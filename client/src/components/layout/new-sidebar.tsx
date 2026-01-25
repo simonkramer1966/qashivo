@@ -157,7 +157,7 @@ function NavSection({
   return (
     <div className="mb-6">
       {!isCollapsed && (
-        <p className="text-[11px] uppercase tracking-wider text-slate-400 font-medium mb-2 px-3">
+        <p className="text-[11px] uppercase tracking-wider text-gray-400 font-medium mb-2 px-3">
           {label}
         </p>
       )}
@@ -197,8 +197,8 @@ function NavItem({
           "w-full flex items-center text-[14px] transition-colors duration-150 relative",
           isCollapsed ? "justify-center px-2 py-2" : "px-3 py-2",
           isActive
-            ? "text-slate-900 font-medium"
-            : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+            ? "text-gray-900 font-medium"
+            : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
         )}
         data-testid={`nav-${name.toLowerCase().replace(/\s+/g, '-')}`}
       >
@@ -207,7 +207,7 @@ function NavItem({
           <span className="absolute left-0 top-1 bottom-1 w-0.5 bg-[#17B6C3] rounded-full" />
         )}
         
-        {Icon && <Icon className={cn("w-4 h-4 flex-shrink-0", isCollapsed ? "" : "mr-3", isActive ? "text-[#17B6C3]" : "text-slate-400")} />}
+        {Icon && <Icon className={cn("w-4 h-4 flex-shrink-0", isCollapsed ? "" : "mr-3", isActive ? "text-[#17B6C3]" : "text-gray-400")} />}
         {!isCollapsed && <span>{name}</span>}
       </button>
     </li>
@@ -439,7 +439,7 @@ export default function NewSidebar() {
   return (
     <>
     <aside className={cn(
-      "hidden lg:flex bg-white border-r border-slate-100 flex-col h-full transition-all duration-300",
+      "hidden lg:flex bg-white border-r border-gray-100 flex-col h-full transition-all duration-300",
       isCollapsed ? "w-16" : "w-56"
     )}>
       {/* Header - Simplified */}
@@ -458,13 +458,13 @@ export default function NewSidebar() {
         >
           <div className="w-8 h-8 flex items-center justify-center">
             {isFullscreen ? (
-              <Minimize2 className="w-5 h-5 text-slate-600" />
+              <Minimize2 className="w-5 h-5 text-gray-600" />
             ) : (
               <img src={nexusLogo} alt="Qashivo" className="w-full h-full object-contain" />
             )}
           </div>
           {!isCollapsed && (
-            <span className="text-[22px] font-semibold text-slate-900 tracking-tight">
+            <span className="text-[22px] font-semibold text-gray-900 tracking-tight">
               {isFullscreen ? "Exit" : "Qashivo"}
             </span>
           )}
@@ -473,7 +473,7 @@ export default function NewSidebar() {
           variant="ghost"
           size="sm"
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="h-7 w-7 p-0 text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+          className="h-7 w-7 p-0 text-gray-400 hover:text-gray-600 hover:bg-gray-50"
           data-testid="button-toggle-sidebar"
         >
           <Menu className="h-4 w-4" />
@@ -486,7 +486,7 @@ export default function NewSidebar() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
-                className="w-full flex items-center justify-between px-3 py-2 text-left text-[13px] text-slate-600 hover:bg-slate-50 rounded transition-colors"
+                className="w-full flex items-center justify-between px-3 py-2 text-left text-[13px] text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
                 disabled={switchTenantMutation.isPending}
                 data-testid="button-organization-dropdown"
               >
@@ -497,34 +497,34 @@ export default function NewSidebar() {
                   }
                 </span>
                 {switchTenantMutation.isPending ? (
-                  <RefreshCw className="h-3.5 w-3.5 text-slate-400 animate-spin flex-shrink-0" />
+                  <RefreshCw className="h-3.5 w-3.5 text-gray-400 animate-spin flex-shrink-0" />
                 ) : (
-                  <ChevronDown className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                  <ChevronDown className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
                 )}
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56 bg-white border-slate-200" align="start" side="bottom">
+            <DropdownMenuContent className="w-56 bg-white border-gray-100" align="start" side="bottom">
               {/* Change Organisation - Submenu (only for partners) */}
               {canSwitchOrganizations && (
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger className="text-[#17B6C3] text-sm" data-testid="menu-item-change-organization">
                     Change organisation
                   </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent className="w-64 bg-white border-slate-200">
+                  <DropdownMenuSubContent className="w-64 bg-white border-gray-100">
                     {/* Search Bar */}
                     <div className="relative p-2">
-                      <Search className="absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                      <Search className="absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                       <Input
                         placeholder="Search organisations"
                         value={orgSearchQuery}
                         onChange={(e) => setOrgSearchQuery(e.target.value)}
-                        className="pl-10 pr-10 h-8 text-sm bg-white border-slate-200"
+                        className="pl-10 pr-10 h-8 text-sm bg-white border-gray-200 rounded-lg focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                         data-testid="input-organization-search"
                       />
                       {orgSearchQuery && (
                         <button
                           onClick={() => setOrgSearchQuery("")}
-                          className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                          className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                           data-testid="button-clear-search"
                         >
                           <X className="h-4 w-4" />
@@ -547,7 +547,7 @@ export default function NewSidebar() {
                                 "px-3 py-2.5",
                                 switchTenantMutation.isPending 
                                   ? "opacity-50 cursor-not-allowed" 
-                                  : "cursor-pointer hover:bg-slate-50"
+                                  : "cursor-pointer hover:bg-gray-50"
                               )}
                               onClick={() => !switchTenantMutation.isPending && handleOrganizationSelect(org.id)}
                               data-testid={`dropdown-organization-${org.id}`}
@@ -556,7 +556,7 @@ export default function NewSidebar() {
                                 <div className="w-7 h-7 rounded bg-[#17B6C3] flex items-center justify-center text-white font-medium text-xs">
                                   {initials}
                                 </div>
-                                <span className="flex-1 text-sm text-slate-700 truncate">{companyName}</span>
+                                <span className="flex-1 text-sm text-gray-700 truncate">{companyName}</span>
                                 {isCurrentOrg && (
                                   <Check className="h-4 w-4 text-[#17B6C3]" />
                                 )}
@@ -565,7 +565,7 @@ export default function NewSidebar() {
                           );
                         })
                       ) : (
-                        <div className="px-3 py-3 text-sm text-slate-500 text-center">
+                        <div className="px-3 py-3 text-sm text-gray-500 text-center">
                           {orgSearchQuery ? "No organizations found" : "No organizations available"}
                         </div>
                       )}
@@ -672,10 +672,10 @@ export default function NewSidebar() {
         <div className="mt-auto p-3 space-y-2">
           {/* User Profile - Minimal */}
           <DropdownMenu>
-            <DropdownMenuTrigger className="w-full flex items-center space-x-2.5 hover:bg-slate-50 rounded px-2 py-2 transition-colors" data-testid="button-user-menu">
+            <DropdownMenuTrigger className="w-full flex items-center space-x-2.5 hover:bg-gray-50 rounded-lg px-2 py-2 transition-colors" data-testid="button-user-menu">
               <Avatar className="h-7 w-7" data-testid="avatar-user">
                 <AvatarImage src={(user as any)?.profileImageUrl || ""} />
-                <AvatarFallback className="bg-slate-200 text-slate-600 text-xs font-medium">
+                <AvatarFallback className="bg-gray-100 text-gray-600 text-xs font-medium">
                   {(() => {
                     const firstName = (user as any)?.firstName || "";
                     const lastName = (user as any)?.lastName || "";
@@ -690,7 +690,7 @@ export default function NewSidebar() {
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 text-left min-w-0">
-                <p className="text-[13px] text-slate-700 truncate" data-testid="text-user-name">
+                <p className="text-[13px] text-gray-700 truncate" data-testid="text-user-name">
                   {(() => {
                     const firstName = (user as any)?.firstName;
                     const lastName = (user as any)?.lastName;
@@ -704,9 +704,9 @@ export default function NewSidebar() {
                   })()}
                 </p>
               </div>
-              <ChevronDown className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+              <ChevronDown className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 bg-white border-slate-200">
+            <DropdownMenuContent align="end" className="w-48 bg-white border-gray-100">
               <DropdownMenuItem onClick={() => setIsProfileDialogOpen(true)} className="text-sm cursor-pointer" data-testid="menu-item-profile">
                 <User className="mr-2 h-4 w-4" />
                 Profile
@@ -729,10 +729,10 @@ export default function NewSidebar() {
       {isCollapsed && (
         <div className="mt-auto p-2 space-y-1">
           <DropdownMenu>
-            <DropdownMenuTrigger className="w-full flex items-center justify-center hover:bg-slate-50 rounded p-2 transition-colors" data-testid="button-user-menu-collapsed">
+            <DropdownMenuTrigger className="w-full flex items-center justify-center hover:bg-gray-50 rounded-lg p-2 transition-colors" data-testid="button-user-menu-collapsed">
               <Avatar className="h-7 w-7" data-testid="avatar-user-collapsed">
                 <AvatarImage src={(user as any)?.profileImageUrl || ""} />
-                <AvatarFallback className="bg-slate-200 text-slate-600 text-xs font-medium">
+                <AvatarFallback className="bg-gray-100 text-gray-600 text-xs font-medium">
                   {(() => {
                     const firstName = (user as any)?.firstName || "";
                     const lastName = (user as any)?.lastName || "";
@@ -747,7 +747,7 @@ export default function NewSidebar() {
                 </AvatarFallback>
               </Avatar>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 bg-white border-slate-200">
+            <DropdownMenuContent align="end" className="w-48 bg-white border-gray-100">
               <DropdownMenuItem onClick={() => setIsProfileDialogOpen(true)} className="text-sm cursor-pointer" data-testid="menu-item-profile">
                 <User className="mr-2 h-4 w-4" />
                 Profile
