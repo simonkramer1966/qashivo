@@ -29,7 +29,8 @@ import {
   CreditCard,
   Calculator,
   BookOpen,
-  Inbox
+  Inbox,
+  Minimize2
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -219,8 +220,31 @@ export default function NewSidebar() {
   const [orgSearchQuery, setOrgSearchQuery] = useState("");
   const [recentOrgIds, setRecentOrgIds] = useState<string[]>([]);
   const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const queryClient = useQueryClient();
   const { triggerSplash } = useSplash();
+
+  // Track fullscreen state
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  // Toggle fullscreen mode
+  const toggleFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+    } catch (err) {
+      console.error('Fullscreen error:', err);
+    }
+  };
 
   // Load recent organizations from localStorage on mount
   useEffect(() => {
@@ -423,19 +447,25 @@ export default function NewSidebar() {
         isCollapsed ? "flex-col space-y-2 justify-center" : "justify-between"
       )}>
         <button
-          onClick={triggerSplash}
+          onClick={toggleFullscreen}
           className={cn(
             "flex items-center hover:opacity-80 transition-opacity cursor-pointer",
             isCollapsed ? "flex-col" : "space-x-2"
           )}
-          title="Click to lock screen"
-          data-testid="button-logo-splash"
+          title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+          data-testid="button-fullscreen-toggle"
         >
           <div className="w-8 h-8 flex items-center justify-center">
-            <img src={nexusLogo} alt="Qashivo" className="w-full h-full object-contain" />
+            {isFullscreen ? (
+              <Minimize2 className="w-5 h-5 text-slate-600" />
+            ) : (
+              <img src={nexusLogo} alt="Qashivo" className="w-full h-full object-contain" />
+            )}
           </div>
           {!isCollapsed && (
-            <span className="text-[22px] font-semibold text-slate-900 tracking-tight">Qashivo</span>
+            <span className="text-[22px] font-semibold text-slate-900 tracking-tight">
+              {isFullscreen ? "Exit" : "Qashivo"}
+            </span>
           )}
         </button>
         <Button
