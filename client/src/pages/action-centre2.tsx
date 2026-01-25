@@ -1293,84 +1293,101 @@ interface CashboardTab2Props {
   formatCurrency: (value: number) => string;
 }
 
+type DebtorStatus = 'due' | 'overdue' | 'no_contact' | 'promised' | 'broken' | 'dispute' | 'query' | 'paid';
+const STATUS_ORDER: DebtorStatus[] = ['due', 'overdue', 'no_contact', 'promised', 'broken', 'dispute', 'query', 'paid'];
+
+function getStatusLabel(status: DebtorStatus): string {
+  const labels: Record<DebtorStatus, string> = {
+    due: 'Due',
+    overdue: 'Overdue',
+    no_contact: 'No Contact',
+    promised: 'Promised',
+    broken: 'Broken',
+    dispute: 'Dispute',
+    query: 'Query',
+    paid: 'Paid',
+  };
+  return labels[status] || status;
+}
+
+interface CashboardCell {
+  debtorId: string;
+  status: DebtorStatus;
+  amount: number;
+  invoiceCount: number;
+  oldestDaysOverdue: number;
+  lastActionAt?: string;
+  lastActionChannel?: string;
+  ptpDate?: string;
+}
+
+interface CashboardRow {
+  debtor: Debtor;
+  cells: Partial<Record<DebtorStatus, CashboardCell>>;
+}
+
+function buildCashboardMatrix2(debtors: Debtor[]): CashboardRow[] {
+  return debtors.map(debtor => {
+    const status = getDebtorStatus(debtor) as DebtorStatus;
+    const cell: CashboardCell = {
+      debtorId: debtor.id,
+      status,
+      amount: debtor.totalOutstanding,
+      invoiceCount: debtor.invoiceCount,
+      oldestDaysOverdue: debtor.oldestDaysOverdue,
+      lastActionAt: debtor.lastActionAt,
+      lastActionChannel: debtor.lastActionChannel,
+      ptpDate: debtor.ptpDate,
+    };
+    
+    return {
+      debtor,
+      cells: { [status]: cell }
+    };
+  });
+}
+
 function CashboardTab2({ debtors, onSelectDebtor, isLoading, formatCurrency }: CashboardTab2Props) {
-  const [sortKey, setSortKey] = useState<'name' | 'outstanding' | 'overdue' | 'days'>('outstanding');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const matrix = useMemo(() => buildCashboardMatrix2(debtors), [debtors]);
+  
+  const columnTotals = useMemo(() => {
+    const totals: Record<DebtorStatus, number> = {
+      due: 0, overdue: 0, no_contact: 0, promised: 0, broken: 0, dispute: 0, query: 0, paid: 0
+    };
+    for (const row of matrix) {
+      for (const status of STATUS_ORDER) {
+        totals[status] += row.cells[status]?.amount || 0;
+      }
+    }
+    return totals;
+  }, [matrix]);
 
   const PAGE_SIZE_OPTIONS = [10, 15, 25, 50];
   const [itemsPerPage, setItemsPerPage] = useState(15);
   const [currentPage, setCurrentPage] = useState(1);
-
-  const handleSort = (key: typeof sortKey) => {
-    if (sortKey === key) {
-      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortKey(key);
-      setSortDirection(key === 'name' ? 'asc' : 'desc');
-    }
-  };
-
-  const sortedDebtors = useMemo(() => {
-    return [...debtors].sort((a, b) => {
-      let comparison = 0;
-      switch (sortKey) {
-        case 'name':
-          comparison = (a.name || '').localeCompare(b.name || '');
-          break;
-        case 'outstanding':
-          comparison = a.totalOutstanding - b.totalOutstanding;
-          break;
-        case 'overdue':
-          comparison = a.totalOverdue - b.totalOverdue;
-          break;
-        case 'days':
-          comparison = a.oldestDaysOverdue - b.oldestDaysOverdue;
-          break;
-      }
-      return sortDirection === 'asc' ? comparison : -comparison;
-    });
-  }, [debtors, sortKey, sortDirection]);
-
-  const totalPages = Math.max(1, Math.ceil(sortedDebtors.length / itemsPerPage));
+  const totalPages = Math.max(1, Math.ceil(matrix.length / itemsPerPage));
   
   useEffect(() => {
     if (currentPage > totalPages) {
       setCurrentPage(Math.max(1, totalPages));
     }
-  }, [sortedDebtors.length, itemsPerPage, currentPage, totalPages]);
+  }, [matrix.length, itemsPerPage, currentPage, totalPages]);
   
-  const paginatedDebtors = useMemo(() => {
+  const paginatedMatrix = useMemo(() => {
     const clampedPage = Math.min(currentPage, totalPages);
     const start = (clampedPage - 1) * itemsPerPage;
-    return sortedDebtors.slice(start, start + itemsPerPage);
-  }, [sortedDebtors, currentPage, itemsPerPage, totalPages]);
+    return matrix.slice(start, start + itemsPerPage);
+  }, [matrix, currentPage, itemsPerPage, totalPages]);
   
   const handlePageSizeChange = (newSize: number) => {
     setItemsPerPage(newSize);
     setCurrentPage(1);
   };
 
-  const SortIndicator = ({ columnKey }: { columnKey: typeof sortKey }) => {
-    if (sortKey !== columnKey) return null;
-    return sortDirection === 'asc' 
-      ? <ChevronUp className="h-3 w-3 inline-block ml-0.5" />
-      : <ChevronDown className="h-3 w-3 inline-block ml-0.5" />;
-  };
-
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      paid: 'bg-[#4FAD80]',
-      promise: 'bg-[#E8A23B]',
-      overdue: 'bg-[#C75C5C]',
-      dispute: 'bg-[#C75C5C]',
-      query: 'bg-[#E8A23B]',
-    };
-    return colors[status] || 'bg-gray-300';
-  };
-
   if (isLoading) {
     return (
       <div className="space-y-1">
+        <div className="h-10 bg-gray-50 animate-pulse rounded-lg" />
         {[...Array(6)].map((_, i) => (
           <div key={i} className="h-12 bg-gray-50 animate-pulse rounded-lg" />
         ))}
@@ -1387,111 +1404,132 @@ function CashboardTab2({ debtors, onSelectDebtor, isLoading, formatCurrency }: C
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-260px)]">
-      <div className="overflow-auto flex-1 -mx-6">
-        <div className="px-6">
-          <div className="flex items-center py-2 border-b border-gray-100 text-[11px] font-medium text-gray-400 uppercase tracking-wider">
-            <div 
-              className="w-[30%] px-3 cursor-pointer hover:text-gray-600 transition-colors select-none"
-              onClick={() => handleSort('name')}
-            >
-              Customer <SortIndicator columnKey="name" />
-            </div>
-            <div className="w-[10%] px-3 text-center">Status</div>
-            <div 
-              className="w-[20%] px-3 text-right cursor-pointer hover:text-gray-600 transition-colors select-none"
-              onClick={() => handleSort('outstanding')}
-            >
-              Outstanding <SortIndicator columnKey="outstanding" />
-            </div>
-            <div 
-              className="w-[20%] px-3 text-right cursor-pointer hover:text-gray-600 transition-colors select-none"
-              onClick={() => handleSort('overdue')}
-            >
-              Overdue <SortIndicator columnKey="overdue" />
-            </div>
-            <div 
-              className="w-[10%] px-3 text-right cursor-pointer hover:text-gray-600 transition-colors select-none"
-              onClick={() => handleSort('days')}
-            >
-              Days <SortIndicator columnKey="days" />
-            </div>
-            <div className="w-[10%] px-3 text-center">Invoices</div>
-          </div>
-          
-          {paginatedDebtors.map(debtor => (
-            <div 
-              key={debtor.id}
-              onClick={() => onSelectDebtor(debtor.id)}
-              className="flex items-center py-2.5 border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors"
-            >
-              <div className="w-[30%] px-3 min-w-0">
-                <div className="text-[13px] font-medium text-gray-900 truncate">{debtor.name}</div>
-                {debtor.primaryContactName && (
-                  <div className="text-xs text-gray-500 truncate">{debtor.primaryContactName}</div>
-                )}
-              </div>
-              <div className="w-[10%] px-3 flex justify-center">
-                <span className={`inline-block w-2.5 h-2.5 rounded-full ${getStatusColor(debtor.status)}`} />
-              </div>
-              <div className="w-[20%] px-3 text-right">
-                <span className="text-[13px] font-medium tabular-nums text-gray-900">
-                  {formatCurrency(debtor.totalOutstanding)}
-                </span>
-              </div>
-              <div className="w-[20%] px-3 text-right">
-                <span className={`text-[13px] font-medium tabular-nums ${debtor.totalOverdue > 0 ? 'text-[#C75C5C]' : 'text-gray-500'}`}>
-                  {formatCurrency(debtor.totalOverdue)}
-                </span>
-              </div>
-              <div className="w-[10%] px-3 text-right">
-                <span className="text-[13px] tabular-nums text-gray-500">{debtor.oldestDaysOverdue}d</span>
-              </div>
-              <div className="w-[10%] px-3 text-center">
-                <span className="text-[13px] tabular-nums text-gray-500">{debtor.invoiceCount}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-      
-      <div className="flex items-center justify-end pt-3 flex-shrink-0 border-t border-gray-100 mt-3">
-        <div className="flex items-center gap-4 text-[12px] text-gray-500">
-          <div className="flex items-center gap-2">
-            <span className="text-gray-400">Rows:</span>
-            <select
-              value={itemsPerPage}
-              onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-              className="bg-white border border-gray-200 rounded-lg px-2 py-1 text-[12px] text-gray-600 cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
-            >
-              {PAGE_SIZE_OPTIONS.map(size => (
-                <option key={size} value={size}>{size}</option>
+    <TooltipProvider delayDuration={200}>
+      <div className="flex flex-col h-[calc(100vh-260px)]">
+        <div className="overflow-auto flex-1">
+          <table className="w-full bg-white" style={{ minWidth: '900px', tableLayout: 'fixed' }}>
+            <colgroup>
+              <col style={{ width: '18%' }} />
+              {STATUS_ORDER.map(status => (
+                <col key={status} style={{ width: `${82 / STATUS_ORDER.length}%` }} />
               ))}
-            </select>
-          </div>
-          
-          {totalPages > 1 && (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="p-1 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <span className="tabular-nums min-w-[80px] text-center">{currentPage} of {totalPages}</span>
-              <button
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="p-1 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
+            </colgroup>
+            <thead className="sticky top-0 z-20">
+              <tr className="border-b border-gray-100 bg-gray-50 h-16">
+                <th className="px-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider sticky left-0 bg-gray-50 z-30 align-middle">
+                  Customer
+                </th>
+                {STATUS_ORDER.map((status, idx) => (
+                  <th 
+                    key={status} 
+                    className={`px-2 text-right bg-gray-50 align-middle ${idx > 0 ? 'border-l border-gray-100' : ''}`}
+                  >
+                    <div className="text-[11px] font-medium text-gray-400 uppercase tracking-wider">{getStatusLabel(status)}</div>
+                    <div className="font-semibold text-gray-900 text-[13px] mt-1 tabular-nums">
+                      {formatCurrencyCompact(columnTotals[status])}
+                    </div>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedMatrix.map(row => (
+                <tr 
+                  key={row.debtor.id} 
+                  className="group border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer"
+                  onClick={() => onSelectDebtor(row.debtor.id)}
+                >
+                  <td className="py-[5px] px-3 sticky left-0 bg-white group-hover:bg-gray-50 z-10 transition-colors">
+                    <div className="text-[13px] font-medium text-gray-900 truncate max-w-[170px]">
+                      {row.debtor.name}
+                    </div>
+                    <div className="text-[12px] text-gray-400 truncate tabular-nums">
+                      {formatCurrencyCompact(row.debtor.totalOutstanding)} outstanding
+                    </div>
+                  </td>
+                  {STATUS_ORDER.map((status, idx) => {
+                    const cell = row.cells[status];
+                    const borderClass = idx > 0 ? 'border-l border-gray-100' : '';
+                    if (!cell) {
+                      return (
+                        <td key={status} className={`py-[5px] px-2 text-right ${borderClass}`}>
+                          <span className="text-gray-200 text-[13px]">—</span>
+                        </td>
+                      );
+                    }
+                    
+                    return (
+                      <td key={status} className={`py-[5px] px-2 text-right ${borderClass}`}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="text-[13px] font-medium tabular-nums text-gray-900 cursor-pointer">
+                              {formatCurrencyCompact(cell.amount)}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs">
+                            <div className="text-xs space-y-1">
+                              <div className="font-medium">{formatCurrencyCompact(cell.amount)} · {cell.invoiceCount} invoices</div>
+                              <div className="text-gray-400">Oldest: {cell.oldestDaysOverdue}d</div>
+                              {cell.lastActionAt && cell.lastActionChannel && (
+                                <div className="text-gray-400">
+                                  Last: {getChannelLabel(cell.lastActionChannel)} {formatRelativeTime(cell.lastActionAt)}
+                                </div>
+                              )}
+                              {cell.ptpDate && (
+                                <div className="text-gray-500">PTP: {new Date(cell.ptpDate).toLocaleDateString('en-GB')}</div>
+                              )}
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        
+        <div className="flex items-center justify-end pt-3 flex-shrink-0 border-t border-gray-100 mt-3">
+          {matrix.length > 0 && (
+            <div className="flex items-center gap-4 text-[12px] text-gray-500">
+              <div className="flex items-center gap-2">
+                <span className="text-gray-400">Rows:</span>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                  className="bg-white border border-gray-200 rounded-lg px-2 py-1 text-[12px] text-gray-600 cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                >
+                  {PAGE_SIZE_OPTIONS.map(size => (
+                    <option key={size} value={size}>{size}</option>
+                  ))}
+                </select>
+              </div>
+              
+              {totalPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="p-1 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="tabular-nums min-w-[80px] text-center">{currentPage} of {totalPages}</span>
+                  <button
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="p-1 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 }
 
