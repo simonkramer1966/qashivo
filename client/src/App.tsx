@@ -67,6 +67,7 @@ const AcceptInvite = lazy(() => import("@/pages/accept-invite"));
 const SmeOnboarding = lazy(() => import("@/pages/sme-onboarding"));
 const Inbox = lazy(() => import("@/pages/inbox"));
 const InvestorInterest = lazy(() => import("@/pages/investor-interest"));
+const Overview2 = lazy(() => import("@/pages/overview2"));
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -168,6 +169,7 @@ function Router() {
           <Route path="/invoices" component={Invoices} />
           <Route path="/action-centre" component={ActionCentre} />
           <Route path="/action-centre2" component={ActionCentre2} />
+          <Route path="/overview2" component={Overview2} />
           <Route path="/inbox" component={Inbox} />
           <Route path="/activity-log" component={ActivityLog} />
           <Route path="/documentation" component={Documentation} />
