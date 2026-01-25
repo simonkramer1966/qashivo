@@ -68,6 +68,7 @@ const navigationSections = [
     label: "REFERENCE",
     items: [
       { name: "Customers", href: "/contacts", icon: Users },
+      { name: "Customers2", href: "/customers2", icon: Users },
       { name: "Invoices", href: "/invoices", icon: FileText },
     ]
   },

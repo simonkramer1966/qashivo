@@ -58,6 +58,7 @@ const Automation = lazy(() => import("@/pages/automation"));
 const Workflows = lazy(() => import("@/pages/workflows"));
 const WorkflowProfile = lazy(() => import("@/pages/workflow-profile"));
 const CustomerDetail = lazy(() => import("@/pages/customer-detail"));
+const Customers2 = lazy(() => import("@/pages/customers2"));
 const PartnerPractice = lazy(() => import("@/pages/partner-practice"));
 const PartnerClients = lazy(() => import("@/pages/partner-clients"));
 const PartnerClientDetail = lazy(() => import("@/pages/partner-client-detail"));
@@ -162,6 +163,7 @@ function Router() {
           <Route path="/contacts" component={Contacts} />
           <Route path="/customers" component={Contacts} />
           <Route path="/customers/:customerId" component={CustomerDetail} />
+          <Route path="/customers2" component={Customers2} />
           <Route path="/invoices" component={Invoices} />
           <Route path="/action-centre" component={ActionCentre} />
           <Route path="/inbox" component={Inbox} />
