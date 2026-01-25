@@ -9,7 +9,7 @@ import {
   inboundMessages,
   contactOutcomes
 } from "@shared/schema";
-import { eq, and, desc, asc, lt, or, sql } from "drizzle-orm";
+import { eq, and, desc, asc, lt, or, sql, ne } from "drizzle-orm";
 import type { 
   TimelineItem, 
   TimelineResponse, 
@@ -34,6 +34,7 @@ export class CustomerTimelineService {
       return null;
     }
 
+    // Fetch all unpaid invoices (exclude only "paid" status) to support All/Overdue toggle in drawer
     const customerInvoices = await db
       .select({
         id: invoices.id,
@@ -49,10 +50,7 @@ export class CustomerTimelineService {
       .where(and(
         eq(invoices.contactId, customerId),
         eq(invoices.tenantId, tenantId),
-        or(
-          eq(invoices.status, "pending"),
-          eq(invoices.status, "overdue")
-        )
+        ne(invoices.status, "paid")
       ))
       .orderBy(asc(invoices.dueDate))
       .limit(20);
@@ -63,10 +61,7 @@ export class CustomerTimelineService {
       .where(and(
         eq(invoices.contactId, customerId),
         eq(invoices.tenantId, tenantId),
-        or(
-          eq(invoices.status, "pending"),
-          eq(invoices.status, "overdue")
-        )
+        ne(invoices.status, "paid")
       ));
     const totalInvoiceCount = invoiceCountResult[0]?.count || 0;
 
@@ -223,6 +218,7 @@ export class CustomerTimelineService {
     offset: number = 0,
     limit: number = 20
   ) {
+    // Fetch all unpaid invoices (exclude only "paid" status) to support All/Overdue toggle
     const customerInvoices = await db
       .select({
         id: invoices.id,
@@ -238,10 +234,7 @@ export class CustomerTimelineService {
       .where(and(
         eq(invoices.contactId, customerId),
         eq(invoices.tenantId, tenantId),
-        or(
-          eq(invoices.status, "pending"),
-          eq(invoices.status, "overdue")
-        )
+        ne(invoices.status, "paid")
       ))
       .orderBy(asc(invoices.dueDate))
       .offset(offset)
@@ -253,10 +246,7 @@ export class CustomerTimelineService {
       .where(and(
         eq(invoices.contactId, customerId),
         eq(invoices.tenantId, tenantId),
-        or(
-          eq(invoices.status, "pending"),
-          eq(invoices.status, "overdue")
-        )
+        ne(invoices.status, "paid")
       ));
     const total = countResult[0]?.count || 0;
 
