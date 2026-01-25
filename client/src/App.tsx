@@ -161,8 +161,8 @@ function Router() {
           <Route path="/dashboard-experimental" component={DashboardExperimental} />
           <Route path="/onboarding" component={UserOnboarding} />
           <Route path="/connection-error" component={ConnectionError} />
-          <Route path="/contacts" component={Contacts} />
-          <Route path="/customers" component={Contacts} />
+          <Route path="/contacts" component={Customers2} />
+          <Route path="/customers" component={Customers2} />
           <Route path="/customers/:customerId" component={CustomerDetail} />
           <Route path="/customers2" component={Customers2} />
           <Route path="/invoices" component={Invoices} />
