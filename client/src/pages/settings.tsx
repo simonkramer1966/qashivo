@@ -1969,7 +1969,7 @@ export default function Settings() {
         <NewSidebar />
       </div>
 
-      <main className="flex-1 flex flex-col min-h-0">
+      <main className="flex-1 overflow-y-auto">
         <div className="max-w-7xl mx-auto w-full px-6 py-5">
           <h1 className="text-2xl font-bold text-gray-900 font-heading">Settings</h1>
           <p className="text-sm text-gray-500 mt-1">
@@ -1977,9 +1977,8 @@ export default function Settings() {
           </p>
         </div>
         
-        <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
-          <div className="max-w-7xl mx-auto w-full px-6 flex-1 flex flex-col min-h-0">
-            <Tabs defaultValue="general" className="space-y-6 flex-1 flex flex-col min-h-0">
+        <div className="max-w-7xl mx-auto w-full px-6 pb-6">
+            <Tabs defaultValue="general" className="space-y-6">
               <div className="border-b border-gray-100 overflow-x-auto">
                 <TabsList className="bg-transparent h-auto p-0 gap-0">
                   <TabsTrigger 
@@ -2589,7 +2588,6 @@ export default function Settings() {
                 <DemoDataTabContent />
               </TabsContent>
             </Tabs>
-          </div>
         </div>
       </main>
     </div>
