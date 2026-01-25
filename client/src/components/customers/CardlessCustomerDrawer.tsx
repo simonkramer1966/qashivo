@@ -633,12 +633,20 @@ export function CardlessCustomerDrawer({
   const handleGenerateEmail = async () => {
     if (emailTemplate === "manual") return;
     
+    // Find the selected recipient's name from the contacts list
+    const selectedRecipient = preview?.allCreditControlContacts?.find(
+      (contact) => contact.email === selectedRecipientEmail
+    );
+    const recipientName = selectedRecipient?.name || '';
+    
     setIsGeneratingEmail(true);
     try {
       const res = await apiRequest("POST", `/api/contacts/${customerId}/generate-email`, {
         templateType: emailTemplate,
         tone: toneLabels[emailTone].toLowerCase(),
         includeStatutoryInterest,
+        recipientName,
+        recipientEmail: selectedRecipientEmail,
       });
       const data = await res.json();
       setEmailSubject(data.subject || "");

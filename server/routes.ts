@@ -4790,7 +4790,7 @@ Return only JSON with keys: intent, sentiment, confidence, ptpAmount, ptpDate, d
       }
 
       const { contactId } = req.params;
-      const { templateType, tone, includeStatutoryInterest = true } = req.body;
+      const { templateType, tone, includeStatutoryInterest = true, recipientName, recipientEmail } = req.body;
 
       // Verify contact exists and user has access
       const contact = await storage.getContact(contactId, user.tenantId);
@@ -4871,11 +4871,14 @@ Return only JSON with keys: intent, sentiment, confidence, ptpAmount, ptpDate, d
       // Build context for AI email generation
       const { generateCollectionEmail } = await import("./services/openai.js");
       
-      // Extract first name from arContactName for personal greeting
-      const arContactFirstName = contact.arContactName?.split(' ')[0];
+      // Use recipient name from request, or fall back to AR contact name
+      // Extract first name for personal greeting
+      const recipientFirstName = recipientName 
+        ? recipientName.split(' ')[0] 
+        : contact.arContactName?.split(' ')[0];
       
       const emailDraft = await generateCollectionEmail(templateType, {
-        contactName: arContactFirstName || 'there',
+        contactName: recipientFirstName || 'there',
         companyName: contact.name || 'Customer',
         totalOutstanding,
         oldestOverdueDays,
