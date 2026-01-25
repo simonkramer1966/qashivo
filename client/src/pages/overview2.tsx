@@ -201,16 +201,37 @@ export default function Overview2() {
             
             <div className="h-6 w-px bg-gray-200 hidden sm:block" />
             
-            <div className="flex items-center gap-1.5">
-              <span className="inline-block w-2 h-2 rounded-full bg-[#4FAD80]" />
-              <span className="text-xs text-gray-500">On-time</span>
-              <span className="text-sm font-semibold text-gray-900 tabular-nums ml-0.5">32%</span>
+            <div>
+              <span className="text-xs text-gray-500">Avg Days Late</span>
+              {metricsLoading ? (
+                <div className="h-5 w-16 bg-gray-100 animate-pulse rounded mt-0.5"></div>
+              ) : (
+                <p className="text-sm font-semibold text-gray-900 tabular-nums">
+                  {Math.abs(avgDaysOverdue).toFixed(0)} <span className="text-xs font-normal text-gray-400">days</span>
+                </p>
+              )}
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="inline-block w-2 h-2 rounded-full bg-[#E8A23B]" />
-              <span className="text-xs text-gray-500">Late</span>
-              <span className="text-sm font-semibold text-gray-900 tabular-nums ml-0.5">45</span>
-              <span className="text-xs text-gray-400">days avg</span>
+            <div>
+              <span className="text-xs text-gray-500">Avg Days to Pay</span>
+              {metricsLoading ? (
+                <div className="h-5 w-16 bg-gray-100 animate-pulse rounded mt-0.5"></div>
+              ) : (
+                <p className="text-sm font-semibold text-gray-900 tabular-nums">
+                  45 <span className="text-xs font-normal text-gray-400">days</span>
+                </p>
+              )}
+            </div>
+            <div>
+              <span className="text-xs text-gray-500">On-time Rate</span>
+              {metricsLoading ? (
+                <div className="h-5 w-16 bg-gray-100 animate-pulse rounded mt-0.5"></div>
+              ) : (
+                <p className="text-sm font-semibold text-[#4FAD80] tabular-nums">32%</p>
+              )}
+            </div>
+            <div>
+              <span className="text-xs text-gray-500">Promises Kept</span>
+              <p className="text-sm font-semibold text-[#4FAD80] tabular-nums">78%</p>
             </div>
           </div>
 
@@ -338,49 +359,7 @@ export default function Overview2() {
             </div>
           </section>
 
-          <section className="py-5">
-            <p className="text-[11px] text-gray-400 uppercase tracking-wider font-medium mb-4">Behaviour Performance</p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-8">
-              <div data-testid="card-perf-avg-days-late">
-                <p className="text-xs text-gray-500 mb-1">Avg Days Late</p>
-                {metricsLoading ? (
-                  <div className="h-5 w-16 bg-gray-100 animate-pulse rounded"></div>
-                ) : (
-                  <p className="text-sm font-semibold text-gray-900 tabular-nums">
-                    {Math.abs(avgDaysOverdue).toFixed(0)} <span className="text-xs font-normal text-gray-400">days</span>
-                  </p>
-                )}
-              </div>
-
-              <div data-testid="card-perf-avg-days-pay">
-                <p className="text-xs text-gray-500 mb-1">Avg Days to Pay</p>
-                {metricsLoading ? (
-                  <div className="h-5 w-16 bg-gray-100 animate-pulse rounded"></div>
-                ) : (
-                  <p className="text-sm font-semibold text-gray-900 tabular-nums">
-                    45 <span className="text-xs font-normal text-gray-400">days</span>
-                  </p>
-                )}
-              </div>
-
-              <div data-testid="card-perf-ontime-rate">
-                <p className="text-xs text-gray-500 mb-1">On-time Rate</p>
-                {metricsLoading ? (
-                  <div className="h-5 w-16 bg-gray-100 animate-pulse rounded"></div>
-                ) : (
-                  <p className="text-sm font-semibold text-[#4FAD80] tabular-nums">
-                    32%
-                  </p>
-                )}
-              </div>
-
-              <div data-testid="card-perf-promises-kept">
-                <p className="text-xs text-gray-500 mb-1">Promises Kept</p>
-                <p className="text-sm font-semibold text-[#4FAD80] tabular-nums">78%</p>
-              </div>
-            </div>
-          </section>
-
+          
           </div>
         </div>
       </main>
