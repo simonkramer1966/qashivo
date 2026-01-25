@@ -5069,7 +5069,7 @@ Return only JSON with keys: intent, sentiment, confidence, ptpAmount, ptpDate, d
       }
 
       const { contactId } = req.params;
-      const { templateType, tone } = req.body;
+      const { templateType, tone, recipientName } = req.body;
 
       // Verify contact exists and user has access
       const contact = await storage.getContact(contactId, user.tenantId);
@@ -5112,10 +5112,13 @@ Return only JSON with keys: intent, sentiment, confidence, ptpAmount, ptpDate, d
       // Build context for AI SMS generation
       const { generateCollectionSms } = await import("./services/openai.js");
       
-      const arContactFirstName = contact.arContactName?.split(' ')[0];
+      // Use the passed recipientName if provided, otherwise fall back to contact.arContactName
+      const recipientFirstName = recipientName 
+        ? recipientName.split(' ')[0] 
+        : (contact.arContactName?.split(' ')[0] || 'there');
       
       const smsDraft = await generateCollectionSms(templateType, {
-        contactName: arContactFirstName || 'there',
+        contactName: recipientFirstName,
         companyName: contact.name || 'Customer',
         totalOutstanding,
         oldestOverdueDays,

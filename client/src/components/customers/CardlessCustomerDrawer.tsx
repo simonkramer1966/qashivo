@@ -561,11 +561,18 @@ export function CardlessCustomerDrawer({
   const handleGenerateSms = async () => {
     if (smsTemplate === "manual") return;
     
+    // Find the selected recipient's name from the contacts list
+    const selectedSmsRecipient = preview?.allCreditControlContacts?.find(
+      (contact) => contact.phone === selectedRecipientPhone
+    );
+    const recipientName = selectedSmsRecipient?.name || '';
+    
     setIsGeneratingSms(true);
     try {
       const res = await apiRequest("POST", `/api/contacts/${customerId}/generate-sms`, {
         templateType: smsTemplate,
         tone: toneLabels[smsTone].toLowerCase(),
+        recipientName: recipientName,
       });
       const data = await res.json();
       setSmsBody(data.body || "");
