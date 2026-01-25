@@ -8,11 +8,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import NewSidebar from "@/components/layout/new-sidebar";
 import Header from "@/components/layout/header";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -50,7 +48,12 @@ import {
   AlertCircle,
   Clock,
   TrendingUp,
-  ShieldAlert
+  ShieldAlert,
+  Trash2,
+  PlusCircle,
+  FileText,
+  CreditCard,
+  RotateCcw
 } from "lucide-react";
 import { SiXero, SiSage, SiQuickbooks } from "react-icons/si";
 import { CURRENCIES, DEFAULT_CURRENCY } from "@shared/currencies";
@@ -62,7 +65,6 @@ import UserManagementTabContent from "@/components/rbac/UserManagementTabContent
 import EmailSenderManagement from "@/components/collections/EmailSenderManagement";
 import { BookOpen, Volume2, Timer, Gauge } from "lucide-react";
 
-// Playbook settings interface
 interface PlaybookSettings {
   tenantStyle: string;
   highValueThreshold: string;
@@ -75,7 +77,6 @@ interface PlaybookSettings {
   businessHoursEnd: string;
 }
 
-// Playbook Tab Component - AI-Driven Collections Configuration
 function PlaybookTabContent() {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -154,48 +155,38 @@ function PlaybookTabContent() {
   }
 
   return (
-    <div className="space-y-8">
-      <Card className="card-glass">
-        <CardHeader>
-          <CardTitle className="text-xl font-bold flex items-center">
-            <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
-              <BookOpen className="h-5 w-5 text-[#17B6C3]" />
-            </div>
-            AI Collections Playbook
-          </CardTitle>
-          <CardDescription className="text-base">
-            Configure how Qashivo's AI autonomously manages your credit control and collections. 
-            The playbook determines who to contact, when, and how - based on best-practice credit control principles.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              <strong>AI-First Collections:</strong> Qashivo decides the optimal contact strategy based on invoice age, 
-              amount, payment history, and customer behaviour. You set the guardrails; the AI executes.
-            </AlertDescription>
-          </Alert>
-        </CardContent>
-      </Card>
+    <div className="space-y-0">
+      <div className="py-8 border-b border-gray-200">
+        <div className="flex items-center mb-1">
+          <BookOpen className="h-5 w-5 text-[#17B6C3] mr-2" />
+          <h2 className="text-lg font-semibold text-gray-900">AI Collections Playbook</h2>
+        </div>
+        <p className="text-sm text-gray-500 mb-6">
+          Configure how Qashivo's AI autonomously manages your credit control and collections. 
+          The playbook determines who to contact, when, and how - based on best-practice credit control principles.
+        </p>
+        <Alert className="bg-blue-50 border-blue-200">
+          <AlertCircle className="h-4 w-4 text-blue-600" />
+          <AlertDescription className="text-blue-800">
+            <strong>AI-First Collections:</strong> Qashivo decides the optimal contact strategy based on invoice age, 
+            amount, payment history, and customer behaviour. You set the guardrails; the AI executes.
+          </AlertDescription>
+        </Alert>
+      </div>
 
-      <Card className="card-glass">
-        <CardHeader>
-          <CardTitle className="text-xl font-bold flex items-center">
-            <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
-              <Volume2 className="h-5 w-5 text-[#17B6C3]" />
-            </div>
-            Communication Tone
-          </CardTitle>
-          <CardDescription className="text-base">
-            Set your preferred communication style. This affects email, SMS, and voice call tone across all stages.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
+      <div className="py-8 border-b border-gray-200">
+        <div className="flex items-center mb-1">
+          <Volume2 className="h-5 w-5 text-[#17B6C3] mr-2" />
+          <h2 className="text-lg font-semibold text-gray-900">Communication Tone</h2>
+        </div>
+        <p className="text-sm text-gray-500 mb-6">
+          Set your preferred communication style. This affects email, SMS, and voice call tone across all stages.
+        </p>
+        <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="tenantStyle">Tenant Communication Style</Label>
             <Select value={tenantStyle} onValueChange={setTenantStyle}>
-              <SelectTrigger className="bg-white/70 border-gray-200/30" data-testid="select-tenant-style">
+              <SelectTrigger className="bg-white border-gray-200 max-w-md" data-testid="select-tenant-style">
                 <SelectValue placeholder="Select style" />
               </SelectTrigger>
               <SelectContent>
@@ -204,73 +195,63 @@ function PlaybookTabContent() {
                 <SelectItem value="FIRM">Firm - Direct and assertive while remaining professional</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-gray-500">
               This affects how AI communicates across credit control and recovery stages.
             </p>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <Card className="card-glass">
-        <CardHeader>
-          <CardTitle className="text-xl font-bold flex items-center">
-            <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
-              <Gauge className="h-5 w-5 text-[#17B6C3]" />
-            </div>
-            High-Value Thresholds
-          </CardTitle>
-          <CardDescription className="text-base">
-            Define what constitutes a high-value customer for escalation and VIP handling.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="highValueThreshold">Total Overdue Threshold (£)</Label>
-              <Input 
-                id="highValueThreshold"
-                type="number"
-                value={highValueThreshold}
-                onChange={(e) => setHighValueThreshold(e.target.value)}
-                className="bg-white/70 border-gray-200/30"
-                data-testid="input-high-value-threshold"
-              />
-              <p className="text-sm text-muted-foreground">
-                Customers with total overdue above this are flagged as HIGH_VALUE
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="singleInvoiceThreshold">Single Invoice Threshold (£)</Label>
-              <Input 
-                id="singleInvoiceThreshold"
-                type="number"
-                value={singleInvoiceThreshold}
-                onChange={(e) => setSingleInvoiceThreshold(e.target.value)}
-                className="bg-white/70 border-gray-200/30"
-                data-testid="input-single-invoice-threshold"
-              />
-              <p className="text-sm text-muted-foreground">
-                Any single invoice above this triggers HIGH_VALUE treatment
-              </p>
-            </div>
+      <div className="py-8 border-b border-gray-200">
+        <div className="flex items-center mb-1">
+          <Gauge className="h-5 w-5 text-[#17B6C3] mr-2" />
+          <h2 className="text-lg font-semibold text-gray-900">High-Value Thresholds</h2>
+        </div>
+        <p className="text-sm text-gray-500 mb-6">
+          Define what constitutes a high-value customer for escalation and VIP handling.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <Label htmlFor="highValueThreshold">Total Overdue Threshold (£)</Label>
+            <Input 
+              id="highValueThreshold"
+              type="number"
+              value={highValueThreshold}
+              onChange={(e) => setHighValueThreshold(e.target.value)}
+              className="bg-white border-gray-200"
+              data-testid="input-high-value-threshold"
+            />
+            <p className="text-sm text-gray-500">
+              Customers with total overdue above this are flagged as HIGH_VALUE
+            </p>
           </div>
-        </CardContent>
-      </Card>
+          <div className="space-y-2">
+            <Label htmlFor="singleInvoiceThreshold">Single Invoice Threshold (£)</Label>
+            <Input 
+              id="singleInvoiceThreshold"
+              type="number"
+              value={singleInvoiceThreshold}
+              onChange={(e) => setSingleInvoiceThreshold(e.target.value)}
+              className="bg-white border-gray-200"
+              data-testid="input-single-invoice-threshold"
+            />
+            <p className="text-sm text-gray-500">
+              Any single invoice above this triggers HIGH_VALUE treatment
+            </p>
+          </div>
+        </div>
+      </div>
 
-      <Card className="card-glass">
-        <CardHeader>
-          <CardTitle className="text-xl font-bold flex items-center">
-            <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
-              <Timer className="h-5 w-5 text-[#17B6C3]" />
-            </div>
-            Contact Frequency & Cooldowns
-          </CardTitle>
-          <CardDescription className="text-base">
-            Control how often AI contacts customers to avoid over-communication.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-3 gap-6">
+      <div className="py-8 border-b border-gray-200">
+        <div className="flex items-center mb-1">
+          <Timer className="h-5 w-5 text-[#17B6C3] mr-2" />
+          <h2 className="text-lg font-semibold text-gray-900">Contact Frequency & Cooldowns</h2>
+        </div>
+        <p className="text-sm text-gray-500 mb-6">
+          Control how often AI contacts customers to avoid over-communication.
+        </p>
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="space-y-2">
               <Label htmlFor="emailCooldown">Email Cooldown (days)</Label>
               <Input 
@@ -280,7 +261,7 @@ function PlaybookTabContent() {
                 max="30"
                 value={emailCooldown}
                 onChange={(e) => setEmailCooldown(e.target.value)}
-                className="bg-white/70 border-gray-200/30"
+                className="bg-white border-gray-200"
                 data-testid="input-email-cooldown"
               />
             </div>
@@ -293,7 +274,7 @@ function PlaybookTabContent() {
                 max="30"
                 value={smsCooldown}
                 onChange={(e) => setSmsCooldown(e.target.value)}
-                className="bg-white/70 border-gray-200/30"
+                className="bg-white border-gray-200"
                 data-testid="input-sms-cooldown"
               />
             </div>
@@ -306,87 +287,80 @@ function PlaybookTabContent() {
                 max="30"
                 value={voiceCooldown}
                 onChange={(e) => setVoiceCooldown(e.target.value)}
-                className="bg-white/70 border-gray-200/30"
+                className="bg-white border-gray-200"
                 data-testid="input-voice-cooldown"
               />
             </div>
           </div>
           
-          <Separator />
-          
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="maxTouches">Max Touches per 14-day Window</Label>
-              <Input 
-                id="maxTouches"
-                type="number"
-                min="1"
-                max="10"
-                value={maxTouchesPerWindow}
-                onChange={(e) => setMaxTouchesPerWindow(e.target.value)}
-                className="bg-white/70 border-gray-200/30"
-                data-testid="input-max-touches"
-              />
-              <p className="text-sm text-muted-foreground">
-                Maximum outbound contacts per customer within any 14-day period
-              </p>
-            </div>
-            <div className="space-y-4">
-              <Label>Business Hours for Voice Calls</Label>
-              <div className="flex items-center gap-4">
+          <div className="border-t border-gray-100 pt-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="maxTouches">Max Touches per 14-day Window</Label>
                 <Input 
-                  type="time"
-                  value={businessHoursStart}
-                  onChange={(e) => setBusinessHoursStart(e.target.value)}
-                  className="bg-white/70 border-gray-200/30 w-32"
-                  data-testid="input-business-hours-start"
+                  id="maxTouches"
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={maxTouchesPerWindow}
+                  onChange={(e) => setMaxTouchesPerWindow(e.target.value)}
+                  className="bg-white border-gray-200"
+                  data-testid="input-max-touches"
                 />
-                <span className="text-muted-foreground">to</span>
-                <Input 
-                  type="time"
-                  value={businessHoursEnd}
-                  onChange={(e) => setBusinessHoursEnd(e.target.value)}
-                  className="bg-white/70 border-gray-200/30 w-32"
-                  data-testid="input-business-hours-end"
-                />
+                <p className="text-sm text-gray-500">
+                  Maximum outbound contacts per customer within any 14-day period
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>Business Hours for Voice Calls</Label>
+                <div className="flex items-center gap-4">
+                  <Input 
+                    type="time"
+                    value={businessHoursStart}
+                    onChange={(e) => setBusinessHoursStart(e.target.value)}
+                    className="bg-white border-gray-200 w-32"
+                    data-testid="input-business-hours-start"
+                  />
+                  <span className="text-gray-500">to</span>
+                  <Input 
+                    type="time"
+                    value={businessHoursEnd}
+                    onChange={(e) => setBusinessHoursEnd(e.target.value)}
+                    className="bg-white border-gray-200 w-32"
+                    data-testid="input-business-hours-end"
+                  />
+                </div>
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <Card className="card-glass">
-        <CardHeader>
-          <CardTitle className="text-xl font-bold flex items-center">
-            <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
-              <ShieldAlert className="h-5 w-5 text-[#17B6C3]" />
-            </div>
-            Late Payment Legislation
-          </CardTitle>
-          <CardDescription className="text-base">
-            Enable statutory interest and compensation notifications for recovery-stage invoices.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <Label htmlFor="latePayment">Enable Late Payment Legislation</Label>
-              <p className="text-sm text-muted-foreground">
-                When enabled, AI will include statutory interest (Bank of England base rate + 8%) 
-                and compensation information in recovery-stage communications.
-              </p>
-            </div>
-            <Switch 
-              id="latePayment"
-              checked={useLatePamentLegislation}
-              onCheckedChange={setUseLatePamentLegislation}
-              data-testid="switch-late-payment-legislation"
-            />
+      <div className="py-8 border-b border-gray-200">
+        <div className="flex items-center mb-1">
+          <ShieldAlert className="h-5 w-5 text-[#17B6C3] mr-2" />
+          <h2 className="text-lg font-semibold text-gray-900">Late Payment Legislation</h2>
+        </div>
+        <p className="text-sm text-gray-500 mb-6">
+          Enable statutory interest and compensation notifications for recovery-stage invoices.
+        </p>
+        <div className="flex items-center justify-between py-4">
+          <div>
+            <p className="font-medium text-gray-900">Enable Late Payment Legislation</p>
+            <p className="text-sm text-gray-500">
+              When enabled, AI will include statutory interest (Bank of England base rate + 8%) 
+              and compensation information in recovery-stage communications.
+            </p>
           </div>
-        </CardContent>
-      </Card>
+          <Switch 
+            checked={useLatePamentLegislation}
+            onCheckedChange={setUseLatePamentLegislation}
+            data-testid="switch-late-payment-legislation"
+          />
+        </div>
+      </div>
 
-      <div className="flex justify-end">
+      <div className="py-8">
         <Button 
           onClick={handleSave}
           disabled={updatePlaybookMutation.isPending}
@@ -400,7 +374,6 @@ function PlaybookTabContent() {
   );
 }
 
-// Test Tab Component
 function TestTabContent() {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -411,7 +384,6 @@ function TestTabContent() {
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [isGeneratingMockData, setIsGeneratingMockData] = useState(false);
   
-  // Static test data for communications
   const [testEmail, setTestEmail] = useState<string>(() => 
     localStorage.getItem('nexus-test-email') || "test@example.com"
   );
@@ -422,7 +394,6 @@ function TestTabContent() {
     localStorage.getItem('nexus-test-telephone') || "+1234567890"
   );
   
-  // Retell voice call variables
   const [customerName, setCustomerName] = useState<string>(() => 
     localStorage.getItem('nexus-test-customer-name') || "John Smith"
   );
@@ -454,8 +425,6 @@ function TestTabContent() {
     localStorage.getItem('nexus-test-demo-message') || "This is a professional collection call regarding outstanding invoices."
   );
 
-
-  // Save to localStorage whenever values change
   useEffect(() => {
     localStorage.setItem('nexus-test-email', testEmail);
   }, [testEmail]);
@@ -632,21 +601,21 @@ function TestTabContent() {
   const handleDemoSetup = async () => {
     setIsDemoSetup(true);
     try {
-      const response = await apiRequest("POST", "/api/demo/setup-retell", {});
+      const response = await apiRequest("POST", "/api/demo/setup-full");
       
       if (response.ok) {
         const data = await response.json();
         toast({
-          title: "Success",
-          description: data.message || "Retell AI demo configured successfully!",
+          title: "Demo Setup Complete",
+          description: data.message || "Demo data has been set up successfully.",
         });
       } else {
-        throw new Error("Failed to setup demo");
+        throw new Error("Failed to set up demo data");
       }
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to setup Retell AI demo. Please try again.",
+        description: "Failed to set up demo data. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -654,26 +623,24 @@ function TestTabContent() {
     }
   };
 
-  const handleRegenerateData = async () => {
+  const handleRegenerate = async () => {
     setIsRegenerating(true);
     try {
-      const response = await apiRequest("POST", "/api/mock-data/generate", {});
+      const response = await apiRequest("POST", "/api/demo/regenerate");
       
       if (response.ok) {
+        const data = await response.json();
         toast({
-          title: "Data Regenerated",
-          description: "Mock data has been regenerated with overdue invoice dates",
+          title: "Success",
+          description: data.message || "Demo data has been regenerated.",
         });
-        
-        // Refresh the page data
-        window.location.reload();
       } else {
-        throw new Error("Failed to regenerate data");
+        throw new Error("Failed to regenerate demo data");
       }
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to regenerate mock data. Please try again.",
+        description: "Failed to regenerate demo data. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -684,22 +651,23 @@ function TestTabContent() {
   const handleGenerateMockData = async () => {
     setIsGeneratingMockData(true);
     try {
-      const response = await apiRequest("POST", "/api/mock-data/generate", {});
+      const response = await apiRequest("POST", "/api/mock-data/generate");
       
       if (response.ok) {
+        const data = await response.json();
+        queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
         toast({
           title: "Mock Data Generated",
-          description: "Successfully generated 80 clients and 1,800+ invoices with realistic AR data",
+          description: data.message || "Mock data has been generated successfully.",
         });
-        
-        // Refresh the page data
-        window.location.reload();
       } else {
         throw new Error("Failed to generate mock data");
       }
     } catch (error) {
       toast({
-        title: "Generation Failed",
+        title: "Error",
         description: "Failed to generate mock data. Please try again.",
         variant: "destructive",
       });
@@ -709,305 +677,457 @@ function TestTabContent() {
   };
 
   return (
-    <Card className="card-glass">
-      <CardHeader>
-        <CardTitle className="text-xl font-bold flex items-center">
-          <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
-            <TestTube className="h-5 w-5 text-[#17B6C3]" />
-          </div>
-          Contact Testing
-        </CardTitle>
-        <CardDescription className="text-base">
-          Test email, SMS, and voice communications with specific clients
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Contact Information */}
-        <div className="space-y-4">
-          <h4 className="font-semibold text-lg">Contact Information</h4>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="test-email">Email Address</Label>
-              <Input
-                id="test-email"
-                type="email"
-                placeholder="test@example.com"
-                value={testEmail}
-                onChange={(e) => setTestEmail(e.target.value)}
-                className="bg-white/70 border-gray-200/30"
-                data-testid="input-test-email"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="test-mobile">Mobile Number (SMS)</Label>
-              <Input
-                id="test-mobile"
-                type="tel"
-                placeholder="+1234567890"
-                value={testMobile}
-                onChange={(e) => setTestMobile(e.target.value)}
-                className="bg-white/70 border-gray-200/30"
-                data-testid="input-test-mobile"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="test-telephone">Telephone (Voice)</Label>
-              <Input
-                id="test-telephone"
-                type="tel"
-                placeholder="+1234567890"
-                value={testTelephone}
-                onChange={(e) => setTestTelephone(e.target.value)}
-                className="bg-white/70 border-gray-200/30"
-                data-testid="input-test-telephone"
-              />
-            </div>
-          </div>
+    <div className="space-y-0">
+      <div className="py-8 border-b border-gray-200">
+        <div className="flex items-center mb-1">
+          <TestTube className="h-5 w-5 text-[#17B6C3] mr-2" />
+          <h2 className="text-lg font-semibold text-gray-900">Communication Testing</h2>
         </div>
-
-
-        {/* Contact Test Variables */}
-        <div className="space-y-4">
-          <h4 className="font-semibold text-lg">Contact Test Variables</h4>
-          <p className="text-sm text-gray-600">Configure the data that will be used for contact testing</p>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="customer-name">Customer Name</Label>
-              <Input
-                id="customer-name"
-                type="text"
-                placeholder="John Smith"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                className="bg-white/70 border-gray-200/30"
-                data-testid="input-customer-name"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="company-name">Company Name</Label>
-              <Input
-                id="company-name"
-                type="text"
-                placeholder="ABC Corporation"
-                value={companyName}
-                onChange={(e) => setCompanyName(e.target.value)}
-                className="bg-white/70 border-gray-200/30"
-                data-testid="input-company-name"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="invoice-number">Invoice Number</Label>
-              <Input
-                id="invoice-number"
-                type="text"
-                placeholder="INV-12345"
-                value={invoiceNumber}
-                onChange={(e) => setInvoiceNumber(e.target.value)}
-                className="bg-white/70 border-gray-200/30"
-                data-testid="input-invoice-number"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="invoice-amount">Invoice Amount</Label>
-              <Input
-                id="invoice-amount"
-                type="number"
-                step="0.01"
-                placeholder="2500.00"
-                value={invoiceAmount}
-                onChange={(e) => setInvoiceAmount(e.target.value)}
-                className="bg-white/70 border-gray-200/30"
-                data-testid="input-invoice-amount"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="total-outstanding">Total Outstanding</Label>
-              <Input
-                id="total-outstanding"
-                type="number"
-                step="0.01"
-                placeholder="5000.00"
-                value={totalOutstanding}
-                onChange={(e) => setTotalOutstanding(e.target.value)}
-                className="bg-white/70 border-gray-200/30"
-                data-testid="input-total-outstanding"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="days-overdue">Days Overdue</Label>
-              <Input
-                id="days-overdue"
-                type="number"
-                placeholder="45"
-                value={daysOverdue}
-                onChange={(e) => setDaysOverdue(e.target.value)}
-                className="bg-white/70 border-gray-200/30"
-                data-testid="input-days-overdue"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="invoice-count">Invoice Count</Label>
-              <Input
-                id="invoice-count"
-                type="number"
-                placeholder="3"
-                value={invoiceCount}
-                onChange={(e) => setInvoiceCount(e.target.value)}
-                className="bg-white/70 border-gray-200/30"
-                data-testid="input-invoice-count"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="due-date">Due Date</Label>
-              <Input
-                id="due-date"
-                type="text"
-                placeholder="7/15/2025"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                className="bg-white/70 border-gray-200/30"
-                data-testid="input-due-date"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="organisation-name">Organisation Name</Label>
-              <Input
-                id="organisation-name"
-                type="text"
-                placeholder="Qashivo"
-                value={organisationName}
-                onChange={(e) => setOrganisationName(e.target.value)}
-                className="bg-white/70 border-gray-200/30"
-                data-testid="input-organisation-name"
-              />
-            </div>
-          </div>
-        </div>
-
-
-        <Separator />
-
-        {/* Test Actions */}
-        <div className="space-y-4">
-          <h4 className="font-semibold text-lg">Test Communications</h4>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Email Test */}
-            <Card className="p-4">
-              <div className="flex items-center mb-3">
-                <Mail className="h-5 w-5 text-[#17B6C3] mr-2" />
-                <h5 className="font-medium">Email Test</h5>
+        <p className="text-sm text-gray-500 mb-6">
+          Test email, SMS, and voice call functionality with custom parameters
+        </p>
+        
+        <div className="space-y-6">
+          <div className="py-4 border-b border-gray-100">
+            <h3 className="font-medium text-gray-900 mb-4">Test Contact Details</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="testEmail">Email Address</Label>
+                <Input 
+                  id="testEmail"
+                  type="email"
+                  value={testEmail}
+                  onChange={(e) => setTestEmail(e.target.value)}
+                  className="bg-white border-gray-200"
+                  data-testid="input-test-email"
+                />
               </div>
-              <p className="text-sm text-gray-600 mb-3">
-                Send a test email reminder to the selected client
-              </p>
+              <div className="space-y-2">
+                <Label htmlFor="testMobile">Mobile (SMS)</Label>
+                <Input 
+                  id="testMobile"
+                  type="tel"
+                  value={testMobile}
+                  onChange={(e) => setTestMobile(e.target.value)}
+                  className="bg-white border-gray-200"
+                  data-testid="input-test-mobile"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="testTelephone">Telephone (Voice)</Label>
+                <Input 
+                  id="testTelephone"
+                  type="tel"
+                  value={testTelephone}
+                  onChange={(e) => setTestTelephone(e.target.value)}
+                  className="bg-white border-gray-200"
+                  data-testid="input-test-telephone"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="py-4 border-b border-gray-100">
+            <h3 className="font-medium text-gray-900 mb-4">Test Data Variables</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="customerName">Customer Name</Label>
+                <Input 
+                  id="customerName"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  className="bg-white border-gray-200"
+                  data-testid="input-customer-name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="companyName">Company Name</Label>
+                <Input 
+                  id="companyName"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  className="bg-white border-gray-200"
+                  data-testid="input-company-name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="invoiceNumber">Invoice Number</Label>
+                <Input 
+                  id="invoiceNumber"
+                  value={invoiceNumber}
+                  onChange={(e) => setInvoiceNumber(e.target.value)}
+                  className="bg-white border-gray-200"
+                  data-testid="input-invoice-number"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="invoiceAmount">Invoice Amount</Label>
+                <Input 
+                  id="invoiceAmount"
+                  type="number"
+                  value={invoiceAmount}
+                  onChange={(e) => setInvoiceAmount(e.target.value)}
+                  className="bg-white border-gray-200"
+                  data-testid="input-invoice-amount"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="daysOverdue">Days Overdue</Label>
+                <Input 
+                  id="daysOverdue"
+                  type="number"
+                  value={daysOverdue}
+                  onChange={(e) => setDaysOverdue(e.target.value)}
+                  className="bg-white border-gray-200"
+                  data-testid="input-days-overdue"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="organisationName">Organisation Name</Label>
+                <Input 
+                  id="organisationName"
+                  value={organisationName}
+                  onChange={(e) => setOrganisationName(e.target.value)}
+                  className="bg-white border-gray-200"
+                  data-testid="input-organisation-name"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="py-4">
+            <h3 className="font-medium text-gray-900 mb-4">Send Test Communications</h3>
+            <div className="flex flex-wrap gap-3">
               <Button 
                 onClick={handleTestEmail}
-                disabled={!testEmail || isTestingEmail}
-                className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                disabled={isTestingEmail}
+                className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
                 data-testid="button-test-email"
               >
-                {isTestingEmail ? "Sending..." : "Send Test Email"}
+                <Mail className="h-4 w-4 mr-2" />
+                {isTestingEmail ? 'Sending...' : 'Send Test Email'}
               </Button>
-            </Card>
-
-            {/* SMS Test */}
-            <Card className="p-4">
-              <div className="flex items-center mb-3">
-                <MessageSquare className="h-5 w-5 text-[#17B6C3] mr-2" />
-                <h5 className="font-medium">SMS Test</h5>
-              </div>
-              <p className="text-sm text-gray-600 mb-3">
-                Send a test SMS message to the selected client
-              </p>
               <Button 
                 onClick={handleTestSMS}
-                disabled={!testMobile || isTestingSMS}
-                className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                disabled={isTestingSMS}
+                className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
                 data-testid="button-test-sms"
               >
-                {isTestingSMS ? "Sending..." : "Send Test SMS"}
+                <MessageSquare className="h-4 w-4 mr-2" />
+                {isTestingSMS ? 'Sending...' : 'Send Test SMS'}
               </Button>
-            </Card>
-
-            {/* Voice Test */}
-            <Card className="p-4">
-              <div className="flex items-center mb-3">
-                <Phone className="h-5 w-5 text-[#17B6C3] mr-2" />
-                <h5 className="font-medium">Voice Test</h5>
-              </div>
-              <p className="text-sm text-gray-600 mb-3">
-                Initiate a test voice call to the selected client
-              </p>
               <Button 
-                onClick={() => handleTestVoice()}
-                disabled={!testTelephone || isTestingVoice}
-                className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                onClick={handleTestVoice}
+                disabled={isTestingVoice}
+                className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
                 data-testid="button-test-voice"
               >
-                {isTestingVoice ? "Calling..." : "Start Test Call"}
+                <Phone className="h-4 w-4 mr-2" />
+                {isTestingVoice ? 'Calling...' : 'Initiate Test Call'}
               </Button>
-            </Card>
-          </div>
-        </div>
-
-        {/* Status Information */}
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-          <div className="flex items-center">
-            <CheckCircle className="h-5 w-5 text-blue-600 mr-2" />
-            <h5 className="font-medium text-blue-800">Testing Information</h5>
-          </div>
-          <div className="mt-2 text-sm text-blue-700">
-            <p>• Email tests will send a sample payment reminder</p>
-            <p>• SMS tests will send a brief payment notification</p>
-            <p>• Voice tests will initiate a short AI-powered call</p>
-            <p>• All tests are clearly marked as test communications</p>
-          </div>
-        </div>
-
-        {/* Generate Mock Data */}
-        <div className="mt-8 pt-6 border-t border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <h4 className="font-semibold text-lg">Generate Mock Data</h4>
-              <p className="text-sm text-gray-600 mt-1">
-                Generate 80 clients and 1,800+ realistic AR invoices for testing purposes
-              </p>
             </div>
-            <Button
-              onClick={handleGenerateMockData}
-              disabled={isGeneratingMockData}
-              variant="outline"
-              size="sm"
-              className="bg-[#17B6C3]/10 hover:bg-[#17B6C3]/20 text-[#17B6C3] border-[#17B6C3]/30"
-              data-testid="button-generate-mock-data"
-            >
-              {isGeneratingMockData ? (
-                <div className="w-4 h-4 border-2 border-[#17B6C3] border-t-transparent rounded-full animate-spin mr-2" />
-              ) : (
-                <Database className="h-4 w-4 mr-2" />
-              )}
-              Generate Mock Data
-            </Button>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+
+      <div className="py-8">
+        <div className="flex items-center mb-1">
+          <Database className="h-5 w-5 text-[#17B6C3] mr-2" />
+          <h2 className="text-lg font-semibold text-gray-900">Demo Data Management</h2>
+        </div>
+        <p className="text-sm text-gray-500 mb-6">
+          Set up and manage demo data for testing and demonstrations
+        </p>
+        
+        <div className="flex flex-wrap gap-3">
+          <Button 
+            onClick={handleDemoSetup}
+            disabled={isDemoSetup}
+            variant="outline"
+            className="border-gray-200"
+            data-testid="button-demo-setup"
+          >
+            <Zap className="h-4 w-4 mr-2" />
+            {isDemoSetup ? 'Setting up...' : 'Setup Full Demo'}
+          </Button>
+          <Button 
+            onClick={handleRegenerate}
+            disabled={isRegenerating}
+            variant="outline"
+            className="border-gray-200"
+            data-testid="button-regenerate"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isRegenerating ? 'animate-spin' : ''}`} />
+            {isRegenerating ? 'Regenerating...' : 'Regenerate Data'}
+          </Button>
+          <Button 
+            onClick={handleGenerateMockData}
+            disabled={isGeneratingMockData}
+            variant="outline"
+            className="border-gray-200"
+            data-testid="button-generate-mock"
+          >
+            <Database className="h-4 w-4 mr-2" />
+            {isGeneratingMockData ? 'Generating...' : 'Generate Mock Data'}
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
 
-// Automation Tab Component
+function DemoDataTabContent() {
+  const { toast } = useToast();
+  const [isResetting, setIsResetting] = useState(false);
+  const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
+  const [isGeneratingInvoice, setIsGeneratingInvoice] = useState(false);
+  const [isSimulatingPayment, setIsSimulatingPayment] = useState(false);
+
+  const { data: stats, isLoading: isLoadingStats, refetch: refetchStats } = useQuery<{
+    customers: number;
+    invoices: number;
+    totalOutstanding: number;
+    totalPaid: number;
+  }>({
+    queryKey: ['/api/demo-data/stats'],
+  });
+
+  const handleResetAll = async () => {
+    if (!confirm('Are you sure you want to reset all demo data? This action cannot be undone.')) {
+      return;
+    }
+    
+    setIsResetting(true);
+    try {
+      const response = await apiRequest("POST", "/api/demo-data/reset-all");
+      if (response.ok) {
+        const data = await response.json();
+        queryClient.invalidateQueries();
+        refetchStats();
+        toast({
+          title: "Data Reset Complete",
+          description: data.message || "All demo data has been reset successfully.",
+        });
+      } else {
+        throw new Error("Failed to reset data");
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to reset demo data. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
+  const handleCreateDemoCustomer = async () => {
+    setIsCreatingCustomer(true);
+    try {
+      const response = await apiRequest("POST", "/api/demo-data/create-demo-customer");
+      if (response.ok) {
+        const data = await response.json();
+        queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
+        refetchStats();
+        toast({
+          title: "Customer Created",
+          description: data.message || "Demo customer created successfully.",
+        });
+      } else {
+        throw new Error("Failed to create customer");
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create demo customer. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreatingCustomer(false);
+    }
+  };
+
+  const handleGenerateInvoice = async () => {
+    setIsGeneratingInvoice(true);
+    try {
+      const response = await apiRequest("POST", "/api/demo-data/generate-invoice");
+      if (response.ok) {
+        const data = await response.json();
+        queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
+        refetchStats();
+        toast({
+          title: "Invoice Generated",
+          description: data.message || "Demo invoice generated successfully.",
+        });
+      } else {
+        throw new Error("Failed to generate invoice");
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to generate demo invoice. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingInvoice(false);
+    }
+  };
+
+  const handleSimulatePayment = async () => {
+    setIsSimulatingPayment(true);
+    try {
+      const response = await apiRequest("POST", "/api/demo-data/simulate-payment");
+      if (response.ok) {
+        const data = await response.json();
+        queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/payments'] });
+        refetchStats();
+        toast({
+          title: "Payment Simulated",
+          description: data.message || "Payment simulated successfully.",
+        });
+      } else {
+        throw new Error("Failed to simulate payment");
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to simulate payment. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSimulatingPayment(false);
+    }
+  };
+
+  return (
+    <div className="space-y-0">
+      <div className="py-8 border-b border-gray-200">
+        <div className="flex items-center mb-1">
+          <Database className="h-5 w-5 text-[#17B6C3] mr-2" />
+          <h2 className="text-lg font-semibold text-gray-900">Demo Data Statistics</h2>
+        </div>
+        <p className="text-sm text-gray-500 mb-6">
+          Current demo data overview
+        </p>
+        
+        {isLoadingStats ? (
+          <div className="animate-pulse grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-20 bg-gray-100 rounded-lg"></div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <p className="text-sm text-gray-500">Customers</p>
+              <p className="text-2xl font-bold text-gray-900">{stats?.customers ?? 0}</p>
+            </div>
+            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <p className="text-sm text-gray-500">Invoices</p>
+              <p className="text-2xl font-bold text-gray-900">{stats?.invoices ?? 0}</p>
+            </div>
+            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <p className="text-sm text-gray-500">Outstanding</p>
+              <p className="text-2xl font-bold text-gray-900">
+                £{(stats?.totalOutstanding ?? 0).toLocaleString()}
+              </p>
+            </div>
+            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <p className="text-sm text-gray-500">Paid</p>
+              <p className="text-2xl font-bold text-green-600">
+                £{(stats?.totalPaid ?? 0).toLocaleString()}
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="py-8 border-b border-gray-200">
+        <div className="flex items-center mb-1">
+          <PlusCircle className="h-5 w-5 text-[#17B6C3] mr-2" />
+          <h2 className="text-lg font-semibold text-gray-900">Create Demo Data</h2>
+        </div>
+        <p className="text-sm text-gray-500 mb-6">
+          Generate new demo customers, invoices, and simulate payments
+        </p>
+        
+        <div className="space-y-4">
+          <div className="flex items-center justify-between py-4 border-b border-gray-100">
+            <div>
+              <p className="font-medium text-gray-900">Create Demo Customer</p>
+              <p className="text-sm text-gray-500">Add a new random demo customer to the system</p>
+            </div>
+            <Button 
+              onClick={handleCreateDemoCustomer}
+              disabled={isCreatingCustomer}
+              className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+              data-testid="button-create-demo-customer"
+            >
+              <UserPlus className="h-4 w-4 mr-2" />
+              {isCreatingCustomer ? 'Creating...' : 'Create Customer'}
+            </Button>
+          </div>
+
+          <div className="flex items-center justify-between py-4 border-b border-gray-100">
+            <div>
+              <p className="font-medium text-gray-900">Generate Invoice</p>
+              <p className="text-sm text-gray-500">Create a new demo invoice for an existing customer</p>
+            </div>
+            <Button 
+              onClick={handleGenerateInvoice}
+              disabled={isGeneratingInvoice}
+              className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+              data-testid="button-generate-invoice"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              {isGeneratingInvoice ? 'Generating...' : 'Generate Invoice'}
+            </Button>
+          </div>
+
+          <div className="flex items-center justify-between py-4">
+            <div>
+              <p className="font-medium text-gray-900">Simulate Payment</p>
+              <p className="text-sm text-gray-500">Simulate a payment on a random outstanding invoice</p>
+            </div>
+            <Button 
+              onClick={handleSimulatePayment}
+              disabled={isSimulatingPayment}
+              className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+              data-testid="button-simulate-payment"
+            >
+              <CreditCard className="h-4 w-4 mr-2" />
+              {isSimulatingPayment ? 'Simulating...' : 'Simulate Payment'}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="py-8">
+        <div className="flex items-center mb-1">
+          <RotateCcw className="h-5 w-5 text-red-500 mr-2" />
+          <h2 className="text-lg font-semibold text-gray-900">Reset Data</h2>
+        </div>
+        <p className="text-sm text-gray-500 mb-6">
+          Completely reset all demo data. This action cannot be undone.
+        </p>
+        
+        <Button 
+          onClick={handleResetAll}
+          disabled={isResetting}
+          variant="destructive"
+          className="bg-red-600 hover:bg-red-700 text-white"
+          data-testid="button-reset-all"
+        >
+          <Trash2 className="h-4 w-4 mr-2" />
+          {isResetting ? 'Resetting...' : 'Reset All Data'}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function AutomationTabContent() {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -1058,13 +1178,11 @@ function AutomationTabContent() {
     };
   }
 
-  // Fetch current tenant settings
   const { data: tenant, isLoading } = useQuery<TenantData>({
     queryKey: ['/api/tenant'],
     enabled: !!user,
   });
 
-  // Initialize form with default values
   const form = useForm<PolicyFormData>({
     resolver: zodResolver(policySchema),
     defaultValues: {
@@ -1109,7 +1227,6 @@ function AutomationTabContent() {
     } : undefined,
   });
 
-  // Update settings mutation
   const updateSettingsMutation = useMutation({
     mutationFn: async (data: PolicyFormData) => {
       const response = await apiRequest('PATCH', '/api/automation/policy-settings', data);
@@ -1150,124 +1267,113 @@ function AutomationTabContent() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Info Banner */}
-      <Alert className="bg-blue-50/50 border-blue-200">
+    <div className="space-y-0">
+      <Alert className="mb-6 bg-blue-50 border-blue-200">
         <Bot className="h-4 w-4 text-blue-600" />
-        <AlertDescription className="text-blue-900">
+        <AlertDescription className="text-blue-800">
           <strong>Supervised Autonomy:</strong> AI generates a daily plan overnight, you approve it each morning, then AI executes throughout the day. This gives you control while saving 2-3 hours daily.
         </AlertDescription>
       </Alert>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          {/* Automation Mode */}
-          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Zap className="h-5 w-5 text-[#17B6C3]" />
-                Automation Mode
-              </CardTitle>
-              <CardDescription>
-                Choose between manual approval (supervised) or full automation
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <FormField
-                control={form.control}
-                name="approvalMode"
-                render={({ field }) => (
-                  <FormItem>
-                    <div className="flex items-center justify-between rounded-lg border p-4 bg-white/70">
-                      <div className="space-y-0.5 flex-1">
-                        <FormLabel className="text-base font-semibold">
-                          {field.value === 'manual' ? 'Manual Approval (Recommended)' : 'Full Automation'}
-                        </FormLabel>
-                        <FormDescription>
-                          {field.value === 'manual' 
-                            ? 'AI generates plan, you approve daily, AI executes (10 min/day supervision)'
-                            : 'AI generates and executes plan automatically without approval'}
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value === 'auto'}
-                          onCheckedChange={(checked) => field.onChange(checked ? 'auto' : 'manual')}
-                          data-testid="switch-approval-mode"
-                        />
-                      </FormControl>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-0">
+          <div className="py-8 border-b border-gray-200">
+            <div className="flex items-center mb-1">
+              <Zap className="h-5 w-5 text-[#17B6C3] mr-2" />
+              <h2 className="text-lg font-semibold text-gray-900">Automation Mode</h2>
+            </div>
+            <p className="text-sm text-gray-500 mb-6">
+              Choose between manual approval (supervised) or full automation
+            </p>
+            
+            <FormField
+              control={form.control}
+              name="approvalMode"
+              render={({ field }) => (
+                <FormItem>
+                  <div className="flex items-center justify-between py-4 border border-gray-200 rounded-lg px-4 bg-gray-50">
+                    <div className="space-y-0.5 flex-1">
+                      <FormLabel className="text-base font-semibold text-gray-900">
+                        {field.value === 'manual' ? 'Manual Approval (Recommended)' : 'Full Automation'}
+                      </FormLabel>
+                      <FormDescription className="text-gray-500">
+                        {field.value === 'manual' 
+                          ? 'AI generates plan, you approve daily, AI executes (10 min/day supervision)'
+                          : 'AI generates and executes plan automatically without approval'}
+                      </FormDescription>
                     </div>
-                    {field.value === 'auto' && (
-                      <Alert variant="destructive" className="bg-yellow-50 border-yellow-300">
-                        <AlertCircle className="h-4 w-4 text-yellow-600" />
-                        <AlertDescription className="text-yellow-900">
-                          Full automation mode executes all actions without human review. Use with caution.
-                        </AlertDescription>
-                      </Alert>
-                    )}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-          </Card>
-
-          {/* Execution Timing */}
-          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-[#17B6C3]" />
-                Execution Timing
-              </CardTitle>
-              <CardDescription>
-                Set when approved actions should be executed each day
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <FormField
-                control={form.control}
-                name="executionTime"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Execution Time (24-hour format)</FormLabel>
                     <FormControl>
-                      <Input
-                        type="time"
-                        placeholder="09:00"
-                        className="bg-white/70"
-                        data-testid="input-execution-time"
-                        {...field}
+                      <Switch
+                        checked={field.value === 'auto'}
+                        onCheckedChange={(checked) => field.onChange(checked ? 'auto' : 'manual')}
+                        data-testid="switch-approval-mode"
                       />
                     </FormControl>
-                    <FormDescription>
-                      Actions will be executed at this time each day. Recommended: 09:00 (9 AM)
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-          </Card>
+                  </div>
+                  {field.value === 'auto' && (
+                    <Alert className="mt-4 bg-yellow-50 border-yellow-300">
+                      <AlertCircle className="h-4 w-4 text-yellow-600" />
+                      <AlertDescription className="text-yellow-900">
+                        Full automation mode executes all actions without human review. Use with caution.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
-          {/* Daily Limits */}
-          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-[#17B6C3]" />
-                Daily Limits by Channel
-              </CardTitle>
-              <CardDescription>
-                Maximum number of actions per channel to prevent overwhelming customers
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          <div className="py-8 border-b border-gray-200">
+            <div className="flex items-center mb-1">
+              <Clock className="h-5 w-5 text-[#17B6C3] mr-2" />
+              <h2 className="text-lg font-semibold text-gray-900">Execution Timing</h2>
+            </div>
+            <p className="text-sm text-gray-500 mb-6">
+              Set when approved actions should be executed each day
+            </p>
+            
+            <FormField
+              control={form.control}
+              name="executionTime"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Execution Time (24-hour format)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="time"
+                      placeholder="09:00"
+                      className="bg-white border-gray-200 max-w-xs"
+                      data-testid="input-execution-time"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription className="text-gray-500">
+                    Actions will be executed at this time each day. Recommended: 09:00 (9 AM)
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="py-8 border-b border-gray-200">
+            <div className="flex items-center mb-1">
+              <TrendingUp className="h-5 w-5 text-[#17B6C3] mr-2" />
+              <h2 className="text-lg font-semibold text-gray-900">Daily Limits by Channel</h2>
+            </div>
+            <p className="text-sm text-gray-500 mb-6">
+              Maximum number of actions per channel to prevent overwhelming customers
+            </p>
+            
+            <div className="space-y-6">
               <FormField
                 control={form.control}
                 name="dailyLimits.email"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-2">
-                      <Mail className="h-4 w-4" />
+                      <Mail className="h-4 w-4 text-gray-500" />
                       Email Limit
                     </FormLabel>
                     <FormControl>
@@ -1275,13 +1381,13 @@ function AutomationTabContent() {
                         type="number"
                         min="0"
                         max="500"
-                        className="bg-white/70"
+                        className="bg-white border-gray-200 max-w-xs"
                         data-testid="input-limit-email"
                         {...field}
                         onChange={(e) => field.onChange(parseInt(e.target.value))}
                       />
                     </FormControl>
-                    <FormDescription>
+                    <FormDescription className="text-gray-500">
                       Maximum emails sent per day (0-500)
                     </FormDescription>
                     <FormMessage />
@@ -1295,7 +1401,7 @@ function AutomationTabContent() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-2">
-                      <MessageSquare className="h-4 w-4" />
+                      <MessageSquare className="h-4 w-4 text-gray-500" />
                       SMS Limit
                     </FormLabel>
                     <FormControl>
@@ -1303,13 +1409,13 @@ function AutomationTabContent() {
                         type="number"
                         min="0"
                         max="200"
-                        className="bg-white/70"
+                        className="bg-white border-gray-200 max-w-xs"
                         data-testid="input-limit-sms"
                         {...field}
                         onChange={(e) => field.onChange(parseInt(e.target.value))}
                       />
                     </FormControl>
-                    <FormDescription>
+                    <FormDescription className="text-gray-500">
                       Maximum SMS messages sent per day (0-200)
                     </FormDescription>
                     <FormMessage />
@@ -1323,7 +1429,7 @@ function AutomationTabContent() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-2">
-                      <Phone className="h-4 w-4" />
+                      <Phone className="h-4 w-4 text-gray-500" />
                       Voice Call Limit
                     </FormLabel>
                     <FormControl>
@@ -1331,42 +1437,40 @@ function AutomationTabContent() {
                         type="number"
                         min="0"
                         max="100"
-                        className="bg-white/70"
+                        className="bg-white border-gray-200 max-w-xs"
                         data-testid="input-limit-voice"
                         {...field}
                         onChange={(e) => field.onChange(parseInt(e.target.value))}
                       />
                     </FormControl>
-                    <FormDescription>
+                    <FormDescription className="text-gray-500">
                       Maximum voice calls made per day (0-100)
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          {/* Confidence Thresholds */}
-          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-[#17B6C3]" />
-                AI Confidence Thresholds
-              </CardTitle>
-              <CardDescription>
-                Minimum confidence scores required for automated execution
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          <div className="py-8 border-b border-gray-200">
+            <div className="flex items-center mb-1">
+              <CheckCircle className="h-5 w-5 text-[#17B6C3] mr-2" />
+              <h2 className="text-lg font-semibold text-gray-900">AI Confidence Thresholds</h2>
+            </div>
+            <p className="text-sm text-gray-500 mb-6">
+              Minimum confidence scores required for automated execution
+            </p>
+            
+            <div className="space-y-6">
               <FormField
                 control={form.control}
                 name="minConfidence.email"
                 render={({ field }) => (
                   <FormItem>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between mb-2">
                       <FormLabel className="flex items-center gap-2">
-                        <Mail className="h-4 w-4" />
+                        <Mail className="h-4 w-4 text-gray-500" />
                         Email Confidence
                       </FormLabel>
                       <Badge variant="outline">{Math.round(field.value * 100)}%</Badge>
@@ -1377,13 +1481,13 @@ function AutomationTabContent() {
                         min="0"
                         max="1"
                         step="0.05"
-                        className="bg-white/70"
+                        className="bg-white max-w-md"
                         data-testid="slider-confidence-email"
                         {...field}
                         onChange={(e) => field.onChange(parseFloat(e.target.value))}
                       />
                     </FormControl>
-                    <FormDescription>
+                    <FormDescription className="text-gray-500">
                       Minimum AI confidence to auto-send emails (recommended: 80%)
                     </FormDescription>
                     <FormMessage />
@@ -1396,9 +1500,9 @@ function AutomationTabContent() {
                 name="minConfidence.sms"
                 render={({ field }) => (
                   <FormItem>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between mb-2">
                       <FormLabel className="flex items-center gap-2">
-                        <MessageSquare className="h-4 w-4" />
+                        <MessageSquare className="h-4 w-4 text-gray-500" />
                         SMS Confidence
                       </FormLabel>
                       <Badge variant="outline">{Math.round(field.value * 100)}%</Badge>
@@ -1409,13 +1513,13 @@ function AutomationTabContent() {
                         min="0"
                         max="1"
                         step="0.05"
-                        className="bg-white/70"
+                        className="bg-white max-w-md"
                         data-testid="slider-confidence-sms"
                         {...field}
                         onChange={(e) => field.onChange(parseFloat(e.target.value))}
                       />
                     </FormControl>
-                    <FormDescription>
+                    <FormDescription className="text-gray-500">
                       Minimum AI confidence to auto-send SMS (recommended: 85%)
                     </FormDescription>
                     <FormMessage />
@@ -1428,9 +1532,9 @@ function AutomationTabContent() {
                 name="minConfidence.voice"
                 render={({ field }) => (
                   <FormItem>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between mb-2">
                       <FormLabel className="flex items-center gap-2">
-                        <Phone className="h-4 w-4" />
+                        <Phone className="h-4 w-4 text-gray-500" />
                         Voice Call Confidence
                       </FormLabel>
                       <Badge variant="outline">{Math.round(field.value * 100)}%</Badge>
@@ -1441,42 +1545,40 @@ function AutomationTabContent() {
                         min="0"
                         max="1"
                         step="0.05"
-                        className="bg-white/70"
+                        className="bg-white max-w-md"
                         data-testid="slider-confidence-voice"
                         {...field}
                         onChange={(e) => field.onChange(parseFloat(e.target.value))}
                       />
                     </FormControl>
-                    <FormDescription>
+                    <FormDescription className="text-gray-500">
                       Minimum AI confidence to auto-make calls (recommended: 90%)
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          {/* Exception Rules */}
-          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <ShieldAlert className="h-5 w-5 text-[#17B6C3]" />
-                Exception Rules
-              </CardTitle>
-              <CardDescription>
-                Automatically flag actions requiring manual review
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          <div className="py-8 border-b border-gray-200">
+            <div className="flex items-center mb-1">
+              <ShieldAlert className="h-5 w-5 text-[#17B6C3] mr-2" />
+              <h2 className="text-lg font-semibold text-gray-900">Exception Rules</h2>
+            </div>
+            <p className="text-sm text-gray-500 mb-6">
+              Automatically flag actions requiring manual review
+            </p>
+            
+            <div className="space-y-4">
               <FormField
                 control={form.control}
                 name="exceptionRules.flagFirstContact"
                 render={({ field }) => (
-                  <FormItem className="flex items-center justify-between rounded-lg border p-4 bg-white/70">
+                  <FormItem className="flex items-center justify-between py-4 border-b border-gray-100">
                     <div className="space-y-0.5">
-                      <FormLabel className="text-base">Flag First Contact</FormLabel>
-                      <FormDescription>
+                      <FormLabel className="text-base font-medium text-gray-900">Flag First Contact</FormLabel>
+                      <FormDescription className="text-gray-500">
                         Require approval for first-time contact with new customers
                       </FormDescription>
                     </div>
@@ -1495,21 +1597,21 @@ function AutomationTabContent() {
                 control={form.control}
                 name="exceptionRules.flagHighValue"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>High Value Threshold</FormLabel>
+                  <FormItem className="py-4 border-b border-gray-100">
+                    <FormLabel className="font-medium text-gray-900">High Value Threshold</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
                         min="0"
                         step="1000"
                         placeholder="10000"
-                        className="bg-white/70"
+                        className="bg-white border-gray-200 max-w-xs"
                         data-testid="input-exception-high-value"
                         {...field}
                         onChange={(e) => field.onChange(parseInt(e.target.value))}
                       />
                     </FormControl>
-                    <FormDescription>
+                    <FormDescription className="text-gray-500">
                       Flag invoices above this amount (£) for manual review
                     </FormDescription>
                     <FormMessage />
@@ -1521,10 +1623,10 @@ function AutomationTabContent() {
                 control={form.control}
                 name="exceptionRules.flagDisputeKeywords"
                 render={({ field }) => (
-                  <FormItem className="flex items-center justify-between rounded-lg border p-4 bg-white/70">
+                  <FormItem className="flex items-center justify-between py-4 border-b border-gray-100">
                     <div className="space-y-0.5">
-                      <FormLabel className="text-base">Flag Dispute Keywords</FormLabel>
-                      <FormDescription>
+                      <FormLabel className="text-base font-medium text-gray-900">Flag Dispute Keywords</FormLabel>
+                      <FormDescription className="text-gray-500">
                         Require approval if customer messages contain dispute language
                       </FormDescription>
                     </div>
@@ -1543,10 +1645,10 @@ function AutomationTabContent() {
                 control={form.control}
                 name="exceptionRules.flagVipCustomers"
                 render={({ field }) => (
-                  <FormItem className="flex items-center justify-between rounded-lg border p-4 bg-white/70">
+                  <FormItem className="flex items-center justify-between py-4">
                     <div className="space-y-0.5">
-                      <FormLabel className="text-base">Flag VIP Customers</FormLabel>
-                      <FormDescription>
+                      <FormLabel className="text-base font-medium text-gray-900">Flag VIP Customers</FormLabel>
+                      <FormDescription className="text-gray-500">
                         Require approval for actions involving VIP/priority customers
                       </FormDescription>
                     </div>
@@ -1560,344 +1662,249 @@ function AutomationTabContent() {
                   </FormItem>
                 )}
               />
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          {/* Summary Preview */}
-          <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200/50 shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-lg">Current Configuration Summary</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 text-sm">
+          <div className="py-8 border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Current Configuration Summary</h3>
+            <div className="space-y-2 text-sm bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Mode:</span>
+                <Badge variant={approvalMode === 'manual' ? 'default' : 'destructive'}>
+                  {approvalMode === 'manual' ? 'Manual Approval' : 'Full Automation'}
+                </Badge>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Execution Time:</span>
+                <strong className="text-gray-900">{executionTime}</strong>
+              </div>
+              <div className="border-t border-gray-200 pt-2 mt-2">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Mode:</span>
-                  <Badge variant={approvalMode === 'manual' ? 'default' : 'destructive'}>
-                    {approvalMode === 'manual' ? 'Manual Approval' : 'Full Automation'}
-                  </Badge>
+                  <span className="text-gray-500">Daily Capacity:</span>
+                  <strong className="text-gray-900">{dailyLimits.email + dailyLimits.sms + dailyLimits.voice} actions/day</strong>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Execution Time:</span>
-                  <strong>{executionTime}</strong>
-                </div>
-                <Separator />
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Daily Capacity:</span>
-                  <strong>{dailyLimits.email + dailyLimits.sms + dailyLimits.voice} actions/day</strong>
+                <div className="flex justify-between pl-4 mt-1">
+                  <span className="text-gray-500">• Emails:</span>
+                  <span className="text-gray-900">{dailyLimits.email}</span>
                 </div>
                 <div className="flex justify-between pl-4">
-                  <span className="text-muted-foreground">• Emails:</span>
-                  <span>{dailyLimits.email}</span>
+                  <span className="text-gray-500">• SMS:</span>
+                  <span className="text-gray-900">{dailyLimits.sms}</span>
                 </div>
                 <div className="flex justify-between pl-4">
-                  <span className="text-muted-foreground">• SMS:</span>
-                  <span>{dailyLimits.sms}</span>
-                </div>
-                <div className="flex justify-between pl-4">
-                  <span className="text-muted-foreground">• Calls:</span>
-                  <span>{dailyLimits.voice}</span>
+                  <span className="text-gray-500">• Voice:</span>
+                  <span className="text-gray-900">{dailyLimits.voice}</span>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          {/* Save Button */}
-          <div className="flex justify-end gap-4">
-            <Button
+          <div className="py-8">
+            <Button 
               type="submit"
               disabled={updateSettingsMutation.isPending}
-              className="bg-[#17B6C3] hover:bg-[#1396A1] text-white px-8"
-              data-testid="button-save-settings"
+              className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+              data-testid="button-save-automation"
             >
-              {updateSettingsMutation.isPending ? 'Saving...' : 'Save Settings'}
+              {updateSettingsMutation.isPending ? 'Saving...' : 'Save Automation Settings'}
             </Button>
           </div>
         </form>
       </Form>
-
-      {/* Email Sender Setup - Moved from Workflows */}
-      <div className="mt-8">
-        <EmailSenderManagement />
-      </div>
     </div>
   );
 }
 
 export default function Settings() {
   const { toast } = useToast();
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user } = useAuth();
+  const { hasPermission } = usePermissions();
+  
+  const [organizationName, setOrganizationName] = useState<string>("");
+  const [organizationCurrency, setOrganizationCurrency] = useState<string>(DEFAULT_CURRENCY);
+  const [eomDay, setEomDay] = useState<string>("25");
   const [isConnecting, setIsConnecting] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const [autoSync, setAutoSync] = useState(true);
   const [isGeneratingMockData, setIsGeneratingMockData] = useState(false);
   const [isCleaningContacts, setIsCleaningContacts] = useState(false);
   
-  // Branding form state
-  const [companyName, setCompanyName] = useState("");
-  const [tagline, setTagline] = useState("");
-  
-  // Organization settings state
-  const [organizationName, setOrganizationName] = useState("");
-  const [organizationCurrency, setOrganizationCurrency] = useState(DEFAULT_CURRENCY);
-  const [eomDay, setEomDay] = useState<string>("31");
+  const [primaryColor, setPrimaryColor] = useState("#17B6C3");
+  const [logoUrl, setLogoUrl] = useState("");
 
-  // Xero sync settings state
-  const [autoSync, setAutoSync] = useState(true);
-
-  // Fetch tenant information
-  const { data: tenant } = useQuery<{
-    id: string;
-    name: string;
-    settings?: {
-      companyName?: string;
-      tagline?: string;
-      currency?: string;
-      eomDay?: string;
+  interface AccountingStatus {
+    connectedProvider?: {
+      name: string;
+      displayName: string;
+      organizationName?: string;
     };
-    xeroAccessToken?: string;
-    xeroTenantId?: string;
-  }>({
+  }
+  
+  interface SyncSettings {
+    lastSyncAt?: string;
+    autoSync?: boolean;
+  }
+  
+  interface TenantData {
+    name?: string;
+    currency?: string;
+    eomDay?: number;
+    primaryColor?: string;
+    logoUrl?: string;
+  }
+
+  const { data: accountingStatus } = useQuery<AccountingStatus>({
+    queryKey: ['/api/integrations/accounting/status'],
+  });
+
+  const { data: syncSettings } = useQuery<SyncSettings>({
+    queryKey: ['/api/sync/settings'],
+  });
+
+  const { data: tenant } = useQuery<TenantData>({
     queryKey: ['/api/tenant'],
     enabled: !!user,
   });
 
-  // Fetch accounting status
-  const { data: accountingStatus, isLoading: accountingStatusLoading } = useQuery<{
-    success: boolean;
-    connectedProvider?: {
-      name: string;
-      displayName: string;
-      type: string;
-      organizationName: string;
-      isConnected: boolean;
-    };
-    availableProviders: Array<{
-      name: string;
-      displayName: string;
-      type: string;
-    }>;
-  }>({
-    queryKey: ['/api/accounting/status'],
-    enabled: !!user && !!isAuthenticated,
-  });
-
-  // Fetch Xero sync settings (only if connected to any provider)
-  const { data: syncSettings } = useQuery<{
-    autoSync: boolean;
-    lastSyncAt?: string;
-  }>({
-    queryKey: ['/api/xero/sync/settings'],
-    enabled: !!user && !!accountingStatus?.connectedProvider,
-  });
-
-  // Initialize form values when tenant data loads
   useEffect(() => {
     if (tenant) {
-      setCompanyName(tenant.settings?.companyName || tenant.name || "Qashivo");
-      setTagline(tenant.settings?.tagline || "Debt Recovery Suite");
       setOrganizationName(tenant.name || "");
-      setOrganizationCurrency(tenant.settings?.currency || DEFAULT_CURRENCY);
-      setEomDay(tenant.settings?.eomDay || "31");
+      setOrganizationCurrency(tenant.currency || DEFAULT_CURRENCY);
+      setEomDay(tenant.eomDay?.toString() || "25");
+      setPrimaryColor(tenant.primaryColor || "#17B6C3");
+      setLogoUrl(tenant.logoUrl || "");
     }
   }, [tenant]);
 
-  // Initialize sync settings when loaded
   useEffect(() => {
     if (syncSettings) {
-      setAutoSync(syncSettings.autoSync);
+      setAutoSync(syncSettings.autoSync ?? true);
     }
   }, [syncSettings]);
 
-  // Mutation to update tenant settings
   const updateTenantMutation = useMutation({
-    mutationFn: async (data: { name?: string; settings?: any }) => {
-      const response = await fetch('/api/tenant/settings', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      return response.json();
+    mutationFn: async (data: Partial<TenantData>) => {
+      const response = await apiRequest('PATCH', '/api/tenant', data);
+      return await response.json();
     },
     onSuccess: () => {
+      toast({
+        title: 'Settings saved',
+        description: 'Organization settings have been updated successfully',
+      });
       queryClient.invalidateQueries({ queryKey: ['/api/tenant'] });
-      toast({
-        title: "Success",
-        description: "Branding settings updated successfully!",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to update branding settings.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Mutation to update Xero sync settings
-  const updateSyncSettingsMutation = useMutation({
-    mutationFn: async (data: { autoSync: boolean }) => {
-      const response = await apiRequest("PUT", "/api/xero/sync/settings", data);
-      return response;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/xero/sync/settings'] });
-      toast({
-        title: "Success",
-        description: "Sync settings updated successfully!",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to update sync settings.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Mutation to trigger manual Xero sync
-  const triggerSyncMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/xero/sync", {});
-      return response;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/xero/sync/settings'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
-      toast({
-        title: "Success",
-        description: "Xero sync started successfully! Data will be refreshed shortly.",
-      });
     },
     onError: (error: any) => {
       toast({
-        title: "Error",
-        description: error?.message || "Failed to start Xero sync.",
-        variant: "destructive",
+        title: 'Failed to save settings',
+        description: error.message || 'An error occurred while saving settings',
+        variant: 'destructive',
       });
     },
   });
 
-  const handleSaveBranding = () => {
-    updateTenantMutation.mutate({
-      settings: {
-        companyName,
-        tagline,
-      },
-    });
-  };
+  const updateSyncSettingsMutation = useMutation({
+    mutationFn: async (data: { autoSync: boolean }) => {
+      const response = await apiRequest('PATCH', '/api/sync/settings', data);
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Sync settings saved',
+        description: 'Auto-sync settings have been updated',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/sync/settings'] });
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: 'Failed to update sync settings',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const triggerSyncMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/sync/trigger');
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Sync started',
+        description: 'Data synchronization has been initiated',
+      });
+      queryClient.invalidateQueries();
+    },
+    onError: () => {
+      toast({
+        title: 'Sync failed',
+        description: 'Failed to trigger synchronization',
+        variant: 'destructive',
+      });
+    },
+  });
 
   const handleSaveOrganization = () => {
     updateTenantMutation.mutate({
       name: organizationName,
-      settings: {
-        ...tenant?.settings,
-        companyName: organizationName,
-        currency: organizationCurrency,
-        eomDay: eomDay,
-      },
+      currency: organizationCurrency,
+      eomDay: parseInt(eomDay),
+    });
+  };
+
+  const handleSaveBranding = () => {
+    updateTenantMutation.mutate({
+      primaryColor,
+      logoUrl,
     });
   };
 
   const handleSaveSyncSettings = () => {
-    updateSyncSettingsMutation.mutate({
-      autoSync,
-    });
+    updateSyncSettingsMutation.mutate({ autoSync });
   };
 
-  // Redirect to home if not authenticated
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      toast({
-        title: "Unauthorized",
-        description: "You are logged out. Logging in again...",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
-      return;
-    }
-  }, [isAuthenticated, isLoading, toast]);
-
-  if (isLoading || !isAuthenticated) {
-    return <div className="min-h-screen bg-background" />;
-  }
-
-  // Generic handler for any provider connection
-  const handleProviderConnect = async (providerName: string, displayName: string) => {
+  const handleProviderConnect = async (provider: string, displayName: string) => {
     setIsConnecting(true);
     try {
-      const response = await fetch(`/api/providers/connect/${providerName}`);
+      const response = await apiRequest('GET', `/api/integrations/${provider}/connect`);
       const data = await response.json();
       
-      if (response.ok && data.success && data.authUrl) {
+      if (data.authUrl) {
         window.location.href = data.authUrl;
       } else {
-        const errorMessage = data.message || `Failed to initiate ${displayName} connection`;
-        const isConfigError = errorMessage.toLowerCase().includes('not configured') || response.status === 400;
-        
-        toast({
-          title: isConfigError ? "Configuration Required" : "Connection Error",
-          description: isConfigError 
-            ? `${displayName} API credentials need to be configured. Please contact support to enable this integration.`
-            : errorMessage,
-          variant: "destructive",
-        });
+        throw new Error('No auth URL received');
       }
     } catch (error) {
       toast({
-        title: "Connection Error",
-        description: `Failed to connect to ${displayName}. Please try again.`,
-        variant: "destructive",
+        title: 'Connection failed',
+        description: `Failed to connect to ${displayName}`,
+        variant: 'destructive',
       });
     } finally {
       setIsConnecting(false);
     }
   };
 
-  // Generic handler for any provider disconnect
-  const handleProviderDisconnect = async (providerName: string, displayName: string) => {
+  const handleProviderDisconnect = async (provider: string, displayName: string) => {
     setIsDisconnecting(true);
     try {
-      const response = await fetch(`/api/providers/disconnect/${providerName}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await apiRequest('POST', `/api/integrations/${provider}/disconnect`);
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Failed to disconnect from ${displayName}`);
+      if (response.ok) {
+        toast({
+          title: 'Disconnected',
+          description: `Successfully disconnected from ${displayName}`,
+        });
+        queryClient.invalidateQueries({ queryKey: ['/api/integrations/accounting/status'] });
+      } else {
+        throw new Error('Disconnect failed');
       }
-      
-      const result = await response.json();
-      
-      // Invalidate relevant queries to refresh the connection status
-      queryClient.invalidateQueries({ queryKey: ['/api/tenant'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/accounting/status'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/xero/sync/settings'] });
-      
-      toast({
-        title: "Disconnected",
-        description: result.message || `Successfully disconnected from ${displayName}`,
-        variant: "default",
-      });
     } catch (error) {
       toast({
-        title: "Error",
-        description: `Failed to disconnect from ${displayName}. Please try again.`,
-        variant: "destructive",
+        title: 'Error',
+        description: `Failed to disconnect from ${displayName}`,
+        variant: 'destructive',
       });
     } finally {
       setIsDisconnecting(false);
@@ -1907,28 +1914,22 @@ export default function Settings() {
   const handleGenerateMockData = async () => {
     setIsGeneratingMockData(true);
     try {
-      const response = await fetch('/api/mock-data/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (!response.ok) {
+      const response = await apiRequest('POST', '/api/mock-data/generate');
+      if (response.ok) {
+        const data = await response.json();
+        queryClient.invalidateQueries();
+        toast({
+          title: 'Mock Data Generated',
+          description: data.message || 'Mock data has been generated successfully',
+        });
+      } else {
         throw new Error('Failed to generate mock data');
       }
-      
-      const result = await response.json();
-      toast({
-        title: "Success!",
-        description: result.message,
-        variant: "default",
-      });
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to generate mock data. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to generate mock data',
+        variant: 'destructive',
       });
     } finally {
       setIsGeneratingMockData(false);
@@ -1938,33 +1939,22 @@ export default function Settings() {
   const handleCleanupContacts = async () => {
     setIsCleaningContacts(true);
     try {
-      const response = await fetch('/api/contacts/cleanup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to cleanup contacts');
+      const response = await apiRequest('POST', '/api/contacts/cleanup');
+      if (response.ok) {
+        const data = await response.json();
+        queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
+        toast({
+          title: 'Cleanup Complete',
+          description: data.message || 'Contacts have been cleaned up',
+        });
+      } else {
+        throw new Error('Failed to clean up contacts');
       }
-      
-      const result = await response.json();
-      
-      // Invalidate contacts and invoices data to refresh
-      queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
-      
-      toast({
-        title: "Cleanup Complete!",
-        description: result.message,
-        variant: "default",
-      });
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to cleanup contacts. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to clean up contacts',
+        variant: 'destructive',
       });
     } finally {
       setIsCleaningContacts(false);
@@ -1972,195 +1962,235 @@ export default function Settings() {
   };
 
   return (
-    <div className="flex h-screen page-gradient">
+    <div className="flex h-screen bg-white">
       <NewSidebar />
-      <main className="flex-1 overflow-y-auto">
-        <Header 
-          title="Settings" 
-          subtitle="Manage your account, integrations, and preferences"
-        />
+      
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Header />
         
-        <div className="p-8 max-w-5xl mx-auto space-y-8">
-          <Tabs defaultValue="general" className="space-y-8">
-            <Card className="card-glass">
-              <CardHeader>
-                <CardTitle className="text-xl font-bold flex items-center">
-                  <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
-                    <SettingsIcon className="h-5 w-5 text-[#17B6C3]" />
-                  </div>
-                  Settings Navigation
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <TabsList className="grid w-full grid-cols-9 bg-slate-50/80">
-                  <TabsTrigger value="general" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-general">General</TabsTrigger>
-                  <TabsTrigger value="integrations" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-integrations">Integrations</TabsTrigger>
-                  <TabsTrigger value="playbook" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-playbook">Playbook</TabsTrigger>
-                  <TabsTrigger value="automation" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-automation">Automation</TabsTrigger>
-                  <TabsTrigger value="notifications" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-notifications">Notifications</TabsTrigger>
-                  <TabsTrigger value="security" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-security">Security</TabsTrigger>
-                  <ProtectedComponent permission="admin:users" hideOnDeny>
-                    <TabsTrigger value="users" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-users">User Management</TabsTrigger>
-                  </ProtectedComponent>
-                  <TabsTrigger value="branding" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-branding">Branding</TabsTrigger>
-                  <TabsTrigger value="test" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-test">Test</TabsTrigger>
-                </TabsList>
-              </CardContent>
-            </Card>
+        <main className="flex-1 overflow-auto">
+          <div className="max-w-5xl mx-auto px-6 py-8">
+            <div className="mb-8">
+              <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+              <p className="text-gray-500 mt-1">
+                Manage your account, integrations, and preferences
+              </p>
+            </div>
 
-            <TabsContent value="general" className="space-y-8">
-              {/* Profile Settings */}
-              <Card className="card-glass">
-                <CardHeader>
-                  <CardTitle className="text-xl font-bold flex items-center">
-                    <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
-                      <User className="h-5 w-5 text-[#17B6C3]" />
-                    </div>
-                    Profile Information
-                  </CardTitle>
-                  <CardDescription className="text-base">
-                    Update your personal information and preferences
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="firstName">First Name</Label>
-                      <Input 
-                        id="firstName"
-                        defaultValue={(user as any)?.firstName || ""}
-                        className="bg-white/70 border-gray-200/30"
-                        data-testid="input-first-name"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="lastName">Last Name</Label>
-                      <Input 
-                        id="lastName"
-                        defaultValue={(user as any)?.lastName || ""}
-                        className="bg-white/70 border-gray-200/30"
-                        data-testid="input-last-name"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email Address</Label>
-                    <Input 
-                      id="email"
-                      type="email"
-                      defaultValue={(user as any)?.email || ""}
-                      disabled
-                      className="bg-gray-100/50 border-gray-200/30"
-                      data-testid="input-email"
-                    />
-                    <p className="text-sm text-muted-foreground">
-                      Email cannot be changed. Contact support if needed.
-                    </p>
-                  </div>
-                  <Button className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="button-save-profile">Save Changes</Button>
-                </CardContent>
-              </Card>
-
-              {/* Tenant Settings */}
-              <Card className="card-glass">
-                <CardHeader>
-                  <CardTitle className="text-xl font-bold flex items-center">
-                    <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
-                      <Building2 className="h-5 w-5 text-[#17B6C3]" />
-                    </div>
-                    Organization Settings
-                  </CardTitle>
-                  <CardDescription className="text-base">
-                    Configure your organization details and preferences
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="orgName">Organization Name</Label>
-                    <Input 
-                      id="orgName"
-                      value={organizationName}
-                      onChange={(e) => setOrganizationName(e.target.value)}
-                      placeholder="Your Company Name"
-                      className="bg-white/70 border-gray-200/30"
-                      data-testid="input-org-name"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="currency">Organisation Currency</Label>
-                    <Select 
-                      value={organizationCurrency} 
-                      onValueChange={setOrganizationCurrency}
-                    >
-                      <SelectTrigger className="bg-white/70 border-gray-200/30" data-testid="select-currency">
-                        <SelectValue placeholder="Select currency" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white border-gray-200">
-                        {CURRENCIES.map((currency) => (
-                          <SelectItem key={currency.code} value={currency.code}>
-                            {currency.symbol} {currency.name} ({currency.code})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="eomDay">EOM Day for Cash Flow</Label>
-                    <Select 
-                      value={eomDay} 
-                      onValueChange={setEomDay}
-                    >
-                      <SelectTrigger className="bg-white/70 border-gray-200/30" data-testid="select-eom-day">
-                        <SelectValue placeholder="Select EOM day" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white border-gray-200">
-                        {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
-                          <SelectItem key={day} value={day.toString()}>
-                            Day {day} of the month
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      Set the day of month for EOM cash flow calculations (typically payroll day)
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="subdomain">Subdomain</Label>
-                    <div className="flex">
-                      <Input 
-                        id="subdomain"
-                        placeholder="yourcompany"
-                        className="rounded-r-none bg-white/70 border-gray-200/30"
-                        data-testid="input-subdomain"
-                      />
-                      <div className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-200/30 bg-slate-100/80 text-slate-600">
-                        .arpro.com
-                      </div>
-                    </div>
-                  </div>
-                  <Button 
-                    onClick={handleSaveOrganization}
-                    disabled={updateTenantMutation.isPending}
-                    className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" 
-                    data-testid="button-save-org"
+            <Tabs defaultValue="general" className="space-y-8">
+              <div className="border-b border-gray-200 overflow-x-auto">
+                <TabsList className="bg-transparent h-auto p-0 gap-0">
+                  <TabsTrigger 
+                    value="general" 
+                    className="px-4 py-3 rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
+                    data-testid="tab-general"
                   >
-                    {updateTenantMutation.isPending ? "Saving..." : "Save Changes"}
-                  </Button>
-                </CardContent>
-              </Card>
-            </TabsContent>
+                    General
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="integrations" 
+                    className="px-4 py-3 rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
+                    data-testid="tab-integrations"
+                  >
+                    Integrations
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="notifications" 
+                    className="px-4 py-3 rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
+                    data-testid="tab-notifications"
+                  >
+                    Notifications
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="security" 
+                    className="px-4 py-3 rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
+                    data-testid="tab-security"
+                  >
+                    Security
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="branding" 
+                    className="px-4 py-3 rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
+                    data-testid="tab-branding"
+                  >
+                    Branding
+                  </TabsTrigger>
+                  <ProtectedComponent permission="admin:users" hideOnDeny>
+                    <TabsTrigger 
+                      value="users" 
+                      className="px-4 py-3 rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
+                      data-testid="tab-users"
+                    >
+                      Users
+                    </TabsTrigger>
+                  </ProtectedComponent>
+                  <TabsTrigger 
+                    value="playbook" 
+                    className="px-4 py-3 rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
+                    data-testid="tab-playbook"
+                  >
+                    Playbook
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="test" 
+                    className="px-4 py-3 rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
+                    data-testid="tab-test"
+                  >
+                    Test
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="demo-data" 
+                    className="px-4 py-3 rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
+                    data-testid="tab-demo-data"
+                  >
+                    Demo Data
+                  </TabsTrigger>
+                </TabsList>
+              </div>
 
-            <TabsContent value="integrations" className="space-y-8">
-              {/* Accounting Integration */}
-              <Card className="card-glass">
-                <CardHeader>
-                  <CardTitle className="text-xl font-bold flex items-center justify-between">
-                    <div className="flex items-center">
-                      <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
-                        <BarChart3 className="h-5 w-5 text-[#17B6C3]" />
+              <TabsContent value="general" className="mt-0">
+                <div className="py-8 border-b border-gray-200">
+                  <div className="flex items-center mb-1">
+                    <User className="h-5 w-5 text-[#17B6C3] mr-2" />
+                    <h2 className="text-lg font-semibold text-gray-900">Profile Information</h2>
+                  </div>
+                  <p className="text-sm text-gray-500 mb-6">
+                    Update your personal information and preferences
+                  </p>
+                  
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="firstName">First Name</Label>
+                        <Input 
+                          id="firstName"
+                          defaultValue={(user as any)?.firstName || ""}
+                          className="bg-white border-gray-200"
+                          data-testid="input-first-name"
+                        />
                       </div>
-                      Accounting Integration
+                      <div className="space-y-2">
+                        <Label htmlFor="lastName">Last Name</Label>
+                        <Input 
+                          id="lastName"
+                          defaultValue={(user as any)?.lastName || ""}
+                          className="bg-white border-gray-200"
+                          data-testid="input-last-name"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email Address</Label>
+                      <Input 
+                        id="email"
+                        type="email"
+                        defaultValue={(user as any)?.email || ""}
+                        disabled
+                        className="bg-gray-100 border-gray-200"
+                        data-testid="input-email"
+                      />
+                      <p className="text-sm text-gray-500">
+                        Email cannot be changed. Contact support if needed.
+                      </p>
+                    </div>
+                    <Button className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="button-save-profile">
+                      Save Changes
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="py-8">
+                  <div className="flex items-center mb-1">
+                    <Building2 className="h-5 w-5 text-[#17B6C3] mr-2" />
+                    <h2 className="text-lg font-semibold text-gray-900">Organization Settings</h2>
+                  </div>
+                  <p className="text-sm text-gray-500 mb-6">
+                    Configure your organization details and preferences
+                  </p>
+                  
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="orgName">Organization Name</Label>
+                      <Input 
+                        id="orgName"
+                        value={organizationName}
+                        onChange={(e) => setOrganizationName(e.target.value)}
+                        placeholder="Your Company Name"
+                        className="bg-white border-gray-200 max-w-md"
+                        data-testid="input-org-name"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="currency">Organisation Currency</Label>
+                      <Select 
+                        value={organizationCurrency} 
+                        onValueChange={setOrganizationCurrency}
+                      >
+                        <SelectTrigger className="bg-white border-gray-200 max-w-md" data-testid="select-currency">
+                          <SelectValue placeholder="Select currency" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white border-gray-200">
+                          {CURRENCIES.map((currency) => (
+                            <SelectItem key={currency.code} value={currency.code}>
+                              {currency.symbol} {currency.name} ({currency.code})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="eomDay">EOM Day for Cash Flow</Label>
+                      <Select 
+                        value={eomDay} 
+                        onValueChange={setEomDay}
+                      >
+                        <SelectTrigger className="bg-white border-gray-200 max-w-md" data-testid="select-eom-day">
+                          <SelectValue placeholder="Select EOM day" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white border-gray-200">
+                          {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+                            <SelectItem key={day} value={day.toString()}>
+                              Day {day} of the month
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-sm text-gray-500">
+                        Set the day of month for EOM cash flow calculations (typically payroll day)
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="subdomain">Subdomain</Label>
+                      <div className="flex max-w-md">
+                        <Input 
+                          id="subdomain"
+                          placeholder="yourcompany"
+                          className="rounded-r-none bg-white border-gray-200"
+                          data-testid="input-subdomain"
+                        />
+                        <div className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-200 bg-gray-50 text-gray-600">
+                          .arpro.com
+                        </div>
+                      </div>
+                    </div>
+                    <Button 
+                      onClick={handleSaveOrganization}
+                      disabled={updateTenantMutation.isPending}
+                      className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" 
+                      data-testid="button-save-org"
+                    >
+                      {updateTenantMutation.isPending ? "Saving..." : "Save Changes"}
+                    </Button>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="integrations" className="mt-0">
+                <div className="py-8 border-b border-gray-200">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center">
+                      <BarChart3 className="h-5 w-5 text-[#17B6C3] mr-2" />
+                      <h2 className="text-lg font-semibold text-gray-900">Accounting Integration</h2>
                     </div>
                     <Badge 
                       className={accountingStatus?.connectedProvider 
@@ -2171,48 +2201,39 @@ export default function Settings() {
                     >
                       {accountingStatus?.connectedProvider ? "Connected" : "Not Connected"}
                     </Badge>
-                  </CardTitle>
-                  <CardDescription className="text-base ml-11">
+                  </div>
+                  <p className="text-sm text-gray-500 mb-6">
                     Connect to your accounting software to automatically sync invoices and contacts
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {/* Provider Selection - Show if no provider connected */}
-                  {!accountingStatus?.connectedProvider && (
+                  </p>
+
+                  {!accountingStatus?.connectedProvider ? (
                     <div className="space-y-4">
-                      <h4 className="text-lg font-semibold text-slate-900 mb-4">Choose Your Accounting Software</h4>
-                      <div className="grid gap-4">
-                        {/* Xero Option */}
-                        <div className="flex items-center justify-between p-6 bg-slate-50/80 rounded-xl border border-slate-200/50 hover:border-[#17B6C3]/50 transition-colors">
+                      <h4 className="font-medium text-gray-900">Choose Your Accounting Software</h4>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
                           <div className="flex items-center space-x-4">
                             <div className="p-3 bg-blue-100 rounded-lg">
                               <SiXero className="h-6 w-6 text-blue-600" />
                             </div>
                             <div>
-                              <p className="font-semibold text-slate-900">Xero</p>
-                              <p className="text-sm text-slate-600">
-                                Cloud-based accounting software
-                              </p>
+                              <p className="font-semibold text-gray-900">Xero</p>
+                              <p className="text-sm text-gray-500">Cloud-based accounting software</p>
                             </div>
                           </div>
                           <Button 
                             onClick={() => handleProviderConnect('xero', 'Xero')}
                             disabled={isConnecting}
-                            className="bg-[#17B6C3] hover:bg-[#1396A1] text-white min-w-[100px]"
+                            className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
                             data-testid="button-connect-xero"
                           >
                             {isConnecting ? "Connecting..." : "Connect"}
                           </Button>
                         </div>
-
                       </div>
                     </div>
-                  )}
-
-                  {/* Connected Provider Display - Show if provider connected */}
-                  {accountingStatus?.connectedProvider && (
+                  ) : (
                     <div className="space-y-6">
-                      <div className="flex items-center justify-between p-6 bg-slate-50/80 rounded-xl border border-slate-200/50">
+                      <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
                         <div className="flex items-center space-x-4">
                           <div className={`p-3 rounded-lg ${
                             accountingStatus.connectedProvider.name === 'xero' ? 'bg-blue-100' :
@@ -2224,17 +2245,19 @@ export default function Settings() {
                             {accountingStatus.connectedProvider.name === 'quickbooks' && <SiQuickbooks className="h-6 w-6 text-orange-600" />}
                           </div>
                           <div>
-                            <p className="font-semibold text-slate-900">
+                            <p className="font-semibold text-gray-900">
                               Connected to {accountingStatus.connectedProvider.displayName}
                             </p>
-                            <p className="text-sm text-slate-600">
+                            <p className="text-sm text-gray-500">
                               Syncing invoices, contacts, and payment data
                             </p>
-                            <p className="text-sm text-slate-700 font-medium mt-1">
-                              Organization: {accountingStatus.connectedProvider.organizationName}
-                            </p>
+                            {accountingStatus.connectedProvider.organizationName && (
+                              <p className="text-sm text-gray-700 font-medium mt-1">
+                                Organization: {accountingStatus.connectedProvider.organizationName}
+                              </p>
+                            )}
                             {syncSettings?.lastSyncAt && (
-                              <p className="text-xs text-slate-500 mt-1">
+                              <p className="text-xs text-gray-500 mt-1">
                                 Last sync: {new Date(syncSettings.lastSyncAt).toLocaleString()}
                               </p>
                             )}
@@ -2251,18 +2274,6 @@ export default function Settings() {
                             {triggerSyncMutation.isPending ? "Syncing..." : "Sync Now"}
                           </Button>
                           <Button 
-                            onClick={() => handleProviderConnect(
-                              accountingStatus?.connectedProvider?.name || '', 
-                              accountingStatus?.connectedProvider?.displayName || ''
-                            )}
-                            disabled={isConnecting}
-                            variant="outline"
-                            className="border-[#17B6C3] text-[#17B6C3] hover:bg-[#17B6C3]/10"
-                            data-testid="button-reconnect-provider"
-                          >
-                            {isConnecting ? "Connecting..." : "Reconnect"}
-                          </Button>
-                          <Button 
                             onClick={() => handleProviderDisconnect(
                               accountingStatus?.connectedProvider?.name || '', 
                               accountingStatus?.connectedProvider?.displayName || ''
@@ -2277,373 +2288,308 @@ export default function Settings() {
                         </div>
                       </div>
 
-                      {/* Sync Settings */}
-                      <Separator />
-                      <div>
-                        <h4 className="text-lg font-semibold text-slate-900 mb-4">Sync Settings</h4>
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <div className="space-y-0.5">
-                              <Label htmlFor="auto-sync" className="text-base">Auto Sync</Label>
-                              <p className="text-sm text-slate-600">
-                                Automatically sync invoices at regular intervals
-                              </p>
-                            </div>
-                            <Switch
-                              id="auto-sync"
-                              checked={autoSync}
-                              onCheckedChange={setAutoSync}
-                              data-testid="switch-auto-sync"
-                            />
+                      <div className="border-t border-gray-100 pt-6">
+                        <h4 className="font-medium text-gray-900 mb-4">Sync Settings</h4>
+                        <div className="flex items-center justify-between py-4">
+                          <div>
+                            <p className="font-medium text-gray-900">Auto Sync</p>
+                            <p className="text-sm text-gray-500">
+                              Automatically sync invoices at regular intervals
+                            </p>
                           </div>
-
-                          {syncSettings?.lastSyncAt && (
-                            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                              <p className="text-sm text-blue-800">
-                                <strong>Last sync:</strong> {new Date(syncSettings.lastSyncAt).toLocaleString()}
-                              </p>
-                            </div>
-                          )}
-
-                          <Button 
-                            onClick={handleSaveSyncSettings}
-                            disabled={updateSyncSettingsMutation.isPending}
-                            className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
-                            data-testid="button-save-sync-settings"
-                          >
-                            {updateSyncSettingsMutation.isPending ? "Saving..." : "Save Sync Settings"}
-                          </Button>
+                          <Switch
+                            checked={autoSync}
+                            onCheckedChange={setAutoSync}
+                            data-testid="switch-auto-sync"
+                          />
                         </div>
+                        <Button 
+                          onClick={handleSaveSyncSettings}
+                          disabled={updateSyncSettingsMutation.isPending}
+                          className="bg-[#17B6C3] hover:bg-[#1396A1] text-white mt-4"
+                          data-testid="button-save-sync-settings"
+                        >
+                          {updateSyncSettingsMutation.isPending ? "Saving..." : "Save Sync Settings"}
+                        </Button>
                       </div>
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                </div>
 
-              {/* AI Integration */}
-              <Card className="card-glass">
-                <CardHeader>
-                  <CardTitle className="text-xl font-bold flex items-center justify-between">
+                <div className="py-8 border-b border-gray-200">
+                  <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center">
-                      <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
-                        <Bot className="h-5 w-5 text-[#17B6C3]" />
-                      </div>
-                      AI Integration (OpenAI)
+                      <Bot className="h-5 w-5 text-[#17B6C3] mr-2" />
+                      <h2 className="text-lg font-semibold text-gray-900">AI Integration (OpenAI)</h2>
                     </div>
                     <Badge className="bg-green-100 text-green-800 border-green-200" data-testid="badge-openai-status">
                       Active
                     </Badge>
-                  </CardTitle>
-                  <CardDescription className="text-base ml-11">
+                  </div>
+                  <p className="text-sm text-gray-500 mb-6">
                     AI-powered suggestions and automated message generation
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="flex items-center justify-between p-4 bg-slate-50/80 rounded-xl">
-                    <div>
-                      <p className="font-semibold text-slate-900">Enable AI Suggestions</p>
-                      <p className="text-sm text-slate-600">
-                        Get intelligent collection recommendations
-                      </p>
-                    </div>
-                    <Switch defaultChecked data-testid="switch-ai-suggestions" />
-                  </div>
-                  <div className="flex items-center justify-between p-4 bg-slate-50/80 rounded-xl">
-                    <div>
-                      <p className="font-semibold text-slate-900">Auto-generate Email Content</p>
-                      <p className="text-sm text-slate-600">
-                        Use AI to create personalized reminder emails
-                      </p>
-                    </div>
-                    <Switch defaultChecked data-testid="switch-ai-emails" />
-                  </div>
-                </CardContent>
-              </Card>
+                  </p>
 
-              {/* Developer Tools */}
-              <Card className="card-glass">
-                <CardHeader>
-                  <CardTitle className="text-xl font-bold flex items-center justify-between">
-                    <div className="flex items-center">
-                      <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
-                        <Database className="h-5 w-5 text-[#17B6C3]" />
+                  <div className="space-y-0">
+                    <div className="flex items-center justify-between py-4 border-b border-gray-100">
+                      <div>
+                        <p className="font-medium text-gray-900">Enable AI Suggestions</p>
+                        <p className="text-sm text-gray-500">Get intelligent collection recommendations</p>
                       </div>
-                      Developer Tools
+                      <Switch defaultChecked data-testid="switch-ai-suggestions" />
+                    </div>
+                    <div className="flex items-center justify-between py-4">
+                      <div>
+                        <p className="font-medium text-gray-900">Auto-generate Email Content</p>
+                        <p className="text-sm text-gray-500">Use AI to create personalized reminder emails</p>
+                      </div>
+                      <Switch defaultChecked data-testid="switch-ai-emails" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="py-8">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center">
+                      <Database className="h-5 w-5 text-[#17B6C3] mr-2" />
+                      <h2 className="text-lg font-semibold text-gray-900">Developer Tools</h2>
                     </div>
                     <Badge className="bg-orange-100 text-orange-800 border-orange-200" data-testid="badge-dev-tools-status">
                       Demo Mode
                     </Badge>
-                  </CardTitle>
-                  <CardDescription className="text-base ml-11">
+                  </div>
+                  <p className="text-sm text-gray-500 mb-6">
                     Generate sample data for testing and demonstrations
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between p-6 bg-gradient-to-r from-slate-50/80 to-blue-50/80 rounded-xl border border-slate-200/50">
-                    <div>
-                      <p className="font-semibold text-slate-900 flex items-center">
-                        <Zap className="h-4 w-4 mr-2 text-[#17B6C3]" />
-                        Generate Mock AR Data
-                      </p>
-                      <p className="text-sm text-slate-600 mt-1">
-                        Creates 80 agency clients with 1,800 invoices over 6 months
-                      </p>
-                      <p className="text-xs text-slate-500 mt-1">
-                        Perfect for demos with realistic overdue accounts and payment patterns
-                      </p>
+                  </p>
+
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                      <div>
+                        <p className="font-medium text-gray-900 flex items-center">
+                          <Zap className="h-4 w-4 mr-2 text-[#17B6C3]" />
+                          Generate Mock AR Data
+                        </p>
+                        <p className="text-sm text-gray-500 mt-1">
+                          Creates 80 agency clients with 1,800 invoices over 6 months
+                        </p>
+                      </div>
+                      <Button 
+                        onClick={handleGenerateMockData}
+                        disabled={isGeneratingMockData}
+                        className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                        data-testid="button-generate-mock-data"
+                      >
+                        {isGeneratingMockData ? "Generating..." : "Generate Data"}
+                      </Button>
                     </div>
-                    <Button 
-                      onClick={handleGenerateMockData}
-                      disabled={isGeneratingMockData}
-                      className="bg-[#17B6C3] hover:bg-[#1396A1] text-white min-w-[120px]"
-                      data-testid="button-generate-mock-data"
-                    >
-                      {isGeneratingMockData ? "Generating..." : "Generate Data"}
-                    </Button>
+
+                    <div className="flex items-center justify-between p-4 bg-orange-50 rounded-lg border border-orange-200">
+                      <div>
+                        <p className="font-medium text-gray-900">Clean Up Contacts</p>
+                        <p className="text-sm text-gray-500 mt-1">
+                          Remove old Xero contacts and keep only 80 mock clients
+                        </p>
+                      </div>
+                      <Button 
+                        onClick={handleCleanupContacts}
+                        disabled={isCleaningContacts}
+                        variant="outline"
+                        className="border-orange-300 text-orange-600 hover:bg-orange-100"
+                        data-testid="button-cleanup-contacts"
+                      >
+                        {isCleaningContacts ? "Cleaning..." : "Clean Up"}
+                      </Button>
+                    </div>
                   </div>
+                </div>
+              </TabsContent>
 
-                  <div className="flex items-center justify-between p-6 bg-orange-50/80 rounded-xl border border-orange-200/50">
-                    <div>
-                      <p className="font-semibold text-slate-900">
-                        Clean Up Contacts
-                      </p>
-                      <p className="text-sm text-slate-600 mt-1">
-                        Remove old Xero contacts and keep only 80 mock clients
-                      </p>
-                      <p className="text-xs text-slate-500 mt-1">
-                        Recommended after disconnecting from Xero to reduce clutter
-                      </p>
-                    </div>
-                    <Button 
-                      onClick={handleCleanupContacts}
-                      disabled={isCleaningContacts}
-                      variant="outline"
-                      className="border-orange-300 text-orange-600 hover:bg-orange-50 min-w-[120px]"
-                      data-testid="button-cleanup-contacts"
-                    >
-                      {isCleaningContacts ? "Cleaning..." : "Clean Up"}
-                    </Button>
+              <TabsContent value="notifications" className="mt-0">
+                <div className="py-8 border-b border-gray-200">
+                  <div className="flex items-center mb-1">
+                    <Bell className="h-5 w-5 text-[#17B6C3] mr-2" />
+                    <h2 className="text-lg font-semibold text-gray-900">Notification Preferences</h2>
                   </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="automation" className="space-y-8">
-              <AutomationTabContent />
-            </TabsContent>
-
-            <TabsContent value="notifications" className="space-y-8">
-              <Card className="card-glass">
-                <CardHeader>
-                  <CardTitle className="text-xl font-bold flex items-center">
-                    <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
-                      <Bell className="h-5 w-5 text-[#17B6C3]" />
-                    </div>
-                    Notification Preferences
-                  </CardTitle>
-                  <CardDescription className="text-base ml-11">
+                  <p className="text-sm text-gray-500 mb-6">
                     Choose how you want to be notified about important events
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="space-y-6">
-                    <div className="flex items-center justify-between p-4 bg-slate-50/80 rounded-xl">
+                  </p>
+
+                  <div className="space-y-0">
+                    <div className="flex items-center justify-between py-4 border-b border-gray-100">
                       <div>
-                        <p className="font-semibold text-slate-900">New Overdue Invoices</p>
-                        <p className="text-sm text-slate-600">
-                          Get notified when invoices become overdue
-                        </p>
+                        <p className="font-medium text-gray-900">New Overdue Invoices</p>
+                        <p className="text-sm text-gray-500">Get notified when invoices become overdue</p>
                       </div>
-                      <Switch defaultChecked data-testid="switch-overdue-notifications" />
+                      <Switch defaultChecked data-testid="switch-notify-overdue" />
                     </div>
-                    
-                    <div className="flex items-center justify-between p-4 bg-slate-50/80 rounded-xl">
+                    <div className="flex items-center justify-between py-4 border-b border-gray-100">
                       <div>
-                        <p className="font-semibold text-slate-900">Payment Received</p>
-                        <p className="text-sm text-slate-600">
-                          Get notified when payments are received
-                        </p>
+                        <p className="font-medium text-gray-900">Payment Received</p>
+                        <p className="text-sm text-gray-500">Get notified when payments are received</p>
                       </div>
-                      <Switch defaultChecked data-testid="switch-payment-notifications" />
+                      <Switch defaultChecked data-testid="switch-notify-payment" />
                     </div>
-                    
-                    <div className="flex items-center justify-between p-4 bg-slate-50/80 rounded-xl">
+                    <div className="flex items-center justify-between py-4 border-b border-gray-100">
                       <div>
-                        <p className="font-semibold text-slate-900">Daily Summary</p>
-                        <p className="text-sm text-slate-600">
-                          Receive daily summary of collection activities
-                        </p>
+                        <p className="font-medium text-gray-900">Collection Status Updates</p>
+                        <p className="text-sm text-gray-500">Get notified about collection workflow changes</p>
                       </div>
-                      <Switch data-testid="switch-daily-summary" />
+                      <Switch defaultChecked data-testid="switch-notify-collection" />
                     </div>
-                    
-                    <div className="flex items-center justify-between p-4 bg-slate-50/80 rounded-xl">
+                    <div className="flex items-center justify-between py-4">
                       <div>
-                        <p className="font-semibold text-slate-900">AI Suggestions</p>
-                        <p className="text-sm text-slate-600">
-                          Get notified about new AI collection suggestions
-                        </p>
+                        <p className="font-medium text-gray-900">Weekly Summary</p>
+                        <p className="text-sm text-gray-500">Receive a weekly summary of your AR status</p>
                       </div>
-                      <Switch defaultChecked data-testid="switch-ai-notifications" />
+                      <Switch defaultChecked data-testid="switch-notify-weekly" />
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
+                </div>
 
-            <TabsContent value="security" className="space-y-8">
-              <Card className="card-glass">
-                <CardHeader>
-                  <CardTitle className="text-xl font-bold flex items-center">
-                    <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
-                      <Shield className="h-5 w-5 text-[#17B6C3]" />
-                    </div>
-                    Security Settings
-                  </CardTitle>
-                  <CardDescription className="text-base ml-11">
-                    Manage your account security and access controls
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-8">
-                  <div className="space-y-6">
-                    <div className="p-6 bg-slate-50/80 rounded-xl">
-                      <h4 className="font-bold text-lg text-slate-900 mb-3">Account Security</h4>
-                      <div className="space-y-3">
-                        <p className="text-sm text-slate-600">
-                          Your account is secured through Replit authentication.
-                        </p>
-                        <Button variant="outline" className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5" data-testid="button-change-password">
-                          Change Password
-                        </Button>
+                <div className="py-8">
+                  <Button className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="button-save-notifications">
+                    Save Preferences
+                  </Button>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="security" className="mt-0">
+                <div className="py-8 border-b border-gray-200">
+                  <div className="flex items-center mb-1">
+                    <Shield className="h-5 w-5 text-[#17B6C3] mr-2" />
+                    <h2 className="text-lg font-semibold text-gray-900">Account Security</h2>
+                  </div>
+                  <p className="text-sm text-gray-500 mb-6">
+                    Manage your security settings and two-factor authentication
+                  </p>
+
+                  <div className="space-y-0">
+                    <div className="flex items-center justify-between py-4 border-b border-gray-100">
+                      <div>
+                        <p className="font-medium text-gray-900">Two-Factor Authentication</p>
+                        <p className="text-sm text-gray-500">Add an extra layer of security to your account</p>
                       </div>
+                      <Button variant="outline" className="border-gray-200" data-testid="button-enable-2fa">
+                        Enable
+                      </Button>
                     </div>
-                    
-                    <div className="p-6 bg-slate-50/80 rounded-xl">
-                      <h4 className="font-bold text-lg text-slate-900 mb-3">Session Management</h4>
-                      <div className="space-y-3">
-                        <p className="text-sm text-slate-600">
-                          Manage your active sessions and logout from all devices.
-                        </p>
-                        <Button variant="outline" className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5" data-testid="button-logout-all">
-                          Logout All Sessions
-                        </Button>
+                    <div className="flex items-center justify-between py-4 border-b border-gray-100">
+                      <div>
+                        <p className="font-medium text-gray-900">Change Password</p>
+                        <p className="text-sm text-gray-500">Update your password regularly for better security</p>
                       </div>
+                      <Button variant="outline" className="border-gray-200" data-testid="button-change-password">
+                        Change
+                      </Button>
                     </div>
-                    
-                    <div className="p-6 bg-slate-50/80 rounded-xl">
-                      <h4 className="font-bold text-lg text-slate-900 mb-3">API Access</h4>
-                      <div className="space-y-3">
-                        <p className="text-sm text-slate-600">
-                          Generate API keys for integrating with external systems.
-                        </p>
-                        <Button variant="outline" className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5" data-testid="button-generate-api-key">
-                          Generate API Key
-                        </Button>
+                    <div className="flex items-center justify-between py-4">
+                      <div>
+                        <p className="font-medium text-gray-900">Session Timeout</p>
+                        <p className="text-sm text-gray-500">Auto-logout after period of inactivity</p>
                       </div>
+                      <Select defaultValue="30">
+                        <SelectTrigger className="w-32 bg-white border-gray-200" data-testid="select-session-timeout">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="15">15 minutes</SelectItem>
+                          <SelectItem value="30">30 minutes</SelectItem>
+                          <SelectItem value="60">1 hour</SelectItem>
+                          <SelectItem value="120">2 hours</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
+                </div>
 
-            <TabsContent value="branding" className="space-y-8">
-              <Card className="card-glass">
-                <CardHeader>
-                  <CardTitle className="text-xl font-bold flex items-center">
-                    <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
-                      <Palette className="h-5 w-5 text-[#17B6C3]" />
-                    </div>
-                    Branding & Appearance
-                  </CardTitle>
-                  <CardDescription className="text-base ml-11">
-                    Customize the appearance of your Qashivo instance
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-8">
+                <div className="py-8">
+                  <Button className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="button-save-security">
+                    Save Security Settings
+                  </Button>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="branding" className="mt-0">
+                <div className="py-8 border-b border-gray-200">
+                  <div className="flex items-center mb-1">
+                    <Palette className="h-5 w-5 text-[#17B6C3] mr-2" />
+                    <h2 className="text-lg font-semibold text-gray-900">Brand Settings</h2>
+                  </div>
+                  <p className="text-sm text-gray-500 mb-6">
+                    Customize the look and feel of your portal and communications
+                  </p>
+
                   <div className="space-y-6">
-                    <div className="p-6 bg-slate-50/80 rounded-xl">
-                      <Label htmlFor="companyLogo" className="text-base font-semibold text-slate-900">Company Logo</Label>
-                      <div className="mt-4">
-                        <div className="flex items-center space-x-4">
-                          <div className="w-16 h-16 bg-white/70 border border-slate-200/50 rounded-xl flex items-center justify-center">
-                            <Building2 className="h-8 w-8 text-[#17B6C3]" />
-                          </div>
-                          <Button variant="outline" className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5" data-testid="button-upload-logo">
-                            Upload Logo
-                          </Button>
-                        </div>
-                      </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="logoUrl">Company Logo URL</Label>
+                      <Input 
+                        id="logoUrl"
+                        value={logoUrl}
+                        onChange={(e) => setLogoUrl(e.target.value)}
+                        placeholder="https://example.com/logo.png"
+                        className="bg-white border-gray-200 max-w-md"
+                        data-testid="input-logo-url"
+                      />
+                      <p className="text-sm text-gray-500">
+                        Enter the URL to your company logo (PNG or SVG recommended)
+                      </p>
                     </div>
-                    
-                    <div className="p-6 bg-slate-50/80 rounded-xl">
-                      <Label htmlFor="primaryColor" className="text-base font-semibold text-slate-900">Primary Color</Label>
-                      <div className="mt-4 flex items-center space-x-4">
-                        <div className="w-12 h-12 bg-[#17B6C3] rounded-lg border border-slate-200/50"></div>
+                    <div className="space-y-2">
+                      <Label htmlFor="primaryColor">Primary Brand Color</Label>
+                      <div className="flex items-center gap-4 max-w-md">
                         <Input 
                           id="primaryColor"
-                          defaultValue="#17B6C3"
-                          className="w-32 bg-white/70 border-gray-200/30"
+                          type="color"
+                          value={primaryColor}
+                          onChange={(e) => setPrimaryColor(e.target.value)}
+                          className="w-16 h-10 p-1 bg-white border-gray-200"
                           data-testid="input-primary-color"
                         />
+                        <Input 
+                          value={primaryColor}
+                          onChange={(e) => setPrimaryColor(e.target.value)}
+                          className="flex-1 bg-white border-gray-200"
+                          placeholder="#17B6C3"
+                        />
                       </div>
-                    </div>
-                    
-                    <div className="p-6 bg-slate-50/80 rounded-xl">
-                      <div className="space-y-4">
-                        <div>
-                          <Label htmlFor="companyName" className="text-base font-semibold text-slate-900">Company Name (in sidebar)</Label>
-                          <Input 
-                            id="companyName"
-                            value={companyName}
-                            onChange={(e) => setCompanyName(e.target.value)}
-                            className="mt-2 bg-white/70 border-gray-200/30"
-                            data-testid="input-sidebar-company-name"
-                          />
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor="tagline" className="text-base font-semibold text-slate-900">Tagline</Label>
-                          <Input 
-                            id="tagline"
-                            value={tagline}
-                            onChange={(e) => setTagline(e.target.value)}
-                            className="mt-2 bg-white/70 border-gray-200/30"
-                            data-testid="input-tagline"
-                          />
-                        </div>
-                      </div>
+                      <p className="text-sm text-gray-500">
+                        This color will be used for buttons and accents
+                      </p>
                     </div>
                   </div>
-                  
+                </div>
+
+                <div className="py-8">
                   <Button 
-                    className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" 
                     onClick={handleSaveBranding}
                     disabled={updateTenantMutation.isPending}
+                    className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" 
                     data-testid="button-save-branding"
                   >
                     {updateTenantMutation.isPending ? "Saving..." : "Save Branding"}
                   </Button>
-                </CardContent>
-              </Card>
-            </TabsContent>
+                </div>
+              </TabsContent>
 
-            {/* User Management Tab */}
-            <ProtectedComponent permission="admin:users">
-              <TabsContent value="users" className="space-y-8">
+              <TabsContent value="users" className="mt-0">
                 <UserManagementTabContent />
               </TabsContent>
-            </ProtectedComponent>
 
-            <TabsContent value="playbook" className="space-y-8">
-              <PlaybookTabContent />
-            </TabsContent>
+              <TabsContent value="playbook" className="mt-0">
+                <PlaybookTabContent />
+              </TabsContent>
 
-            <TabsContent value="test" className="space-y-8">
-              <TestTabContent />
-            </TabsContent>
-          </Tabs>
-        </div>
-      </main>
+              <TabsContent value="test" className="mt-0">
+                <TestTabContent />
+              </TabsContent>
+
+              <TabsContent value="demo-data" className="mt-0">
+                <DemoDataTabContent />
+              </TabsContent>
+            </Tabs>
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

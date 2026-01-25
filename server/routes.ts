@@ -22870,6 +22870,399 @@ ${tenant.name}
     }
   });
 
+  // ==================== DEMO DATA TESTING API ====================
+  // Comprehensive testing environment for development and demos
+
+  // Reset ALL data for tenant (not just DEMO-prefixed)
+  app.post("/api/demo-data/reset-all", isAuthenticated, async (req: any, res) => {
+    try {
+      const tenantId = req.user?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "No tenant associated with user" });
+      }
+
+      // Import all tenant-scoped tables for deletion
+      const { 
+        timelineEvents, paymentPromises, disputes, voiceCalls, emailMessages, smsMessages,
+        contactNotes, customerContactPersons, paymentPlans, paymentPlanSchedules, paymentPlanInvoices,
+        workflowTimers, inboundMessages, detectedOutcomes, contactOutcomes, policyDecisions,
+        messageDrafts, customerBehaviorSignals
+      } = await import('@shared/schema.js');
+      
+      // Delete in order respecting foreign key constraints (child tables first)
+      const result = await db.transaction(async (tx) => {
+        // Timeline and messaging
+        const deletedTimeline = await tx.delete(timelineEvents).where(eq(timelineEvents.tenantId, tenantId)).returning();
+        const deletedVoiceCalls = await tx.delete(voiceCalls).where(eq(voiceCalls.tenantId, tenantId)).returning();
+        const deletedEmails = await tx.delete(emailMessages).where(eq(emailMessages.tenantId, tenantId)).returning();
+        const deletedSms = await tx.delete(smsMessages).where(eq(smsMessages.tenantId, tenantId)).returning();
+        const deletedInbound = await tx.delete(inboundMessages).where(eq(inboundMessages.tenantId, tenantId)).returning();
+        const deletedDrafts = await tx.delete(messageDrafts).where(eq(messageDrafts.tenantId, tenantId)).returning();
+        
+        // Outcomes and decisions
+        const deletedOutcomes = await tx.delete(detectedOutcomes).where(eq(detectedOutcomes.tenantId, tenantId)).returning();
+        const deletedContactOutcomes = await tx.delete(contactOutcomes).where(eq(contactOutcomes.tenantId, tenantId)).returning();
+        const deletedPolicyDecisions = await tx.delete(policyDecisions).where(eq(policyDecisions.tenantId, tenantId)).returning();
+        
+        // Promises, disputes, workflow timers
+        const deletedPromises = await tx.delete(paymentPromises).where(eq(paymentPromises.tenantId, tenantId)).returning();
+        const deletedDisputes = await tx.delete(disputes).where(eq(disputes.tenantId, tenantId)).returning();
+        const deletedTimers = await tx.delete(workflowTimers).where(eq(workflowTimers.tenantId, tenantId)).returning();
+        
+        // Payment plans (schedules and invoices depend on plans)
+        const deletedPlanSchedules = await tx.delete(paymentPlanSchedules).where(eq(paymentPlanSchedules.tenantId, tenantId)).returning();
+        const deletedPlanInvoices = await tx.delete(paymentPlanInvoices).where(eq(paymentPlanInvoices.tenantId, tenantId)).returning();
+        const deletedPlans = await tx.delete(paymentPlans).where(eq(paymentPlans.tenantId, tenantId)).returning();
+        
+        // Actions
+        const deletedActions = await tx.delete(actions).where(eq(actions.tenantId, tenantId)).returning();
+        
+        // Invoices (before contacts due to foreign key)
+        const deletedInvoices = await tx.delete(invoices).where(eq(invoices.tenantId, tenantId)).returning();
+        
+        // Contact-related (notes, contact persons, behavior signals)
+        const deletedNotes = await tx.delete(contactNotes).where(eq(contactNotes.tenantId, tenantId)).returning();
+        const deletedContactPersons = await tx.delete(customerContactPersons).where(eq(customerContactPersons.tenantId, tenantId)).returning();
+        const deletedSignals = await tx.delete(customerBehaviorSignals).where(eq(customerBehaviorSignals.tenantId, tenantId)).returning();
+        
+        // Contacts (last due to foreign keys)
+        const deletedContacts = await tx.delete(contacts).where(eq(contacts.tenantId, tenantId)).returning();
+        
+        return {
+          timeline: deletedTimeline.length,
+          voiceCalls: deletedVoiceCalls.length,
+          emails: deletedEmails.length,
+          sms: deletedSms.length,
+          inboundMessages: deletedInbound.length,
+          messageDrafts: deletedDrafts.length,
+          outcomes: deletedOutcomes.length,
+          contactOutcomes: deletedContactOutcomes.length,
+          policyDecisions: deletedPolicyDecisions.length,
+          promises: deletedPromises.length,
+          disputes: deletedDisputes.length,
+          workflowTimers: deletedTimers.length,
+          paymentPlans: deletedPlans.length,
+          paymentPlanSchedules: deletedPlanSchedules.length,
+          paymentPlanInvoices: deletedPlanInvoices.length,
+          actions: deletedActions.length,
+          invoices: deletedInvoices.length,
+          contactNotes: deletedNotes.length,
+          contactPersons: deletedContactPersons.length,
+          behaviorSignals: deletedSignals.length,
+          contacts: deletedContacts.length,
+        };
+      });
+
+      res.json({ 
+        success: true, 
+        message: "All data cleared successfully",
+        stats: result 
+      });
+    } catch (error) {
+      console.error("Error resetting all data:", error);
+      res.status(500).json({ message: "Failed to reset data" });
+    }
+  });
+
+  // Create demo customer with varied invoices
+  const createDemoCustomerSchema = z.object({
+    customerName: z.string().min(1).max(200).default("Nexus KPI Limited"),
+  });
+  
+  app.post("/api/demo-data/create-demo-customer", isAuthenticated, async (req: any, res) => {
+    try {
+      const tenantId = req.user?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "No tenant associated with user" });
+      }
+
+      const parsed = createDemoCustomerSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid input", errors: parsed.error.issues });
+      }
+      const { customerName } = parsed.data;
+
+      const result = await db.transaction(async (tx) => {
+        // Create the customer
+        const [contact] = await tx
+          .insert(contacts)
+          .values({
+            tenantId,
+            name: "Simon Ritchie",
+            companyName: customerName,
+            email: "simon@nexuskpi.com",
+            phone: "+447716273336",
+            role: "customer",
+            isActive: true,
+            paymentTerms: 30,
+            creditLimit: "100000",
+            preferredContactMethod: "email",
+            riskBand: "B",
+            riskScore: 68,
+            arContactName: "Simon Ritchie",
+            arContactEmail: "simon@nexuskpi.com",
+            arContactPhone: "+447716273336",
+          })
+          .returning();
+
+        // Create 8-10 varied invoices
+        const now = new Date();
+        const invoiceData = [
+          // 2 current (not yet due)
+          { daysFromDue: 15, amount: 2500.00, status: "outstanding" },
+          { daysFromDue: 7, amount: 4750.50, status: "outstanding" },
+          // 2 recently overdue (1-30 days)
+          { daysFromDue: -5, amount: 1250.00, status: "overdue" },
+          { daysFromDue: -12, amount: 3890.75, status: "overdue" },
+          // 2 significantly overdue (31-60 days)
+          { daysFromDue: -35, amount: 8500.00, status: "overdue" },
+          { daysFromDue: -48, amount: 5200.25, status: "overdue" },
+          // 2 severely overdue (61-90 days)
+          { daysFromDue: -72, amount: 12450.00, status: "overdue" },
+          { daysFromDue: -85, amount: 6325.50, status: "overdue" },
+        ];
+
+        const createdInvoices = [];
+        for (let i = 0; i < invoiceData.length; i++) {
+          const inv = invoiceData[i];
+          const dueDate = new Date(now);
+          dueDate.setDate(dueDate.getDate() + inv.daysFromDue);
+          const issueDate = new Date(dueDate);
+          issueDate.setDate(issueDate.getDate() - 30);
+
+          const [invoice] = await tx
+            .insert(invoices)
+            .values({
+              tenantId,
+              contactId: contact.id,
+              invoiceNumber: `INV-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}-${String(i + 1).padStart(4, '0')}`,
+              amount: inv.amount.toFixed(2),
+              amountPaid: "0",
+              status: inv.status,
+              issueDate,
+              dueDate,
+              currency: "GBP",
+              description: `Professional services - ${['Consulting', 'Development', 'Analysis', 'Strategy', 'Implementation', 'Training', 'Support', 'Advisory'][i]}`,
+              workflowState: inv.status === "overdue" ? "late" : "pre_due",
+              reminderCount: inv.daysFromDue < -30 ? 2 : inv.daysFromDue < 0 ? 1 : 0,
+            })
+            .returning();
+
+          createdInvoices.push(invoice);
+        }
+
+        return {
+          customer: contact,
+          invoices: createdInvoices,
+        };
+      });
+
+      res.json({ 
+        success: true, 
+        message: `Created ${result.customer.companyName} with ${result.invoices.length} invoices`,
+        data: result 
+      });
+    } catch (error) {
+      console.error("Error creating demo customer:", error);
+      res.status(500).json({ message: "Failed to create demo customer" });
+    }
+  });
+
+  // Generate a new random invoice for existing customer
+  const generateInvoiceSchema = z.object({
+    contactId: z.string().uuid().optional(),
+    daysUntilDue: z.number().int().min(-365).max(365).default(30),
+    amount: z.number().positive().max(1000000).optional(),
+  });
+  
+  app.post("/api/demo-data/generate-invoice", isAuthenticated, async (req: any, res) => {
+    try {
+      const tenantId = req.user?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "No tenant associated with user" });
+      }
+
+      const parsed = generateInvoiceSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid input", errors: parsed.error.issues });
+      }
+      const { contactId, daysUntilDue, amount } = parsed.data;
+
+      // Get contact or use first available
+      let targetContact;
+      if (contactId) {
+        const [contact] = await db.select().from(contacts).where(and(eq(contacts.id, contactId), eq(contacts.tenantId, tenantId)));
+        targetContact = contact;
+      } else {
+        const [contact] = await db.select().from(contacts).where(eq(contacts.tenantId, tenantId)).limit(1);
+        targetContact = contact;
+      }
+
+      if (!targetContact) {
+        return res.status(400).json({ message: "No customer found. Create a demo customer first." });
+      }
+
+      const now = new Date();
+      const dueDate = new Date(now);
+      dueDate.setDate(dueDate.getDate() + daysUntilDue);
+      const issueDate = new Date(now);
+
+      // Generate random amount if not provided
+      const invoiceAmount = amount || (Math.random() * 9000 + 1000).toFixed(2);
+      
+      // Generate invoice number
+      const existingCount = await db.select({ count: sql`count(*)::int` }).from(invoices).where(eq(invoices.tenantId, tenantId));
+      const sequence = (existingCount[0]?.count as number || 0) + 1;
+
+      const [invoice] = await db
+        .insert(invoices)
+        .values({
+          tenantId,
+          contactId: targetContact.id,
+          invoiceNumber: `INV-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}-${String(sequence).padStart(4, '0')}`,
+          amount: invoiceAmount,
+          amountPaid: "0",
+          status: daysUntilDue < 0 ? "overdue" : "outstanding",
+          issueDate,
+          dueDate,
+          currency: "GBP",
+          description: `Generated invoice - ${['Consulting', 'Development', 'Support', 'Training'][Math.floor(Math.random() * 4)]}`,
+          workflowState: daysUntilDue < 0 ? "late" : "pre_due",
+          reminderCount: 0,
+        })
+        .returning();
+
+      res.json({ 
+        success: true, 
+        message: `Generated invoice ${invoice.invoiceNumber} for £${invoice.amount}`,
+        invoice 
+      });
+    } catch (error) {
+      console.error("Error generating invoice:", error);
+      res.status(500).json({ message: "Failed to generate invoice" });
+    }
+  });
+
+  // Simulate payment (mimics Xero/QuickBooks webhook)
+  const simulatePaymentSchema = z.object({
+    invoiceId: z.string().uuid().optional(),
+    paymentAmount: z.number().positive().max(10000000).optional(),
+    paymentDate: z.string().datetime().optional(),
+  });
+  
+  app.post("/api/demo-data/simulate-payment", isAuthenticated, async (req: any, res) => {
+    try {
+      const tenantId = req.user?.tenantId;
+      const userId = req.user?.id;
+      if (!tenantId) {
+        return res.status(400).json({ message: "No tenant associated with user" });
+      }
+
+      const parsed = simulatePaymentSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid input", errors: parsed.error.issues });
+      }
+      const { invoiceId, paymentAmount, paymentDate } = parsed.data;
+
+      // If no invoiceId specified, pick a random overdue invoice
+      let targetInvoice;
+      if (invoiceId) {
+        const [invoice] = await db.select().from(invoices).where(and(eq(invoices.id, invoiceId), eq(invoices.tenantId, tenantId)));
+        targetInvoice = invoice;
+      } else {
+        const overdueInvoices = await db.select().from(invoices).where(and(eq(invoices.tenantId, tenantId), eq(invoices.status, 'overdue'))).limit(10);
+        if (overdueInvoices.length > 0) {
+          targetInvoice = overdueInvoices[Math.floor(Math.random() * overdueInvoices.length)];
+        }
+      }
+
+      if (!targetInvoice) {
+        return res.status(400).json({ message: "No invoice found to apply payment to." });
+      }
+
+      const outstanding = parseFloat(targetInvoice.amount) - parseFloat(targetInvoice.amountPaid || "0");
+      const payment = paymentAmount ?? outstanding; // Full payment by default (paymentAmount is already a number from Zod)
+      const paidDate = paymentDate ? new Date(paymentDate) : new Date();
+
+      const newAmountPaid = parseFloat(targetInvoice.amountPaid || "0") + payment;
+      const isFullyPaid = newAmountPaid >= parseFloat(targetInvoice.amount);
+
+      // Update invoice
+      const [updatedInvoice] = await db
+        .update(invoices)
+        .set({
+          amountPaid: newAmountPaid.toFixed(2),
+          status: isFullyPaid ? "paid" : targetInvoice.status,
+          paidDate: isFullyPaid ? paidDate : null,
+          workflowState: isFullyPaid ? "completed" : targetInvoice.workflowState,
+          updatedAt: new Date(),
+        })
+        .where(eq(invoices.id, targetInvoice.id))
+        .returning();
+
+      // Create timeline event for the payment (simulating Xero webhook)
+      const { timelineEvents } = await import('@shared/schema.js');
+      await db.insert(timelineEvents).values({
+        tenantId,
+        customerId: targetInvoice.contactId,
+        invoiceId: targetInvoice.id,
+        occurredAt: paidDate,
+        direction: "inbound",
+        channel: "system",
+        summary: `Payment received: £${payment.toFixed(2)} via bank transfer`,
+        preview: `Payment of £${payment.toFixed(2)} applied to invoice ${targetInvoice.invoiceNumber}`,
+        eventType: "payment_received",
+        status: "completed",
+        metadata: {
+          source: "xero_simulation",
+          paymentAmount: payment,
+          paymentMethod: "bank_transfer",
+          reference: `PAY-${Date.now()}`,
+        },
+      });
+
+      res.json({ 
+        success: true, 
+        message: `Payment of £${payment.toFixed(2)} applied to ${targetInvoice.invoiceNumber}${isFullyPaid ? ' (fully paid)' : ''}`,
+        invoice: updatedInvoice,
+        paymentDetails: {
+          amount: payment,
+          previousBalance: outstanding,
+          newBalance: parseFloat(targetInvoice.amount) - newAmountPaid,
+          isFullyPaid,
+        }
+      });
+    } catch (error) {
+      console.error("Error simulating payment:", error);
+      res.status(500).json({ message: "Failed to simulate payment" });
+    }
+  });
+
+  // Get demo data stats
+  app.get("/api/demo-data/stats", isAuthenticated, async (req: any, res) => {
+    try {
+      const tenantId = req.user?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "No tenant associated with user" });
+      }
+
+      const [contactCount] = await db.select({ count: sql`count(*)::int` }).from(contacts).where(eq(contacts.tenantId, tenantId));
+      const [invoiceCount] = await db.select({ count: sql`count(*)::int` }).from(invoices).where(eq(invoices.tenantId, tenantId));
+      const [overdueCount] = await db.select({ count: sql`count(*)::int` }).from(invoices).where(and(eq(invoices.tenantId, tenantId), eq(invoices.status, 'overdue')));
+      const [actionCount] = await db.select({ count: sql`count(*)::int` }).from(actions).where(eq(actions.tenantId, tenantId));
+
+      res.json({
+        customers: contactCount?.count || 0,
+        invoices: invoiceCount?.count || 0,
+        overdueInvoices: overdueCount?.count || 0,
+        actions: actionCount?.count || 0,
+      });
+    } catch (error) {
+      console.error("Error getting demo data stats:", error);
+      res.status(500).json({ message: "Failed to get stats" });
+    }
+  });
+
   // ==================== END DEMO MODE API ====================
 
   // ==================== PLATFORM ADMIN API ====================
