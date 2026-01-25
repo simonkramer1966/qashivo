@@ -22934,12 +22934,16 @@ ${tenant.name}
         return res.status(400).json({ message: "No tenant associated with user" });
       }
 
-      // Import all tenant-scoped tables for deletion
+      // Import all tenant-scoped tables for deletion (comprehensive list based on FK constraints to contacts)
       const { 
         timelineEvents, paymentPromises, disputes, voiceCalls, emailMessages, smsMessages,
         contactNotes, customerContactPersons, paymentPlans, paymentPlanSchedules, paymentPlanInvoices,
         workflowTimers, inboundMessages, detectedOutcomes, contactOutcomes, policyDecisions,
-        messageDrafts, customerBehaviorSignals, customerScheduleAssignments
+        messageDrafts, customerBehaviorSignals, customerScheduleAssignments,
+        customerPreferences, customerContactRoles, customerLearningProfiles, customerSegmentAssignments,
+        actionEffectiveness, actionItems, bankTransactions, bills, debtorPayments, financeAdvances,
+        invoiceHealthScores, magicLinkTokens, paymentPredictions, promisesToPay, riskScores,
+        userContactAssignments, walletTransactions
       } = await import('@shared/schema.js');
       
       // Delete in order respecting foreign key constraints (child tables first)
@@ -22983,11 +22987,30 @@ ${tenant.name}
         // Invoices (before contacts due to foreign key)
         const deletedInvoices = await tx.delete(invoices).where(eq(invoices.tenantId, tenantId)).returning();
         
-        // Contact-related (notes, contact persons, behavior signals, schedule assignments)
+        // Contact-related tables (all tables with FK to contacts - must delete before contacts)
         const deletedNotes = await tx.delete(contactNotes).where(eq(contactNotes.tenantId, tenantId)).returning();
         const deletedContactPersons = await tx.delete(customerContactPersons).where(eq(customerContactPersons.tenantId, tenantId)).returning();
         const deletedSignals = await tx.delete(customerBehaviorSignals).where(eq(customerBehaviorSignals.tenantId, tenantId)).returning();
         const deletedScheduleAssignments = await tx.delete(customerScheduleAssignments).where(eq(customerScheduleAssignments.tenantId, tenantId)).returning();
+        
+        // Additional contact-related tables
+        await tx.delete(customerPreferences).where(eq(customerPreferences.tenantId, tenantId));
+        await tx.delete(customerContactRoles).where(eq(customerContactRoles.tenantId, tenantId));
+        await tx.delete(customerLearningProfiles).where(eq(customerLearningProfiles.tenantId, tenantId));
+        await tx.delete(customerSegmentAssignments).where(eq(customerSegmentAssignments.tenantId, tenantId));
+        await tx.delete(actionEffectiveness).where(eq(actionEffectiveness.tenantId, tenantId));
+        await tx.delete(actionItems).where(eq(actionItems.tenantId, tenantId));
+        await tx.delete(bankTransactions).where(eq(bankTransactions.tenantId, tenantId));
+        await tx.delete(bills).where(eq(bills.tenantId, tenantId));
+        await tx.delete(debtorPayments).where(eq(debtorPayments.tenantId, tenantId));
+        await tx.delete(financeAdvances).where(eq(financeAdvances.tenantId, tenantId));
+        await tx.delete(invoiceHealthScores).where(eq(invoiceHealthScores.tenantId, tenantId));
+        await tx.delete(magicLinkTokens).where(eq(magicLinkTokens.tenantId, tenantId));
+        await tx.delete(paymentPredictions).where(eq(paymentPredictions.tenantId, tenantId));
+        await tx.delete(promisesToPay).where(eq(promisesToPay.tenantId, tenantId));
+        await tx.delete(riskScores).where(eq(riskScores.tenantId, tenantId));
+        await tx.delete(userContactAssignments).where(eq(userContactAssignments.tenantId, tenantId));
+        await tx.delete(walletTransactions).where(eq(walletTransactions.tenantId, tenantId));
         
         // Contacts (last due to foreign keys)
         const deletedContacts = await tx.delete(contacts).where(eq(contacts.tenantId, tenantId)).returning();
