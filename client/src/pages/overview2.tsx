@@ -4,6 +4,7 @@ import NewSidebar from "@/components/layout/new-sidebar";
 import BottomNav from "@/components/layout/bottom-nav";
 import { useCurrency } from "@/hooks/useCurrency";
 import { ComposedChart, Bar, Line, XAxis, YAxis, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 interface CashInflowPoint {
   date: string;
@@ -85,6 +86,7 @@ export default function Overview2() {
   const { formatCurrency } = useCurrency();
   const [forecastRange, setForecastRange] = useState<30 | 60 | 90>(60);
   const [forecastBucket, setForecastBucket] = useState<"day" | "week">("week");
+  const [showAllMetrics, setShowAllMetrics] = useState(false);
 
   const { data: metrics, isLoading: metricsLoading } = useQuery<CashMetrics>({
     queryKey: ["/api/dashboard/metrics"],
@@ -147,217 +149,369 @@ export default function Overview2() {
       </div>
 
       <main className="flex-1 flex flex-col min-h-0 main-with-bottom-nav">
-        <div className="max-w-7xl mx-auto w-full px-6 py-5 border-b border-gray-100">
+        {/* Desktop Header - Cardless v2.0 */}
+        <div className="hidden lg:block max-w-7xl mx-auto w-full px-6 py-5 border-b border-gray-100">
           <h1 className="text-2xl font-bold text-gray-900 font-heading">Overview</h1>
           <p className="text-sm text-gray-500 mt-1">
             Qashivo manages collections automatically. Review only when flagged.
           </p>
         </div>
+
+        {/* Mobile Header - Cardless v3.0: Compact, no subtitle */}
+        <div className="lg:hidden px-4 py-4 border-b border-gray-100">
+          <h1 className="text-xl font-bold text-gray-900 font-heading">Overview</h1>
+        </div>
         
         <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
-          <div className="max-w-7xl mx-auto w-full px-6 flex-1 flex flex-col min-h-0">
-          
-          <div className="py-4 border-b border-gray-100 flex flex-wrap items-center gap-x-10 gap-y-3">
-            <div>
-              <span className="text-xs text-gray-500">Outstanding</span>
-              {metricsLoading ? (
-                <div className="h-5 w-20 bg-gray-100 animate-pulse rounded mt-0.5"></div>
-              ) : (
-                <p className="text-sm font-semibold text-gray-900 tabular-nums">
-                  {formatCurrency(totalOutstanding)} <span className="text-xs font-normal text-gray-400">({totalInvoiceCount})</span>
-                </p>
-              )}
-            </div>
-            <div>
-              <span className="text-xs text-gray-500">Overdue</span>
-              {metricsLoading ? (
-                <div className="h-5 w-20 bg-gray-100 animate-pulse rounded mt-0.5"></div>
-              ) : (
-                <p className="text-sm font-semibold text-gray-900 tabular-nums">
-                  {formatCurrency(overdueAmount)} <span className="text-xs font-normal text-gray-400">({overdueCount})</span>
-                </p>
-              )}
-            </div>
-            <div>
-              <span className="text-xs text-gray-500">Collected (Month)</span>
-              {metricsLoading ? (
-                <div className="h-5 w-20 bg-gray-100 animate-pulse rounded mt-0.5"></div>
-              ) : (
-                <p className="text-sm font-semibold text-[#4FAD80] tabular-nums">
-                  {formatCurrency(metrics?.collectedThisMonth || 0)}
-                </p>
-              )}
-            </div>
-            <div>
-              <span className="text-xs text-gray-500">Collected (Week)</span>
-              {metricsLoading ? (
-                <div className="h-5 w-20 bg-gray-100 animate-pulse rounded mt-0.5"></div>
-              ) : (
-                <p className="text-sm font-semibold text-[#4FAD80] tabular-nums">
-                  {formatCurrency(metrics?.collectedThisWeek || 0)}
-                </p>
-              )}
-            </div>
-            
-            <div className="h-6 w-px bg-gray-200 hidden sm:block" />
-            
-            <div>
-              <span className="text-xs text-gray-500">Avg Days Late</span>
-              {metricsLoading ? (
-                <div className="h-5 w-16 bg-gray-100 animate-pulse rounded mt-0.5"></div>
-              ) : (
-                <p className="text-sm font-semibold text-gray-900 tabular-nums">
-                  {Math.abs(avgDaysOverdue).toFixed(0)} <span className="text-xs font-normal text-gray-400">days</span>
-                </p>
-              )}
-            </div>
-            <div>
-              <span className="text-xs text-gray-500">Avg Days to Pay</span>
-              {metricsLoading ? (
-                <div className="h-5 w-16 bg-gray-100 animate-pulse rounded mt-0.5"></div>
-              ) : (
-                <p className="text-sm font-semibold text-gray-900 tabular-nums">
-                  45 <span className="text-xs font-normal text-gray-400">days</span>
-                </p>
-              )}
-            </div>
-            <div>
-              <span className="text-xs text-gray-500">On-time Rate</span>
-              {metricsLoading ? (
-                <div className="h-5 w-16 bg-gray-100 animate-pulse rounded mt-0.5"></div>
-              ) : (
-                <p className="text-sm font-semibold text-[#4FAD80] tabular-nums">32%</p>
-              )}
-            </div>
-            <div>
-              <span className="text-xs text-gray-500">Promises Kept</span>
-              <p className="text-sm font-semibold text-[#4FAD80] tabular-nums">78%</p>
+          {/* Desktop Metrics - Cardless v2.0 (unchanged) */}
+          <div className="hidden lg:block max-w-7xl mx-auto w-full px-6">
+            <div className="py-4 border-b border-gray-100 flex flex-wrap items-center gap-x-10 gap-y-3">
+              <div>
+                <span className="text-xs text-gray-500">Outstanding</span>
+                {metricsLoading ? (
+                  <div className="h-5 w-20 bg-gray-100 animate-pulse rounded mt-0.5"></div>
+                ) : (
+                  <p className="text-sm font-semibold text-gray-900 tabular-nums">
+                    {formatCurrency(totalOutstanding)} <span className="text-xs font-normal text-gray-400">({totalInvoiceCount})</span>
+                  </p>
+                )}
+              </div>
+              <div>
+                <span className="text-xs text-gray-500">Overdue</span>
+                {metricsLoading ? (
+                  <div className="h-5 w-20 bg-gray-100 animate-pulse rounded mt-0.5"></div>
+                ) : (
+                  <p className="text-sm font-semibold text-gray-900 tabular-nums">
+                    {formatCurrency(overdueAmount)} <span className="text-xs font-normal text-gray-400">({overdueCount})</span>
+                  </p>
+                )}
+              </div>
+              <div>
+                <span className="text-xs text-gray-500">Collected (Month)</span>
+                {metricsLoading ? (
+                  <div className="h-5 w-20 bg-gray-100 animate-pulse rounded mt-0.5"></div>
+                ) : (
+                  <p className="text-sm font-semibold text-[#4FAD80] tabular-nums">
+                    {formatCurrency(metrics?.collectedThisMonth || 0)}
+                  </p>
+                )}
+              </div>
+              <div>
+                <span className="text-xs text-gray-500">Collected (Week)</span>
+                {metricsLoading ? (
+                  <div className="h-5 w-20 bg-gray-100 animate-pulse rounded mt-0.5"></div>
+                ) : (
+                  <p className="text-sm font-semibold text-[#4FAD80] tabular-nums">
+                    {formatCurrency(metrics?.collectedThisWeek || 0)}
+                  </p>
+                )}
+              </div>
+              
+              <div className="h-6 w-px bg-gray-200 hidden sm:block" />
+              
+              <div>
+                <span className="text-xs text-gray-500">Avg Days Late</span>
+                {metricsLoading ? (
+                  <div className="h-5 w-16 bg-gray-100 animate-pulse rounded mt-0.5"></div>
+                ) : (
+                  <p className="text-sm font-semibold text-gray-900 tabular-nums">
+                    {Math.abs(avgDaysOverdue).toFixed(0)} <span className="text-xs font-normal text-gray-400">days</span>
+                  </p>
+                )}
+              </div>
+              <div>
+                <span className="text-xs text-gray-500">Avg Days to Pay</span>
+                {metricsLoading ? (
+                  <div className="h-5 w-16 bg-gray-100 animate-pulse rounded mt-0.5"></div>
+                ) : (
+                  <p className="text-sm font-semibold text-gray-900 tabular-nums">
+                    45 <span className="text-xs font-normal text-gray-400">days</span>
+                  </p>
+                )}
+              </div>
+              <div>
+                <span className="text-xs text-gray-500">On-time Rate</span>
+                {metricsLoading ? (
+                  <div className="h-5 w-16 bg-gray-100 animate-pulse rounded mt-0.5"></div>
+                ) : (
+                  <p className="text-sm font-semibold text-[#4FAD80] tabular-nums">32%</p>
+                )}
+              </div>
+              <div>
+                <span className="text-xs text-gray-500">Promises Kept</span>
+                <p className="text-sm font-semibold text-[#4FAD80] tabular-nums">78%</p>
+              </div>
             </div>
           </div>
 
-          <section className="flex-1 flex flex-col min-h-0 py-5 border-b border-gray-100" data-testid="card-cashflow-chart">
-            <div className="flex items-center justify-between mb-3 flex-shrink-0">
-              <h3 className="text-[11px] font-medium text-gray-400 uppercase tracking-wider">{getForecastTitle()}</h3>
-              <div className="flex items-center gap-2" data-testid="radio-forecast-period">
-                <div className="flex items-center gap-0.5">
-                  {([30, 60, 90] as const).map((range) => (
-                    <button
-                      key={range}
-                      onClick={() => setForecastRange(range)}
-                      className={`px-2.5 py-1 text-[11px] transition-colors rounded ${
-                        forecastRange === range 
-                          ? "text-gray-900 font-medium bg-gray-100" 
-                          : "text-gray-400 hover:text-gray-600"
-                      }`}
-                      data-testid={`radio-range-${range}`}
-                    >
-                      {range}d
-                    </button>
-                  ))}
-                </div>
-                <div className="w-px h-4 bg-gray-200" />
-                <div className="flex items-center gap-0.5">
-                  {(["day", "week"] as const).map((b) => (
-                    <button
-                      key={b}
-                      onClick={() => setForecastBucket(b)}
-                      className={`px-2.5 py-1 text-[11px] transition-colors rounded ${
-                        forecastBucket === b 
-                          ? "text-gray-900 font-medium bg-gray-100" 
-                          : "text-gray-400 hover:text-gray-600"
-                      }`}
-                      data-testid={`radio-bucket-${b}`}
-                    >
-                      {b === "day" ? "Daily" : "Weekly"}
-                    </button>
-                  ))}
-                </div>
+          {/* Mobile Metrics - Cardless v3.0: Hero card + 2-column grid */}
+          <div className="lg:hidden px-4 py-4 space-y-4">
+            {/* Hero Metric Card - Outstanding */}
+            <div className="bg-gray-50 rounded-xl p-4">
+              <span className="text-sm text-gray-500">Total Outstanding</span>
+              {metricsLoading ? (
+                <div className="h-8 w-32 bg-gray-200 animate-pulse rounded mt-1"></div>
+              ) : (
+                <p className="text-2xl font-bold text-gray-900 tabular-nums mt-1">
+                  {formatCurrency(totalOutstanding)}
+                </p>
+              )}
+              <p className="text-sm text-gray-500 mt-0.5">{totalInvoiceCount} invoices</p>
+            </div>
+
+            {/* Secondary Metrics - 2 Column Grid */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-gray-50 rounded-xl p-4">
+                <span className="text-sm text-gray-500">Overdue</span>
+                {metricsLoading ? (
+                  <div className="h-6 w-20 bg-gray-200 animate-pulse rounded mt-1"></div>
+                ) : (
+                  <>
+                    <p className="text-lg font-semibold text-gray-900 tabular-nums mt-1">
+                      {formatCurrency(overdueAmount)}
+                    </p>
+                    <p className="text-sm text-gray-400">{overdueCount} invoices</p>
+                  </>
+                )}
+              </div>
+              <div className="bg-gray-50 rounded-xl p-4">
+                <span className="text-sm text-gray-500">Collected</span>
+                {metricsLoading ? (
+                  <div className="h-6 w-20 bg-gray-200 animate-pulse rounded mt-1"></div>
+                ) : (
+                  <>
+                    <p className="text-lg font-semibold text-[#4FAD80] tabular-nums mt-1">
+                      {formatCurrency(metrics?.collectedThisMonth || 0)}
+                    </p>
+                    <p className="text-sm text-gray-400">this month</p>
+                  </>
+                )}
               </div>
             </div>
-            <div className="flex-1 min-h-[200px] max-h-[400px]">
-              {cashInflowLoading ? (
-                <div className="h-full flex items-center justify-center">
-                  <div className="text-gray-400 text-sm">Loading chart...</div>
+
+            {/* Expandable Additional Metrics */}
+            <button 
+              onClick={() => setShowAllMetrics(!showAllMetrics)}
+              className="flex items-center justify-center gap-2 w-full h-11 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              {showAllMetrics ? "Hide details" : "View all metrics"}
+              {showAllMetrics ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </button>
+
+            {showAllMetrics && (
+              <div className="grid grid-cols-2 gap-3 animate-in slide-in-from-top-2 duration-200">
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <span className="text-sm text-gray-500">Collected (Week)</span>
+                  {metricsLoading ? (
+                    <div className="h-6 w-20 bg-gray-200 animate-pulse rounded mt-1"></div>
+                  ) : (
+                    <p className="text-lg font-semibold text-[#4FAD80] tabular-nums mt-1">
+                      {formatCurrency(metrics?.collectedThisWeek || 0)}
+                    </p>
+                  )}
                 </div>
-              ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={formatChartData()}>
-                    <XAxis 
-                      dataKey="date" 
-                      tick={{ fontSize: 11, fill: '#9ca3af' }}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis 
-                      tick={{ fontSize: 11, fill: '#9ca3af' }}
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(value) => formatCompactCurrency(value)}
-                      width={55}
-                    />
-                    <RechartsTooltip
-                      content={({ active, payload, label }) => {
-                        if (!active || !payload || !payload.length) return null;
-                        const data = payload[0]?.payload;
-                        if (!data) return null;
-                        return (
-                          <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm text-[13px]">
-                            <p className="font-medium text-gray-900 mb-2">{label}</p>
-                            <div className="space-y-1">
-                              <div className="flex justify-between gap-4">
-                                <span className="text-gray-500">Total Expected</span>
-                                <span className="font-medium tabular-nums">{formatCurrency(data.expectedAmount)}</span>
-                              </div>
-                              <div className="flex justify-between gap-4">
-                                <span className="text-gray-500">Confidence-Weighted</span>
-                                <span className="font-medium tabular-nums text-gray-700">{formatCurrency(data.confidenceWeightedAmount)}</span>
-                              </div>
-                              <div className="border-t border-gray-100 my-2 pt-2">
-                                <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">By Confidence</p>
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <span className="text-sm text-gray-500">Avg Days Late</span>
+                  {metricsLoading ? (
+                    <div className="h-6 w-16 bg-gray-200 animate-pulse rounded mt-1"></div>
+                  ) : (
+                    <p className="text-lg font-semibold text-gray-900 tabular-nums mt-1">
+                      {Math.abs(avgDaysOverdue).toFixed(0)} days
+                    </p>
+                  )}
+                </div>
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <span className="text-sm text-gray-500">Avg Days to Pay</span>
+                  {metricsLoading ? (
+                    <div className="h-6 w-16 bg-gray-200 animate-pulse rounded mt-1"></div>
+                  ) : (
+                    <p className="text-lg font-semibold text-gray-900 tabular-nums mt-1">
+                      45 days
+                    </p>
+                  )}
+                </div>
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <span className="text-sm text-gray-500">On-time Rate</span>
+                  {metricsLoading ? (
+                    <div className="h-6 w-16 bg-gray-200 animate-pulse rounded mt-1"></div>
+                  ) : (
+                    <p className="text-lg font-semibold text-[#4FAD80] tabular-nums mt-1">32%</p>
+                  )}
+                </div>
+                <div className="bg-gray-50 rounded-xl p-4 col-span-2">
+                  <span className="text-sm text-gray-500">Promises Kept</span>
+                  <p className="text-lg font-semibold text-[#4FAD80] tabular-nums mt-1">78%</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Chart Section - Responsive */}
+          <div className="max-w-7xl mx-auto w-full px-4 lg:px-6 flex-1 flex flex-col min-h-0">
+            <section className="flex-1 flex flex-col min-h-0 py-4 lg:py-5 border-t lg:border-t-0 lg:border-b border-gray-100" data-testid="card-cashflow-chart">
+              {/* Chart Header & Controls */}
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 lg:mb-3 gap-3 flex-shrink-0">
+                <h3 className="text-sm lg:text-[11px] font-medium text-gray-500 lg:text-gray-400 lg:uppercase lg:tracking-wider">{getForecastTitle()}</h3>
+                
+                {/* Mobile Controls - 44px (h-11) touch targets, segmented control style */}
+                <div className="lg:hidden flex items-center gap-2" data-testid="radio-forecast-period">
+                  <div className="flex items-center bg-gray-100 rounded-xl p-1">
+                    {([30, 60, 90] as const).map((range) => (
+                      <button
+                        key={range}
+                        onClick={() => setForecastRange(range)}
+                        className={`h-11 px-4 text-sm font-medium transition-colors rounded-lg ${
+                          forecastRange === range 
+                            ? "text-gray-900 bg-white shadow-sm" 
+                            : "text-gray-500"
+                        }`}
+                        data-testid={`radio-range-${range}`}
+                      >
+                        {range}d
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex items-center bg-gray-100 rounded-xl p-1">
+                    {(["day", "week"] as const).map((b) => (
+                      <button
+                        key={b}
+                        onClick={() => setForecastBucket(b)}
+                        className={`h-11 px-4 text-sm font-medium transition-colors rounded-lg ${
+                          forecastBucket === b 
+                            ? "text-gray-900 bg-white shadow-sm" 
+                            : "text-gray-500"
+                        }`}
+                        data-testid={`radio-bucket-${b}`}
+                      >
+                        {b === "day" ? "Daily" : "Weekly"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Desktop Controls - Cardless v2.0 (unchanged) */}
+                <div className="hidden lg:flex items-center gap-2" data-testid="radio-forecast-period-desktop">
+                  <div className="flex items-center gap-0.5">
+                    {([30, 60, 90] as const).map((range) => (
+                      <button
+                        key={range}
+                        onClick={() => setForecastRange(range)}
+                        className={`px-2.5 py-1 text-[11px] transition-colors rounded ${
+                          forecastRange === range 
+                            ? "text-gray-900 font-medium bg-gray-100" 
+                            : "text-gray-400 hover:text-gray-600"
+                        }`}
+                        data-testid={`radio-range-${range}-desktop`}
+                      >
+                        {range}d
+                      </button>
+                    ))}
+                  </div>
+                  <div className="w-px h-4 bg-gray-200" />
+                  <div className="flex items-center gap-0.5">
+                    {(["day", "week"] as const).map((b) => (
+                      <button
+                        key={b}
+                        onClick={() => setForecastBucket(b)}
+                        className={`px-2.5 py-1 text-[11px] transition-colors rounded ${
+                          forecastBucket === b 
+                            ? "text-gray-900 font-medium bg-gray-100" 
+                            : "text-gray-400 hover:text-gray-600"
+                        }`}
+                        data-testid={`radio-bucket-${b}-desktop`}
+                      >
+                        {b === "day" ? "Daily" : "Weekly"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Chart */}
+              <div className="flex-1 min-h-[200px] max-h-[400px]">
+                {cashInflowLoading ? (
+                  <div className="h-full flex items-center justify-center">
+                    <div className="text-gray-400 text-sm">Loading chart...</div>
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={formatChartData()}>
+                      <XAxis 
+                        dataKey="date" 
+                        tick={{ fontSize: 11, fill: '#9ca3af' }}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <YAxis 
+                        tick={{ fontSize: 11, fill: '#9ca3af' }}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(value) => formatCompactCurrency(value)}
+                        width={55}
+                      />
+                      <RechartsTooltip
+                        content={({ active, payload, label }) => {
+                          if (!active || !payload || !payload.length) return null;
+                          const data = payload[0]?.payload;
+                          if (!data) return null;
+                          return (
+                            <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm text-[13px]">
+                              <p className="font-medium text-gray-900 mb-2">{label}</p>
+                              <div className="space-y-1">
                                 <div className="flex justify-between gap-4">
-                                  <span className="text-[#17B6C3]">High</span>
-                                  <span className="tabular-nums">{formatCurrency(data.highConfidence)}</span>
+                                  <span className="text-gray-500">Total Expected</span>
+                                  <span className="font-medium tabular-nums">{formatCurrency(data.expectedAmount)}</span>
                                 </div>
                                 <div className="flex justify-between gap-4">
-                                  <span className="text-[#E8A23B]">Medium</span>
-                                  <span className="tabular-nums">{formatCurrency(data.mediumConfidence)}</span>
+                                  <span className="text-gray-500">Confidence-Weighted</span>
+                                  <span className="font-medium tabular-nums text-gray-700">{formatCurrency(data.confidenceWeightedAmount)}</span>
                                 </div>
-                                <div className="flex justify-between gap-4">
-                                  <span className="text-gray-400">Low</span>
-                                  <span className="tabular-nums">{formatCurrency(data.lowConfidence)}</span>
+                                <div className="border-t border-gray-100 my-2 pt-2">
+                                  <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">By Confidence</p>
+                                  <div className="flex justify-between gap-4">
+                                    <span className="text-[#17B6C3]">High</span>
+                                    <span className="tabular-nums">{formatCurrency(data.highConfidence)}</span>
+                                  </div>
+                                  <div className="flex justify-between gap-4">
+                                    <span className="text-[#E8A23B]">Medium</span>
+                                    <span className="tabular-nums">{formatCurrency(data.mediumConfidence)}</span>
+                                  </div>
+                                  <div className="flex justify-between gap-4">
+                                    <span className="text-gray-400">Low</span>
+                                    <span className="tabular-nums">{formatCurrency(data.lowConfidence)}</span>
+                                  </div>
                                 </div>
-                              </div>
-                              <div className="text-gray-400 text-[10px]">
-                                {data.invoiceCount} invoice{data.invoiceCount !== 1 ? 's' : ''}
+                                <div className="text-gray-400 text-[10px]">
+                                  {data.invoiceCount} invoice{data.invoiceCount !== 1 ? 's' : ''}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        );
-                      }}
-                    />
-                    <Bar 
-                      dataKey="expectedAmount" 
-                      fill="#17B6C3"
-                      radius={[2, 2, 0, 0]}
-                      animationDuration={600}
-                      animationEasing="ease-out"
-                      name="Total Expected"
-                    />
-                    <Line 
-                      type="monotone"
-                      dataKey="confidenceWeightedAmount" 
-                      stroke="#4B5563"
-                      strokeWidth={2}
-                      dot={false}
-                      animationDuration={600}
-                      animationEasing="ease-out"
-                      name="Confidence-Weighted"
-                    />
-                  </ComposedChart>
-                </ResponsiveContainer>
-              )}
-            </div>
-          </section>
+                          );
+                        }}
+                      />
+                      <Bar 
+                        dataKey="expectedAmount" 
+                        fill="#17B6C3"
+                        radius={[2, 2, 0, 0]}
+                        animationDuration={600}
+                        animationEasing="ease-out"
+                        name="Total Expected"
+                      />
+                      <Line 
+                        type="monotone"
+                        dataKey="confidenceWeightedAmount" 
+                        stroke="#4B5563"
+                        strokeWidth={2}
+                        dot={false}
+                        animationDuration={600}
+                        animationEasing="ease-out"
+                        name="Confidence-Weighted"
+                      />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            </section>
 
           
           </div>
