@@ -416,7 +416,7 @@ FORMATTING INSTRUCTIONS:
 }
 
 // Email template types for collections
-export type EmailTemplateType = 'full_payment_request' | 'plan_confirmation' | 'remittance_request' | 'statement';
+export type EmailTemplateType = 'full_payment_request' | 'plan_confirmation' | 'remittance_request' | 'statement' | 'failed_ptp' | 'debt_escalation';
 
 interface CollectionEmailContext {
   contactName: string;
@@ -447,6 +447,12 @@ interface CollectionEmailContext {
   includeStatutoryInterest?: boolean;
   totalInterest?: number;
   statutoryInterestRate?: number;
+  failedPtpDetails?: {
+    promiseDate: string;
+    promisedAmount: number;
+    invoiceNumbers: string[];
+    daysSinceBreach: number;
+  } | null;
 }
 
 export interface CollectionEmailDraft {
@@ -459,7 +465,9 @@ const templateDescriptions: Record<EmailTemplateType, string> = {
   full_payment_request: "Request for full payment of all outstanding invoices, emphasizing the importance of settling the account",
   plan_confirmation: "Confirmation of an agreed payment plan with details of the installments and next steps",
   remittance_request: "Request for remittance advice or proof of payment for recent payments made",
-  statement: "Statement of account showing all outstanding invoices with a request to review and confirm balances"
+  statement: "Statement of account showing all outstanding invoices with a request to review and confirm balances",
+  failed_ptp: "Follow-up on a broken promise to pay - the customer committed to making a payment by a specific date but did not honour that commitment. Express disappointment, reference the original promise, and request immediate payment or an explanation",
+  debt_escalation: "Final warning before escalation to formal debt recovery. Inform the customer that continued non-payment will result in the account being passed to a debt collection agency or legal action, which will incur additional costs. This is a serious, formal communication"
 };
 
 export async function generateCollectionEmail(
@@ -487,6 +495,14 @@ export async function generateCollectionEmail(
       ? `Active payment plan: £${context.paymentPlan.totalAmount} over ${context.paymentPlan.installments} installments. Next payment: £${context.paymentPlan.nextPaymentAmount} due ${context.paymentPlan.nextPaymentDate}`
       : 'No active payment plan';
 
+    const failedPtpText = context.failedPtpDetails
+      ? `\nFailed Promise to Pay Details (CRITICAL - reference this in the email):
+- Promise Date: ${context.failedPtpDetails.promiseDate}
+- Promised Amount: £${context.failedPtpDetails.promisedAmount.toFixed(2)}
+- Related Invoices: ${context.failedPtpDetails.invoiceNumbers.join(', ')}
+- Days Since Breach: ${context.failedPtpDetails.daysSinceBreach}`
+      : '';
+
     const prompt = `
 Generate a professional UK business collection email with these details:
 
@@ -502,6 +518,7 @@ Customer Details:
 Overdue Invoices (past due date):
 ${invoicesList}
 ${statutoryInterestSection}
+${failedPtpText}
 
 Recent Communication History:
 ${recentActivityText}
@@ -572,6 +589,10 @@ function getDefaultSubject(templateType: EmailTemplateType, context: CollectionE
       return `Remittance Advice Required - ${context.companyName}`;
     case 'statement':
       return `Statement of Account - ${context.companyName}`;
+    case 'failed_ptp':
+      return `Urgent: Broken Payment Commitment - ${context.companyName}`;
+    case 'debt_escalation':
+      return `Final Notice Before Debt Recovery Action - ${context.companyName}`;
   }
 }
 
@@ -588,6 +609,11 @@ function getDefaultBody(templateType: EmailTemplateType, context: CollectionEmai
       return `${greeting}\n\nWe have received a payment but require remittance advice to allocate it correctly.\n\nPlease provide details of the invoices this payment relates to.\n\n${signOff}`;
     case 'statement':
       return `${greeting}\n\nPlease find below a summary of your outstanding invoices totalling £${context.totalOutstanding.toFixed(2)}.\n\nKindly review and let us know if you have any queries.\n\n${signOff}`;
+    case 'failed_ptp':
+      const ptpDetails = context.failedPtpDetails;
+      return `${greeting}\n\nI am disappointed to note that the payment of £${ptpDetails?.promisedAmount?.toFixed(2) || context.totalOutstanding.toFixed(2)} promised for ${ptpDetails?.promiseDate || 'the agreed date'} has not been received.\n\nPlease contact us immediately to discuss this matter and arrange payment.\n\n${signOff}`;
+    case 'debt_escalation':
+      return `${greeting}\n\nDespite our previous attempts to resolve the overdue balance of £${context.totalOutstanding.toFixed(2)}, we have not received payment or a satisfactory response.\n\nUnless payment is received within 7 days, we will have no option but to escalate this matter to our debt recovery partners, which will incur additional costs to your account.\n\n${signOff}`;
   }
 }
 

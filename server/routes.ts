@@ -65,6 +65,7 @@ import {
   messageDrafts,
   tenants,
   paymentPromises,
+  promisesToPay,
   smeClients,
   contactNotes,
   timelineEvents
@@ -4868,6 +4869,37 @@ Return only JSON with keys: intent, sentiment, confidence, ptpAmount, ptpDate, d
         where: eq(tenants.id, user.tenantId),
       });
 
+      // Fetch failed PTP details if this is a failed_ptp template
+      let failedPtpDetails = null;
+      if (templateType === 'failed_ptp') {
+        const failedPtps = await db.select()
+          .from(promisesToPay)
+          .innerJoin(invoices, eq(promisesToPay.invoiceId, invoices.id))
+          .where(
+            and(
+              eq(promisesToPay.contactId, contactId),
+              eq(promisesToPay.tenantId, user.tenantId),
+              eq(promisesToPay.status, 'breached')
+            )
+          )
+          .orderBy(desc(promisesToPay.breachedAt))
+          .limit(5);
+
+        if (failedPtps.length > 0) {
+          // Get the most recent breached PTP
+          const mostRecentPtp = failedPtps[0];
+          const breachDate = mostRecentPtp.promisesToPay.breachedAt || mostRecentPtp.promisesToPay.promisedDate;
+          const daysSinceBreach = Math.floor((Date.now() - new Date(breachDate).getTime()) / (1000 * 60 * 60 * 24));
+          
+          failedPtpDetails = {
+            promiseDate: new Date(mostRecentPtp.promisesToPay.promisedDate).toLocaleDateString('en-GB'),
+            promisedAmount: Number(mostRecentPtp.promisesToPay.amount),
+            invoiceNumbers: failedPtps.map(p => p.invoices.invoiceNumber || 'N/A'),
+            daysSinceBreach
+          };
+        }
+      }
+
       // Build context for AI email generation
       const { generateCollectionEmail } = await import("./services/openai.js");
       
@@ -4894,7 +4926,8 @@ Return only JSON with keys: intent, sentiment, confidence, ptpAmount, ptpDate, d
         senderCompany: tenant?.name || 'Accounts Receivable',
         includeStatutoryInterest,
         totalInterest,
-        statutoryInterestRate: BOE_BASE_RATE + STATUTORY_MARKUP
+        statutoryInterestRate: BOE_BASE_RATE + STATUTORY_MARKUP,
+        failedPtpDetails
       });
 
       res.json({

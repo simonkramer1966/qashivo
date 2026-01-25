@@ -69,7 +69,7 @@ interface CardlessCustomerDrawerProps {
 type NoteType = "internal" | "reminder";
 type CallGoal = "payment_commitment" | "payment_plan" | "query_resolution" | "general_followup";
 type CallScheduleMode = "now" | "asap" | "scheduled";
-type EmailTemplateType = "full_payment_request" | "plan_confirmation" | "remittance_request" | "statement" | "manual";
+type EmailTemplateType = "full_payment_request" | "plan_confirmation" | "remittance_request" | "statement" | "failed_ptp" | "debt_escalation" | "manual";
 type SmsTemplateType = "payment_reminder" | "payment_received" | "payment_overdue" | "manual";
 
 const callGoalLabels: Record<CallGoal, string> = {
@@ -84,6 +84,8 @@ const emailTemplateLabels: Record<EmailTemplateType, string> = {
   plan_confirmation: "Plan Confirmation",
   remittance_request: "Remittance Request",
   statement: "Statement",
+  failed_ptp: "Failed PTP",
+  debt_escalation: "Debt Escalation",
   manual: "Write Manually",
 };
 
