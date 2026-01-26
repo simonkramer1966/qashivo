@@ -5725,9 +5725,9 @@ Return only JSON with keys: intent, sentiment, confidence, ptpAmount, ptpDate, d
             invoiceId: invoice.id,
             promisedAmount: promiseAmount,
             promisedDate: parsedDate,
-            source: 'manual',
-            confirmedBy: confirmedBy || null,
-            notes: notes || null,
+            promiseType: paymentType === 'full' ? 'payment_date' : 'partial_payment',
+            sourceType: 'manual',
+            notes: notes || `Confirmed by: ${confirmedBy || 'Unknown'}`,
             createdByUserId: user.id,
           });
           
