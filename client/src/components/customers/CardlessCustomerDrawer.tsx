@@ -762,13 +762,61 @@ export function CardlessCustomerDrawer({
       const res = await apiRequest("POST", `/api/contacts/${customerId}/promise-to-pay`, ptpData);
       return await res.json();
     },
-    onSuccess: () => {
-      toast({
-        title: "Promise to Pay recorded",
-        description: "The payment commitment has been saved",
-      });
+    onSuccess: (_data, variables) => {
+      const savedPtpDetails = {
+        amount: variables.amount || 0,
+        paymentDate: variables.paymentDate,
+        confirmedBy: variables.confirmedBy,
+        invoiceCount: variables.invoiceIds.length,
+      };
+      
       resetPtpMode();
       queryClient.invalidateQueries({ queryKey: [`/api/contacts/${customerId}/preview`] });
+      
+      const confirmedByContact = preview?.allCreditControlContacts?.find(
+        c => c.name === savedPtpDetails.confirmedBy || c.id === savedPtpDetails.confirmedBy
+      );
+      const recipientEmail = confirmedByContact?.email || 
+        preview?.creditControlContact?.email || 
+        preview?.customer?.email || '';
+      const recipientName = confirmedByContact?.name || savedPtpDetails.confirmedBy;
+      const companyName = preview?.customer?.companyName || preview?.customer?.name || 'your company';
+      
+      const formattedAmount = new Intl.NumberFormat('en-GB', {
+        style: 'currency',
+        currency: 'GBP',
+        minimumFractionDigits: 2
+      }).format(savedPtpDetails.amount);
+      
+      const formattedDate = new Date(savedPtpDetails.paymentDate).toLocaleDateString('en-GB', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
+      
+      setIsEmailMode(true);
+      setIsNoteMode(false);
+      setIsCallMode(false);
+      setIsSmsMode(false);
+      setSelectedRecipientEmail(recipientEmail);
+      setEmailTemplate("manual" as EmailTemplateType);
+      
+      setEmailSubject(`Payment Confirmation - ${formattedAmount} by ${formattedDate}`);
+      setEmailBody(`Dear ${recipientName},
+
+Thank you for confirming your payment commitment during our recent conversation.
+
+As agreed, we have recorded your promise to pay ${formattedAmount} by ${formattedDate}${savedPtpDetails.invoiceCount > 0 ? ` covering ${savedPtpDetails.invoiceCount} invoice${savedPtpDetails.invoiceCount > 1 ? 's' : ''}` : ''}.
+
+If you have any questions or need to discuss alternative arrangements, please don't hesitate to contact us.
+
+Kind regards`);
+      
+      toast({
+        title: "Promise to Pay recorded",
+        description: "Email confirmation ready to send",
+      });
     },
     onError: (error: any) => {
       toast({
