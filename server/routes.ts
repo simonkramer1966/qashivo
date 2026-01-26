@@ -3609,14 +3609,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Calculate invoice aggregates scoped to filtered contacts
         const today = new Date();
         const filteredContactIds = new Set(filteredContacts.map(c => c.id));
-        const filteredUnpaidInvoices = allInvoices.filter(inv => 
-          inv.status !== 'paid' && inv.status !== 'cancelled' && filteredContactIds.has(inv.contactId)
-        );
+        const filteredUnpaidInvoices = allInvoices.filter(inv => {
+          const status = (inv.status || '').toLowerCase();
+          return status !== 'paid' && status !== 'cancelled' && status !== 'void' && filteredContactIds.has(inv.contactId);
+        });
+        
+        // Helper to calculate outstanding balance for an invoice
+        const getInvoiceBalance = (inv: typeof allInvoices[0]) => {
+          const amount = Number(inv.amount) || 0;
+          const amountPaid = Number(inv.amountPaid) || 0;
+          return amount - amountPaid;
+        };
         
         // Calculate amounts for All/Due/Overdue
-        const allInvoiceAmount = filteredUnpaidInvoices.reduce((sum, inv) => sum + (inv.amountDue || 0), 0);
+        const allInvoiceAmount = filteredUnpaidInvoices.reduce((sum, inv) => sum + getInvoiceBalance(inv), 0);
         const overdueInvoices = filteredUnpaidInvoices.filter(inv => inv.dueDate && new Date(inv.dueDate) < today);
-        const overdueInvoiceAmount = overdueInvoices.reduce((sum, inv) => sum + (inv.amountDue || 0), 0);
+        const overdueInvoiceAmount = overdueInvoices.reduce((sum, inv) => sum + getInvoiceBalance(inv), 0);
         const dueInvoiceAmount = allInvoiceAmount - overdueInvoiceAmount;
 
         const aggregates = {
