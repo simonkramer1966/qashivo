@@ -780,7 +780,8 @@ export function CardlessCustomerDrawer({
       const recipientEmail = confirmedByContact?.email || 
         preview?.creditControlContact?.email || 
         preview?.customer?.email || '';
-      const recipientName = confirmedByContact?.name || savedPtpDetails.confirmedBy || preview?.customer?.name || 'Customer';
+      const fullName = confirmedByContact?.name || savedPtpDetails.confirmedBy || preview?.customer?.name || 'Customer';
+      const recipientFirstName = fullName.split(' ')[0]; // Use first name only for greeting
       
       const formattedAmount = new Intl.NumberFormat('en-GB', {
         style: 'currency',
@@ -840,7 +841,7 @@ export function CardlessCustomerDrawer({
       // Different email based on whether invoices were selected
       if (savedPtpDetails.invoiceIds.length > 0) {
         setEmailSubject(`Payment Confirmation - ${formattedAmount} by ${formattedDate}`);
-        setEmailBody(`Dear ${recipientName},
+        setEmailBody(`Dear ${recipientFirstName},
 
 Thank you for confirming your payment commitment during our recent conversation.
 
@@ -852,7 +853,7 @@ ${signOff}`);
       } else {
         // Unallocated amount - just confirm the amount
         setEmailSubject(`Payment Confirmation - ${formattedAmount} by ${formattedDate}`);
-        setEmailBody(`Dear ${recipientName},
+        setEmailBody(`Dear ${recipientFirstName},
 
 Thank you for confirming your payment commitment during our recent conversation.
 
