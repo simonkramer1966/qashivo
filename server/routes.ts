@@ -317,7 +317,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     company: z.string().optional(),
     phone: z.string().optional(),
     message: z.string().min(10, "Please provide more details about your enquiry"),
-    enquiryType: z.enum(['demo', 'pricing', 'partnership', 'general']).default('general')
+    enquiryType: z.enum(['demo', 'pricing', 'partnership', 'general', 'investment']).default('general')
   });
 
   app.post('/api/public/sales-enquiry', async (req, res) => {
