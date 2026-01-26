@@ -767,6 +767,7 @@ export function CardlessCustomerDrawer({
         amount: variables.amount || 0,
         paymentDate: variables.paymentDate,
         confirmedBy: variables.confirmedBy,
+        invoiceIds: variables.invoiceIds,
         invoiceCount: variables.invoiceIds.length,
       };
       
@@ -779,8 +780,7 @@ export function CardlessCustomerDrawer({
       const recipientEmail = confirmedByContact?.email || 
         preview?.creditControlContact?.email || 
         preview?.customer?.email || '';
-      const recipientName = confirmedByContact?.name || savedPtpDetails.confirmedBy;
-      const companyName = preview?.customer?.companyName || preview?.customer?.name || 'your company';
+      const recipientName = confirmedByContact?.name || savedPtpDetails.confirmedBy || preview?.customer?.name || 'Customer';
       
       const formattedAmount = new Intl.NumberFormat('en-GB', {
         style: 'currency',
@@ -800,6 +800,36 @@ export function CardlessCustomerDrawer({
         year: 'numeric'
       });
       
+      // Build invoice list if invoices were selected - use selectedPtpInvoices map which has all invoice data
+      let invoiceDetails = '';
+      if (savedPtpDetails.invoiceIds.length > 0) {
+        // First try to get invoice details from preview.invoices
+        const selectedInvoices = preview?.invoices?.filter(inv => savedPtpDetails.invoiceIds.includes(inv.id)) || [];
+        
+        if (selectedInvoices.length > 0) {
+          invoiceDetails = `\n\nThis payment covers the following invoice${selectedInvoices.length > 1 ? 's' : ''}:\n`;
+          selectedInvoices.forEach(inv => {
+            const invBalance = parseFloat(inv.amount?.toString() || '0') - parseFloat(inv.amountPaid?.toString() || '0');
+            const formattedBalance = new Intl.NumberFormat('en-GB', {
+              style: 'currency',
+              currency: 'GBP',
+              minimumFractionDigits: 2
+            }).format(invBalance);
+            invoiceDetails += `• ${inv.invoiceNumber} - ${formattedBalance}\n`;
+          });
+        } else if (savedPtpDetails.invoiceCount > 0) {
+          // Fallback if invoices not found in preview (edge case)
+          invoiceDetails = `\n\nThis payment covers ${savedPtpDetails.invoiceCount} invoice${savedPtpDetails.invoiceCount > 1 ? 's' : ''}.\n`;
+        }
+      }
+      
+      // Build user sign-off
+      const userName = currentUser?.firstName && currentUser?.lastName 
+        ? `${currentUser.firstName} ${currentUser.lastName}`
+        : currentUser?.firstName || currentUser?.lastName || currentUser?.email?.split('@')[0] || 'The Team';
+      const orgName = tenant?.name || '';
+      const signOff = orgName ? `${userName}\n${orgName}` : userName;
+      
       setIsEmailMode(true);
       setIsNoteMode(false);
       setIsCallMode(false);
@@ -807,16 +837,32 @@ export function CardlessCustomerDrawer({
       setSelectedRecipientEmail(recipientEmail);
       setEmailTemplate("manual" as EmailTemplateType);
       
-      setEmailSubject(`Payment Confirmation - ${formattedAmount} by ${formattedDate}`);
-      setEmailBody(`Dear ${recipientName},
+      // Different email based on whether invoices were selected
+      if (savedPtpDetails.invoiceIds.length > 0) {
+        setEmailSubject(`Payment Confirmation - ${formattedAmount} by ${formattedDate}`);
+        setEmailBody(`Dear ${recipientName},
 
 Thank you for confirming your payment commitment during our recent conversation.
 
-As agreed, we have recorded your promise to pay ${formattedAmount} by ${formattedDate}${savedPtpDetails.invoiceCount > 0 ? ` covering ${savedPtpDetails.invoiceCount} invoice${savedPtpDetails.invoiceCount > 1 ? 's' : ''}` : ''}.
+As agreed, we have recorded your promise to pay ${formattedAmount} by ${formattedDate}.${invoiceDetails}
+If you have any questions or need to discuss alternative arrangements, please don't hesitate to contact us.
+
+Kind regards,
+${signOff}`);
+      } else {
+        // Unallocated amount - just confirm the amount
+        setEmailSubject(`Payment Confirmation - ${formattedAmount} by ${formattedDate}`);
+        setEmailBody(`Dear ${recipientName},
+
+Thank you for confirming your payment commitment during our recent conversation.
+
+As agreed, we have recorded your promise to pay ${formattedAmount} by ${formattedDate}.
 
 If you have any questions or need to discuss alternative arrangements, please don't hesitate to contact us.
 
-Kind regards`);
+Kind regards,
+${signOff}`);
+      }
       
       toast({
         title: "Promise to Pay recorded",
