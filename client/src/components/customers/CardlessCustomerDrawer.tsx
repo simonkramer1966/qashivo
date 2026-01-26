@@ -788,7 +788,12 @@ export function CardlessCustomerDrawer({
         minimumFractionDigits: 2
       }).format(savedPtpDetails.amount);
       
-      const formattedDate = new Date(savedPtpDetails.paymentDate).toLocaleDateString('en-GB', {
+      // Parse DD/MM/YYYY format correctly
+      const dateParts = savedPtpDetails.paymentDate.split('/');
+      const parsedDate = dateParts.length === 3 
+        ? new Date(parseInt(dateParts[2]), parseInt(dateParts[1]) - 1, parseInt(dateParts[0]))
+        : new Date(savedPtpDetails.paymentDate);
+      const formattedDate = parsedDate.toLocaleDateString('en-GB', {
         weekday: 'long',
         day: 'numeric',
         month: 'long',
