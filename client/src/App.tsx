@@ -69,6 +69,11 @@ const InvestorInterest = lazy(() => import("@/pages/investor-interest"));
 const Overview2 = lazy(() => import("@/pages/overview2"));
 const Privacy = lazy(() => import("@/pages/Privacy"));
 const Terms = lazy(() => import("@/pages/Terms"));
+const InvestorsHome = lazy(() => import("@/pages/investors/index"));
+const InvestorsHowItWorks = lazy(() => import("@/pages/investors/how-it-works"));
+const InvestorsDemoPage = lazy(() => import("@/pages/investors/demo"));
+const InvestorsBusinessModel = lazy(() => import("@/pages/investors/business-model"));
+const InvestorsInvest = lazy(() => import("@/pages/investors/invest"));
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -130,6 +135,11 @@ function Router() {
           <Route path="/accept-invite" component={AcceptInvite} />
           <Route path="/sme-onboarding" component={SmeOnboarding} />
           <Route path="/investor-interest" component={InvestorInterest} />
+          <Route path="/investors" component={InvestorsHome} />
+          <Route path="/investors/how-it-works" component={InvestorsHowItWorks} />
+          <Route path="/investors/demo" component={InvestorsDemoPage} />
+          <Route path="/investors/business-model" component={InvestorsBusinessModel} />
+          <Route path="/investors/invest" component={InvestorsInvest} />
           <Route path="/privacy" component={Privacy} />
           <Route path="/terms" component={Terms} />
           <Route path="/" component={Home} />
@@ -192,6 +202,11 @@ function Router() {
           <Route path="/accept-invite" component={AcceptInvite} />
           <Route path="/sme-onboarding" component={SmeOnboarding} />
           <Route path="/investor-interest" component={InvestorInterest} />
+          <Route path="/investors" component={InvestorsHome} />
+          <Route path="/investors/how-it-works" component={InvestorsHowItWorks} />
+          <Route path="/investors/demo" component={InvestorsDemoPage} />
+          <Route path="/investors/business-model" component={InvestorsBusinessModel} />
+          <Route path="/investors/invest" component={InvestorsInvest} />
           <Route path="/privacy" component={Privacy} />
           <Route path="/terms" component={Terms} />
           <Route path="/" component={Overview2} />
