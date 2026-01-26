@@ -5746,9 +5746,8 @@ Return only JSON with keys: intent, sentiment, confidence, ptpAmount, ptpDate, d
       const { customerTimelineService } = await import("./services/customerTimelineService");
       const userName = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
       
-      const totalAmount = paymentType === 'full' 
-        ? createdPromises.reduce((sum, p) => sum + parseFloat(p.promisedAmount?.toString() || '0'), 0)
-        : (amount || 0);
+      // Always use the amount from the frontend - that's what the user confirmed
+      const totalAmount = amount || 0;
       
       const formattedAmount = new Intl.NumberFormat('en-GB', {
         style: 'currency',
