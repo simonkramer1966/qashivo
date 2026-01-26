@@ -61,6 +61,9 @@ export default function Customers2() {
       totalOutstanding: number; 
       highRiskCount: number; 
       totalContacts: number;
+      allInvoiceCount: number;
+      dueInvoiceCount: number;
+      overdueInvoiceCount: number;
       onTimePercent: number;
       lateReliablePercent: number;
       inconsistentPercent: number;
@@ -76,6 +79,9 @@ export default function Customers2() {
     totalOutstanding: 0, 
     highRiskCount: 0, 
     totalContacts: 0,
+    allInvoiceCount: 0,
+    dueInvoiceCount: 0,
+    overdueInvoiceCount: 0,
     onTimePercent: 0,
     lateReliablePercent: 0,
     inconsistentPercent: 0,
@@ -215,18 +221,22 @@ export default function Customers2() {
               {/* Divider */}
               <div className="h-4 w-px bg-gray-200 hidden md:block" />
               
-              {/* Portfolio Summary */}
+              {/* Invoice Summary - All/Due/Overdue */}
               <div className="flex items-center gap-1.5">
-                <span className="text-sm text-gray-500">Customers</span>
-                <span className="text-sm font-semibold text-gray-900 tabular-nums">{aggregates.totalContacts}</span>
+                <span className="text-sm text-gray-500">All</span>
+                <span className="text-sm font-semibold text-gray-900 tabular-nums">{aggregates.allInvoiceCount}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm text-gray-500">Due</span>
+                <span className="text-sm font-semibold text-gray-900 tabular-nums">{aggregates.dueInvoiceCount}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm text-gray-500">Overdue</span>
+                <span className="text-sm font-semibold text-[#C75C5C] tabular-nums">{aggregates.overdueInvoiceCount}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="text-sm text-gray-500">Outstanding</span>
                 <span className="text-sm font-semibold text-gray-900 tabular-nums">{formatCurrency(aggregates.totalOutstanding)}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-sm text-gray-500">High Risk</span>
-                <span className="text-sm font-semibold text-[#C75C5C] tabular-nums">{aggregates.highRiskCount}</span>
               </div>
             </div>
 

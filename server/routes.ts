@@ -3606,10 +3606,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const inconsistentCount = filteredContacts.filter(c => c.riskBand === 'C' || c.riskBand === 'D' || c.riskBand === 'E').length;
         const unknownCount = filteredContacts.filter(c => !c.riskBand).length;
         
+        // Calculate invoice aggregates scoped to filtered contacts
+        const filteredContactIds = new Set(filteredContacts.map(c => c.id));
+        const filteredUnpaidInvoices = allInvoices.filter(inv => 
+          inv.status !== 'paid' && inv.status !== 'cancelled' && filteredContactIds.has(inv.contactId)
+        );
+        const allInvoiceCount = filteredUnpaidInvoices.length;
+        const overdueInvoiceCount = filteredUnpaidInvoices.filter(inv => {
+          if (inv.dueDate) {
+            return new Date(inv.dueDate) < today;
+          }
+          return false;
+        }).length;
+        const dueInvoiceCount = allInvoiceCount - overdueInvoiceCount;
+
         const aggregates = {
           totalOutstanding: filteredContacts.reduce((sum, c) => sum + c.outstandingAmount, 0),
           highRiskCount: filteredContacts.filter(c => c.riskScore >= 70).length,
           totalContacts: filteredContacts.length,
+          // Invoice counts
+          allInvoiceCount,
+          dueInvoiceCount,
+          overdueInvoiceCount,
           // Behavior profile percentages
           onTimePercent: filteredContacts.length > 0 ? Math.round((onTimeCount / totalForProfiles) * 100) : 0,
           lateReliablePercent: filteredContacts.length > 0 ? Math.round((lateReliableCount / totalForProfiles) * 100) : 0,
