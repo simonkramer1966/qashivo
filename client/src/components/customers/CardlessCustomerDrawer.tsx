@@ -2155,15 +2155,7 @@ export function CardlessCustomerDrawer({
                     </div>
                     <div className="flex justify-between text-sm gap-4">
                       <span className="text-gray-500 flex-shrink-0">oldestInvoiceAge</span>
-                      <span className="text-gray-900 font-medium text-right">
-                        {(() => {
-                          const oldest = preview?.invoices?.reduce((max, inv) => {
-                            const created = inv.createdAt ? new Date(inv.createdAt).getTime() : Date.now();
-                            return created < max ? created : max;
-                          }, Date.now());
-                          return oldest ? Math.floor((Date.now() - oldest) / (1000 * 60 * 60 * 24)) : 0;
-                        })()} days
-                      </span>
+                      <span className="text-gray-900 font-medium text-right italic text-gray-400">calculated at call time</span>
                     </div>
                     <div className="flex justify-between text-sm gap-4">
                       <span className="text-gray-500 flex-shrink-0">averageDaysOverdue</span>
@@ -2202,7 +2194,7 @@ export function CardlessCustomerDrawer({
                     </div>
                     <div className="flex justify-between text-sm gap-4">
                       <span className="text-gray-500 flex-shrink-0">creditTerms</span>
-                      <span className="text-gray-900 font-medium text-right">{preview?.customer?.paymentTerms || "Net 30"}</span>
+                      <span className="text-gray-900 font-medium text-right">Net 30</span>
                     </div>
                     <div className="flex justify-between text-sm gap-4">
                       <span className="text-gray-500 flex-shrink-0">accountAge</span>

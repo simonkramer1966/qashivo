@@ -4522,7 +4522,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }, 0);
             const averageDaysOverdue = overdueCount > 0 ? Math.round(totalDaysOverdue / overdueCount) : 0;
             
-            // Get last payment info from invoices
+            // Get last payment info from invoices (using amountPaid for actual payment amount)
             const paidInvoices = await db.select()
               .from(invoices)
               .where(
@@ -4535,34 +4535,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
               .orderBy(sql`${invoices.paidDate} DESC`)
               .limit(1);
             const lastPaymentDate = paidInvoices[0]?.paidDate || null;
-            const lastPaymentAmount = paidInvoices[0]?.amount || null;
+            // Use amountPaid for actual payment amount (handles partial payments correctly)
+            const lastPaymentAmount = paidInvoices[0]?.amountPaid || null;
             
-            // Get last contact/action info
-            const lastActions = await db.select()
-              .from(actions)
+            // Get last contact from timeline events (most accurate record of communications)
+            const lastTimelineEvents = await db.select()
+              .from(timelineEvents)
               .where(
                 and(
-                  eq(actions.contactId, contactId),
-                  eq(actions.tenantId, user.tenantId),
-                  sql`${actions.status} = 'completed'`
+                  eq(timelineEvents.customerId, contactId),
+                  eq(timelineEvents.tenantId, user.tenantId),
+                  eq(timelineEvents.direction, 'outbound')
                 )
               )
-              .orderBy(sql`${actions.completedAt} DESC`)
+              .orderBy(sql`${timelineEvents.occurredAt} DESC`)
               .limit(1);
-            const lastContactDate = lastActions[0]?.completedAt || null;
-            const contactMethod = lastActions[0]?.type || null;
+            const lastContactDate = lastTimelineEvents[0]?.occurredAt || null;
+            const contactMethod = lastTimelineEvents[0]?.channel || null;
             
-            // Count previous promises to pay (PTP outcomes)
-            const ptpActions = await db.select({ count: sql<number>`count(*)` })
-              .from(actions)
+            // Count previous promises to pay from payment_plans and promisesToPay tables
+            const ptpPlans = await db.select({ count: sql<number>`count(*)` })
+              .from(paymentPlans)
               .where(
                 and(
-                  eq(actions.contactId, contactId),
-                  eq(actions.tenantId, user.tenantId),
-                  sql`${actions.outcome} = 'promise_to_pay' OR (${actions.metadata}->>'outcome' = 'promise_to_pay')`
+                  eq(paymentPlans.contactId, contactId),
+                  eq(paymentPlans.tenantId, user.tenantId)
                 )
               );
-            const previousPromises = Number(ptpActions[0]?.count || 0);
+            const ptpPromises = await db.select({ count: sql<number>`count(*)` })
+              .from(promisesToPay)
+              .where(
+                and(
+                  eq(promisesToPay.contactId, contactId),
+                  eq(promisesToPay.tenantId, user.tenantId)
+                )
+              );
+            const previousPromises = Number(ptpPlans[0]?.count || 0) + Number(ptpPromises[0]?.count || 0);
             
             // Count disputed invoices
             const disputedInvoices = await db.select({ count: sql<number>`count(*)` })
@@ -4576,8 +4584,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               );
             const disputeCount = Number(disputedInvoices[0]?.count || 0);
             
-            // Get credit terms from contact or default
-            const creditTerms = contact.paymentTerms || 'Net 30';
+            // Get credit terms from contact (paymentTerms is stored as days, e.g., 30 -> "Net 30")
+            const creditTermsDays = contact.paymentTerms || 30;
+            const creditTerms = `Net ${creditTermsDays}`;
             
             // Calculate account age (days since first invoice)
             const firstInvoice = await db.select()
