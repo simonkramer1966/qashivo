@@ -278,6 +278,67 @@ export class CustomerTimelineService {
     };
   }
 
+  async getPaidInvoicesPage(
+    tenantId: string,
+    customerId: string,
+    offset: number = 0,
+    limit: number = 20
+  ) {
+    // Fetch paid invoices only
+    const paidInvoices = await db
+      .select({
+        id: invoices.id,
+        invoiceNumber: invoices.invoiceNumber,
+        description: invoices.description,
+        issueDate: invoices.issueDate,
+        amount: invoices.amount,
+        amountPaid: invoices.amountPaid,
+        status: invoices.status,
+        dueDate: invoices.dueDate,
+        paidDate: invoices.paidDate
+      })
+      .from(invoices)
+      .where(and(
+        eq(invoices.contactId, customerId),
+        eq(invoices.tenantId, tenantId),
+        eq(invoices.status, "paid")
+      ))
+      .orderBy(desc(invoices.paidDate))
+      .offset(offset)
+      .limit(limit);
+
+    const countResult = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(invoices)
+      .where(and(
+        eq(invoices.contactId, customerId),
+        eq(invoices.tenantId, tenantId),
+        eq(invoices.status, "paid")
+      ));
+    const total = countResult[0]?.count || 0;
+
+    const items = paidInvoices.map(inv => {
+      return {
+        id: inv.id,
+        invoiceNumber: inv.invoiceNumber,
+        description: inv.description || undefined,
+        issueDate: inv.issueDate ? new Date(inv.issueDate).toISOString() : new Date().toISOString(),
+        dueDate: inv.dueDate ? new Date(inv.dueDate).toISOString() : new Date().toISOString(),
+        paidDate: inv.paidDate ? new Date(inv.paidDate).toISOString() : undefined,
+        amount: Number(inv.amount),
+        amountPaid: Number(inv.amountPaid || 0),
+        balance: 0, // Paid invoices have 0 balance
+        status: inv.status,
+      };
+    });
+
+    return {
+      items,
+      total,
+      hasMore: offset + limit < total
+    };
+  }
+
   async getTimelinePage(
     tenantId: string, 
     customerId: string, 

@@ -173,7 +173,12 @@ export function CardlessCustomerDrawer({
   const [activitySearchOpen, setActivitySearchOpen] = useState(false);
   const [activitySearchQuery, setActivitySearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
-  const [invoiceFilter, setInvoiceFilter] = useState<"all" | "overdue">("overdue");
+  const [invoiceFilter, setInvoiceFilter] = useState<"all" | "overdue" | "paid">("overdue");
+  const [paidInvoices, setPaidInvoices] = useState<CustomerPreviewInvoice[]>([]);
+  const [isLoadingPaidInvoices, setIsLoadingPaidInvoices] = useState(false);
+  const [paidInvoicesTotal, setPaidInvoicesTotal] = useState(0);
+  const [hasMorePaidInvoices, setHasMorePaidInvoices] = useState(false);
+  const [paidInvoiceOffset, setPaidInvoiceOffset] = useState(0);
   const [invoiceSortColumn, setInvoiceSortColumn] = useState<"issueDate" | "invoiceNumber" | "dueDate" | "daysOverdue" | "balance">("daysOverdue");
   const [invoiceSortDirection, setInvoiceSortDirection] = useState<"asc" | "desc">("desc");
   const [expandedInvoices, setExpandedInvoices] = useState<Set<string>>(new Set());
@@ -206,6 +211,11 @@ export function CardlessCustomerDrawer({
     setHasMoreInvoicesState(null);
     setActiveCallPolling(null);
     setCallPollingStatus("");
+    setPaidInvoices([]);
+    setPaidInvoicesTotal(0);
+    setHasMorePaidInvoices(false);
+    setPaidInvoiceOffset(0);
+    setInvoiceFilter("overdue");
   }, [customerId]);
 
   useEffect(() => {
@@ -1748,7 +1758,37 @@ export function CardlessCustomerDrawer({
                       >
                         Overdue ({[...(preview.invoices || []), ...additionalInvoices].filter(inv => inv.daysOverdue && inv.daysOverdue > 0).length || 0})
                       </button>
-                      {isPtpMode && (
+                      <span className="text-gray-300">|</span>
+                      <button
+                        onClick={() => {
+                          setInvoiceFilter("paid");
+                          // Fetch paid invoices if not already loaded
+                          if (paidInvoices.length === 0 && !isLoadingPaidInvoices) {
+                            setIsLoadingPaidInvoices(true);
+                            fetch(`/api/contacts/${customerId}/invoices/paid?offset=0&limit=20`, { credentials: 'include' })
+                              .then(res => {
+                                if (!res.ok) throw new Error('Failed to fetch paid invoices');
+                                return res.json();
+                              })
+                              .then(data => {
+                                setPaidInvoices(data.items || []);
+                                setPaidInvoicesTotal(data.total || 0);
+                                setHasMorePaidInvoices(data.hasMore || false);
+                                setPaidInvoiceOffset(20);
+                              })
+                              .catch(err => console.error("Failed to fetch paid invoices:", err))
+                              .finally(() => setIsLoadingPaidInvoices(false));
+                          }
+                        }}
+                        className={`text-sm transition-colors ${
+                          invoiceFilter === "paid"
+                            ? "text-[#4FAD80] font-medium"
+                            : "text-gray-400 hover:text-gray-600"
+                        }`}
+                      >
+                        Paid ({paidInvoicesTotal})
+                      </button>
+                      {isPtpMode && invoiceFilter !== "paid" && (
                         <button
                           onClick={() => {
                             const allInvoices = [...(preview.invoices || []), ...additionalInvoices];
@@ -1785,7 +1825,110 @@ export function CardlessCustomerDrawer({
                       )}
                     </div>
                     
-                    {(() => {
+                    {/* Paid Invoices Section */}
+                    {invoiceFilter === "paid" && (
+                      <>
+                        {isLoadingPaidInvoices ? (
+                          <div className="py-8 flex items-center justify-center">
+                            <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                          </div>
+                        ) : paidInvoices.length > 0 ? (
+                          <div className="space-y-0">
+                            {paidInvoices.map((invoice) => {
+                              const isExpanded = expandedInvoices.has(invoice.id);
+                              return (
+                                <div key={invoice.id} className="border-b border-gray-50 last:border-0">
+                                  <div
+                                    onClick={() => toggleInvoice(invoice.id)}
+                                    className="group w-full flex items-center py-2.5 cursor-pointer transition-colors hover:bg-gray-50"
+                                  >
+                                    <div className="flex-1 min-w-0 mr-3">
+                                      <p className="text-sm font-medium text-gray-600">
+                                        {invoice.invoiceNumber}
+                                      </p>
+                                      <p className="text-sm text-gray-400 mt-0.5">
+                                        Paid {invoice.paidDate ? formatShortDate(invoice.paidDate) : 'N/A'}
+                                      </p>
+                                    </div>
+                                    
+                                    <span className="text-lg font-semibold tabular-nums mr-4 text-[#4FAD80]">
+                                      {formatCurrency(invoice.amountPaid, { showDecimals: true })}
+                                    </span>
+                                    
+                                    <ChevronRight className={`h-4 w-4 text-gray-300 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                                  </div>
+                                  
+                                  {isExpanded && (
+                                    <div className="pb-4 space-y-2">
+                                      {invoice.description && (
+                                        <p className="text-base text-gray-600">{invoice.description}</p>
+                                      )}
+                                      <div className="flex gap-8 text-base">
+                                        <div>
+                                          <span className="text-gray-400">Invoice total</span>
+                                          <span className="ml-2 text-gray-900 font-medium">{formatCurrency(invoice.amount, { showDecimals: true })}</span>
+                                        </div>
+                                        <div>
+                                          <span className="text-gray-400">Paid</span>
+                                          <span className="ml-2 text-[#4FAD80] font-medium">{formatCurrency(invoice.amountPaid, { showDecimals: true })}</span>
+                                        </div>
+                                      </div>
+                                      <div className="text-base">
+                                        <span className="text-gray-400">Allocation date</span>
+                                        <span className="ml-2 text-gray-900 font-medium">{invoice.paidDate ? formatShortDate(invoice.paidDate) : 'N/A'}</span>
+                                      </div>
+                                      <div className="text-base">
+                                        <span className="text-gray-400">Balance</span>
+                                        <span className="ml-2 text-[#4FAD80] font-medium">£0.00</span>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                            
+                            {hasMorePaidInvoices && (
+                              <button
+                                onClick={() => {
+                                  setIsLoadingPaidInvoices(true);
+                                  fetch(`/api/contacts/${customerId}/invoices/paid?offset=${paidInvoiceOffset}&limit=20`, { credentials: 'include' })
+                                    .then(res => {
+                                      if (!res.ok) throw new Error('Failed to load more paid invoices');
+                                      return res.json();
+                                    })
+                                    .then(data => {
+                                      setPaidInvoices(prev => [...prev, ...(data.items || [])]);
+                                      setHasMorePaidInvoices(data.hasMore || false);
+                                      setPaidInvoiceOffset(prev => prev + 20);
+                                    })
+                                    .catch(err => console.error("Failed to load more paid invoices:", err))
+                                    .finally(() => setIsLoadingPaidInvoices(false));
+                                }}
+                                disabled={isLoadingPaidInvoices}
+                                className="w-full py-4 text-base text-gray-500 hover:text-gray-900 transition-colors flex items-center justify-center gap-2"
+                              >
+                                {isLoadingPaidInvoices ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Loading...
+                                  </>
+                                ) : (
+                                  "Load more"
+                                )}
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-center py-12">
+                            <FileText className="h-10 w-10 text-gray-300 mx-auto mb-3" />
+                            <p className="text-base text-gray-400">No paid invoices</p>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {/* Outstanding Invoices Section (All/Overdue) */}
+                    {invoiceFilter !== "paid" && (() => {
                       const allInvoices = [...(preview.invoices || []), ...additionalInvoices];
                       const baseInvoices = invoiceFilter === "overdue"
                         ? allInvoices.filter(inv => inv.daysOverdue && inv.daysOverdue > 0)

@@ -5527,6 +5527,38 @@ Return only JSON with keys: intent, sentiment, confidence, ptpAmount, ptpDate, d
     }
   });
 
+  // Customer Paid Invoices page endpoint with offset pagination
+  app.get("/api/contacts/:contactId/invoices/paid", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId } = req.params;
+      const { offset, limit } = req.query;
+      
+      const contact = await storage.getContact(contactId, user.tenantId);
+      if (!contact) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+
+      const { customerTimelineService } = await import("./services/customerTimelineService");
+      
+      const result = await customerTimelineService.getPaidInvoicesPage(
+        user.tenantId, 
+        contactId,
+        offset ? parseInt(offset as string, 10) : 0,
+        limit ? parseInt(limit as string, 10) : 20
+      );
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching paid invoices:", error);
+      res.status(500).json({ message: "Failed to fetch paid invoices" });
+    }
+  });
+
   // Customer Timeline endpoint with cursor pagination and filters
   app.get("/api/contacts/:contactId/timeline", isAuthenticated, async (req: any, res) => {
     try {

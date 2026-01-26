@@ -77,6 +77,7 @@ export interface CustomerPreviewInvoice {
   description?: string;
   issueDate: string;
   dueDate: string;
+  paidDate?: string;
   amount: number;
   amountPaid: number;
   balance: number;
