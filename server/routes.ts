@@ -5712,10 +5712,10 @@ Return only JSON with keys: intent, sentiment, confidence, ptpAmount, ptpDate, d
       const createdPromises = [];
       
       if (invoiceIds && invoiceIds.length > 0) {
-        // Get invoices to calculate amounts
-        const invoiceList = await storage.getInvoicesByIds(invoiceIds, user.tenantId);
-        
-        for (const invoice of invoiceList) {
+        // Get invoices to calculate amounts - fetch each individually
+        for (const invoiceId of invoiceIds) {
+          const invoice = await storage.getInvoice(invoiceId, user.tenantId);
+          if (!invoice) continue;
           const invoiceBalance = parseFloat(invoice.amountDue?.toString() || invoice.total?.toString() || '0') - parseFloat(invoice.amountPaid?.toString() || '0');
           const promiseAmount = paymentType === 'full' ? invoiceBalance : (amount || 0);
           
