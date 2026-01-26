@@ -67,6 +67,8 @@ const SmeOnboarding = lazy(() => import("@/pages/sme-onboarding"));
 const Inbox = lazy(() => import("@/pages/inbox"));
 const InvestorInterest = lazy(() => import("@/pages/investor-interest"));
 const Overview2 = lazy(() => import("@/pages/overview2"));
+const Privacy = lazy(() => import("@/pages/Privacy"));
+const Terms = lazy(() => import("@/pages/Terms"));
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -128,6 +130,8 @@ function Router() {
           <Route path="/accept-invite" component={AcceptInvite} />
           <Route path="/sme-onboarding" component={SmeOnboarding} />
           <Route path="/investor-interest" component={InvestorInterest} />
+          <Route path="/privacy" component={Privacy} />
+          <Route path="/terms" component={Terms} />
           <Route path="/" component={Home} />
           <Route path="/:rest*" component={Home} />
         </Switch>
@@ -188,6 +192,8 @@ function Router() {
           <Route path="/accept-invite" component={AcceptInvite} />
           <Route path="/sme-onboarding" component={SmeOnboarding} />
           <Route path="/investor-interest" component={InvestorInterest} />
+          <Route path="/privacy" component={Privacy} />
+          <Route path="/terms" component={Terms} />
           <Route path="/" component={Overview2} />
           <Route path="/:rest*" component={NotFound} />
         </Switch>

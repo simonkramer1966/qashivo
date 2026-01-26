@@ -294,8 +294,8 @@ export default function Integrations() {
             <div>
               <h4 className="font-semibold mb-4">Legal</h4>
               <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-[#17B6C3] transition-colors">Privacy</a></li>
-                <li><a href="#" className="hover:text-[#17B6C3] transition-colors">Terms</a></li>
+                <li><a href="/privacy" className="hover:text-[#17B6C3] transition-colors">Privacy</a></li>
+                <li><a href="/terms" className="hover:text-[#17B6C3] transition-colors">Terms</a></li>
               </ul>
             </div>
           </div>

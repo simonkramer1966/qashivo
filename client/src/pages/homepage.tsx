@@ -615,6 +615,14 @@ export default function Homepage() {
             className="h-12 w-auto mx-auto opacity-80"
           />
         </div>
+        <div className="flex justify-center gap-6 mb-4">
+          <Link href="/privacy">
+            <a className="text-gray-400 hover:text-white transition text-sm">Privacy Policy</a>
+          </Link>
+          <Link href="/terms">
+            <a className="text-gray-400 hover:text-white transition text-sm">Terms & Conditions</a>
+          </Link>
+        </div>
         <p className="text-gray-400">
           © 2026 Nexus KPI Limited. Built in London. Backed by innovation. All rights reserved.
         </p>
