@@ -335,7 +335,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         demo: 'Product Demo Request',
         pricing: 'Pricing Enquiry',
         partnership: 'Partnership Enquiry',
-        general: 'General Enquiry'
+        general: 'General Enquiry',
+        investment: 'Investment Enquiry'
       }[data.enquiryType];
       
       // Email to Qashivo team
