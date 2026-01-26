@@ -344,6 +344,10 @@ export function CardlessCustomerDrawer({
   });
   const currentUser = userResponse?.user;
 
+  const { data: tenant } = useQuery<{ id: string; name: string }>({
+    queryKey: ['/api/tenant'],
+  });
+
   const { data: tenantUsersResponse } = useQuery<{ users: TenantUser[] }>({
     queryKey: [`/api/tenants/${currentUser?.tenantId}/users`],
     enabled: !!currentUser?.tenantId && isNoteMode && noteType === "reminder",
@@ -2078,99 +2082,120 @@ export function CardlessCustomerDrawer({
               </div>
 
               <div className="space-y-5 max-h-[60vh] overflow-y-auto">
-                {/* Recipient Information */}
+                {/* Retell Dynamic Variables - what the voice agent can use */}
                 <div>
-                  <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">Recipient</p>
+                  <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">Retell Dynamic Variables</p>
+                  <p className="text-xs text-gray-400 mb-3">Passed to createUnifiedRetellCall dynamicVariables</p>
                   <div className="space-y-1.5">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Name</span>
-                      <span className="text-gray-900 font-medium">{selectedCallRecipientName || "—"}</span>
+                    <div className="flex justify-between text-sm gap-4">
+                      <span className="text-gray-500 flex-shrink-0">customerName</span>
+                      <span className="text-gray-900 font-medium text-right">{selectedCallRecipientName || "—"}</span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Phone</span>
-                      <span className="text-gray-900 font-medium">{selectedCallRecipientPhone || "—"}</span>
+                    <div className="flex justify-between text-sm gap-4">
+                      <span className="text-gray-500 flex-shrink-0">companyName</span>
+                      <span className="text-gray-900 font-medium text-right">{preview?.customer?.companyName || preview?.customer?.name || "—"}</span>
+                    </div>
+                    <div className="flex justify-between text-sm gap-4">
+                      <span className="text-gray-500 flex-shrink-0">invoiceNumber</span>
+                      <span className="text-gray-900 font-medium text-right">
+                        {preview?.invoices?.sort((a, b) => (b.daysOverdue || 0) - (a.daysOverdue || 0))[0]?.invoiceNumber || "N/A"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm gap-4">
+                      <span className="text-gray-500 flex-shrink-0">invoiceAmount</span>
+                      <span className="text-gray-900 font-medium text-right">{preview?.customer?.outstandingTotal || 0}</span>
+                    </div>
+                    <div className="flex justify-between text-sm gap-4">
+                      <span className="text-gray-500 flex-shrink-0">totalOutstanding</span>
+                      <span className="text-gray-900 font-medium text-right">{preview?.customer?.outstandingTotal || 0}</span>
+                    </div>
+                    <div className="flex justify-between text-sm gap-4">
+                      <span className="text-gray-500 flex-shrink-0">invoiceCount</span>
+                      <span className="text-gray-900 font-medium text-right">{preview?.invoices?.length || 0}</span>
+                    </div>
+                    <div className="flex justify-between text-sm gap-4">
+                      <span className="text-gray-500 flex-shrink-0">daysOverdue</span>
+                      <span className="text-gray-900 font-medium text-right">
+                        {preview?.invoices?.reduce((max, inv) => Math.max(max, inv.daysOverdue || 0), 0) || 0}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm gap-4">
+                      <span className="text-gray-500 flex-shrink-0">dueDate</span>
+                      <span className="text-gray-900 font-medium text-right">
+                        {preview?.invoices?.sort((a, b) => (b.daysOverdue || 0) - (a.daysOverdue || 0))[0]?.dueDate || "—"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm gap-4">
+                      <span className="text-gray-500 flex-shrink-0">voiceTone</span>
+                      <span className="text-gray-900 font-medium text-right">
+                        {['VOICE_TONE_WARM_FRIENDLY', 'VOICE_TONE_CALM_COLLABORATIVE', 'VOICE_TONE_FIRM_ASSERTIVE'][callTone]}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm gap-4">
+                      <span className="text-gray-500 flex-shrink-0">toneLabel</span>
+                      <span className="text-gray-900 font-medium text-right">{toneLabels[callTone]}</span>
+                    </div>
+                    <div className="flex justify-between text-sm gap-4">
+                      <span className="text-gray-500 flex-shrink-0">reasonForCall</span>
+                      <span className="text-gray-900 font-medium text-right max-w-[180px] truncate">{callReason || "''"}</span>
+                    </div>
+                    <div className="flex justify-between text-sm gap-4">
+                      <span className="text-gray-500 flex-shrink-0">callGoal</span>
+                      <span className="text-gray-900 font-medium text-right">{callGoal}</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Call Parameters */}
+                {/* Organisation Name - Note: Not currently passed */}
                 <div>
-                  <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">Call Parameters</p>
+                  <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">Note: Tenant Info</p>
+                  <p className="text-xs text-gray-400 mb-3">Available but not passed in this flow</p>
                   <div className="space-y-1.5">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Goal</span>
-                      <span className="text-gray-900 font-medium">{callGoalLabels[callGoal]}</span>
+                    <div className="flex justify-between text-sm gap-4">
+                      <span className="text-gray-500 flex-shrink-0">organisationName <span className="text-gray-400 italic">(not passed)</span></span>
+                      <span className="text-gray-400 font-medium text-right">{tenant?.name || "—"}</span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Tone</span>
-                      <span className="text-gray-900 font-medium">{toneLabels[callTone]}</span>
+                  </div>
+                </div>
+
+                {/* Call Routing - used to place the call */}
+                <div>
+                  <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">Call Routing</p>
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-sm gap-4">
+                      <span className="text-gray-500 flex-shrink-0">To Number <span className="text-gray-400 font-mono text-xs">(toNumber)</span></span>
+                      <span className="text-gray-900 font-medium text-right">{selectedCallRecipientPhone || "—"}</span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Max Duration</span>
-                      <span className="text-gray-900 font-medium">{callMaxDuration} min</span>
+                  </div>
+                </div>
+
+                {/* Action Metadata - stored with the action record */}
+                <div>
+                  <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">Action Metadata</p>
+                  <p className="text-xs text-gray-400 mb-3">Stored in actions.metadata, not sent to Retell</p>
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-sm gap-4">
+                      <span className="text-gray-500 flex-shrink-0">Max Duration <span className="text-gray-400 font-mono text-xs">(maxDuration)</span></span>
+                      <span className="text-gray-900 font-medium text-right">{callMaxDuration} min</span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Schedule Mode</span>
-                      <span className="text-gray-900 font-medium">
-                        {callScheduleMode === 'now' ? 'Now' : callScheduleMode === 'asap' ? 'ASAP' : 'Scheduled'}
-                      </span>
+                    <div className="flex justify-between text-sm gap-4">
+                      <span className="text-gray-500 flex-shrink-0">Schedule Mode <span className="text-gray-400 font-mono text-xs">(scheduleMode)</span></span>
+                      <span className="text-gray-900 font-medium text-right">{callScheduleMode}</span>
                     </div>
                     {callScheduleMode === 'scheduled' && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-500">Scheduled For</span>
-                        <span className="text-gray-900 font-medium">
-                          {callScheduleDate} {callScheduleTime || '09:00'}
+                      <div className="flex justify-between text-sm gap-4">
+                        <span className="text-gray-500 flex-shrink-0">Scheduled For <span className="text-gray-400 font-mono text-xs">(scheduledFor)</span></span>
+                        <span className="text-gray-900 font-medium text-right">
+                          {callScheduleDate}T{callScheduleTime || '09:00'}:00.000Z
                         </span>
                       </div>
                     )}
                     {callReason && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-500">Reason</span>
-                        <span className="text-gray-900 font-medium text-right max-w-[200px] truncate">{callReason}</span>
+                      <div className="flex justify-between text-sm gap-4">
+                        <span className="text-gray-500 flex-shrink-0">Reason <span className="text-gray-400 font-mono text-xs">(reason)</span></span>
+                        <span className="text-gray-900 font-medium text-right max-w-[180px] truncate">{callReason}</span>
                       </div>
                     )}
-                  </div>
-                </div>
-
-                {/* Customer Context */}
-                <div>
-                  <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">Customer Context</p>
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Company Name</span>
-                      <span className="text-gray-900 font-medium">{preview?.customer?.name || preview?.customer?.companyName || "—"}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Contact ID</span>
-                      <span className="text-gray-900 font-medium font-mono text-xs">{customerId || "—"}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Total Outstanding</span>
-                      <span className="text-gray-900 font-medium">{formatCurrency(preview?.customer?.outstandingTotal || 0)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Invoice Count</span>
-                      <span className="text-gray-900 font-medium">{preview?.invoices?.length || 0}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Oldest Days Overdue</span>
-                      <span className="text-gray-900 font-medium">
-                        {preview?.invoices?.reduce((max, inv) => Math.max(max, inv.daysOverdue || 0), 0) || 0} days
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Voice Tone Profile */}
-                <div>
-                  <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">Voice Configuration</p>
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Voice Tone Profile</span>
-                      <span className="text-gray-900 font-medium font-mono text-xs">
-                        {['VOICE_TONE_WARM_FRIENDLY', 'VOICE_TONE_CALM_COLLABORATIVE', 'VOICE_TONE_FIRM_ASSERTIVE'][callTone]}
-                      </span>
-                    </div>
                   </div>
                 </div>
               </div>
