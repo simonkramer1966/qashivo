@@ -228,6 +228,19 @@ export function createStandardCollectionVariables(data: {
   invoiceCount?: string | number;
   dueDate?: string | Date;
   customMessage?: string;
+  // New variables for enhanced context
+  totalOverdue?: string | number;
+  overdueCount?: string | number;
+  oldestInvoiceAge?: string | number;
+  averageDaysOverdue?: string | number;
+  lastPaymentDate?: string | Date | null;
+  lastPaymentAmount?: string | number | null;
+  lastContactDate?: string | Date | null;
+  contactMethod?: string | null;
+  previousPromises?: string | number;
+  disputeCount?: string | number;
+  creditTerms?: string | null;
+  accountAge?: string | number;
 }): Record<string, any> {
   const variables: Record<string, any> = {};
 
@@ -251,6 +264,48 @@ export function createStandardCollectionVariables(data: {
 
   // Custom message
   if (data.customMessage) variables.customMessage = data.customMessage;
+
+  // New enhanced context variables
+  if (data.totalOverdue !== undefined) variables.totalOverdue = String(data.totalOverdue);
+  if (data.overdueCount !== undefined) variables.overdueCount = String(data.overdueCount);
+  if (data.oldestInvoiceAge !== undefined) variables.oldestInvoiceAge = String(data.oldestInvoiceAge);
+  if (data.averageDaysOverdue !== undefined) variables.averageDaysOverdue = String(data.averageDaysOverdue);
+  if (data.previousPromises !== undefined) variables.previousPromises = String(data.previousPromises);
+  if (data.disputeCount !== undefined) variables.disputeCount = String(data.disputeCount);
+  if (data.accountAge !== undefined) variables.accountAge = String(data.accountAge);
+  
+  // Optional date fields
+  if (data.lastPaymentDate) {
+    const date = typeof data.lastPaymentDate === 'string' ? new Date(data.lastPaymentDate) : data.lastPaymentDate;
+    variables.lastPaymentDate = date.toISOString().split('T')[0];
+  } else {
+    variables.lastPaymentDate = 'never';
+  }
+  
+  if (data.lastPaymentAmount !== undefined && data.lastPaymentAmount !== null) {
+    variables.lastPaymentAmount = String(data.lastPaymentAmount);
+  } else {
+    variables.lastPaymentAmount = 'none';
+  }
+  
+  if (data.lastContactDate) {
+    const date = typeof data.lastContactDate === 'string' ? new Date(data.lastContactDate) : data.lastContactDate;
+    variables.lastContactDate = date.toISOString().split('T')[0];
+  } else {
+    variables.lastContactDate = 'never';
+  }
+  
+  if (data.contactMethod) {
+    variables.contactMethod = data.contactMethod;
+  } else {
+    variables.contactMethod = 'none';
+  }
+  
+  if (data.creditTerms) {
+    variables.creditTerms = data.creditTerms;
+  } else {
+    variables.creditTerms = 'standard';
+  }
 
   return variables;
 }

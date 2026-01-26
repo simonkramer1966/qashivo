@@ -2143,17 +2143,70 @@ export function CardlessCustomerDrawer({
                       <span className="text-gray-500 flex-shrink-0">callGoal</span>
                       <span className="text-gray-900 font-medium text-right">{callGoal}</span>
                     </div>
-                  </div>
-                </div>
-
-                {/* Organisation Name - Note: Not currently passed */}
-                <div>
-                  <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">Note: Tenant Info</p>
-                  <p className="text-xs text-gray-400 mb-3">Available but not passed in this flow</p>
-                  <div className="space-y-1.5">
                     <div className="flex justify-between text-sm gap-4">
-                      <span className="text-gray-500 flex-shrink-0">organisationName <span className="text-gray-400 italic">(not passed)</span></span>
-                      <span className="text-gray-400 font-medium text-right">{tenant?.name || "—"}</span>
+                      <span className="text-gray-500 flex-shrink-0">totalOverdue</span>
+                      <span className="text-gray-900 font-medium text-right">{preview?.customer?.outstandingTotal || 0}</span>
+                    </div>
+                    <div className="flex justify-between text-sm gap-4">
+                      <span className="text-gray-500 flex-shrink-0">overdueCount</span>
+                      <span className="text-gray-900 font-medium text-right">
+                        {preview?.invoices?.filter(inv => (inv.daysOverdue || 0) > 0).length || 0}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm gap-4">
+                      <span className="text-gray-500 flex-shrink-0">oldestInvoiceAge</span>
+                      <span className="text-gray-900 font-medium text-right">
+                        {(() => {
+                          const oldest = preview?.invoices?.reduce((max, inv) => {
+                            const created = inv.createdAt ? new Date(inv.createdAt).getTime() : Date.now();
+                            return created < max ? created : max;
+                          }, Date.now());
+                          return oldest ? Math.floor((Date.now() - oldest) / (1000 * 60 * 60 * 24)) : 0;
+                        })()} days
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm gap-4">
+                      <span className="text-gray-500 flex-shrink-0">averageDaysOverdue</span>
+                      <span className="text-gray-900 font-medium text-right">
+                        {(() => {
+                          const overdueInvs = preview?.invoices?.filter(inv => (inv.daysOverdue || 0) > 0) || [];
+                          if (overdueInvs.length === 0) return 0;
+                          const total = overdueInvs.reduce((sum, inv) => sum + (inv.daysOverdue || 0), 0);
+                          return Math.round(total / overdueInvs.length);
+                        })()} days
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm gap-4">
+                      <span className="text-gray-500 flex-shrink-0">lastPaymentDate</span>
+                      <span className="text-gray-900 font-medium text-right italic text-gray-400">calculated at call time</span>
+                    </div>
+                    <div className="flex justify-between text-sm gap-4">
+                      <span className="text-gray-500 flex-shrink-0">lastPaymentAmount</span>
+                      <span className="text-gray-900 font-medium text-right italic text-gray-400">calculated at call time</span>
+                    </div>
+                    <div className="flex justify-between text-sm gap-4">
+                      <span className="text-gray-500 flex-shrink-0">lastContactDate</span>
+                      <span className="text-gray-900 font-medium text-right italic text-gray-400">calculated at call time</span>
+                    </div>
+                    <div className="flex justify-between text-sm gap-4">
+                      <span className="text-gray-500 flex-shrink-0">contactMethod</span>
+                      <span className="text-gray-900 font-medium text-right italic text-gray-400">calculated at call time</span>
+                    </div>
+                    <div className="flex justify-between text-sm gap-4">
+                      <span className="text-gray-500 flex-shrink-0">previousPromises</span>
+                      <span className="text-gray-900 font-medium text-right italic text-gray-400">calculated at call time</span>
+                    </div>
+                    <div className="flex justify-between text-sm gap-4">
+                      <span className="text-gray-500 flex-shrink-0">disputeCount</span>
+                      <span className="text-gray-900 font-medium text-right italic text-gray-400">calculated at call time</span>
+                    </div>
+                    <div className="flex justify-between text-sm gap-4">
+                      <span className="text-gray-500 flex-shrink-0">creditTerms</span>
+                      <span className="text-gray-900 font-medium text-right">{preview?.customer?.paymentTerms || "Net 30"}</span>
+                    </div>
+                    <div className="flex justify-between text-sm gap-4">
+                      <span className="text-gray-500 flex-shrink-0">accountAge</span>
+                      <span className="text-gray-900 font-medium text-right italic text-gray-400">calculated at call time</span>
                     </div>
                   </div>
                 </div>

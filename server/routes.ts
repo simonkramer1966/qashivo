@@ -4502,6 +4502,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
               ? Math.max(0, Math.floor((Date.now() - new Date(primaryInvoice.dueDate).getTime()) / (1000 * 60 * 60 * 24)))
               : 0;
             
+            // Calculate additional context variables for the voice agent
+            // totalOverdue = sum of overdue invoice amounts (same as totalOutstanding for overdue invoices)
+            const totalOverdue = totalOutstanding;
+            const overdueCount = invoiceCount;
+            
+            // Calculate oldest invoice age (days since invoice was created)
+            const oldestInvoiceAge = primaryInvoice?.createdAt 
+              ? Math.floor((Date.now() - new Date(primaryInvoice.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+              : 0;
+            
+            // Calculate average days overdue across all overdue invoices
+            const totalDaysOverdue = overdueInvoices.reduce((sum, inv) => {
+              if (inv.dueDate) {
+                const days = Math.max(0, Math.floor((Date.now() - new Date(inv.dueDate).getTime()) / (1000 * 60 * 60 * 24)));
+                return sum + days;
+              }
+              return sum;
+            }, 0);
+            const averageDaysOverdue = overdueCount > 0 ? Math.round(totalDaysOverdue / overdueCount) : 0;
+            
+            // Get last payment info from invoices
+            const paidInvoices = await db.select()
+              .from(invoices)
+              .where(
+                and(
+                  eq(invoices.contactId, contactId),
+                  eq(invoices.tenantId, user.tenantId),
+                  sql`${invoices.paidDate} IS NOT NULL`
+                )
+              )
+              .orderBy(sql`${invoices.paidDate} DESC`)
+              .limit(1);
+            const lastPaymentDate = paidInvoices[0]?.paidDate || null;
+            const lastPaymentAmount = paidInvoices[0]?.amount || null;
+            
+            // Get last contact/action info
+            const lastActions = await db.select()
+              .from(actions)
+              .where(
+                and(
+                  eq(actions.contactId, contactId),
+                  eq(actions.tenantId, user.tenantId),
+                  sql`${actions.status} = 'completed'`
+                )
+              )
+              .orderBy(sql`${actions.completedAt} DESC`)
+              .limit(1);
+            const lastContactDate = lastActions[0]?.completedAt || null;
+            const contactMethod = lastActions[0]?.type || null;
+            
+            // Count previous promises to pay (PTP outcomes)
+            const ptpActions = await db.select({ count: sql<number>`count(*)` })
+              .from(actions)
+              .where(
+                and(
+                  eq(actions.contactId, contactId),
+                  eq(actions.tenantId, user.tenantId),
+                  sql`${actions.outcome} = 'promise_to_pay' OR (${actions.metadata}->>'outcome' = 'promise_to_pay')`
+                )
+              );
+            const previousPromises = Number(ptpActions[0]?.count || 0);
+            
+            // Count disputed invoices
+            const disputedInvoices = await db.select({ count: sql<number>`count(*)` })
+              .from(invoices)
+              .where(
+                and(
+                  eq(invoices.contactId, contactId),
+                  eq(invoices.tenantId, user.tenantId),
+                  eq(invoices.outcomeOverride, 'Disputed')
+                )
+              );
+            const disputeCount = Number(disputedInvoices[0]?.count || 0);
+            
+            // Get credit terms from contact or default
+            const creditTerms = contact.paymentTerms || 'Net 30';
+            
+            // Calculate account age (days since first invoice)
+            const firstInvoice = await db.select()
+              .from(invoices)
+              .where(
+                and(
+                  eq(invoices.contactId, contactId),
+                  eq(invoices.tenantId, user.tenantId)
+                )
+              )
+              .orderBy(sql`${invoices.createdAt} ASC`)
+              .limit(1);
+            const accountAge = firstInvoice[0]?.createdAt 
+              ? Math.floor((Date.now() - new Date(firstInvoice[0].createdAt).getTime()) / (1000 * 60 * 60 * 24))
+              : 0;
+            
             // Create standard collection variables with real customer data
             const callVariables = createStandardCollectionVariables({
               customerName: nameToCall,
@@ -4512,6 +4604,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
               invoiceCount: invoiceCount,
               daysOverdue: daysOverdue,
               dueDate: primaryInvoice?.dueDate,
+              // New enhanced context variables
+              totalOverdue: totalOverdue,
+              overdueCount: overdueCount,
+              oldestInvoiceAge: oldestInvoiceAge,
+              averageDaysOverdue: averageDaysOverdue,
+              lastPaymentDate: lastPaymentDate,
+              lastPaymentAmount: lastPaymentAmount,
+              lastContactDate: lastContactDate,
+              contactMethod: contactMethod,
+              previousPromises: previousPromises,
+              disputeCount: disputeCount,
+              creditTerms: creditTerms,
+              accountAge: accountAge,
             });
             
             const unifiedResult = await createUnifiedRetellCall({
@@ -10644,17 +10749,31 @@ Guidelines:
       const { createUnifiedRetellCall, createStandardCollectionVariables } = await import('./utils/retellCallHelper');
       
       // Create standard collection variables using the helper (accepts any format)
+      // Demo values provide realistic test data for the voice agent
       const variablesData = createStandardCollectionVariables({
         customerName: customerName || "Test Customer",
         companyName: companyName || "Test Company", 
         organisationName: organisationName || tenant?.name || "Nexus AR",
         invoiceNumber: invoiceNumber || "TEST-001",
         invoiceAmount: invoiceAmount || "1500.00",
-        totalOutstanding: totalOutstanding || "0.00",
-        daysOverdue: daysOverdue || "0",
-        invoiceCount: invoiceCount || "1",
+        totalOutstanding: totalOutstanding || "1500.00",
+        daysOverdue: daysOverdue || "14",
+        invoiceCount: invoiceCount || "2",
         dueDate: dueDate || new Date(),
-        customMessage: demoMessage || "This is a professional collection call regarding outstanding invoices."
+        customMessage: demoMessage || "This is a professional collection call regarding outstanding invoices.",
+        // New enhanced context variables with demo values
+        totalOverdue: totalOutstanding || "1500.00",
+        overdueCount: invoiceCount || "2",
+        oldestInvoiceAge: "45",
+        averageDaysOverdue: daysOverdue || "14",
+        lastPaymentDate: null, // Demo: no recent payment
+        lastPaymentAmount: null,
+        lastContactDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
+        contactMethod: "email",
+        previousPromises: "1",
+        disputeCount: "0",
+        creditTerms: "Net 30",
+        accountAge: "180",
       });
 
       // Use unified Retell call creation (handles variable normalization, phone formatting, etc.)
