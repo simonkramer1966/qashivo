@@ -4638,6 +4638,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 toneLabel: toneLabel,
                 reasonForCall: reason || '',
                 callGoal: goal || 'payment_commitment',
+                maxDuration: String(maxDuration || 5),
               },
               metadata: {
                 // Use snake_case keys to match webhook expectations

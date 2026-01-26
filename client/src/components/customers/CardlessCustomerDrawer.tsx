@@ -2200,6 +2200,10 @@ export function CardlessCustomerDrawer({
                       <span className="text-gray-500 flex-shrink-0">accountAge</span>
                       <span className="text-gray-900 font-medium text-right italic text-gray-400">calculated at call time</span>
                     </div>
+                    <div className="flex justify-between text-sm gap-4">
+                      <span className="text-gray-500 flex-shrink-0">maxDuration</span>
+                      <span className="text-gray-900 font-medium text-right">{callMaxDuration}</span>
+                    </div>
                   </div>
                 </div>
 
@@ -2219,10 +2223,6 @@ export function CardlessCustomerDrawer({
                   <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">Action Metadata</p>
                   <p className="text-xs text-gray-400 mb-3">Stored in actions.metadata, not sent to Retell</p>
                   <div className="space-y-1.5">
-                    <div className="flex justify-between text-sm gap-4">
-                      <span className="text-gray-500 flex-shrink-0">Max Duration <span className="text-gray-400 font-mono text-xs">(maxDuration)</span></span>
-                      <span className="text-gray-900 font-medium text-right">{callMaxDuration} min</span>
-                    </div>
                     <div className="flex justify-between text-sm gap-4">
                       <span className="text-gray-500 flex-shrink-0">Schedule Mode <span className="text-gray-400 font-mono text-xs">(scheduleMode)</span></span>
                       <span className="text-gray-900 font-medium text-right">{callScheduleMode}</span>
