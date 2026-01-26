@@ -173,7 +173,7 @@ export function CardlessCustomerDrawer({
   const [activitySearchOpen, setActivitySearchOpen] = useState(false);
   const [activitySearchQuery, setActivitySearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
-  const [invoiceFilter, setInvoiceFilter] = useState<"all" | "overdue" | "paid">("overdue");
+  const [invoiceFilter, setInvoiceFilter] = useState<"all" | "due" | "overdue" | "paid">("overdue");
   const [paidInvoices, setPaidInvoices] = useState<CustomerPreviewInvoice[]>([]);
   const [isLoadingPaidInvoices, setIsLoadingPaidInvoices] = useState(false);
   const [paidInvoicesTotal, setPaidInvoicesTotal] = useState(0);
@@ -1749,6 +1749,16 @@ export function CardlessCustomerDrawer({
                         All ({preview.totalInvoiceCount || preview.invoices?.length || 0})
                       </button>
                       <button
+                        onClick={() => setInvoiceFilter("due")}
+                        className={`text-sm transition-colors ${
+                          invoiceFilter === "due"
+                            ? "text-gray-900 font-medium"
+                            : "text-gray-400 hover:text-gray-600"
+                        }`}
+                      >
+                        Due ({[...(preview.invoices || []), ...additionalInvoices].filter(inv => !inv.daysOverdue || inv.daysOverdue <= 0).length || 0})
+                      </button>
+                      <button
                         onClick={() => setInvoiceFilter("overdue")}
                         className={`text-sm transition-colors ${
                           invoiceFilter === "overdue"
@@ -1794,6 +1804,8 @@ export function CardlessCustomerDrawer({
                             const allInvoices = [...(preview.invoices || []), ...additionalInvoices];
                             const baseInvoices = invoiceFilter === "overdue"
                               ? allInvoices.filter(inv => inv.daysOverdue && inv.daysOverdue > 0)
+                              : invoiceFilter === "due"
+                              ? allInvoices.filter(inv => !inv.daysOverdue || inv.daysOverdue <= 0)
                               : allInvoices;
                             const allSelected = baseInvoices.length > 0 && baseInvoices.every(inv => selectedPtpInvoices.has(inv.id));
                             if (allSelected) {
@@ -1817,6 +1829,8 @@ export function CardlessCustomerDrawer({
                             const allInvoices = [...(preview.invoices || []), ...additionalInvoices];
                             const baseInvoices = invoiceFilter === "overdue"
                               ? allInvoices.filter(inv => inv.daysOverdue && inv.daysOverdue > 0)
+                              : invoiceFilter === "due"
+                              ? allInvoices.filter(inv => !inv.daysOverdue || inv.daysOverdue <= 0)
                               : allInvoices;
                             const allSelected = baseInvoices.length > 0 && baseInvoices.every(inv => selectedPtpInvoices.has(inv.id));
                             return allSelected ? "Deselect all" : "Select all";
@@ -1927,11 +1941,13 @@ export function CardlessCustomerDrawer({
                       </>
                     )}
 
-                    {/* Outstanding Invoices Section (All/Overdue) */}
+                    {/* Outstanding Invoices Section (All/Due/Overdue) */}
                     {invoiceFilter !== "paid" && (() => {
                       const allInvoices = [...(preview.invoices || []), ...additionalInvoices];
                       const baseInvoices = invoiceFilter === "overdue"
                         ? allInvoices.filter(inv => inv.daysOverdue && inv.daysOverdue > 0)
+                        : invoiceFilter === "due"
+                        ? allInvoices.filter(inv => !inv.daysOverdue || inv.daysOverdue <= 0)
                         : allInvoices;
                       
                       const sortedInvoices = baseInvoices?.slice().sort((a, b) => {
