@@ -5664,6 +5664,123 @@ Return only JSON with keys: intent, sentiment, confidence, ptpAmount, ptpDate, d
     }
   });
 
+  // Promise to Pay endpoint - Create PTP from customer drawer
+  app.post("/api/contacts/:contactId/promise-to-pay", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId } = req.params;
+      const { invoiceIds, paymentDate, paymentType, amount, confirmedBy, notes } = req.body;
+
+      // Validate required fields
+      if (!paymentDate || typeof paymentDate !== 'string') {
+        return res.status(400).json({ message: "Payment date is required" });
+      }
+      
+      if (!invoiceIds || !Array.isArray(invoiceIds) || invoiceIds.length === 0) {
+        return res.status(400).json({ message: "At least one invoice must be selected" });
+      }
+
+      // Verify contact exists
+      const contact = await storage.getContact(contactId, user.tenantId);
+      if (!contact) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+
+      // Parse the payment date (DD/MM/YYYY format)
+      let parsedDate: Date;
+      if (paymentDate.includes('/')) {
+        const parts = paymentDate.split('/');
+        parsedDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+      } else {
+        parsedDate = new Date(paymentDate);
+      }
+      
+      // Validate parsed date
+      if (isNaN(parsedDate.getTime())) {
+        return res.status(400).json({ message: "Invalid payment date format" });
+      }
+
+      // Get the promise reliability service
+      const { getPromiseReliabilityService } = await import('./services/promiseReliabilityService.js');
+      const promiseService = getPromiseReliabilityService();
+
+      // Create promises for each invoice or a single promise for full payment
+      const createdPromises = [];
+      
+      if (invoiceIds && invoiceIds.length > 0) {
+        // Get invoices to calculate amounts
+        const invoiceList = await storage.getInvoicesByIds(invoiceIds, user.tenantId);
+        
+        for (const invoice of invoiceList) {
+          const invoiceBalance = parseFloat(invoice.amountDue?.toString() || invoice.total?.toString() || '0') - parseFloat(invoice.amountPaid?.toString() || '0');
+          const promiseAmount = paymentType === 'full' ? invoiceBalance : (amount || 0);
+          
+          const promise = await promiseService.createPromise({
+            tenantId: user.tenantId,
+            contactId,
+            invoiceId: invoice.id,
+            promisedAmount: promiseAmount,
+            promisedDate: parsedDate,
+            source: 'manual',
+            confirmedBy: confirmedBy || null,
+            notes: notes || null,
+            createdByUserId: user.id,
+          });
+          
+          createdPromises.push(promise);
+        }
+        
+        // Update invoice outcome override to 'Plan' for PTP
+        for (const invoiceId of invoiceIds) {
+          await storage.updateInvoice(invoiceId, user.tenantId, {
+            outcomeOverride: 'Plan',
+          });
+        }
+      }
+
+      // Create a timeline note for the PTP
+      const { customerTimelineService } = await import("./services/customerTimelineService");
+      const userName = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
+      
+      const totalAmount = paymentType === 'full' 
+        ? createdPromises.reduce((sum, p) => sum + parseFloat(p.promisedAmount?.toString() || '0'), 0)
+        : (amount || 0);
+      
+      const formattedAmount = new Intl.NumberFormat('en-GB', {
+        style: 'currency',
+        currency: 'GBP',
+      }).format(totalAmount);
+      
+      const formattedDate = parsedDate.toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      });
+
+      await customerTimelineService.createNote(
+        user.tenantId,
+        contactId,
+        user.id,
+        userName,
+        `Promise to Pay recorded: ${formattedAmount} by ${formattedDate}. Confirmed by: ${confirmedBy || 'Unknown'}${notes ? `. Notes: ${notes}` : ''}`,
+        invoiceIds?.[0] || null
+      );
+
+      res.status(201).json({ 
+        success: true, 
+        promisesCreated: createdPromises.length,
+        promiseIds: createdPromises.map(p => p.id),
+      });
+    } catch (error) {
+      console.error("Error creating promise to pay:", error);
+      res.status(500).json({ message: "Failed to create promise to pay" });
+    }
+  });
+
   // Customer preferences endpoint
   app.get("/api/contacts/:contactId/preferences", isAuthenticated, async (req: any, res) => {
     try {
