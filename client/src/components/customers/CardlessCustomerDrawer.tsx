@@ -2215,7 +2215,7 @@ Kind regards`);
             {preview && !isPtpMode && (
               <div className="px-6 py-3 border-t border-gray-100 flex-shrink-0">
                 <div className="flex gap-4">
-                  <TooltipProvider delayDuration={500}>
+                  <TooltipProvider delayDuration={750}>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button
