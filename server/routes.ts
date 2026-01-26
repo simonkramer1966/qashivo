@@ -3601,11 +3601,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Calculate aggregates across ALL filtered contacts (not just current page)
         // Calculate behavior profile percentages based on risk bands
+        // A = On Time, B = Late Reliable, C = Inconsistent, D or no band = Unknown
         const totalForProfiles = filteredContacts.length || 1; // Avoid division by zero
         const onTimeCount = filteredContacts.filter(c => c.riskBand === 'A').length;
         const lateReliableCount = filteredContacts.filter(c => c.riskBand === 'B').length;
-        const inconsistentCount = filteredContacts.filter(c => c.riskBand === 'C' || c.riskBand === 'D' || c.riskBand === 'E').length;
-        const unknownCount = filteredContacts.filter(c => !c.riskBand).length;
+        const inconsistentCount = filteredContacts.filter(c => c.riskBand === 'C').length;
+        const unknownCount = filteredContacts.filter(c => c.riskBand === 'D' || c.riskBand === 'E' || !c.riskBand).length;
         
         // Calculate invoice aggregates scoped to filtered contacts
         const today = new Date();

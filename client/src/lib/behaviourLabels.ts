@@ -16,6 +16,7 @@ export function getBehaviourLabel(riskBand?: string | null, riskScore?: number |
 
   const band = riskBand?.toUpperCase();
   
+  // A = On Time, B = Late Reliable, C = Inconsistent, D or no band = Unknown
   switch (band) {
     case "A":
       return { 
@@ -24,18 +25,19 @@ export function getBehaviourLabel(riskBand?: string | null, riskScore?: number |
       };
     case "B":
       return { 
-        label: "Pays on time", 
-        context: "Reliable payment behaviour" 
+        label: "Pays late but reliable", 
+        context: "Reliable payment behaviour, typically after due date" 
       };
     case "C":
       return { 
-        label: "Pays late but reliable", 
-        context: "Predictable payment timing, typically after due date" 
-      };
-    case "D":
-      return { 
         label: "Inconsistent", 
         context: "Payment timing varies" 
+      };
+    case "D":
+    case "E":
+      return { 
+        label: "Unknown", 
+        context: "Limited payment history" 
       };
     default:
       if (riskScore !== undefined && riskScore !== null) {
@@ -46,7 +48,7 @@ export function getBehaviourLabel(riskBand?: string | null, riskScore?: number |
         } else if (riskScore <= 70) {
           return { label: "Inconsistent" };
         } else {
-          return { label: "Inconsistent", context: "Requires closer supervision" };
+          return { label: "Unknown", context: "Limited payment history" };
         }
       }
       return { label: "Unknown", context: "Limited payment history" };
