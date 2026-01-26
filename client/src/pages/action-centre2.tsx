@@ -1907,7 +1907,7 @@ function ActivityTab2({ items, onSelectCustomer, isLoading, search = '' }: Activ
             >
               <div className="w-[25%] px-3 min-w-0">
                 <div className="text-[13px] font-medium text-gray-900 truncate">{item.customerName}</div>
-                {item.contactName && item.contactName !== item.customerName && (
+                {item.contactName && (
                   <div className="text-xs text-gray-500 truncate">{item.contactName}</div>
                 )}
               </div>
