@@ -3607,6 +3607,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const unknownCount = filteredContacts.filter(c => !c.riskBand).length;
         
         // Calculate invoice aggregates scoped to filtered contacts
+        const today = new Date();
         const filteredContactIds = new Set(filteredContacts.map(c => c.id));
         const filteredUnpaidInvoices = allInvoices.filter(inv => 
           inv.status !== 'paid' && inv.status !== 'cancelled' && filteredContactIds.has(inv.contactId)
