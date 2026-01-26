@@ -2215,13 +2215,22 @@ Kind regards`);
             {preview && !isPtpMode && (
               <div className="px-6 py-3 border-t border-gray-100 flex-shrink-0">
                 <div className="flex gap-4">
-                  <button
-                    onClick={handlePtpButtonClick}
-                    className="flex items-center gap-1.5 h-9 px-2.5 text-sm text-gray-600 font-medium hover:text-gray-900 transition-colors"
-                  >
-                    <Handshake className="h-4 w-4" />
-                    PTP
-                  </button>
+                  <TooltipProvider delayDuration={500}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={handlePtpButtonClick}
+                          className="flex items-center gap-1.5 h-9 px-2.5 text-sm text-gray-600 font-medium hover:text-gray-900 transition-colors"
+                        >
+                          <Handshake className="h-4 w-4" />
+                          PTP
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs text-center">
+                        <p>A 'PTP' (Promise to Pay) is a single payment promised by your customer to clear specific invoice(s) on a specified date.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                   <button className="flex items-center gap-1.5 h-9 px-2.5 text-sm text-gray-600 font-medium hover:text-gray-900 transition-colors">
                     <Calendar className="h-4 w-4" />
                     Plan
