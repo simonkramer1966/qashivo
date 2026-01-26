@@ -53,8 +53,18 @@ import {
   Send,
   Loader2,
   Search,
-  StickyNote
+  StickyNote,
+  Info
 } from "lucide-react";
+import {
+  Dialog,
+  DialogPortal,
+  DialogOverlay,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { cn } from "@/lib/utils";
 import { useCurrency } from "@/hooks/useCurrency";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -183,6 +193,7 @@ export function CardlessCustomerDrawer({
     contactId: string;
   } | null>(null);
   const [callPollingStatus, setCallPollingStatus] = useState<string>("");
+  const [voiceAgentDebugOpen, setVoiceAgentDebugOpen] = useState(false);
 
   useEffect(() => {
     setActivitySearchOpen(false);
@@ -1283,7 +1294,17 @@ export function CardlessCustomerDrawer({
                     {/* Call Section - Cardless */}
                     {isCallMode && (
                       <section className="pt-10 space-y-6">
-                        <p className="text-xs text-gray-400 uppercase tracking-wider">Schedule AI Call</p>
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-gray-400 uppercase tracking-wider">Schedule AI Call</p>
+                          <button
+                            type="button"
+                            onClick={() => setVoiceAgentDebugOpen(true)}
+                            className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                            title="View Voice Agent Variables"
+                          >
+                            <Info className="h-4 w-4" />
+                          </button>
+                        </div>
                         
                         <div className="space-y-4">
                           <div>
@@ -2036,6 +2057,136 @@ export function CardlessCustomerDrawer({
           </div>
         </div>
       </SheetContent>
+
+      {/* Voice Agent Debug Dialog - Cardless v2.0 */}
+      <Dialog open={voiceAgentDebugOpen} onOpenChange={setVoiceAgentDebugOpen}>
+        <DialogPortal>
+          <DialogOverlay />
+          <DialogPrimitive.Content
+            className={cn(
+              "fixed left-[50%] top-[50%] z-50 w-full max-w-lg translate-x-[-50%] translate-y-[-50%] bg-white border border-gray-200 p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg"
+            )}
+          >
+            <div className="space-y-6">
+              <div>
+                <DialogTitle className="text-base font-medium text-gray-900">
+                  Voice Agent Variables
+                </DialogTitle>
+                <DialogDescription className="text-sm text-gray-500 mt-1">
+                  Data that will be passed to the AI voice agent for this call.
+                </DialogDescription>
+              </div>
+
+              <div className="space-y-5 max-h-[60vh] overflow-y-auto">
+                {/* Recipient Information */}
+                <div>
+                  <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">Recipient</p>
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Name</span>
+                      <span className="text-gray-900 font-medium">{selectedCallRecipientName || "—"}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Phone</span>
+                      <span className="text-gray-900 font-medium">{selectedCallRecipientPhone || "—"}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Call Parameters */}
+                <div>
+                  <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">Call Parameters</p>
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Goal</span>
+                      <span className="text-gray-900 font-medium">{callGoalLabels[callGoal]}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Tone</span>
+                      <span className="text-gray-900 font-medium">{toneLabels[callTone]}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Max Duration</span>
+                      <span className="text-gray-900 font-medium">{callMaxDuration} min</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Schedule Mode</span>
+                      <span className="text-gray-900 font-medium">
+                        {callScheduleMode === 'now' ? 'Now' : callScheduleMode === 'asap' ? 'ASAP' : 'Scheduled'}
+                      </span>
+                    </div>
+                    {callScheduleMode === 'scheduled' && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-500">Scheduled For</span>
+                        <span className="text-gray-900 font-medium">
+                          {callScheduleDate} {callScheduleTime || '09:00'}
+                        </span>
+                      </div>
+                    )}
+                    {callReason && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-500">Reason</span>
+                        <span className="text-gray-900 font-medium text-right max-w-[200px] truncate">{callReason}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Customer Context */}
+                <div>
+                  <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">Customer Context</p>
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Company Name</span>
+                      <span className="text-gray-900 font-medium">{preview?.customer?.name || preview?.customer?.companyName || "—"}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Contact ID</span>
+                      <span className="text-gray-900 font-medium font-mono text-xs">{customerId || "—"}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Total Outstanding</span>
+                      <span className="text-gray-900 font-medium">{formatCurrency(preview?.customer?.outstandingTotal || 0)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Invoice Count</span>
+                      <span className="text-gray-900 font-medium">{preview?.invoices?.length || 0}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Oldest Days Overdue</span>
+                      <span className="text-gray-900 font-medium">
+                        {preview?.invoices?.reduce((max, inv) => Math.max(max, inv.daysOverdue || 0), 0) || 0} days
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Voice Tone Profile */}
+                <div>
+                  <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">Voice Configuration</p>
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Voice Tone Profile</span>
+                      <span className="text-gray-900 font-medium font-mono text-xs">
+                        {['VOICE_TONE_WARM_FRIENDLY', 'VOICE_TONE_CALM_COLLABORATIVE', 'VOICE_TONE_FIRM_ASSERTIVE'][callTone]}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  onClick={() => setVoiceAgentDebugOpen(false)}
+                  className="w-full h-10 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors border border-gray-200 rounded-lg"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </DialogPrimitive.Content>
+        </DialogPortal>
+      </Dialog>
     </Sheet>
   );
 }
