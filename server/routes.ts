@@ -3612,23 +3612,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const filteredUnpaidInvoices = allInvoices.filter(inv => 
           inv.status !== 'paid' && inv.status !== 'cancelled' && filteredContactIds.has(inv.contactId)
         );
-        const allInvoiceCount = filteredUnpaidInvoices.length;
-        const overdueInvoiceCount = filteredUnpaidInvoices.filter(inv => {
-          if (inv.dueDate) {
-            return new Date(inv.dueDate) < today;
-          }
-          return false;
-        }).length;
-        const dueInvoiceCount = allInvoiceCount - overdueInvoiceCount;
+        
+        // Calculate amounts for All/Due/Overdue
+        const allInvoiceAmount = filteredUnpaidInvoices.reduce((sum, inv) => sum + (inv.amountDue || 0), 0);
+        const overdueInvoices = filteredUnpaidInvoices.filter(inv => inv.dueDate && new Date(inv.dueDate) < today);
+        const overdueInvoiceAmount = overdueInvoices.reduce((sum, inv) => sum + (inv.amountDue || 0), 0);
+        const dueInvoiceAmount = allInvoiceAmount - overdueInvoiceAmount;
 
         const aggregates = {
           totalOutstanding: filteredContacts.reduce((sum, c) => sum + c.outstandingAmount, 0),
           highRiskCount: filteredContacts.filter(c => c.riskScore >= 70).length,
           totalContacts: filteredContacts.length,
-          // Invoice counts
-          allInvoiceCount,
-          dueInvoiceCount,
-          overdueInvoiceCount,
+          // Invoice amounts
+          allInvoiceAmount,
+          dueInvoiceAmount,
+          overdueInvoiceAmount,
           // Behavior profile percentages
           onTimePercent: filteredContacts.length > 0 ? Math.round((onTimeCount / totalForProfiles) * 100) : 0,
           lateReliablePercent: filteredContacts.length > 0 ? Math.round((lateReliableCount / totalForProfiles) * 100) : 0,
