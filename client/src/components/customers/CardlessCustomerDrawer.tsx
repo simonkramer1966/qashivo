@@ -2131,7 +2131,7 @@ export function CardlessCustomerDrawer({
                             setPtpAmount(formatted);
                           }
                         }}
-                        placeholder="0.00"
+                        placeholder="0,000.00"
                         className={`h-9 bg-white border rounded-lg pl-7 pr-3 text-sm text-right tabular-nums focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3] ${ptpValidationAttempted && (!ptpAmount || parseFloat(stripCommas(ptpAmount) || "0") <= 0) ? 'border-[#C75C5C]' : 'border-gray-200'}`}
                       />
                     </div>

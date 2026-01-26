@@ -1448,7 +1448,7 @@ export class DatabaseStorage implements IStorage {
           COUNT(*) as count
         FROM invoices
         WHERE tenant_id = ${tenantId}
-          AND status IN ('pending', 'overdue')
+          AND LOWER(status) NOT IN ('paid', 'void', 'voided', 'deleted')
       ),
       overdue_stats AS (
         SELECT 
@@ -1457,7 +1457,8 @@ export class DatabaseStorage implements IStorage {
           COALESCE(AVG(EXTRACT(DAY FROM AGE(CURRENT_DATE, due_date))), 0) as avg_days
         FROM invoices
         WHERE tenant_id = ${tenantId}
-          AND status = 'overdue'
+          AND LOWER(status) NOT IN ('paid', 'void', 'voided', 'deleted')
+          AND due_date < CURRENT_DATE
       ),
       paid_stats AS (
         SELECT 
