@@ -1,0 +1,272 @@
+# Qashivo V0.5 (SME) — Technical Feature Set (Gap Checklist)
+
+Goal: Ship a working supervised loop with Xero read-only sync + two-way outcomes + confidence-based Cash In.
+
+---
+
+## 0) Cross-cutting foundations
+
+### 0.1 Auth + tenancy
+- [ ] ✅/🟡/❌ Multi-tenant auth (SME tenant scoped)
+- [ ] ✅/🟡/❌ Roles: SME_ADMIN, SME_USER, PARTNER_USER (partner may be V0.5 optional but role scaffolding needed)
+- [ ] ✅/🟡/❌ Row-level tenant isolation in DB queries
+- [ ] ✅/🟡/❌ Feature flags (e.g., Xero enabled, SMS enabled)
+
+### 0.2 Audit + activity
+- [ ] ✅/🟡/❌ Audit log table + API (who/what/when)
+- [ ] ✅/🟡/❌ Unified activity feed (sync, plan, approve, send, reply, outcome, forecast change)
+- [ ] ✅/🟡/❌ Per-invoice timeline endpoint
+
+---
+
+## 1) CONNECT — Xero Read-only Sync (V0.5 required)
+
+### 1.1 OAuth connection + tenant mapping
+UI:
+- [ ] ✅/🟡/❌ Settings → Integrations → "Connect Xero" button
+- [ ] ✅/🟡/❌ Connection status widget: org name, last sync, health badge, "Sync now"
+
+Backend:
+- [ ] ✅/🟡/❌ OAuth2 flow + callback handler
+- [ ] ✅/🟡/❌ Store connection: xero_tenant_id, org_name, tokens (refresh/access), scopes
+- [ ] ✅/🟡/❌ Token refresh handling + retry-safe client wrapper
+- [ ] ✅/🟡/❌ One SME tenant ↔ one Xero tenant enforced (V0.5)
+
+Tables:
+- [ ] ✅/🟡/❌ ledger_connections (tenantId, provider=xero, xeroTenantId, orgName, status, lastSyncAt, lastSyncResult)
+- [ ] ✅/🟡/❌ ledger_sync_runs (connectionId, startedAt, finishedAt, status, counts json, errorSummary)
+
+### 1.2 Read-only sync entities (minimum set)
+Sync scope (read-only):
+- [ ] ✅/🟡/❌ Contacts (customers)
+- [ ] ✅/🟡/❌ Invoices (ACCREC) — include open + paid + part-paid within lookback; always include all open
+- [ ] ✅/🟡/❌ Payments allocated to invoices
+- [ ] ✅/🟡/❌ Credit notes (optional if easy)
+
+Tables (raw+normalized fields, store xero IDs):
+- [ ] ✅/🟡/❌ ledger_contacts (xeroContactId, name, email, phone, updatedAtXero, rawJson)
+- [ ] ✅/🟡/❌ ledger_invoices (xeroInvoiceId, invoiceNumber, xeroContactId, date, dueDate, total, amountPaid, amountDue, status, currency, updatedAtXero, rawJson)
+- [ ] ✅/🟡/❌ ledger_payments (xeroPaymentId, xeroInvoiceId, amount, date, updatedAtXero, rawJson)
+- [ ] ✅/🟡/❌ ledger_credit_notes (optional) (xeroCreditNoteId, allocations, remainingCredit, updatedAtXero, rawJson)
+
+Endpoints / jobs:
+- [ ] ✅/🟡/❌ POST /api/integrations/xero/sync (manual)
+- [ ] ✅/🟡/❌ Background polling job every 10–30 mins (V0.5 ok) OR cron-like scheduler
+- [ ] ✅/🟡/❌ Incremental sync using updatedAtXero/UpdatedDateUTC where possible
+
+### 1.3 Payment signals (derived)
+Per operational invoice compute:
+- [ ] ✅/🟡/❌ payment_state = PAID | PART_PAID | OPEN
+- [ ] ✅/🟡/❌ last_payment_date
+- [ ] ✅/🟡/❌ amount_paid_to_date + amount_remaining_due
+
+Derivation job after sync:
+- [ ] ✅/🟡/❌ Upsert Qashivo customers from ledger_contacts
+- [ ] ✅/🟡/❌ Upsert Qashivo invoices from ledger_invoices
+- [ ] ✅/🟡/❌ Attach payment signals from ledger_payments (+ credit notes if present)
+
+### 1.4 Sync health + reconciliation hints → Attention flags
+Create Attention items when:
+- [ ] ✅/🟡/❌ Payment exists but invoice amountDue unchanged / status still open after threshold
+- [ ] ✅/🟡/❌ Invoice paid in Xero but open/remaining in Qashivo
+- [ ] ✅/🟡/❌ Credit note allocated but amountDue didn’t reduce (if credit notes enabled)
+- [ ] ✅/🟡/❌ Missing/invalid debtor email/phone (data quality)
+
+Implementation:
+- [ ] ✅/🟡/❌ attention_items table supports type="SYNC_MISMATCH" with payload {xeroSnapshot,qashivoSnapshot,recommendation}
+- [ ] ✅/🟡/❌ UI shows these in Attention queue with "Sync now" CTA
+
+---
+
+## 2) Invoices + prioritisation
+
+UI:
+- [ ] ✅/🟡/❌ Invoices list (open/overdue/paid filters)
+- [ ] ✅/🟡/❌ Search + sort (amount, due date, risk/behaviour, status)
+- [ ] ✅/🟡/❌ Invoice detail with timeline + conversation thread
+
+Backend:
+- [ ] ✅/🟡/❌ Invoice status taxonomy (due/overdue/critical/recovery/legal or your chosen bands)
+- [ ] ✅/🟡/❌ Prioritisation scoring function (simple rules) used by Daily Plan
+
+Tables:
+- [ ] ✅/🟡/❌ customers (tenantId, name, primaryEmail, primaryPhone, channelPrefs, behaviourLabel)
+- [ ] ✅/🟡/❌ invoices (tenantId, customerId, invoiceNumber, amountTotal, amountPaid, amountDue, dueDate, statusBand, paymentSignals..., externalRefs)
+
+---
+
+## 3) PLAN — Daily Plan generation (Today view)
+
+UI:
+- [ ] ✅/🟡/❌ Action Centre tabs: Planned / Attention / Forecast / Activity
+- [ ] ✅/🟡/❌ Planned list groups actions by invoice/customer with recommended channel + reason
+
+Backend:
+- [ ] ✅/🟡/❌ Plan generator job (daily + on-demand) producing proposed actions
+- [ ] ✅/🟡/❌ Explainability: store reason codes + short text
+
+Tables:
+- [ ] ✅/🟡/❌ planned_actions (tenantId, invoiceId, customerId, channel, templateType, recommendedAt, reasonCodes, draftMessage, status=PLANNED)
+
+Endpoints:
+- [ ] ✅/🟡/❌ POST /api/plan/generate
+- [ ] ✅/🟡/❌ GET /api/plan/today
+
+Rules (minimum):
+- [ ] ✅/🟡/❌ Don’t plan actions for PAID invoices
+- [ ] ✅/🟡/❌ Pause if active Promise-to-Pay date in future
+- [ ] ✅/🟡/❌ Route disputes / payment plan requests to Attention (no auto chase)
+- [ ] ✅/🟡/❌ Rate-limit per debtor (avoid spamming)
+
+---
+
+## 4) APPROVE — Approval Centre (human-in-the-loop)
+
+UI:
+- [ ] ✅/🟡/❌ Approve / Edit / Decline per planned action
+- [ ] ✅/🟡/❌ Bulk approve/decline
+- [ ] ✅/🟡/❌ Edit modal for subject/body (email) or text (SMS)
+
+Backend:
+- [ ] ✅/🟡/❌ Approval endpoint updates action state + writes audit log
+- [ ] ✅/🟡/❌ Version approved content (approved message snapshot)
+
+Tables:
+- [ ] ✅/🟡/❌ actions (tenantId, plannedActionId, status=APPROVED|DECLINED|SENT|FAILED, approvedBy, approvedAt, channel, subject, body)
+- [ ] ✅/🟡/❌ audit_log (tenantId, actorId, actionType, entityType, entityId, before, after, createdAt)
+
+Endpoints:
+- [ ] ✅/🟡/❌ POST /api/actions/:id/approve
+- [ ] ✅/🟡/❌ POST /api/actions/:id/decline
+- [ ] ✅/🟡/❌ POST /api/actions/bulk-approve
+
+Guardrail:
+- [ ] ✅/🟡/❌ No send without approved state enforced server-side
+
+---
+
+## 5) EXECUTE — Email + SMS sending (approved only)
+
+Email (SendGrid):
+- [ ] ✅/🟡/❌ Send approved emails via SendGrid
+- [ ] ✅/🟡/❌ Store provider messageId + delivery status (if available)
+- [ ] ✅/🟡/❌ Reply-to routing configured (for inbound capture)
+
+SMS (Twilio):
+- [ ] ✅/🟡/❌ Send approved SMS via Twilio
+- [ ] ✅/🟡/❌ Store provider messageId + status
+
+Tables:
+- [ ] ✅/🟡/❌ outbound_messages (tenantId, actionId, channel, to, from, provider, providerMessageId, status, sentAt)
+
+Endpoints / jobs:
+- [ ] ✅/🟡/❌ POST /api/actions/:id/send (or send automatically upon approve)
+- [ ] ✅/🟡/❌ Background worker for send retries + failure handling
+
+---
+
+## 6) CAPTURE — Two-way outcomes (inbound replies → structured outcomes)
+
+Inbound email:
+- [ ] ✅/🟡/❌ Inbound parse endpoint (SendGrid inbound webhook)
+- [ ] ✅/🟡/❌ Thread matching to customer/invoice/action (by headers, references, or tokens)
+- [ ] ✅/🟡/❌ Store raw inbound + extracted text
+
+Inbound SMS:
+- [ ] ✅/🟡/❌ Twilio inbound webhook
+- [ ] ✅/🟡/❌ Match to customer by phone + recent invoice/action context
+
+Outcome extraction (LLM or rules):
+- [ ] ✅/🟡/❌ Outcome types:
+  - PROMISE_TO_PAY {date}
+  - REQUEST_MORE_TIME (optionally {proposedDate})
+  - PAYMENT_PLAN_REQUEST {proposal?}
+  - DISPUTE {category?, notes?}
+  - AMBIGUOUS / LOW_CONFIDENCE
+- [ ] ✅/🟡/❌ Confidence scoring + thresholds
+- [ ] ✅/🟡/❌ Low-confidence → Attention item
+
+Tables:
+- [ ] ✅/🟡/❌ inbound_messages (tenantId, channel, from, to, body, receivedAt, rawJson, matchedInvoiceId?)
+- [ ] ✅/🟡/❌ outcomes (tenantId, invoiceId, customerId, type, payloadJson, confidence, extractedAt, sourceMessageId)
+
+UI:
+- [ ] ✅/🟡/❌ Conversation thread view on Invoice detail
+- [ ] ✅/🟡/❌ Outcome card rendered after inbound processing
+
+---
+
+## 7) RESOLVE — Attention queue (exceptions hub)
+
+Attention types (minimum V0.5):
+- [ ] ✅/🟡/❌ DISPUTE
+- [ ] ✅/🟡/❌ PAYMENT_PLAN_REQUEST / REQUEST_MORE_TIME
+- [ ] ✅/🟡/❌ LOW_CONFIDENCE_OUTCOME
+- [ ] ✅/🟡/❌ SYNC_MISMATCH
+- [ ] ✅/🟡/❌ DATA_QUALITY (missing email/phone)
+
+UI:
+- [ ] ✅/🟡/❌ Attention queue list + filters by type
+- [ ] ✅/🟡/❌ Resolve actions:
+  - mark resolved
+  - add note
+  - assign owner (optional V0.5)
+  - open invoice detail
+
+Tables:
+- [ ] ✅/🟡/❌ attention_items (tenantId, type, severity, invoiceId?, customerId?, status, payloadJson, createdAt, resolvedAt, resolvedBy)
+
+---
+
+## 8) PREDICT — Cash In forecast (confidence-based, V0.5)
+
+Forecast model (minimum):
+- [ ] ✅/🟡/❌ Forecast points for 30/60/90 days (day/week buckets)
+- [ ] ✅/🟡/❌ Confidence bands: high/medium/low driven by:
+  - explicit Promise-to-Pay date (high)
+  - payment plan request / dispute (low / excluded)
+  - no response + overdue (low/medium)
+
+Triggers (must update forecast):
+- [ ] ✅/🟡/❌ After Xero sync (payments + invoice changes)
+- [ ] ✅/🟡/❌ After new outcome extracted
+- [ ] ✅/🟡/❌ After approval/send? (optional, but nice)
+
+Endpoints:
+- [ ] ✅/🟡/❌ GET /api/dashboard/cash-inflow?range=30|60|90&bucket=day|week
+
+UI:
+- [ ] ✅/🟡/❌ Forecast tab showing expected cash with confidence segmentation
+- [ ] ✅/🟡/❌ "As of" timestamp + data freshness
+
+Tables:
+- [ ] ✅/🟡/❌ forecast_points (tenantId, dateBucket, highAmount, medAmount, lowAmount, invoiceCount, computedAt)
+
+---
+
+## 9) SME-facing pages (minimum nav)
+
+Required pages:
+- [ ] ✅/🟡/❌ Action Centre (Planned / Attention / Forecast / Activity)
+- [ ] ✅/🟡/❌ Customers list + customer detail (optional if time; invoice-level may suffice)
+- [ ] ✅/🟡/❌ Invoices list + invoice detail
+- [ ] ✅/🟡/❌ Integrations (Xero connect + sync status)
+
+---
+
+## 10) Acceptance tests (V0.5 “done” definition)
+
+Xero:
+- [ ] ✅/🟡/❌ Connect Xero → sync pulls invoices/contacts/payments
+- [ ] ✅/🟡/❌ A part-payment in Xero shows as PART_PAID in Qashivo with last payment date
+- [ ] ✅/🟡/❌ A mismatch creates a SYNC_MISMATCH Attention item
+
+Loop:
+- [ ] ✅/🟡/❌ Generate Daily Plan → approve an email → message sends
+- [ ] ✅/🟡/❌ Debtor replies “I’ll pay on Friday” → PROMISE_TO_PAY extracted with date
+- [ ] ✅/🟡/❌ Forecast updates (cash moves to promised date + confidence rises)
+- [ ] ✅/🟡/❌ Dispute reply stops automation and appears in Attention
+
+Governance:
+- [ ] ✅/🟡/❌ No send without approval (server enforced)
+- [ ] ✅/🟡/❌ Audit log shows approval + send + outcome + forecast change
