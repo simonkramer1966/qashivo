@@ -2,6 +2,7 @@ import { db } from "../db";
 import { tenants, cachedXeroInvoices, bills, contacts, bankAccounts, bankTransactions, invoices } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import { xeroService } from "./xero";
+import { attentionItemService } from "./attentionItemService";
 
 export class XeroSyncService {
   constructor() {
@@ -795,6 +796,16 @@ export class XeroSyncService {
         ✅ ${billsResult.billsCount} bills
         ✅ ${bankAccountsResult.accountsCount} bank accounts
         ✅ ${bankTransactionsResult.transactionsCount} bank transactions`);
+
+      // Create attention items for data quality issues (missing email/phone)
+      try {
+        const dataQualityCount = await attentionItemService.createDataQualityAttentionItems(tenantId);
+        if (dataQualityCount > 0) {
+          console.log(`📋 Created ${dataQualityCount} data quality attention items`);
+        }
+      } catch (error) {
+        console.warn('Failed to create data quality attention items:', error);
+      }
 
       return {
         success: true,

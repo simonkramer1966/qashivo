@@ -68,7 +68,8 @@ import {
   promisesToPay,
   smeClients,
   contactNotes,
-  timelineEvents
+  timelineEvents,
+  attentionItems
 } from "@shared/schema";
 import { getOverdueCategoryFromDueDate } from "@shared/utils/overdueUtils";
 import { calculateLatePaymentInterest } from "./utils/interestCalculator";
@@ -12464,6 +12465,391 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     } catch (error: any) {
       console.error("Error approving plan:", error);
       res.status(500).json({ message: `Failed to approve plan: ${error.message}` });
+    }
+  });
+
+  // ============================================================
+  // V0.5 ATTENTION ITEMS API ENDPOINTS
+  // ============================================================
+
+  // Get attention items with filters
+  app.get("/api/attention-items", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { type, status, severity, invoiceId, contactId, limit = 50, offset = 0 } = req.query;
+
+      const conditions = [eq(attentionItems.tenantId, user.tenantId)];
+      
+      if (type) conditions.push(eq(attentionItems.type, type as string));
+      if (status) conditions.push(eq(attentionItems.status, status as string));
+      if (severity) conditions.push(eq(attentionItems.severity, severity as string));
+      if (invoiceId) conditions.push(eq(attentionItems.invoiceId, invoiceId as string));
+      if (contactId) conditions.push(eq(attentionItems.contactId, contactId as string));
+
+      const items = await db.query.attentionItems.findMany({
+        where: and(...conditions),
+        with: {
+          invoice: true,
+          contact: true,
+          assignedTo: true,
+        },
+        orderBy: [desc(attentionItems.createdAt)],
+        limit: parseInt(limit as string),
+        offset: parseInt(offset as string),
+      });
+
+      // Get counts by status
+      const openCount = await db.select({ count: sql<number>`count(*)` })
+        .from(attentionItems)
+        .where(and(eq(attentionItems.tenantId, user.tenantId), eq(attentionItems.status, 'OPEN')));
+      
+      const inProgressCount = await db.select({ count: sql<number>`count(*)` })
+        .from(attentionItems)
+        .where(and(eq(attentionItems.tenantId, user.tenantId), eq(attentionItems.status, 'IN_PROGRESS')));
+
+      res.json({
+        items,
+        counts: {
+          open: Number(openCount[0]?.count ?? 0),
+          inProgress: Number(inProgressCount[0]?.count ?? 0),
+        },
+      });
+    } catch (error: any) {
+      console.error("Error fetching attention items:", error);
+      res.status(500).json({ message: `Failed to fetch attention items: ${error.message}` });
+    }
+  });
+
+  // Get single attention item
+  app.get("/api/attention-items/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const item = await db.query.attentionItems.findFirst({
+        where: and(
+          eq(attentionItems.id, req.params.id),
+          eq(attentionItems.tenantId, user.tenantId)
+        ),
+        with: {
+          invoice: true,
+          contact: true,
+          action: true,
+          assignedTo: true,
+          resolvedBy: true,
+        },
+      });
+
+      if (!item) {
+        return res.status(404).json({ message: "Attention item not found" });
+      }
+
+      res.json(item);
+    } catch (error: any) {
+      console.error("Error fetching attention item:", error);
+      res.status(500).json({ message: `Failed to fetch attention item: ${error.message}` });
+    }
+  });
+
+  // Create attention item - Zod validation schema
+  const createAttentionItemSchema = z.object({
+    type: z.enum(['DISPUTE', 'PAYMENT_PLAN_REQUEST', 'REQUEST_MORE_TIME', 'LOW_CONFIDENCE_OUTCOME', 'SYNC_MISMATCH', 'DATA_QUALITY', 'PTP_BREACH', 'FIRST_CONTACT_HIGH_VALUE', 'VIP_CUSTOMER', 'MANUAL_REVIEW']),
+    severity: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional().default('MEDIUM'),
+    title: z.string().min(1, "Title is required"),
+    description: z.string().optional(),
+    invoiceId: z.string().optional(),
+    contactId: z.string().optional(),
+    actionId: z.string().optional(),
+    payloadJson: z.any().optional(),
+  });
+
+  app.post("/api/attention-items", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // Validate request body with Zod
+      const parseResult = createAttentionItemSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ 
+          message: "Validation failed", 
+          errors: parseResult.error.flatten().fieldErrors 
+        });
+      }
+
+      const { type, severity, title, description, invoiceId, contactId, actionId, payloadJson } = parseResult.data;
+
+      // Validate foreign keys belong to tenant (prevent cross-tenant references)
+      if (invoiceId) {
+        const invoice = await db.query.invoices.findFirst({
+          where: and(eq(invoices.id, invoiceId), eq(invoices.tenantId, user.tenantId))
+        });
+        if (!invoice) {
+          return res.status(400).json({ message: "Invoice not found or belongs to different tenant" });
+        }
+      }
+
+      if (contactId) {
+        const contact = await db.query.contacts.findFirst({
+          where: and(eq(contacts.id, contactId), eq(contacts.tenantId, user.tenantId))
+        });
+        if (!contact) {
+          return res.status(400).json({ message: "Contact not found or belongs to different tenant" });
+        }
+      }
+
+      if (actionId) {
+        const action = await db.query.actions.findFirst({
+          where: and(eq(actions.id, actionId), eq(actions.tenantId, user.tenantId))
+        });
+        if (!action) {
+          return res.status(400).json({ message: "Action not found or belongs to different tenant" });
+        }
+      }
+
+      const [item] = await db.insert(attentionItems).values({
+        tenantId: user.tenantId,
+        type,
+        severity,
+        title,
+        description,
+        invoiceId,
+        contactId,
+        actionId,
+        payloadJson,
+      }).returning();
+
+      console.log(`✅ Created attention item: ${item.id} (${type})`);
+
+      res.status(201).json(item);
+    } catch (error: any) {
+      console.error("Error creating attention item:", error);
+      res.status(500).json({ message: `Failed to create attention item: ${error.message}` });
+    }
+  });
+
+  // Update attention item (assign, update status)
+  app.patch("/api/attention-items/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { status, severity, assignedToUserId, description } = req.body;
+
+      const updates: any = { updatedAt: new Date() };
+      if (status) updates.status = status;
+      if (severity) updates.severity = severity;
+      if (assignedToUserId !== undefined) updates.assignedToUserId = assignedToUserId;
+      if (description !== undefined) updates.description = description;
+
+      const [item] = await db.update(attentionItems)
+        .set(updates)
+        .where(and(
+          eq(attentionItems.id, req.params.id),
+          eq(attentionItems.tenantId, user.tenantId)
+        ))
+        .returning();
+
+      if (!item) {
+        return res.status(404).json({ message: "Attention item not found" });
+      }
+
+      res.json(item);
+    } catch (error: any) {
+      console.error("Error updating attention item:", error);
+      res.status(500).json({ message: `Failed to update attention item: ${error.message}` });
+    }
+  });
+
+  // Resolve attention item
+  app.post("/api/attention-items/:id/resolve", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { resolutionNotes, resolutionAction } = req.body;
+
+      const [item] = await db.update(attentionItems)
+        .set({
+          status: 'RESOLVED',
+          resolvedByUserId: user.id,
+          resolvedAt: new Date(),
+          resolutionNotes,
+          resolutionAction,
+          updatedAt: new Date(),
+        })
+        .where(and(
+          eq(attentionItems.id, req.params.id),
+          eq(attentionItems.tenantId, user.tenantId)
+        ))
+        .returning();
+
+      if (!item) {
+        return res.status(404).json({ message: "Attention item not found" });
+      }
+
+      console.log(`✅ Resolved attention item: ${item.id}`);
+
+      res.json(item);
+    } catch (error: any) {
+      console.error("Error resolving attention item:", error);
+      res.status(500).json({ message: `Failed to resolve attention item: ${error.message}` });
+    }
+  });
+
+  // Dismiss attention item
+  app.post("/api/attention-items/:id/dismiss", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { resolutionNotes } = req.body;
+
+      const [item] = await db.update(attentionItems)
+        .set({
+          status: 'DISMISSED',
+          resolvedByUserId: user.id,
+          resolvedAt: new Date(),
+          resolutionNotes,
+          updatedAt: new Date(),
+        })
+        .where(and(
+          eq(attentionItems.id, req.params.id),
+          eq(attentionItems.tenantId, user.tenantId)
+        ))
+        .returning();
+
+      if (!item) {
+        return res.status(404).json({ message: "Attention item not found" });
+      }
+
+      console.log(`✅ Dismissed attention item: ${item.id}`);
+
+      res.json(item);
+    } catch (error: any) {
+      console.error("Error dismissing attention item:", error);
+      res.status(500).json({ message: `Failed to dismiss attention item: ${error.message}` });
+    }
+  });
+
+  // ============================================================
+  // BULK APPROVE/DECLINE ACTIONS ENDPOINT
+  // ============================================================
+
+  app.post("/api/actions/bulk-approve", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { actionIds, scheduledFor } = req.body;
+
+      if (!actionIds || !Array.isArray(actionIds) || actionIds.length === 0) {
+        return res.status(400).json({ message: "actionIds array is required" });
+      }
+
+      // Get tenant for execution time
+      const tenant = await storage.getTenant(user.tenantId);
+      if (!tenant) {
+        return res.status(404).json({ message: "Tenant not found" });
+      }
+
+      // Calculate execution time
+      let execTime: Date;
+      if (scheduledFor) {
+        execTime = new Date(scheduledFor);
+      } else {
+        // Default to tomorrow at tenant's execution time
+        execTime = new Date();
+        execTime.setDate(execTime.getDate() + 1);
+        const [hours, minutes] = (tenant.executionTime || '09:00').split(':');
+        execTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+      }
+
+      // Bulk update actions
+      const result = await db.update(actions)
+        .set({
+          status: 'scheduled',
+          scheduledFor: execTime,
+          approvedBy: user.id,
+          approvedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(actions.tenantId, user.tenantId),
+            inArray(actions.id, actionIds),
+            eq(actions.status, 'pending_approval')
+          )
+        )
+        .returning();
+
+      console.log(`✅ Bulk approved ${result.length} actions`);
+
+      res.json({
+        message: "Actions approved successfully",
+        approvedCount: result.length,
+        executionTime: execTime.toISOString(),
+      });
+    } catch (error: any) {
+      console.error("Error bulk approving actions:", error);
+      res.status(500).json({ message: `Failed to bulk approve actions: ${error.message}` });
+    }
+  });
+
+  app.post("/api/actions/bulk-decline", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { actionIds, reason } = req.body;
+
+      if (!actionIds || !Array.isArray(actionIds) || actionIds.length === 0) {
+        return res.status(400).json({ message: "actionIds array is required" });
+      }
+
+      // Bulk update actions to cancelled
+      const result = await db.update(actions)
+        .set({
+          status: 'cancelled',
+          metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({ declinedBy: user.id, declinedAt: new Date().toISOString(), declineReason: reason || 'Bulk declined' })}::jsonb`,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(actions.tenantId, user.tenantId),
+            inArray(actions.id, actionIds),
+            eq(actions.status, 'pending_approval')
+          )
+        )
+        .returning();
+
+      console.log(`✅ Bulk declined ${result.length} actions`);
+
+      res.json({
+        message: "Actions declined successfully",
+        declinedCount: result.length,
+      });
+    } catch (error: any) {
+      console.error("Error bulk declining actions:", error);
+      res.status(500).json({ message: `Failed to bulk decline actions: ${error.message}` });
     }
   });
 

@@ -5489,6 +5489,269 @@ export const messageVariantKeyEnum = [
 ] as const;
 export type MessageVariantKey = typeof messageVariantKeyEnum[number];
 
+// ============================================================
+// V0.5 GAP TABLES - Attention Items, Ledger Sync, Forecast Points
+// ============================================================
+
+// Attention items table - exceptions hub for human review
+export const attentionItemTypeEnum = [
+  'DISPUTE',
+  'PAYMENT_PLAN_REQUEST',
+  'REQUEST_MORE_TIME',
+  'LOW_CONFIDENCE_OUTCOME',
+  'SYNC_MISMATCH',
+  'DATA_QUALITY',
+  'PTP_BREACH',
+  'FIRST_CONTACT_HIGH_VALUE',
+  'VIP_CUSTOMER',
+  'MANUAL_REVIEW',
+] as const;
+export type AttentionItemType = typeof attentionItemTypeEnum[number];
+
+export const attentionItemSeverityEnum = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] as const;
+export type AttentionItemSeverity = typeof attentionItemSeverityEnum[number];
+
+export const attentionItemStatusEnum = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'DISMISSED'] as const;
+export type AttentionItemStatus = typeof attentionItemStatusEnum[number];
+
+export const attentionItems = pgTable("attention_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  type: varchar("type").notNull(), // DISPUTE, PAYMENT_PLAN_REQUEST, etc.
+  severity: varchar("severity").notNull().default("MEDIUM"), // LOW, MEDIUM, HIGH, CRITICAL
+  status: varchar("status").notNull().default("OPEN"), // OPEN, IN_PROGRESS, RESOLVED, DISMISSED
+  
+  // Related entities (optional - depends on type)
+  invoiceId: varchar("invoice_id").references(() => invoices.id),
+  contactId: varchar("contact_id").references(() => contacts.id),
+  actionId: varchar("action_id").references(() => actions.id),
+  inboundMessageId: varchar("inbound_message_id").references(() => inboundMessages.id),
+  
+  // Description and payload
+  title: varchar("title").notNull(),
+  description: text("description"),
+  payloadJson: jsonb("payload_json"), // Type-specific data (e.g., xeroSnapshot, qashivoSnapshot, recommendation)
+  
+  // Resolution tracking
+  assignedToUserId: varchar("assigned_to_user_id").references(() => users.id),
+  resolvedByUserId: varchar("resolved_by_user_id").references(() => users.id),
+  resolvedAt: timestamp("resolved_at"),
+  resolutionNotes: text("resolution_notes"),
+  resolutionAction: varchar("resolution_action"), // What action was taken to resolve
+  
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_attention_items_tenant").on(table.tenantId),
+  index("idx_attention_items_type").on(table.type),
+  index("idx_attention_items_status").on(table.status),
+  index("idx_attention_items_severity").on(table.severity),
+  index("idx_attention_items_invoice").on(table.invoiceId),
+  index("idx_attention_items_contact").on(table.contactId),
+]);
+
+export const insertAttentionItemSchema = createInsertSchema(attentionItems).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertAttentionItem = z.infer<typeof insertAttentionItemSchema>;
+export type AttentionItem = typeof attentionItems.$inferSelect;
+
+// Ledger connections table - tracks connections to accounting software
+export const ledgerConnectionStatusEnum = ['CONNECTED', 'DISCONNECTED', 'ERROR', 'PENDING'] as const;
+export type LedgerConnectionStatus = typeof ledgerConnectionStatusEnum[number];
+
+export const ledgerConnections = pgTable("ledger_connections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  provider: varchar("provider").notNull(), // xero, quickbooks, sage
+  externalTenantId: varchar("external_tenant_id"), // xeroTenantId, qbRealmId, etc.
+  organisationName: varchar("organisation_name"),
+  status: varchar("status").notNull().default("PENDING"), // CONNECTED, DISCONNECTED, ERROR, PENDING
+  scopes: text("scopes").array(), // OAuth scopes granted
+  
+  // Token storage (encrypted in production)
+  accessToken: text("access_token"),
+  refreshToken: text("refresh_token"),
+  tokenExpiresAt: timestamp("token_expires_at"),
+  
+  // Sync tracking
+  lastSyncAt: timestamp("last_sync_at"),
+  lastSyncResult: varchar("last_sync_result"), // SUCCESS, PARTIAL, FAILED
+  lastSyncError: text("last_sync_error"),
+  syncIntervalMinutes: integer("sync_interval_minutes").default(240), // 4 hours default
+  autoSyncEnabled: boolean("auto_sync_enabled").default(true),
+  
+  // Health monitoring
+  lastHealthCheckAt: timestamp("last_health_check_at"),
+  healthCheckError: text("health_check_error"),
+  consecutiveFailures: integer("consecutive_failures").default(0),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_ledger_connections_tenant").on(table.tenantId),
+  index("idx_ledger_connections_provider").on(table.provider),
+  index("idx_ledger_connections_status").on(table.status),
+  unique("uq_ledger_connections_tenant_provider").on(table.tenantId, table.provider),
+]);
+
+export const insertLedgerConnectionSchema = createInsertSchema(ledgerConnections).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertLedgerConnection = z.infer<typeof insertLedgerConnectionSchema>;
+export type LedgerConnection = typeof ledgerConnections.$inferSelect;
+
+// Ledger sync runs table - tracks individual sync operations
+export const ledgerSyncRunStatusEnum = ['RUNNING', 'SUCCESS', 'PARTIAL', 'FAILED', 'CANCELLED'] as const;
+export type LedgerSyncRunStatus = typeof ledgerSyncRunStatusEnum[number];
+
+export const ledgerSyncRuns = pgTable("ledger_sync_runs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  connectionId: varchar("connection_id").notNull().references(() => ledgerConnections.id),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  
+  // Sync metadata
+  triggerType: varchar("trigger_type").notNull().default("SCHEDULED"), // SCHEDULED, MANUAL, WEBHOOK, INITIAL
+  status: varchar("status").notNull().default("RUNNING"), // RUNNING, SUCCESS, PARTIAL, FAILED, CANCELLED
+  
+  // Timing
+  startedAt: timestamp("started_at").defaultNow(),
+  finishedAt: timestamp("finished_at"),
+  durationMs: integer("duration_ms"),
+  
+  // Counts (stored as JSON for flexibility)
+  countsJson: jsonb("counts_json").default({
+    contactsCreated: 0,
+    contactsUpdated: 0,
+    invoicesCreated: 0,
+    invoicesUpdated: 0,
+    paymentsCreated: 0,
+    paymentsUpdated: 0,
+    creditNotesCreated: 0,
+    creditNotesUpdated: 0,
+    errors: 0,
+  }),
+  
+  // Error tracking
+  errorSummary: text("error_summary"),
+  errorDetails: jsonb("error_details"), // Array of individual errors
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_ledger_sync_runs_connection").on(table.connectionId),
+  index("idx_ledger_sync_runs_tenant").on(table.tenantId),
+  index("idx_ledger_sync_runs_status").on(table.status),
+  index("idx_ledger_sync_runs_started").on(table.startedAt),
+]);
+
+export const insertLedgerSyncRunSchema = createInsertSchema(ledgerSyncRuns).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertLedgerSyncRun = z.infer<typeof insertLedgerSyncRunSchema>;
+export type LedgerSyncRun = typeof ledgerSyncRuns.$inferSelect;
+
+// Forecast points table - persisted cash-in forecasts with confidence bands
+export const forecastPoints = pgTable("forecast_points", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  
+  // Time bucket (day or week)
+  dateBucket: timestamp("date_bucket").notNull(), // Start of day/week
+  bucketType: varchar("bucket_type").notNull().default("DAY"), // DAY, WEEK
+  
+  // Confidence-based amounts
+  highAmount: decimal("high_amount", { precision: 12, scale: 2 }).notNull().default("0"), // High confidence (PTP with date)
+  mediumAmount: decimal("medium_amount", { precision: 12, scale: 2 }).notNull().default("0"), // Medium confidence
+  lowAmount: decimal("low_amount", { precision: 12, scale: 2 }).notNull().default("0"), // Low confidence (overdue, no response)
+  
+  // Invoice counts per band
+  highInvoiceCount: integer("high_invoice_count").notNull().default(0),
+  mediumInvoiceCount: integer("medium_invoice_count").notNull().default(0),
+  lowInvoiceCount: integer("low_invoice_count").notNull().default(0),
+  
+  // Excluded amounts (disputes, payment plans with issues)
+  excludedAmount: decimal("excluded_amount", { precision: 12, scale: 2 }).notNull().default("0"),
+  excludedInvoiceCount: integer("excluded_invoice_count").notNull().default(0),
+  
+  // Metadata
+  computedAt: timestamp("computed_at").defaultNow(),
+  triggerEvent: varchar("trigger_event"), // XERO_SYNC, OUTCOME_RECEIVED, MANUAL, SCHEDULED
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_forecast_points_tenant").on(table.tenantId),
+  index("idx_forecast_points_date").on(table.dateBucket),
+  index("idx_forecast_points_bucket_type").on(table.bucketType),
+  unique("uq_forecast_points_tenant_date_type").on(table.tenantId, table.dateBucket, table.bucketType),
+]);
+
+export const insertForecastPointSchema = createInsertSchema(forecastPoints).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertForecastPoint = z.infer<typeof insertForecastPointSchema>;
+export type ForecastPoint = typeof forecastPoints.$inferSelect;
+
+// Relations for V0.5 gap tables
+export const attentionItemsRelations = relations(attentionItems, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [attentionItems.tenantId],
+    references: [tenants.id],
+  }),
+  invoice: one(invoices, {
+    fields: [attentionItems.invoiceId],
+    references: [invoices.id],
+  }),
+  contact: one(contacts, {
+    fields: [attentionItems.contactId],
+    references: [contacts.id],
+  }),
+  action: one(actions, {
+    fields: [attentionItems.actionId],
+    references: [actions.id],
+  }),
+  assignedTo: one(users, {
+    fields: [attentionItems.assignedToUserId],
+    references: [users.id],
+  }),
+  resolvedBy: one(users, {
+    fields: [attentionItems.resolvedByUserId],
+    references: [users.id],
+  }),
+}));
+
+export const ledgerConnectionsRelations = relations(ledgerConnections, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [ledgerConnections.tenantId],
+    references: [tenants.id],
+  }),
+  syncRuns: many(ledgerSyncRuns),
+}));
+
+export const ledgerSyncRunsRelations = relations(ledgerSyncRuns, ({ one }) => ({
+  connection: one(ledgerConnections, {
+    fields: [ledgerSyncRuns.connectionId],
+    references: [ledgerConnections.id],
+  }),
+  tenant: one(tenants, {
+    fields: [ledgerSyncRuns.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
+export const forecastPointsRelations = relations(forecastPoints, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [forecastPoints.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
 // Workflow Profile - Tenant-owned collection policy configuration
 export const workflowProfiles = pgTable("workflow_profiles", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

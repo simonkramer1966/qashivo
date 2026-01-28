@@ -1,6 +1,6 @@
 import { db } from '../db';
-import { invoices, contacts, actions, promisesToPay } from '@shared/schema';
-import { eq, and, or, inArray, desc, gte } from 'drizzle-orm';
+import { invoices, contacts, actions, promisesToPay, forecastPoints } from '@shared/schema';
+import { eq, and, or, inArray, desc, gte, sql } from 'drizzle-orm';
 
 export type CashInflowPoint = {
   date: string;
@@ -294,5 +294,124 @@ export async function computeCashInflow(
     bucket,
     points,
     asOf: now.toISOString()
+  };
+}
+
+export async function persistForecastPoints(
+  tenantId: string,
+  points: CashInflowPoint[],
+  bucket: "day" | "week",
+  triggerEvent: string = "MANUAL"
+): Promise<number> {
+  const now = new Date();
+  let persisted = 0;
+
+  for (const point of points) {
+    const dateBucket = new Date(point.date);
+    
+    await db.insert(forecastPoints)
+      .values({
+        tenantId,
+        dateBucket,
+        bucketType: bucket.toUpperCase(),
+        highAmount: point.highConfidence.toFixed(2),
+        mediumAmount: point.mediumConfidence.toFixed(2),
+        lowAmount: point.lowConfidence.toFixed(2),
+        highInvoiceCount: Math.round(point.invoiceCount * 0.3),
+        mediumInvoiceCount: Math.round(point.invoiceCount * 0.4),
+        lowInvoiceCount: Math.round(point.invoiceCount * 0.3),
+        excludedAmount: "0",
+        excludedInvoiceCount: 0,
+        computedAt: now,
+        triggerEvent,
+      })
+      .onConflictDoUpdate({
+        target: [forecastPoints.tenantId, forecastPoints.dateBucket, forecastPoints.bucketType],
+        set: {
+          highAmount: point.highConfidence.toFixed(2),
+          mediumAmount: point.mediumConfidence.toFixed(2),
+          lowAmount: point.lowConfidence.toFixed(2),
+          highInvoiceCount: Math.round(point.invoiceCount * 0.3),
+          mediumInvoiceCount: Math.round(point.invoiceCount * 0.4),
+          lowInvoiceCount: Math.round(point.invoiceCount * 0.3),
+          computedAt: now,
+          triggerEvent,
+        },
+      });
+    
+    persisted++;
+  }
+
+  console.log(`📊 Persisted ${persisted} forecast points for tenant ${tenantId}`);
+  return persisted;
+}
+
+export async function computeAndPersistCashInflow(
+  tenantId: string,
+  rangeDays: number = 60,
+  bucket: "day" | "week" = "week",
+  triggerEvent: string = "MANUAL"
+): Promise<CashInflowResponse> {
+  const result = await computeCashInflow(tenantId, rangeDays, bucket);
+  
+  try {
+    await persistForecastPoints(tenantId, result.points, bucket, triggerEvent);
+  } catch (error) {
+    console.warn(`Failed to persist forecast points for tenant ${tenantId}:`, error);
+  }
+  
+  return result;
+}
+
+export async function getPersistedForecastPoints(
+  tenantId: string,
+  rangeDays: number = 90,
+  bucket: "day" | "week" = "week"
+): Promise<{
+  points: Array<{
+    date: string;
+    highAmount: number;
+    mediumAmount: number;
+    lowAmount: number;
+    totalAmount: number;
+    invoiceCount: number;
+  }>;
+  asOf: string | null;
+}> {
+  const now = new Date();
+  const rangeEnd = new Date(now);
+  rangeEnd.setDate(rangeEnd.getDate() + rangeDays);
+
+  const storedPoints = await db.query.forecastPoints.findMany({
+    where: and(
+      eq(forecastPoints.tenantId, tenantId),
+      eq(forecastPoints.bucketType, bucket.toUpperCase()),
+      gte(forecastPoints.dateBucket, now),
+      sql`${forecastPoints.dateBucket} <= ${rangeEnd}`
+    ),
+    orderBy: [forecastPoints.dateBucket],
+  });
+
+  if (storedPoints.length === 0) {
+    return { points: [], asOf: null };
+  }
+
+  const latestComputed = storedPoints.reduce((latest, p) => {
+    if (!latest || (p.computedAt && new Date(p.computedAt) > new Date(latest))) {
+      return p.computedAt?.toISOString() || null;
+    }
+    return latest;
+  }, null as string | null);
+
+  return {
+    points: storedPoints.map(p => ({
+      date: p.dateBucket.toISOString().split('T')[0],
+      highAmount: parseFloat(p.highAmount || "0"),
+      mediumAmount: parseFloat(p.mediumAmount || "0"),
+      lowAmount: parseFloat(p.lowAmount || "0"),
+      totalAmount: parseFloat(p.highAmount || "0") + parseFloat(p.mediumAmount || "0") + parseFloat(p.lowAmount || "0"),
+      invoiceCount: (p.highInvoiceCount || 0) + (p.mediumInvoiceCount || 0) + (p.lowInvoiceCount || 0),
+    })),
+    asOf: latestComputed,
   };
 }
