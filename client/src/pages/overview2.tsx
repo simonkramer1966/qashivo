@@ -414,7 +414,7 @@ export default function Overview2() {
               </div>
 
               {/* Chart */}
-              <div className="flex-1 min-h-[200px] max-h-[400px]">
+              <div className="flex-1 min-h-[200px]">
                 {cashInflowLoading ? (
                   <div className="h-full flex items-center justify-center">
                     <div className="text-gray-400 text-sm">Loading chart...</div>
@@ -501,7 +501,7 @@ export default function Overview2() {
             </section>
 
             {/* Desktop Bottom Metrics - 4 column grid below chart */}
-            <div className="hidden lg:block py-5 border-t border-gray-100">
+            <div className="hidden lg:block py-5 mb-5 border-t border-gray-100 flex-shrink-0">
               <div className="grid grid-cols-4 gap-6">
                 <div className="text-center">
                   <span className="text-xs text-gray-500 uppercase tracking-wider">Avg Days Late</span>
