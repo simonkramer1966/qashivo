@@ -115,15 +115,36 @@ export default function Overview2() {
 
   const formatChartData = () => {
     if (!cashInflowData?.points) return [];
-    return cashInflowData.points.map(point => ({
-      date: new Date(point.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      expectedAmount: point.expectedAmount,
-      confidenceWeightedAmount: point.confidenceWeightedAmount,
-      highConfidence: point.highConfidence,
-      mediumConfidence: point.mediumConfidence,
-      lowConfidence: point.lowConfidence,
-      invoiceCount: point.invoiceCount
-    }));
+    return cashInflowData.points.map(point => {
+      const d = new Date(point.date);
+      return {
+        date: new Date(point.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        day: d.getDate().toString(),
+        month: d.toLocaleDateString('en-US', { month: 'short' }),
+        expectedAmount: point.expectedAmount,
+        confidenceWeightedAmount: point.confidenceWeightedAmount,
+        highConfidence: point.highConfidence,
+        mediumConfidence: point.mediumConfidence,
+        lowConfidence: point.lowConfidence,
+        invoiceCount: point.invoiceCount
+      };
+    });
+  };
+
+  const CustomXAxisTick = ({ x, y, payload }: any) => {
+    const dataPoint = payload?.payload;
+    const day = dataPoint?.day || '';
+    const month = dataPoint?.month || '';
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <text x={0} y={0} dy={12} textAnchor="middle" fill="#9ca3af" fontSize={11} fontWeight={500}>
+          {day}
+        </text>
+        <text x={0} y={0} dy={26} textAnchor="middle" fill="#9ca3af" fontSize={10}>
+          {month}
+        </text>
+      </g>
+    );
   };
 
   const getForecastTitle = () => {
@@ -163,83 +184,48 @@ export default function Overview2() {
         </div>
         
         <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
-          {/* Desktop Metrics - Cardless v2.0 (unchanged) */}
+          {/* Desktop Top Metrics - 4 column grid above chart */}
           <div className="hidden lg:block max-w-7xl mx-auto w-full px-6">
-            <div className="py-4 border-b border-gray-100 flex flex-wrap items-center gap-x-10 gap-y-3">
-              <div>
-                <span className="text-xs text-gray-500">Outstanding</span>
+            <div className="py-5 border-b border-gray-100 grid grid-cols-4 gap-6">
+              <div className="text-center">
+                <span className="text-xs text-gray-500 uppercase tracking-wider">Outstanding</span>
                 {metricsLoading ? (
-                  <div className="h-5 w-20 bg-gray-100 animate-pulse rounded mt-0.5"></div>
+                  <div className="h-7 w-28 bg-gray-100 animate-pulse rounded mt-1 mx-auto"></div>
                 ) : (
-                  <p className="text-sm font-semibold text-gray-900 tabular-nums">
-                    {formatCurrency(totalOutstanding)} <span className="text-xs font-normal text-gray-400">({totalInvoiceCount})</span>
+                  <p className="text-lg font-semibold text-gray-900 tabular-nums mt-1">
+                    {formatCurrency(totalOutstanding)} <span className="text-sm font-normal text-gray-400">({totalInvoiceCount})</span>
                   </p>
                 )}
               </div>
-              <div>
-                <span className="text-xs text-gray-500">Overdue</span>
+              <div className="text-center">
+                <span className="text-xs text-gray-500 uppercase tracking-wider">Overdue</span>
                 {metricsLoading ? (
-                  <div className="h-5 w-20 bg-gray-100 animate-pulse rounded mt-0.5"></div>
+                  <div className="h-7 w-28 bg-gray-100 animate-pulse rounded mt-1 mx-auto"></div>
                 ) : (
-                  <p className="text-sm font-semibold text-gray-900 tabular-nums">
-                    {formatCurrency(overdueAmount)} <span className="text-xs font-normal text-gray-400">({overdueCount})</span>
+                  <p className="text-lg font-semibold text-gray-900 tabular-nums mt-1">
+                    {formatCurrency(overdueAmount)} <span className="text-sm font-normal text-gray-400">({overdueCount})</span>
                   </p>
                 )}
               </div>
-              <div>
-                <span className="text-xs text-gray-500">Collected (Month)</span>
+              <div className="text-center">
+                <span className="text-xs text-gray-500 uppercase tracking-wider">Collected (Month)</span>
                 {metricsLoading ? (
-                  <div className="h-5 w-20 bg-gray-100 animate-pulse rounded mt-0.5"></div>
+                  <div className="h-7 w-24 bg-gray-100 animate-pulse rounded mt-1 mx-auto"></div>
                 ) : (
-                  <p className="text-sm font-semibold text-[#4FAD80] tabular-nums">
+                  <p className="text-lg font-semibold text-[#4FAD80] tabular-nums mt-1">
                     {formatCurrency(metrics?.collectedThisMonth || 0)}
                   </p>
                 )}
               </div>
-              <div>
-                <span className="text-xs text-gray-500">Collected (Week)</span>
+              <div className="text-center">
+                <span className="text-xs text-gray-500 uppercase tracking-wider">Collected (Week)</span>
                 {metricsLoading ? (
-                  <div className="h-5 w-20 bg-gray-100 animate-pulse rounded mt-0.5"></div>
+                  <div className="h-7 w-24 bg-gray-100 animate-pulse rounded mt-1 mx-auto"></div>
                 ) : (
-                  <p className="text-sm font-semibold text-[#4FAD80] tabular-nums">
+                  <p className="text-lg font-semibold text-[#4FAD80] tabular-nums mt-1">
                     {formatCurrency(metrics?.collectedThisWeek || 0)}
                   </p>
                 )}
-              </div>
-              
-              <div className="h-6 w-px bg-gray-200 hidden sm:block" />
-              
-              <div>
-                <span className="text-xs text-gray-500">Avg Days Late</span>
-                {metricsLoading ? (
-                  <div className="h-5 w-16 bg-gray-100 animate-pulse rounded mt-0.5"></div>
-                ) : (
-                  <p className="text-sm font-semibold text-gray-900 tabular-nums">
-                    {Math.abs(avgDaysOverdue).toFixed(0)} <span className="text-xs font-normal text-gray-400">days</span>
-                  </p>
-                )}
-              </div>
-              <div>
-                <span className="text-xs text-gray-500">Avg Days to Pay</span>
-                {metricsLoading ? (
-                  <div className="h-5 w-16 bg-gray-100 animate-pulse rounded mt-0.5"></div>
-                ) : (
-                  <p className="text-sm font-semibold text-gray-900 tabular-nums">
-                    45 <span className="text-xs font-normal text-gray-400">days</span>
-                  </p>
-                )}
-              </div>
-              <div>
-                <span className="text-xs text-gray-500">On-time Rate</span>
-                {metricsLoading ? (
-                  <div className="h-5 w-16 bg-gray-100 animate-pulse rounded mt-0.5"></div>
-                ) : (
-                  <p className="text-sm font-semibold text-[#4FAD80] tabular-nums">32%</p>
-                )}
-              </div>
-              <div>
-                <span className="text-xs text-gray-500">Promises Kept</span>
-                <p className="text-sm font-semibold text-[#4FAD80] tabular-nums">78%</p>
               </div>
             </div>
           </div>
@@ -438,9 +424,10 @@ export default function Overview2() {
                     <ComposedChart data={formatChartData()}>
                       <XAxis 
                         dataKey="date" 
-                        tick={{ fontSize: 11, fill: '#9ca3af' }}
+                        tick={<CustomXAxisTick />}
                         tickLine={false}
                         axisLine={false}
+                        height={45}
                       />
                       <YAxis 
                         tick={{ fontSize: 11, fill: '#9ca3af' }}
@@ -513,6 +500,43 @@ export default function Overview2() {
               </div>
             </section>
 
+            {/* Desktop Bottom Metrics - 4 column grid below chart */}
+            <div className="hidden lg:block py-5 border-t border-gray-100">
+              <div className="grid grid-cols-4 gap-6">
+                <div className="text-center">
+                  <span className="text-xs text-gray-500 uppercase tracking-wider">Avg Days Late</span>
+                  {metricsLoading ? (
+                    <div className="h-7 w-20 bg-gray-100 animate-pulse rounded mt-1 mx-auto"></div>
+                  ) : (
+                    <p className="text-lg font-semibold text-gray-900 tabular-nums mt-1">
+                      {Math.abs(avgDaysOverdue).toFixed(0)} <span className="text-sm font-normal text-gray-400">days</span>
+                    </p>
+                  )}
+                </div>
+                <div className="text-center">
+                  <span className="text-xs text-gray-500 uppercase tracking-wider">Avg Days to Pay</span>
+                  {metricsLoading ? (
+                    <div className="h-7 w-20 bg-gray-100 animate-pulse rounded mt-1 mx-auto"></div>
+                  ) : (
+                    <p className="text-lg font-semibold text-gray-900 tabular-nums mt-1">
+                      45 <span className="text-sm font-normal text-gray-400">days</span>
+                    </p>
+                  )}
+                </div>
+                <div className="text-center">
+                  <span className="text-xs text-gray-500 uppercase tracking-wider">On-time Rate</span>
+                  {metricsLoading ? (
+                    <div className="h-7 w-16 bg-gray-100 animate-pulse rounded mt-1 mx-auto"></div>
+                  ) : (
+                    <p className="text-lg font-semibold text-[#4FAD80] tabular-nums mt-1">32%</p>
+                  )}
+                </div>
+                <div className="text-center">
+                  <span className="text-xs text-gray-500 uppercase tracking-wider">Promises Kept</span>
+                  <p className="text-lg font-semibold text-[#4FAD80] tabular-nums mt-1">78%</p>
+                </div>
+              </div>
+            </div>
           
           </div>
         </div>
