@@ -173,6 +173,7 @@ export function CardlessCustomerDrawer({
   const [activitySearchOpen, setActivitySearchOpen] = useState(false);
   const [activitySearchQuery, setActivitySearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const [conversationFilter, setConversationFilter] = useState<"all" | "messages" | "outcomes" | "notes">("all");
   const [invoiceFilter, setInvoiceFilter] = useState<"all" | "due" | "overdue" | "paid">("overdue");
   const [paidInvoices, setPaidInvoices] = useState<CustomerPreviewInvoice[]>([]);
   const [isLoadingPaidInvoices, setIsLoadingPaidInvoices] = useState(false);
@@ -346,6 +347,31 @@ export function CardlessCustomerDrawer({
 
   const { data: preview, isLoading } = useQuery<CustomerPreview>({
     queryKey: [`/api/contacts/${customerId}/preview`],
+    enabled: !!customerId && open,
+  });
+
+  // Fetch outcomes for this debtor
+  interface OutcomeData {
+    id: string;
+    type: string;
+    confidence: string;
+    confidenceBand: string;
+    effect: string | null;
+    requiresHumanReview: boolean;
+    extracted: any;
+    linkedInvoiceIds: string[];
+    invoiceId: string | null;
+    sourceChannel: string | null;
+    rawSnippet: string | null;
+    createdAt: string;
+  }
+  
+  const { data: outcomesData } = useQuery<OutcomeData[]>({
+    queryKey: ['/api/outcomes', { debtorId: customerId }],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/outcomes?debtorId=${customerId}&limit=50`);
+      return res.json();
+    },
     enabled: !!customerId && open,
   });
 
@@ -1184,19 +1210,101 @@ ${signOff}`);
                       )}
                     </section>
 
-                    {/* Recent Timeline - Compact v2.0 */}
+                    {/* Loop Anchor Strip - Cardless v2.0 */}
+                    {!isNoteMode && !isCallMode && !isEmailMode && !isSmsMode && (
+                      <section className="pt-4 border-t border-gray-100">
+                        <div className="flex gap-4">
+                          {/* Next Action */}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Next</p>
+                            {preview.latestTimeline && preview.latestTimeline.length > 0 && 
+                             preview.latestTimeline[0].channel && 
+                             ['email', 'sms', 'call'].includes(preview.latestTimeline[0].channel.toLowerCase()) ? (
+                              <p className="text-sm text-gray-900 truncate">
+                                Follow-up
+                              </p>
+                            ) : (
+                              <p className="text-sm text-gray-400">—</p>
+                            )}
+                          </div>
+                          
+                          {/* Expected Payment */}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Expected</p>
+                            {(() => {
+                              // Sort outcomes by createdAt desc and find latest with payment date
+                              const sortedOutcomes = outcomesData 
+                                ? [...outcomesData].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                                : [];
+                              const latestWithDate = sortedOutcomes.find(o => o.extracted?.promisedPaymentDate);
+                              
+                              if (latestWithDate?.extracted?.promisedPaymentDate) {
+                                return (
+                                  <p className="text-sm text-[#2E7D32] truncate">
+                                    {new Date(latestWithDate.extracted.promisedPaymentDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                                  </p>
+                                );
+                              } else if (preview.customer.overdueTotal > 0) {
+                                return <p className="text-sm text-[#C75C5C] truncate">Overdue</p>;
+                              }
+                              return <p className="text-sm text-gray-400">—</p>;
+                            })()}
+                          </div>
+                          
+                          {/* Flags */}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Flags</p>
+                            <div className="flex gap-1">
+                              {outcomesData && outcomesData.some(o => o.type === 'DISPUTE') && (
+                                <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-[#C75C5C]/10 text-[#C75C5C]">
+                                  Dispute
+                                </span>
+                              )}
+                              {outcomesData && outcomesData.some(o => o.requiresHumanReview) && (
+                                <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-[#F59E0B]/10 text-[#F59E0B]">
+                                  Review
+                                </span>
+                              )}
+                              {(!outcomesData || !outcomesData.some(o => o.type === 'DISPUTE' || o.requiresHumanReview)) && (
+                                <p className="text-sm text-gray-400">—</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </section>
+                    )}
+
+                    {/* Conversation - Cardless v2.0 */}
                     {!isNoteMode && !isCallMode && !isEmailMode && !isSmsMode && (
                       <section className="pt-5 overflow-hidden">
-                        <div className="flex items-center gap-2 mb-4">
+                        <div className="flex items-center justify-between mb-3">
                           <p className="text-[11px] text-gray-400 uppercase tracking-wider">
-                            Recent Activity
+                            Conversation
                           </p>
                           <button
                             onClick={toggleActivitySearch}
-                            className="h-9 w-9 flex items-center justify-center hover:bg-gray-100 rounded-full transition-colors"
+                            className="h-8 w-8 flex items-center justify-center hover:bg-gray-100 rounded transition-colors"
                           >
-                            <Search className={`h-4 w-4 ${activitySearchOpen ? 'text-gray-900' : 'text-gray-400'}`} />
+                            <Search className={`h-3.5 w-3.5 ${activitySearchOpen ? 'text-gray-900' : 'text-gray-400'}`} />
                           </button>
+                        </div>
+                        
+                        {/* Filter Pills - Cardless v2.0 */}
+                        <div className="flex gap-1 mb-4">
+                          {(["all", "messages", "outcomes", "notes"] as const).map((filter) => (
+                            <button
+                              key={filter}
+                              onClick={() => setConversationFilter(filter)}
+                              className={cn(
+                                "px-2.5 py-1 text-xs font-medium rounded transition-colors",
+                                conversationFilter === filter
+                                  ? "bg-gray-900 text-white"
+                                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                              )}
+                            >
+                              {filter === "all" ? "All" : filter === "messages" ? "Messages" : filter === "outcomes" ? "Outcomes" : "Notes"}
+                            </button>
+                          ))}
                         </div>
                         
                         {activitySearchOpen && (
@@ -1222,11 +1330,118 @@ ${signOff}`);
                         )}
                         
                         <div className="space-y-0">
-                          {preview.latestTimeline && preview.latestTimeline.length > 0 ? (
+                          {/* Outcomes Only View - Cardless v2.0 */}
+                          {conversationFilter === "outcomes" && outcomesData && outcomesData.length > 0 && (
+                            <div className="space-y-2">
+                              {[...outcomesData]
+                                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                                .map((outcome) => {
+                                const confidenceColor = outcome.confidenceBand === 'HIGH' ? 'text-[#2E7D32]' : 
+                                  outcome.confidenceBand === 'MEDIUM' ? 'text-[#F59E0B]' : 'text-[#C75C5C]';
+                                const confidenceBg = outcome.confidenceBand === 'HIGH' ? 'bg-[#2E7D32]/10' : 
+                                  outcome.confidenceBand === 'MEDIUM' ? 'bg-[#F59E0B]/10' : 'bg-[#C75C5C]/10';
+                                const effectLabel = outcome.effect === 'FORECAST_UPDATED' ? 'Forecast Updated' : 
+                                  outcome.effect === 'ROUTED_TO_ATTENTION' ? 'Needs Review' : 
+                                  outcome.effect === 'MANUAL_REVIEW' ? 'Manual Review' : null;
+                                
+                                return (
+                                  <div key={outcome.id} className="border border-gray-100 rounded p-3 bg-white">
+                                    <div className="flex items-start justify-between gap-2">
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-1">
+                                          <span className="text-sm font-medium text-gray-900">
+                                            {outcome.type.replace(/_/g, ' ')}
+                                          </span>
+                                          <span className={cn("px-1.5 py-0.5 text-[10px] font-medium rounded", confidenceBg, confidenceColor)}>
+                                            {outcome.confidenceBand}
+                                          </span>
+                                          {effectLabel && (
+                                            <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-gray-100 text-gray-600">
+                                              {effectLabel}
+                                            </span>
+                                          )}
+                                        </div>
+                                        {outcome.rawSnippet && (
+                                          <p className="text-xs text-gray-500 line-clamp-2">{outcome.rawSnippet}</p>
+                                        )}
+                                        {outcome.extracted?.promisedPaymentDate && (
+                                          <p className="text-xs text-[#2E7D32] mt-1">
+                                            Expected: {new Date(outcome.extracted.promisedPaymentDate).toLocaleDateString()}
+                                          </p>
+                                        )}
+                                        {/* Linked Invoices Chips */}
+                                        {outcome.linkedInvoiceIds && outcome.linkedInvoiceIds.length > 0 && (
+                                          <div className="flex flex-wrap gap-1 mt-2">
+                                            {outcome.linkedInvoiceIds.slice(0, 3).map((invId) => (
+                                              <span key={invId} className="px-1.5 py-0.5 text-[10px] bg-gray-50 text-gray-500 rounded">
+                                                {invId.slice(-6)}
+                                              </span>
+                                            ))}
+                                            {outcome.linkedInvoiceIds.length > 3 && (
+                                              <span className="px-1.5 py-0.5 text-[10px] bg-gray-50 text-gray-500 rounded">
+                                                +{outcome.linkedInvoiceIds.length - 3}
+                                              </span>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+                                      <span className="text-[10px] text-gray-400 flex-shrink-0">
+                                        {new Date(outcome.createdAt).toLocaleDateString()}
+                                      </span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                          
+                          {conversationFilter === "outcomes" && (!outcomesData || outcomesData.length === 0) && (
+                            <p className="text-sm text-gray-400 py-4">No outcomes recorded</p>
+                          )}
+                          
+                          {/* All View - includes recent outcomes summary block */}
+                          {conversationFilter === "all" && outcomesData && outcomesData.length > 0 && (
+                            <div className="mb-4 pb-3 border-b border-gray-100">
+                              <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-2">Recent Outcomes</p>
+                              <div className="space-y-1.5">
+                                {[...outcomesData]
+                                  .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                                  .slice(0, 3)
+                                  .map((outcome) => {
+                                    const confidenceColor = outcome.confidenceBand === 'HIGH' ? 'text-[#2E7D32]' : 
+                                      outcome.confidenceBand === 'MEDIUM' ? 'text-[#F59E0B]' : 'text-[#C75C5C]';
+                                    return (
+                                      <div key={outcome.id} className="flex items-center gap-2 text-xs">
+                                        <span className="font-medium text-gray-700">{outcome.type.replace(/_/g, ' ')}</span>
+                                        <span className={cn("font-medium", confidenceColor)}>{outcome.confidenceBand}</span>
+                                        <span className="text-gray-400">{new Date(outcome.createdAt).toLocaleDateString()}</span>
+                                      </div>
+                                    );
+                                  })}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Messages/Notes/All Timeline View */}
+                          {conversationFilter !== "outcomes" && preview.latestTimeline && preview.latestTimeline.length > 0 ? (
                             (() => {
                               const allItems = [...preview.latestTimeline, ...additionalTimelineItems];
+                              
+                              // Apply conversation filter
+                              let filteredItems = allItems;
+                              if (conversationFilter === "messages") {
+                                filteredItems = allItems.filter(item => 
+                                  ['email', 'sms', 'whatsapp', 'call', 'voice'].includes(item.channel?.toLowerCase() || '')
+                                );
+                              } else if (conversationFilter === "notes") {
+                                filteredItems = allItems.filter(item => 
+                                  item.channel?.toLowerCase() === 'note' || item.channel?.toLowerCase() === 'internal'
+                                );
+                              }
+                              // "all" shows everything - outcomes shown in summary block above
+                              
                               const items = debouncedSearchQuery
-                                ? allItems.filter(item => {
+                                ? filteredItems.filter(item => {
                                     const query = debouncedSearchQuery.toLowerCase();
                                     const searchFields = [
                                       item.channel,
@@ -1239,14 +1454,22 @@ ${signOff}`);
                                       field?.toLowerCase().includes(query)
                                     );
                                   })
-                                : allItems;
+                                : filteredItems;
 
                               if (items.length === 0 && debouncedSearchQuery) {
                                 return (
                                   <div className="text-center py-8">
                                     <Search className="h-8 w-8 text-gray-300 mx-auto mb-3" />
-                                    <p className="text-base text-gray-400">No matching activity</p>
+                                    <p className="text-sm text-gray-400">No matching activity</p>
                                   </div>
+                                );
+                              }
+                              
+                              if (items.length === 0) {
+                                return (
+                                  <p className="text-sm text-gray-400 py-4">
+                                    No {conversationFilter === "messages" ? "messages" : conversationFilter === "notes" ? "notes" : "activity"}
+                                  </p>
                                 );
                               }
 
@@ -1302,15 +1525,15 @@ ${signOff}`);
                                     );
                                   })}
                                   
-                                  {preview.hasMoreTimeline && timelineOffset < (preview.totalTimelineCount || 0) && !debouncedSearchQuery && (
+                                  {conversationFilter === "all" && preview.hasMoreTimeline && timelineOffset < (preview.totalTimelineCount || 0) && !debouncedSearchQuery && (
                                     <button
                                       onClick={loadMoreTimeline}
                                       disabled={isLoadingMoreTimeline}
-                                      className="w-full py-4 text-base text-gray-500 hover:text-gray-900 transition-colors flex items-center justify-center gap-2"
+                                      className="w-full py-3 text-sm text-gray-500 hover:text-gray-900 transition-colors flex items-center justify-center gap-2"
                                     >
                                       {isLoadingMoreTimeline ? (
                                         <>
-                                          <Loader2 className="h-4 w-4 animate-spin" />
+                                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                           Loading...
                                         </>
                                       ) : (
