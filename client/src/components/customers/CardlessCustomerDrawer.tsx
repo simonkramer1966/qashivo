@@ -247,32 +247,46 @@ export function CardlessCustomerDrawer({
         );
         const data = await res.json();
 
-        if (data.callStatus === 'ongoing' || data.callStatus === 'in_progress') {
-          setCallPollingStatus("Call in progress...");
-        } else if (data.callStatus === 'registered' || data.callStatus === 'queued') {
-          setCallPollingStatus("Connecting...");
-        } else if (data.isEnded || data.callStatus === 'ended' || data.callStatus === 'error') {
+        // Handle new Loop V0.5 response format
+        if (data.terminal === true) {
+          // Terminal state - stop polling
           setCallPollingStatus("");
           setActiveCallPolling(null);
+          clearInterval(pollInterval);
           
           if (data.processed) {
+            // Show outcome message
+            const isSuccess = data.status === 'completed';
             toast({
-              title: "Call completed",
-              description: data.analysis?.summary || "AI call has been processed",
-            });
-          } else if (data.callStatus === 'error') {
-            toast({
-              title: "Call failed",
-              description: "The call could not be completed",
-              variant: "destructive",
+              title: isSuccess ? "Call completed" : `Call — ${data.status?.replace(/_/g, ' ')}`,
+              description: data.message || "Call has been processed",
+              variant: data.status === 'failed' ? "destructive" : "default",
             });
           } else {
             toast({
               title: "Call ended",
-              description: "Call results will appear in the activity log",
+              description: data.message || "Call results will appear in the activity log",
             });
           }
           
+          // Refresh Conversation feed (preview + outcomes + audit_events)
+          queryClient.invalidateQueries({ queryKey: [`/api/contacts/${currentContactId}/preview`] });
+          queryClient.invalidateQueries({ queryKey: ['/api/outcomes', currentContactId] });
+          return;
+        }
+        
+        // Non-terminal: update status
+        if (data.status === 'in_progress') {
+          setCallPollingStatus("Call in progress...");
+        } else if (data.status === 'connecting') {
+          setCallPollingStatus("Connecting...");
+        }
+        
+        // Legacy fallback for old response format
+        if (data.isEnded || data.callStatus === 'ended' || data.callStatus === 'error') {
+          setCallPollingStatus("");
+          setActiveCallPolling(null);
+          clearInterval(pollInterval);
           queryClient.invalidateQueries({ queryKey: [`/api/contacts/${currentContactId}/preview`] });
         }
       } catch (error) {
@@ -1015,11 +1029,11 @@ ${signOff}`);
     });
   };
 
-  const getChannelIcon = (channel: string) => {
+  const getChannelIcon = (channel: string, isVoiceAI?: boolean) => {
     switch (channel) {
       case "email": return <Mail className="h-4 w-4" />;
       case "sms": return <MessageSquare className="h-4 w-4" />;
-      case "voice": return <Phone className="h-4 w-4" />;
+      case "voice": return <Phone className={cn("h-4 w-4", isVoiceAI && "text-[#0D9488]")} />;
       case "note": return <StickyNote className="h-4 w-4" />;
       case "system": return <Settings className="h-4 w-4" />;
       default: return <Clock className="h-4 w-4" />;
@@ -1348,13 +1362,18 @@ ${signOff}`);
                                   <div key={outcome.id} className="border border-gray-100 rounded p-3 bg-white">
                                     <div className="flex items-start justify-between gap-2">
                                       <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 mb-1">
+                                        <div className="flex items-center gap-2 mb-1 flex-wrap">
                                           <span className="text-sm font-medium text-gray-900">
                                             {outcome.type.replace(/_/g, ' ')}
                                           </span>
                                           <span className={cn("px-1.5 py-0.5 text-[10px] font-medium rounded", confidenceBg, confidenceColor)}>
                                             {outcome.confidenceBand}
                                           </span>
+                                          {outcome.sourceChannel === 'VOICE' && (
+                                            <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-[#0D9488]/10 text-[#0D9488]">
+                                              Voice
+                                            </span>
+                                          )}
                                           {effectLabel && (
                                             <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-gray-100 text-gray-600">
                                               {effectLabel}
@@ -1480,19 +1499,41 @@ ${signOff}`);
                                     const isItemExpanded = expandedTimelineItems.has(item.id);
                                     const amount = item.outcome?.extracted?.amount;
                                     
+                                    // Check if this is a VOICE audit event (from REPLY_RECEIVED with payload.channel === 'VOICE')
+                                    const payload = item.metadata || item.payload || {};
+                                    const isVoiceAI = item.channel?.toLowerCase() === 'voice' || payload.channel === 'VOICE' || payload.provider === 'RETELL';
+                                    const voiceStatus = payload.status;
+                                    const durationSeconds = payload.durationSeconds || 0;
+                                    const transcriptSnippet = payload.transcriptSnippet || payload.summarySnippet;
+                                    
+                                    // Format voice call title
+                                    const getVoiceTitle = () => {
+                                      if (!isVoiceAI) return item.preview || item.summary;
+                                      const statusLabel = voiceStatus === 'completed' ? 'Completed' 
+                                        : voiceStatus === 'no_answer' ? 'No answer'
+                                        : voiceStatus === 'busy' ? 'Busy'
+                                        : voiceStatus === 'voicemail' ? 'Voicemail'
+                                        : voiceStatus === 'failed' ? 'Failed'
+                                        : 'Completed';
+                                      const duration = durationSeconds > 0 
+                                        ? ` (${Math.floor(durationSeconds / 60)}m ${durationSeconds % 60}s)` 
+                                        : '';
+                                      return `AI call — ${statusLabel}${duration}`;
+                                    };
+                                    
                                     return (
                                       <div key={item.id} className="border-b border-gray-50 last:border-0 overflow-hidden">
                                         <button
                                           onClick={() => toggleTimelineItem(item.id)}
                                           className="group w-full flex items-center py-2.5 hover:bg-gray-50 transition-colors text-left overflow-hidden"
                                         >
-                                          <span className="text-gray-400 mr-3 flex-shrink-0">
-                                            {getChannelIcon(item.channel)}
+                                          <span className={cn("mr-3 flex-shrink-0", isVoiceAI ? "text-[#0D9488]" : "text-gray-400")}>
+                                            {getChannelIcon(item.channel, isVoiceAI)}
                                           </span>
                                           
                                           <div className="flex-1 w-0 min-w-0 mr-3 overflow-hidden">
                                             <p className="text-sm text-gray-900 truncate block">
-                                              {item.preview || item.summary}
+                                              {getVoiceTitle()}
                                             </p>
                                             <p className="text-xs text-gray-400 mt-0.5 truncate block">
                                               {dateInfo.relative}
@@ -1510,7 +1551,13 @@ ${signOff}`);
                                         
                                         {isItemExpanded && (
                                           <div className="pl-8 pr-3 pb-3 space-y-2">
-                                            {item.body && (
+                                            {/* Voice transcript snippet */}
+                                            {isVoiceAI && transcriptSnippet && (
+                                              <div className="bg-gray-50 rounded p-2 text-xs text-gray-600 italic">
+                                                "{transcriptSnippet.length > 200 ? transcriptSnippet.substring(0, 200) + '...' : transcriptSnippet}"
+                                              </div>
+                                            )}
+                                            {item.body && !isVoiceAI && (
                                               <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">
                                                 {item.body}
                                               </p>
@@ -1518,6 +1565,7 @@ ${signOff}`);
                                             <p className="text-xs text-gray-400">
                                               {formatExactDate(item.occurredAt)}
                                               {item.createdBy && ` · ${item.createdBy.name || (item.createdBy.type === 'system' ? 'System' : 'User')}`}
+                                              {isVoiceAI && payload.provider && ` · ${payload.provider}`}
                                             </p>
                                           </div>
                                         )}

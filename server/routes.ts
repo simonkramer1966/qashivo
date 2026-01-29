@@ -4745,8 +4745,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { contactId, callId } = req.params;
       const { actionId } = req.query;
+      const tenantId = user.tenantId;
 
-      console.log(`📞 [SYSTEM-CALL-STATUS] Checking call status for: ${callId}, contact: ${contactId}, action: ${actionId}`);
+      console.log(`📞 [CALL-STATUS] callId=${callId}, contactId=${contactId}, actionId=${actionId}`);
 
       if (!callId) {
         return res.status(400).json({ message: "Call ID is required" });
@@ -4756,186 +4757,470 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { retellService } = await import('./retell-service.js');
       const callData = await retellService.getCall(callId);
 
-      console.log(`📞 [SYSTEM-CALL-STATUS] Retell call data:`, JSON.stringify({
-        call_id: callData.call_id,
-        call_status: callData.call_status,
-        end_timestamp: callData.end_timestamp,
-        disconnection_reason: callData.disconnection_reason,
-        has_transcript: !!callData.transcript
-      }));
-
-      // Check if call is ended
-      const isEnded = callData.call_status === 'ended' || callData.call_status === 'error';
-
-      if (isEnded && actionId) {
-        // Check if we already processed this call by looking at the timeline event
-        const existingEvent = await db.select()
-          .from(timelineEvents)
-          .where(
-            and(
-              eq(timelineEvents.actionId, actionId as string),
-              eq(timelineEvents.tenantId, user.tenantId)
-            )
-          )
-          .limit(1);
-
-        if (existingEvent.length > 0 && existingEvent[0].status !== 'transcribed') {
-          console.log(`📞 [SYSTEM-CALL-STATUS] Processing completed call for action: ${actionId}`);
-
-          // Process the call - analyze transcript with OpenAI
-          const OpenAI = (await import('openai')).default;
-          const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-          const transcriptText = callData.transcript || 'No transcript available';
-
-          const completion = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
-            messages: [{
-              role: "system",
-              content: `Analyze this debt collection AI call transcript and extract detailed insights:
-1) Primary Intent: payment_plan, dispute, promise_to_pay, general_query, refused, wrong_contact, or unknown
-2) Sentiment: positive, neutral, negative, cooperative, or hostile
-3) Confidence Score: 0-100 (how confident are you in the intent detection)
-4) Promise to Pay: If a payment commitment was made, extract amount and date
-5) Dispute: If a dispute was raised, extract details
-6) Summary: 1-2 sentence summary of the call outcome
-7) Next Steps: Recommended follow-up actions
-
-Return only JSON with keys: intent, sentiment, confidence, ptpAmount, ptpDate, disputeDetails, summary, nextSteps`
-            }, {
-              role: "user",
-              content: transcriptText
-            }],
-            response_format: { type: "json_object" }
-          });
-
-          const analysis = JSON.parse(completion.choices[0].message.content || '{}');
-
-          // Map intent to outcome type
-          const intentToOutcomeMap: Record<string, string> = {
-            'payment_plan': 'promise_to_pay',
-            'promise_to_pay': 'promise_to_pay',
-            'dispute': 'dispute',
-            'refused': 'refused',
-            'wrong_contact': 'wrong_contact',
-            'general_query': 'other',
-            'unknown': 'other'
-          };
-          const outcomeType = intentToOutcomeMap[analysis.intent] || 'other';
-
-          // Build extracted data
-          const extractedData: Record<string, any> = {
-            sentiment: analysis.sentiment,
-            intent: analysis.intent,
-            summary: analysis.summary,
-            nextSteps: analysis.nextSteps
-          };
-          if (analysis.ptpAmount) extractedData.amount = analysis.ptpAmount;
-          if (analysis.ptpDate) extractedData.promiseDate = analysis.ptpDate;
-          if (analysis.disputeDetails) extractedData.disputeDetails = analysis.disputeDetails;
-
-          // Update the timeline event with call results
-          await db.update(timelineEvents)
-            .set({
-              status: 'transcribed',
-              body: transcriptText || null,
-              summary: analysis.summary || 'AI call completed',
-              outcomeType: outcomeType,
-              outcomeConfidence: String(((analysis.confidence || 80) / 100).toFixed(2)),
-              outcomeExtracted: Object.keys(extractedData).length > 0 ? extractedData : null,
-              outcomeRequiresReview: outcomeType === 'dispute' || outcomeType === 'wrong_contact',
-              provider: 'retell',
-              providerMessageId: callId,
-            })
-            .where(
-              and(
-                eq(timelineEvents.actionId, actionId as string),
-                eq(timelineEvents.tenantId, user.tenantId)
-              )
-            );
-
-          // Also update the action status
-          await db.update(actions)
-            .set({
-              status: 'completed',
-              outcome: outcomeType,
-              completedAt: new Date()
-            })
-            .where(eq(actions.id, actionId as string));
-
-          console.log('✅ [SYSTEM-CALL-STATUS] Call analysis saved via polling:', {
-            intent: analysis.intent,
-            sentiment: analysis.sentiment,
-            confidence: analysis.confidence,
-            outcomeType
-          });
-
-          return res.json({
-            callStatus: callData.call_status,
-            isEnded: true,
-            processed: true,
-            analysis: {
-              intent: analysis.intent,
-              sentiment: analysis.sentiment,
-              confidence: analysis.confidence,
-              summary: analysis.summary,
-              outcomeType,
-              ptpAmount: analysis.ptpAmount,
-              ptpDate: analysis.ptpDate,
-              disputeDetails: analysis.disputeDetails,
-              nextSteps: analysis.nextSteps,
-              transcript: transcriptText
-            }
-          });
-        } else if (existingEvent.length > 0 && existingEvent[0].status === 'transcribed') {
-          // Already processed
-          return res.json({
-            callStatus: callData.call_status,
-            isEnded: true,
-            processed: true,
-            alreadyProcessed: true,
-            analysis: {
-              outcomeType: existingEvent[0].outcomeType,
-              summary: existingEvent[0].summary,
-              ...((existingEvent[0].outcomeExtracted as any) || {})
-            }
-          });
-        } else if (existingEvent.length === 0) {
-          // No timeline event found - call ended but we can't process it
-          // Return as processed to stop polling (webhook may handle it instead)
-          console.log(`⚠️ [SYSTEM-CALL-STATUS] No timeline event found for action: ${actionId}`);
-          return res.json({
-            callStatus: callData.call_status,
-            isEnded: true,
-            processed: true,
-            noEventFound: true,
-            analysis: {
-              summary: 'Call ended - results will appear in activity log'
-            }
-          });
+      // Normalize Retell status to our status values
+      const retellStatus = callData.call_status;
+      const disconnectionReason = callData.disconnection_reason || '';
+      
+      // Map Retell statuses to our terminal/non-terminal statuses
+      let voiceStatus: 'completed' | 'no_answer' | 'busy' | 'voicemail' | 'failed' | 'in_progress' = 'in_progress';
+      let isTerminal = false;
+      
+      if (retellStatus === 'ended') {
+        isTerminal = true;
+        // Check disconnection reason for non-completed statuses
+        if (disconnectionReason.includes('no_answer') || disconnectionReason === 'no_audio_timeout') {
+          voiceStatus = 'no_answer';
+        } else if (disconnectionReason.includes('busy') || disconnectionReason === 'line_busy') {
+          voiceStatus = 'busy';
+        } else if (disconnectionReason.includes('voicemail') || disconnectionReason === 'voicemail_reached') {
+          voiceStatus = 'voicemail';
+        } else if (disconnectionReason.includes('fail') || disconnectionReason === 'call_transfer_failed') {
+          voiceStatus = 'failed';
+        } else {
+          voiceStatus = 'completed';
         }
+      } else if (retellStatus === 'error') {
+        isTerminal = true;
+        voiceStatus = 'failed';
       }
 
-      // If call ended without actionId, return terminal state
-      if (isEnded && !actionId) {
+      // Calculate duration
+      const durationSeconds = callData.start_timestamp && callData.end_timestamp
+        ? Math.round((callData.end_timestamp - callData.start_timestamp) / 1000)
+        : 0;
+
+      // If not terminal, return progress
+      if (!isTerminal) {
         return res.json({
-          callStatus: callData.call_status,
-          isEnded: true,
-          processed: true,
-          noActionId: true,
-          analysis: {
-            summary: 'Call ended - check activity log for details'
-          }
+          status: retellStatus === 'registered' || retellStatus === 'queued' ? 'connecting' : 'in_progress',
+          terminal: false,
+          processed: false,
+          callStatus: retellStatus
         });
       }
 
-      res.json({
-        callStatus: callData.call_status,
-        isEnded,
-        processed: false
+      // If no actionId, can't process further
+      if (!actionId) {
+        return res.json({
+          status: voiceStatus,
+          terminal: true,
+          processed: false,
+          message: 'No actionId provided, cannot process'
+        });
+      }
+
+      // Load action and verify tenant security
+      const [action] = await db.select()
+        .from(actions)
+        .where(and(
+          eq(actions.id, actionId as string),
+          eq(actions.tenantId, tenantId)
+        ))
+        .limit(1);
+
+      if (!action) {
+        return res.status(404).json({ message: "Action not found or access denied" });
+      }
+
+      // Verify action is for the right contact
+      if (action.contactId !== contactId) {
+        return res.status(403).json({ message: "Action does not belong to this contact" });
+      }
+
+      // Idempotency check: if already processed, return cached result
+      if (action.voiceProcessedAt) {
+        console.log(`📞 [CALL-STATUS] Already processed at ${action.voiceProcessedAt}`);
+        return res.json({
+          status: action.voiceStatus || voiceStatus,
+          terminal: true,
+          processed: true,
+          alreadyProcessed: true,
+          workState: action.workState,
+          inFlightState: action.inFlightState,
+          message: 'Call already processed'
+        });
+      }
+
+      // Prepare snippets
+      const transcriptSnippet = callData.transcript ? callData.transcript.substring(0, 500) : null;
+      const summarySnippet = callData.call_analysis?.call_summary?.substring(0, 240) || null;
+      const recordingUrl = callData.recording_url || null;
+
+      // Update action with voice tracking fields
+      await db.update(actions)
+        .set({
+          voiceStatus,
+          voiceCompletedAt: new Date(),
+          voiceTranscriptSnippet: transcriptSnippet,
+          voiceSummarySnippet: summarySnippet,
+          voiceRecordingUrl: recordingUrl,
+          voiceLastPolledAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(actions.id, action.id));
+
+      // Get linked invoice IDs from action
+      const linkedInvoiceIds: string[] = action.invoiceIds || (action.invoiceId ? [action.invoiceId] : []);
+
+      // Import WorkStateService
+      const { WorkStateService } = await import('./services/workStateService.js');
+      const workStateService = new WorkStateService();
+
+      // HANDLE DIFFERENT TERMINAL STATUSES
+      
+      // 1) no_answer / busy / voicemail → COOLDOWN
+      if (['no_answer', 'busy', 'voicemail'].includes(voiceStatus)) {
+        // Write REPLY_RECEIVED audit event
+        await workStateService.emitAuditEvent({
+          tenantId,
+          debtorId: contactId,
+          invoiceId: linkedInvoiceIds[0] || undefined,
+          actionId: action.id,
+          type: 'REPLY_RECEIVED',
+          summary: `AI call — ${voiceStatus === 'no_answer' ? 'No answer' : voiceStatus === 'busy' ? 'Busy' : 'Voicemail'}${durationSeconds > 0 ? ` (${Math.floor(durationSeconds / 60)}m ${durationSeconds % 60}s)` : ''}`,
+          payload: {
+            channel: 'VOICE',
+            provider: 'RETELL',
+            callId,
+            status: voiceStatus,
+            durationSeconds,
+            transcriptSnippet,
+            summarySnippet,
+            recordingUrl,
+            linkedInvoiceIds,
+          },
+          actor: 'SYSTEM',
+        });
+
+        // Get cooldown policy
+        const policy = await workStateService.getPolicy(tenantId);
+        const cooldownDays = policy?.cooldownDays || 2;
+        const cooldownUntil = new Date(Date.now() + cooldownDays * 24 * 60 * 60 * 1000);
+
+        // Update action to COOLDOWN
+        await db.update(actions)
+          .set({
+            workState: 'IN_FLIGHT',
+            inFlightState: 'COOLDOWN',
+            cooldownUntil,
+            voiceProcessedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(actions.id, action.id));
+
+        // Emit STATE_CHANGED
+        await workStateService.emitAuditEvent({
+          tenantId,
+          debtorId: contactId,
+          invoiceId: linkedInvoiceIds[0] || undefined,
+          actionId: action.id,
+          type: 'STATE_CHANGED',
+          summary: `Action entered cooldown (${cooldownDays} days) after ${voiceStatus}`,
+          payload: { cooldownDays, cooldownUntil, voiceStatus },
+          actor: 'SYSTEM',
+        });
+
+        console.log(`📞 [CALL-STATUS] ${voiceStatus} → COOLDOWN for ${cooldownDays} days`);
+
+        return res.json({
+          status: voiceStatus,
+          terminal: true,
+          processed: true,
+          workState: 'IN_FLIGHT',
+          inFlightState: 'COOLDOWN',
+          message: `No answer, entering ${cooldownDays}-day cooldown`
+        });
+      }
+
+      // 2) failed → ATTENTION + attention_item DELIVERY_FAILED
+      if (voiceStatus === 'failed') {
+        // Write REPLY_RECEIVED audit event
+        await workStateService.emitAuditEvent({
+          tenantId,
+          debtorId: contactId,
+          invoiceId: linkedInvoiceIds[0] || undefined,
+          actionId: action.id,
+          type: 'REPLY_RECEIVED',
+          summary: `AI call — Failed`,
+          payload: {
+            channel: 'VOICE',
+            provider: 'RETELL',
+            callId,
+            status: voiceStatus,
+            disconnectionReason,
+            linkedInvoiceIds,
+          },
+          actor: 'SYSTEM',
+        });
+
+        // Create attention item
+        const { AttentionItemService } = await import('./services/attentionItemService.js');
+        const attentionService = new AttentionItemService();
+        await attentionService.createItem({
+          tenantId,
+          debtorId: contactId,
+          invoiceId: linkedInvoiceIds[0] || null,
+          type: 'DELIVERY_FAILED',
+          title: 'Voice call delivery failed',
+          description: `Call failed: ${disconnectionReason || 'Unknown reason'}`,
+          severity: 'medium',
+        });
+
+        // Update action to ATTENTION
+        await db.update(actions)
+          .set({
+            workState: 'ATTENTION',
+            inFlightState: 'DELIVERY_FAILED',
+            voiceProcessedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(actions.id, action.id));
+
+        // Emit ROUTED_TO_ATTENTION + STATE_CHANGED
+        await workStateService.emitAuditEvent({
+          tenantId,
+          debtorId: contactId,
+          invoiceId: linkedInvoiceIds[0] || undefined,
+          actionId: action.id,
+          type: 'ROUTED_TO_ATTENTION',
+          summary: 'Call delivery failed, routed to attention',
+          payload: { attentionItemType: 'DELIVERY_FAILED', disconnectionReason },
+          actor: 'SYSTEM',
+        });
+
+        await workStateService.emitAuditEvent({
+          tenantId,
+          debtorId: contactId,
+          invoiceId: linkedInvoiceIds[0] || undefined,
+          actionId: action.id,
+          type: 'STATE_CHANGED',
+          summary: `Action state changed: IN_FLIGHT → ATTENTION (delivery failed)`,
+          payload: { previousWorkState: action.workState, newWorkState: 'ATTENTION', inFlightState: 'DELIVERY_FAILED' },
+          actor: 'SYSTEM',
+        });
+
+        console.log(`📞 [CALL-STATUS] failed → ATTENTION (DELIVERY_FAILED)`);
+
+        return res.json({
+          status: voiceStatus,
+          terminal: true,
+          processed: true,
+          workState: 'ATTENTION',
+          inFlightState: 'DELIVERY_FAILED',
+          message: 'Call failed, routed to attention'
+        });
+      }
+
+      // 3) completed → extract intent, create outcome, routeFromOutcome
+      if (voiceStatus === 'completed') {
+        const transcriptText = callData.transcript || '';
+        const summaryText = callData.call_analysis?.call_summary || '';
+
+        // Check if we have content to extract from
+        if (!transcriptText && !summaryText) {
+          // No transcript, create DATA_QUALITY attention item
+          const { AttentionItemService } = await import('./services/attentionItemService.js');
+          const attentionService = new AttentionItemService();
+          await attentionService.createItem({
+            tenantId,
+            debtorId: contactId,
+            invoiceId: linkedInvoiceIds[0] || null,
+            type: 'DATA_QUALITY',
+            subtype: 'VOICE_TRANSCRIPT_MISSING',
+            title: 'Voice call transcript missing',
+            description: 'Call completed but no transcript available for analysis',
+            severity: 'medium',
+          });
+
+          // Write REPLY_RECEIVED audit event
+          await workStateService.emitAuditEvent({
+            tenantId,
+            debtorId: contactId,
+            invoiceId: linkedInvoiceIds[0] || undefined,
+            actionId: action.id,
+            type: 'REPLY_RECEIVED',
+            summary: `AI call — Completed (${Math.floor(durationSeconds / 60)}m ${durationSeconds % 60}s)`,
+            payload: {
+              channel: 'VOICE',
+              provider: 'RETELL',
+              callId,
+              status: voiceStatus,
+              durationSeconds,
+              transcriptMissing: true,
+              linkedInvoiceIds,
+            },
+            actor: 'SYSTEM',
+          });
+
+          // Update action
+          await db.update(actions)
+            .set({
+              workState: 'ATTENTION',
+              voiceProcessedAt: new Date(),
+              updatedAt: new Date(),
+            })
+            .where(eq(actions.id, action.id));
+
+          // Emit ROUTED_TO_ATTENTION
+          await workStateService.emitAuditEvent({
+            tenantId,
+            debtorId: contactId,
+            invoiceId: linkedInvoiceIds[0] || undefined,
+            actionId: action.id,
+            type: 'ROUTED_TO_ATTENTION',
+            summary: 'Transcript missing, routed to attention for manual review',
+            payload: { attentionItemType: 'DATA_QUALITY', subtype: 'VOICE_TRANSCRIPT_MISSING' },
+            actor: 'SYSTEM',
+          });
+
+          console.log(`📞 [CALL-STATUS] completed but no transcript → ATTENTION`);
+
+          return res.json({
+            status: voiceStatus,
+            terminal: true,
+            processed: true,
+            workState: 'ATTENTION',
+            message: 'Transcript missing; review required'
+          });
+        }
+
+        // Run intent extraction with OpenAI
+        const OpenAI = (await import('openai')).default;
+        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+        const contentToAnalyze = transcriptText || summaryText;
+
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [{
+            role: "system",
+            content: `Analyze this debt collection AI call and extract the outcome. Use these EXACT outcome types:
+- PROMISE_TO_PAY: Debtor commits to pay on a specific date
+- PAYMENT_IN_PROCESS: Payment is being processed, awaiting authorization, in payment run
+- DISPUTE: Debtor disputes the invoice (pricing, delivery, quality issues)
+- DOCS_REQUESTED: Debtor requests invoice copy, statement, PO, or remittance
+- REQUEST_CALL_BACK: Debtor asks to be called back or speak to someone else
+- CONTACT_ISSUE: Wrong number, contact no longer works there, etc.
+- CANNOT_PAY: Debtor explicitly cannot pay (financial difficulties)
+- BANK_DETAILS_CHANGE_REQUEST: Debtor wants to change bank details (ALWAYS flag for review)
+- OUT_OF_OFFICE: Contact is away/on leave
+- NO_RESPONSE: Debtor acknowledged but gave no commitment
+- CONFIRMATION: Simple acknowledgment without commitment
+
+Return JSON with:
+- type: One of the outcome types above
+- confidence: 0-100 (how confident are you)
+- promisedPaymentDate: ISO date string if PTP mentioned
+- promisedPaymentAmount: number if amount mentioned
+- disputeCategory: PRICING|DELIVERY|QUALITY|OTHER if dispute
+- docsRequested: array of INVOICE_COPY|STATEMENT|REMITTANCE|PO if docs requested
+- summary: Brief 1-2 sentence summary`
+          }, {
+            role: "user",
+            content: contentToAnalyze
+          }],
+          response_format: { type: "json_object" }
+        });
+
+        const analysis = JSON.parse(completion.choices[0].message.content || '{}');
+        const outcomeType = analysis.type || 'NO_RESPONSE';
+        const confidenceScore = (analysis.confidence || 70) / 100;
+        const confidenceBand = confidenceScore >= 0.85 ? 'HIGH' : confidenceScore >= 0.65 ? 'MEDIUM' : 'LOW';
+        const requiresHumanReview = confidenceScore < 0.65 || ['BANK_DETAILS_CHANGE_REQUEST', 'DISPUTE'].includes(outcomeType);
+
+        // Build extracted data
+        const extracted: Record<string, any> = {};
+        if (analysis.promisedPaymentDate) extracted.promisedPaymentDate = analysis.promisedPaymentDate;
+        if (analysis.promisedPaymentAmount) extracted.promisedPaymentAmount = analysis.promisedPaymentAmount;
+        if (analysis.disputeCategory) extracted.disputeCategory = analysis.disputeCategory;
+        if (analysis.docsRequested) extracted.docsRequested = analysis.docsRequested;
+        if (analysis.summary) extracted.freeTextNotes = analysis.summary;
+
+        // Create outcome
+        const [newOutcome] = await db.insert(outcomes)
+          .values({
+            tenantId,
+            debtorId: contactId,
+            invoiceId: linkedInvoiceIds[0] || null,
+            linkedInvoiceIds,
+            type: outcomeType,
+            confidence: String(confidenceScore.toFixed(2)),
+            confidenceBand,
+            requiresHumanReview,
+            extracted,
+            sourceChannel: 'VOICE',
+            sourceMessageId: callId,
+            rawSnippet: (transcriptText || summaryText).substring(0, 200),
+          })
+          .returning();
+
+        console.log(`📞 [CALL-STATUS] Created outcome: ${outcomeType} (${confidenceBand})`);
+
+        // Write REPLY_RECEIVED audit event with transcript info
+        await workStateService.emitAuditEvent({
+          tenantId,
+          debtorId: contactId,
+          invoiceId: linkedInvoiceIds[0] || undefined,
+          actionId: action.id,
+          type: 'REPLY_RECEIVED',
+          summary: `AI call — Completed (${Math.floor(durationSeconds / 60)}m ${durationSeconds % 60}s)`,
+          payload: {
+            channel: 'VOICE',
+            provider: 'RETELL',
+            callId,
+            status: voiceStatus,
+            durationSeconds,
+            transcriptSnippet,
+            summarySnippet,
+            recordingUrl,
+            linkedInvoiceIds,
+            outcomeId: newOutcome.id,
+          },
+          actor: 'SYSTEM',
+        });
+
+        // Process outcome through Loop routing
+        await workStateService.processOutcome(newOutcome);
+
+        // Update action with voiceProcessedAt
+        await db.update(actions)
+          .set({
+            voiceProcessedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(actions.id, action.id));
+
+        // Fetch updated action for response
+        const [updatedAction] = await db.select()
+          .from(actions)
+          .where(eq(actions.id, action.id))
+          .limit(1);
+
+        const effectLabel = confidenceBand === 'HIGH' ? 'High' : confidenceBand === 'MEDIUM' ? 'Medium' : 'Low';
+
+        console.log(`📞 [CALL-STATUS] completed → ${updatedAction.workState}/${updatedAction.inFlightState || '-'}`);
+
+        return res.json({
+          status: voiceStatus,
+          terminal: true,
+          processed: true,
+          outcomeId: newOutcome.id,
+          workState: updatedAction.workState,
+          inFlightState: updatedAction.inFlightState,
+          message: `Outcome captured: ${outcomeType.replace(/_/g, ' ')} (${effectLabel})`
+        });
+      }
+
+      // Fallback
+      return res.json({
+        status: voiceStatus,
+        terminal: true,
+        processed: false,
+        message: 'Unknown terminal state'
       });
+
     } catch (error: any) {
-      console.error("❌ [SYSTEM-CALL-STATUS] Error checking call status:", error?.message);
+      console.error("❌ [CALL-STATUS] Error:", error?.message);
       res.status(500).json({ message: "Failed to check call status", error: error?.message });
     }
   });
