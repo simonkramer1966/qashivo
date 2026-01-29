@@ -274,13 +274,18 @@ export function CardlessCustomerDrawer({
           queryClient.invalidateQueries({ queryKey: ['/api/outcomes', currentContactId] });
           // Refresh dashboard charts (forecast updates with PTPs)
           // Use predicate to match all queries starting with these prefixes (handles parameterized keys)
+          // refetchType: 'all' forces refetch even if queries aren't actively observed
+          console.log('📊 [VOICE] Invalidating dashboard charts after call completion');
           queryClient.invalidateQueries({ 
             predicate: (query) => {
               const key = query.queryKey[0];
-              return key === '/api/dashboard/cash-inflow' || 
+              const matches = key === '/api/dashboard/cash-inflow' || 
                      key === '/api/dashboard/metrics' ||
                      key === '/api/dashboard/leaderboards';
-            }
+              if (matches) console.log('📊 [VOICE] Invalidating:', query.queryKey);
+              return matches;
+            },
+            refetchType: 'all'
           });
           return;
         }
