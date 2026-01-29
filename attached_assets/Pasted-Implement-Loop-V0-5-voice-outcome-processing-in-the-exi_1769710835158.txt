@@ -1,0 +1,55 @@
+Implement Loop V0.5 voice outcome processing in the existing client-side polling endpoint.
+
+Endpoint:
+GET /api/contacts/:contactId/call-status/:callId?actionId=:actionId
+
+Server requirements:
+- Resolve tenant from session; never trust request payload.
+- Load action by actionId; verify tenantId and that action.providerCallId == callId (if present) and that it belongs to the contact/debtor.
+- Fetch call details from Retell by callId.
+- Update action with voiceStatus/voiceCompletedAt/snippets/recordingUrl/lastPolledAt.
+
+Idempotency:
+- Process terminal calls only if actions.voiceProcessedAt is null.
+- Add DB uniqueness guard: outcomes unique on (tenantId, sourceChannel, sourceMessageId).
+
+On first terminal processing:
+1) Write audit_event type=REPLY_RECEIVED with payload:
+   {channel:"VOICE", provider:"RETELL", callId, status, durationSeconds, transcriptSnippet, summarySnippet, recordingUrl, linkedInvoiceIds}
+
+2) Status handling:
+- no_answer/busy/voicemail:
+  - set actions.inFlightState=COOLDOWN and nextEligibleActionAt from collection policy
+  - write audit_event STATE_CHANGED
+  - set voiceProcessedAt
+  - return {terminal:true, processed:true, status}
+
+- failed:
+  - create attention_item type=DELIVERY_FAILED
+  - set workState=ATTENTION, inFlightState=DELIVERY_FAILED
+  - write audit_event ROUTED_TO_ATTENTION + STATE_CHANGED
+  - set voiceProcessedAt
+  - return {terminal:true, processed:true, status}
+
+- completed:
+  - if transcriptText exists use it; else if summaryText exists use it
+  - if neither exists:
+      create attention_item type=DATA_QUALITY with subtype VOICE_TRANSCRIPT_MISSING
+      set workState=ATTENTION
+      write audit_event ROUTED_TO_ATTENTION
+      set voiceProcessedAt
+      return {terminal:true, processed:true, status, message:"Transcript missing; review required"}
+  - else:
+      run intent extraction => {type, confidence, extracted}
+      insert outcomes row with sourceChannel="VOICE", sourceMessageId=callId, linkedInvoiceIds from action
+      compute confidenceBand and requiresHumanReview (confidence<0.65 or high-risk)
+      call routeFromOutcome(outcome) to set workState/inFlightState and create attention_items and update forecast_points
+      write audit_events: OUTCOME_EXTRACTED, STATE_CHANGED (if changed), FORECAST_UPDATED or ROUTED_TO_ATTENTION
+      set voiceProcessedAt
+      return {terminal:true, processed:true, outcomeId, workState, inFlightState, message}
+
+Client:
+- Keep existing polling.
+- When response.terminal === true, stop polling and refresh Conversation feed:
+  - Messages view reads audit_events where type=REPLY_RECEIVED and payload.channel=="VOICE"
+  - Outcomes view reads outcomes.

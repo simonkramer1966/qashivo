@@ -1,0 +1,174 @@
+# Replit Build Prompt — Retell Voice Outcomes via Polling (v0.5 Loop)
+
+Context:
+We use Retell for outbound AI voice calls. Retell returns call results (status, transcript, summary) via a polling routine (not webhooks).
+
+Goal:
+When a Retell call completes, Qashivo must:
+1) show the call in Debtor Drawer > Conversation > Messages (as a Voice item)
+2) store transcript/summary (at least a snippet)
+3) extract intent into an Outcome (type + confidence + extracted JSON)
+4) run routeFromOutcome(outcome) to set actions.workState/inFlightState and attention_items
+5) update forecast_points confidence buckets
+6) write audit_events for traceability
+
+IMPORTANT:
+- Tenant must be resolved server-side (from the action we already created for the call).
+- Never trust any tenantId in external payloads (polling is server-to-server anyway).
+- Keep it idempotent: polling must not create duplicate outcomes/events.
+
+------------------------------------------------------------
+A) Ensure outbound call is correlated to an action
+
+When scheduling/placing a Retell call (existing flow):
+- Ensure the action record includes:
+  - tenantId
+  - debtorId
+  - linkedInvoiceIds (JSON array if you have it; else store on action payload)
+  - channel="VOICE"
+  - provider="RETELL"
+  - providerCallId (Retell call_id) persisted as soon as Retell returns it
+  - toPhone, fromPhone (optional)
+  - actions.workState = IN_FLIGHT
+  - actions.inFlightState = SENT (or SCHEDULED then SENT)
+
+Write audit_event:
+- type=MESSAGE_SENT
+- summary="AI call sent"
+- payload={ channel:"VOICE", provider:"RETELL", providerCallId, debtorId, linkedInvoiceIds }
+
+------------------------------------------------------------
+B) Add minimal tracking fields (prefer actions; no new tables if possible)
+
+Add these columns to actions if not present (or store in an action.metadata JSON):
+- voiceStatus (string) // retell status, e.g. completed/no_answer/failed
+- voiceCompletedAt (datetime)
+- voiceTranscriptSnippet (string, nullable)
+- voiceSummarySnippet (string, nullable)
+- voiceRecordingUrl (string, nullable)
+- voiceLastPolledAt (datetime, nullable)
+- voiceProcessedAt (datetime, nullable) // set once we've created outcomes + events
+
+Idempotency rule:
+- Only “process” a call once when it reaches a terminal status AND voiceProcessedAt is null.
+- If transcript arrives later, allow a second pass only if we haven’t created an outcome yet OR last transcript hash changed.
+
+------------------------------------------------------------
+C) Polling Job: pollRetellCalls()
+
+Implement a server job that runs on an interval (e.g., every 60–120s) or via a route triggered by a Replit cron.
+
+Job logic:
+1) Select candidate VOICE actions:
+   - provider="RETELL"
+   - providerCallId not null
+   - voiceProcessedAt is null
+   - AND (workState=IN_FLIGHT OR inFlightState in {SENT, AWAITING_REPLY, COOLDOWN})
+   - limit batch size to avoid rate limits (e.g., 25–50)
+
+2) For each action:
+   - Call Retell API to fetch call details by providerCallId
+   - Normalize response into:
+     {
+       status: "completed" | "no_answer" | "busy" | "voicemail" | "failed" | "in_progress",
+       startedAt, endedAt, durationSeconds,
+       transcriptText?, summaryText?, recordingUrl?
+     }
+
+3) Update action fields:
+   - voiceStatus, voiceCompletedAt, voiceLastPolledAt
+   - store transcript/summary snippets (first ~240–500 chars)
+
+4) If status is not terminal (in_progress), continue.
+
+5) If status is terminal and voiceProcessedAt is null:
+   - Write audit_event (rendered in Conversation > Messages):
+     - type=REPLY_RECEIVED (reuse existing enum to avoid migrations)
+     - summary based on status:
+       - "AI call completed (3m 12s)"
+       - "AI call no answer"
+       - "AI call failed"
+     - payload includes:
+       { channel:"VOICE", provider:"RETELL", providerCallId, status, durationSeconds,
+         transcriptSnippet, summarySnippet, recordingUrl, linkedInvoiceIds }
+
+   - If status in {no_answer, busy, voicemail}:
+     - Treat as NO_RESPONSE:
+       - either create OutcomeType=NO_RESPONSE with confidence=1.0
+       - OR just apply cooldown timers without creating an Outcome (MVP ok)
+     - Set inFlightState=COOLDOWN + set nextEligibleActionAt using collection_policies
+     - Write audit_event: STATE_CHANGED
+     - Set voiceProcessedAt=now
+     - continue
+
+   - If status == failed:
+     - Create attention_item type=DELIVERY_FAILED (or DATA_QUALITY if invalid number)
+     - Set workState=ATTENTION, inFlightState=DELIVERY_FAILED
+     - Write audit_event: ROUTED_TO_ATTENTION + STATE_CHANGED
+     - Set voiceProcessedAt=now
+     - continue
+
+   - If status == completed:
+     - If transcriptText exists, run extraction on transcriptText; else run extraction on summaryText.
+     - Insert row into outcomes table:
+       - sourceChannel="VOICE"
+       - sourceMessageId = providerCallId
+       - linkedInvoiceIds from action
+       - confidence + confidenceBand
+       - extracted fields (PTP date/amount, docs requested, dispute category, etc.)
+       - requiresHumanReview if confidence < 0.65 OR high-risk outcome
+       - effect placeholder
+     - Call routeFromOutcome(outcome):
+       - creates attention_items for DISPUTE/DOCS_REQUESTED/etc
+       - sets actions.workState/inFlightState
+       - triggers forecast recompute for linked invoices
+     - Write audit_events:
+       - OUTCOME_EXTRACTED
+       - STATE_CHANGED (if changed)
+       - FORECAST_UPDATED or ROUTED_TO_ATTENTION
+     - Set voiceProcessedAt=now
+
+------------------------------------------------------------
+D) Conversation UI: show voice calls as Messages
+
+In Debtor Drawer > Conversation:
+- Messages filter should include audit_events.type=REPLY_RECEIVED where payload.channel=="VOICE"
+- Render a phone icon row:
+  - title: "AI call — Completed" / "AI call — No answer" / "AI call — Failed"
+  - subtitle: duration + timestamp
+  - expandable snippet: transcriptSnippet or summarySnippet
+  - linked invoice chips from payload.linkedInvoiceIds
+
+Outcomes filter already shows outcomes rows; add a small chip "Voice" when sourceChannel=="VOICE".
+
+------------------------------------------------------------
+E) Extraction mapping (voice phrasing)
+
+Ensure extractor recognizes:
+- "We'll pay Friday / on 30 Jan" -> PROMISE_TO_PAY (date)
+- "It's in the payment run / awaiting authorisation" -> PAYMENT_IN_PROCESS
+- "Send invoice / statement / PO" -> DOCS_REQUESTED
+- "We dispute this" -> DISPUTE
+- "Can't pay right now" -> CANNOT_PAY
+- "Call back next week / speak to X" -> REQUEST_CALL_BACK or CONTACT_ISSUE
+- "Change bank details" -> BANK_DETAILS_CHANGE_REQUEST (always Attention)
+
+------------------------------------------------------------
+F) Security + reliability
+
+- Retell API key stored in env (RETELL_API_KEY).
+- Poller must be tenant-safe by selecting actions by tenantId and never mixing results.
+- Add idempotency:
+  - unique constraint or guard: outcomes.sourceMessageId + outcomes.type (optional)
+  - or store `voiceProcessedAt` and only process once.
+- Batch limits + exponential backoff on Retell API errors.
+- Log failures as audit_event NOTE_ADDED or a server log; don’t crash the job.
+
+------------------------------------------------------------
+G) Testing
+
+Seed one debtor with a VOICE action containing providerCallId.
+Mock/preset Retell responses for:
+1) completed + transcript with PTP date -> outcome PROMISE_TO_PAY + forecast updated
+2) completed + docs request -> outcome DOCS_REQUESTED -> attention item + routed
+3) no_answer -> cooldown applied -> returns to Plan after policy cooldown

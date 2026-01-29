@@ -1,0 +1,41 @@
+Update the existing client-side Retell polling integration in CardlessCustomerDrawer so that completed calls automatically create Conversation entries + Outcomes and route them via the Loop.
+
+Context:
+The drawer currently polls client-side:
+GET /api/contacts/:contactId/call-status/:callId?actionId=:actionId
+Polling runs max 120 polls using setInterval and stops when call ends/timeouts.
+
+Implement server-side processing inside the call-status endpoint:
+
+1) Fetch Retell call status by callId.
+2) Enforce tenant security:
+   - Resolve tenant from session
+   - Load action by actionId and ensure it belongs to the tenant and contact/debtor
+   - Never trust tenantId from request
+3) If call is terminal AND actions.voiceProcessedAt is null:
+   - Write audit_event type=REPLY_RECEIVED with payload:
+     {channel:"VOICE", provider:"RETELL", callId, status, durationSeconds, transcriptSnippet, summarySnippet, recordingUrl, linkedInvoiceIds}
+   - If status in {no_answer, busy, voicemail}:
+     - set actions.inFlightState=COOLDOWN and nextEligibleActionAt based on collection policy
+     - write audit_event STATE_CHANGED
+     - set voiceProcessedAt=now
+     - return {terminal:true, processed:true, status}
+   - If status == failed:
+     - create attention_item type=DELIVERY_FAILED
+     - set workState=ATTENTION and inFlightState=DELIVERY_FAILED
+     - write audit_event ROUTED_TO_ATTENTION + STATE_CHANGED
+     - set voiceProcessedAt=now
+     - return {terminal:true, processed:true, status}
+   - If status == completed:
+     - If transcriptText exists use it, else use summaryText for extraction
+     - Insert outcomes row: sourceChannel="VOICE", sourceMessageId=callId, linkedInvoiceIds from action
+     - Compute confidenceBand and requiresHumanReview (confidence<0.65 or high-risk)
+     - Call routeFromOutcome(outcome) to update workState/inFlightState + attention_items and update forecast_points
+     - Write audit_events: OUTCOME_EXTRACTED, STATE_CHANGED (if changed), FORECAST_UPDATED or ROUTED_TO_ATTENTION
+     - set voiceProcessedAt=now
+     - return {terminal:true, processed:true, outcomeId, workState, inFlightState}
+4) If not terminal, return {terminal:false, status, progress info}.
+
+Client update:
+- Keep polling logic, but when response.terminal==true, stop polling and refresh the drawer Conversation feed (audit events + outcomes).
+- Ensure voice call items appear under Conversation > Messages by rendering audit_events REPLY_RECEIVED where payload.channel=="VOICE".
