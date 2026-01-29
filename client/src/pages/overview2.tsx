@@ -414,7 +414,7 @@ export default function Overview2() {
               </div>
 
               {/* Chart */}
-              <div className="flex-1 min-h-[200px]">
+              <div className="flex-1 min-h-[250px] max-h-[500px]">
                 {cashInflowLoading ? (
                   <div className="h-full flex items-center justify-center">
                     <div className="text-gray-400 text-sm">Loading chart...</div>
