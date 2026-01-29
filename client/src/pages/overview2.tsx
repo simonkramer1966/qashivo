@@ -132,9 +132,10 @@ export default function Overview2() {
   };
 
   const CustomXAxisTick = ({ x, y, payload }: any) => {
-    const dataPoint = payload?.payload;
-    const day = dataPoint?.day || '';
-    const month = dataPoint?.month || '';
+    const value = payload?.value || '';
+    const parts = value.split(' ');
+    const month = parts[0] || '';
+    const day = parts[1] || '';
     return (
       <g transform={`translate(${x},${y})`}>
         <text x={0} y={0} dy={12} textAnchor="middle" fill="#9ca3af" fontSize={11} fontWeight={500}>
