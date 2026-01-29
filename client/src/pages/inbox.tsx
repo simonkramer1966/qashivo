@@ -107,8 +107,15 @@ export default function InboxPage() {
       });
       queryClient.invalidateQueries({ queryKey: ["/api/inbox"] });
       // Refresh dashboard charts (forecast updates with PTPs)
-      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/cash-inflow'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
+      // Use predicate to match all queries starting with these prefixes (handles parameterized keys)
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return key === '/api/dashboard/cash-inflow' || 
+                 key === '/api/dashboard/metrics' ||
+                 key === '/api/dashboard/leaderboards';
+        }
+      });
       setSelectedItem(null);
     },
     onError: () => {
