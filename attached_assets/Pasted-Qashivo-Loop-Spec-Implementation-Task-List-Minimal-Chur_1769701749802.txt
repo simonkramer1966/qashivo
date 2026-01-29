@@ -1,0 +1,463 @@
+Qashivo Loop Spec — Implementation Task List (Minimal-Churn Upgrade)
+Guiding principle
+Don’t replace what works. Layer the Loop spec on top of existing tables first, then consolidate later.
+Phase order
+Add missing primitives (Outcome + Audit + Policy)
+
+
+Wire routing (Plan → In-Flight → Attention) using existing action + attention_items
+
+
+Update forecast to use Outcomes (confidence-weighted)
+
+
+Optional consolidation (WorkState/WorkItem materialization) after everything works
+
+
+
+0) Pre-flight (1–2 hours)
+Inventory current entities and fields:
+
+
+actions: status, approvalStatus, sentAt, etc.
+
+
+invoices: outcomeOverride, nextAction, expectedPaymentDate?
+
+
+attention_items: type, invoiceId, debtorId, resolvedAt?
+
+
+forecast_points: confidence buckets
+
+
+Create a one-page mapping doc:
+
+
+current field → Loop concept
+
+
+no schema changes yet
+
+
+Output: “Loop Mapping Sheet” in repo (README or /docs).
+
+1) Add Outcomes table (core missing primitive) — must do
+1.1 Schema migration
+Create outcomes table.
+Fields
+id (uuid)
+
+
+tenantId
+
+
+debtorId
+
+
+invoiceId (nullable if outcome applies to debtor + multiple invoices)
+
+
+linkedInvoiceIds (JSON array) OR join table (see 1.2)
+
+
+type (enum OutcomeType)
+
+
+confidence (float 0..1)
+
+
+confidenceBand (HIGH|MEDIUM|LOW)
+
+
+requiresHumanReview (bool)
+
+
+extracted (jsonb) // promiseToPayDate, planSchedule, docsRequested etc
+
+
+effect (enum: FORECAST_UPDATED | ROUTED_TO_ATTENTION | MANUAL_REVIEW)
+
+
+sourceChannel (EMAIL|SMS|VOICE|MANUAL)
+
+
+sourceMessageId (nullable)
+
+
+rawSnippet (nullable, short)
+
+
+createdByUserId (nullable)
+
+
+createdAt
+
+
+1.2 Linking outcomes to multiple invoices
+Pick the quickest MVP option:
+Option A (fastest): linkedInvoiceIds jsonb
+
+
+Option B (more proper): outcome_invoices join table
+
+
+For v0.5 speed: Option A. Add join table later if needed.
+1.3 Backfill / compatibility
+When user saves a PTP / payment plan / dispute in the UI, ALSO insert an outcomes row.
+
+
+Keep writing invoice.outcomeOverride for now (backwards compatibility), but treat outcomes as canonical going forward.
+
+
+Acceptance
+Creating PTP creates an Outcome: PROMISE_TO_PAY with extracted date/amount.
+2) Add Audit Events table (queryable Activity) — must do
+2.1 Schema migration
+Create audit_events table:
+id
+
+
+tenantId
+
+
+debtorId
+
+
+invoiceId (nullable)
+
+
+type (enum EventType)
+
+
+summary (string)
+
+
+payload (jsonb)
+
+
+actor (SYSTEM|USER)
+
+
+actorUserId (nullable)
+
+
+createdAt
+
+
+2.2 Emit events from existing flows
+Instrument these actions to write AuditEvents:
+Plan generated (if you have a generator)
+
+
+Bulk approve / decline
+
+
+Message sent (email/sms/call scheduled)
+
+
+Reply received (when inbound pipeline runs)
+
+
+Outcome extracted / saved
+
+
+Payment signal received / reconciled
+
+
+State change written (see section 4)
+
+
+Acceptance
+Activity tab can be driven entirely from audit_events (even if you keep old logging too).
+
+
+
+3) Add Collection Policy (timers + cadence) — must do
+3.1 Schema migration
+Create collection_policies table:
+id
+
+
+tenantId
+
+
+name
+
+
+waitDaysForReply (int, default 3)
+
+
+cooldownDaysBetweenTouches (int, default 5)
+
+
+maxTouchesBeforeEscalation (int, default 4)
+
+
+escalationRoute (ATTENTION|MANUAL_CALL)
+
+
+confirmPTPDaysBefore (int, default 1)
+
+
+createdAt, updatedAt
+
+
+3.2 Apply policy to actions
+On send: set awaitingReplyUntil = sentAt + waitDaysForReply
+
+
+On no reply: set cooldownUntil = now + cooldownDaysBetweenTouches
+
+
+On max touches: set escalation flag and/or create attention_item type ESCALATION_DUE
+
+
+Acceptance
+A scheduled job (or request-time evaluator) moves items between “awaiting reply / cooldown / escalation due”.
+
+
+
+4) WorkState / InFlightState (don’t rewrite actions yet) — layer it
+4.1 Minimal fields added to actions (or a view)
+Instead of replacing status + approvalStatus, add two columns:
+workState (PLAN|IN_FLIGHT|ATTENTION|RESOLVED)
+
+
+inFlightState (SCHEDULED|SENT|AWAITING_REPLY|COOLDOWN|ESCALATION_DUE|DELIVERY_FAILED)
+
+
+Default mapping:
+approvalStatus=PENDING => workState=PLAN
+
+
+approvalStatus=APPROVED and status in {QUEUED,SENT} => workState=IN_FLIGHT
+
+
+if attention_item exists open => workState=ATTENTION
+
+
+if invoice paid => workState=RESOLVED
+
+
+4.2 Transition writer (single function)
+Create setWorkState({invoiceId, debtorId, workState, inFlightState, reason})
+updates action(s)
+
+
+writes AuditEvent STATE_CHANGED
+
+
+optionally creates/resolves attention_items
+
+
+Acceptance
+Every movement between Plan/In-Flight/Attention is recorded as an event.
+
+
+
+5) Outcome routing rules (the “Interpret → Route” heart)
+Implement routeFromOutcome(outcome):
+Routing:
+If confidence < 0.65 ⇒ Attention: LOW_CONFIDENCE_OUTCOME
+
+
+If type in:
+
+
+DISPUTE, DOCS_REQUESTED, CONTACT_ISSUE, CANNOT_PAY, PAID_ALREADY_CLAIM, REQUEST_CALL_BACK, BANK_DETAILS_CHANGE_REQUEST
+ ⇒ Attention (create attention_item with subtype = outcome.type)
+
+
+If type in:
+
+
+PROMISE_TO_PAY, PAYMENT_IN_PROCESS
+ ⇒ remain IN_FLIGHT (await payment) + schedule confirmation action (confirmPTPDaysBefore)
+
+
+If PAYMENT_PLAN_PROPOSED:
+ ⇒ Attention (unless you add “accept plan” later)
+
+
+If NO_RESPONSE / AMBIGUOUS:
+ ⇒ remain IN_FLIGHT, apply cooldown rules
+
+
+Also implement payment routing:
+PAYMENT_SIGNAL paid in full ⇒ RESOLVED
+
+
+part-paid ⇒ update remaining + return to PLAN (or IN_FLIGHT depending on policy)
+
+
+Acceptance
+Simulated inbound reply creates Outcome → creates attention_item or updates in-flight timers and forecast.
+
+
+
+6) Forecast service consumes Outcomes (confidence-weighted)
+6.1 Derive expected payment date & confidence
+Implement deriveExpectation(invoiceId) priority:
+Latest PROMISE_TO_PAY: exact date, band from outcome confidence
+
+
+PAYMENT_PLAN_PROPOSED: schedule (MED)
+
+
+PAYMENT_IN_PROCESS: window midpoint/latest (MED)
+
+
+Else heuristic (LOW)
+
+
+6.2 Update forecast_points
+On Outcome insert, recompute:
+
+
+amounts into highConfidence/mediumConfidence/lowConfidence buckets
+
+
+confidenceWeightedAmount
+
+
+Acceptance
+Recording PTP immediately shifts Cash In forecast buckets.
+
+
+
+7) UI: Debtor Drawer “Conversation” upgrade (visible Loop value)
+(Use the prompt you already have, but tie to new tables.)
+Rename “Recent Activity” → “Conversation”
+
+
+Add filter pills: All / Messages / Outcomes / Notes
+
+
+Render Outcome Cards from outcomes table (distinct styling)
+
+
+Add Loop Anchor strip:
+
+
+Next action (from action/workState)
+
+
+Expected (from derived expectation)
+
+
+Flags (from open attention_items + contact health + delivery fails)
+
+
+Add Linked invoice chips for conversation items (use linkedInvoiceIds)
+
+
+Ensure every UI action writes:
+
+
+Outcome (if relevant)
+
+
+AuditEvent
+
+
+Acceptance
+A user can open a debtor and instantly see: what was said, what Qashivo believed, what changed in forecast, and what happens next.
+
+
+
+8) Background evaluator (timers + auto re-plan)
+MVP approach: run on page load + cron later.
+evaluateInFlightTimers():
+
+
+If awaitingReplyUntil passed and no reply → COOLDOWN
+
+
+If cooldownUntil passed → create next planned action and set PLAN
+
+
+If touches exceed max → ESCALATION_DUE + attention_item
+
+
+Acceptance
+“No response” automatically returns items to Plan at the right time.
+
+
+
+9) Optional: WorkItem materialization (only after stable)
+Do NOT do this in v0.5 unless you need performance.
+ Instead, create a DB view work_items_view joining:
+invoices + actions + latest outcome + open attention_items + expectedPaymentDate
+
+
+Acceptance
+Plan/In-Flight/Attention lists can query one view.
+
+
+
+10) Testing checklist (fast QA)
+Create a small seeded scenario set (5 debtors, 20 invoices):
+Flows to test:
+Approve + send email → In-Flight Sent → Awaiting Reply
+
+
+No reply → Cooldown → returns to Plan
+
+
+Reply: PTP date → Outcome saved → Forecast shifts → confirm PTP action scheduled
+
+
+Reply: Dispute → routed to Attention with badge
+
+
+Reply: Bank details change → Attention + high-risk tag
+
+
+Payment signal full → Resolved + forecast removed
+
+
+Part payment → balance reduces + next action updates
+
+
+Delivery failed → Attention + flag
+
+
+
+Decisions (lock these now so Replit can build)
+Multi-invoice linking for v0.5: linkedInvoiceIds JSON on outcomes (fastest)
+
+
+WorkState: add columns to actions rather than rewrite status/approvalStatus
+
+
+Outcomes are canonical; invoice.outcomeOverride remains temporary compatibility
+
+
+
+What you should NOT do yet (avoid churn)
+Don’t redesign the entire Action Centre UI.
+
+
+Don’t build a global “Conversations Inbox” nav item.
+
+
+Don’t attempt a perfect event-sourcing architecture.
+
+
+Don’t migrate every historical log into audit_events (only new events need to be structured).
+
+
+
+If you paste the above back into Replit, tell it to:
+implement tasks 1 → 7 first (that’s the visible Loop),
+
+
+then do 8 if time,
+
+
+and only do 9 if needed.
+
+
+If you want, paste your current Prisma schema (or DB models) and I’ll produce an exact migration diff (tables + enums + indexes) aligned to your naming conventions.
+

@@ -1,0 +1,470 @@
+# Qashivo Loop Spec (V0.5 Canonical) — Plan → Approve → Execute → Interpret → Re-Plan → Forecast
+
+Purpose: Define a single, audit-ready supervised-autonomy loop where Qashivo recommends actions, humans approve, Qashivo executes communications, extracts debtor intent into structured outcomes, updates forecast confidence, and continuously re-plans.
+
+---
+
+## 1) Information Architecture (IA)
+
+### Top-level navigation
+- **Cash In**
+- **Action Centre**
+- Customers
+- Invoices
+- Conversations
+- Settings
+
+### Action Centre (daily workflow)
+Tabs map to operational states:
+1. **Plan** (includes inline approval — no separate Approval tab required)
+2. **In-Flight**
+3. **Attention**
+4. **Activity** (audit log)
+
+### Cash In (forecast visibility)
+Single cash view to avoid duplication:
+- Default: Forecast timeline + expected cash + confidence
+- Optional sub-toggle: Signals (PTPs, plans, disputes impact)
+
+---
+
+## 2) Core Loop (conceptual)
+
+1) **Plan**: Qashivo generates recommended actions (messages + channels + timing) and queues them for approval.
+2) **Approve**: User approves/edits/declines (bulk or single) directly from Plan.
+3) **Execute**: Approved actions are sent/scheduled via Email/SMS/Voice.
+4) **Interpret**: Inbound replies are classified into structured outcomes with confidence + extracted fields.
+5) **Re-Plan**: Actions reprioritise based on outcomes, response gaps, policy timers, and payment signals.
+6) **Forecast Update**: Expected payment dates and confidence bands update immediately when outcomes or payments occur.
+7) **Audit**: Every step produces an immutable event in Activity.
+
+This cycle repeats continuously per invoice/debtor.
+
+---
+
+## 3) Canonical Work States (what tab an item appears in)
+
+```ts
+export enum WorkState {
+  PLAN = "PLAN",           // recommended actions awaiting approval (and drafts)
+  IN_FLIGHT = "IN_FLIGHT", // approved actions scheduled/sent/awaiting reply/cooldown
+  ATTENTION = "ATTENTION", // human-needed exception / manual decision
+  RESOLVED = "RESOLVED",   // paid / written-off / cancelled / credited
+}
+
+export enum PlanLane {
+  RECOMMENDED = "RECOMMENDED",
+  READY = "READY",
+}
+
+export enum InFlightState {
+  SCHEDULED = "SCHEDULED",           // approved, queued to send later
+  SENT = "SENT",                     // message sent
+  AWAITING_REPLY = "AWAITING_REPLY", // waiting for inbound response
+  COOLDOWN = "COOLDOWN",             // waiting N days before next touch
+  ESCALATION_DUE = "ESCALATION_DUE", // exceeded max touches or long silence
+  DELIVERY_FAILED = "DELIVERY_FAILED",
+}
+
+export enum OutcomeType {
+  // Confirmed / forecastable intent
+  PROMISE_TO_PAY = "PROMISE_TO_PAY",               // PTP with date
+  PAYMENT_PLAN_PROPOSED = "PAYMENT_PLAN_PROPOSED", // staged payments proposed
+  PAYMENT_IN_PROCESS = "PAYMENT_IN_PROCESS",       // "in payment run / awaiting authorisation"
+
+  // Attention required (exceptions)
+  DISPUTE = "DISPUTE",
+  DOCS_REQUESTED = "DOCS_REQUESTED",               // invoice copy, statement, remittance, PO
+  CONTACT_ISSUE = "CONTACT_ISSUE",                 // wrong person, update needed
+  OUT_OF_OFFICE = "OUT_OF_OFFICE",
+  CANNOT_PAY = "CANNOT_PAY",
+  PAID_ALREADY_CLAIM = "PAID_ALREADY_CLAIM",       // potential allocation issue
+  DELIVERY_FAILED = "DELIVERY_FAILED",             // bounce / SMS fail
+  BANK_DETAILS_CHANGE_REQUEST = "BANK_DETAILS_CHANGE_REQUEST", // high-risk
+  REQUEST_CALL_BACK = "REQUEST_CALL_BACK",
+
+  // No clear intent captured
+  AMBIGUOUS = "AMBIGUOUS",
+  NO_RESPONSE = "NO_RESPONSE",
+
+  // Resolution signals
+  PAID = "PAID",
+  PART_PAID = "PART_PAID",
+  CREDIT_NOTE = "CREDIT_NOTE",
+  WRITTEN_OFF = "WRITTEN_OFF",
+  CANCELLED = "CANCELLED",
+}
+
+High-risk always routes to Attention:
+BANK_DETAILS_CHANGE_REQUEST
+
+
+Any outcome with confidence below threshold
+
+
+export type ConfidenceBand = "HIGH" | "MEDIUM" | "LOW";
+
+export const CONFIDENCE = { HIGH: 0.85, MEDIUM: 0.65, LOW: 0.0 };
+export const HUMAN_REVIEW_THRESHOLD = 0.65;
+
+export function band(conf: number): ConfidenceBand {
+  if (conf >= CONFIDENCE.HIGH) return "HIGH";
+  if (conf >= CONFIDENCE.MEDIUM) return "MEDIUM";
+  return "LOW";
+}
+
+UX behaviour:
+HIGH: auto-apply to forecast + schedule next step (still supervised on outbound sends)
+
+
+MEDIUM: apply to forecast, show “Review suggested” (optional)
+
+
+LOW: route to Attention
+export interface WorkItem {
+  id: string;
+  invoiceId: string;
+  debtorId: string;
+
+  state: WorkState;                 // PLAN / IN_FLIGHT / ATTENTION / RESOLVED
+  planLane?: PlanLane;
+
+  inFlightState?: InFlightState;
+  nextEligibleActionAt?: string;    // cooldown end
+  escalationDueAt?: string;
+
+  latestOutcomeType?: OutcomeType;
+  latestOutcomeAt?: string;
+
+  expectedPaymentDate?: string;     // derived (PTP / plan / heuristic)
+  expectedPaymentConfidence?: ConfidenceBand;
+
+  priorityScore: number;
+  assignedToUserId?: string;
+
+  updatedAt: string;
+}
+
+export interface Outcome {
+  id: string;
+  invoiceId: string;
+  debtorId: string;
+
+  type: OutcomeType;
+  confidence: number;               // 0..1
+  confidenceBand: ConfidenceBand;
+
+  extracted: {
+    promiseToPayDate?: string;      // ISO date
+    paymentPlan?: Array<{ date: string; amount: number }>;
+    paymentProcessWindow?: { earliest?: string; latest?: string };
+    disputeCategory?: "PRICING" | "DELIVERY" | "QUALITY" | "OTHER";
+    docsRequested?: Array<"INVOICE_COPY" | "STATEMENT" | "REMITTANCE" | "PO">;
+    oooUntil?: string;
+    freeTextNotes?: string;         // short summary
+  };
+
+  requiresHumanReview: boolean;
+  routedToState: WorkState;
+
+  source: {
+    channel: "EMAIL" | "SMS" | "VOICE" | "MANUAL";
+    messageId?: string;
+    rawSnippet?: string;            // optional, short excerpt only
+  };
+
+  createdAt: string;
+}
+
+export enum EventType {
+  PLAN_CREATED = "PLAN_CREATED",
+  ACTION_APPROVED = "ACTION_APPROVED",
+  ACTION_EDITED = "ACTION_EDITED",
+  ACTION_DECLINED = "ACTION_DECLINED",
+  MESSAGE_SENT = "MESSAGE_SENT",
+  MESSAGE_DELIVERY_FAILED = "MESSAGE_DELIVERY_FAILED",
+  REPLY_RECEIVED = "REPLY_RECEIVED",
+  OUTCOME_EXTRACTED = "OUTCOME_EXTRACTED",
+  PAYMENT_SIGNAL = "PAYMENT_SIGNAL",
+  STATE_CHANGED = "STATE_CHANGED",
+  NOTE_ADDED = "NOTE_ADDED",
+}
+
+export interface AuditEvent {
+  id: string;
+  invoiceId: string;
+  debtorId: string;
+  type: EventType;
+
+  summary: string;                  // human-readable
+  payload?: Record<string, any>;     // minimal structured payload
+  actor: "SYSTEM" | "USER";
+  actorUserId?: string;
+
+  createdAt: string;
+}
+
+Transition Rules (state machine)
+A) Plan → In-Flight (approval)
+On user approval:
+
+
+PLAN -> IN_FLIGHT.SCHEDULED (send later) OR PLAN -> IN_FLIGHT.SENT (send now)
+
+
+Log:
+
+
+ACTION_APPROVED
+
+
+MESSAGE_SENT when actually sent
+
+
+B) In-Flight lifecycle (wait/cooldown/escalation)
+After send:
+
+
+IN_FLIGHT.SENT -> IN_FLIGHT.AWAITING_REPLY
+
+
+If no reply after policy.waitDaysForReply:
+
+
+IN_FLIGHT.AWAITING_REPLY -> IN_FLIGHT.COOLDOWN (set nextEligibleActionAt)
+
+
+When cooldown ends:
+
+
+IN_FLIGHT.COOLDOWN -> PLAN (generate next recommended action)
+
+
+If touches exceed policy.maxTouchesBeforeEscalation:
+
+
+IN_FLIGHT.* -> IN_FLIGHT.ESCALATION_DUE and/or route to Attention based on policy
+
+
+C) Reply received → Outcome extracted → routed
+On REPLY_RECEIVED:
+Extract Outcome { type, confidence, extracted }
+
+
+Route:
+
+
+If confidence < HUMAN_REVIEW_THRESHOLD -> ATTENTION
+
+
+If type == BANK_DETAILS_CHANGE_REQUEST -> ATTENTION
+
+
+If type in {DISPUTE, DOCS_REQUESTED, CONTACT_ISSUE, OUT_OF_OFFICE, CANNOT_PAY, PAID_ALREADY_CLAIM, REQUEST_CALL_BACK} -> ATTENTION
+
+
+If type == PAYMENT_PLAN_PROPOSED -> ATTENTION (unless later you build plan-acceptance)
+
+
+If type in {PROMISE_TO_PAY, PAYMENT_IN_PROCESS} -> remain IN_FLIGHT (await payment) and schedule confirmation touch
+
+
+Else AMBIGUOUS -> remain IN_FLIGHT and apply cooldown rules
+
+
+Log:
+REPLY_RECEIVED
+
+
+OUTCOME_EXTRACTED
+
+
+STATE_CHANGED (if state changes)
+
+
+D) Payment signals → Resolved / Part-paid
+On PAYMENT_SIGNAL:
+If paid in full: * -> RESOLVED with outcome PAID
+
+
+If partial: outcome PART_PAID, update remaining balance, re-plan next action
+
+
+Also support resolution outcomes:
+CREDIT_NOTE, WRITTEN_OFF, CANCELLED => RESOLVED
+9) Forecast Update Rules (Cash In)
+Forecast updates immediately on:
+Outcome extracted (PTP / payment plan / payment-in-process / dispute risk)
+
+
+Payment signal (paid / part-paid)
+
+
+Resolution (credit note / write-off)
+
+
+Expected payment date derivation priority:
+PROMISE_TO_PAY -> promiseToPayDate (confidence band from outcome)
+
+
+PAYMENT_PLAN_PROPOSED -> instalment schedule (usually MEDIUM; may require approval)
+
+
+PAYMENT_IN_PROCESS -> use window midpoint or latest provided (MEDIUM)
+
+
+No intent -> heuristic based on due date + ageing + historical payer behaviour (LOW for MVP)
+
+
+Cash In UI shows:
+Expected cash by day/week
+
+
+Confidence band per bucket
+
+
+“Changed today” list (what shifted and why)
+
+
+
+10) UI Copy Pack (accountant-calm)
+Action Centre tabs
+Plan — “Qashivo recommends. You approve.”
+
+
+In-Flight — “Approved actions in motion.”
+
+
+Attention — “Needs a human decision.”
+
+
+Activity — “Audit-ready history.”
+
+
+In-Flight status chips
+Scheduled
+
+
+Sent
+
+
+Awaiting reply
+
+
+Cooling down (Next touch: {date})
+
+
+Escalation due
+
+
+Delivery failed
+
+
+Attention badges (reasons)
+Dispute
+
+
+Docs requested
+
+
+Contact issue
+
+
+Out of office
+
+
+Can’t pay
+
+
+Paid already (check allocation)
+
+
+Bank details change (verify)
+
+
+Call back requested
+
+
+Delivery failed
+
+
+Empty states
+Plan: “Nothing to approve right now.”
+
+
+In-Flight: “No actions in motion.”
+
+
+Attention: “No exceptions. Everything is running smoothly.”
+
+
+Activity: “No events yet.”
+
+
+export interface Policy {
+  waitDaysForReply: number;            // e.g. 3
+  cooldownDaysBetweenTouches: number;  // e.g. 5
+  maxTouchesBeforeEscalation: number;  // e.g. 4
+  escalationRoute: "ATTENTION" | "MANUAL_CALL";
+  confirmPTPDaysBefore: number;        // e.g. 1
+}
+
+12) Implementation Checklist (MVP)
+Plan tab supports bulk approve/edit/decline (inline approval)
+
+
+In-Flight shows timers + substates + next eligible time
+
+
+Attention shows reason badges + required action controls
+
+
+Activity provides searchable, filterable audit log (events)
+
+
+Outcomes captured from inbound replies with confidence bands
+
+
+Forecast updates in Cash In immediately after outcomes/payments
+
+
+Invoice/Debtor records update: latest outcome + next action + expected payment date
+
+
+Every state change and key action writes an AuditEvent
+
+
+
+13) Replit Build Brief (copy/paste)
+Implement the Qashivo Loop Spec exactly:
+Action Centre tabs: Plan (inline approvals), In-Flight, Attention, Activity.
+
+
+WorkState + InFlightState + OutcomeType enums as specified.
+
+
+On approval: Plan -> In-Flight (Scheduled/Sent).
+
+
+On inbound reply: extract Outcome (type + confidence + extracted fields). Route low-confidence or high-risk to Attention.
+
+
+Maintain timers for reply-wait and cooldown per Policy.
+
+
+On payment signals: Paid/Part-paid handling; Paid resolves.
+
+
+Cash In forecast updates instantly based on expectedPaymentDate + confidence band.
+
+
+Activity tab logs all events with search/filter.
+
+
+Keep UX copy calm and consistent with provided copy pack.
+
+
+End.
+::contentReference[oaicite:0]{index=0}
+
+

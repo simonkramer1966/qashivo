@@ -1,0 +1,163 @@
+# Replit Build Prompt — Debtor Drawer “Conversation” Upgrade (Loop Anchor + Outcome Cards + Filters)
+
+You are working inside the existing Qashivo app. Implement a tighter v0.5 “Conversation” experience inside the **Debtor Drawer** (Customer drawer) without adding a new top-level nav item.
+
+Goal: Make the supervised autonomy loop *obvious and trustworthy* by separating:
+- **Conversation** (messages + outcomes + notes per debtor)
+from
+- **Activity (Audit)** (global searchable ledger elsewhere)
+
+Keep the current layout (debtor drawer with middle panel + invoice list panel). Make minimal changes with high UX impact.
+
+---
+
+## A) Rename and Clarify
+
+1) Rename the drawer section header:
+- **“Recent Activity” → “Conversation”**
+
+2) Under the “Conversation” header, add a compact filter pill row:
+- **All · Messages · Outcomes · Notes**
+Default: **All**
+
+Definitions:
+- **Messages** = outbound/inbound comms: Email, SMS, Call (voice transcript/summary)
+- **Outcomes** = structured records: PTP, Payment Plan, Dispute, Admin Issue, Paid claim, etc.
+- **Notes** = internal user notes attached to debtor/invoice (not sent)
+
+Filtering rules:
+- All shows everything in reverse chronological order.
+- Messages shows only message-type events.
+- Outcomes shows only outcome-type events.
+- Notes shows only internal notes.
+
+---
+
+## B) Add the “Loop Anchor” Header Strip (Next / Expected / Flags)
+
+Above the conversation list (but below the debtor name + outstanding balance), add a calm 3-line “Loop Anchor” strip:
+
+Line 1: **Next:** {next action label} · {due in X days or scheduled time}
+Line 2: **Expected:** {£amount} on {date} · **Confidence:** {High/Medium/Low}
+Line 3: **Flags:** {#disputes} dispute · {#missingContacts} missing contact · {#deliveryIssues} delivery issue
+
+Rules:
+- `next action label` comes from the debtor/invoice next action field (or compute from latest WorkItem).
+- Expected amount/date comes from latest forecast expectation (PTP date or derived expectedPaymentDate).
+- Flags are counts derived from:
+  - disputes (open dispute outcomes)
+  - missing contacts (no primary email/phone)
+  - delivery issues (bounces / SMS failures)
+
+Styling:
+- Very lightweight (no big card). Use subtle separators, muted labels, bold values.
+- Confidence shown as text only (“High/Medium/Low”). No loud colors.
+
+---
+
+## C) Outcome Cards (Visually Distinct, Trust-First)
+
+When an item in the conversation feed is an **Outcome**, render it as an “Outcome Card” row (still cardless overall, but outcome items need a distinct surface).
+
+Outcome Card must display:
+- **Outcome Type** (e.g., “Promise to Pay”, “Payment Plan Requested”, “Dispute”, “Docs Requested”, “Paid Already (Claim)”)
+- **Key fields** (only those present):
+  - PTP: date, amount, confirmed by (contact)
+  - Payment plan: schedule summary (e.g., “3 instalments”, first date)
+  - Dispute: category + short note
+  - Docs requested: invoice copy / statement / remittance / PO
+  - Payment in process: window if available
+- **Confidence band**: High / Medium / Low
+- **Effect label** (small, right-aligned):
+  - “Forecast updated” (for PTP / in-process / plan)
+  - “Routed to Attention” (for dispute / cannot pay / bank details change / low confidence)
+  - “Manual review” (for low confidence or high-risk)
+
+Behaviour:
+- Clicking an Outcome Card focuses the right panel to show linked invoices and opens the relevant action form if appropriate (e.g., view PTP record).
+- If confidence is Low, show a small “Needs review” tag and route the related WorkItem to Attention.
+
+---
+
+## D) Separate “Read” vs “Compose” (Reduce Clutter)
+
+Default middle panel mode: **Conversation reader**
+- Shows list of conversation items (messages/outcomes/notes) and a detail preview when an item is selected.
+
+When user clicks actions (Email / SMS / Call / PTP / Plan / Dispute):
+- Open a **focused compose panel** (like current) BUT:
+  - Add a top-left text link: **“← Back to Conversation”**
+  - Keep a small persistent debtor summary at top (name + outstanding)
+  - On submit/cancel, return to Conversation reader mode.
+
+Do not remove existing functionality; just add the “Back to Conversation” affordance and make the default view the reader.
+
+---
+
+## E) Multi-Invoice Linking (Chips + Applies To)
+
+1) For each conversation item (message or outcome) add a small line:
+- **Linked invoices:** {chips}
+Chips show invoice number (e.g., INV-202601-0008). Clicking a chip selects that invoice in the right panel.
+
+2) PTP form:
+- Add field **“Applies to”** with:
+  - “Selected invoices (N)” if the user checked invoices in the right list
+  - Otherwise default to the currently opened invoice
+- Persist link table so one PTP can cover multiple invoices.
+
+3) Message compose (email/SMS/call):
+- Attach the same “Applies to” logic and record invoice links on send.
+
+---
+
+## F) Data Model / Types (Minimal Additions)
+
+If not already present, implement/standardize these types:
+
+- ConversationItem (for drawer feed) with `kind`:
+  - MESSAGE | OUTCOME | NOTE
+  - timestamps, summary, body/snippet, linkedInvoiceIds[]
+
+- Outcome fields:
+  - outcomeType, confidence (0..1), confidenceBand (High/Med/Low), extracted fields
+  - requiresHumanReview boolean
+  - effect: ForecastUpdated | RoutedToAttention | ManualReview
+
+- Link table:
+  - conversationItemId ↔ invoiceId (many-to-many)
+
+Ensure every submit action writes an AuditEvent elsewhere (existing Activity tab), but the drawer shows the per-debtor conversation view.
+
+---
+
+## G) UI Copy (Exact)
+
+- Header: **Conversation**
+- Filter pills: **All** | **Messages** | **Outcomes** | **Notes**
+- Loop anchor labels: **Next:** / **Expected:** / **Flags:**
+- Back link: **← Back to Conversation**
+- Linked invoices label: **Linked invoices:**
+- Outcome effect labels: **Forecast updated** / **Routed to Attention** / **Manual review**
+- Low confidence tag: **Needs review**
+
+Tone: calm, accountant-grade, minimal punctuation, no exclamation marks.
+
+---
+
+## H) Acceptance Criteria
+
+1) Drawer header reads “Conversation” and filter pills work.
+2) Loop anchor strip always visible and updates when:
+   - next action changes
+   - PTP / outcome recorded
+   - payment received
+3) Outcomes render in a distinct Outcome Card style with confidence + effect.
+4) Default mode is reader; compose panels include “Back to Conversation”.
+5) Linked invoice chips appear on conversation items and control right-panel selection.
+6) PTP and messages support “Applies to selected invoices” with persisted links.
+7) All conversation events are still written to the global Activity/Audit log.
+
+Implement with minimal UI disruption; reuse existing components where possible.
+
+
