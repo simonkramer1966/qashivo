@@ -665,6 +665,15 @@ export const actions = pgTable("actions", {
   feedback: varchar("feedback"), // "up" | "down" for reinforcement learning
   feedbackNote: text("feedback_note"), // Agent notes on recommendation quality
   
+  // Voice call tracking (Loop V0.5)
+  voiceStatus: varchar("voice_status"), // completed, no_answer, busy, voicemail, failed, in_progress
+  voiceCompletedAt: timestamp("voice_completed_at"),
+  voiceTranscriptSnippet: text("voice_transcript_snippet"), // First 500 chars
+  voiceSummarySnippet: text("voice_summary_snippet"), // First 240 chars
+  voiceRecordingUrl: varchar("voice_recording_url"),
+  voiceLastPolledAt: timestamp("voice_last_polled_at"),
+  voiceProcessedAt: timestamp("voice_processed_at"), // Set once outcomes/events created (idempotency)
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
@@ -6129,6 +6138,7 @@ export const outcomes = pgTable("outcomes", {
   index("idx_outcomes_invoice").on(table.invoiceId),
   index("idx_outcomes_type").on(table.type),
   index("idx_outcomes_created").on(table.createdAt),
+  unique("uniq_outcomes_source").on(table.tenantId, table.sourceChannel, table.sourceMessageId),
 ]);
 
 export const insertOutcomeSchema = createInsertSchema(outcomes).omit({
