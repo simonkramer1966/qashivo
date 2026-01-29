@@ -72,7 +72,8 @@ import {
   attentionItems,
   outcomes,
   auditEvents,
-  collectionPolicies
+  collectionPolicies,
+  paymentPlans
 } from "@shared/schema";
 import { getOverdueCategoryFromDueDate } from "@shared/utils/overdueUtils";
 import { calculateLatePaymentInterest } from "./utils/interestCalculator";
