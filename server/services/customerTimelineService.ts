@@ -7,7 +7,8 @@ import {
   customerPreferences,
   customerContactPersons,
   inboundMessages,
-  contactOutcomes
+  contactOutcomes,
+  auditEvents
 } from "@shared/schema";
 import { eq, and, desc, asc, lt, or, sql, ne } from "drizzle-orm";
 import type { 
@@ -118,6 +119,7 @@ export class CustomerTimelineService {
       )
     });
 
+    // Fetch timeline events
     const latestTimelineItems = await db
       .select({
         id: timelineEvents.id,
@@ -140,18 +142,88 @@ export class CustomerTimelineService {
         eq(timelineEvents.customerId, customerId),
         eq(timelineEvents.tenantId, tenantId)
       ))
-      .orderBy(desc(timelineEvents.occurredAt))
-      .limit(20);
+      .orderBy(desc(timelineEvents.occurredAt));
 
-    // Get total count for pagination
-    const countResult = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(timelineEvents)
+    // Fetch VOICE audit events only for this debtor (REPLY_RECEIVED with payload.channel='VOICE')
+    const allAuditItems = await db
+      .select({
+        id: auditEvents.id,
+        createdAt: auditEvents.createdAt,
+        type: auditEvents.type,
+        summary: auditEvents.summary,
+        payload: auditEvents.payload,
+        invoiceId: auditEvents.invoiceId,
+        actor: auditEvents.actor
+      })
+      .from(auditEvents)
       .where(and(
-        eq(timelineEvents.customerId, customerId),
-        eq(timelineEvents.tenantId, tenantId)
-      ));
-    const totalTimelineCount = countResult[0]?.count || 0;
+        eq(auditEvents.debtorId, customerId),
+        eq(auditEvents.tenantId, tenantId)
+      ))
+      .orderBy(desc(auditEvents.createdAt));
+    
+    // Filter to only VOICE channel events
+    const latestAuditItems = allAuditItems.filter(item => {
+      const payload = item.payload || {};
+      return payload.channel === 'VOICE';
+    });
+
+    // Map timeline events
+    const mappedTimelineItems = latestTimelineItems.map(item => ({
+      id: item.id,
+      occurredAt: item.occurredAt?.toISOString() || new Date().toISOString(),
+      channel: item.channel as TimelineChannel,
+      direction: item.direction as TimelineDirection,
+      summary: item.summary,
+      preview: item.preview || undefined,
+      body: item.body || undefined,
+      status: item.status as TimelineStatus | undefined,
+      invoiceId: item.invoiceId || undefined,
+      outcome: item.outcomeType ? {
+        type: item.outcomeType as any,
+        confidence: Number(item.outcomeConfidence || 0),
+        extracted: item.outcomeExtracted as Record<string, any> | undefined
+      } : undefined,
+      createdBy: item.createdByType ? {
+        type: item.createdByType as any,
+        name: item.createdByName || undefined
+      } : undefined,
+      metadata: undefined as Record<string, any> | undefined,
+      payload: undefined as Record<string, any> | undefined
+    }));
+
+    // Map audit events to timeline format
+    const mappedAuditItems = latestAuditItems.map(item => {
+      const payload = item.payload || {};
+      const isVoice = payload.channel === 'VOICE';
+      const createdByType = (item.actor === 'SYSTEM' ? 'system' : 'user') as 'system' | 'user';
+      
+      return {
+        id: item.id,
+        occurredAt: item.createdAt?.toISOString() || new Date().toISOString(),
+        channel: (isVoice ? 'voice' : 'system') as TimelineChannel,
+        direction: 'outbound' as TimelineDirection,
+        summary: item.summary,
+        preview: item.summary,
+        body: payload.transcriptSnippet || payload.summarySnippet || undefined,
+        status: undefined as TimelineStatus | undefined,
+        invoiceId: item.invoiceId || undefined,
+        outcome: undefined,
+        createdBy: {
+          type: createdByType,
+          name: item.actor === 'SYSTEM' ? 'System' : undefined
+        },
+        metadata: payload,
+        payload: payload
+      };
+    });
+
+    // Merge and sort by occurredAt descending, take first 20
+    const allTimelineItems = [...mappedTimelineItems, ...mappedAuditItems]
+      .sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime())
+      .slice(0, 20);
+
+    const totalTimelineCount = mappedTimelineItems.length + mappedAuditItems.length;
 
     const behaviourLabel = customer.riskBand 
       ? `${customer.riskBand} rated` 
@@ -184,26 +256,7 @@ export class CustomerTimelineService {
         smsOptedOut: !preferences.smsEnabled,
         voiceOptedOut: !preferences.voiceEnabled
       } : undefined,
-      latestTimeline: latestTimelineItems.map(item => ({
-        id: item.id,
-        occurredAt: item.occurredAt?.toISOString() || new Date().toISOString(),
-        channel: item.channel as TimelineChannel,
-        direction: item.direction as TimelineDirection,
-        summary: item.summary,
-        preview: item.preview || undefined,
-        body: item.body || undefined,
-        status: item.status as TimelineStatus | undefined,
-        invoiceId: item.invoiceId || undefined,
-        outcome: item.outcomeType ? {
-          type: item.outcomeType as any,
-          confidence: Number(item.outcomeConfidence || 0),
-          extracted: item.outcomeExtracted as Record<string, any> | undefined
-        } : undefined,
-        createdBy: item.createdByType ? {
-          type: item.createdByType as any,
-          name: item.createdByName || undefined
-        } : undefined
-      })),
+      latestTimeline: allTimelineItems,
       totalTimelineCount,
       hasMoreTimeline: totalTimelineCount > 20,
       invoices: invoiceList,
@@ -345,7 +398,8 @@ export class CustomerTimelineService {
     offset: number = 0,
     limit: number = 20
   ) {
-    const items = await db
+    // Fetch timeline events
+    const timelineItems = await db
       .select({
         id: timelineEvents.id,
         occurredAt: timelineEvents.occurredAt,
@@ -367,42 +421,97 @@ export class CustomerTimelineService {
         eq(timelineEvents.customerId, customerId),
         eq(timelineEvents.tenantId, tenantId)
       ))
-      .orderBy(desc(timelineEvents.occurredAt))
-      .offset(offset)
-      .limit(limit);
+      .orderBy(desc(timelineEvents.occurredAt));
 
-    const countResult = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(timelineEvents)
+    // Fetch VOICE audit events only for this debtor
+    const allAuditItems = await db
+      .select({
+        id: auditEvents.id,
+        createdAt: auditEvents.createdAt,
+        type: auditEvents.type,
+        summary: auditEvents.summary,
+        payload: auditEvents.payload,
+        invoiceId: auditEvents.invoiceId,
+        actor: auditEvents.actor,
+        outcomeId: auditEvents.outcomeId
+      })
+      .from(auditEvents)
       .where(and(
-        eq(timelineEvents.customerId, customerId),
-        eq(timelineEvents.tenantId, tenantId)
-      ));
-    const total = countResult[0]?.count || 0;
+        eq(auditEvents.debtorId, customerId),
+        eq(auditEvents.tenantId, tenantId)
+      ))
+      .orderBy(desc(auditEvents.createdAt));
+    
+    // Filter to only VOICE channel events
+    const auditItems = allAuditItems.filter(item => {
+      const payload = item.payload || {};
+      return payload.channel === 'VOICE';
+    });
+
+    // Map audit events to timeline format
+    const mappedAuditItems = auditItems.map(item => {
+      const payload = item.payload || {};
+      const isVoice = payload.channel === 'VOICE';
+      const createdByType = (item.actor === 'SYSTEM' ? 'system' : 'user') as 'system' | 'user';
+      
+      return {
+        id: item.id,
+        occurredAt: item.createdAt?.toISOString() || new Date().toISOString(),
+        channel: (isVoice ? 'voice' : 'system') as TimelineChannel,
+        direction: 'outbound' as TimelineDirection,
+        summary: item.summary,
+        preview: item.summary,
+        body: payload.transcriptSnippet || payload.summarySnippet || undefined,
+        status: undefined as TimelineStatus | undefined,
+        invoiceId: item.invoiceId || undefined,
+        outcome: undefined,
+        createdBy: {
+          type: createdByType,
+          name: item.actor === 'SYSTEM' ? 'System' : undefined
+        },
+        metadata: payload,
+        payload: payload,
+        source: 'audit' as const
+      };
+    });
+
+    // Map timeline events to consistent format
+    const mappedTimelineItems = timelineItems.map(item => ({
+      id: item.id,
+      occurredAt: item.occurredAt?.toISOString() || new Date().toISOString(),
+      channel: item.channel as TimelineChannel,
+      direction: item.direction as TimelineDirection,
+      summary: item.summary,
+      preview: item.preview || undefined,
+      body: item.body || undefined,
+      status: item.status as TimelineStatus | undefined,
+      invoiceId: item.invoiceId || undefined,
+      outcome: item.outcomeType ? {
+        type: item.outcomeType as any,
+        confidence: Number(item.outcomeConfidence || 0),
+        extracted: item.outcomeExtracted as Record<string, any> | undefined
+      } : undefined,
+      createdBy: item.createdByType ? {
+        type: item.createdByType as any,
+        name: item.createdByName || undefined
+      } : undefined,
+      metadata: undefined,
+      payload: undefined,
+      source: 'timeline' as const
+    }));
+
+    // Merge and sort by occurredAt descending
+    const allItems = [...mappedTimelineItems, ...mappedAuditItems]
+      .sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime());
+
+    // Apply pagination
+    const paginatedItems = allItems.slice(offset, offset + limit);
+    const total = allItems.length;
 
     return {
-      items: items.map(item => ({
-        id: item.id,
-        occurredAt: item.occurredAt?.toISOString() || new Date().toISOString(),
-        channel: item.channel as TimelineChannel,
-        direction: item.direction as TimelineDirection,
-        summary: item.summary,
-        preview: item.preview || undefined,
-        body: item.body || undefined,
-        status: item.status as TimelineStatus | undefined,
-        invoiceId: item.invoiceId || undefined,
-        outcome: item.outcomeType ? {
-          type: item.outcomeType as any,
-          confidence: Number(item.outcomeConfidence || 0),
-          extracted: item.outcomeExtracted as Record<string, any> | undefined
-        } : undefined,
-        createdBy: item.createdByType ? {
-          type: item.createdByType as any,
-          name: item.createdByName || undefined
-        } : undefined
-      })),
+      items: paginatedItems,
       total,
-      hasMore: offset + items.length < total
+      hasMore: offset + paginatedItems.length < total
     };
   }
 
