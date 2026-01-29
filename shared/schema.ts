@@ -644,6 +644,15 @@ export const actions = pgTable("actions", {
   // Experimentation tracking (A/B testing)
   experimentVariant: varchar("experiment_variant"), // STATIC, ADAPTIVE, etc.
   
+  // Loop Spec V0.5: WorkState and InFlightState (layered on existing status)
+  workState: varchar("work_state"), // PLAN, IN_FLIGHT, ATTENTION, RESOLVED
+  inFlightState: varchar("in_flight_state"), // SCHEDULED, SENT, AWAITING_REPLY, COOLDOWN, ESCALATION_DUE, DELIVERY_FAILED
+  
+  // Loop Spec V0.5: Timer fields
+  awaitingReplyUntil: timestamp("awaiting_reply_until"), // When reply wait expires
+  cooldownUntil: timestamp("cooldown_until"), // When cooldown ends
+  touchCount: integer("touch_count").default(0), // Number of touches for this debtor/invoice
+  
   // Sprint 1: Adaptive Action Centre fields
   invoiceIds: text("invoice_ids").array(), // Bundled invoices for same contact
   recommendedAt: timestamp("recommended_at"), // When AI recommended this action
@@ -5960,3 +5969,291 @@ export const outcomeOverrideEnum = ['Silent', 'Disputed', 'Plan'] as const;
 // Invoice outcomes are now tracked via the simpler 'outcomeOverride' field on invoices.
 // For payment plans, use the payment_plans and payment_plan_invoices tables.
 // Breach detection uses plan-level outstanding comparison (not individual installment tracking).
+
+// ============================================================
+// QASHIVO LOOP SPEC V0.5 - CANONICAL WORK LOOP PRIMITIVES
+// ============================================================
+
+// Work State - canonical states for the supervised autonomy loop
+export const WORK_STATE = {
+  PLAN: 'PLAN',           // Recommended actions awaiting approval
+  IN_FLIGHT: 'IN_FLIGHT', // Approved actions scheduled/sent/awaiting reply
+  ATTENTION: 'ATTENTION', // Human-needed exception / manual decision
+  RESOLVED: 'RESOLVED',   // Paid / written-off / cancelled / credited
+} as const;
+export type WorkState = typeof WORK_STATE[keyof typeof WORK_STATE];
+export const workStateEnum = ['PLAN', 'IN_FLIGHT', 'ATTENTION', 'RESOLVED'] as const;
+
+// In-Flight State - substates for actions in the IN_FLIGHT work state
+export const IN_FLIGHT_STATE = {
+  SCHEDULED: 'SCHEDULED',             // Approved, queued to send later
+  SENT: 'SENT',                       // Message sent
+  AWAITING_REPLY: 'AWAITING_REPLY',   // Waiting for inbound response
+  COOLDOWN: 'COOLDOWN',               // Waiting N days before next touch
+  ESCALATION_DUE: 'ESCALATION_DUE',   // Exceeded max touches or long silence
+  DELIVERY_FAILED: 'DELIVERY_FAILED', // Bounce / SMS fail
+} as const;
+export type InFlightState = typeof IN_FLIGHT_STATE[keyof typeof IN_FLIGHT_STATE];
+export const inFlightStateEnum = ['SCHEDULED', 'SENT', 'AWAITING_REPLY', 'COOLDOWN', 'ESCALATION_DUE', 'DELIVERY_FAILED'] as const;
+
+// Outcome Type - structured classification of debtor responses
+export const OUTCOME_TYPE = {
+  // Confirmed / forecastable intent
+  PROMISE_TO_PAY: 'PROMISE_TO_PAY',               // PTP with date
+  PAYMENT_PLAN_PROPOSED: 'PAYMENT_PLAN_PROPOSED', // Staged payments proposed
+  PAYMENT_IN_PROCESS: 'PAYMENT_IN_PROCESS',       // In payment run / awaiting authorisation
+  
+  // Attention required (exceptions)
+  DISPUTE: 'DISPUTE',
+  DOCS_REQUESTED: 'DOCS_REQUESTED',               // Invoice copy, statement, remittance, PO
+  CONTACT_ISSUE: 'CONTACT_ISSUE',                 // Wrong person, update needed
+  OUT_OF_OFFICE: 'OUT_OF_OFFICE',
+  CANNOT_PAY: 'CANNOT_PAY',
+  PAID_ALREADY_CLAIM: 'PAID_ALREADY_CLAIM',       // Potential allocation issue
+  DELIVERY_FAILED: 'DELIVERY_FAILED',             // Bounce / SMS fail
+  BANK_DETAILS_CHANGE_REQUEST: 'BANK_DETAILS_CHANGE_REQUEST', // High-risk
+  REQUEST_CALL_BACK: 'REQUEST_CALL_BACK',
+  
+  // No clear intent captured
+  AMBIGUOUS: 'AMBIGUOUS',
+  NO_RESPONSE: 'NO_RESPONSE',
+  
+  // Resolution signals
+  PAID: 'PAID',
+  PART_PAID: 'PART_PAID',
+  CREDIT_NOTE: 'CREDIT_NOTE',
+  WRITTEN_OFF: 'WRITTEN_OFF',
+  CANCELLED: 'CANCELLED',
+} as const;
+export type OutcomeType = typeof OUTCOME_TYPE[keyof typeof OUTCOME_TYPE];
+export const outcomeTypeEnum = [
+  'PROMISE_TO_PAY', 'PAYMENT_PLAN_PROPOSED', 'PAYMENT_IN_PROCESS',
+  'DISPUTE', 'DOCS_REQUESTED', 'CONTACT_ISSUE', 'OUT_OF_OFFICE', 'CANNOT_PAY',
+  'PAID_ALREADY_CLAIM', 'DELIVERY_FAILED', 'BANK_DETAILS_CHANGE_REQUEST', 'REQUEST_CALL_BACK',
+  'AMBIGUOUS', 'NO_RESPONSE',
+  'PAID', 'PART_PAID', 'CREDIT_NOTE', 'WRITTEN_OFF', 'CANCELLED',
+] as const;
+
+// Confidence Band - bucketing for forecast weighting
+export const CONFIDENCE_BAND = {
+  HIGH: 'HIGH',     // >= 0.85
+  MEDIUM: 'MEDIUM', // >= 0.65
+  LOW: 'LOW',       // < 0.65
+} as const;
+export type ConfidenceBand = typeof CONFIDENCE_BAND[keyof typeof CONFIDENCE_BAND];
+export const confidenceBandEnum = ['HIGH', 'MEDIUM', 'LOW'] as const;
+
+export const CONFIDENCE_THRESHOLDS = { HIGH: 0.85, MEDIUM: 0.65, LOW: 0.0 };
+export const HUMAN_REVIEW_THRESHOLD = 0.65;
+
+export function getConfidenceBand(confidence: number): ConfidenceBand {
+  if (confidence >= CONFIDENCE_THRESHOLDS.HIGH) return 'HIGH';
+  if (confidence >= CONFIDENCE_THRESHOLDS.MEDIUM) return 'MEDIUM';
+  return 'LOW';
+}
+
+// Outcome Effect - what happened as a result of this outcome
+export const OUTCOME_EFFECT = {
+  FORECAST_UPDATED: 'FORECAST_UPDATED',   // PTP / in-process / plan
+  ROUTED_TO_ATTENTION: 'ROUTED_TO_ATTENTION', // Dispute / cannot pay / low confidence
+  MANUAL_REVIEW: 'MANUAL_REVIEW',         // Low confidence or high-risk
+} as const;
+export type OutcomeEffect = typeof OUTCOME_EFFECT[keyof typeof OUTCOME_EFFECT];
+export const outcomeEffectEnum = ['FORECAST_UPDATED', 'ROUTED_TO_ATTENTION', 'MANUAL_REVIEW'] as const;
+
+// Audit Event Type - immutable activity log types
+export const EVENT_TYPE = {
+  PLAN_CREATED: 'PLAN_CREATED',
+  ACTION_APPROVED: 'ACTION_APPROVED',
+  ACTION_EDITED: 'ACTION_EDITED',
+  ACTION_DECLINED: 'ACTION_DECLINED',
+  MESSAGE_SENT: 'MESSAGE_SENT',
+  MESSAGE_DELIVERY_FAILED: 'MESSAGE_DELIVERY_FAILED',
+  REPLY_RECEIVED: 'REPLY_RECEIVED',
+  OUTCOME_EXTRACTED: 'OUTCOME_EXTRACTED',
+  PAYMENT_SIGNAL: 'PAYMENT_SIGNAL',
+  STATE_CHANGED: 'STATE_CHANGED',
+  NOTE_ADDED: 'NOTE_ADDED',
+} as const;
+export type EventType = typeof EVENT_TYPE[keyof typeof EVENT_TYPE];
+export const eventTypeEnum = [
+  'PLAN_CREATED', 'ACTION_APPROVED', 'ACTION_EDITED', 'ACTION_DECLINED',
+  'MESSAGE_SENT', 'MESSAGE_DELIVERY_FAILED', 'REPLY_RECEIVED',
+  'OUTCOME_EXTRACTED', 'PAYMENT_SIGNAL', 'STATE_CHANGED', 'NOTE_ADDED',
+] as const;
+
+// ============================================================
+// OUTCOMES TABLE - Structured debtor responses
+// ============================================================
+export const outcomes = pgTable("outcomes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  debtorId: varchar("debtor_id").notNull().references(() => contacts.id),
+  invoiceId: varchar("invoice_id").references(() => invoices.id), // Nullable if applies to debtor + multiple invoices
+  linkedInvoiceIds: jsonb("linked_invoice_ids").$type<string[]>().default([]), // MVP: JSON array instead of join table
+  
+  // Classification
+  type: varchar("type").notNull(), // OutcomeType enum
+  confidence: decimal("confidence", { precision: 3, scale: 2 }).notNull(), // 0.00 to 1.00
+  confidenceBand: varchar("confidence_band").notNull(), // HIGH, MEDIUM, LOW
+  requiresHumanReview: boolean("requires_human_review").notNull().default(false),
+  effect: varchar("effect"), // FORECAST_UPDATED, ROUTED_TO_ATTENTION, MANUAL_REVIEW
+  
+  // Extracted structured fields (varies by outcome type)
+  extracted: jsonb("extracted").$type<{
+    promiseToPayDate?: string;      // ISO date for PTP
+    promiseToPayAmount?: number;    // Amount promised
+    confirmedBy?: string;           // Contact name who confirmed
+    paymentPlanSchedule?: Array<{ date: string; amount: number }>;
+    paymentProcessWindow?: { earliest?: string; latest?: string };
+    disputeCategory?: 'PRICING' | 'DELIVERY' | 'QUALITY' | 'OTHER';
+    docsRequested?: Array<'INVOICE_COPY' | 'STATEMENT' | 'REMITTANCE' | 'PO'>;
+    oooUntil?: string;              // Out of office until date
+    freeTextNotes?: string;         // Short summary
+  }>().default({}),
+  
+  // Source tracking
+  sourceChannel: varchar("source_channel"), // EMAIL, SMS, VOICE, MANUAL
+  sourceMessageId: varchar("source_message_id"),
+  rawSnippet: text("raw_snippet"), // Short excerpt only
+  
+  // User tracking
+  createdByUserId: varchar("created_by_user_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_outcomes_tenant").on(table.tenantId),
+  index("idx_outcomes_debtor").on(table.debtorId),
+  index("idx_outcomes_invoice").on(table.invoiceId),
+  index("idx_outcomes_type").on(table.type),
+  index("idx_outcomes_created").on(table.createdAt),
+]);
+
+export const insertOutcomeSchema = createInsertSchema(outcomes).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertOutcome = z.infer<typeof insertOutcomeSchema>;
+export type Outcome = typeof outcomes.$inferSelect;
+
+// ============================================================
+// AUDIT EVENTS TABLE - Immutable activity log
+// ============================================================
+export const auditEvents = pgTable("audit_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  debtorId: varchar("debtor_id").references(() => contacts.id),
+  invoiceId: varchar("invoice_id").references(() => invoices.id),
+  actionId: varchar("action_id").references(() => actions.id),
+  outcomeId: varchar("outcome_id").references(() => outcomes.id),
+  
+  // Event classification
+  type: varchar("type").notNull(), // EventType enum
+  summary: varchar("summary").notNull(), // Human-readable description
+  payload: jsonb("payload").$type<Record<string, any>>(), // Minimal structured payload
+  
+  // Actor tracking
+  actor: varchar("actor").notNull().default("SYSTEM"), // SYSTEM or USER
+  actorUserId: varchar("actor_user_id").references(() => users.id),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_audit_events_tenant").on(table.tenantId),
+  index("idx_audit_events_debtor").on(table.debtorId),
+  index("idx_audit_events_invoice").on(table.invoiceId),
+  index("idx_audit_events_type").on(table.type),
+  index("idx_audit_events_created").on(table.createdAt),
+  index("idx_audit_events_actor").on(table.actor),
+]);
+
+export const insertAuditEventSchema = createInsertSchema(auditEvents).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertAuditEvent = z.infer<typeof insertAuditEventSchema>;
+export type AuditEvent = typeof auditEvents.$inferSelect;
+
+// ============================================================
+// COLLECTION POLICIES TABLE - Timer and cadence settings
+// ============================================================
+export const collectionPolicies = pgTable("collection_policies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  name: varchar("name").notNull().default("Default Policy"),
+  isDefault: boolean("is_default").default(false),
+  
+  // Timer settings
+  waitDaysForReply: integer("wait_days_for_reply").notNull().default(3),
+  cooldownDaysBetweenTouches: integer("cooldown_days_between_touches").notNull().default(5),
+  maxTouchesBeforeEscalation: integer("max_touches_before_escalation").notNull().default(4),
+  confirmPTPDaysBefore: integer("confirm_ptp_days_before").notNull().default(1),
+  
+  // Escalation route
+  escalationRoute: varchar("escalation_route").notNull().default("ATTENTION"), // ATTENTION or MANUAL_CALL
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_collection_policies_tenant").on(table.tenantId),
+]);
+
+export const insertCollectionPolicySchema = createInsertSchema(collectionPolicies).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertCollectionPolicy = z.infer<typeof insertCollectionPolicySchema>;
+export type CollectionPolicy = typeof collectionPolicies.$inferSelect;
+
+// Relations for Loop Spec tables
+export const outcomesRelations = relations(outcomes, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [outcomes.tenantId],
+    references: [tenants.id],
+  }),
+  debtor: one(contacts, {
+    fields: [outcomes.debtorId],
+    references: [contacts.id],
+  }),
+  invoice: one(invoices, {
+    fields: [outcomes.invoiceId],
+    references: [invoices.id],
+  }),
+  createdBy: one(users, {
+    fields: [outcomes.createdByUserId],
+    references: [users.id],
+  }),
+}));
+
+export const auditEventsRelations = relations(auditEvents, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [auditEvents.tenantId],
+    references: [tenants.id],
+  }),
+  debtor: one(contacts, {
+    fields: [auditEvents.debtorId],
+    references: [contacts.id],
+  }),
+  invoice: one(invoices, {
+    fields: [auditEvents.invoiceId],
+    references: [invoices.id],
+  }),
+  action: one(actions, {
+    fields: [auditEvents.actionId],
+    references: [actions.id],
+  }),
+  outcome: one(outcomes, {
+    fields: [auditEvents.outcomeId],
+    references: [outcomes.id],
+  }),
+  actorUser: one(users, {
+    fields: [auditEvents.actorUserId],
+    references: [users.id],
+  }),
+}));
+
+export const collectionPoliciesRelations = relations(collectionPolicies, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [collectionPolicies.tenantId],
+    references: [tenants.id],
+  }),
+}));

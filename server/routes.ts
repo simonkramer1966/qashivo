@@ -69,7 +69,10 @@ import {
   smeClients,
   contactNotes,
   timelineEvents,
-  attentionItems
+  attentionItems,
+  outcomes,
+  auditEvents,
+  collectionPolicies
 } from "@shared/schema";
 import { getOverdueCategoryFromDueDate } from "@shared/utils/overdueUtils";
 import { calculateLatePaymentInterest } from "./utils/interestCalculator";
@@ -12850,6 +12853,234 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     } catch (error: any) {
       console.error("Error bulk declining actions:", error);
       res.status(500).json({ message: `Failed to bulk decline actions: ${error.message}` });
+    }
+  });
+
+  // ============================================================
+  // OUTCOMES API - Loop Spec V0.5
+  // ============================================================
+
+  // Get outcomes for a debtor
+  app.get("/api/outcomes", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { debtorId, invoiceId, type, limit = 50 } = req.query;
+
+      // Build conditions array to ensure tenant filter is always applied
+      const conditions = [eq(outcomes.tenantId, user.tenantId)];
+      if (debtorId) conditions.push(eq(outcomes.debtorId, debtorId as string));
+      if (invoiceId) conditions.push(eq(outcomes.invoiceId, invoiceId as string));
+      if (type) conditions.push(eq(outcomes.type, type as string));
+
+      const result = await db.select().from(outcomes)
+        .where(and(...conditions))
+        .orderBy(desc(outcomes.createdAt))
+        .limit(parseInt(limit as string));
+
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error fetching outcomes:", error);
+      res.status(500).json({ message: `Failed to fetch outcomes: ${error.message}` });
+    }
+  });
+
+  // Create outcome
+  const createOutcomeSchema = z.object({
+    debtorId: z.string().min(1, "Debtor ID is required"),
+    invoiceId: z.string().optional(),
+    linkedInvoiceIds: z.array(z.string()).optional().default([]),
+    type: z.enum([
+      'PROMISE_TO_PAY', 'PAYMENT_PLAN_PROPOSED', 'PAYMENT_IN_PROCESS',
+      'DISPUTE', 'DOCS_REQUESTED', 'CONTACT_ISSUE', 'OUT_OF_OFFICE', 'CANNOT_PAY',
+      'PAID_ALREADY_CLAIM', 'DELIVERY_FAILED', 'BANK_DETAILS_CHANGE_REQUEST', 'REQUEST_CALL_BACK',
+      'AMBIGUOUS', 'NO_RESPONSE',
+      'PAID', 'PART_PAID', 'CREDIT_NOTE', 'WRITTEN_OFF', 'CANCELLED',
+    ]),
+    confidence: z.number().min(0).max(1).default(0.8),
+    sourceChannel: z.enum(['EMAIL', 'SMS', 'VOICE', 'MANUAL']).optional(),
+    sourceMessageId: z.string().optional(),
+    rawSnippet: z.string().optional(),
+    extracted: z.object({
+      promiseToPayDate: z.string().optional(),
+      promiseToPayAmount: z.number().optional(),
+      confirmedBy: z.string().optional(),
+      paymentPlanSchedule: z.array(z.object({ date: z.string(), amount: z.number() })).optional(),
+      paymentProcessWindow: z.object({ earliest: z.string().optional(), latest: z.string().optional() }).optional(),
+      disputeCategory: z.enum(['PRICING', 'DELIVERY', 'QUALITY', 'OTHER']).optional(),
+      docsRequested: z.array(z.enum(['INVOICE_COPY', 'STATEMENT', 'REMITTANCE', 'PO'])).optional(),
+      oooUntil: z.string().optional(),
+      freeTextNotes: z.string().optional(),
+    }).optional().default({}),
+  });
+
+  app.post("/api/outcomes", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const parseResult = createOutcomeSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ 
+          message: "Validation failed", 
+          errors: parseResult.error.flatten().fieldErrors 
+        });
+      }
+
+      const data = parseResult.data;
+      const confidenceBand = data.confidence >= 0.85 ? 'HIGH' : data.confidence >= 0.65 ? 'MEDIUM' : 'LOW';
+      const requiresHumanReview = data.confidence < 0.65;
+
+      // Validate debtor belongs to tenant
+      const debtor = await db.query.contacts.findFirst({
+        where: and(eq(contacts.id, data.debtorId), eq(contacts.tenantId, user.tenantId))
+      });
+      if (!debtor) {
+        return res.status(400).json({ message: "Debtor not found or belongs to different tenant" });
+      }
+
+      const [outcome] = await db.insert(outcomes).values({
+        tenantId: user.tenantId,
+        debtorId: data.debtorId,
+        invoiceId: data.invoiceId,
+        linkedInvoiceIds: data.linkedInvoiceIds,
+        type: data.type,
+        confidence: data.confidence.toString(),
+        confidenceBand,
+        requiresHumanReview,
+        sourceChannel: data.sourceChannel,
+        sourceMessageId: data.sourceMessageId,
+        rawSnippet: data.rawSnippet,
+        extracted: data.extracted,
+        createdByUserId: user.id,
+      }).returning();
+
+      // Process outcome routing
+      const { workStateService } = await import("./services/workStateService");
+      await workStateService.processOutcome(outcome);
+
+      console.log(`✅ Created outcome: ${outcome.id} (${data.type})`);
+
+      res.status(201).json(outcome);
+    } catch (error: any) {
+      console.error("Error creating outcome:", error);
+      res.status(500).json({ message: `Failed to create outcome: ${error.message}` });
+    }
+  });
+
+  // ============================================================
+  // AUDIT EVENTS API - Loop Spec V0.5
+  // ============================================================
+
+  // Get audit events (Activity log)
+  app.get("/api/audit-events", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { debtorId, invoiceId, type, actor, limit = 100 } = req.query;
+
+      // Build conditions array to ensure tenant filter is always applied
+      const conditions = [eq(auditEvents.tenantId, user.tenantId)];
+      if (debtorId) conditions.push(eq(auditEvents.debtorId, debtorId as string));
+      if (invoiceId) conditions.push(eq(auditEvents.invoiceId, invoiceId as string));
+      if (type) conditions.push(eq(auditEvents.type, type as string));
+      if (actor) conditions.push(eq(auditEvents.actor, actor as string));
+
+      const result = await db.select().from(auditEvents)
+        .where(and(...conditions))
+        .orderBy(desc(auditEvents.createdAt))
+        .limit(parseInt(limit as string));
+
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error fetching audit events:", error);
+      res.status(500).json({ message: `Failed to fetch audit events: ${error.message}` });
+    }
+  });
+
+  // ============================================================
+  // COLLECTION POLICIES API - Loop Spec V0.5
+  // ============================================================
+
+  // Get collection policies
+  app.get("/api/collection-policies", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const result = await db.select().from(collectionPolicies)
+        .where(eq(collectionPolicies.tenantId, user.tenantId))
+        .orderBy(desc(collectionPolicies.createdAt));
+
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error fetching collection policies:", error);
+      res.status(500).json({ message: `Failed to fetch collection policies: ${error.message}` });
+    }
+  });
+
+  // Create or update default collection policy
+  const createPolicySchema = z.object({
+    name: z.string().optional().default("Default Policy"),
+    waitDaysForReply: z.number().min(1).max(14).optional().default(3),
+    cooldownDaysBetweenTouches: z.number().min(1).max(30).optional().default(5),
+    maxTouchesBeforeEscalation: z.number().min(1).max(10).optional().default(4),
+    confirmPTPDaysBefore: z.number().min(0).max(7).optional().default(1),
+    escalationRoute: z.enum(['ATTENTION', 'MANUAL_CALL']).optional().default('ATTENTION'),
+    isDefault: z.boolean().optional().default(true),
+  });
+
+  app.post("/api/collection-policies", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const parseResult = createPolicySchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ 
+          message: "Validation failed", 
+          errors: parseResult.error.flatten().fieldErrors 
+        });
+      }
+
+      const data = parseResult.data;
+
+      // If setting as default, unset other defaults
+      if (data.isDefault) {
+        await db.update(collectionPolicies)
+          .set({ isDefault: false, updatedAt: new Date() })
+          .where(eq(collectionPolicies.tenantId, user.tenantId));
+      }
+
+      const [policy] = await db.insert(collectionPolicies).values({
+        tenantId: user.tenantId,
+        name: data.name,
+        waitDaysForReply: data.waitDaysForReply,
+        cooldownDaysBetweenTouches: data.cooldownDaysBetweenTouches,
+        maxTouchesBeforeEscalation: data.maxTouchesBeforeEscalation,
+        confirmPTPDaysBefore: data.confirmPTPDaysBefore,
+        escalationRoute: data.escalationRoute,
+        isDefault: data.isDefault,
+      }).returning();
+
+      console.log(`✅ Created collection policy: ${policy.id}`);
+
+      res.status(201).json(policy);
+    } catch (error: any) {
+      console.error("Error creating collection policy:", error);
+      res.status(500).json({ message: `Failed to create collection policy: ${error.message}` });
     }
   });
 
