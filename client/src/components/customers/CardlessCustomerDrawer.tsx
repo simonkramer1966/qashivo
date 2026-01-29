@@ -272,6 +272,9 @@ export function CardlessCustomerDrawer({
           // Refresh Conversation feed (preview + outcomes + audit_events)
           queryClient.invalidateQueries({ queryKey: [`/api/contacts/${currentContactId}/preview`] });
           queryClient.invalidateQueries({ queryKey: ['/api/outcomes', currentContactId] });
+          // Refresh dashboard charts (forecast updates with PTPs)
+          queryClient.invalidateQueries({ queryKey: ['/api/dashboard/cash-inflow'] });
+          queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
           return;
         }
         

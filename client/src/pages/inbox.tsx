@@ -106,6 +106,9 @@ export default function InboxPage() {
         description: "The outcome has been reviewed and saved.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/inbox"] });
+      // Refresh dashboard charts (forecast updates with PTPs)
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/cash-inflow'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
       setSelectedItem(null);
     },
     onError: () => {
