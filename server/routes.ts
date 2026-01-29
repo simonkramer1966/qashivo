@@ -5090,12 +5090,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
         const contentToAnalyze = transcriptText || summaryText;
+        
+        // Get current date for context (so AI uses correct year for dates like "28th Feb")
+        const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        const currentYear = new Date().getFullYear();
 
         const completion = await openai.chat.completions.create({
           model: "gpt-4o-mini",
           messages: [{
             role: "system",
-            content: `Analyze this debt collection AI call and extract the outcome. Use these EXACT outcome types:
+            content: `Today's date is ${currentDate}. When interpreting dates mentioned in the call (like "28th February" or "next month"), use the current year ${currentYear} or the next appropriate future date.
+
+Analyze this debt collection AI call and extract the outcome. Use these EXACT outcome types:
 - PROMISE_TO_PAY: Debtor commits to pay on a specific date
 - PAYMENT_IN_PROCESS: Payment is being processed, awaiting authorization, in payment run
 - DISPUTE: Debtor disputes the invoice (pricing, delivery, quality issues)
@@ -5137,59 +5143,85 @@ Return JSON with:
         if (analysis.docsRequested) extracted.docsRequested = analysis.docsRequested;
         if (analysis.summary) extracted.freeTextNotes = analysis.summary;
 
-        // Create outcome
-        const [newOutcome] = await db.insert(outcomes)
-          .values({
+        // Idempotent outcome creation using try/catch for race conditions
+        let newOutcome: any;
+        let wasNewlyCreated = false;
+        
+        try {
+          // Try to create outcome
+          const [createdOutcome] = await db.insert(outcomes)
+            .values({
+              tenantId,
+              debtorId: contactId,
+              invoiceId: linkedInvoiceIds[0] || null,
+              linkedInvoiceIds,
+              type: outcomeType,
+              confidence: String(confidenceScore.toFixed(2)),
+              confidenceBand,
+              requiresHumanReview,
+              extracted,
+              sourceChannel: 'VOICE',
+              sourceMessageId: callId,
+              rawSnippet: (transcriptText || summaryText).substring(0, 200),
+            })
+            .returning();
+          newOutcome = createdOutcome;
+          wasNewlyCreated = true;
+          console.log(`📞 [CALL-STATUS] Created outcome: ${outcomeType} (${confidenceBand})`);
+        } catch (insertError: any) {
+          // If duplicate key error, fetch existing outcome
+          if (insertError?.message?.includes('uniq_outcomes_source') || insertError?.code === '23505') {
+            const [existingOutcome] = await db.select()
+              .from(outcomes)
+              .where(and(
+                eq(outcomes.sourceMessageId, callId),
+                eq(outcomes.sourceChannel, 'VOICE'),
+                eq(outcomes.tenantId, tenantId)
+              ))
+              .limit(1);
+            newOutcome = existingOutcome;
+            console.log(`📞 [CALL-STATUS] Outcome already exists for callId ${callId}, using existing`);
+          } else {
+            throw insertError; // Re-throw non-duplicate errors
+          }
+        }
+
+        // Only process if newly created (not duplicate)
+        if (wasNewlyCreated) {
+          // Write REPLY_RECEIVED audit event with transcript info
+          await workStateService.emitAuditEvent({
             tenantId,
             debtorId: contactId,
-            invoiceId: linkedInvoiceIds[0] || null,
-            linkedInvoiceIds,
-            type: outcomeType,
-            confidence: String(confidenceScore.toFixed(2)),
-            confidenceBand,
-            requiresHumanReview,
-            extracted,
-            sourceChannel: 'VOICE',
-            sourceMessageId: callId,
-            rawSnippet: (transcriptText || summaryText).substring(0, 200),
-          })
-          .returning();
+            invoiceId: linkedInvoiceIds[0] || undefined,
+            actionId: action.id,
+            type: 'REPLY_RECEIVED',
+            summary: `AI call — Completed (${Math.floor(durationSeconds / 60)}m ${durationSeconds % 60}s)`,
+            payload: {
+              channel: 'VOICE',
+              provider: 'RETELL',
+              callId,
+              status: voiceStatus,
+              durationSeconds,
+              transcriptSnippet,
+              summarySnippet,
+              recordingUrl,
+              linkedInvoiceIds,
+              outcomeId: newOutcome.id,
+            },
+            actor: 'SYSTEM',
+          });
 
-        console.log(`📞 [CALL-STATUS] Created outcome: ${outcomeType} (${confidenceBand})`);
+          // Process outcome through Loop routing
+          await workStateService.processOutcome(newOutcome);
 
-        // Write REPLY_RECEIVED audit event with transcript info
-        await workStateService.emitAuditEvent({
-          tenantId,
-          debtorId: contactId,
-          invoiceId: linkedInvoiceIds[0] || undefined,
-          actionId: action.id,
-          type: 'REPLY_RECEIVED',
-          summary: `AI call — Completed (${Math.floor(durationSeconds / 60)}m ${durationSeconds % 60}s)`,
-          payload: {
-            channel: 'VOICE',
-            provider: 'RETELL',
-            callId,
-            status: voiceStatus,
-            durationSeconds,
-            transcriptSnippet,
-            summarySnippet,
-            recordingUrl,
-            linkedInvoiceIds,
-            outcomeId: newOutcome.id,
-          },
-          actor: 'SYSTEM',
-        });
-
-        // Process outcome through Loop routing
-        await workStateService.processOutcome(newOutcome);
-
-        // Update action with voiceProcessedAt
-        await db.update(actions)
-          .set({
-            voiceProcessedAt: new Date(),
-            updatedAt: new Date(),
-          })
-          .where(eq(actions.id, action.id));
+          // Update action with voiceProcessedAt
+          await db.update(actions)
+            .set({
+              voiceProcessedAt: new Date(),
+              updatedAt: new Date(),
+            })
+            .where(eq(actions.id, action.id));
+        }
 
         // Fetch updated action for response
         const [updatedAction] = await db.select()
@@ -5197,7 +5229,10 @@ Return JSON with:
           .where(eq(actions.id, action.id))
           .limit(1);
 
-        const effectLabel = confidenceBand === 'HIGH' ? 'High' : confidenceBand === 'MEDIUM' ? 'Medium' : 'Low';
+        // Use stored outcome data for consistent response
+        const storedOutcomeType = newOutcome?.type || outcomeType;
+        const storedConfidenceBand = newOutcome?.confidenceBand || confidenceBand;
+        const effectLabel = storedConfidenceBand === 'HIGH' ? 'High' : storedConfidenceBand === 'MEDIUM' ? 'Medium' : 'Low';
 
         console.log(`📞 [CALL-STATUS] completed → ${updatedAction.workState}/${updatedAction.inFlightState || '-'}`);
 
@@ -5205,10 +5240,10 @@ Return JSON with:
           status: voiceStatus,
           terminal: true,
           processed: true,
-          outcomeId: newOutcome.id,
+          outcomeId: newOutcome?.id,
           workState: updatedAction.workState,
           inFlightState: updatedAction.inFlightState,
-          message: `Outcome captured: ${outcomeType.replace(/_/g, ' ')} (${effectLabel})`
+          message: `Outcome captured: ${storedOutcomeType.replace(/_/g, ' ')} (${effectLabel})`
         });
       }
 
