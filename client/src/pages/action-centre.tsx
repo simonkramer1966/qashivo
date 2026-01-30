@@ -101,12 +101,13 @@ export default function ActionCentreV2() {
     queryKey: ['/api/action-centre/tabs'],
   });
 
-  const { data: dbAttentionItems = [] } = useQuery<any[], Error, any[]>({
+  const { data: attentionItemsData } = useQuery<{ items: any[]; counts: any }>({
     queryKey: ['/api/attention-items'],
-    select: (data: any) => data?.items || [],
     staleTime: 0,
-    refetchOnMount: true,
+    gcTime: 0,
+    refetchOnMount: 'always',
   });
+  const dbAttentionItems = attentionItemsData?.items || [];
 
   const executedActions = useMemo(() => transformActionsToExecuted(allActions), [allActions]);
   const actionAttentionItems = useMemo(() => transformActionsToAttention(allActions), [allActions]);
