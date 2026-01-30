@@ -1051,12 +1051,12 @@ ${signOff}`);
 
   const getChannelIcon = (channel: string, isVoiceAI?: boolean) => {
     switch (channel) {
-      case "email": return <Mail className="h-4 w-4" />;
-      case "sms": return <MessageSquare className="h-4 w-4" />;
-      case "voice": return <Phone className={cn("h-4 w-4", isVoiceAI && "text-[#0D9488]")} />;
-      case "note": return <StickyNote className="h-4 w-4" />;
-      case "system": return <Settings className="h-4 w-4" />;
-      default: return <Clock className="h-4 w-4" />;
+      case "email": return <Mail className="h-4 w-4 text-blue-500" />;
+      case "sms": return <MessageSquare className="h-4 w-4 text-green-500" />;
+      case "voice": return <Phone className={cn("h-4 w-4", isVoiceAI ? "text-[#0D9488]" : "text-purple-500")} />;
+      case "note": return <StickyNote className="h-4 w-4 text-amber-500" />;
+      case "system": return <Settings className="h-4 w-4 text-gray-400" />;
+      default: return <Clock className="h-4 w-4 text-gray-400" />;
     }
   };
 
@@ -1642,7 +1642,7 @@ ${signOff}`);
                                           onClick={() => toggleTimelineItem(item.id)}
                                           className="group w-full flex items-center py-2.5 hover:bg-gray-50 transition-colors text-left overflow-hidden"
                                         >
-                                          <span className={cn("mr-3 flex-shrink-0", isVoiceAI ? "text-[#0D9488]" : "text-gray-400")}>
+                                          <span className="mr-3 flex-shrink-0">
                                             {getChannelIcon(item.channel, isVoiceAI)}
                                           </span>
                                           
