@@ -2181,28 +2181,28 @@ ${signOff}`);
                     onClick={handleNoteButtonClick}
                     className="flex items-center gap-1.5 h-9 px-2.5 text-sm text-gray-600 font-medium hover:text-gray-900 transition-colors"
                   >
-                    <StickyNote className="h-4 w-4" />
+                    <StickyNote className="h-4 w-4 text-amber-500" />
                     Note
                   </button>
                   <button
                     onClick={handleEmailButtonClick}
                     className="flex items-center gap-1.5 h-9 px-2.5 text-sm text-gray-600 font-medium hover:text-gray-900 transition-colors"
                   >
-                    <Mail className="h-4 w-4" />
+                    <Mail className="h-4 w-4 text-blue-500" />
                     Email
                   </button>
                   <button
                     onClick={handleSmsButtonClick}
                     className="flex items-center gap-1.5 h-9 px-2.5 text-sm text-gray-600 font-medium hover:text-gray-900 transition-colors"
                   >
-                    <MessageSquare className="h-4 w-4" />
+                    <MessageSquare className="h-4 w-4 text-green-500" />
                     SMS
                   </button>
                   <button
                     onClick={handleCallButtonClick}
                     className="flex items-center gap-1.5 h-9 px-2.5 text-sm text-gray-600 font-medium hover:text-gray-900 transition-colors"
                   >
-                    <Phone className="h-4 w-4" />
+                    <Phone className="h-4 w-4 text-purple-500" />
                     Call
                   </button>
                 </div>
