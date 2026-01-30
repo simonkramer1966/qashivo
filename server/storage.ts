@@ -1183,11 +1183,19 @@ export class DatabaseStorage implements IStorage {
       : sortDir;
     const orderByClause = effectiveDir === 'desc' ? desc(sortColumn) : asc(sortColumn);
 
-    // Execute main query with pagination
+    // Execute main query with pagination - includes primary credit contact person
     const results = await db
       .select()
       .from(invoices)
       .leftJoin(contacts, eq(invoices.contactId, contacts.id))
+      .leftJoin(
+        customerContactPersons,
+        and(
+          eq(customerContactPersons.contactId, invoices.contactId),
+          eq(customerContactPersons.tenantId, tenantId),
+          eq(customerContactPersons.isPrimaryCreditControl, true)
+        )
+      )
       .where(whereClause)
       .orderBy(orderByClause)
       .limit(limit)
@@ -1202,7 +1210,7 @@ export class DatabaseStorage implements IStorage {
     
     const total = countResult?.count || 0;
 
-    // Map results and apply consistent contact fallback
+    // Map results and apply consistent contact fallback, including primary credit contact
     const mappedResults = results.map((row) => ({
       ...row.invoices,
       contact: row.contacts || {
@@ -1226,7 +1234,14 @@ export class DatabaseStorage implements IStorage {
         notes: null,
         createdAt: new Date(),
         updatedAt: new Date(),
-      }
+      },
+      primaryCreditContact: row.customer_contact_persons ? {
+        name: row.customer_contact_persons.name,
+        email: row.customer_contact_persons.email,
+        phone: row.customer_contact_persons.phone,
+        smsNumber: row.customer_contact_persons.smsNumber,
+        jobTitle: row.customer_contact_persons.jobTitle,
+      } : null
     }));
 
     console.log(`🎯 SQL filtering results: ${mappedResults.length}/${total} invoices (overdue category: ${overdueCategory})`);

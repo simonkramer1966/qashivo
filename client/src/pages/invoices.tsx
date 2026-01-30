@@ -31,6 +31,13 @@ interface Invoice {
     companyName?: string;
     address?: string;
   };
+  primaryCreditContact?: {
+    name: string;
+    email?: string;
+    phone?: string;
+    smsNumber?: string;
+    jobTitle?: string;
+  } | null;
 }
 
 type SortField = 'date' | 'invoiceNumber' | 'customer' | 'daysOverdue' | 'status' | 'amount';
@@ -266,6 +273,12 @@ export default function Invoices() {
                           <p className="text-[12px] text-slate-500 truncate mt-1">
                             {invoice.contact?.companyName || invoice.contact?.name || 'Unknown'}
                           </p>
+                          <p className="text-[11px] text-slate-400 truncate">
+                            {invoice.primaryCreditContact?.name || invoice.contact?.name}
+                            {(invoice.primaryCreditContact?.phone || invoice.contact?.phone) && (
+                              <span className="ml-2">{invoice.primaryCreditContact?.phone || invoice.contact?.phone}</span>
+                            )}
+                          </p>
                           <div className="flex items-center gap-4 mt-1 text-[12px] text-slate-500">
                             <span className="tabular-nums">{formatCurrency(outstanding)}</span>
                             {daysOverdue > 0 && (
@@ -367,9 +380,11 @@ export default function Invoices() {
                                 {invoice.contact?.companyName || invoice.contact?.name || 'Unknown'}
                               </p>
                               <p className="text-[11px] text-slate-400 truncate">
-                                {invoice.contact?.name}
-                                {invoice.contact?.phone && (
-                                  <span className="ml-2 text-slate-500">{invoice.contact.phone}</span>
+                                {invoice.primaryCreditContact?.name || invoice.contact?.name}
+                                {(invoice.primaryCreditContact?.phone || invoice.contact?.phone) && (
+                                  <span className="ml-2 text-slate-500">
+                                    {invoice.primaryCreditContact?.phone || invoice.contact?.phone}
+                                  </span>
                                 )}
                               </p>
                             </td>
