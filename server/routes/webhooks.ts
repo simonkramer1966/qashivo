@@ -1,6 +1,6 @@
 import type { Express, Request, Response } from "express";
 import { db } from "../db";
-import { inboundMessages, contacts, emailMessages, detectedOutcomes, actions, invoices, timelineEvents } from "@shared/schema";
+import { inboundMessages, contacts, emailMessages, detectedOutcomes, actions, invoices, timelineEvents, outcomes } from "@shared/schema";
 import { intentAnalyst } from "../services/intentAnalyst";
 import { detectOutcomeFromText } from "../services/outcomeDetection";
 import { eq, or, and } from "drizzle-orm";
@@ -717,12 +717,12 @@ export function registerWebhookRoutes(app: Express) {
    */
   app.post("/api/webhooks/retell/call-ended", async (req: Request, res: Response) => {
     try {
-      console.log('🎙️  Received Custom LLM call ended webhook from Retell');
+      console.log('🎙️  [WEBHOOK] Received call-ended webhook from Retell');
       
       // Handle nested call data structure
       const callData = req.body?.call || req.body;
       if (!callData || typeof callData !== 'object') {
-        console.log('⚠️  Invalid call data structure');
+        console.log('⚠️  [WEBHOOK] Invalid call data structure');
         return res.status(200).json({ message: 'Invalid payload' });
       }
       
@@ -730,23 +730,233 @@ export function registerWebhookRoutes(app: Express) {
         call_id,
         call_status,
         end_timestamp,
+        start_timestamp,
         transcript,
         call_analysis,
         metadata,
-        retell_llm_dynamic_variables
+        retell_llm_dynamic_variables,
+        disconnection_reason,
+        recording_url
       } = callData;
 
       // Extract metadata (could be in metadata or retell_llm_dynamic_variables)
       const callMetadata = metadata || retell_llm_dynamic_variables || {};
       
       if (!callMetadata.tenant_id || !callMetadata.contact_id) {
-        console.log('⚠️  Missing tenant or contact in call metadata');
+        console.log('⚠️  [WEBHOOK] Missing tenant or contact in call metadata');
         return res.status(200).json({ message: 'Missing metadata' });
       }
 
+      const tenantId = callMetadata.tenant_id;
+      const contactId = callMetadata.contact_id;
+      const actionId = callMetadata.action_id;
+      const linkedInvoiceIds: string[] = callMetadata.invoice_id ? [callMetadata.invoice_id] : [];
+
       const { storage } = await import("../storage");
       const { eventBus } = await import("../lib/event-bus");
+      const { WorkStateService } = await import("../services/workStateService");
+      const { AttentionItemService } = await import("../services/attentionItemService");
+      const workStateService = new WorkStateService();
+      const attentionService = new AttentionItemService();
 
+      // Calculate duration
+      const durationSeconds = start_timestamp && end_timestamp
+        ? Math.round((end_timestamp - start_timestamp) / 1000)
+        : 0;
+
+      // Map Retell status to voiceStatus (same logic as polling)
+      let voiceStatus: 'completed' | 'no_answer' | 'busy' | 'voicemail' | 'failed' | 'in_progress' = 'completed';
+      const disconnectReason = disconnection_reason || '';
+      
+      if (call_status === 'ended') {
+        if (disconnectReason.includes('no_answer') || disconnectReason === 'no_audio_timeout') {
+          voiceStatus = 'no_answer';
+        } else if (disconnectReason.includes('busy') || disconnectReason === 'line_busy') {
+          voiceStatus = 'busy';
+        } else if (disconnectReason.includes('voicemail') || disconnectReason === 'voicemail_reached') {
+          voiceStatus = 'voicemail';
+        } else if (disconnectReason.includes('fail') || disconnectReason === 'call_transfer_failed') {
+          voiceStatus = 'failed';
+        } else {
+          voiceStatus = 'completed';
+        }
+      } else if (call_status === 'error') {
+        voiceStatus = 'failed';
+      }
+
+      console.log(`🎙️  [WEBHOOK] Call ${call_id} - status: ${voiceStatus}, duration: ${durationSeconds}s`);
+
+      // Prepare transcript snippets
+      let transcriptText = '';
+      let transcriptArray: Array<{role: string; content: string}> = [];
+      
+      if (typeof transcript === 'string') {
+        transcriptText = transcript;
+      } else if (Array.isArray(transcript)) {
+        transcriptArray = transcript.filter(
+          (t: any) => t && typeof t === 'object' && typeof t.role === 'string' && typeof t.content === 'string'
+        );
+        transcriptText = transcriptArray.map(t => `${t.role}: ${t.content}`).join('\n');
+      }
+
+      const transcriptSnippet = transcriptText ? transcriptText.substring(0, 500) : null;
+      const summarySnippet = call_analysis?.call_summary?.substring(0, 240) || null;
+
+      // Check if action exists and hasn't been processed yet (idempotency)
+      if (actionId) {
+        const [existingAction] = await db.select()
+          .from(actions)
+          .where(and(
+            eq(actions.id, actionId),
+            eq(actions.tenantId, tenantId)
+          ))
+          .limit(1);
+
+        if (existingAction?.voiceProcessedAt) {
+          console.log(`🎙️  [WEBHOOK] Call ${call_id} already processed at ${existingAction.voiceProcessedAt}, skipping`);
+          return res.status(200).json({ message: 'Already processed', call_id });
+        }
+
+        // Update action with voice tracking fields
+        await db.update(actions)
+          .set({
+            voiceStatus,
+            voiceCompletedAt: new Date(),
+            voiceTranscriptSnippet: transcriptSnippet,
+            voiceSummarySnippet: summarySnippet,
+            voiceRecordingUrl: recording_url || null,
+            voiceLastPolledAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(actions.id, actionId));
+      }
+
+      // HANDLE NON-COMPLETED STATUSES (no_answer, busy, voicemail → COOLDOWN)
+      if (['no_answer', 'busy', 'voicemail'].includes(voiceStatus) && actionId) {
+        // Write REPLY_RECEIVED audit event
+        await workStateService.emitAuditEvent({
+          tenantId,
+          debtorId: contactId,
+          invoiceId: linkedInvoiceIds[0] || undefined,
+          actionId,
+          type: 'REPLY_RECEIVED',
+          summary: `AI call — ${voiceStatus === 'no_answer' ? 'No answer' : voiceStatus === 'busy' ? 'Busy' : 'Voicemail'}${durationSeconds > 0 ? ` (${Math.floor(durationSeconds / 60)}m ${durationSeconds % 60}s)` : ''}`,
+          payload: {
+            channel: 'VOICE',
+            provider: 'RETELL',
+            callId: call_id,
+            status: voiceStatus,
+            durationSeconds,
+            linkedInvoiceIds,
+          },
+          actor: 'SYSTEM',
+        });
+
+        // Get cooldown policy
+        const policy = await workStateService.getPolicy(tenantId);
+        const cooldownDays = policy?.cooldownDays || 2;
+        const cooldownUntil = new Date(Date.now() + cooldownDays * 24 * 60 * 60 * 1000);
+
+        // Update action to COOLDOWN
+        await db.update(actions)
+          .set({
+            workState: 'IN_FLIGHT',
+            inFlightState: 'COOLDOWN',
+            cooldownUntil,
+            voiceProcessedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(actions.id, actionId));
+
+        // Emit STATE_CHANGED
+        await workStateService.emitAuditEvent({
+          tenantId,
+          debtorId: contactId,
+          invoiceId: linkedInvoiceIds[0] || undefined,
+          actionId,
+          type: 'STATE_CHANGED',
+          summary: `Action entered cooldown (${cooldownDays} days) after ${voiceStatus}`,
+          payload: { cooldownDays, cooldownUntil, voiceStatus },
+          actor: 'SYSTEM',
+        });
+
+        console.log(`🎙️  [WEBHOOK] ${voiceStatus} → COOLDOWN for ${cooldownDays} days`);
+
+        return res.status(200).json({
+          message: 'Call ended processed',
+          call_id,
+          voiceStatus,
+          workState: 'IN_FLIGHT',
+          inFlightState: 'COOLDOWN'
+        });
+      }
+
+      // HANDLE FAILED STATUS → ATTENTION
+      if (voiceStatus === 'failed' && actionId) {
+        // Write REPLY_RECEIVED audit event
+        await workStateService.emitAuditEvent({
+          tenantId,
+          debtorId: contactId,
+          invoiceId: linkedInvoiceIds[0] || undefined,
+          actionId,
+          type: 'REPLY_RECEIVED',
+          summary: `AI call — Failed`,
+          payload: {
+            channel: 'VOICE',
+            provider: 'RETELL',
+            callId: call_id,
+            status: voiceStatus,
+            disconnectionReason: disconnectReason,
+            linkedInvoiceIds,
+          },
+          actor: 'SYSTEM',
+        });
+
+        // Create attention item
+        await attentionService.createItem({
+          tenantId,
+          debtorId: contactId,
+          invoiceId: linkedInvoiceIds[0] || null,
+          type: 'DELIVERY_FAILED',
+          title: 'Voice call delivery failed',
+          description: `Call failed: ${disconnectReason || 'Unknown reason'}`,
+          severity: 'medium',
+        });
+
+        // Update action to ATTENTION
+        await db.update(actions)
+          .set({
+            workState: 'ATTENTION',
+            inFlightState: 'DELIVERY_FAILED',
+            voiceProcessedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(actions.id, actionId));
+
+        // Emit ROUTED_TO_ATTENTION
+        await workStateService.emitAuditEvent({
+          tenantId,
+          debtorId: contactId,
+          invoiceId: linkedInvoiceIds[0] || undefined,
+          actionId,
+          type: 'ROUTED_TO_ATTENTION',
+          summary: 'Call delivery failed, routed to attention',
+          payload: { attentionItemType: 'DELIVERY_FAILED', disconnectionReason: disconnectReason },
+          actor: 'SYSTEM',
+        });
+
+        console.log(`🎙️  [WEBHOOK] failed → ATTENTION (DELIVERY_FAILED)`);
+
+        return res.status(200).json({
+          message: 'Call ended processed',
+          call_id,
+          voiceStatus,
+          workState: 'ATTENTION',
+          inFlightState: 'DELIVERY_FAILED'
+        });
+      }
+
+      // COMPLETED CALL - Extract intent and process outcome
       // Extract captured PTP from call analysis or transcript
       let capturedPtp: { amount?: string; date?: string } | null = null;
       let capturedDispute: string | null = null;
@@ -775,20 +985,7 @@ export function registerWebhookRoutes(app: Express) {
         }
       }
 
-      // Parse transcript for PTP if not in analysis
-      // Handle both array of objects [{role, content}] and string format
-      let transcriptText = '';
-      let transcriptArray: Array<{role: string; content: string}> = [];
-      
-      if (typeof transcript === 'string') {
-        transcriptText = transcript;
-      } else if (Array.isArray(transcript)) {
-        transcriptArray = transcript.filter(
-          (t: any) => t && typeof t === 'object' && typeof t.role === 'string' && typeof t.content === 'string'
-        );
-        transcriptText = transcriptArray.map(t => `${t.role}: ${t.content}`).join('\n');
-      }
-      
+      // Parse transcript for PTP if not already in analysis (using transcriptText from above)
       if (!capturedPtp && transcriptText) {
         // Look for payment commitment patterns
         const ptpDatePattern = /(?:pay|commit|promise).*?(?:by|on|before)\s+(\d{1,2}(?:st|nd|rd|th)?(?:\s+(?:of\s+)?(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*)?|\w+day|tomorrow|next\s+\w+)/i;
@@ -927,7 +1124,277 @@ export function registerWebhookRoutes(app: Express) {
         }).catch(err => console.error('Failed to process outcome:', err));
       }
 
-      console.log(`✅ Charlie voice call processed: ${call_id} - outcome: ${callOutcome}`);
+      console.log(`🎙️  [WEBHOOK] Outcome extracted: ${callOutcome}`);
+
+      // For completed calls, create detected outcome and route via workStateService
+      if (voiceStatus === 'completed' && actionId) {
+        const summaryText = call_analysis?.call_summary || '';
+
+        // Check if we have content to extract from
+        if (!transcriptText && !summaryText) {
+          // No transcript, create DATA_QUALITY attention item
+          await attentionService.createItem({
+            tenantId,
+            debtorId: contactId,
+            invoiceId: linkedInvoiceIds[0] || null,
+            type: 'DATA_QUALITY',
+            subtype: 'VOICE_TRANSCRIPT_MISSING',
+            title: 'Voice call transcript missing',
+            description: 'Call completed but no transcript available for analysis',
+            severity: 'medium',
+          });
+
+          // Update action to ATTENTION
+          await db.update(actions)
+            .set({
+              workState: 'ATTENTION',
+              voiceProcessedAt: new Date(),
+              updatedAt: new Date(),
+            })
+            .where(eq(actions.id, actionId));
+
+          // Emit ROUTED_TO_ATTENTION
+          await workStateService.emitAuditEvent({
+            tenantId,
+            debtorId: contactId,
+            invoiceId: linkedInvoiceIds[0] || undefined,
+            actionId,
+            type: 'ROUTED_TO_ATTENTION',
+            summary: 'Transcript missing, routed to attention for manual review',
+            payload: { attentionItemType: 'DATA_QUALITY', subtype: 'VOICE_TRANSCRIPT_MISSING' },
+            actor: 'SYSTEM',
+          });
+
+          console.log(`🎙️  [WEBHOOK] completed but no transcript → ATTENTION`);
+
+          return res.status(200).json({
+            message: 'Call ended processed',
+            call_id,
+            voiceStatus,
+            workState: 'ATTENTION',
+            transcriptMissing: true
+          });
+        }
+
+        // Check if outcome already exists for this call (skip OpenAI if duplicate)
+        const [existingOutcome] = await db.select()
+          .from(outcomes)
+          .where(and(
+            eq(outcomes.sourceMessageId, call_id),
+            eq(outcomes.sourceChannel, 'VOICE'),
+            eq(outcomes.tenantId, tenantId)
+          ))
+          .limit(1);
+
+        if (existingOutcome) {
+          console.log(`🎙️  [WEBHOOK] Outcome already exists for call ${call_id}, skipping OpenAI analysis`);
+          
+          // Check if action was already processed (voiceProcessedAt set)
+          const [currentAction] = await db.select()
+            .from(actions)
+            .where(eq(actions.id, actionId))
+            .limit(1);
+
+          // If NOT already processed, we need to complete routing (crash recovery scenario)
+          if (currentAction && !currentAction.voiceProcessedAt) {
+            console.log(`🎙️  [WEBHOOK] Outcome exists but action not processed - completing routing`);
+            
+            // Route the existing outcome
+            await workStateService.processOutcome(existingOutcome);
+            
+            // Emit audit event for crash recovery
+            await workStateService.emitAuditEvent({
+              tenantId,
+              debtorId: contactId,
+              invoiceId: linkedInvoiceIds[0] || undefined,
+              actionId,
+              type: 'REPLY_RECEIVED',
+              summary: `AI call — Completed (${Math.floor(durationSeconds / 60)}m ${durationSeconds % 60}s) [recovered]`,
+              payload: {
+                channel: 'VOICE',
+                provider: 'RETELL',
+                callId: call_id,
+                status: voiceStatus,
+                outcomeId: existingOutcome.id,
+                recovered: true,
+              },
+              actor: 'SYSTEM',
+            });
+          }
+          
+          // Update voiceProcessedAt for idempotency
+          await db.update(actions)
+            .set({
+              voiceProcessedAt: new Date(),
+              updatedAt: new Date(),
+            })
+            .where(eq(actions.id, actionId));
+
+          // Fetch updated action for response
+          const [updatedAction] = await db.select()
+            .from(actions)
+            .where(eq(actions.id, actionId))
+            .limit(1);
+
+          return res.status(200).json({
+            message: 'Call ended processed (existing outcome)',
+            call_id,
+            voiceStatus,
+            workState: updatedAction?.workState,
+            outcomeType: existingOutcome.type,
+            duplicate: true,
+            recovered: !currentAction?.voiceProcessedAt
+          });
+        }
+
+        // Run intent extraction with OpenAI
+        const OpenAI = (await import('openai')).default;
+        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+        const contentToAnalyze = transcriptText || summaryText;
+        const currentDate = new Date().toISOString().split('T')[0];
+        const currentYear = new Date().getFullYear();
+
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [{
+            role: "system",
+            content: `Today's date is ${currentDate}. When interpreting dates mentioned in the call (like "28th February" or "next month"), use the current year ${currentYear} or the next appropriate future date.
+
+Analyze this debt collection AI call and extract the outcome. Use these EXACT outcome types:
+- PROMISE_TO_PAY: Debtor commits to pay on a specific date
+- PAYMENT_IN_PROCESS: Payment is being processed, awaiting authorization, in payment run
+- DISPUTE: Debtor disputes the invoice (pricing, delivery, quality issues)
+- DOCS_REQUESTED: Debtor requests invoice copy, statement, PO, or remittance
+- REQUEST_CALL_BACK: Debtor asks to be called back or speak to someone else
+- CONTACT_ISSUE: Wrong number, contact no longer works there, etc.
+- CANNOT_PAY: Debtor explicitly cannot pay (financial difficulties)
+- BANK_DETAILS_CHANGE_REQUEST: Debtor wants to change bank details (ALWAYS flag for review)
+- OUT_OF_OFFICE: Contact is away/on leave
+- NO_RESPONSE: Debtor acknowledged but gave no commitment
+- CONFIRMATION: Simple acknowledgment without commitment
+
+Return JSON with:
+- type: One of the outcome types above
+- confidence: 0-100 (how confident are you)
+- promisedPaymentDate: ISO date string if PTP mentioned
+- promisedPaymentAmount: number if amount mentioned
+- disputeCategory: PRICING|DELIVERY|QUALITY|OTHER if dispute
+- docsRequested: array of INVOICE_COPY|STATEMENT|REMITTANCE|PO if docs requested
+- summary: Brief 1-2 sentence summary`
+          }, {
+            role: "user",
+            content: contentToAnalyze
+          }],
+          response_format: { type: "json_object" }
+        });
+
+        const analysis = JSON.parse(completion.choices[0].message.content || '{}');
+        const outcomeType = analysis.type || 'NO_RESPONSE';
+        const confidenceScore = (analysis.confidence || 70) / 100;
+        const confidenceBand = confidenceScore >= 0.85 ? 'HIGH' : confidenceScore >= 0.65 ? 'MEDIUM' : 'LOW';
+        const requiresHumanReview = confidenceScore < 0.65 || ['BANK_DETAILS_CHANGE_REQUEST', 'DISPUTE'].includes(outcomeType);
+
+        // Build extracted data
+        const extracted: Record<string, any> = {};
+        if (analysis.promisedPaymentDate) extracted.promisedPaymentDate = analysis.promisedPaymentDate;
+        if (analysis.promisedPaymentAmount) extracted.promisedPaymentAmount = analysis.promisedPaymentAmount;
+        if (analysis.disputeCategory) extracted.disputeCategory = analysis.disputeCategory;
+        if (analysis.docsRequested) extracted.docsRequested = analysis.docsRequested;
+        if (analysis.summary) extracted.freeTextNotes = analysis.summary;
+
+        // Idempotent outcome creation using try/catch for race conditions
+        let newOutcome: any;
+        let wasNewlyCreated = false;
+        
+        try {
+          // Try to create outcome
+          const [createdOutcome] = await db.insert(outcomes)
+            .values({
+              tenantId,
+              debtorId: contactId,
+              invoiceId: linkedInvoiceIds[0] || null,
+              linkedInvoiceIds,
+              type: outcomeType,
+              confidence: String(confidenceScore.toFixed(2)),
+              confidenceBand,
+              requiresHumanReview,
+              extracted,
+              sourceChannel: 'VOICE',
+              sourceMessageId: call_id,
+              rawSnippet: contentToAnalyze.substring(0, 200),
+            })
+            .returning();
+          newOutcome = createdOutcome;
+          wasNewlyCreated = true;
+          console.log(`🎙️  [WEBHOOK] Created outcome: ${outcomeType} (${confidenceBand})`);
+        } catch (insertError: any) {
+          // If duplicate key error, fetch existing outcome
+          if (insertError?.message?.includes('uniq_outcomes_source') || insertError?.code === '23505') {
+            const [existingOutcome] = await db.select()
+              .from(outcomes)
+              .where(and(
+                eq(outcomes.sourceMessageId, call_id),
+                eq(outcomes.sourceChannel, 'VOICE'),
+                eq(outcomes.tenantId, tenantId)
+              ))
+              .limit(1);
+            newOutcome = existingOutcome;
+            console.log(`🎙️  [WEBHOOK] Outcome already exists for callId ${call_id}, using existing`);
+          } else {
+            throw insertError;
+          }
+        }
+
+        // Process outcome and update action
+        if (newOutcome) {
+          // Only emit audit event and route if newly created (avoid duplicate processing)
+          if (wasNewlyCreated) {
+            // Write REPLY_RECEIVED audit event
+            await workStateService.emitAuditEvent({
+              tenantId,
+              debtorId: contactId,
+              invoiceId: linkedInvoiceIds[0] || undefined,
+              actionId,
+              type: 'REPLY_RECEIVED',
+              summary: `AI call — Completed (${Math.floor(durationSeconds / 60)}m ${durationSeconds % 60}s)`,
+              payload: {
+                channel: 'VOICE',
+                provider: 'RETELL',
+                callId: call_id,
+                status: voiceStatus,
+                durationSeconds,
+                transcriptSnippet,
+                summarySnippet,
+                recordingUrl: recording_url,
+                linkedInvoiceIds,
+                outcomeId: newOutcome.id,
+              },
+              actor: 'SYSTEM',
+            });
+
+            // Process outcome through Loop routing
+            await workStateService.processOutcome(newOutcome);
+          }
+
+          // ALWAYS update action with voiceProcessedAt (even for duplicate outcomes)
+          // This ensures idempotency - subsequent webhooks will short-circuit early
+          await db.update(actions)
+            .set({
+              voiceProcessedAt: new Date(),
+              updatedAt: new Date(),
+            })
+            .where(eq(actions.id, actionId));
+        }
+
+        // Fetch updated action for response
+        const [updatedAction] = await db.select()
+          .from(actions)
+          .where(eq(actions.id, actionId))
+          .limit(1);
+
+        console.log(`🎙️  [WEBHOOK] completed → ${updatedAction?.workState}/${updatedAction?.inFlightState || '-'} (${wasNewlyCreated ? 'new' : 'duplicate'})`);
+      }
 
       // Update the timeline event with call results
       if (callMetadata.action_id) {

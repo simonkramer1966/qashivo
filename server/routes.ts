@@ -4736,7 +4736,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Poll system call status from Retell API and update timeline when complete
+  /**
+   * @deprecated POLLING DEPRECATED - Webhook now handles all call processing
+   * 
+   * This endpoint is kept as a fallback in case webhook doesn't arrive.
+   * Primary processing now happens via POST /api/webhooks/retell/call-ended
+   * 
+   * The webhook handles:
+   * - voiceStatus/voiceProcessedAt updates
+   * - Outcome creation in outcomes table
+   * - Work state routing (COOLDOWN, ATTENTION, etc.)
+   * - Timeline event updates
+   * 
+   * This polling endpoint now returns cached results if webhook already processed.
+   */
   app.get("/api/contacts/:contactId/call-status/:callId", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -4748,6 +4761,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { actionId } = req.query;
       const tenantId = user.tenantId;
 
+      console.log(`📞 [CALL-STATUS] ⚠️ DEPRECATED - Polling endpoint (webhook preferred)`);
       console.log(`📞 [CALL-STATUS] callId=${callId}, contactId=${contactId}, actionId=${actionId}`);
 
       if (!callId) {
