@@ -1194,41 +1194,91 @@ ${signOff}`);
                           <Info className="h-3 w-3" />
                         </button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-80 p-3" align="start">
-                        <div className="space-y-2">
-                          <h4 className="font-medium text-sm text-gray-900">Template Variables</h4>
-                          <p className="text-xs text-gray-500 mb-2">Use these in email/SMS templates</p>
-                          <div className="space-y-1.5 text-xs">
-                            <div className="flex justify-between py-1 border-b border-gray-100">
-                              <code className="text-blue-600 bg-blue-50 px-1 rounded">{"{firstName}"}</code>
-                              <span className="text-gray-500">{preview?.creditControlContact?.name?.split(' ')[0] || 'First name'}</span>
+                      <PopoverContent className="w-96 p-3" align="start">
+                        {(() => {
+                          const primaryContact = preview?.allCreditControlContacts?.find(c => c.isPrimary) || preview?.creditControlContact;
+                          return (
+                            <div className="space-y-3">
+                              <div>
+                                <h4 className="font-medium text-sm text-gray-900">Email/SMS Variables</h4>
+                                <div className="space-y-1 text-xs mt-2">
+                                  <div className="flex justify-between py-1 border-b border-gray-100">
+                                    <code className="text-blue-600 bg-blue-50 px-1 rounded">{"{firstName}"}</code>
+                                    <span className="text-gray-500 truncate ml-2">{primaryContact?.name?.split(' ')[0] || '—'}</span>
+                                  </div>
+                                  <div className="flex justify-between py-1 border-b border-gray-100">
+                                    <code className="text-blue-600 bg-blue-50 px-1 rounded">{"{customerName}"}</code>
+                                    <span className="text-gray-500 truncate ml-2">{primaryContact?.name || '—'}</span>
+                                  </div>
+                                  <div className="flex justify-between py-1 border-b border-gray-100">
+                                    <code className="text-blue-600 bg-blue-50 px-1 rounded">{"{companyName}"}</code>
+                                    <span className="text-gray-500 truncate ml-2">{preview?.customer?.companyName || '—'}</span>
+                                  </div>
+                                  <div className="flex justify-between py-1 border-b border-gray-100">
+                                    <code className="text-blue-600 bg-blue-50 px-1 rounded">{"{amount}"}</code>
+                                    <span className="text-gray-500">Invoice amount</span>
+                                  </div>
+                                  <div className="flex justify-between py-1 border-b border-gray-100">
+                                    <code className="text-blue-600 bg-blue-50 px-1 rounded">{"{invoiceNumber}"}</code>
+                                    <span className="text-gray-500">Invoice ref</span>
+                                  </div>
+                                  <div className="flex justify-between py-1 border-b border-gray-100">
+                                    <code className="text-blue-600 bg-blue-50 px-1 rounded">{"{dueDate}"}</code>
+                                    <span className="text-gray-500">Due date</span>
+                                  </div>
+                                  <div className="flex justify-between py-1">
+                                    <code className="text-blue-600 bg-blue-50 px-1 rounded">{"{daysOverdue}"}</code>
+                                    <span className="text-gray-500">Days overdue</span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="border-t border-gray-200 pt-2">
+                                <h4 className="font-medium text-sm text-gray-900 flex items-center gap-1">
+                                  <Mic className="h-3 w-3" /> AI Voice Variables
+                                </h4>
+                                <p className="text-xs text-gray-400 mb-2">Sent to Retell (snake_case)</p>
+                                <div className="space-y-1 text-xs">
+                                  <div className="flex justify-between py-1 border-b border-gray-100">
+                                    <code className="text-purple-600 bg-purple-50 px-1 rounded">customer_name</code>
+                                    <span className="text-gray-500 truncate ml-2">{primaryContact?.name || '—'}</span>
+                                  </div>
+                                  <div className="flex justify-between py-1 border-b border-gray-100">
+                                    <code className="text-purple-600 bg-purple-50 px-1 rounded">company_name</code>
+                                    <span className="text-gray-500 truncate ml-2">{preview?.customer?.companyName || '—'}</span>
+                                  </div>
+                                  <div className="flex justify-between py-1 border-b border-gray-100">
+                                    <code className="text-purple-600 bg-purple-50 px-1 rounded">total_outstanding</code>
+                                    <span className="text-gray-500">Total owed</span>
+                                  </div>
+                                  <div className="flex justify-between py-1 border-b border-gray-100">
+                                    <code className="text-purple-600 bg-purple-50 px-1 rounded">invoice_count</code>
+                                    <span className="text-gray-500">Number of invoices</span>
+                                  </div>
+                                  <div className="flex justify-between py-1 border-b border-gray-100">
+                                    <code className="text-purple-600 bg-purple-50 px-1 rounded">invoice_number</code>
+                                    <span className="text-gray-500">Invoice ref</span>
+                                  </div>
+                                  <div className="flex justify-between py-1 border-b border-gray-100">
+                                    <code className="text-purple-600 bg-purple-50 px-1 rounded">invoice_amount</code>
+                                    <span className="text-gray-500">Single invoice amount</span>
+                                  </div>
+                                  <div className="flex justify-between py-1 border-b border-gray-100">
+                                    <code className="text-purple-600 bg-purple-50 px-1 rounded">due_date</code>
+                                    <span className="text-gray-500">Payment due date</span>
+                                  </div>
+                                  <div className="flex justify-between py-1 border-b border-gray-100">
+                                    <code className="text-purple-600 bg-purple-50 px-1 rounded">days_overdue</code>
+                                    <span className="text-gray-500">Days past due</span>
+                                  </div>
+                                  <div className="flex justify-between py-1">
+                                    <code className="text-purple-600 bg-purple-50 px-1 rounded">custom_message</code>
+                                    <span className="text-gray-500">Additional context</span>
+                                  </div>
+                                </div>
+                              </div>
                             </div>
-                            <div className="flex justify-between py-1 border-b border-gray-100">
-                              <code className="text-blue-600 bg-blue-50 px-1 rounded">{"{customerName}"}</code>
-                              <span className="text-gray-500">{preview?.customer?.name || 'Full name'}</span>
-                            </div>
-                            <div className="flex justify-between py-1 border-b border-gray-100">
-                              <code className="text-blue-600 bg-blue-50 px-1 rounded">{"{companyName}"}</code>
-                              <span className="text-gray-500">{preview?.customer?.companyName || 'Company'}</span>
-                            </div>
-                            <div className="flex justify-between py-1 border-b border-gray-100">
-                              <code className="text-blue-600 bg-blue-50 px-1 rounded">{"{amount}"}</code>
-                              <span className="text-gray-500">Invoice amount</span>
-                            </div>
-                            <div className="flex justify-between py-1 border-b border-gray-100">
-                              <code className="text-blue-600 bg-blue-50 px-1 rounded">{"{invoiceNumber}"}</code>
-                              <span className="text-gray-500">Invoice ref</span>
-                            </div>
-                            <div className="flex justify-between py-1 border-b border-gray-100">
-                              <code className="text-blue-600 bg-blue-50 px-1 rounded">{"{dueDate}"}</code>
-                              <span className="text-gray-500">Due date</span>
-                            </div>
-                            <div className="flex justify-between py-1">
-                              <code className="text-blue-600 bg-blue-50 px-1 rounded">{"{daysOverdue}"}</code>
-                              <span className="text-gray-500">Days overdue</span>
-                            </div>
-                          </div>
-                        </div>
+                          );
+                        })()}
                       </PopoverContent>
                     </Popover>
                   </>
