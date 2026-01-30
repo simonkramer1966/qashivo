@@ -2757,7 +2757,9 @@ ${signOff}`);
                     </div>
                     <div className="flex justify-between text-sm gap-4">
                       <span className="text-gray-500 flex-shrink-0">invoiceAmount</span>
-                      <span className="text-gray-900 font-medium text-right">{preview?.customer?.outstandingTotal || 0}</span>
+                      <span className="text-gray-900 font-medium text-right">
+                        {preview?.invoices?.sort((a, b) => (b.daysOverdue || 0) - (a.daysOverdue || 0))[0]?.amountDue || 0}
+                      </span>
                     </div>
                     <div className="flex justify-between text-sm gap-4">
                       <span className="text-gray-500 flex-shrink-0">totalOutstanding</span>
@@ -2799,7 +2801,10 @@ ${signOff}`);
                     </div>
                     <div className="flex justify-between text-sm gap-4">
                       <span className="text-gray-500 flex-shrink-0">totalOverdue</span>
-                      <span className="text-gray-900 font-medium text-right">{preview?.customer?.outstandingTotal || 0}</span>
+                      <span className="text-gray-900 font-medium text-right">
+                        {preview?.invoices?.filter(inv => (inv.daysOverdue || 0) > 0)
+                          .reduce((sum, inv) => sum + (inv.amountDue || 0), 0) || 0}
+                      </span>
                     </div>
                     <div className="flex justify-between text-sm gap-4">
                       <span className="text-gray-500 flex-shrink-0">overdueCount</span>
