@@ -16,6 +16,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -1177,11 +1182,56 @@ ${signOff}`);
         <SheetHeader className="px-6 pt-5 pb-4 flex-shrink-0 border-b border-gray-100">
           <div className="flex items-start justify-between">
             <div>
-              <SheetTitle className="text-xl font-bold text-gray-900">
+              <SheetTitle className="text-xl font-bold text-gray-900 flex items-center gap-2">
                 {isLoading ? (
                   <Skeleton className="h-6 w-48" />
                 ) : (
-                  preview?.customer.companyName || preview?.customer.name || "Customer"
+                  <>
+                    {preview?.customer.companyName || preview?.customer.name || "Customer"}
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-gray-300 text-gray-400 hover:text-gray-600 hover:border-gray-400 transition-colors">
+                          <Info className="h-3 w-3" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-80 p-3" align="start">
+                        <div className="space-y-2">
+                          <h4 className="font-medium text-sm text-gray-900">Template Variables</h4>
+                          <p className="text-xs text-gray-500 mb-2">Use these in email/SMS templates</p>
+                          <div className="space-y-1.5 text-xs">
+                            <div className="flex justify-between py-1 border-b border-gray-100">
+                              <code className="text-blue-600 bg-blue-50 px-1 rounded">{"{firstName}"}</code>
+                              <span className="text-gray-500">{preview?.creditControlContact?.name?.split(' ')[0] || 'First name'}</span>
+                            </div>
+                            <div className="flex justify-between py-1 border-b border-gray-100">
+                              <code className="text-blue-600 bg-blue-50 px-1 rounded">{"{customerName}"}</code>
+                              <span className="text-gray-500">{preview?.customer?.name || 'Full name'}</span>
+                            </div>
+                            <div className="flex justify-between py-1 border-b border-gray-100">
+                              <code className="text-blue-600 bg-blue-50 px-1 rounded">{"{companyName}"}</code>
+                              <span className="text-gray-500">{preview?.customer?.companyName || 'Company'}</span>
+                            </div>
+                            <div className="flex justify-between py-1 border-b border-gray-100">
+                              <code className="text-blue-600 bg-blue-50 px-1 rounded">{"{amount}"}</code>
+                              <span className="text-gray-500">Invoice amount</span>
+                            </div>
+                            <div className="flex justify-between py-1 border-b border-gray-100">
+                              <code className="text-blue-600 bg-blue-50 px-1 rounded">{"{invoiceNumber}"}</code>
+                              <span className="text-gray-500">Invoice ref</span>
+                            </div>
+                            <div className="flex justify-between py-1 border-b border-gray-100">
+                              <code className="text-blue-600 bg-blue-50 px-1 rounded">{"{dueDate}"}</code>
+                              <span className="text-gray-500">Due date</span>
+                            </div>
+                            <div className="flex justify-between py-1">
+                              <code className="text-blue-600 bg-blue-50 px-1 rounded">{"{daysOverdue}"}</code>
+                              <span className="text-gray-500">Days overdue</span>
+                            </div>
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </>
                 )}
               </SheetTitle>
               <SheetDescription className="text-sm text-gray-500 mt-0.5">
