@@ -276,7 +276,7 @@ export function CardlessCustomerDrawer({
           
           // Refresh Conversation feed (preview + outcomes + audit_events)
           queryClient.invalidateQueries({ queryKey: [`/api/contacts/${currentContactId}/preview`] });
-          queryClient.invalidateQueries({ queryKey: ['/api/outcomes', currentContactId] });
+          queryClient.invalidateQueries({ queryKey: ['/api/outcomes', { debtorId: currentContactId }] });
           // Refresh dashboard charts (forecast updates with PTPs)
           // Use predicate to match all queries starting with these prefixes (handles parameterized keys)
           // refetchType: 'all' forces refetch even if queries aren't actively observed

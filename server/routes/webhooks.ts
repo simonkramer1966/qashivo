@@ -1132,22 +1132,31 @@ export function registerWebhookRoutes(app: Express) {
 
         // Check if we have content to extract from
         if (!transcriptText && !summaryText) {
-          // No transcript, create DATA_QUALITY attention item
-          await attentionService.createItem({
+          console.log(`🎙️  [WEBHOOK] No transcript/summary for call ${call_id} - marking for attention`);
+          
+          // Emit audit event for missing transcript
+          await workStateService.emitAuditEvent({
             tenantId,
             debtorId: contactId,
-            invoiceId: linkedInvoiceIds[0] || null,
-            type: 'DATA_QUALITY',
-            subtype: 'VOICE_TRANSCRIPT_MISSING',
-            title: 'Voice call transcript missing',
-            description: 'Call completed but no transcript available for analysis',
-            severity: 'medium',
+            invoiceId: linkedInvoiceIds[0] || undefined,
+            actionId,
+            type: 'REPLY_RECEIVED',
+            summary: 'AI call completed - transcript missing',
+            payload: {
+              channel: 'VOICE',
+              provider: 'RETELL',
+              callId: call_id,
+              status: voiceStatus,
+              issue: 'transcript_missing',
+            },
+            actor: 'SYSTEM',
           });
 
           // Update action to ATTENTION
           await db.update(actions)
             .set({
               workState: 'ATTENTION',
+              inFlightState: 'DATA_QUALITY',
               voiceProcessedAt: new Date(),
               updatedAt: new Date(),
             })
