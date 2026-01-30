@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { AttentionItem } from '../types';
 import { formatCurrencyCompact, getChannelLabel, formatRelativeTime } from '../utils';
-import { AlertTriangle, HelpCircle, Phone, MessageCircle, TrendingUp } from 'lucide-react';
+import { AlertTriangle, HelpCircle, Phone, MessageCircle, TrendingUp, Clock } from 'lucide-react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -12,7 +12,7 @@ interface AttentionTabProps {
   search?: string;
 }
 
-type ExceptionType = 'dispute' | 'query' | 'contact_issue' | 'no_response' | 'high_value_ageing';
+type ExceptionType = 'dispute' | 'query' | 'contact_issue' | 'no_response' | 'high_value_ageing' | 'reminder';
 
 const EXCEPTION_CONFIG: Record<ExceptionType, { label: string; icon: any; color: string }> = {
   dispute: { label: 'Dispute', icon: AlertTriangle, color: 'text-rose-500' },
@@ -20,6 +20,7 @@ const EXCEPTION_CONFIG: Record<ExceptionType, { label: string; icon: any; color:
   contact_issue: { label: 'Contact', icon: Phone, color: 'text-orange-500' },
   no_response: { label: 'No Response', icon: MessageCircle, color: 'text-amber-500' },
   high_value_ageing: { label: 'High Value', icon: TrendingUp, color: 'text-red-500' },
+  reminder: { label: 'Reminder', icon: Clock, color: 'text-blue-500' },
 };
 
 export function AttentionTab({ items, onSelectDebtor, isLoading, search = '' }: AttentionTabProps) {
@@ -64,7 +65,7 @@ export function AttentionTab({ items, onSelectDebtor, isLoading, search = '' }: 
   // Calculate totals by type for header (based on filtered items)
   const typeTotals = useMemo(() => {
     const totals: Record<ExceptionType, number> = {
-      dispute: 0, query: 0, contact_issue: 0, no_response: 0, high_value_ageing: 0
+      dispute: 0, query: 0, contact_issue: 0, no_response: 0, high_value_ageing: 0, reminder: 0
     };
     for (const item of filteredItems) {
       if (item.exceptionType in totals) {

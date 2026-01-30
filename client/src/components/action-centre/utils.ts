@@ -313,6 +313,35 @@ export function transformActionsToAttention(actions: any[]): AttentionItem[] {
   return items;
 }
 
+const DB_TYPE_TO_EXCEPTION: Record<string, AttentionItem['exceptionType']> = {
+  'DISPUTE': 'dispute',
+  'QUERY': 'query',
+  'DATA_QUALITY': 'contact_issue',
+  'SYNC_MISMATCH': 'contact_issue',
+  'LOW_CONFIDENCE_OUTCOME': 'query',
+  'PTP_BREACH': 'no_response',
+  'REMINDER': 'reminder',
+};
+
+export function transformDbAttentionItems(dbItems: any[]): AttentionItem[] {
+  return dbItems
+    .filter(item => item.status === 'OPEN')
+    .map(item => {
+      const payload = item.payloadJson || {};
+      return {
+        id: `db-${item.id}`,
+        debtorId: item.contactId || '',
+        debtorName: item.title?.replace('Reminder: ', '') || 'Unknown',
+        exceptionType: DB_TYPE_TO_EXCEPTION[item.type] || 'query',
+        amountImpacted: 0,
+        oldestDaysOverdue: 0,
+        reason: item.description || item.title || '',
+        lastActionAt: item.createdAt,
+        meta: payload,
+      };
+    });
+}
+
 export function formatCurrencyCompact(amount: number): string {
   return new Intl.NumberFormat('en-GB', {
     style: 'decimal',

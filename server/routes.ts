@@ -4362,6 +4362,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdByName: userName
       });
       
+      // If this is a reminder note, create an attention item so it appears in the Attention list
+      if (noteData.noteType === 'reminder' && noteData.reminderDate) {
+        const { attentionItemService } = await import("./services/attentionItemService");
+        await attentionItemService.createReminderAttentionItem(
+          user.tenantId,
+          contactId,
+          contact.name || 'Unknown Customer',
+          note.id,
+          noteData.reminderDate,
+          noteData.content,
+          user.id
+        );
+        console.log(`📋 Created reminder attention item for contact ${contactId}`);
+      }
+      
       // Return a properly structured JSON response
       return res.status(201).json({
         success: true,

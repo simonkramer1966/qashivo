@@ -33,6 +33,7 @@ import { ActionDrawer } from "@/components/action-centre/ActionDrawer";
 import { 
   transformActionsToExecuted, 
   transformActionsToAttention,
+  transformDbAttentionItems,
   getDebtorStatus,
 } from "@/components/action-centre/utils";
 import { Debtor, ActivityItem } from "@/components/action-centre/types";
@@ -100,8 +101,16 @@ export default function ActionCentreV2() {
     queryKey: ['/api/action-centre/tabs'],
   });
 
+  const { data: dbAttentionItems = [] } = useQuery<any[]>({
+    queryKey: ['/api/attention-items'],
+  });
+
   const executedActions = useMemo(() => transformActionsToExecuted(allActions), [allActions]);
-  const attentionItems = useMemo(() => transformActionsToAttention(allActions), [allActions]);
+  const actionAttentionItems = useMemo(() => transformActionsToAttention(allActions), [allActions]);
+  const attentionItems = useMemo(() => {
+    const fromDb = transformDbAttentionItems(dbAttentionItems);
+    return [...actionAttentionItems, ...fromDb];
+  }, [actionAttentionItems, dbAttentionItems]);
 
   const activityItems: ActivityItem[] = useMemo(() => {
     const rawItems: { item: ActivityItem; timestamp: number }[] = [];

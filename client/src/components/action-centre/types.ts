@@ -73,7 +73,7 @@ export interface AttentionItem {
   id: string;
   debtorId: string;
   debtorName: string;
-  exceptionType: 'dispute' | 'query' | 'contact_issue' | 'no_response' | 'high_value_ageing';
+  exceptionType: 'dispute' | 'query' | 'contact_issue' | 'no_response' | 'high_value_ageing' | 'reminder';
   amountImpacted: number;
   oldestDaysOverdue?: number;
   reason: string;

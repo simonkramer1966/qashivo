@@ -187,6 +187,40 @@ export class AttentionItemService {
     });
   }
 
+  async createReminderAttentionItem(
+    tenantId: string,
+    contactId: string,
+    contactName: string,
+    noteId: string,
+    reminderDate: Date,
+    reminderContent: string,
+    createdByUserId: string
+  ): Promise<AttentionItem> {
+    const formattedDate = reminderDate.toLocaleDateString('en-GB', { 
+      day: 'numeric', 
+      month: 'short', 
+      year: 'numeric' 
+    });
+
+    return this.createAttentionItem({
+      tenantId,
+      type: 'REMINDER',
+      severity: 'MEDIUM',
+      title: `Reminder: ${contactName}`,
+      description: reminderContent.length > 150 
+        ? reminderContent.substring(0, 150) + '...' 
+        : reminderContent,
+      contactId,
+      payloadJson: {
+        noteId,
+        reminderDate: reminderDate.toISOString(),
+        reminderContent,
+        createdByUserId,
+        formattedDate,
+      },
+    });
+  }
+
   async resolveAttentionItem(
     itemId: string,
     tenantId: string,
