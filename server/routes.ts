@@ -24728,7 +24728,19 @@ ${tenant.name}
   });
 
   // Trigger voice demo (Retell call)
+  /**
+   * @deprecated INVESTOR DEMO ONLY - DO NOT USE FOR PRODUCTION COLLECTIONS
+   * 
+   * This endpoint uses HARDCODED dummy data for investor demonstrations:
+   * - Company: "Williams Logistics"
+   * - Invoice: "INV-1001", £5,000
+   * - Days overdue: 15
+   * 
+   * For real collection calls, use: POST /api/contacts/:contactId/schedule-call
+   * That endpoint uses actual customer and invoice data from the database.
+   */
   app.post("/api/investor/voice-demo", async (req, res) => {
+    console.log('🎤 [VOICE-DEMO] ⚠️ DEMO ONLY - Using hardcoded dummy data');
     console.log('🎤 [VOICE-DEMO] Received voice demo request:', JSON.stringify(req.body));
     
     try {
@@ -24803,8 +24815,14 @@ ${tenant.name}
     }
   });
 
-  // Send SMS demo
+  /**
+   * @deprecated INVESTOR DEMO ONLY - DO NOT USE FOR PRODUCTION COLLECTIONS
+   * 
+   * This endpoint uses HARDCODED dummy data for investor demonstrations.
+   * For real SMS collection messages, use the customer drawer SMS functionality.
+   */
   app.post("/api/investor/sms-demo", async (req, res) => {
+    console.log('📱 [SMS-DEMO] ⚠️ DEMO ONLY - Using hardcoded dummy data');
     try {
       const { leadId, phone, name } = req.body;
       
@@ -24818,7 +24836,7 @@ ${tenant.name}
       
       const lead = await storage.updateInvestorLead(leadId, updateData);
       
-      // Send SMS via Vonage with investor demo message
+      // Send SMS via Vonage with investor demo message (HARDCODED for demo)
       const { sendCustomSMS } = await import('./services/vonage.js');
       
       const displayName = name || lead.name;
