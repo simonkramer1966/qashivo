@@ -48,6 +48,13 @@ const channelIcons: Partial<Record<TimelineChannel, typeof Mail>> = {
   note: StickyNote
 };
 
+const channelColors: Partial<Record<TimelineChannel, string>> = {
+  email: "text-blue-500",
+  sms: "text-green-500",
+  voice: "text-purple-500",
+  note: "text-amber-500"
+};
+
 const channelLabels: Partial<Record<TimelineChannel, string>> = {
   email: "Email",
   sms: "SMS",
@@ -464,6 +471,7 @@ interface TimelineItemRowProps {
 
 function TimelineItemRow({ item, compact, onClick, isLast }: TimelineItemRowProps) {
   const ChannelIcon = channelIcons[item.channel] || Mail;
+  const channelColor = channelColors[item.channel] || "text-slate-400";
   
   const formatTimeAgo = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -488,13 +496,13 @@ function TimelineItemRow({ item, compact, onClick, isLast }: TimelineItemRowProp
     >
       <div className="flex items-start gap-3">
         {/* Icon */}
-        <div className="flex items-center gap-1 text-slate-400 flex-shrink-0 mt-0.5">
-          <ChannelIcon className="h-4 w-4" />
+        <div className="flex items-center gap-1 flex-shrink-0 mt-0.5">
+          <ChannelIcon className={`h-4 w-4 ${channelColor}`} />
           {item.direction === "outbound" && (
-            <ArrowUpRight className="h-3 w-3" />
+            <ArrowUpRight className="h-3 w-3 text-slate-400" />
           )}
           {item.direction === "inbound" && (
-            <ArrowDownLeft className="h-3 w-3" />
+            <ArrowDownLeft className="h-3 w-3 text-slate-400" />
           )}
         </div>
 
