@@ -101,8 +101,9 @@ export default function ActionCentreV2() {
     queryKey: ['/api/action-centre/tabs'],
   });
 
-  const { data: dbAttentionItems = [] } = useQuery<any[]>({
+  const { data: dbAttentionItems = [] } = useQuery<any[], Error, any[]>({
     queryKey: ['/api/attention-items'],
+    select: (data: any) => data?.items || [],
   });
 
   const executedActions = useMemo(() => transformActionsToExecuted(allActions), [allActions]);
