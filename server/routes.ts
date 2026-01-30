@@ -3451,10 +3451,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Use fallback pagination with invoice data
       {
-        // Get all contacts, invoices, and actions
-        const allContacts = await storage.getContacts(user.tenantId);
-        const allInvoices = await storage.getInvoices(user.tenantId, 10000); // Get all invoices
-        const allActions = await storage.getActions(user.tenantId);
+        // Get all contacts, invoices, and actions in parallel for performance
+        const [allContacts, allInvoices, allActions] = await Promise.all([
+          storage.getContacts(user.tenantId),
+          storage.getInvoices(user.tenantId, 10000),
+          storage.getActions(user.tenantId)
+        ]);
         
         // Calculate outstanding amounts and invoice counts for each contact
         const contactsWithData = allContacts.map(contact => {
