@@ -12845,6 +12845,8 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       if (invoiceId) conditions.push(eq(attentionItems.invoiceId, invoiceId as string));
       if (contactId) conditions.push(eq(attentionItems.contactId, contactId as string));
 
+      console.log("📋 Fetching attention items for tenant:", user.tenantId);
+      
       const items = await db.query.attentionItems.findMany({
         where: and(...conditions),
         with: {
@@ -12856,6 +12858,8 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         limit: parseInt(limit as string),
         offset: parseInt(offset as string),
       });
+      
+      console.log("📋 Found", items.length, "attention items");
 
       // Get counts by status
       const openCount = await db.select({ count: sql<number>`count(*)` })
