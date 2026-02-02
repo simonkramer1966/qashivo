@@ -754,10 +754,36 @@ export const inboundMessages = pgTable("inbound_messages", {
   index("idx_inbound_analyzed").on(table.intentAnalyzed),
 ]);
 
+// Conversations - unified grouping for all communication types (email, voice, SMS)
+export const conversations = pgTable("conversations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id),
+  
+  // Conversation metadata
+  subject: varchar("subject"), // Topic or title of the conversation
+  status: varchar("status").notNull().default("open"), // open, resolved, pending
+  channel: varchar("channel").notNull().default("email"), // primary channel: email, voice, sms
+  
+  // Tracking
+  messageCount: integer("message_count").notNull().default(0),
+  lastMessageAt: timestamp("last_message_at"),
+  lastMessageDirection: varchar("last_message_direction"), // inbound, outbound
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_conversations_tenant").on(table.tenantId),
+  index("idx_conversations_contact").on(table.contactId),
+  index("idx_conversations_status").on(table.tenantId, table.status),
+  index("idx_conversations_last_message").on(table.tenantId, table.lastMessageAt),
+]);
+
 // Email Messages table - unified outbound/inbound email tracking with threading
 export const emailMessages = pgTable("email_messages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  conversationId: varchar("conversation_id").references(() => conversations.id),
   
   // Direction and linking
   direction: varchar("direction").notNull(), // OUTBOUND, INBOUND
@@ -808,6 +834,7 @@ export const emailMessages = pgTable("email_messages", {
   index("idx_email_messages_contact").on(table.contactId),
   index("idx_email_messages_invoice").on(table.invoiceId),
   index("idx_email_messages_action").on(table.actionId),
+  index("idx_email_messages_conversation").on(table.conversationId),
   index("idx_email_messages_thread").on(table.threadKey),
   index("idx_email_messages_direction").on(table.tenantId, table.direction),
   index("idx_email_messages_reply_token").on(table.replyToken),
@@ -1266,6 +1293,7 @@ export const retellConfigurations = pgTable("retell_configurations", {
 export const voiceCalls = pgTable("voice_calls", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  conversationId: varchar("conversation_id").references(() => conversations.id),
   contactId: varchar("contact_id").notNull().references(() => contacts.id),
   invoiceId: varchar("invoice_id").references(() => invoices.id),
   retellCallId: varchar("retell_call_id").notNull(), // Retell AI call ID
@@ -1308,6 +1336,7 @@ export const voiceCalls = pgTable("voice_calls", {
 export const smsMessages = pgTable("sms_messages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  conversationId: varchar("conversation_id").references(() => conversations.id),
   contactId: varchar("contact_id").references(() => contacts.id),
   invoiceId: varchar("invoice_id").references(() => invoices.id),
   provider: varchar("provider").notNull().default("twilio"), // "twilio" or "vonage"
@@ -2594,6 +2623,12 @@ export const insertInboundMessageSchema = createInsertSchema(inboundMessages).om
   updatedAt: true,
 });
 
+export const insertConversationSchema = createInsertSchema(conversations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertEmailMessageSchema = createInsertSchema(emailMessages).omit({
   id: true,
   createdAt: true,
@@ -2841,6 +2876,8 @@ export type InsertMessageDraft = z.infer<typeof insertMessageDraftSchema>;
 export type MessageDraft = typeof messageDrafts.$inferSelect;
 export type InsertInboundMessage = z.infer<typeof insertInboundMessageSchema>;
 export type InboundMessageRecord = typeof inboundMessages.$inferSelect;
+export type InsertConversation = z.infer<typeof insertConversationSchema>;
+export type Conversation = typeof conversations.$inferSelect;
 export type InsertEmailMessage = z.infer<typeof insertEmailMessageSchema>;
 export type EmailMessageRecord = typeof emailMessages.$inferSelect;
 export type InsertDetectedOutcome = z.infer<typeof insertDetectedOutcomeSchema>;
