@@ -41,6 +41,7 @@ import {
   Mic,
   Clock,
   ArrowUpRight,
+  ArrowDownLeft,
   ChevronDown,
   ChevronUp,
   ChevronRight,
@@ -1049,15 +1050,33 @@ ${signOff}`);
     });
   };
 
-  const getChannelIcon = (channel: string, isVoiceAI?: boolean) => {
-    switch (channel) {
-      case "email": return <Mail className="h-4 w-4 text-blue-500" />;
-      case "sms": return <MessageSquare className="h-4 w-4 text-green-500" />;
-      case "voice": return <Phone className={cn("h-4 w-4", isVoiceAI ? "text-[#0D9488]" : "text-purple-500")} />;
-      case "note": return <StickyNote className="h-4 w-4 text-amber-500" />;
-      case "system": return <Settings className="h-4 w-4 text-gray-400" />;
-      default: return <Clock className="h-4 w-4 text-gray-400" />;
+  const getChannelIcon = (channel: string, isVoiceAI?: boolean, direction?: 'inbound' | 'outbound') => {
+    const getIcon = () => {
+      switch (channel) {
+        case "email": return <Mail className="h-4 w-4 text-blue-500" />;
+        case "sms": return <MessageSquare className="h-4 w-4 text-green-500" />;
+        case "voice": return <Phone className={cn("h-4 w-4", isVoiceAI ? "text-[#0D9488]" : "text-purple-500")} />;
+        case "note": return <StickyNote className="h-4 w-4 text-amber-500" />;
+        case "system": return <Settings className="h-4 w-4 text-gray-400" />;
+        default: return <Clock className="h-4 w-4 text-gray-400" />;
+      }
+    };
+    
+    // For communication channels, show direction indicator
+    if (direction && (channel === "email" || channel === "sms" || channel === "voice")) {
+      return (
+        <div className="relative">
+          {getIcon()}
+          {direction === 'inbound' ? (
+            <ArrowDownLeft className="h-2.5 w-2.5 text-gray-500 absolute -bottom-1 -right-1 bg-white rounded-full" />
+          ) : (
+            <ArrowUpRight className="h-2.5 w-2.5 text-[#17B6C3] absolute -bottom-1 -right-1 bg-white rounded-full" />
+          )}
+        </div>
+      );
     }
+    
+    return getIcon();
   };
 
   const getChannelLabel = (channel: string) => {
@@ -1621,6 +1640,13 @@ ${signOff}`);
                                     const durationSeconds = payload.durationSeconds || 0;
                                     const transcriptSnippet = payload.transcriptSnippet || payload.summarySnippet;
                                     
+                                    // Derive direction with fallbacks from metadata
+                                    const itemDirection: 'inbound' | 'outbound' | undefined = 
+                                      (item.direction as 'inbound' | 'outbound') || 
+                                      (payload.direction as 'inbound' | 'outbound') ||
+                                      (payload.inbound === true ? 'inbound' : undefined) ||
+                                      (payload.outbound === true ? 'outbound' : undefined);
+                                    
                                     // Format voice call title
                                     const getVoiceTitle = () => {
                                       if (!isVoiceAI) return item.preview || item.summary;
@@ -1643,7 +1669,7 @@ ${signOff}`);
                                           className="group w-full flex items-center py-2.5 hover:bg-gray-50 transition-colors text-left overflow-hidden"
                                         >
                                           <span className="mr-3 flex-shrink-0">
-                                            {getChannelIcon(item.channel, isVoiceAI)}
+                                            {getChannelIcon(item.channel, isVoiceAI, itemDirection)}
                                           </span>
                                           
                                           <div className="flex-1 w-0 min-w-0 mr-3 overflow-hidden">
