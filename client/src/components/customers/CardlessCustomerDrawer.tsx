@@ -409,10 +409,19 @@ export function CardlessCustomerDrawer({
     setActivitySearchOpen(!activitySearchOpen);
   }, [activitySearchOpen]);
 
-  const { data: preview, isLoading } = useQuery<CustomerPreview>({
+  const { data: preview, isLoading, refetch: refetchPreview } = useQuery<CustomerPreview>({
     queryKey: [`/api/contacts/${customerId}/preview`],
     enabled: !!customerId && open,
+    staleTime: 30000, // Consider data stale after 30 seconds
+    refetchOnWindowFocus: true, // Refetch when user returns to tab
   });
+  
+  // Refetch preview when drawer opens to get latest conversations
+  useEffect(() => {
+    if (open && customerId) {
+      refetchPreview();
+    }
+  }, [open, customerId, refetchPreview]);
 
   // Fetch outcomes for this debtor
   interface OutcomeData {

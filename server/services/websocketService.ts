@@ -143,6 +143,7 @@ class WebSocketService {
   broadcast(tenantId: string, event: Omit<DashboardEvent, 'tenantId' | 'timestamp'>) {
     const tenantConnections = this.connections.get(tenantId);
     if (!tenantConnections || tenantConnections.size === 0) {
+      console.log(`📡 No WebSocket connections for tenant: ${tenantId}, skipping broadcast of ${event.type}`);
       return;
     }
 
