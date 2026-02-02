@@ -1,0 +1,138 @@
+Delivered-To: simon@qashivo.com
+Received: by 2002:adf:f80d:0:b0:436:84e:bc67 with SMTP id s13csp409362wrp;
+        Mon, 2 Feb 2026 02:34:50 -0800 (PST)
+X-Received: by 2002:a05:6a00:ab01:b0:81f:4164:79b0 with SMTP id d2e1a72fcca58-823ab6d705bmr11812104b3a.31.1770028490356;
+        Mon, 02 Feb 2026 02:34:50 -0800 (PST)
+ARC-Seal: i=1; a=rsa-sha256; t=1770028490; cv=none;
+        d=google.com; s=arc-20240605;
+        b=a39tbE83WnFO8OBBZC8s+sDRMQM/RtSl7c7ecMoYY5Va/LxEEmIVlAMbl/6On/BIVM
+         RKdvz9PTepZE0p840JTR/9/4StlQpb0DMvDGx1uQRp8fct/KyX7n6JFBp5Ne3ZFpiLSj
+         HvZmNBNcGJMUC7a8JraXkeafosI1SnzqS8kOkCHmcINmSY688fM01VvBOMEeJ77UtB3o
+         BOBuAVfBH5kJP0iIBJP6Sm8YMyDzegmdClVTmJ0a/+UteOYdfPQnkj7mLmK94KuLtgjG
+         PyShRTuEpuGMlkKrO9T+aFysgS47RlZTUs5S54qDU7ruCMo1YGeetOaGyXJbkMcPh4XG
+         d0Yg==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=to:reply-to:subject:message-id:mime-version:from:date
+         :dkim-signature;
+        bh=TkpkWsSOMUTITiAGq5ySJWt3aOzO/yyxc/YiJJKw/9s=;
+        fh=dmg5ccTBNU1OEuFbymJnM2Ze+1LmhoHGDRWf9ROGMko=;
+        b=Z3Uhf6blobI4c8wtjz9UO5zJJL6AEJUuLkzkQd/9Q8J0xQXx3vIiLVGtZba/xFpr+m
+         Ft+gLotM9Pw9D8pzCiU1sEAfaoGQw1dsLYZjXccsDWrXiH+iEJk45dSBl0NdMBvtl6SL
+         WH2Wq4IAgcEAAotjAiE/fbY2yhrbw5aNHHZwd/qUBXUBJQYKKtvchwFo7GZxccPBhjAl
+         JmOfNXVdaPyOR9bjaroFvX7PxwDsajKntLsfjnqatoWNKTTkqk46PWbx+cP5IKsikljp
+         5q1QZIDIjkw0upmoUwbC2M3fN5Wfaxn7SldswmGxx8lCu1+a4XNArkBwWO7wrfLZs/2o
+         0osQ==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@qashivo.com header.s=s1 header.b=pb8jtZTO;
+       spf=pass (google.com: domain of bounces+55717064-4266-simon=qashivo.com@em7089.qashivo.com designates 149.72.154.232 as permitted sender) smtp.mailfrom="bounces+55717064-4266-simon=qashivo.com@em7089.qashivo.com";
+       dmarc=pass (p=QUARANTINE sp=QUARANTINE dis=NONE) header.from=qashivo.com
+Return-Path: <bounces+55717064-4266-simon=qashivo.com@em7089.qashivo.com>
+Received: from s.wrqvwxzv.outbound-mail.sendgrid.net (s.wrqvwxzv.outbound-mail.sendgrid.net. [149.72.154.232])
+        by mx.google.com with ESMTPS id d2e1a72fcca58-82379c869c9si30749708b3a.230.2026.02.02.02.34.49
+        for <simon@qashivo.com>
+        (version=TLS1_3 cipher=TLS_AES_128_GCM_SHA256 bits=128/128);
+        Mon, 02 Feb 2026 02:34:50 -0800 (PST)
+Received-SPF: pass (google.com: domain of bounces+55717064-4266-simon=qashivo.com@em7089.qashivo.com designates 149.72.154.232 as permitted sender) client-ip=149.72.154.232;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@qashivo.com header.s=s1 header.b=pb8jtZTO;
+       spf=pass (google.com: domain of bounces+55717064-4266-simon=qashivo.com@em7089.qashivo.com designates 149.72.154.232 as permitted sender) smtp.mailfrom="bounces+55717064-4266-simon=qashivo.com@em7089.qashivo.com";
+       dmarc=pass (p=QUARANTINE sp=QUARANTINE dis=NONE) header.from=qashivo.com
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=qashivo.com; h=content-type:date:from:mime-version:subject:reply-to:to:cc: content-type:date:from:subject:to; s=s1; bh=TkpkWsSOMUTITiAGq5ySJWt3aOzO/yyxc/YiJJKw/9s=; b=pb8jtZTOib60ChST7TVgC1xZ4pyFHQxQqeZ7eXIX0eyFu444/+nDNpTTsxtP8rfBcnyU sKa6Pepm0u9oAHxNinCq9yHCi57ByV35OwEB4ctBFTpeAaU8XfirLclMdL2l97grqCh9ta XlJKICb1CkRY1GP5iHGRg1RL/MECtMsBYKL9jiHG4APqBC1JtWZUNslIQ/UgchkDv0y/66 EuOZI9bk58la+DYvs4vkTtohiV1aeezjpvscJ6dO58YOiVbf3QcYQ6QmrOvrt56aQ6xdKz Zh0D1gDDLzbl4xBcuF2Ldroy7k4ov9+QbridV+oClyM1HuX8mSk78hWYzzTQDQ/Q==
+Received: by recvd-canary-7d4b78b65c-nhdmm with SMTP id recvd-canary-7d4b78b65c-nhdmm-1-69807DC8-1A 2026-02-02 10:34:48.626292307 +0000 UTC m=+4020010.157722948
+Received: from NTU3MTcwNjQ (unknown) by geopod-ismtpd-canary-0 (SG) with HTTP id -paA_CFkT0iecXiSjfnAWw Mon, 02 Feb 2026 10:34:48.567 +0000 (UTC)
+Content-Type: multipart/alternative; boundary=6301d6c7756e26646d09172aa6b985a5439618c00cb89946982a1604cec2
+Date: Mon, 02 Feb 2026 10:34:48 +0000 (UTC)
+From: Nexus KPI Limited <cc@qashivo.com>
+Mime-Version: 1.0
+Message-ID: <-paA_CFkT0iecXiSjfnAWw@geopod-ismtpd-canary-0>
+Subject: Statement of Account - Review of Overdue Balance
+Reply-To: reply+1daf0d80-9be4-4186-87ff-768bbc1950b0.ab8ef455-5ca6-4baf-8223-adf302f1431a.bd3a1ed2-af33-4868-963d-098d9dfde7cd.uJv-kzmr@in.qashivo.com
+X-SG-EID: u001.sIHGspNcW1UuTj2i0GsgBC85OuXsogSU6mFRu/TIF094cMmL7cWi/pePf4PtCB4Z8sw+5qRVM4fcWfxNX4HAY4VjCcGmYHrgTWEtC2ZGcCgvyMk+N39BMBgM4AMSp70nX7lAQHssGRYfXGLkB8nczJMe5MKsXuYxdh5mnwoKK1xpQzFYHOagYfxNZJnPnb60mUx5fC6iPw5aGqasq1nIc598koHLCfmGMLocH0N5odJWikcugp1fMnCQlifN6/0S
+To: simon@qashivo.com
+X-Entity-ID: u001.ys6MjBO2WFtHCsYz9B3xug==
+
+--6301d6c7756e26646d09172aa6b985a5439618c00cb89946982a1604cec2
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/plain; charset=iso-8859-1
+Mime-Version: 1.0
+
+Dear Simon,
+
+I hope this message finds you well.
+
+I am writing to provide you with a statement of your account with Nexus KPI=
+ Limited, which outlines all overdue invoices currently on record. As of to=
+day, your total overdue balance stands at =A368,267.00. Please find below t=
+he details of the overdue invoices:
+
+- Invoice INV-202601-0002: =A34,750.50
+- Invoice INV-SEED-PENDING: =A32,200.00
+- Invoice INV-202601-0003: =A31,250.00
+- Invoice INV-202601-0004: =A33,890.75
+- Invoice INV-SEED-OVERDUE: =A33,100.00
+- Invoice INV-SEED-PROMISED: =A33,400.00
+- Invoice INV-SEED-DISPUTED: =A32,800.00
+- Invoice INV-202601-0005: =A38,500.00
+- Invoice INV-SEED-CRITICAL: =A34,500.00
+- Invoice INV-202601-0006: =A35,200.25
+- Invoice INV-SEED-PLAN: =A34,100.00
+- Invoice INV-202601-0007: =A312,450.00
+- Invoice INV-SEED-RECOVERY: =A35,800.00
+- Invoice INV-202601-0008: =A36,325.50
+
+As a reminder, I reserve the right to charge statutory interest of =A31,212=
+.01 under the Late Payment of Commercial Debts (Interest) Act 1998.
+
+Given that the oldest overdue invoice is now 92 days past due, I kindly ask=
+ that you review this statement and confirm your understanding of the total=
+ overdue balance. It is essential that we resolve this matter promptly to m=
+aintain our positive working relationship.
+
+Please let me know how you would like to proceed, whether that be arranging=
+ payment or discussing a feasible payment plan.
+
+Thank you for your attention to this important matter, and I look forward t=
+o your prompt reply.
+
+Best regards,
+
+Simon =20
+Nexus KPI Limited
+--6301d6c7756e26646d09172aa6b985a5439618c00cb89946982a1604cec2
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/html; charset=iso-8859-1
+Mime-Version: 1.0
+
+Dear Simon,<br><br>I hope this message finds you well.<br><br>I am writing =
+to provide you with a statement of your account with Nexus KPI Limited, whi=
+ch outlines all overdue invoices currently on record. As of today, your tot=
+al overdue balance stands at =A368,267.00. Please find below the details of=
+ the overdue invoices:<br><br>- Invoice INV-202601-0002: =A34,750.50<br>- I=
+nvoice INV-SEED-PENDING: =A32,200.00<br>- Invoice INV-202601-0003: =A31,250=
+.00<br>- Invoice INV-202601-0004: =A33,890.75<br>- Invoice INV-SEED-OVERDUE=
+: =A33,100.00<br>- Invoice INV-SEED-PROMISED: =A33,400.00<br>- Invoice INV-=
+SEED-DISPUTED: =A32,800.00<br>- Invoice INV-202601-0005: =A38,500.00<br>- I=
+nvoice INV-SEED-CRITICAL: =A34,500.00<br>- Invoice INV-202601-0006: =A35,20=
+0.25<br>- Invoice INV-SEED-PLAN: =A34,100.00<br>- Invoice INV-202601-0007: =
+=A312,450.00<br>- Invoice INV-SEED-RECOVERY: =A35,800.00<br>- Invoice INV-2=
+02601-0008: =A36,325.50<br><br>As a reminder, I reserve the right to charge=
+ statutory interest of =A31,212.01 under the Late Payment of Commercial Deb=
+ts (Interest) Act 1998.<br><br>Given that the oldest overdue invoice is now=
+ 92 days past due, I kindly ask that you review this statement and confirm =
+your understanding of the total overdue balance. It is essential that we re=
+solve this matter promptly to maintain our positive working relationship.<b=
+r><br>Please let me know how you would like to proceed, whether that be arr=
+anging payment or discussing a feasible payment plan.<br><br>Thank you for =
+your attention to this important matter, and I look forward to your prompt =
+reply.<br><br>Best regards,<br><br>Simon  <br>Nexus KPI Limited<img src=3D"=
+http://url8025.qashivo.com/wf/open?upn=3Du001.SWDQduz-2FaN-2BrU4Sp91zDmtWFf=
+yE4VWIUWL75uDidWk7oIpNyduR5vA-2FNHbn3PKDC-2FGAAk-2Bu8mYrJre-2Bfb-2Fb5-2BwxV=
+n-2B8ChGnDaExAj8NnX-2BXf3VqtuPn6xeZynHw9HEvoKbllDD7b2OSdwpD-2F17NpAVqiMpan2=
+B4GAi2vVAlGA3rZokEq3mfg2N3HOigjkemJl2wILzU5A9pg8W2As7an2gVm30PvElNiUzgc7aHB=
+9z4-3D" alt=3D"" width=3D"1" height=3D"1" border=3D"0" style=3D"height:1px =
+!important;width:1px !important;border-width:0 !important;margin-top:0 !imp=
+ortant;margin-bottom:0 !important;margin-right:0 !important;margin-left:0 !=
+important;padding-top:0 !important;padding-bottom:0 !important;padding-righ=
+t:0 !important;padding-left:0 !important;"/>
+--6301d6c7756e26646d09172aa6b985a5439618c00cb89946982a1604cec2--
