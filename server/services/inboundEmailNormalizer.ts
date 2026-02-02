@@ -151,12 +151,25 @@ function extractRouting(
   toAddresses: string[],
   headers: Record<string, string>
 ): InboundEmailRouting {
+  console.log(`🔍 Extracting routing from ${toAddresses.length} addresses:`, toAddresses);
+  
   // Try reply token first (highest confidence)
   for (const to of toAddresses) {
+    console.log(`🔍 Checking address for reply token: ${to}`);
     const token = parseReplyToken(to);
     if (token) {
+      console.log(`🔍 Parsed reply token:`, {
+        tenantId: token.tenantId,
+        conversationId: token.conversationId,
+        outboundMessageId: token.outboundMessageId,
+        signature: token.signature,
+      });
       try {
+        const expectedSig = generateReplyTokenSignature(token.tenantId, token.conversationId, token.outboundMessageId);
+        console.log(`🔍 Signature check: expected=${expectedSig}, received=${token.signature}`);
+        
         if (verifyReplyTokenSignature(token)) {
+          console.log(`✅ Reply token signature verified successfully`);
           return {
             method: 'reply_to_token',
             confidence: 'high',
@@ -165,11 +178,13 @@ function extractRouting(
             outboundMessageId: token.outboundMessageId,
           };
         } else {
-          console.warn('⚠️ Reply token signature verification failed');
+          console.warn(`⚠️ Reply token signature verification failed: expected=${expectedSig}, got=${token.signature}`);
         }
       } catch (err) {
         console.warn('⚠️ Reply token signature verification error:', err);
       }
+    } else {
+      console.log(`🔍 No reply token found in: ${to}`);
     }
   }
   
@@ -319,14 +334,20 @@ export async function normalizeSendGridInboundEmail(req: Request): Promise<Norma
   const body = req.body;
   const receivedAt = new Date().toISOString();
   
+  console.log(`📧 SendGrid raw 'to' field: ${body.to}`);
+  console.log(`📧 SendGrid raw envelope: ${body.envelope}`);
+  
   // Parse envelope for routing
   let envelope: { to?: string[]; from?: string } = {};
   try {
     envelope = typeof body.envelope === 'string' ? JSON.parse(body.envelope) : (body.envelope || {});
   } catch {}
   
+  console.log(`📧 Parsed envelope:`, envelope);
+  
   // Get To addresses from envelope (preferred) or body
   const toAddresses = envelope.to || [body.to].filter(Boolean);
+  console.log(`📧 Using toAddresses for routing:`, toAddresses);
   
   // Parse headers
   const headers = parseHeaders(body.headers);
