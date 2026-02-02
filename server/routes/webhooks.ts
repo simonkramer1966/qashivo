@@ -28,6 +28,8 @@ const SENDGRID_WEBHOOK_IPS = [
   '208.117.48.0/20',  // SendGrid secondary range
   '50.31.32.0/19',    // SendGrid tertiary range
   '198.37.144.0/20',  // Additional range
+  '159.26.0.0/16',    // SendGrid newer range (includes 159.26.144.x, 159.26.150.x)
+  '149.72.0.0/16',    // SendGrid outbound range (seen in production)
 ];
 
 /**
