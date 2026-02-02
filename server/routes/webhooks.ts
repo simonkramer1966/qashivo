@@ -3,7 +3,7 @@ import { db } from "../db";
 import { inboundMessages, contacts, emailMessages, detectedOutcomes, actions, invoices, timelineEvents, outcomes, conversations } from "@shared/schema";
 import { intentAnalyst } from "../services/intentAnalyst";
 import { detectOutcomeFromText } from "../services/outcomeDetection";
-import { eq, or, and, desc } from "drizzle-orm";
+import { eq, or, and, desc, sql } from "drizzle-orm";
 import crypto from "crypto";
 import multer from "multer";
 import {
@@ -12,11 +12,15 @@ import {
   verifyQashivoSignature,
 } from "../services/inboundEmailNormalizer";
 import {
-  isDuplicate,
-  markProcessed,
+  isDuplicate as isDuplicateInMemory,
+  markProcessed as markProcessedInMemory,
   queueForRetry,
   getQueueStats,
 } from "../services/inboundEmailQueue";
+import {
+  tryReserveWebhook,
+  completeWebhook,
+} from "../services/webhookIdempotency";
 import type { NormalizedInboundEmail } from "../../shared/types/inboundEmail";
 import { websocketService } from "../services/websocketService";
 
@@ -184,11 +188,19 @@ export function registerWebhookRoutes(app: Express) {
       
       // Normalize to canonical format
       const normalizedEmail = await normalizeSendGridInboundEmail(req);
-      console.log(`📧 Normalized email: ${normalizedEmail.idempotency.key}`);
+      const idempotencyKey = normalizedEmail.idempotency.key;
+      console.log(`📧 Normalized email: ${idempotencyKey}`);
       
-      // Check idempotency - reject duplicates
-      if (isDuplicate(normalizedEmail.idempotency.key)) {
-        console.log(`📧 Duplicate email ignored: ${normalizedEmail.idempotency.key}`);
+      // Atomic idempotency: reserve first, then process
+      const reservation = await tryReserveWebhook({
+        idempotencyKey,
+        source: "sendgrid",
+        eventType: "inbound_email",
+        tenantId: normalizedEmail.routing.tenantId,
+      });
+      
+      if (!reservation.reserved) {
+        console.log(`📧 Duplicate email ignored: ${idempotencyKey} (status: ${reservation.existingStatus})`);
         return res.status(200).json({ message: 'Duplicate ignored' });
       }
       
@@ -196,13 +208,23 @@ export function registerWebhookRoutes(app: Express) {
       const processResult = await processNormalizedInboundEmail(normalizedEmail);
       
       if (processResult.success) {
-        markProcessed(normalizedEmail.idempotency.key, 'success');
+        await completeWebhook({
+          idempotencyKey,
+          source: "sendgrid",
+          status: "processed",
+        });
         return res.status(200).json({ 
           message: 'Email received',
           emailMessageId: processResult.emailMessageId,
           legacyMessageId: processResult.legacyMessageId,
         });
       } else {
+        await completeWebhook({
+          idempotencyKey,
+          source: "sendgrid",
+          status: "failed",
+          errorMessage: processResult.error || 'Processing failed',
+        });
         // Queue for retry if processing failed
         queueForRetry(normalizedEmail, processResult.error || 'Processing failed');
         return res.status(200).json({ message: 'Queued for retry' });
@@ -245,17 +267,31 @@ export function registerWebhookRoutes(app: Express) {
       
       const normalizedEmail = req.body as NormalizedInboundEmail;
       
-      // Check idempotency
+      // Atomic idempotency check
       const key = idempotencyKey || normalizedEmail.idempotency?.key;
-      if (key && isDuplicate(key)) {
-        return res.status(200).json({ message: 'Duplicate ignored' });
+      if (key) {
+        const reservation = await tryReserveWebhook({
+          idempotencyKey: key,
+          source: "sendgrid",
+          eventType: "inbound_email",
+          tenantId: normalizedEmail.routing?.tenantId,
+        });
+        
+        if (!reservation.reserved) {
+          return res.status(200).json({ message: 'Duplicate ignored' });
+        }
       }
       
       // Process the normalized email
       const result = await processNormalizedInboundEmail(normalizedEmail);
       
-      if (result.success && key) {
-        markProcessed(key, 'success');
+      if (key) {
+        await completeWebhook({
+          idempotencyKey: key,
+          source: "sendgrid",
+          status: result.success ? "processed" : "failed",
+          errorMessage: result.success ? undefined : result.error,
+        });
       }
       
       res.status(200).json(result);
@@ -942,23 +978,23 @@ export function registerWebhookRoutes(app: Express) {
       const transcriptSnippet = transcriptText ? transcriptText.substring(0, 500) : null;
       const summarySnippet = call_analysis?.call_summary?.substring(0, 240) || null;
 
-      // Check if action exists and hasn't been processed yet (idempotency)
+      // Atomic idempotency: reserve first using INSERT
+      const voiceIdempotencyKey = call_id;
+      const reservation = await tryReserveWebhook({
+        idempotencyKey: voiceIdempotencyKey,
+        source: "retell",
+        eventType: "call_ended",
+        tenantId,
+      });
+      
+      if (!reservation.reserved) {
+        console.log(`🎙️  [WEBHOOK] Call ${call_id} already processed (status: ${reservation.existingStatus}), skipping`);
+        return res.status(200).json({ message: 'Already processed', call_id });
+      }
+
+      // Atomic check-and-set on action: Update only if not already processed
       if (actionId) {
-        const [existingAction] = await db.select()
-          .from(actions)
-          .where(and(
-            eq(actions.id, actionId),
-            eq(actions.tenantId, tenantId)
-          ))
-          .limit(1);
-
-        if (existingAction?.voiceProcessedAt) {
-          console.log(`🎙️  [WEBHOOK] Call ${call_id} already processed at ${existingAction.voiceProcessedAt}, skipping`);
-          return res.status(200).json({ message: 'Already processed', call_id });
-        }
-
-        // Update action with voice tracking fields
-        await db.update(actions)
+        const updateResult = await db.update(actions)
           .set({
             voiceStatus,
             voiceCompletedAt: new Date(),
@@ -968,7 +1004,22 @@ export function registerWebhookRoutes(app: Express) {
             voiceLastPolledAt: new Date(),
             updatedAt: new Date(),
           })
-          .where(eq(actions.id, actionId));
+          .where(and(
+            eq(actions.id, actionId),
+            eq(actions.tenantId, tenantId),
+            sql`${actions.voiceProcessedAt} IS NULL`
+          ))
+          .returning({ id: actions.id });
+
+        if (updateResult.length === 0) {
+          console.log(`🎙️  [WEBHOOK] Call ${call_id} action already processed (atomic check), skipping`);
+          await completeWebhook({
+            idempotencyKey: voiceIdempotencyKey,
+            source: "retell",
+            status: "skipped",
+          });
+          return res.status(200).json({ message: 'Already processed', call_id });
+        }
       }
 
       // HANDLE NON-COMPLETED STATUSES (no_answer, busy, voicemail → COOLDOWN)
@@ -1020,6 +1071,12 @@ export function registerWebhookRoutes(app: Express) {
         });
 
         console.log(`🎙️  [WEBHOOK] ${voiceStatus} → COOLDOWN for ${cooldownDays} days`);
+
+        await completeWebhook({
+          idempotencyKey: voiceIdempotencyKey,
+          source: "retell",
+          status: "processed",
+        });
 
         return res.status(200).json({
           message: 'Call ended processed',
@@ -1085,6 +1142,12 @@ export function registerWebhookRoutes(app: Express) {
         });
 
         console.log(`🎙️  [WEBHOOK] failed → ATTENTION (DELIVERY_FAILED)`);
+
+        await completeWebhook({
+          idempotencyKey: voiceIdempotencyKey,
+          source: "retell",
+          status: "processed",
+        });
 
         return res.status(200).json({
           message: 'Call ended processed',
@@ -1314,6 +1377,12 @@ export function registerWebhookRoutes(app: Express) {
           });
 
           console.log(`🎙️  [WEBHOOK] completed but no transcript → ATTENTION`);
+
+          await completeWebhook({
+            idempotencyKey: voiceIdempotencyKey,
+            source: "retell",
+            status: "processed",
+          });
 
           return res.status(200).json({
             message: 'Call ended processed',
@@ -1621,6 +1690,12 @@ Return JSON with:
           console.error('Failed to update timeline event with call results:', timelineErr);
         }
       }
+
+      await completeWebhook({
+        idempotencyKey: voiceIdempotencyKey,
+        source: "retell",
+        status: "processed",
+      });
 
       res.status(200).json({ 
         message: 'Call ended processed',

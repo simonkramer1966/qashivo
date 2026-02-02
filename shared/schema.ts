@@ -6223,6 +6223,33 @@ export type InsertAuditEvent = z.infer<typeof insertAuditEventSchema>;
 export type AuditEvent = typeof auditEvents.$inferSelect;
 
 // ============================================================
+// WEBHOOK EVENTS TABLE - Idempotency tracking for webhooks
+// ============================================================
+export const webhookEvents = pgTable("webhook_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  idempotencyKey: varchar("idempotency_key").notNull().unique(),
+  source: varchar("source").notNull(), // sendgrid, retell, stripe, vonage
+  eventType: varchar("event_type").notNull(), // inbound_email, call_ended, payment_received, etc.
+  status: varchar("status").notNull().default("processed"), // processed, failed, skipped
+  tenantId: varchar("tenant_id"),
+  payload: jsonb("payload").$type<Record<string, any>>(),
+  errorMessage: text("error_message"),
+  processedAt: timestamp("processed_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_webhook_events_key").on(table.idempotencyKey),
+  index("idx_webhook_events_source").on(table.source),
+  index("idx_webhook_events_created").on(table.createdAt),
+]);
+
+export const insertWebhookEventSchema = createInsertSchema(webhookEvents).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertWebhookEvent = z.infer<typeof insertWebhookEventSchema>;
+export type WebhookEvent = typeof webhookEvents.$inferSelect;
+
+// ============================================================
 // COLLECTION POLICIES TABLE - Timer and cadence settings
 // ============================================================
 export const collectionPolicies = pgTable("collection_policies", {
