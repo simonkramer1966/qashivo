@@ -1,9 +1,9 @@
 import type { Express, Request, Response } from "express";
 import { db } from "../db";
-import { inboundMessages, contacts, emailMessages, detectedOutcomes, actions, invoices, timelineEvents, outcomes } from "@shared/schema";
+import { inboundMessages, contacts, emailMessages, detectedOutcomes, actions, invoices, timelineEvents, outcomes, conversations } from "@shared/schema";
 import { intentAnalyst } from "../services/intentAnalyst";
 import { detectOutcomeFromText } from "../services/outcomeDetection";
-import { eq, or, and } from "drizzle-orm";
+import { eq, or, and, desc } from "drizzle-orm";
 import crypto from "crypto";
 import {
   verifyInboundToken,
@@ -1720,14 +1720,32 @@ async function processNormalizedInboundEmail(
     let linkedAction: any = null;
     let linkedContact: any = null;
     let linkedInvoice: any = null;
+    let linkedConversationId: string | null = null;
     
     // Use routing info if available (high or medium confidence)
     const useRouting = routing.outboundMessageId && (
       routing.confidence === 'high' || routing.confidence === 'medium'
     );
     
+    // Use conversation ID from routing if available, with tenant verification
+    if (routing.conversationId) {
+      // Verify conversation exists and belongs to the correct tenant before using
+      const [existingConversation] = await db
+        .select()
+        .from(conversations)
+        .where(eq(conversations.id, routing.conversationId))
+        .limit(1);
+      
+      if (existingConversation) {
+        // Store for later tenant verification after we know linkedContact
+        linkedConversationId = routing.conversationId;
+      } else {
+        console.log(`⚠️  Conversation ${routing.conversationId} from routing not found, will create new`);
+      }
+    }
+    
     if (useRouting) {
-      console.log(`📨 Using ${routing.method} routing (${routing.confidence}): outboundMessageId=${routing.outboundMessageId}`);
+      console.log(`📨 Using ${routing.method} routing (${routing.confidence}): outboundMessageId=${routing.outboundMessageId}, conversationId=${routing.conversationId}`);
       
       // For reply_to_token, look up by our internal message ID
       // For in_reply_to/references, the outboundMessageId is the external Message-ID header
@@ -1811,6 +1829,57 @@ async function processNormalizedInboundEmail(
       return { success: true, error: 'No matching contact' };
     }
     
+    // Verify conversation belongs to same tenant as contact (prevent cross-tenant mislinking)
+    if (linkedConversationId) {
+      const [conv] = await db
+        .select()
+        .from(conversations)
+        .where(and(
+          eq(conversations.id, linkedConversationId),
+          eq(conversations.tenantId, linkedContact.tenantId)
+        ))
+        .limit(1);
+      
+      if (!conv) {
+        console.log(`⚠️  Conversation ${linkedConversationId} does not belong to tenant ${linkedContact.tenantId}, creating new`);
+        linkedConversationId = null;
+      }
+    }
+    
+    // Find or create conversation for this contact if not already linked
+    if (!linkedConversationId) {
+      // Look for existing open conversation
+      const [existingConv] = await db
+        .select()
+        .from(conversations)
+        .where(and(
+          eq(conversations.tenantId, linkedContact.tenantId),
+          eq(conversations.contactId, linkedContact.id),
+          eq(conversations.status, 'open')
+        ))
+        .orderBy(desc(conversations.lastMessageAt))
+        .limit(1);
+      
+      if (existingConv) {
+        linkedConversationId = existingConv.id;
+      } else {
+        // Create new conversation for this inbound email
+        const [newConv] = await db
+          .insert(conversations)
+          .values({
+            tenantId: linkedContact.tenantId,
+            contactId: linkedContact.id,
+            subject: subject || 'Inbound correspondence',
+            status: 'open',
+            channel: 'email',
+            messageCount: 0,
+          })
+          .returning();
+        linkedConversationId = newConv.id;
+        console.log(`📝 Created new conversation: ${linkedConversationId}`);
+      }
+    }
+    
     // Store in emailMessages table
     const threadKey = linkedInvoice?.id ? `inv_${linkedInvoice.id}` : `cust_${linkedContact.id}`;
     
@@ -1818,6 +1887,7 @@ async function processNormalizedInboundEmail(
       .insert(emailMessages)
       .values({
         tenantId: linkedContact.tenantId,
+        conversationId: linkedConversationId, // Link to conversation
         direction: 'INBOUND',
         channel: 'EMAIL',
         actionId: linkedAction?.id || null,
@@ -1837,7 +1907,28 @@ async function processNormalizedInboundEmail(
       })
       .returning();
     
-    console.log(`✅ Inbound email stored: ${emailMessage.id}`);
+    // Update conversation stats
+    if (linkedConversationId) {
+      const [conv] = await db
+        .select()
+        .from(conversations)
+        .where(eq(conversations.id, linkedConversationId))
+        .limit(1);
+      
+      if (conv) {
+        await db
+          .update(conversations)
+          .set({
+            messageCount: (conv.messageCount || 0) + 1,
+            lastMessageAt: new Date(),
+            lastMessageDirection: 'inbound',
+            updatedAt: new Date(),
+          })
+          .where(eq(conversations.id, linkedConversationId));
+      }
+    }
+    
+    console.log(`✅ Inbound email stored: ${emailMessage.id} (conversation: ${linkedConversationId})`);
     
     // Store in legacy inboundMessages table
     const [legacyMessage] = await db
