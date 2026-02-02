@@ -184,7 +184,7 @@ export async function sendActionEmail(actionId: string): Promise<SendActionEmail
         toEmail: contact.email,
         toName: contact.name || null,
         fromEmail: SENDGRID_FROM_EMAIL,
-        fromName: tenant.name || SENDGRID_FROM_NAME,
+        fromName: tenant.name ? `${tenant.name} via Qashivo` : SENDGRID_FROM_NAME,
         subject,
         textBody,
         htmlBody,
@@ -202,7 +202,7 @@ export async function sendActionEmail(actionId: string): Promise<SendActionEmail
     try {
       const sendResult = await sendEmail({
         to: contact.email,
-        from: `${tenant.name || SENDGRID_FROM_NAME} <${SENDGRID_FROM_EMAIL}>`,
+        from: `${tenant.name ? `${tenant.name} via Qashivo` : SENDGRID_FROM_NAME} <${SENDGRID_FROM_EMAIL}>`,
         replyTo: replyToEmail,
         subject,
         html: htmlBody,
