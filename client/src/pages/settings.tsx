@@ -921,17 +921,52 @@ function DemoDataTabContent() {
     }
   };
 
+  const generateRandomCompanyName = () => {
+    const prefixes = [
+      'Bright', 'Summit', 'Nova', 'Peak', 'Apex', 'Crown', 'Prime', 'Elite',
+      'Meridian', 'Horizon', 'Sterling', 'Phoenix', 'Atlas', 'Beacon', 'Crest',
+      'Vanguard', 'Pinnacle', 'Pacific', 'Atlantic', 'Northern', 'Southern',
+      'Eastern', 'Western', 'Central', 'Metro', 'Urban', 'Global', 'United'
+    ];
+    const middles = [
+      'Oak', 'Stone', 'Bridge', 'Gate', 'Field', 'Valley', 'Ridge', 'Park',
+      'Hill', 'Wood', 'Grove', 'Lake', 'River', 'Bay', 'Point', 'View',
+      'Tech', 'Digital', 'Data', 'Cloud', 'Systems', 'Networks', 'Solutions'
+    ];
+    const industries = [
+      'Consulting', 'Services', 'Solutions', 'Partners', 'Group', 'Industries',
+      'Enterprises', 'Holdings', 'Ventures', 'Associates', 'Trading', 'Logistics',
+      'Engineering', 'Manufacturing', 'Construction', 'Properties', 'Investments'
+    ];
+    const suffixes = ['Ltd', 'Limited', 'PLC', 'LLP'];
+    
+    const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+    const middle = middles[Math.floor(Math.random() * middles.length)];
+    const industry = industries[Math.floor(Math.random() * industries.length)];
+    const suffix = suffixes[Math.floor(Math.random() * suffixes.length)];
+    
+    const formats = [
+      `${prefix} ${middle} ${suffix}`,
+      `${prefix} ${industry} ${suffix}`,
+      `${middle} ${industry} ${suffix}`,
+      `${prefix} ${middle} ${industry} ${suffix}`
+    ];
+    
+    return formats[Math.floor(Math.random() * formats.length)];
+  };
+
   const handleCreateDemoCustomer = async () => {
     setIsCreatingCustomer(true);
     try {
-      const response = await apiRequest("POST", "/api/demo-data/create-demo-customer");
+      const customerName = generateRandomCompanyName();
+      const response = await apiRequest("POST", "/api/demo-data/create-demo-customer", { customerName });
       if (response.ok) {
         const data = await response.json();
         queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
         refetchStats();
         toast({
           title: "Customer Created",
-          description: data.message || "Demo customer created successfully.",
+          description: data.message || `Demo customer "${customerName}" created successfully.`,
         });
       } else {
         throw new Error("Failed to create customer");
