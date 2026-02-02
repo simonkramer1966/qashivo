@@ -1,0 +1,73 @@
+Delivered-To: simon@qashivo.com
+Received: by 2002:adf:f80d:0:b0:436:84e:bc67 with SMTP id s13csp406424wrp;
+        Mon, 2 Feb 2026 02:25:22 -0800 (PST)
+X-Received: by 2002:a05:6a21:4801:b0:343:9397:c4d6 with SMTP id adf61e73a8af0-392dfb97a11mr11135042637.23.1770027922641;
+        Mon, 02 Feb 2026 02:25:22 -0800 (PST)
+ARC-Seal: i=1; a=rsa-sha256; t=1770027922; cv=none;
+        d=google.com; s=arc-20240605;
+        b=kJcSluHfzxgLF8aeFphmDc3wFH/aKQ2og1VPEvPApvirSggnQ/cpzGbqT0yagRlh2f
+         /MLkIfvXgOhFljOSAZoQgwsjZq1w7Y1jxMfI6qHtZC29IV4EGXZeN7ciLgsao8Cl4odT
+         PUHvben5nLPlUK+6Vobg3tHdqzyS12NT8ECO24+kPL+q2XoRflt7vuJsGHhR13xwrHgg
+         GiMOpTYsWNKkiJe4zwmZ11qoepVaoKRVZXIFLx7cIhDjgmPE9VMPZTNNFElC25LC1oe5
+         ar3UlOGrd3EeK0XykWPWK6xavNV87BK96UXLKPhUHH+LlDGncZwetIAM+YNE/KL+uTmT
+         U4Aw==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=to:subject:message-id:mime-version:from:date:dkim-signature;
+        bh=d6l7hcAYUdxUW0FXqeJEa27xkOG7BjFa76knykKtxxw=;
+        fh=dmg5ccTBNU1OEuFbymJnM2Ze+1LmhoHGDRWf9ROGMko=;
+        b=QN29ke501ErH3y6WsprkvgiHI0VIE9AzdQhQdrPqsXCBzJcWrS3lFdfUmWbT8BlBcy
+         kpkAwwc4E1ox27g8WhNMSsLlP9F7Pw8lDX0iUYR3pmgFp1Rx1rLwgYRfzfDsnKI72nlG
+         OSzlSeJmHslOxPBoEKDOi4nTf2IBmQ+Iym0ppqGZXP0OMjDYn/JAP4jpST2Q6PkIhSV3
+         6yAMMtDfIxeTd5fGuA76QQLstUfEI57etAQdg9j2/CyV6+uzmwWP4Osp4oTHv3cMebd5
+         DmOWK0EA5hAOhpCG92VYO7Z1+fxuaY9PqfZbfW+4e1G2ClTZ+PNLhFeFtavb/oDX2+XV
+         pRKA==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@qashivo.com header.s=s1 header.b=KYDFkfAh;
+       spf=pass (google.com: domain of bounces+55717064-4266-simon=qashivo.com@em7089.qashivo.com designates 159.183.224.105 as permitted sender) smtp.mailfrom="bounces+55717064-4266-simon=qashivo.com@em7089.qashivo.com";
+       dmarc=pass (p=QUARANTINE sp=QUARANTINE dis=NONE) header.from=qashivo.com
+Return-Path: <bounces+55717064-4266-simon=qashivo.com@em7089.qashivo.com>
+Received: from s.wfbtzhsw.outbound-mail.sendgrid.net (s.wfbtzhsw.outbound-mail.sendgrid.net. [159.183.224.105])
+        by mx.google.com with ESMTPS id 41be03b00d2f7-c64260a7c5fsi25002685a12.8.2026.02.02.02.25.21
+        for <simon@qashivo.com>
+        (version=TLS1_3 cipher=TLS_AES_128_GCM_SHA256 bits=128/128);
+        Mon, 02 Feb 2026 02:25:22 -0800 (PST)
+Received-SPF: pass (google.com: domain of bounces+55717064-4266-simon=qashivo.com@em7089.qashivo.com designates 159.183.224.105 as permitted sender) client-ip=159.183.224.105;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@qashivo.com header.s=s1 header.b=KYDFkfAh;
+       spf=pass (google.com: domain of bounces+55717064-4266-simon=qashivo.com@em7089.qashivo.com designates 159.183.224.105 as permitted sender) smtp.mailfrom="bounces+55717064-4266-simon=qashivo.com@em7089.qashivo.com";
+       dmarc=pass (p=QUARANTINE sp=QUARANTINE dis=NONE) header.from=qashivo.com
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=qashivo.com; h=content-type:date:from:mime-version:subject:to:cc:content-type:date: from:subject:to; s=s1; bh=d6l7hcAYUdxUW0FXqeJEa27xkOG7BjFa76knykKtxxw=; b=KYDFkfAhgreSOgk60M7+neUzc7WRFax8JtfH3sft+CoxK/on4NG+qhHiuQgRX0CLQ/HT DzuFZXF7sN74zBZKr/6lHPC+IIOsA+sZSXumrkAxFSY2pqECxAO6GNA/bPliiYVGDmBVXi ZqBmDrNT/V5gkpSw0/RqSOBvJGhU9w3gRmDLCcAiJUx+K9GAJrQD0Rn3J52G+A19q6yD+j GGQ1c3N05IUUMybvISqBR1G1jjyWtiJkJNeD3WAVp5T5fHEbKd6Tf69iIUVlZ2K2imRbpW +MiRpdA17Kny9Bo4Co2rqIJo3AGATdEr9WwMcSDkIdQfBX+JIhKV+fbb2jx4EYDg==
+Received: by recvd-7bd9484584-hpzqs with SMTP id recvd-7bd9484584-hpzqs-1-69807B8F-B6 2026-02-02 10:25:19.5315581 +0000 UTC m=+4019399.354401240
+Received: from NTU3MTcwNjQ (unknown) by geopod-ismtpd-9 (SG) with HTTP id e_nOD2GsR6StriCBK7OvCg Mon, 02 Feb 2026 10:25:19.509 +0000 (UTC)
+Content-Type: multipart/alternative; boundary=adf2a93019a685036aeefccce2559d4ac068a500f90b9163321aeaa41155
+Date: Mon, 02 Feb 2026 10:25:19 +0000 (UTC)
+From: Nexus KPI Limited <cc@qashivo.com>
+Mime-Version: 1.0
+Message-ID: <e_nOD2GsR6StriCBK7OvCg@geopod-ismtpd-9>
+Subject: Email Test
+X-SG-EID: u001.sIHGspNcW1UuTj2i0GsgBC85OuXsogSU6mFRu/TIF094cMmL7cWi/pePf4PtCB4Z8sw+5qRVM4fcWfxNX4HAY6xIHd4pfXAXoycEvApdns8HXS+H8yKJoStUDV+CSlT7Pg4+knVL8ddzwbgFQNSwthLMnQofzwf7dDAvgWostmIQqz0GPCbmY8/GijVDRXX3+xX0JZv1d5CmyKKZ2/jWWDF966Jw6AQPYz6kI0OI0Fg=
+To: simon@qashivo.com
+X-Entity-ID: u001.ys6MjBO2WFtHCsYz9B3xug==
+
+--adf2a93019a685036aeefccce2559d4ac068a500f90b9163321aeaa41155
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/plain; charset=us-ascii
+Mime-Version: 1.0
+
+Test
+--adf2a93019a685036aeefccce2559d4ac068a500f90b9163321aeaa41155
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/html; charset=us-ascii
+Mime-Version: 1.0
+
+Test<img src=3D"http://url8025.qashivo.com/wf/open?upn=3Du001.SWDQduz-2FaN-=
+2BrU4Sp91zDmtWFfyE4VWIUWL75uDidWk578weNNIpHSDNX2MN7OnsFxiZyzGYAAgdqZ-2B4-2F=
+vbpj9oin3o8Gerur3vJqOycJF4uaYxE3QRaEGc88e1TBUBrT96bfwAt7vo9B1z-2FumMWID-2BW=
+7xYbzEdTO2eimmAJHftVSlNq10-2Bm8SQarrkeDYZ6P6yY7A3rOcuy0QQ7ySvs-2F7Q-3D-3D" =
+alt=3D"" width=3D"1" height=3D"1" border=3D"0" style=3D"height:1px !importa=
+nt;width:1px !important;border-width:0 !important;margin-top:0 !important;m=
+argin-bottom:0 !important;margin-right:0 !important;margin-left:0 !importan=
+t;padding-top:0 !important;padding-bottom:0 !important;padding-right:0 !imp=
+ortant;padding-left:0 !important;"/>
+--adf2a93019a685036aeefccce2559d4ac068a500f90b9163321aeaa41155--
