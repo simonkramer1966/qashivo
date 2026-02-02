@@ -334,6 +334,11 @@ export async function normalizeSendGridInboundEmail(req: Request): Promise<Norma
   const body = req.body;
   const receivedAt = new Date().toISOString();
   
+  // DEBUG: Log full body keys and structure
+  console.log(`📧 SendGrid body keys: ${Object.keys(body).join(', ')}`);
+  console.log(`📧 SendGrid body type: ${typeof body}`);
+  console.log(`📧 SendGrid full body (first 2000 chars): ${JSON.stringify(body).substring(0, 2000)}`);
+  
   console.log(`📧 SendGrid raw 'to' field: ${body.to}`);
   console.log(`📧 SendGrid raw envelope: ${body.envelope}`);
   

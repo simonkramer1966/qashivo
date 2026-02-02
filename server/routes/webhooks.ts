@@ -5,6 +5,7 @@ import { intentAnalyst } from "../services/intentAnalyst";
 import { detectOutcomeFromText } from "../services/outcomeDetection";
 import { eq, or, and, desc } from "drizzle-orm";
 import crypto from "crypto";
+import multer from "multer";
 import {
   verifyInboundToken,
   normalizeSendGridInboundEmail,
@@ -138,6 +139,17 @@ function validateSendGridOrigin(req: Request): boolean {
 }
 
 /**
+ * Multer configuration for SendGrid multipart form-data parsing
+ * SendGrid sends inbound emails as multipart/form-data
+ */
+const sendGridUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 25 * 1024 * 1024, // 25MB max attachment size
+  },
+});
+
+/**
  * Webhook Routes for Inbound Communications
  * Handles: SendGrid (email), Vonage (SMS/WhatsApp), Retell (voice)
  */
@@ -153,7 +165,7 @@ export function registerWebhookRoutes(app: Express) {
    * - Idempotency deduplication
    * - Retry queue for reliability
    */
-  app.post("/api/webhooks/sendgrid/inbound", async (req: Request, res: Response) => {
+  app.post("/api/webhooks/sendgrid/inbound", sendGridUpload.any(), async (req: Request, res: Response) => {
     try {
       console.log('📧 Received inbound email webhook from SendGrid');
       
@@ -263,7 +275,7 @@ export function registerWebhookRoutes(app: Express) {
    * Legacy SendGrid Inbound Email Webhook (original processing logic)
    * Kept for backward compatibility during migration
    */
-  app.post("/api/webhooks/sendgrid/inbound-legacy", async (req: Request, res: Response) => {
+  app.post("/api/webhooks/sendgrid/inbound-legacy", sendGridUpload.any(), async (req: Request, res: Response) => {
     try {
       console.log('📧 Received inbound email webhook from SendGrid (legacy)');
       
