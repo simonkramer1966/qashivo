@@ -52,6 +52,9 @@ export async function sendEmail(params: {
       return { success: true, messageId: 'demo-mock-email-' + Date.now() };
     }
 
+    // Debug: log replyTo being passed to SendGrid
+    console.log(`📧 sendEmail called with replyTo: ${params.replyTo || '(none)'}`);
+    
     const message: EmailMessage = {
       to: [{ email: params.to }],
       from: parseEmailAddress(params.from),

@@ -62,6 +62,13 @@ export class SendGridEmailService extends EmailService {
     try {
       const sendGridMessage = this.convertToSendGridFormat(message);
       
+      // Debug: log replyTo to verify it's being set
+      if (message.replyTo) {
+        console.log(`📧 SendGrid replyTo configured:`, JSON.stringify(sendGridMessage.replyTo));
+      } else {
+        console.log(`⚠️  SendGrid: No replyTo in message`);
+      }
+      
       return await this.retryOperation(async () => {
         const [response] = await this.mailService.send(sendGridMessage);
         
