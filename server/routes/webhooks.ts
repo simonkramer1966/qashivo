@@ -1945,6 +1945,8 @@ async function processNormalizedInboundEmail(
     console.log(`✅ Inbound email stored: ${emailMessage.id} (conversation: ${linkedConversationId})`);
     
     // Add to timelineEvents for customer drawer display
+    // Strip HTML tags from preview for clean display
+    const plainTextPreview = (text || (html || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()).substring(0, 200);
     await db
       .insert(timelineEvents)
       .values({
@@ -1953,15 +1955,18 @@ async function processNormalizedInboundEmail(
         invoiceId: linkedInvoice?.id || null,
         channel: 'email',
         direction: 'inbound',
-        summary: subject || '(No Subject)',
-        preview: (text || html || '').substring(0, 200),
+        subject: subject || null,
+        summary: `Email from ${fromName || fromEmail}: ${subject || '(No Subject)'}`,
+        preview: plainTextPreview || null,
         body: text || html || null,
         status: 'received',
         occurredAt: new Date(),
-        createdByType: 'external',
+        createdByType: 'system',
         createdByName: fromName || fromEmail,
-        sourceId: emailMessage.id,
-        sourceType: 'email_message',
+        participantsFrom: fromEmail,
+        actionId: linkedAction?.id || null,
+        providerMessageId: emailMessage.id,
+        provider: 'sendgrid',
       });
     console.log(`✅ Timeline event created for inbound email`);
     
