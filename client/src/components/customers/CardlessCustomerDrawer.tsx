@@ -73,6 +73,8 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { cn } from "@/lib/utils";
 import { useCurrency } from "@/hooks/useCurrency";
 import { useToast } from "@/hooks/use-toast";
+import { useDashboardWebSocket, DashboardEvent } from "@/hooks/useDashboardWebSocket";
+import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { CustomerPreview, CustomerPreviewInvoice } from "@shared/types/timeline";
 
@@ -129,6 +131,33 @@ export function CardlessCustomerDrawer({
   const { formatCurrency } = useCurrency();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { user } = useAuth();
+  
+  // Handle WebSocket events for real-time inbound message notifications
+  const handleWebSocketEvent = useCallback((event: DashboardEvent) => {
+    if (event.type === 'inbound_message_received') {
+      const { channel, senderName, customerName, customerId: msgCustomerId } = event.data || {};
+      const channelLabel = channel === 'email' ? 'Email' : channel === 'sms' ? 'SMS' : channel === 'voice' ? 'Call' : 'Message';
+      
+      // Show toast notification
+      toast({
+        title: `${channelLabel} received`,
+        description: `From ${senderName || 'Unknown'} (${customerName || 'Unknown customer'})`,
+      });
+      
+      // Also invalidate this customer's preview if it matches
+      if (customerId && msgCustomerId === customerId) {
+        queryClient.invalidateQueries({ queryKey: [`/api/contacts/${customerId}/preview`] });
+      }
+    }
+  }, [toast, customerId]);
+  
+  // Subscribe to WebSocket for real-time updates
+  useDashboardWebSocket({ 
+    tenantId: user?.tenantId,
+    onEvent: handleWebSocketEvent,
+    autoInvalidate: true 
+  });
 
   const [isNoteMode, setIsNoteMode] = useState(false);
   const [noteContent, setNoteContent] = useState("");

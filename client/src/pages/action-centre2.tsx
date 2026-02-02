@@ -1,9 +1,10 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { Search, ChevronUp, ChevronDown } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation, useSearch } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useDashboardWebSocket, DashboardEvent } from "@/hooks/useDashboardWebSocket";
 import { Button } from "@/components/ui/button";
 import { 
   Clock, 
@@ -45,6 +46,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertTriangle, HelpCircle, TrendingUp } from 'lucide-react';
+import { useAuth } from "@/hooks/useAuth";
 
 type TabId = 'planned' | 'executed' | 'attention' | 'cashboard' | 'forecast' | 'activity';
 
@@ -62,6 +64,26 @@ export default function ActionCentre2() {
   const { formatCurrency } = useCurrency();
   const [, setLocation] = useLocation();
   const searchString = useSearch();
+  const { user } = useAuth();
+  
+  // Handle WebSocket events for real-time inbound message notifications
+  const handleWebSocketEvent = useCallback((event: DashboardEvent) => {
+    if (event.type === 'inbound_message_received') {
+      const { channel, senderName, customerName } = event.data || {};
+      const channelLabel = channel === 'email' ? 'Email' : channel === 'sms' ? 'SMS' : channel === 'voice' ? 'Call' : 'Message';
+      toast({
+        title: `${channelLabel} received`,
+        description: `From ${senderName || 'Unknown'} (${customerName || 'Unknown customer'})`,
+      });
+    }
+  }, [toast]);
+  
+  // Subscribe to WebSocket for real-time updates
+  useDashboardWebSocket({ 
+    tenantId: user?.tenantId,
+    onEvent: handleWebSocketEvent,
+    autoInvalidate: true 
+  });
   
   const urlParams = new URLSearchParams(searchString);
   const tabParam = urlParams.get('tab') as TabId | null;

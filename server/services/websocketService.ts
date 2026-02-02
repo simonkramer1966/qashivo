@@ -12,7 +12,8 @@ export type DashboardEventType =
   | 'payment_received'
   | 'ptp_created'
   | 'data_refresh'
-  | 'sync_completed';
+  | 'sync_completed'
+  | 'inbound_message_received';
 
 export interface DashboardEvent {
   type: DashboardEventType;
@@ -210,6 +211,20 @@ class WebSocketService {
     this.broadcast(tenantId, {
       type: 'data_refresh',
       data: {}
+    });
+  }
+
+  broadcastInboundMessageReceived(
+    tenantId: string, 
+    channel: 'email' | 'sms' | 'voice',
+    senderName: string,
+    senderEmail: string | null,
+    customerId: string,
+    customerName: string
+  ) {
+    this.broadcast(tenantId, {
+      type: 'inbound_message_received',
+      data: { channel, senderName, senderEmail, customerId, customerName }
     });
   }
 

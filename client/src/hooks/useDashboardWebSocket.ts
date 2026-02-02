@@ -9,6 +9,7 @@ export type DashboardEventType =
   | 'ptp_created'
   | 'data_refresh'
   | 'sync_completed'
+  | 'inbound_message_received'
   | 'connected';
 
 export interface DashboardEvent {
@@ -84,6 +85,15 @@ export function useDashboardWebSocket({
             break;
           case 'data_refresh':
             queryClient.invalidateQueries();
+            break;
+          case 'inbound_message_received':
+            // Invalidate customer preview and timeline queries
+            queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
+            // Invalidate specific customer preview if customerId is provided
+            if (data.data?.customerId) {
+              queryClient.invalidateQueries({ queryKey: [`/api/contacts/${data.data.customerId}/preview`] });
+              queryClient.invalidateQueries({ queryKey: [`/api/contacts/${data.data.customerId}/notes`] });
+            }
             break;
         }
       }

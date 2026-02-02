@@ -18,6 +18,7 @@ import {
   getQueueStats,
 } from "../services/inboundEmailQueue";
 import type { NormalizedInboundEmail } from "../../shared/types/inboundEmail";
+import { websocketService } from "../services/websocketService";
 
 /**
  * SendGrid IP ranges for Inbound Parse webhook
@@ -1989,6 +1990,16 @@ async function processNormalizedInboundEmail(
       .returning();
     
     console.log(`✅ Legacy inbound message stored: ${legacyMessage.id}`);
+    
+    // Broadcast inbound message to connected clients
+    websocketService.broadcastInboundMessageReceived(
+      linkedContact.tenantId,
+      'email',
+      fromName || fromEmail,
+      fromEmail,
+      linkedContact.id,
+      linkedContact.name || linkedContact.companyName || 'Unknown Customer'
+    );
     
     // Record email reply signal
     const { signalCollector } = await import("../lib/signal-collector");
