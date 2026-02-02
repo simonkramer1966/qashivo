@@ -1672,7 +1672,7 @@ ${signOff}`);
                                     const amount = item.outcome?.extracted?.amount;
                                     
                                     // Check if this is a VOICE audit event (from REPLY_RECEIVED with payload.channel === 'VOICE')
-                                    const payload = item.metadata || item.payload || {};
+                                    const payload = (item as any).metadata || (item as any).payload || {};
                                     const isVoiceAI = item.channel?.toLowerCase() === 'voice' || payload.channel === 'VOICE' || payload.provider === 'RETELL';
                                     const voiceStatus = payload.status;
                                     const durationSeconds = payload.durationSeconds || 0;

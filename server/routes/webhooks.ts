@@ -992,9 +992,8 @@ export function registerWebhookRoutes(app: Express) {
           actor: 'SYSTEM',
         });
 
-        // Get cooldown policy
-        const policy = await workStateService.getPolicy(tenantId);
-        const cooldownDays = policy?.cooldownDays || 2;
+        // Get cooldown policy - use default cooldown days
+        const cooldownDays = 2;
         const cooldownUntil = new Date(Date.now() + cooldownDays * 24 * 60 * 60 * 1000);
 
         // Update action to COOLDOWN
@@ -1053,9 +1052,9 @@ export function registerWebhookRoutes(app: Express) {
         });
 
         // Create attention item
-        await attentionService.createItem({
+        await attentionService.createAttentionItem({
           tenantId,
-          debtorId: contactId,
+          contactId: contactId,
           invoiceId: linkedInvoiceIds[0] || null,
           type: 'DELIVERY_FAILED',
           title: 'Voice call delivery failed',
