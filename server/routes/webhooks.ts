@@ -5,6 +5,18 @@ import { intentAnalyst } from "../services/intentAnalyst";
 import { detectOutcomeFromText } from "../services/outcomeDetection";
 import { eq, or, and } from "drizzle-orm";
 import crypto from "crypto";
+import {
+  verifyInboundToken,
+  normalizeSendGridInboundEmail,
+  verifyQashivoSignature,
+} from "../services/inboundEmailNormalizer";
+import {
+  isDuplicate,
+  markProcessed,
+  queueForRetry,
+  getQueueStats,
+} from "../services/inboundEmailQueue";
+import type { NormalizedInboundEmail } from "../../shared/types/inboundEmail";
 
 /**
  * SendGrid IP ranges for Inbound Parse webhook
@@ -130,15 +142,128 @@ function validateSendGridOrigin(req: Request): boolean {
 export function registerWebhookRoutes(app: Express) {
   
   /**
-   * SendGrid Inbound Email Webhook
+   * SendGrid Inbound Email Webhook v0.5
    * https://docs.sendgrid.com/for-developers/parsing-email/setting-up-the-inbound-parse-webhook
    * 
-   * Enhanced to support reply token parsing for email threading
-   * Security: Validates IP origin and reply token existence before processing
+   * Enhanced with:
+   * - Shared-secret token verification
+   * - Normalized canonical JSON output
+   * - Idempotency deduplication
+   * - Retry queue for reliability
    */
   app.post("/api/webhooks/sendgrid/inbound", async (req: Request, res: Response) => {
     try {
       console.log('📧 Received inbound email webhook from SendGrid');
+      
+      // Security: Verify shared-secret token from query string
+      if (!verifyInboundToken(req)) {
+        console.warn('❌ SendGrid webhook rejected: Invalid or missing token');
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+      
+      // Security: Validate request origin (IP allowlist)
+      if (!validateSendGridOrigin(req)) {
+        console.warn('❌ SendGrid webhook rejected: Invalid origin');
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      
+      // Normalize to canonical format
+      const normalizedEmail = await normalizeSendGridInboundEmail(req);
+      console.log(`📧 Normalized email: ${normalizedEmail.idempotency.key}`);
+      
+      // Check idempotency - reject duplicates
+      if (isDuplicate(normalizedEmail.idempotency.key)) {
+        console.log(`📧 Duplicate email ignored: ${normalizedEmail.idempotency.key}`);
+        return res.status(200).json({ message: 'Duplicate ignored' });
+      }
+      
+      // Process the normalized email inline (v0.5 - no internal HTTP call needed)
+      const processResult = await processNormalizedInboundEmail(normalizedEmail);
+      
+      if (processResult.success) {
+        markProcessed(normalizedEmail.idempotency.key, 'success');
+        return res.status(200).json({ 
+          message: 'Email received',
+          emailMessageId: processResult.emailMessageId,
+          legacyMessageId: processResult.legacyMessageId,
+        });
+      } else {
+        // Queue for retry if processing failed
+        queueForRetry(normalizedEmail, processResult.error || 'Processing failed');
+        return res.status(200).json({ message: 'Queued for retry' });
+      }
+
+    } catch (error) {
+      console.error('❌ SendGrid webhook error:', error);
+      res.status(500).json({ error: 'Webhook processing failed' });
+    }
+  });
+
+  /**
+   * Internal Inbound Email Webhook (for future provider abstraction)
+   * POST /webhooks/inbound/email
+   * 
+   * Accepts normalized email JSON with Qashivo HMAC verification
+   */
+  app.post("/webhooks/inbound/email", async (req: Request, res: Response) => {
+    try {
+      const timestamp = req.headers['x-qashivo-timestamp'] as string;
+      const signature = req.headers['x-qashivo-signature'] as string;
+      const idempotencyKey = req.headers['x-idempotency-key'] as string;
+      
+      if (!timestamp || !signature) {
+        return res.status(401).json({ error: 'Missing authentication headers' });
+      }
+      
+      // Verify HMAC signature
+      const bodyString = JSON.stringify(req.body);
+      if (!verifyQashivoSignature(timestamp, bodyString, signature)) {
+        console.warn('❌ Internal webhook rejected: Invalid signature');
+        return res.status(401).json({ error: 'Invalid signature' });
+      }
+      
+      // Check timestamp freshness (5 minute window)
+      const timestampAge = Math.abs(Date.now() / 1000 - parseInt(timestamp));
+      if (timestampAge > 300) {
+        return res.status(401).json({ error: 'Request too old' });
+      }
+      
+      const normalizedEmail = req.body as NormalizedInboundEmail;
+      
+      // Check idempotency
+      const key = idempotencyKey || normalizedEmail.idempotency?.key;
+      if (key && isDuplicate(key)) {
+        return res.status(200).json({ message: 'Duplicate ignored' });
+      }
+      
+      // Process the normalized email
+      const result = await processNormalizedInboundEmail(normalizedEmail);
+      
+      if (result.success && key) {
+        markProcessed(key, 'success');
+      }
+      
+      res.status(200).json(result);
+    } catch (error) {
+      console.error('❌ Internal email webhook error:', error);
+      res.status(500).json({ error: 'Processing failed' });
+    }
+  });
+
+  /**
+   * Queue status endpoint
+   */
+  app.get("/api/webhooks/inbound/queue-stats", (req: Request, res: Response) => {
+    res.json(getQueueStats());
+  });
+
+  /**
+   * Legacy SendGrid Inbound Email Webhook (original processing logic)
+   * Kept for backward compatibility during migration
+   */
+  app.post("/api/webhooks/sendgrid/inbound-legacy", async (req: Request, res: Response) => {
+    try {
+      console.log('📧 Received inbound email webhook from SendGrid (legacy)');
       
       // Security: Validate request origin (IP allowlist)
       if (!validateSendGridOrigin(req)) {
@@ -1557,8 +1682,11 @@ Return JSON with:
     res.json({
       status: 'active',
       webhooks: {
-        sendgrid: '/api/webhooks/sendgrid/inbound',
+        sendgrid: '/api/webhooks/sendgrid/inbound?token=<INBOUND_WEBHOOK_TOKEN>',
+        sendgrid_legacy: '/api/webhooks/sendgrid/inbound-legacy',
         sendgrid_events: '/api/webhooks/sendgrid/events',
+        inbound_email: '/webhooks/inbound/email',
+        inbound_queue_stats: '/api/webhooks/inbound/queue-stats',
         vonage_sms: '/api/webhooks/vonage/sms',
         vonage_whatsapp: '/api/webhooks/vonage/whatsapp',
         vonage_delivery: '/api/webhooks/vonage/delivery-receipt',
@@ -1571,6 +1699,196 @@ Return JSON with:
   });
 
   console.log('✅ Webhook routes registered');
+}
+
+/**
+ * Process normalized inbound email
+ * Handles routing, contact lookup, storage, and outcome detection
+ */
+async function processNormalizedInboundEmail(
+  email: NormalizedInboundEmail
+): Promise<{ success: boolean; emailMessageId?: string; legacyMessageId?: string; error?: string }> {
+  try {
+    const { routing, email: emailContent, idempotency } = email;
+    const fromEmail = emailContent.from.email;
+    const fromName = emailContent.from.name || null;
+    const to = emailContent.to.map(t => t.email).join(', ');
+    const subject = emailContent.subject;
+    const text = emailContent.textBody;
+    const html = emailContent.htmlBody;
+    
+    let linkedAction: any = null;
+    let linkedContact: any = null;
+    let linkedInvoice: any = null;
+    
+    // Use routing info if available (high or medium confidence)
+    const useRouting = routing.outboundMessageId && (
+      routing.confidence === 'high' || routing.confidence === 'medium'
+    );
+    
+    if (useRouting) {
+      console.log(`📨 Using ${routing.method} routing (${routing.confidence}): outboundMessageId=${routing.outboundMessageId}`);
+      
+      // For reply_to_token, look up by our internal message ID
+      // For in_reply_to/references, the outboundMessageId is the external Message-ID header
+      let existingEmail: any = null;
+      
+      if (routing.method === 'reply_to_token') {
+        // Direct lookup by our internal ID
+        const [found] = await db
+          .select()
+          .from(emailMessages)
+          .where(and(
+            eq(emailMessages.id, routing.outboundMessageId!),
+            eq(emailMessages.direction, 'OUTBOUND')
+          ))
+          .limit(1);
+        existingEmail = found;
+      } else if (routing.method === 'in_reply_to' || routing.method === 'references') {
+        // Look up by external Message-ID stored in our outbound emails
+        // The Message-ID is typically stored in the headers or as a separate field
+        // For now, search by checking if the message-id appears in outbound headers
+        const results = await db
+          .select()
+          .from(emailMessages)
+          .where(eq(emailMessages.direction, 'OUTBOUND'))
+          .limit(100);
+        
+        // Find email where headers contain this Message-ID
+        for (const em of results) {
+          const headers = em.inboundHeaders as Record<string, any> || {};
+          const msgId = headers['Message-ID'] || headers['message-id'] || '';
+          if (msgId.includes(routing.outboundMessageId!)) {
+            existingEmail = em;
+            break;
+          }
+        }
+      }
+      
+      if (existingEmail) {
+        // Get linked entities
+        if (existingEmail.actionId) {
+          const [action] = await db
+            .select()
+            .from(actions)
+            .where(eq(actions.id, existingEmail.actionId))
+            .limit(1);
+          linkedAction = action;
+        }
+        
+        if (existingEmail.invoiceId) {
+          const [invoice] = await db
+            .select()
+            .from(invoices)
+            .where(eq(invoices.id, existingEmail.invoiceId))
+            .limit(1);
+          linkedInvoice = invoice;
+        }
+        
+        if (existingEmail.contactId) {
+          const [contact] = await db
+            .select()
+            .from(contacts)
+            .where(eq(contacts.id, existingEmail.contactId))
+            .limit(1);
+          linkedContact = contact;
+        }
+      }
+    }
+    
+    // Fallback: find contact by email if no routing match
+    if (!linkedContact) {
+      const [contact] = await db
+        .select()
+        .from(contacts)
+        .where(eq(contacts.email, fromEmail))
+        .limit(1);
+      linkedContact = contact;
+    }
+    
+    if (!linkedContact) {
+      console.log(`⚠️  No contact found for email: ${fromEmail}`);
+      return { success: true, error: 'No matching contact' };
+    }
+    
+    // Store in emailMessages table
+    const threadKey = linkedInvoice?.id ? `inv_${linkedInvoice.id}` : `cust_${linkedContact.id}`;
+    
+    const [emailMessage] = await db
+      .insert(emailMessages)
+      .values({
+        tenantId: linkedContact.tenantId,
+        direction: 'INBOUND',
+        channel: 'EMAIL',
+        actionId: linkedAction?.id || null,
+        contactId: linkedContact.id,
+        invoiceId: linkedInvoice?.id || null,
+        inboundToEmail: to,
+        inboundFromEmail: fromEmail,
+        inboundFromName: fromName,
+        inboundSubject: subject,
+        inboundText: text || null,
+        inboundHtml: html || null,
+        inboundHeaders: emailContent.headers,
+        threadKey,
+        replyToken: null,
+        status: 'RECEIVED',
+        receivedAt: new Date(),
+      })
+      .returning();
+    
+    console.log(`✅ Inbound email stored: ${emailMessage.id}`);
+    
+    // Store in legacy inboundMessages table
+    const [legacyMessage] = await db
+      .insert(inboundMessages)
+      .values({
+        tenantId: linkedContact.tenantId,
+        contactId: linkedContact.id,
+        channel: 'email',
+        from: fromEmail,
+        to: to,
+        subject: subject || '(No Subject)',
+        content: text || html || '(No content)',
+        rawPayload: {
+          normalized: email,
+          emailMessageId: emailMessage.id,
+        },
+      })
+      .returning();
+    
+    console.log(`✅ Legacy inbound message stored: ${legacyMessage.id}`);
+    
+    // Record email reply signal
+    const { signalCollector } = await import("../lib/signal-collector");
+    signalCollector.recordChannelEvent({
+      contactId: linkedContact.id,
+      tenantId: linkedContact.tenantId,
+      channel: 'email',
+      eventType: 'replied',
+      timestamp: new Date(),
+    }).catch(err => console.error('Failed to record email signal:', err));
+    
+    // Trigger outcome detection asynchronously
+    processInboundEmailOutcome(emailMessage.id, text || html || '', linkedContact, linkedAction, linkedInvoice)
+      .catch(err => console.error('❌ Outcome detection error:', err));
+    
+    // Trigger legacy intent analysis asynchronously
+    intentAnalyst.processInboundMessage(legacyMessage.id)
+      .catch(err => console.error('❌ Intent analysis error:', err));
+    
+    return {
+      success: true,
+      emailMessageId: emailMessage.id,
+      legacyMessageId: legacyMessage.id,
+    };
+  } catch (error) {
+    console.error('❌ Error processing normalized email:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
 }
 
 /**
