@@ -6,7 +6,7 @@ import crypto from "crypto";
 
 const EMAIL_REPLY_PREFIX = process.env.EMAIL_REPLY_PREFIX || "reply";
 const EMAIL_REPLY_DOMAIN = process.env.EMAIL_REPLY_DOMAIN || "in.qashivo.com";
-const SENDGRID_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || "notifications@qashivo.com";
+const SENDGRID_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || "no-reply@qashivo.com";
 const SENDGRID_FROM_NAME = process.env.SENDGRID_FROM_NAME || "Qashivo";
 
 interface SendActionEmailResult {
