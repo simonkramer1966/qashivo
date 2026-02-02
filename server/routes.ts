@@ -73,7 +73,8 @@ import {
   outcomes,
   auditEvents,
   collectionPolicies,
-  paymentPlans
+  paymentPlans,
+  emailMessages
 } from "@shared/schema";
 import { getOverdueCategoryFromDueDate } from "@shared/utils/overdueUtils";
 import { calculateLatePaymentInterest } from "./utils/interestCalculator";
@@ -5494,14 +5495,41 @@ Return JSON with:
         where: eq(tenants.id, user.tenantId),
       });
 
-      // Send email via SendGrid
+      // Send email via SendGrid with conversation tracking
       const { sendEmail, DEFAULT_FROM_EMAIL, DEFAULT_FROM } = await import("./services/sendgrid.js");
+      const { generateReplyToEmail, findOrCreateConversation, updateConversationStats } = await import("./services/emailCommunications.js");
+      const { v4: uuidv4 } = await import("uuid");
+      
+      // Generate IDs for conversation tracking
+      const emailMessageId = uuidv4();
+      const conversationId = await findOrCreateConversation(user.tenantId, contactId, subject);
+      const replyToEmail = generateReplyToEmail(user.tenantId, conversationId, emailMessageId);
+      const replyToken = `${user.tenantId}.${conversationId}.${emailMessageId}`;
+      const threadKey = `cust_${contactId}`;
       
       const htmlBody = body.replace(/\n/g, '<br>');
+      
+      // Create emailMessages record BEFORE sending (with pre-generated ID)
+      const [emailMessageRecord] = await db.insert(emailMessages).values({
+        id: emailMessageId,
+        tenantId: user.tenantId,
+        conversationId,
+        direction: 'OUTBOUND',
+        channel: 'EMAIL',
+        contactId,
+        invoiceId: null,
+        subject,
+        textBody: body,
+        htmlBody,
+        threadKey,
+        replyToken,
+        status: 'QUEUED',
+      }).returning();
       
       const result = await sendEmail({
         to: recipientEmail,
         from: `${tenant?.name || DEFAULT_FROM} <${DEFAULT_FROM_EMAIL}>`,
+        replyTo: replyToEmail,
         subject,
         html: htmlBody,
         text: body,
@@ -5509,8 +5537,20 @@ Return JSON with:
       });
 
       if (!result.success) {
+        // Update emailMessages record to failed status
+        await db.update(emailMessages)
+          .set({ status: 'FAILED', error: result.error, updatedAt: new Date() })
+          .where(eq(emailMessages.id, emailMessageId));
         return res.status(500).json({ message: result.error || "Failed to send email" });
       }
+      
+      // Update emailMessages record to sent status
+      await db.update(emailMessages)
+        .set({ status: 'SENT', sentAt: new Date(), updatedAt: new Date() })
+        .where(eq(emailMessages.id, emailMessageId));
+      
+      // Update conversation stats
+      await updateConversationStats(conversationId, 'outbound');
 
       // Create action record
       const [newAction] = await db.insert(actions).values({

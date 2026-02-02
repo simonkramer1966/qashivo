@@ -31,7 +31,7 @@ interface EmailTemplateData {
  * Generate reply-to email address in format:
  * reply+{tenantId}.{conversationId}.{emailMessageId}.{signature}@in.qashivo.com
  */
-function generateReplyToEmail(tenantId: string, conversationId: string, emailMessageId: string): string {
+export function generateReplyToEmail(tenantId: string, conversationId: string, emailMessageId: string): string {
   const signature = generateReplyTokenSignature(tenantId, conversationId, emailMessageId);
   const token = `${tenantId}.${conversationId}.${emailMessageId}.${signature}`;
   return `reply+${token}@${EMAIL_REPLY_DOMAIN}`;
@@ -40,7 +40,7 @@ function generateReplyToEmail(tenantId: string, conversationId: string, emailMes
 /**
  * Find or create a conversation for a contact
  */
-async function findOrCreateConversation(
+export async function findOrCreateConversation(
   tenantId: string,
   contactId: string,
   subject?: string
@@ -80,7 +80,7 @@ async function findOrCreateConversation(
 /**
  * Update conversation metadata after adding a message
  */
-async function updateConversationStats(
+export async function updateConversationStats(
   conversationId: string,
   direction: "inbound" | "outbound"
 ): Promise<void> {
