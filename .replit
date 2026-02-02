@@ -48,7 +48,7 @@ defaultBucketID = "replit-objstore-2d093fe9-78a8-45b9-8f74-a4a89d8ea11e"
 [userenv]
 
 [userenv.shared]
-SENDGRID_FROM_EMAIL = "no-reply@qashivo.com"
+SENDGRID_FROM_EMAIL = "cc@qashivo.com"
 SENDGRID_FROM_NAME = "Qashivo Credit Control"
 INBOUND_WEBHOOK_TOKEN = "kramerS123*AL&&t_UiKLLK-1678%_"
 REPLY_TOKEN_SECRET = "qashivo-reply-token-v1-secure-secret-2026"
