@@ -1944,6 +1944,27 @@ async function processNormalizedInboundEmail(
     
     console.log(`✅ Inbound email stored: ${emailMessage.id} (conversation: ${linkedConversationId})`);
     
+    // Add to timelineEvents for customer drawer display
+    await db
+      .insert(timelineEvents)
+      .values({
+        tenantId: linkedContact.tenantId,
+        customerId: linkedContact.id,
+        invoiceId: linkedInvoice?.id || null,
+        channel: 'email',
+        direction: 'inbound',
+        summary: subject || '(No Subject)',
+        preview: (text || html || '').substring(0, 200),
+        body: text || html || null,
+        status: 'received',
+        occurredAt: new Date(),
+        createdByType: 'external',
+        createdByName: fromName || fromEmail,
+        sourceId: emailMessage.id,
+        sourceType: 'email_message',
+      });
+    console.log(`✅ Timeline event created for inbound email`);
+    
     // Store in legacy inboundMessages table
     const [legacyMessage] = await db
       .insert(inboundMessages)

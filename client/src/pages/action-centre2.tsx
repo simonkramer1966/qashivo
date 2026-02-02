@@ -124,7 +124,7 @@ export default function ActionCentre2() {
       };
       
       const channel = channelMap[(action.type || '').toLowerCase()] || 'email';
-      const direction = action.metadata?.inbound ? 'in' : 'out';
+      const direction = (action.metadata?.inbound === true || action.metadata?.direction === 'inbound') ? 'in' : 'out';
       const customerId = action.contactId || action.metadata?.contactId || '';
       
       rawItems.push({
