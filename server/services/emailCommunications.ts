@@ -1,10 +1,11 @@
 import { db } from "../db";
-import { eq, and } from "drizzle-orm";
-import { actions, contacts, invoices, tenants, emailMessages } from "@shared/schema";
+import { eq, and, desc } from "drizzle-orm";
+import { actions, contacts, invoices, tenants, emailMessages, conversations } from "@shared/schema";
 import { sendEmail } from "./sendgrid";
+import { generateReplyTokenSignature } from "./inboundEmailNormalizer";
 import crypto from "crypto";
+import { v4 as uuidv4 } from "uuid";
 
-const EMAIL_REPLY_PREFIX = process.env.EMAIL_REPLY_PREFIX || "reply";
 const EMAIL_REPLY_DOMAIN = process.env.EMAIL_REPLY_DOMAIN || "in.qashivo.com";
 const SENDGRID_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || "cc@qashivo.com";
 const SENDGRID_FROM_NAME = process.env.SENDGRID_FROM_NAME || "Qashivo Credit Control";
@@ -26,10 +27,80 @@ interface EmailTemplateData {
   tenantName: string;
 }
 
-function generateReplyToken(actionId: string, contactId: string, invoiceId: string | null): string {
-  const randomPart = crypto.randomBytes(6).toString("base64url");
-  const data = `${actionId}.${contactId}.${invoiceId || "none"}.${randomPart}`;
-  return Buffer.from(data).toString("base64url");
+/**
+ * Generate reply-to email address in format:
+ * reply+{tenantId}.{conversationId}.{emailMessageId}.{signature}@in.qashivo.com
+ */
+function generateReplyToEmail(tenantId: string, conversationId: string, emailMessageId: string): string {
+  const signature = generateReplyTokenSignature(tenantId, conversationId, emailMessageId);
+  const token = `${tenantId}.${conversationId}.${emailMessageId}.${signature}`;
+  return `reply+${token}@${EMAIL_REPLY_DOMAIN}`;
+}
+
+/**
+ * Find or create a conversation for a contact
+ */
+async function findOrCreateConversation(
+  tenantId: string,
+  contactId: string,
+  subject?: string
+): Promise<string> {
+  // Look for existing open conversation with this contact
+  const [existing] = await db
+    .select()
+    .from(conversations)
+    .where(and(
+      eq(conversations.tenantId, tenantId),
+      eq(conversations.contactId, contactId),
+      eq(conversations.status, "open")
+    ))
+    .orderBy(desc(conversations.lastMessageAt))
+    .limit(1);
+  
+  if (existing) {
+    return existing.id;
+  }
+  
+  // Create new conversation
+  const [newConversation] = await db
+    .insert(conversations)
+    .values({
+      tenantId,
+      contactId,
+      subject: subject || "Collection correspondence",
+      status: "open",
+      channel: "email",
+      messageCount: 0,
+    })
+    .returning();
+  
+  return newConversation.id;
+}
+
+/**
+ * Update conversation metadata after adding a message
+ */
+async function updateConversationStats(
+  conversationId: string,
+  direction: "inbound" | "outbound"
+): Promise<void> {
+  const [conv] = await db
+    .select()
+    .from(conversations)
+    .where(eq(conversations.id, conversationId))
+    .limit(1);
+  
+  if (conv) {
+    await db
+      .update(conversations)
+      .set({
+        messageCount: (conv.messageCount || 0) + 1,
+        lastMessageAt: new Date(),
+        lastMessageDirection: direction,
+        updatedAt: new Date(),
+      })
+      .where(eq(conversations.id, conversationId));
+  }
 }
 
 function generateThreadKey(invoiceId: string | null, contactId: string): string {
@@ -130,9 +201,21 @@ export async function sendActionEmail(actionId: string): Promise<SendActionEmail
       return { success: false, error: "Contact has no email address" };
     }
 
-    const replyToken = generateReplyToken(action.id, contact.id, invoice?.id || null);
+    // Find or create conversation for this contact
+    const conversationId = await findOrCreateConversation(
+      action.tenantId,
+      contact.id,
+      invoice?.invoiceNumber ? `Invoice ${invoice.invoiceNumber}` : undefined
+    );
+    
+    // Pre-generate email message ID for reply token
+    const emailMessageId = uuidv4();
+    
+    // Generate reply-to with new format: tenantId.conversationId.emailMessageId.signature
+    const replyToEmail = generateReplyToEmail(action.tenantId, conversationId, emailMessageId);
+    const replyToken = `${action.tenantId}.${conversationId}.${emailMessageId}`;
+    
     const threadKey = generateThreadKey(invoice?.id || null, contact.id);
-    const replyToEmail = `${EMAIL_REPLY_PREFIX}+${replyToken}@${EMAIL_REPLY_DOMAIN}`;
 
     const daysOverdue = invoice?.dueDate
       ? Math.max(0, Math.floor((Date.now() - new Date(invoice.dueDate).getTime()) / (1000 * 60 * 60 * 24)))
@@ -175,7 +258,9 @@ export async function sendActionEmail(actionId: string): Promise<SendActionEmail
     const [emailMessage] = await db
       .insert(emailMessages)
       .values({
+        id: emailMessageId, // Use pre-generated ID for reply token
         tenantId: action.tenantId,
+        conversationId, // Link to conversation
         direction: "OUTBOUND",
         channel: "EMAIL",
         actionId: action.id,
@@ -219,8 +304,11 @@ export async function sendActionEmail(actionId: string): Promise<SendActionEmail
             updatedAt: new Date(),
           })
           .where(eq(emailMessages.id, emailMessage.id));
+        
+        // Update conversation stats
+        await updateConversationStats(conversationId, "outbound");
 
-        console.log(`✅ Email sent to ${contact.email} for action ${action.id}`);
+        console.log(`✅ Email sent to ${contact.email} for action ${action.id} (conversation: ${conversationId})`);
 
         return {
           success: true,
