@@ -14,6 +14,7 @@
 
 import crypto from 'crypto';
 import type { Request } from 'express';
+import { simpleParser, type ParsedMail } from 'mailparser';
 import type {
   NormalizedInboundEmail,
   InboundEmailRouting,
@@ -328,6 +329,23 @@ async function storeRawPayload(payload: any): Promise<string | undefined> {
 }
 
 /**
+ * Parse raw MIME content to extract text/html body
+ * SendGrid sometimes only provides raw MIME in body.email field
+ */
+async function parseRawMimeContent(rawMime: string): Promise<{ text?: string; html?: string }> {
+  try {
+    const parsed: ParsedMail = await simpleParser(rawMime);
+    return {
+      text: parsed.text || undefined,
+      html: typeof parsed.html === 'string' ? parsed.html : undefined,
+    };
+  } catch (error) {
+    console.error('❌ Failed to parse MIME content:', error);
+    return {};
+  }
+}
+
+/**
  * Normalize SendGrid Inbound Parse webhook payload to canonical format
  */
 export async function normalizeSendGridInboundEmail(req: Request): Promise<NormalizedInboundEmail> {
@@ -374,6 +392,19 @@ export async function normalizeSendGridInboundEmail(req: Request): Promise<Norma
   // Check for raw MIME content
   const rawMimeRef = body.email ? await storeRawPayload(body.email) : undefined;
   
+  // Extract text/html - try body fields first, fall back to MIME parsing
+  let textBody = body.text || undefined;
+  let htmlBody = body.html || undefined;
+  
+  // If text/html are empty but raw MIME exists, parse it
+  if (!textBody && !htmlBody && body.email) {
+    console.log('📧 No text/html in body, parsing raw MIME content...');
+    const parsed = await parseRawMimeContent(body.email);
+    textBody = parsed.text;
+    htmlBody = parsed.html;
+    console.log(`📧 Parsed MIME: text=${textBody?.length || 0} chars, html=${htmlBody?.length || 0} chars`);
+  }
+  
   // Generate idempotency key
   const idempotencyKey = generateIdempotencyKey(body);
   
@@ -390,8 +421,8 @@ export async function normalizeSendGridInboundEmail(req: Request): Promise<Norma
       to,
       cc,
       subject: body.subject || '(No Subject)',
-      textBody: body.text || undefined,
-      htmlBody: body.html || undefined,
+      textBody,
+      htmlBody,
       headers,
       raw: rawMimeRef ? { mimeRef: rawMimeRef } : undefined,
     },
