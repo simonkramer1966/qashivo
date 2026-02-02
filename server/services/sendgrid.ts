@@ -8,7 +8,7 @@ const config: EmailServiceConfig = {
   apiKey: process.env.SENDGRID_API_KEY || 'default_key',
   environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
   defaultFrom: {
-    email: process.env.SENDGRID_FROM_EMAIL || 'no-reply@qashivo.com',
+    email: process.env.SENDGRID_FROM_EMAIL || 'cc@qashivo.com',
     name: process.env.SENDGRID_FROM_NAME || 'Qashivo Credit Control'
   }
 };
@@ -17,7 +17,7 @@ const emailService = new SendGridEmailService(config);
 
 // Export constants
 export const DEFAULT_FROM = process.env.SENDGRID_FROM_NAME || 'Qashivo Credit Control';
-export const DEFAULT_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'no-reply@qashivo.com';
+export const DEFAULT_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'cc@qashivo.com';
 
 // Simple send email function for backwards compatibility
 export async function sendEmail(params: {

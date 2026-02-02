@@ -533,7 +533,7 @@ export async function sendPasswordResetEmail(email: string, resetToken: string):
     provider: 'sendgrid',
     apiKey: process.env.SENDGRID_API_KEY || 'default_key',
     defaultFrom: {
-      email: process.env.SENDGRID_FROM_EMAIL || 'no-reply@qashivo.com',
+      email: process.env.SENDGRID_FROM_EMAIL || 'cc@qashivo.com',
       name: process.env.SENDGRID_FROM_NAME || 'Qashivo'
     },
     maxRetries: 3,
