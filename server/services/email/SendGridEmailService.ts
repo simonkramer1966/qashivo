@@ -191,7 +191,8 @@ export class SendGridEmailService extends EmailService {
   async sendTemplateEmail(
     templateId: string, 
     recipient: string, 
-    templateData: Record<string, any>
+    templateData: Record<string, any>,
+    options?: { replyTo?: string }
   ): Promise<EmailSendResult> {
     if (!this.isConfigured) {
       this.log('info', 'SendGrid not configured, skipping template email send in development', {
@@ -203,12 +204,18 @@ export class SendGridEmailService extends EmailService {
     }
 
     try {
-      const message = {
+      const message: any = {
         to: recipient,
         from: `${this.config.defaultFrom.name} <${this.config.defaultFrom.email}>`,
         templateId: templateId,
         dynamic_template_data: templateData,
       };
+      
+      // Add replyTo if provided - SendGrid SDK uses camelCase
+      if (options?.replyTo) {
+        message.replyTo = { email: options.replyTo };
+        console.log(`📧 SendGrid template replyTo set to: ${options.replyTo}`);
+      }
 
       return await this.retryOperation(async () => {
         const [response] = await this.mailService.send(message as any);
@@ -430,9 +437,14 @@ export class SendGridEmailService extends EmailService {
       sendGridMessage.bcc = message.bcc.map(addr => this.formatEmailAddress(addr));
     }
 
-    // Add reply-to if present
+    // Add reply-to if present - SendGrid SDK uses camelCase "replyTo"
     if (message.replyTo) {
-      sendGridMessage.replyTo = this.formatEmailAddress(message.replyTo);
+      // SendGrid SDK expects replyTo with object format { email, name? }
+      sendGridMessage.replyTo = {
+        email: message.replyTo.email,
+        ...(message.replyTo.name && { name: message.replyTo.name })
+      };
+      console.log(`📧 SendGrid message replyTo set to:`, JSON.stringify(sendGridMessage.replyTo));
     }
 
     // Handle content - SendGrid requires at least one content type
