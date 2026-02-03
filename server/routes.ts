@@ -6863,13 +6863,23 @@ Return JSON with:
           let invoiceNumber = null;
           let invoiceAmount = null;
           
+          // Check if contact name is stored in metadata first (for historical accuracy)
+          const metadata = action.metadata as Record<string, any> | null;
+          if (metadata?.storedContactName) {
+            contactName = metadata.storedContactName;
+          }
+          
           // Get contact info
           if (action.contactId) {
             try {
               const contact = await storage.getContact(action.contactId, user.tenantId);
               if (contact) {
                 companyName = contact.companyName || null;
-                contactName = contact.name || null;
+                // Only use dynamic contact name if not stored in metadata
+                if (!contactName) {
+                  // Use primary credit contact if available, otherwise fall back to contact.name
+                  contactName = (contact as any).primaryCreditContact?.name || contact.name || null;
+                }
               }
             } catch (e) {
               // Contact not found, skip

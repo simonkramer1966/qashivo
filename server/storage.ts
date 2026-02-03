@@ -1749,6 +1749,27 @@ export class DatabaseStorage implements IStorage {
       throw new Error('Action type is required but missing from actionData');
     }
     
+    // Store contact name in metadata for historical accuracy if we have a contactId
+    if (actionData.contactId && actionData.tenantId) {
+      try {
+        const contact = await this.getContact(actionData.contactId, actionData.tenantId);
+        if (contact) {
+          const existingMetadata = (actionData.metadata as Record<string, any>) || {};
+          // Use primary credit contact name if available, otherwise fall back to contact.name
+          const contactName = (contact as any).primaryCreditContact?.name || contact.name || null;
+          if (contactName && !existingMetadata.storedContactName) {
+            actionData.metadata = {
+              ...existingMetadata,
+              storedContactName: contactName
+            };
+          }
+        }
+      } catch (e) {
+        // Contact not found, continue without storing contact name
+        console.log('Could not fetch contact for action metadata:', e);
+      }
+    }
+    
     const [action] = await db.insert(actions).values(actionData).returning();
     return action;
   }
