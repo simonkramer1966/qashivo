@@ -5,26 +5,19 @@ import BottomNav from "@/components/layout/bottom-nav";
 import { useCurrency } from "@/hooks/useCurrency";
 import { cn } from "@/lib/utils";
 import { 
-  AlertTriangle, 
-  Clock, 
-  CheckCircle2, 
   Loader2,
-  ChevronRight,
   Mail,
   Phone,
   MessageSquare,
   Calendar,
   FileText,
-  User,
   Send,
   Pause,
   AlertCircle
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import type { DebtorPackRow, LoopStage } from "@shared/schema";
 
 interface DebtorPacksResponse {
@@ -39,152 +32,110 @@ interface DebtorPacksResponse {
   };
 }
 
-const STAGE_CONFIG: Record<LoopStage, { label: string; color: string; icon: any; bgColor: string }> = {
-  PLANNED: { 
-    label: "Planned", 
-    color: "text-blue-600", 
-    icon: Clock, 
-    bgColor: "bg-blue-50 dark:bg-blue-950/30" 
-  },
-  IN_FLIGHT: { 
-    label: "In Flight", 
-    color: "text-amber-600", 
-    icon: Send, 
-    bgColor: "bg-amber-50 dark:bg-amber-950/30" 
-  },
-  ATTENTION: { 
-    label: "Attention", 
-    color: "text-red-600", 
-    icon: AlertTriangle, 
-    bgColor: "bg-red-50 dark:bg-red-950/30" 
-  },
-  CLOSED: { 
-    label: "Closed", 
-    color: "text-green-600", 
-    icon: CheckCircle2, 
-    bgColor: "bg-green-50 dark:bg-green-950/30" 
-  },
+const STAGE_CONFIG: Record<LoopStage, { label: string; color: string }> = {
+  PLANNED: { label: "Planned", color: "text-teal-600 dark:text-teal-400" },
+  IN_FLIGHT: { label: "In Flight", color: "text-amber-600 dark:text-amber-400" },
+  ATTENTION: { label: "Attention", color: "text-red-600 dark:text-red-400" },
+  CLOSED: { label: "Closed", color: "text-emerald-600 dark:text-emerald-400" },
 };
 
 const IN_FLIGHT_LABELS: Record<string, string> = {
   SCHEDULED: "Scheduled",
   SENT: "Sent",
-  AWAITING_REPLY: "Awaiting Reply",
+  AWAITING_REPLY: "Awaiting",
   COOLDOWN: "Cooldown",
-  ESCALATION_DUE: "Escalation Due",
-  DELIVERY_FAILED: "Delivery Failed",
+  ESCALATION_DUE: "Escalation",
+  DELIVERY_FAILED: "Failed",
 };
 
 const ATTENTION_LABELS: Record<string, string> = {
   DISPUTE: "Dispute",
-  PAYMENT_PLAN_REQUEST: "Payment Plan Request",
-  REQUEST_MORE_TIME: "More Time Requested",
-  LOW_CONFIDENCE_OUTCOME: "Review Required",
-  SYNC_MISMATCH: "Sync Issue",
-  DATA_QUALITY: "Data Issue",
+  PAYMENT_PLAN_REQUEST: "Plan Req",
+  REQUEST_MORE_TIME: "More Time",
+  LOW_CONFIDENCE_OUTCOME: "Review",
+  SYNC_MISMATCH: "Sync",
+  DATA_QUALITY: "Data",
   PTP_BREACH: "PTP Breach",
-  FIRST_CONTACT_HIGH_VALUE: "High Value First Contact",
-  VIP_CUSTOMER: "VIP Customer",
-  MANUAL_REVIEW: "Manual Review",
-  NEEDS_ALLOCATION: "Needs Allocation",
-  DELIVERY_FAILED: "Delivery Failed",
+  FIRST_CONTACT_HIGH_VALUE: "High Value",
+  VIP_CUSTOMER: "VIP",
+  MANUAL_REVIEW: "Review",
+  NEEDS_ALLOCATION: "Allocate",
+  DELIVERY_FAILED: "Failed",
 };
 
-function StageChip({ stage }: { stage: LoopStage }) {
-  const config = STAGE_CONFIG[stage];
-  const Icon = config.icon;
-  
-  return (
-    <div className={cn(
-      "inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium",
-      config.bgColor,
-      config.color
-    )}>
-      <Icon className="w-3 h-3" />
-      {config.label}
-    </div>
-  );
-}
-
-function SubstateBadge({ pack }: { pack: DebtorPackRow }) {
-  if (pack.stage === 'IN_FLIGHT' && pack.inFlightState) {
-    return (
-      <Badge variant="outline" className="text-xs">
-        {IN_FLIGHT_LABELS[pack.inFlightState] || pack.inFlightState}
-      </Badge>
-    );
-  }
-  if (pack.stage === 'ATTENTION' && pack.attentionType) {
-    return (
-      <Badge variant="destructive" className="text-xs">
-        {ATTENTION_LABELS[pack.attentionType] || pack.attentionType}
-      </Badge>
-    );
-  }
-  return null;
-}
-
-function DebtorPackCard({ 
+function DebtorPackRow({ 
   pack, 
   isSelected,
+  isActive,
   onSelect,
   onClick 
 }: { 
   pack: DebtorPackRow;
   isSelected: boolean;
+  isActive: boolean;
   onSelect: (packId: string, selected: boolean) => void;
   onClick: () => void;
 }) {
   const { formatCurrency } = useCurrency();
+  const stageConfig = STAGE_CONFIG[pack.stage];
   
+  const substateLabel = pack.stage === 'IN_FLIGHT' && pack.inFlightState
+    ? IN_FLIGHT_LABELS[pack.inFlightState] || pack.inFlightState
+    : pack.stage === 'ATTENTION' && pack.attentionType
+      ? ATTENTION_LABELS[pack.attentionType] || pack.attentionType
+      : null;
+
+  const overdueColor = pack.oldestDaysOverdue > 30 
+    ? "text-red-600 dark:text-red-400" 
+    : pack.oldestDaysOverdue > 14 
+      ? "text-amber-600 dark:text-amber-400" 
+      : "text-gray-500 dark:text-gray-400";
+
   return (
     <div 
       className={cn(
-        "p-3 border-b cursor-pointer transition-colors",
-        isSelected ? "bg-blue-50 dark:bg-blue-950/20" : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+        "px-3 py-2 border-b border-gray-100 dark:border-gray-800 cursor-pointer transition-colors",
+        isActive && "bg-gray-50 dark:bg-gray-900"
       )}
       onClick={onClick}
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-center gap-2">
         {pack.isBatchSelectable && (
           <Checkbox 
             checked={isSelected}
-            onCheckedChange={(checked) => {
-              onSelect(pack.packId, !!checked);
-            }}
+            onCheckedChange={(checked) => onSelect(pack.packId, !!checked)}
             onClick={(e) => e.stopPropagation()}
-            className="mt-1"
+            className="h-3.5 w-3.5"
           />
         )}
         
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="font-medium text-sm truncate">{pack.contactName}</span>
-            <StageChip stage={pack.stage} />
-          </div>
-          
-          <div className="flex items-center gap-3 text-xs text-gray-500 mb-1">
-            <span>{pack.invoiceCount} invoice{pack.invoiceCount !== 1 ? 's' : ''}</span>
-            <span className="font-medium text-gray-900 dark:text-gray-100">
-              {formatCurrency(pack.totalDue)}
+        <div className="flex-1 min-w-0 flex items-baseline gap-2">
+          <span className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">
+            {pack.contactName}
+          </span>
+          <span className={cn("text-xs font-medium", stageConfig.color)}>
+            {stageConfig.label}
+          </span>
+          {substateLabel && (
+            <span className="text-xs text-gray-400">
+              {substateLabel}
             </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {pack.oldestDaysOverdue > 0 && (
-              <span className={cn(
-                "text-xs",
-                pack.oldestDaysOverdue > 30 ? "text-red-600" : 
-                pack.oldestDaysOverdue > 14 ? "text-amber-600" : "text-gray-500"
-              )}>
-                {pack.oldestDaysOverdue}d overdue
-              </span>
-            )}
-            <SubstateBadge pack={pack} />
-          </div>
+          )}
         </div>
 
-        <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0 mt-1" />
+        <div className="flex items-center gap-3 text-xs tabular-nums">
+          <span className="text-gray-500 dark:text-gray-400">
+            {pack.invoiceCount}
+          </span>
+          <span className="font-medium text-gray-900 dark:text-gray-100 w-20 text-right">
+            {formatCurrency(pack.totalDue)}
+          </span>
+          {pack.oldestDaysOverdue > 0 && (
+            <span className={cn("w-12 text-right", overdueColor)}>
+              {pack.oldestDaysOverdue}d
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -195,107 +146,105 @@ function PackBuilder({ selectedPack }: { selectedPack: DebtorPackRow | null }) {
 
   if (!selectedPack) {
     return (
-      <div className="h-full flex items-center justify-center text-gray-400">
-        <div className="text-center">
-          <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
-          <p>Select a debtor to view pack details</p>
-        </div>
+      <div className="h-full flex items-center justify-center">
+        <p className="text-sm text-gray-400">Select a debtor</p>
       </div>
     );
   }
 
+  const stageConfig = STAGE_CONFIG[selectedPack.stage];
+  const overdueColor = selectedPack.oldestDaysOverdue > 30 
+    ? "text-red-600" 
+    : selectedPack.oldestDaysOverdue > 14 
+      ? "text-amber-600" 
+      : "";
+
   return (
     <div className="h-full flex flex-col">
-      <div className="p-4 border-b">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-            <User className="w-5 h-5 text-gray-500" />
-          </div>
-          <div>
-            <h2 className="font-semibold">{selectedPack.contactName}</h2>
-            <div className="flex items-center gap-2">
-              <StageChip stage={selectedPack.stage} />
-              <SubstateBadge pack={selectedPack} />
-            </div>
-          </div>
+      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+        <div className="flex items-baseline gap-2 mb-1">
+          <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+            {selectedPack.contactName}
+          </h2>
+          <span className={cn("text-xs font-medium", stageConfig.color)}>
+            {stageConfig.label}
+          </span>
         </div>
 
-        <div className="grid grid-cols-3 gap-4 mt-4 text-center">
+        <div className="flex items-center gap-6 text-xs">
           <div>
-            <div className="text-2xl font-semibold">{formatCurrency(selectedPack.totalDue)}</div>
-            <div className="text-xs text-gray-500">Total Due</div>
+            <span className="text-gray-500 dark:text-gray-400">Total </span>
+            <span className="font-semibold text-gray-900 dark:text-gray-100">
+              {formatCurrency(selectedPack.totalDue)}
+            </span>
           </div>
           <div>
-            <div className="text-2xl font-semibold">{selectedPack.invoiceCount}</div>
-            <div className="text-xs text-gray-500">Invoices</div>
+            <span className="text-gray-500 dark:text-gray-400">Invoices </span>
+            <span className="font-semibold text-gray-900 dark:text-gray-100">
+              {selectedPack.invoiceCount}
+            </span>
           </div>
           <div>
-            <div className={cn(
-              "text-2xl font-semibold",
-              selectedPack.oldestDaysOverdue > 30 ? "text-red-600" : 
-              selectedPack.oldestDaysOverdue > 14 ? "text-amber-600" : ""
-            )}>
+            <span className="text-gray-500 dark:text-gray-400">Oldest </span>
+            <span className={cn("font-semibold", overdueColor || "text-gray-900 dark:text-gray-100")}>
               {selectedPack.oldestDaysOverdue}d
-            </div>
-            <div className="text-xs text-gray-500">Oldest Overdue</div>
+            </span>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-4">
-        <h3 className="font-medium text-sm mb-3">Included Invoices</h3>
-        <div className="space-y-2">
-          <div className="p-3 border rounded-lg text-sm text-gray-500 text-center">
-            Invoice list will load here...
-          </div>
+      <div className="flex-1 overflow-auto px-4 py-3">
+        <div className="mb-4">
+          <h3 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+            Invoices
+          </h3>
+          <p className="text-xs text-gray-400">Invoice list loads here...</p>
         </div>
 
-        <Separator className="my-4" />
-
-        <h3 className="font-medium text-sm mb-3">Recommended Action</h3>
-        <div className="p-3 border rounded-lg bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
-          <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300 mb-2">
-            <Mail className="w-4 h-4" />
-            <span className="font-medium text-sm">Email Reminder</span>
+        <div>
+          <h3 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+            Recommended
+          </h3>
+          <div className="flex items-center gap-2 text-sm">
+            <Mail className="w-4 h-4 text-teal-600" />
+            <span className="text-gray-900 dark:text-gray-100">Email Reminder</span>
           </div>
-          <p className="text-xs text-gray-600 dark:text-gray-400">
-            Standard reminder email for overdue invoices
+          <p className="text-xs text-gray-500 mt-1 ml-6">
+            Standard reminder for overdue invoices
           </p>
         </div>
       </div>
 
-      <div className="p-4 border-t bg-gray-50 dark:bg-gray-900">
+      <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-800">
         {selectedPack.stage === 'PLANNED' && (
           <div className="flex gap-2">
-            <Button className="flex-1" size="sm">
-              <Send className="w-4 h-4 mr-2" />
-              Approve & Send
+            <Button size="sm" className="flex-1 h-8 text-xs">
+              <Send className="w-3.5 h-3.5 mr-1.5" />
+              Approve
             </Button>
-            <Button variant="outline" size="sm">
-              <Calendar className="w-4 h-4 mr-2" />
+            <Button variant="outline" size="sm" className="h-8 text-xs">
+              <Calendar className="w-3.5 h-3.5 mr-1.5" />
               Schedule
             </Button>
           </div>
         )}
         {selectedPack.stage === 'IN_FLIGHT' && (
           <div className="flex gap-2">
-            <Button variant="outline" className="flex-1" size="sm">
-              <Pause className="w-4 h-4 mr-2" />
+            <Button variant="outline" size="sm" className="flex-1 h-8 text-xs">
+              <Pause className="w-3.5 h-3.5 mr-1.5" />
               Pause
             </Button>
-            <Button variant="outline" size="sm">
-              <Phone className="w-4 h-4 mr-2" />
+            <Button variant="outline" size="sm" className="h-8 text-xs">
+              <Phone className="w-3.5 h-3.5 mr-1.5" />
               Call
             </Button>
           </div>
         )}
         {selectedPack.stage === 'ATTENTION' && (
-          <div className="flex gap-2">
-            <Button variant="destructive" className="flex-1" size="sm">
-              <AlertCircle className="w-4 h-4 mr-2" />
-              Resolve
-            </Button>
-          </div>
+          <Button variant="destructive" size="sm" className="w-full h-8 text-xs">
+            <AlertCircle className="w-3.5 h-3.5 mr-1.5" />
+            Resolve
+          </Button>
         )}
       </div>
     </div>
@@ -305,63 +254,42 @@ function PackBuilder({ selectedPack }: { selectedPack: DebtorPackRow | null }) {
 function Timeline({ selectedPack }: { selectedPack: DebtorPackRow | null }) {
   if (!selectedPack) {
     return (
-      <div className="h-full flex items-center justify-center text-gray-400">
-        <div className="text-center">
-          <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
-          <p>Select a debtor to view timeline</p>
-        </div>
+      <div className="h-full flex items-center justify-center">
+        <p className="text-sm text-gray-400">Select a debtor</p>
       </div>
     );
   }
 
+  const events = [
+    { type: 'email', label: 'Email sent', detail: 'Reminder for INV-001', time: '2d ago', color: 'text-teal-600' },
+    { type: 'reply', label: 'Reply received', detail: '"Will pay by month end"', time: '1d ago', color: 'text-emerald-600' },
+    { type: 'ptp', label: 'PTP recorded', detail: 'Expected: Jan 31', time: '1d ago', color: 'text-amber-600' },
+  ];
+
   return (
     <div className="h-full flex flex-col">
-      <div className="p-4 border-b">
-        <h3 className="font-semibold">Activity Timeline</h3>
-        <p className="text-xs text-gray-500">{selectedPack.contactName}</p>
+      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Timeline</h3>
+        <p className="text-xs text-gray-500 dark:text-gray-400">{selectedPack.contactName}</p>
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="p-4">
-          <div className="space-y-4">
-            <div className="flex gap-3">
-              <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center flex-shrink-0">
-                <Mail className="w-4 h-4 text-blue-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-baseline gap-2">
-                  <span className="font-medium text-sm">Email sent</span>
-                  <span className="text-xs text-gray-400">2 days ago</span>
+        <div className="px-4 py-3">
+          <div className="space-y-3">
+            {events.map((event, i) => (
+              <div key={i} className="flex gap-3">
+                <div className="w-1 bg-gray-200 dark:bg-gray-700 rounded-full flex-shrink-0 relative">
+                  <div className={cn("absolute top-0 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-current", event.color)} />
                 </div>
-                <p className="text-xs text-gray-500">Reminder email for invoice INV-001</p>
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/50 flex items-center justify-center flex-shrink-0">
-                <MessageSquare className="w-4 h-4 text-green-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-baseline gap-2">
-                  <span className="font-medium text-sm">Reply received</span>
-                  <span className="text-xs text-gray-400">1 day ago</span>
+                <div className="flex-1 min-w-0 pb-3">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{event.label}</span>
+                    <span className="text-xs text-gray-400">{event.time}</span>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{event.detail}</p>
                 </div>
-                <p className="text-xs text-gray-500">"We'll pay by end of month"</p>
               </div>
-            </div>
-
-            <div className="flex gap-3">
-              <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center flex-shrink-0">
-                <Clock className="w-4 h-4 text-amber-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-baseline gap-2">
-                  <span className="font-medium text-sm">PTP recorded</span>
-                  <span className="text-xs text-gray-400">1 day ago</span>
-                </div>
-                <p className="text-xs text-gray-500">Expected payment: Jan 31, 2026</p>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </ScrollArea>
@@ -402,6 +330,8 @@ export default function Loop() {
     });
   };
 
+  const stageFilters = ['ALL', 'PLANNED', 'IN_FLIGHT', 'ATTENTION'] as const;
+
   return (
     <div className="flex h-screen bg-white dark:bg-gray-950">
       <NewSidebar />
@@ -409,48 +339,54 @@ export default function Loop() {
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="flex-1 flex overflow-hidden">
           {/* Left Pane: Debtor Queue */}
-          <div className="flex-1 border-r flex flex-col">
-            <div className="p-3 border-b">
-              <h1 className="font-semibold mb-3">Loop</h1>
+          <div className="flex-1 border-r border-gray-100 dark:border-gray-800 flex flex-col">
+            <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-800">
+              <div className="flex items-center justify-between mb-2">
+                <h1 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Loop</h1>
+                <span className="text-xs text-gray-400 tabular-nums">
+                  {data?.summary?.total || 0}
+                </span>
+              </div>
               
-              {/* Stage filter tabs */}
-              <div className="flex gap-1">
-                {(['ALL', 'PLANNED', 'IN_FLIGHT', 'ATTENTION'] as const).map(stage => (
-                  <button
-                    key={stage}
-                    onClick={() => setActiveStageFilter(stage)}
-                    className={cn(
-                      "px-2 py-1 text-xs rounded transition-colors",
-                      activeStageFilter === stage 
-                        ? "bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900" 
-                        : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
-                    )}
-                  >
-                    {stage === 'ALL' ? 'All' : STAGE_CONFIG[stage].label}
-                    {stage !== 'ALL' && data?.summary?.byStage && (
-                      <span className="ml-1 opacity-60">
-                        ({data.summary.byStage[stage] || 0})
-                      </span>
-                    )}
-                  </button>
-                ))}
+              <div className="flex gap-0.5">
+                {stageFilters.map(stage => {
+                  const count = stage === 'ALL' 
+                    ? data?.summary?.total 
+                    : data?.summary?.byStage?.[stage];
+                  return (
+                    <button
+                      key={stage}
+                      onClick={() => setActiveStageFilter(stage)}
+                      className={cn(
+                        "px-2 py-1 text-xs transition-colors rounded",
+                        activeStageFilter === stage 
+                          ? "bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900 font-medium" 
+                          : "text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+                      )}
+                    >
+                      {stage === 'ALL' ? 'All' : STAGE_CONFIG[stage].label}
+                      {count !== undefined && count > 0 && (
+                        <span className="ml-1 opacity-60">{count}</span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Batch actions bar */}
             {selectedPackIds.size > 0 && (
-              <div className="p-2 border-b bg-blue-50 dark:bg-blue-950/30 flex items-center justify-between">
-                <span className="text-xs text-blue-700 dark:text-blue-300">
+              <div className="px-3 py-1.5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50 dark:bg-gray-900">
+                <span className="text-xs text-gray-600 dark:text-gray-300">
                   {selectedPackIds.size} selected
                 </span>
                 <div className="flex gap-1">
-                  <Button size="sm" variant="outline" className="h-7 text-xs">
-                    Approve All
+                  <Button size="sm" variant="outline" className="h-6 text-xs px-2">
+                    Approve
                   </Button>
                   <Button 
                     size="sm" 
                     variant="ghost" 
-                    className="h-7 text-xs"
+                    className="h-6 text-xs px-2"
                     onClick={() => setSelectedPackIds(new Set())}
                   >
                     Clear
@@ -462,27 +398,28 @@ export default function Loop() {
             <ScrollArea className="flex-1">
               {isLoading && (
                 <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                  <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
                 </div>
               )}
 
               {error && (
-                <div className="p-4 text-center text-red-500 text-sm">
-                  Failed to load debtor packs
+                <div className="px-3 py-4 text-center text-xs text-red-600 dark:text-red-400">
+                  Failed to load
                 </div>
               )}
 
               {!isLoading && !error && filteredPacks.length === 0 && (
-                <div className="p-4 text-center text-gray-400 text-sm">
-                  No debtors in this queue
+                <div className="px-3 py-8 text-center text-xs text-gray-400">
+                  No debtors
                 </div>
               )}
 
               {filteredPacks.map(pack => (
-                <DebtorPackCard
+                <DebtorPackRow
                   key={pack.packId}
                   pack={pack}
                   isSelected={selectedPackIds.has(pack.packId)}
+                  isActive={selectedPackId === pack.packId}
                   onSelect={handlePackSelect}
                   onClick={() => setSelectedPackId(pack.packId)}
                 />
@@ -491,7 +428,7 @@ export default function Loop() {
           </div>
 
           {/* Middle Pane: Pack Builder */}
-          <div className="flex-1 border-r">
+          <div className="flex-1 border-r border-gray-100 dark:border-gray-800">
             <PackBuilder selectedPack={selectedPack} />
           </div>
 
