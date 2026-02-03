@@ -1,0 +1,240 @@
+Your reconciliation is correct, and you’ve found the real crux: you already have the Loop state machine at the action level — the v0.5 UX just needs a debtor-level projection (“Debtor Pack Row”) that derives a single stage per contact + invoice bundle.
+
+Below is the cleanest way to close the gaps without rewriting your core loop.
+
+1) Confirmed: what exists already maps well ✅
+Existing = Loop engine (good)
+
+actions.work_state = primary stage driver
+
+actions.in_flight_state + timers (awaiting_reply_until, cooldown_until) = substates + nextEligibleAt
+
+attention_items + WorkStateService.routeOutcome() = exception routing
+
+audit_events = trust + explainability
+
+Missing = UI projection layer (Debtor Pack)
+
+You don’t need to move the “source of truth” away from actions. You just need a derived “DebtorPackRow” to power the left pane and keep the cockpit debtor-centric.
+
+2) Recommended MVP approach: derive packs on-the-fly (don’t add a debtor_packs table yet)
+Why this is best for v0.5
+
+Fastest: no new entity lifecycle to maintain
+
+No migration risk: you keep current action routing intact
+
+Truth-preserving: the UI is a view over existing loop state
+
+Later (scale/perf), you can add debtor_packs as a cache/materialized view if needed.
+
+3) State precedence rules for a Debtor Pack Row
+
+A debtor pack row (contact) should resolve to one stage using this precedence:
+
+ATTENTION if there is any open attention_item for that contact (or for any open invoice under that contact)
+
+Else IN_FLIGHT if there is an active action with work_state = IN_FLIGHT
+
+Else PLANNED if the contact has open invoices eligible for chasing
+
+Else CLOSED if there are no open invoices
+
+This makes the left pane stable and understandable.
+
+4) Substate naming differences: don’t migrate unless you must
+Your existing substates are already richer
+
+AWAITING_REPLY (your current) = WAITING_REPLY (spec)
+
+ESCALATION_DUE is useful and spec didn’t include it
+
+DELIVERY_FAILED exists already
+
+The missing “INTENT_CAPTURED” and “PAYMENT_PENDING_CONFIRM”
+
+Recommendation: keep these as computed UI badges, not enum migrations (for speed).
+
+IntentCaptured badge = latest routable outcome exists (e.g., PTP date) and work_state remains IN_FLIGHT
+
+PaymentPendingConfirm badge = inbound says “paid” but Xero hasn’t confirmed yet
+
+This avoids a schema change and still delivers the UX you want.
+
+If you do want schema alignment later, add enum values—just not required for v0.5.
+
+5) Add one missing attention type: NEEDS_ALLOCATION (worth it)
+
+This one is genuinely operational: “reply received but unclear invoice coverage”.
+
+So I’d add it to attention_items.type now (small migration, high value).
+
+6) Left pane API contract (DebtorPackRow)
+Endpoint
+
+GET /api/clients/:clientId/debtor-packs?stage=PLANNED|IN_FLIGHT|ATTENTION|CLOSED&search=&limit=&cursor=
+
+Response shape
+export type DebtorPackRow = {
+  packId: string;          // "contact:<contactId>"
+  clientId: string;
+  contactId: string;
+  contactName: string;
+
+  invoiceCount: number;
+  totalDue: number;
+  oldestDaysOverdue: number;
+
+  stage: "PLANNED" | "IN_FLIGHT" | "ATTENTION" | "CLOSED";
+
+  inFlightState?: string;        // from actions.in_flight_state (optional)
+  attentionType?: string;        // from attention_items.type (optional)
+
+  nextEligibleAt?: string;       // ISO (derived)
+  lastActionAt?: string;         // ISO
+  lastReplyAt?: string;          // ISO (if you track)
+
+  // “cool” UX fields (derived)
+  intentCaptured?: boolean;
+  intentSummary?: string;        // "PTP 2026-02-12" etc
+  expectedPaymentDate?: string;  // if you store on outcome/invoice
+
+  isBatchSelectable: boolean;    // true when stage=PLANNED
+};
+
+7) SQL derivation (example you can adapt)
+
+Assuming tables: contacts, invoices, actions, attention_items, outcomes
+(Adjust names/joins to your schema.)
+
+WITH open_invoices AS (
+  SELECT
+    i.client_id,
+    i.contact_id,
+    COUNT(*) AS invoice_count,
+    SUM(i.amount_due) AS total_due,
+    MAX(GREATEST(0, DATE_PART('day', NOW()::date - i.due_date::date))) AS oldest_days_overdue
+  FROM invoices i
+  WHERE i.client_id = $1
+    AND i.amount_due > 0
+  GROUP BY i.client_id, i.contact_id
+),
+
+latest_action AS (
+  SELECT DISTINCT ON (a.client_id, a.contact_id)
+    a.client_id,
+    a.contact_id,
+    a.work_state,
+    a.in_flight_state,
+    a.awaiting_reply_until,
+    a.cooldown_until,
+    a.updated_at AS last_action_at
+  FROM actions a
+  WHERE a.client_id = $1
+  ORDER BY a.client_id, a.contact_id, a.updated_at DESC
+),
+
+open_attention AS (
+  SELECT
+    ai.client_id,
+    ai.contact_id,
+    MIN(ai.type) AS attention_type,
+    MAX(ai.created_at) AS attention_created_at
+  FROM attention_items ai
+  WHERE ai.client_id = $1
+    AND ai.status IN ('OPEN', 'IN_PROGRESS')
+  GROUP BY ai.client_id, ai.contact_id
+),
+
+latest_routable_outcome AS (
+  SELECT DISTINCT ON (o.client_id, o.contact_id)
+    o.client_id,
+    o.contact_id,
+    o.type,
+    o.payload_json,
+    o.created_at
+  FROM outcomes o
+  WHERE o.client_id = $1
+    AND o.type IN ('PROMISE_TO_PAY', 'CONFIRM_PAID')
+  ORDER BY o.client_id, o.contact_id, o.created_at DESC
+)
+
+SELECT
+  'contact:' || c.id AS pack_id,
+  c.client_id,
+  c.id AS contact_id,
+  c.name AS contact_name,
+
+  COALESCE(oi.invoice_count, 0) AS invoice_count,
+  COALESCE(oi.total_due, 0) AS total_due,
+  COALESCE(oi.oldest_days_overdue, 0) AS oldest_days_overdue,
+
+  CASE
+    WHEN oi.contact_id IS NULL THEN 'CLOSED'
+    WHEN oa.contact_id IS NOT NULL THEN 'ATTENTION'
+    WHEN la.work_state = 'IN_FLIGHT' THEN 'IN_FLIGHT'
+    ELSE 'PLANNED'
+  END AS stage,
+
+  la.in_flight_state,
+  oa.attention_type,
+
+  -- nextEligibleAt: prefer awaiting_reply_until then cooldown_until
+  COALESCE(la.awaiting_reply_until, la.cooldown_until) AS next_eligible_at,
+  la.last_action_at,
+
+  -- Intent badge: routable outcome exists & not in ATTENTION
+  CASE
+    WHEN oa.contact_id IS NULL AND lo.contact_id IS NOT NULL THEN TRUE
+    ELSE FALSE
+  END AS intent_captured,
+
+  CASE
+    WHEN lo.type = 'PROMISE_TO_PAY'
+      THEN 'PTP ' || (lo.payload_json->>'promiseToPayDate')
+    WHEN lo.type = 'CONFIRM_PAID'
+      THEN 'Customer says paid'
+    ELSE NULL
+  END AS intent_summary
+
+FROM contacts c
+LEFT JOIN open_invoices oi ON oi.client_id = c.client_id AND oi.contact_id = c.id
+LEFT JOIN latest_action la ON la.client_id = c.client_id AND la.contact_id = c.id
+LEFT JOIN open_attention oa ON oa.client_id = c.client_id AND oa.contact_id = c.id
+LEFT JOIN latest_routable_outcome lo ON lo.client_id = c.client_id AND lo.contact_id = c.id
+WHERE c.client_id = $1
+ORDER BY
+  CASE
+    WHEN oi.contact_id IS NULL THEN 4
+    WHEN oa.contact_id IS NOT NULL THEN 1
+    WHEN la.work_state = 'IN_FLIGHT' THEN 2
+    ELSE 3
+  END,
+  oldest_days_overdue DESC,
+  total_due DESC;
+
+
+This produces the left pane rows with the exact stage logic you described.
+
+8) Build steps (fast, minimal risk)
+
+Add NEEDS_ALLOCATION to attention_items.type (migration)
+
+Implement GET /debtor-packs using a query like above
+
+UI: Left pane list with stage chip + intentCaptured badge + nextEligibleAt label
+
+Middle pane: invoice inclusion/exclusion + approve/send (creates action + outbox)
+
+Right pane: debtor thread + “invoice detail on click” (as you described)
+
+9) One design clarification (important for correctness)
+
+You said: “If an Outcome surfaces then chip changes to Attention.”
+Make it: only exceptions go to Attention.
+
+PTP date (high confidence) = IN_FLIGHT + Intent badge
+
+Dispute / plan request / low confidence / needs allocation = ATTENTION
+
+That keeps the UX aligned with operational reality.

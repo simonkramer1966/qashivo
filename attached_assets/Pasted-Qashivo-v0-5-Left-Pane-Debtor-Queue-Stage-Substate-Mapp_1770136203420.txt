@@ -1,0 +1,304 @@
+Qashivo v0.5 — Left Pane Debtor Queue: Stage + Substate Mapping Spec
+1) The unit of work in the left pane
+
+Each row in the left pane represents a Debtor Pack:
+
+Debtor / Contact (primary)
+
+Invoice set (one or more open invoices)
+
+One planned/approved action at a time (email/SMS)
+
+A row’s stage reflects the pack’s current loop stage, not a single invoice.
+
+2) Stage chips (primary state)
+
+Four stages only (chips):
+
+PLANNED — recommended work, not yet executed (awaiting approval)
+
+IN_FLIGHT — an action has been executed; we are waiting for a resolution (reply, payment, or next touchpoint)
+
+ATTENTION — needs human decision/intervention
+
+CLOSED — no open balance / no chase required
+
+Important: “Outcome captured” does not automatically mean Attention.
+Attention means Outcome captured that requires human action.
+
+3) Substates (secondary signal shown as badge/dot)
+
+Substates are badges/dots next to the chip, not separate chips.
+
+IN_FLIGHT substates
+
+WAITING_REPLY — sent, waiting for inbound reply
+
+COOLDOWN — waiting until nextEligibleAt (e.g., after a PTP date or policy delay)
+
+INTENT_CAPTURED — intent detected (e.g., PTP), but no human action required
+
+PAYMENT_PENDING_CONFIRM — customer says “paid” but not yet confirmed by Xero (optional)
+
+DELIVERY_FAILED (usually routes to ATTENTION, but can display briefly)
+
+PLANNED substates
+
+READY — eligible now for approval
+
+DUE_SOON — due in X days (if you show pre-due chasing)
+
+ATTENTION substates (reason codes)
+
+DISPUTE
+
+PAYMENT_PLAN_REQUEST
+
+LOW_CONFIDENCE
+
+DELIVERY_FAILED
+
+NEEDS_ALLOCATION (reply references payment but unclear which invoices)
+
+4) Visual rules (chip + badge)
+
+Chip = primary stage. Badge = why / what’s happening.
+
+Example render in left pane row:
+
+PLANNED + badge “3 invoices • £8,450”
+
+IN_FLIGHT + badge “Waiting reply”
+
+IN_FLIGHT + badge “Intent captured • PTP 12 Feb”
+
+ATTENTION + badge “Dispute”
+
+ATTENTION + badge “Needs allocation”
+
+CLOSED + badge “Paid”
+
+5) State transitions (authoritative routing rules)
+A) Planned → In-Flight (approval event)
+
+Trigger: user clicks “Approve & Send” (row or batch)
+Actions:
+
+create approval record (with message + included invoiceIds)
+
+queue outbox message
+
+on send success:
+
+set pack stage = IN_FLIGHT
+
+set substate = WAITING_REPLY
+
+set nextEligibleAt = now + policy.waitForReplyHours (e.g., 48h)
+
+audit: APPROVED, SENT, STATE_CHANGED
+
+If send fails:
+
+route to ATTENTION / DELIVERY_FAILED
+
+B) In-Flight (waiting) → Planned (no reply and cooldown elapsed)
+
+Trigger: now >= nextEligibleAt AND no “blocking” intent/outcome
+Meaning: it’s eligible again for the next daily plan run
+Actions:
+
+stage becomes PLANNED
+
+substate READY
+
+audit STATE_CHANGED
+
+C) In-Flight → In-Flight (intent captured, no human needed)
+
+Trigger: inbound reply interpreted into a routable intent/outcome requiring no decision
+Typical cases:
+
+PTP date with high confidence
+
+“Will pay Friday” (date extracted)
+Actions:
+
+keep stage = IN_FLIGHT
+
+set substate = INTENT_CAPTURED
+
+set pack expectedPaymentDate
+
+set nextEligibleAt = expectedPaymentDate + gracePeriodDays
+
+audit: REPLY_RECEIVED, OUTCOME_EXTRACTED, FORECAST_UPDATED, STATE_CHANGED
+
+D) In-Flight → Attention (exception outcomes)
+
+Trigger: inbound reply outcome requires a human decision
+Cases:
+
+Dispute
+
+Payment plan request
+
+Ambiguous/low confidence
+
+Needs invoice allocation
+
+Delivery failed
+Actions:
+
+stage = ATTENTION
+
+set attention reason code
+
+keep nextEligibleAt optional (usually null; human decides)
+
+audit: OUTCOME_EXTRACTED, ROUTED_TO_ATTENTION, STATE_CHANGED
+
+E) Any stage → Closed (payment confirmed)
+
+Trigger: Xero sync indicates all included invoices have amountDue == 0
+Actions:
+
+stage = CLOSED
+
+substate optional “Paid”
+
+audit: SYNC_RUN, STATE_CHANGED, FORECAST_UPDATED
+
+F) Attention → Planned or In-Flight (after human resolves)
+
+Trigger: user resolves attention item
+Common paths:
+
+dispute resolved → back to PLANNED (re-chase) or IN_FLIGHT (if they send immediately)
+
+payment plan agreed → IN_FLIGHT / INTENT_CAPTURED with schedule and nextEligibleAt
+
+allocation decided → back to IN_FLIGHT and apply outcome to selected invoiceIds
+Actions:
+
+write resolution action + audit
+
+set stage + substate accordingly
+
+6) Data model (minimum fields needed to drive the left pane)
+DebtorPack (row) canonical fields
+export type LoopStage = "PLANNED" | "IN_FLIGHT" | "ATTENTION" | "CLOSED";
+
+export type InFlightSubstate =
+  | "WAITING_REPLY"
+  | "COOLDOWN"
+  | "INTENT_CAPTURED"
+  | "PAYMENT_PENDING_CONFIRM";
+
+export type AttentionReason =
+  | "DISPUTE"
+  | "PAYMENT_PLAN_REQUEST"
+  | "LOW_CONFIDENCE"
+  | "DELIVERY_FAILED"
+  | "NEEDS_ALLOCATION";
+
+export type DebtorPackRow = {
+  packId: string;
+  clientId: string;
+  contactId: string;
+
+  // invoice bundle
+  openInvoiceIds: string[];
+  invoiceCount: number;
+  totalDue: number;
+  oldestDaysOverdue: number;
+
+  // loop state
+  stage: LoopStage;
+
+  // substates
+  inFlightSubstate?: InFlightSubstate;
+  attentionReason?: AttentionReason;
+
+  nextEligibleAt?: string; // ISO timestamp
+  lastActionAt?: string;
+  lastReplyAt?: string;
+
+  // intent/outcome summary
+  expectedPaymentDate?: string; // YYYY-MM-DD
+  intentSummary?: string; // e.g. "PTP 12 Feb"
+  confidenceBand?: "HIGH" | "MEDIUM" | "LOW";
+
+  // UI helpers
+  isBatchSelectable: boolean;
+};
+
+Pack source of truth
+
+You can compute the pack row either from:
+
+a debtor_packs table, or
+
+derive on the fly by grouping invoices by contact + joining latest plan/action/outcome.
+
+Fast MVP: derive via SQL view / query.
+
+7) Left pane interaction rules (UX contract)
+Row actions
+
+Click row → loads middle pane “Pack Builder” for that debtor
+
+Checkbox select → enables batch approval tray
+
+Batch approval tray
+
+When N rows selected:
+
+Approve & Send (N) → approves each pack using default invoice selection
+
+Decline (N)
+
+Optional: Set channel: Email/SMS
+
+Row-level approval vs invoice selection
+
+Quick path: approve row as-is (defaults include all eligible overdue invoices)
+
+Precise path: click row → middle pane opens, user toggles invoice inclusion → approve
+
+8) “Intent surfaced” vs “Outcome surfaced” definitions (to keep the UI honest)
+Intent surfaced (stay In-Flight)
+
+Means: we have a plausible expected payment signal that does not require a human decision right now.
+Examples:
+
+Promise to pay with a date (high/med confidence)
+
+“Paid today” pending confirmation (optional)
+
+Outcome surfaced requiring action (go Attention)
+
+Means: the reply introduces work the user must do.
+Examples:
+
+dispute
+
+payment plan negotiation
+
+unclear/ambiguous reply
+
+allocation uncertainty
+
+9) Acceptance criteria (engineers can test)
+
+Approving a Planned row moves it to In-Flight / Waiting Reply and sets nextEligibleAt.
+
+If nextEligibleAt passes with no reply/payment, the row returns to Planned on next plan run.
+
+A reply producing PTP date keeps row In-Flight but shows Intent captured and sets expectedPaymentDate.
+
+A reply producing Dispute routes row to Attention / Dispute.
+
+A payment detected via Xero for all open invoices routes row to Closed.
+
+Attention resolution returns row to Planned or In-Flight depending on chosen action, and is fully audited.
