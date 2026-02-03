@@ -13173,6 +13173,151 @@ Payment required immediately to avoid collection action. Contact us NOW.`
   });
 
   // ============================================================
+  // DEBTOR PACKS ENDPOINT - Loop left pane data
+  // Derives debtor packs on-the-fly via SQL aggregation
+  // ============================================================
+
+  app.get("/api/debtor-packs", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const tenantId = user.tenantId;
+      const { stage } = req.query;
+
+      // Step 1: Get all contacts with open invoices, aggregating invoice data
+      const contactsWithInvoices = await db.execute(sql`
+        SELECT 
+          c.id as contact_id,
+          c.name as contact_name,
+          c.tenant_id,
+          COUNT(i.id) as invoice_count,
+          COALESCE(SUM(i.amount_due), 0) as total_due,
+          COALESCE(MAX(CURRENT_DATE - i.due_date), 0) as oldest_days_overdue
+        FROM contacts c
+        INNER JOIN invoices i ON c.id = i.contact_id AND c.tenant_id = i.tenant_id
+        WHERE c.tenant_id = ${tenantId}
+          AND i.status = 'OPEN'
+          AND i.amount_due > 0
+        GROUP BY c.id, c.name, c.tenant_id
+        ORDER BY oldest_days_overdue DESC
+      `);
+
+      // Step 2: Get open attention items per contact
+      const openAttentionItems = await db
+        .select({
+          debtorId: attentionItems.debtorId,
+          type: attentionItems.type,
+          severity: attentionItems.severity,
+        })
+        .from(attentionItems)
+        .where(and(
+          eq(attentionItems.tenantId, tenantId),
+          or(eq(attentionItems.status, 'OPEN'), eq(attentionItems.status, 'IN_PROGRESS'))
+        ));
+
+      const attentionByContact = new Map<string, { type: string; severity: string }>();
+      for (const item of openAttentionItems) {
+        if (item.debtorId && !attentionByContact.has(item.debtorId)) {
+          attentionByContact.set(item.debtorId, { type: item.type!, severity: item.severity! });
+        }
+      }
+
+      // Step 3: Get latest action per contact to determine in-flight state
+      const latestActions = await db.execute(sql`
+        SELECT DISTINCT ON (a.contact_id)
+          a.contact_id,
+          a.status as action_status,
+          a.work_state,
+          a.in_flight_state,
+          a.scheduled_at,
+          a.executed_at
+        FROM actions a
+        WHERE a.tenant_id = ${tenantId}
+          AND a.status IN ('PENDING', 'APPROVED', 'EXECUTED', 'SENT')
+        ORDER BY a.contact_id, a.updated_at DESC
+      `);
+
+      const actionsByContact = new Map<string, any>();
+      for (const action of latestActions.rows as any[]) {
+        actionsByContact.set(action.contact_id, action);
+      }
+
+      // Step 4: Build debtor pack rows with stage derivation
+      const debtorPacks: any[] = [];
+      
+      for (const row of contactsWithInvoices.rows as any[]) {
+        const contactId = row.contact_id;
+        const hasAttention = attentionByContact.has(contactId);
+        const attention = attentionByContact.get(contactId);
+        const latestAction = actionsByContact.get(contactId);
+
+        // Derive stage based on precedence: ATTENTION > IN_FLIGHT > PLANNED
+        let derivedStage: 'PLANNED' | 'IN_FLIGHT' | 'ATTENTION' | 'CLOSED' = 'PLANNED';
+        let inFlightState: string | undefined;
+        let attentionType: string | undefined;
+
+        if (hasAttention) {
+          derivedStage = 'ATTENTION';
+          attentionType = attention?.type;
+        } else if (latestAction) {
+          const actionStatus = latestAction.action_status;
+          const workState = latestAction.work_state;
+          
+          if (workState === 'IN_FLIGHT' || actionStatus === 'SENT' || actionStatus === 'EXECUTED') {
+            derivedStage = 'IN_FLIGHT';
+            inFlightState = latestAction.in_flight_state || 'SENT';
+          } else if (actionStatus === 'APPROVED' || actionStatus === 'PENDING') {
+            derivedStage = 'PLANNED';
+          }
+        }
+
+        // Skip if filtering by stage and doesn't match
+        if (stage && derivedStage !== stage) {
+          continue;
+        }
+
+        debtorPacks.push({
+          packId: `contact:${contactId}`,
+          tenantId: row.tenant_id,
+          contactId,
+          contactName: row.contact_name,
+          invoiceCount: parseInt(row.invoice_count, 10),
+          totalDue: parseFloat(row.total_due),
+          oldestDaysOverdue: parseInt(row.oldest_days_overdue, 10),
+          stage: derivedStage,
+          inFlightState,
+          attentionType,
+          lastActionAt: latestAction?.executed_at || latestAction?.scheduled_at,
+          isBatchSelectable: derivedStage === 'PLANNED',
+        });
+      }
+
+      // Sort by oldest days overdue (most urgent first)
+      debtorPacks.sort((a, b) => b.oldestDaysOverdue - a.oldestDaysOverdue);
+
+      console.log(`📋 Returning ${debtorPacks.length} debtor packs for tenant ${tenantId}`);
+
+      res.json({ 
+        debtorPacks,
+        summary: {
+          total: debtorPacks.length,
+          byStage: {
+            PLANNED: debtorPacks.filter(p => p.stage === 'PLANNED').length,
+            IN_FLIGHT: debtorPacks.filter(p => p.stage === 'IN_FLIGHT').length,
+            ATTENTION: debtorPacks.filter(p => p.stage === 'ATTENTION').length,
+          }
+        }
+      });
+    } catch (error: any) {
+      console.error("Error fetching debtor packs:", error);
+      res.status(500).json({ message: `Failed to fetch debtor packs: ${error.message}` });
+    }
+  });
+
+  // ============================================================
   // BULK APPROVE/DECLINE ACTIONS ENDPOINT
   // ============================================================
 
