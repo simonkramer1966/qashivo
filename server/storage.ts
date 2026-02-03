@@ -235,7 +235,7 @@ export interface IStorage {
   deleteCustomerContactPerson(id: string, tenantId: string): Promise<void>;
   
   // Invoice operations
-  getInvoices(tenantId: string, limit?: number): Promise<(Invoice & { contact: Contact })[]>;
+  getInvoices(tenantId: string, limit?: number): Promise<(Invoice & { contact: Contact; invoiceAge: number; daysOverdue: number })[]>;
   getInvoicesFiltered(tenantId: string, filters: {
     status?: string;
     search?: string;
@@ -245,8 +245,8 @@ export interface IStorage {
     sortDir?: string;
     page?: number;
     limit?: number;
-  }): Promise<{ invoices: (Invoice & { contact: Contact })[]; total: number }>;
-  getInvoice(id: string, tenantId: string): Promise<(Invoice & { contact: Contact }) | undefined>;
+  }): Promise<{ invoices: (Invoice & { contact: Contact; invoiceAge: number; daysOverdue: number })[]; total: number }>;
+  getInvoice(id: string, tenantId: string): Promise<(Invoice & { contact: Contact; invoiceAge: number; daysOverdue: number }) | undefined>;
   createInvoice(invoice: InsertInvoice): Promise<Invoice>;
   updateInvoice(id: string, tenantId: string, updates: Partial<InsertInvoice>): Promise<Invoice>;
   getOverdueInvoices(tenantId: string): Promise<(Invoice & { contact: Contact })[]>;
@@ -262,7 +262,7 @@ export interface IStorage {
     onTimePaymentRate: number;
   }>;
   getOverdueCategorySummary(tenantId: string): Promise<Record<OverdueCategory, { count: number; totalAmount: number }>>;
-  getInvoicesWithOverdueCategory(tenantId: string, limit?: number): Promise<(Invoice & { contact: Contact; overdueCategory: OverdueCategory; overdueCategoryInfo: OverdueCategoryInfo })[]>;
+  getInvoicesWithOverdueCategory(tenantId: string, limit?: number): Promise<(Invoice & { contact: Contact; overdueCategory: OverdueCategory; overdueCategoryInfo: OverdueCategoryInfo; invoiceAge: number; daysOverdue: number })[]>;
   getDebtRecoveryMetrics(tenantId: string): Promise<{
     escalatedCount: number;
     escalatedValue: number;
@@ -1008,7 +1008,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Invoice operations
-  async getInvoices(tenantId: string, limit = 10000): Promise<(Invoice & { contact: Contact })[]> {
+  async getInvoices(tenantId: string, limit = 10000): Promise<(Invoice & { contact: Contact; invoiceAge: number; daysOverdue: number })[]> {
     const results = await db
       .select()
       .from(invoices)
@@ -1017,31 +1017,48 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(invoices.createdAt))
       .limit(limit);
     
-    return results.map((row) => ({
-      ...row.invoices,
-      contact: row.contacts || {
-        id: '',
-        tenantId: '',
-        xeroContactId: null,
-        sageContactId: null,
-        quickBooksContactId: null,
-        name: 'Unknown Contact',
-        email: null,
-        phone: null,
-        companyName: null,
-        address: null,
-        role: 'customer',
-        isActive: true,
-        paymentTerms: 30,
-        creditLimit: null,
-        preferredContactMethod: 'email',
-        taxNumber: null,
-        accountNumber: null,
-        notes: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }
-    }));
+    const now = new Date();
+    return results.map((row) => {
+      // Compute invoice age (days since invoice date)
+      const issueDate = row.invoices.issueDate ? new Date(row.invoices.issueDate) : null;
+      const invoiceAge = issueDate 
+        ? Math.max(0, Math.floor((now.getTime() - issueDate.getTime()) / (1000 * 60 * 60 * 24)))
+        : 0;
+      
+      // Compute days overdue (max(0, today - due date))
+      const dueDate = row.invoices.dueDate ? new Date(row.invoices.dueDate) : null;
+      const daysOverdue = dueDate 
+        ? Math.max(0, Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)))
+        : 0;
+      
+      return {
+        ...row.invoices,
+        invoiceAge,
+        daysOverdue,
+        contact: row.contacts || {
+          id: '',
+          tenantId: '',
+          xeroContactId: null,
+          sageContactId: null,
+          quickBooksContactId: null,
+          name: 'Unknown Contact',
+          email: null,
+          phone: null,
+          companyName: null,
+          address: null,
+          role: 'customer',
+          isActive: true,
+          paymentTerms: 30,
+          creditLimit: null,
+          preferredContactMethod: 'email',
+          taxNumber: null,
+          accountNumber: null,
+          notes: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }
+      };
+    });
   }
 
   async getInvoicesCount(tenantId: string): Promise<number> {
@@ -1251,38 +1268,55 @@ export class DatabaseStorage implements IStorage {
     const total = countResult?.count || 0;
 
     // Map results and apply consistent contact fallback, including primary credit contact
-    const mappedResults = results.map((row) => ({
-      ...row.invoices,
-      contact: row.contacts || {
-        id: '',
-        tenantId: '',
-        xeroContactId: null,
-        sageContactId: null,
-        quickBooksContactId: null,
-        name: 'Unknown Contact',
-        email: null,
-        phone: null,
-        companyName: null,
-        address: null,
-        role: 'customer',
-        isActive: true,
-        paymentTerms: 30,
-        creditLimit: null,
-        preferredContactMethod: 'email',
-        taxNumber: null,
-        accountNumber: null,
-        notes: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      primaryCreditContact: row.customer_contact_persons ? {
-        name: row.customer_contact_persons.name,
-        email: row.customer_contact_persons.email,
-        phone: row.customer_contact_persons.phone,
-        smsNumber: row.customer_contact_persons.smsNumber,
-        jobTitle: row.customer_contact_persons.jobTitle,
-      } : null
-    }));
+    const now = new Date();
+    const mappedResults = results.map((row) => {
+      // Compute invoice age (days since invoice date)
+      const issueDate = row.invoices.issueDate ? new Date(row.invoices.issueDate) : null;
+      const invoiceAge = issueDate 
+        ? Math.max(0, Math.floor((now.getTime() - issueDate.getTime()) / (1000 * 60 * 60 * 24)))
+        : 0;
+      
+      // Compute days overdue (max(0, today - due date))
+      const dueDate = row.invoices.dueDate ? new Date(row.invoices.dueDate) : null;
+      const daysOverdue = dueDate 
+        ? Math.max(0, Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)))
+        : 0;
+      
+      return {
+        ...row.invoices,
+        invoiceAge,
+        daysOverdue,
+        contact: row.contacts || {
+          id: '',
+          tenantId: '',
+          xeroContactId: null,
+          sageContactId: null,
+          quickBooksContactId: null,
+          name: 'Unknown Contact',
+          email: null,
+          phone: null,
+          companyName: null,
+          address: null,
+          role: 'customer',
+          isActive: true,
+          paymentTerms: 30,
+          creditLimit: null,
+          preferredContactMethod: 'email',
+          taxNumber: null,
+          accountNumber: null,
+          notes: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        primaryCreditContact: row.customer_contact_persons ? {
+          name: row.customer_contact_persons.name,
+          email: row.customer_contact_persons.email,
+          phone: row.customer_contact_persons.phone,
+          smsNumber: row.customer_contact_persons.smsNumber,
+          jobTitle: row.customer_contact_persons.jobTitle,
+        } : null
+      };
+    });
 
     console.log(`🎯 SQL filtering results: ${mappedResults.length}/${total} invoices (overdue category: ${overdueCategory})`);
 
@@ -1292,7 +1326,7 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async getInvoice(id: string, tenantId: string): Promise<(Invoice & { contact: Contact }) | undefined> {
+  async getInvoice(id: string, tenantId: string): Promise<(Invoice & { contact: Contact; invoiceAge: number; daysOverdue: number }) | undefined> {
     const [result] = await db
       .select()
       .from(invoices)
@@ -1301,8 +1335,22 @@ export class DatabaseStorage implements IStorage {
     
     if (!result) return undefined;
     
+    // Compute invoice age and days overdue
+    const now = new Date();
+    const issueDate = result.invoices.issueDate ? new Date(result.invoices.issueDate) : null;
+    const invoiceAge = issueDate 
+      ? Math.max(0, Math.floor((now.getTime() - issueDate.getTime()) / (1000 * 60 * 60 * 24)))
+      : 0;
+    
+    const dueDate = result.invoices.dueDate ? new Date(result.invoices.dueDate) : null;
+    const daysOverdue = dueDate 
+      ? Math.max(0, Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)))
+      : 0;
+    
     return {
       ...result.invoices,
+      invoiceAge,
+      daysOverdue,
       contact: result.contacts || {
         id: '',
         tenantId: '',
@@ -1499,7 +1547,7 @@ export class DatabaseStorage implements IStorage {
     return getOverdueCategorySummary(invoicesData);
   }
 
-  async getInvoicesWithOverdueCategory(tenantId: string, limit = 10000): Promise<(Invoice & { contact: Contact; overdueCategory: OverdueCategory; overdueCategoryInfo: OverdueCategoryInfo })[]> {
+  async getInvoicesWithOverdueCategory(tenantId: string, limit = 10000): Promise<(Invoice & { contact: Contact; overdueCategory: OverdueCategory; overdueCategoryInfo: OverdueCategoryInfo; invoiceAge: number; daysOverdue: number })[]> {
     const results = await db
       .select()
       .from(invoices)
@@ -1513,12 +1561,27 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(invoices.dueDate))
       .limit(limit);
     
+    const now = new Date();
     return results.map((row) => {
       const invoice = row.invoices;
       const overdueCategoryInfo = getOverdueCategoryFromDueDate(invoice.dueDate);
       
+      // Compute invoice age (days since invoice date)
+      const issueDate = invoice.issueDate ? new Date(invoice.issueDate) : null;
+      const invoiceAge = issueDate 
+        ? Math.max(0, Math.floor((now.getTime() - issueDate.getTime()) / (1000 * 60 * 60 * 24)))
+        : 0;
+      
+      // Compute days overdue (max(0, today - due date))
+      const dueDate = invoice.dueDate ? new Date(invoice.dueDate) : null;
+      const daysOverdue = dueDate 
+        ? Math.max(0, Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)))
+        : 0;
+      
       return {
         ...invoice,
+        invoiceAge,
+        daysOverdue,
         contact: row.contacts || {
           id: '',
           tenantId: '',
