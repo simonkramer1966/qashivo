@@ -13194,13 +13194,13 @@ Payment required immediately to avoid collection action. Contact us NOW.`
           c.name as contact_name,
           c.tenant_id,
           COUNT(i.id) as invoice_count,
-          COALESCE(SUM(i.amount_due), 0) as total_due,
-          COALESCE(MAX(CURRENT_DATE - i.due_date), 0) as oldest_days_overdue
+          COALESCE(SUM(i.amount - COALESCE(i.amount_paid, 0)), 0) as total_due,
+          COALESCE(MAX(EXTRACT(day FROM (CURRENT_DATE - i.due_date))::integer), 0) as oldest_days_overdue
         FROM contacts c
         INNER JOIN invoices i ON c.id = i.contact_id AND c.tenant_id = i.tenant_id
         WHERE c.tenant_id = ${tenantId}
           AND i.status = 'OPEN'
-          AND i.amount_due > 0
+          AND (i.amount - COALESCE(i.amount_paid, 0)) > 0
         GROUP BY c.id, c.name, c.tenant_id
         ORDER BY oldest_days_overdue DESC
       `);
@@ -13208,7 +13208,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       // Step 2: Get open attention items per contact
       const openAttentionItems = await db
         .select({
-          debtorId: attentionItems.debtorId,
+          contactId: attentionItems.contactId,
           type: attentionItems.type,
           severity: attentionItems.severity,
         })
@@ -13220,8 +13220,8 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
       const attentionByContact = new Map<string, { type: string; severity: string }>();
       for (const item of openAttentionItems) {
-        if (item.debtorId && !attentionByContact.has(item.debtorId)) {
-          attentionByContact.set(item.debtorId, { type: item.type!, severity: item.severity! });
+        if (item.contactId && !attentionByContact.has(item.contactId)) {
+          attentionByContact.set(item.contactId, { type: item.type!, severity: item.severity! });
         }
       }
 
@@ -13232,8 +13232,8 @@ Payment required immediately to avoid collection action. Contact us NOW.`
           a.status as action_status,
           a.work_state,
           a.in_flight_state,
-          a.scheduled_at,
-          a.executed_at
+          a.scheduled_for,
+          a.completed_at
         FROM actions a
         WHERE a.tenant_id = ${tenantId}
           AND a.status IN ('PENDING', 'APPROVED', 'EXECUTED', 'SENT')
@@ -13290,7 +13290,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
           stage: derivedStage,
           inFlightState,
           attentionType,
-          lastActionAt: latestAction?.executed_at || latestAction?.scheduled_at,
+          lastActionAt: latestAction?.completed_at || latestAction?.scheduled_for,
           isBatchSelectable: derivedStage === 'PLANNED',
         });
       }
