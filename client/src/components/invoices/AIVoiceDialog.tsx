@@ -16,6 +16,7 @@ import { Mic, Phone, AlertCircle, Bot } from "lucide-react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useCurrency } from "@/hooks/useCurrency";
+import { getCustomerDisplayName, getCustomerCompanyName } from "@/lib/utils";
 
 interface Contact {
   name: string;
@@ -162,7 +163,7 @@ export function AIVoiceDialog({ invoice, open, onOpenChange, daysOverdue, tenant
     onSuccess: (data) => {
       toast({
         title: "AI Call Initiated 📞",
-        description: `Calling ${invoice?.contact.name || invoice?.contact.companyName} at ${invoice?.contact.phone}`,
+        description: `Calling ${getCustomerDisplayName(invoice?.contact) !== 'Not available' ? getCustomerDisplayName(invoice?.contact) : getCustomerCompanyName(invoice?.contact)} at ${invoice?.contact.phone}`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
       queryClient.invalidateQueries({ queryKey: [`/api/invoices/${invoice?.id}/actions`] });
@@ -180,9 +181,10 @@ export function AIVoiceDialog({ invoice, open, onOpenChange, daysOverdue, tenant
   if (!invoice) return null;
 
   const replaceVariables = (content: string): string => {
-    const customerName = invoice.contact.name || invoice.contact.companyName || "Customer";
-    const nameParts = (invoice.contact.name || "").split(' ');
-    const firstName = nameParts[0] || invoice.contact.name || "Customer";
+    const displayName = getCustomerDisplayName(invoice.contact);
+    const customerName = displayName !== 'Not available' ? displayName : getCustomerCompanyName(invoice.contact) !== 'Not available' ? getCustomerCompanyName(invoice.contact) : "Customer";
+    const nameParts = displayName !== 'Not available' ? displayName.split(' ') : [];
+    const firstName = nameParts[0] || customerName;
     const safeTenantName = tenantName || "your organization";
     
     return content
@@ -208,7 +210,7 @@ export function AIVoiceDialog({ invoice, open, onOpenChange, daysOverdue, tenant
             AI Voice Call Setup
           </DialogTitle>
           <DialogDescription>
-            Calling: {invoice.contact.phone} • {invoice.contact.name || invoice.contact.companyName}
+            Calling: {invoice.contact.phone} • {getCustomerDisplayName(invoice.contact) !== 'Not available' ? getCustomerDisplayName(invoice.contact) : getCustomerCompanyName(invoice.contact)}
           </DialogDescription>
         </DialogHeader>
 

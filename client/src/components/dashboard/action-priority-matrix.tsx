@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { CommunicationPreviewDialog } from "@/components/ui/communication-preview-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { getCustomerDisplayName, getCustomerCompanyName } from "@/lib/utils";
 import { formatDate } from "../../../../shared/utils/dateFormatter";
 import { 
   ScatterChart,
@@ -627,8 +628,8 @@ export default function ActionPriorityMatrix() {
           const item: ActionPriorityItem = {
             id: invoice.id,
             invoiceId: invoice.id,
-            customerName: invoice.contact.name,
-            companyName: invoice.contact.companyName || invoice.contact.name,
+            customerName: getCustomerDisplayName(invoice.contact),
+            companyName: getCustomerCompanyName(invoice.contact) !== 'Not available' ? getCustomerCompanyName(invoice.contact) : getCustomerDisplayName(invoice.contact),
             email: invoice.contact.email,
             phone: invoice.contact.phone,
             invoiceNumber: invoice.invoiceNumber,

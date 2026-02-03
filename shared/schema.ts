@@ -237,6 +237,18 @@ export const insertCustomerContactPersonSchema = createInsertSchema(customerCont
 export type InsertCustomerContactPerson = z.infer<typeof insertCustomerContactPersonSchema>;
 export type CustomerContactPerson = typeof customerContactPersons.$inferSelect;
 
+export interface PrimaryCreditContact {
+  name: string;
+  email: string | null;
+  phone: string | null;
+  smsNumber: string | null;
+  jobTitle: string | null;
+}
+
+export type ContactWithPrimaryCredit = Contact & {
+  primaryCreditContact?: PrimaryCreditContact | null;
+};
+
 // Invoices table
 export const invoices = pgTable("invoices", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

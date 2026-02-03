@@ -13,6 +13,7 @@ import Header from "@/components/layout/header";
 import { useCurrency } from "@/hooks/useCurrency";
 import { CustomerPreviewDrawer } from "@/components/customers/CustomerPreviewDrawer";
 import { getBehaviourLabel } from "@/lib/behaviourLabels";
+import { getCustomerDisplayName, getCustomerCompanyName, PrimaryCreditContact } from "@/lib/utils";
 
 interface Contact {
   id: string;
@@ -31,6 +32,7 @@ interface Contact {
   riskBand?: string | null;
   creditLimit?: number | null;
   workflowId?: string | null;
+  primaryCreditContact?: PrimaryCreditContact | null;
 }
 
 export default function Customers() {
@@ -186,7 +188,7 @@ export default function Customers() {
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         <p className="text-[14px] font-medium text-slate-900 truncate">
-                          {contact.companyName || contact.name}
+                          {getCustomerCompanyName(contact)}
                         </p>
                         <div className="flex items-center gap-4 mt-1 text-[12px] text-slate-500">
                           <span className="tabular-nums">{formatCurrency(contact.outstandingAmount)}</span>
@@ -244,10 +246,10 @@ export default function Customers() {
                           {/* Customer */}
                           <td className="py-[5px] px-3">
                             <p className="text-[13px] font-medium text-slate-900 truncate">
-                              {contact.companyName || contact.name}
+                              {getCustomerCompanyName(contact)}
                             </p>
                             <p className="text-[11px] text-slate-400 truncate">
-                              {contact.name}
+                              {getCustomerDisplayName(contact)}
                               {contact.phone && (
                                 <span className="ml-2 text-slate-500">{contact.phone}</span>
                               )}

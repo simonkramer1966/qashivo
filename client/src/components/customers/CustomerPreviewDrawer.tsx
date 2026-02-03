@@ -59,6 +59,7 @@ import {
   Search
 } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
+import { getCustomerDisplayName, getCustomerCompanyName } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { CustomerPreview, CustomerPreviewInvoice } from "@shared/types/timeline";

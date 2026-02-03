@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Mail, MessageSquare, Phone, Search, Send, Sparkles } from "lucide-react";
+import { getCustomerDisplayName } from "@/lib/utils";
 
 interface GlobalTemplate {
   id: string;
@@ -95,8 +96,8 @@ export function ComposerDrawer({ open, onOpenChange, contact, invoice, onSend }:
     if (!text) return text;
     
     const variables: Record<string, string> = {
-      first_name: contact.name.split(' ')[0] || contact.name,
-      contact_name: contact.name,
+      first_name: getCustomerDisplayName(contact).split(' ')[0] || getCustomerDisplayName(contact),
+      contact_name: getCustomerDisplayName(contact),
       invoice_number: invoice?.invoiceNumber || "N/A",
       invoice_total: invoice?.amount || "N/A",
       due_date: invoice?.dueDate ? new Date(invoice.dueDate).toLocaleDateString('en-GB') : "N/A",
@@ -121,7 +122,7 @@ export function ComposerDrawer({ open, onOpenChange, contact, invoice, onSend }:
             Communication Composer
           </SheetTitle>
           <SheetDescription>
-            Send personalized messages to {contact.name}
+            Send personalized messages to {getCustomerDisplayName(contact)}
           </SheetDescription>
         </SheetHeader>
 

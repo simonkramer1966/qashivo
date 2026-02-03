@@ -13,6 +13,7 @@ import BottomNav from "@/components/layout/bottom-nav";
 import { useCurrency } from "@/hooks/useCurrency";
 import { CardlessCustomerDrawer } from "@/components/customers/CardlessCustomerDrawer";
 import { getBehaviourLabel } from "@/lib/behaviourLabels";
+import { getCustomerDisplayName, getCustomerCompanyName, PrimaryCreditContact } from "@/lib/utils";
 
 interface Contact {
   id: string;
@@ -31,6 +32,7 @@ interface Contact {
   riskBand?: string | null;
   creditLimit?: number | null;
   workflowId?: string | null;
+  primaryCreditContact?: PrimaryCreditContact | null;
 }
 
 type SortKey = 'customer' | 'outstanding' | 'overdue' | 'adpd' | 'lastPaid';
@@ -263,7 +265,7 @@ export default function Customers2() {
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900 truncate">
-                          {contact.companyName || contact.name}
+                          {getCustomerCompanyName(contact)}
                         </p>
                         <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-500">
                           <span className="tabular-nums">{formatCurrency(contact.outstandingAmount)}</span>
@@ -346,7 +348,7 @@ export default function Customers2() {
                         >
                           <td className="py-2">
                             <p className="text-[13px] font-medium text-gray-900 truncate max-w-[200px]">
-                              {contact.companyName || contact.name}
+                              {getCustomerCompanyName(contact)}
                             </p>
                           </td>
 

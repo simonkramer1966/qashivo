@@ -17,6 +17,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useCurrency } from "@/hooks/useCurrency";
+import { getCustomerDisplayName, getCustomerCompanyName } from "@/lib/utils";
 
 interface Contact {
   name: string;
@@ -115,11 +116,12 @@ export function SendSMSDialog({ invoice, open, onOpenChange, daysOverdue }: Send
   if (!invoice) return null;
 
   const replaceVariables = (content: string): string => {
-    const customerName = invoice.contact.name || invoice.contact.companyName || "Customer";
-    const nameParts = (invoice.contact.name || "").split(' ');
-    const firstName = nameParts[0] || invoice.contact.name || "Customer";
+    const displayName = getCustomerDisplayName(invoice.contact);
+    const customerName = displayName !== 'Not available' ? displayName : getCustomerCompanyName(invoice.contact) !== 'Not available' ? getCustomerCompanyName(invoice.contact) : "Customer";
+    const nameParts = displayName !== 'Not available' ? displayName.split(' ') : [];
+    const firstName = nameParts[0] || customerName;
     const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : "";
-    const companyName = invoice.contact.companyName || "";
+    const companyName = getCustomerCompanyName(invoice.contact) !== 'Not available' ? getCustomerCompanyName(invoice.contact) : "";
     
     return content
       .replace(/{firstName}/g, firstName)
@@ -145,7 +147,7 @@ export function SendSMSDialog({ invoice, open, onOpenChange, daysOverdue }: Send
             Send SMS Payment Reminder
           </DialogTitle>
           <DialogDescription>
-            Send to: {invoice.contact.phone} • {invoice.contact.name || invoice.contact.companyName}
+            Send to: {invoice.contact.phone} • {getCustomerDisplayName(invoice.contact) !== 'Not available' ? getCustomerDisplayName(invoice.contact) : getCustomerCompanyName(invoice.contact)}
           </DialogDescription>
         </DialogHeader>
 

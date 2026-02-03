@@ -42,6 +42,7 @@ import {
   ArrowRight
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { getCustomerDisplayName, getCustomerCompanyName } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import type { 
   CustomerScheduleAssignment,
@@ -326,10 +327,10 @@ export default function CustomerAssignmentManager({ className }: CustomerAssignm
                         <Building2 className="h-5 w-5 text-blue-600" />
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900">{contact.name}</p>
+                        <p className="font-medium text-gray-900">{getCustomerDisplayName(contact) !== 'Not available' ? getCustomerDisplayName(contact) : contact.name}</p>
                         <p className="text-sm text-gray-600">{contact.email}</p>
-                        {contact.companyName && (
-                          <p className="text-xs text-gray-500">{contact.companyName}</p>
+                        {getCustomerCompanyName(contact) !== 'Not available' && (
+                          <p className="text-xs text-gray-500">{getCustomerCompanyName(contact)}</p>
                         )}
                       </div>
                     </div>
@@ -436,7 +437,7 @@ export default function CustomerAssignmentManager({ className }: CustomerAssignm
                         {getUnassignedContacts().map((contact: Contact) => (
                           <SelectItem key={contact.id} value={contact.id}>
                             <div>
-                              <p className="font-medium">{contact.name}</p>
+                              <p className="font-medium">{getCustomerDisplayName(contact) !== 'Not available' ? getCustomerDisplayName(contact) : contact.name}</p>
                               <p className="text-xs text-gray-500">{contact.email}</p>
                             </div>
                           </SelectItem>

@@ -831,20 +831,60 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Contact operations
-  async getContacts(tenantId: string): Promise<Contact[]> {
-    return await db
+  async getContacts(tenantId: string): Promise<(Contact & { primaryCreditContact: { name: string; email: string | null; phone: string | null; smsNumber: string | null; jobTitle: string | null } | null })[]> {
+    const results = await db
       .select()
       .from(contacts)
+      .leftJoin(
+        customerContactPersons,
+        and(
+          eq(customerContactPersons.contactId, contacts.id),
+          eq(customerContactPersons.tenantId, tenantId),
+          eq(customerContactPersons.isPrimaryCreditControl, true)
+        )
+      )
       .where(and(eq(contacts.tenantId, tenantId), eq(contacts.isActive, true)))
       .orderBy(desc(contacts.createdAt));
+    
+    return results.map((row) => ({
+      ...row.contacts,
+      primaryCreditContact: row.customer_contact_persons ? {
+        name: row.customer_contact_persons.name,
+        email: row.customer_contact_persons.email,
+        phone: row.customer_contact_persons.phone,
+        smsNumber: row.customer_contact_persons.smsNumber,
+        jobTitle: row.customer_contact_persons.jobTitle,
+      } : null
+    }));
   }
 
-  async getContact(id: string, tenantId: string): Promise<Contact | undefined> {
-    const [contact] = await db
+  async getContact(id: string, tenantId: string): Promise<(Contact & { primaryCreditContact: { name: string; email: string | null; phone: string | null; smsNumber: string | null; jobTitle: string | null } | null }) | undefined> {
+    const results = await db
       .select()
       .from(contacts)
+      .leftJoin(
+        customerContactPersons,
+        and(
+          eq(customerContactPersons.contactId, contacts.id),
+          eq(customerContactPersons.tenantId, tenantId),
+          eq(customerContactPersons.isPrimaryCreditControl, true)
+        )
+      )
       .where(and(eq(contacts.id, id), eq(contacts.tenantId, tenantId)));
-    return contact;
+    
+    if (results.length === 0) return undefined;
+    
+    const row = results[0];
+    return {
+      ...row.contacts,
+      primaryCreditContact: row.customer_contact_persons ? {
+        name: row.customer_contact_persons.name,
+        email: row.customer_contact_persons.email,
+        phone: row.customer_contact_persons.phone,
+        smsNumber: row.customer_contact_persons.smsNumber,
+        jobTitle: row.customer_contact_persons.jobTitle,
+      } : null
+    };
   }
 
   async createContact(contactData: InsertContact): Promise<Contact> {

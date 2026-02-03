@@ -70,7 +70,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { cn } from "@/lib/utils";
+import { cn, getCustomerDisplayName, getCustomerCompanyName } from "@/lib/utils";
 import { useCurrency } from "@/hooks/useCurrency";
 import { useToast } from "@/hooks/use-toast";
 import { useDashboardWebSocket, DashboardEvent } from "@/hooks/useDashboardWebSocket";

@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { getCustomerDisplayName, getCustomerCompanyName } from "@/lib/utils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import EditARContactDialog from "./EditARContactDialog";
@@ -119,8 +120,8 @@ export function CustomerDetailDialog({ contact, open, onOpenChange }: CustomerDe
 
   if (!contact) return null;
 
-  // Use AR overlay contact data if available, otherwise fall back to accounting system data
-  const arContactName = contact.arContactName || contact.name;
+  // Use AR overlay contact data if available, otherwise fall back to primary credit contact
+  const arContactName = contact.arContactName || getCustomerDisplayName(contact);
   const arContactEmail = contact.arContactEmail || contact.email;
   const arContactPhone = contact.arContactPhone || contact.phone;
 
@@ -148,7 +149,7 @@ export function CustomerDetailDialog({ contact, open, onOpenChange }: CustomerDe
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
                 <SheetTitle className="text-2xl font-bold mb-2">
-                  {contact.companyName || contact.name}
+                  {getCustomerCompanyName(contact)}
                 </SheetTitle>
                 <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
                   <span>{outstandingInvoices.length} Outstanding Invoice{outstandingInvoices.length !== 1 ? 's' : ''}</span>
@@ -228,7 +229,7 @@ export function CustomerDetailDialog({ contact, open, onOpenChange }: CustomerDe
                     <span className="text-sm font-medium text-slate-700">Business Contact</span>
                   </div>
                   <div className="space-y-2 ml-6">
-                    <p className="text-sm text-slate-900 font-medium">{contact.companyName || contact.name}</p>
+                    <p className="text-sm text-slate-900 font-medium">{getCustomerCompanyName(contact)}</p>
                     {contact.creditLimit && (
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-slate-500">Credit Limit:</span>
