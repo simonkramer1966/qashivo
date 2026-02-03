@@ -24,6 +24,8 @@ interface Invoice {
   dueDate: string;
   issueDate: string;
   paidDate?: string;
+  invoiceAge?: number;
+  daysOverdue?: number;
   contact: {
     name: string;
     email: string;
@@ -40,7 +42,7 @@ interface Invoice {
   } | null;
 }
 
-type SortField = 'date' | 'invoiceNumber' | 'customer' | 'daysOverdue' | 'status' | 'amount';
+type SortField = 'date' | 'invoiceNumber' | 'customer' | 'daysOverdue' | 'invoiceAge' | 'status' | 'amount';
 type SortDirection = 'asc' | 'desc';
 
 export default function Invoices() {
@@ -67,6 +69,13 @@ export default function Invoices() {
     const today = new Date();
     const diff = Math.floor((today.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
     return diff;
+  };
+
+  const getInvoiceAge = (issueDate: string) => {
+    if (!issueDate) return 0;
+    const issue = new Date(issueDate);
+    const today = new Date();
+    return Math.max(0, Math.floor((today.getTime() - issue.getTime()) / (1000 * 60 * 60 * 24)));
   };
 
   interface AgingBucket {
@@ -374,6 +383,12 @@ export default function Invoices() {
                           Days Overdue{getSortIcon('daysOverdue')}
                         </th>
                         <th 
+                          className="text-right px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 select-none"
+                          onClick={() => handleSort('invoiceAge')}
+                        >
+                          Inv. Age{getSortIcon('invoiceAge')}
+                        </th>
+                        <th 
                           className="text-center px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 select-none"
                           onClick={() => handleSort('status')}
                         >
@@ -435,6 +450,12 @@ export default function Invoices() {
                               ) : (
                                 <span className="text-[13px] text-slate-400">-</span>
                               )}
+                            </td>
+
+                            <td className="py-[5px] px-3 text-right">
+                              <span className="text-[13px] text-slate-500 tabular-nums">
+                                {invoice.invoiceAge ?? getInvoiceAge(invoice.issueDate)}
+                              </span>
                             </td>
 
                             <td className="py-[5px] px-3 text-center">
