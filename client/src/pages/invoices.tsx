@@ -400,6 +400,7 @@ export default function Invoices() {
                         >
                           Amount{getSortIcon('amount')}
                         </th>
+                        <th className="w-8 px-2"></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -459,16 +460,17 @@ export default function Invoices() {
                             </td>
 
                             <td className="py-[5px] px-3 text-center">
-                              <div className="flex items-center justify-center gap-2">
-                                {getStatusDot(invoice)}
-                                {getStatusDisplay(invoice)}
-                              </div>
+                              {getStatusDisplay(invoice)}
                             </td>
 
                             <td className="py-[5px] px-3 text-right">
                               <span className="text-[13px] text-slate-700 tabular-nums font-medium">
                                 {formatCurrency(invoice.status === 'paid' ? invoice.amount : outstanding)}
                               </span>
+                            </td>
+
+                            <td className="py-[5px] px-2 text-center">
+                              {getStatusDot(invoice)}
                             </td>
                           </tr>
                         );
