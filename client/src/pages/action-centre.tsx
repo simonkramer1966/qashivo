@@ -116,9 +116,15 @@ export default function ActionCentreV2() {
     return [...actionAttentionItems, ...fromDb];
   }, [actionAttentionItems, dbAttentionItems]);
 
+  // Fetch activity logs (outcomes)
+  const { data: activityLogs = [] } = useQuery<any[]>({
+    queryKey: ['/api/activity-logs'],
+  });
+
   const activityItems: ActivityItem[] = useMemo(() => {
     const rawItems: { item: ActivityItem; timestamp: number }[] = [];
     
+    // Add actions (communications)
     for (const action of allActions) {
       const rawTimestamp = action.completedAt || action.createdAt;
       const actionDate = new Date(rawTimestamp);
@@ -152,6 +158,7 @@ export default function ActionCentreV2() {
           time: timeStr,
           direction: direction as 'in' | 'out',
           channel,
+          category: 'communication',
           customerId,
           customerName: action.companyName || action.contactName || 'Unknown',
           contactName: action.contactName || 'Unknown',
@@ -162,10 +169,55 @@ export default function ActionCentreV2() {
       });
     }
     
+    // Add activity logs (outcomes)
+    for (const log of activityLogs) {
+      if (log.category !== 'outcome') continue; // Only include outcome logs
+      
+      const logDate = new Date(log.createdAt);
+      const timestamp = logDate.getTime();
+      
+      if (isNaN(timestamp)) continue;
+      
+      const dateStr = logDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      const timeStr = logDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      
+      const channelMap: Record<string, 'promise_to_pay' | 'payment_plan' | 'dispute' | 'payment_received' | 'ptp_breach'> = {
+        promise_to_pay: 'promise_to_pay',
+        payment_plan: 'payment_plan',
+        dispute: 'dispute',
+        payment_received: 'payment_received',
+        ptp_breach: 'ptp_breach',
+      };
+      
+      const channel = channelMap[log.activityType] || 'promise_to_pay';
+      const metadata = log.metadata || {};
+      
+      // Resolve customerId from multiple possible sources
+      const customerId = metadata.contactId || (log.entityType === 'contact' ? log.entityId : '') || '';
+      
+      rawItems.push({
+        timestamp,
+        item: {
+          id: `log-${log.id}`,
+          date: dateStr,
+          time: timeStr,
+          direction: 'outcome',
+          channel,
+          category: 'outcome',
+          customerId,
+          customerName: metadata.companyName || metadata.customerName || 'Unknown',
+          contactName: metadata.contactName || 'Unknown',
+          purpose: log.description || log.action,
+          summary: log.description,
+          meta: { ...metadata, activityType: log.activityType, result: log.result },
+        },
+      });
+    }
+    
     return rawItems
       .sort((a, b) => b.timestamp - a.timestamp)
       .map(r => r.item);
-  }, [allActions]);
+  }, [allActions, activityLogs]);
 
   const debtors: Debtor[] = useMemo(() => {
     if (!tabData) return [];

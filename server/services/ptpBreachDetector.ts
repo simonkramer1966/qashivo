@@ -1,6 +1,6 @@
 import { eq, and, lt, ne, isNotNull, inArray, sql } from "drizzle-orm";
 import { db } from "../db";
-import { tenants, promisesToPay, invoices, actions, paymentPlans, paymentPlanInvoices } from "@shared/schema";
+import { tenants, promisesToPay, invoices, actions, paymentPlans, paymentPlanInvoices, activityLogs } from "@shared/schema";
 import { pauseManager } from "../lib/pause-manager";
 
 interface BreachDetectorConfig {
@@ -223,6 +223,28 @@ class PTPBreachDetector {
             source: 'automated'
           });
 
+          // Log activity for payment plan breach
+          try {
+            await db.insert(activityLogs).values({
+              tenantId: tenantId,
+              activityType: 'ptp_breach',
+              category: 'outcome',
+              entityType: 'contact',
+              entityId: plan.contactId,
+              action: 'breached',
+              description: `Payment plan defaulted - no payment received. Outstanding: ${new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(currentOutstanding)}`,
+              result: 'failure',
+              metadata: {
+                paymentPlanId: plan.id,
+                expectedOutstanding: lastChecked,
+                actualOutstanding: currentOutstanding,
+                contactId: plan.contactId
+              }
+            });
+          } catch (e) {
+            console.log('Failed to log payment plan breach activity:', e);
+          }
+
           // Clear outcomeOverride on linked invoices so they return to collections
           await db
             .update(invoices)
@@ -331,6 +353,29 @@ class PTPBreachDetector {
           aiGenerated: false,
           source: 'automated'
         });
+
+        // Log activity for PTP breach
+        try {
+          await db.insert(activityLogs).values({
+            tenantId: tenantId,
+            activityType: 'ptp_breach',
+            category: 'outcome',
+            entityType: 'invoice',
+            entityId: promise.invoiceId,
+            action: 'breached',
+            description: `Promise to pay breached - ${promise.contactName} failed to pay ${new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(Number(promise.amount))} by ${promise.promisedDate.toISOString().split('T')[0]}`,
+            result: 'failure',
+            metadata: {
+              promiseId: promise.id,
+              contactName: promise.contactName,
+              promisedAmount: promise.amount,
+              promisedDate: promise.promisedDate,
+              invoiceNumber: invoice.invoiceNumber
+            }
+          });
+        } catch (e) {
+          console.log('Failed to log PTP breach activity:', e);
+        }
 
         console.log(`⚠️  Promise breached: ${promise.id} (Invoice ${invoice.invoiceNumber}, ${promise.amount} due ${promise.promisedDate.toISOString().split('T')[0]})`);
         breachCount++;

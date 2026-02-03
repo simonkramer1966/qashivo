@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { ActivityItem, ActivityChannel, ActivityDirection } from '../types';
-import { ChevronLeft, ChevronRight, Mail, MessageSquare, Phone, MessageCircle, Globe, StickyNote, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Mail, MessageSquare, Phone, MessageCircle, Globe, StickyNote, ArrowDownLeft, ArrowUpRight, HandCoins, Calendar, AlertTriangle, CheckCircle2, XCircle, Target } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface ActivityTabProps {
@@ -10,13 +10,18 @@ interface ActivityTabProps {
   search?: string;
 }
 
-const CHANNEL_CONFIG: Record<ActivityChannel, { label: string; icon: any; color: string }> = {
+const CHANNEL_CONFIG: Record<ActivityChannel, { label: string; icon: any; color: string; isOutcome?: boolean }> = {
   email: { label: 'Email', icon: Mail, color: 'text-blue-500' },
   sms: { label: 'SMS', icon: MessageSquare, color: 'text-green-500' },
   voice: { label: 'Voice', icon: Phone, color: 'text-purple-500' },
   whatsapp: { label: 'WhatsApp', icon: MessageCircle, color: 'text-emerald-500' },
   portal: { label: 'Portal', icon: Globe, color: 'text-cyan-500' },
   note: { label: 'Note', icon: StickyNote, color: 'text-amber-500' },
+  promise_to_pay: { label: 'Promise to Pay', icon: HandCoins, color: 'text-teal-600', isOutcome: true },
+  payment_plan: { label: 'Payment Plan', icon: Calendar, color: 'text-indigo-600', isOutcome: true },
+  dispute: { label: 'Dispute', icon: AlertTriangle, color: 'text-orange-600', isOutcome: true },
+  payment_received: { label: 'Payment Received', icon: CheckCircle2, color: 'text-green-600', isOutcome: true },
+  ptp_breach: { label: 'PTP Breach', icon: XCircle, color: 'text-red-600', isOutcome: true },
 };
 
 export function ActivityTab({ items, onSelectCustomer, isLoading, search = '' }: ActivityTabProps) {
@@ -60,7 +65,8 @@ export function ActivityTab({ items, onSelectCustomer, isLoading, search = '' }:
 
   const channelCounts = useMemo(() => {
     const counts: Record<ActivityChannel, number> = {
-      email: 0, sms: 0, voice: 0, whatsapp: 0, portal: 0, note: 0
+      email: 0, sms: 0, voice: 0, whatsapp: 0, portal: 0, note: 0,
+      promise_to_pay: 0, payment_plan: 0, dispute: 0, payment_received: 0, ptp_breach: 0
     };
     for (const item of filteredItems) {
       if (item.channel in counts) {
@@ -140,10 +146,12 @@ export function ActivityTab({ items, onSelectCustomer, isLoading, search = '' }:
                 
                 const hasCustomerId = Boolean(item.customerId);
                 
+                const isOutcome = channelConfig.isOutcome;
+                
                 return (
                   <tr 
                     key={item.id} 
-                    className={`hover:bg-slate-100 transition-colors ${hasCustomerId ? 'cursor-pointer' : ''} ${!isLast ? 'border-b border-slate-200' : ''}`}
+                    className={`transition-colors ${hasCustomerId ? 'cursor-pointer' : ''} ${!isLast ? 'border-b border-slate-200' : ''} ${isOutcome ? 'bg-slate-50/50 hover:bg-slate-100' : 'hover:bg-slate-100'}`}
                     onClick={() => hasCustomerId && onSelectCustomer(item.customerId)}
                   >
                     <td className="py-[5px] px-3">
@@ -162,13 +170,15 @@ export function ActivityTab({ items, onSelectCustomer, isLoading, search = '' }:
                           <div className="inline-flex items-center justify-center">
                             {item.direction === 'in' ? (
                               <ArrowDownLeft className="h-4 w-4 text-emerald-500" />
+                            ) : item.direction === 'outcome' ? (
+                              <Target className="h-4 w-4 text-slate-500" />
                             ) : (
                               <ArrowUpRight className="h-4 w-4 text-blue-500" />
                             )}
                           </div>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>{item.direction === 'in' ? 'Inbound' : 'Outbound'}</p>
+                          <p>{item.direction === 'in' ? 'Inbound' : item.direction === 'outcome' ? 'Outcome' : 'Outbound'}</p>
                         </TooltipContent>
                       </Tooltip>
                     </td>

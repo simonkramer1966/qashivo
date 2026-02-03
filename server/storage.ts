@@ -1336,6 +1336,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateInvoice(id: string, tenantId: string, updates: Partial<InsertInvoice>): Promise<Invoice> {
+    // Get the current invoice to detect outcome changes
+    const [currentInvoice] = await db
+      .select()
+      .from(invoices)
+      .where(and(eq(invoices.id, id), eq(invoices.tenantId, tenantId)));
+    
     // If updating status-related fields, validate consistency
     const validatedUpdates = updates.status || updates.dueDate 
       ? this.validateInvoiceStatus({ ...updates } as InsertInvoice)
@@ -1346,6 +1352,66 @@ export class DatabaseStorage implements IStorage {
       .set({ ...validatedUpdates, updatedAt: new Date() })
       .where(and(eq(invoices.id, id), eq(invoices.tenantId, tenantId)))
       .returning();
+    
+    // Log activity for important outcome changes
+    try {
+      // Get contact info for metadata
+      let contactName = 'Unknown';
+      let companyName = 'Unknown';
+      if (invoice.contactId) {
+        const contact = await this.getContact(invoice.contactId, tenantId);
+        if (contact) {
+          companyName = contact.companyName || 'Unknown';
+          contactName = (contact as any).primaryCreditContact?.name || contact.name || 'Unknown';
+        }
+      }
+      
+      // Log dispute outcome
+      if (updates.outcomeOverride === 'Disputed' && currentInvoice?.outcomeOverride !== 'Disputed') {
+        await this.createActivityLog({
+          tenantId,
+          activityType: 'dispute',
+          category: 'outcome',
+          entityType: 'invoice',
+          entityId: id,
+          action: 'created',
+          description: `Invoice ${invoice.invoiceNumber} disputed - ${new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(Number(invoice.balance || invoice.amount))}`,
+          result: 'success',
+          metadata: {
+            invoiceNumber: invoice.invoiceNumber,
+            amount: invoice.balance || invoice.amount,
+            previousOutcome: currentInvoice?.outcomeOverride || null,
+            contactId: invoice.contactId,
+            contactName,
+            companyName
+          }
+        });
+      }
+      
+      // Log invoice paid (when invoice_status changes to PAID)
+      if (updates.invoiceStatus === 'PAID' && currentInvoice?.invoiceStatus !== 'PAID') {
+        await this.createActivityLog({
+          tenantId,
+          activityType: 'payment_received',
+          category: 'outcome',
+          entityType: 'invoice',
+          entityId: id,
+          action: 'paid',
+          description: `Invoice ${invoice.invoiceNumber} paid - ${new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(Number(invoice.amount))}`,
+          result: 'success',
+          metadata: {
+            invoiceNumber: invoice.invoiceNumber,
+            amount: invoice.amount,
+            contactId: invoice.contactId,
+            contactName,
+            companyName
+          }
+        });
+      }
+    } catch (e) {
+      console.log('Failed to log invoice update activity:', e);
+    }
+    
     return invoice;
   }
 
@@ -4312,6 +4378,42 @@ export class DatabaseStorage implements IStorage {
 
   async createPaymentPlan(paymentPlanData: InsertPaymentPlan): Promise<PaymentPlan> {
     const [paymentPlan] = await db.insert(paymentPlans).values(paymentPlanData).returning();
+    
+    // Log activity for Payment Plan creation
+    try {
+      // Get contact info for the activity log
+      let contactName = 'Unknown';
+      let companyName = 'Unknown';
+      if (paymentPlanData.contactId && paymentPlanData.tenantId) {
+        const contact = await this.getContact(paymentPlanData.contactId, paymentPlanData.tenantId);
+        if (contact) {
+          companyName = contact.companyName || 'Unknown';
+          contactName = (contact as any).primaryCreditContact?.name || contact.name || 'Unknown';
+        }
+      }
+      
+      await this.createActivityLog({
+        tenantId: paymentPlanData.tenantId,
+        activityType: 'payment_plan',
+        category: 'outcome',
+        entityType: 'contact',
+        entityId: paymentPlanData.contactId,
+        action: 'created',
+        description: `Payment plan created for ${companyName} - ${new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(Number(paymentPlanData.totalAmount))} total`,
+        result: 'success',
+        metadata: {
+          paymentPlanId: paymentPlan.id,
+          totalAmount: paymentPlanData.totalAmount,
+          frequency: paymentPlanData.frequency,
+          contactName: contactName,
+          companyName: companyName,
+          source: paymentPlanData.source || 'manual'
+        }
+      });
+    } catch (e) {
+      console.log('Failed to log payment plan activity:', e);
+    }
+    
     return paymentPlan;
   }
 
@@ -5570,6 +5672,31 @@ export class DatabaseStorage implements IStorage {
 
   async createPromiseToPay(promiseData: InsertPromiseToPay): Promise<PromiseToPay> {
     const [promise] = await db.insert(promisesToPay).values(promiseData).returning();
+    
+    // Log activity for Promise to Pay creation
+    try {
+      await this.createActivityLog({
+        tenantId: promiseData.tenantId,
+        activityType: 'promise_to_pay',
+        category: 'outcome',
+        entityType: 'invoice',
+        entityId: promiseData.invoiceId,
+        action: 'created',
+        description: `Promise to pay ${new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(Number(promiseData.amount))} by ${new Date(promiseData.promisedDate).toLocaleDateString('en-GB')}`,
+        result: 'success',
+        metadata: {
+          promiseId: promise.id,
+          amount: promiseData.amount,
+          promisedDate: promiseData.promisedDate,
+          contactName: promiseData.contactName,
+          paymentMethod: promiseData.paymentMethod,
+          createdVia: promiseData.createdVia || 'manual'
+        }
+      });
+    } catch (e) {
+      console.log('Failed to log PTP activity:', e);
+    }
+    
     return promise;
   }
 

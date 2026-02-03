@@ -118,9 +118,11 @@ export interface WeekBucket {
   endDate: Date;
 }
 
-export type ActivityChannel = 'email' | 'sms' | 'voice' | 'whatsapp' | 'portal' | 'note';
+export type ActivityChannel = 'email' | 'sms' | 'voice' | 'whatsapp' | 'portal' | 'note' | 'promise_to_pay' | 'payment_plan' | 'dispute' | 'payment_received' | 'ptp_breach';
 
-export type ActivityDirection = 'in' | 'out';
+export type ActivityDirection = 'in' | 'out' | 'outcome';
+
+export type ActivityCategory = 'communication' | 'outcome';
 
 export interface ActivityItem {
   id: string;
@@ -128,6 +130,7 @@ export interface ActivityItem {
   time: string;
   direction: ActivityDirection;
   channel: ActivityChannel;
+  category: ActivityCategory;
   customerId: string;
   customerName: string;
   contactName: string;
