@@ -389,12 +389,6 @@ export default function Invoices() {
                           Inv. Age{getSortIcon('invoiceAge')}
                         </th>
                         <th 
-                          className="text-center px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 select-none"
-                          onClick={() => handleSort('status')}
-                        >
-                          Status{getSortIcon('status')}
-                        </th>
-                        <th 
                           className="text-right px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 select-none"
                           onClick={() => handleSort('amount')}
                         >
@@ -457,10 +451,6 @@ export default function Invoices() {
                               <span className="text-[13px] text-slate-500 tabular-nums">
                                 {invoice.invoiceAge ?? getInvoiceAge(invoice.issueDate)}
                               </span>
-                            </td>
-
-                            <td className="py-[5px] px-3 text-center">
-                              {getStatusDisplay(invoice)}
                             </td>
 
                             <td className="py-[5px] px-3 text-right">
