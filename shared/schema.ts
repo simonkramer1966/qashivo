@@ -5572,6 +5572,8 @@ export const attentionItemTypeEnum = [
   'FIRST_CONTACT_HIGH_VALUE',
   'VIP_CUSTOMER',
   'MANUAL_REVIEW',
+  'NEEDS_ALLOCATION',
+  'DELIVERY_FAILED',
 ] as const;
 export type AttentionItemType = typeof attentionItemTypeEnum[number];
 
@@ -6346,3 +6348,51 @@ export const collectionPoliciesRelations = relations(collectionPolicies, ({ one 
     references: [tenants.id],
   }),
 }));
+
+// ============================================================
+// DEBTOR PACK ROW - UI PROJECTION FOR LOOP LEFT PANE
+// ============================================================
+
+// Loop Stage - primary stage for debtor pack (derived from actions/attention)
+export const LOOP_STAGE = {
+  PLANNED: 'PLANNED',     // Recommended work, not yet executed
+  IN_FLIGHT: 'IN_FLIGHT', // Action executed, awaiting resolution
+  ATTENTION: 'ATTENTION', // Needs human decision/intervention
+  CLOSED: 'CLOSED',       // No open balance / no chase required
+} as const;
+export type LoopStage = typeof LOOP_STAGE[keyof typeof LOOP_STAGE];
+export const loopStageEnum = ['PLANNED', 'IN_FLIGHT', 'ATTENTION', 'CLOSED'] as const;
+
+// Debtor Pack Row - the unit of work in the left pane
+export interface DebtorPackRow {
+  packId: string;          // "contact:<contactId>"
+  tenantId: string;
+  contactId: string;
+  contactName: string;
+
+  // Invoice bundle
+  invoiceCount: number;
+  totalDue: number;
+  oldestDaysOverdue: number;
+
+  // Loop state
+  stage: LoopStage;
+
+  // Substates (optional)
+  inFlightState?: InFlightState;
+  attentionType?: AttentionItemType;
+
+  // Timer fields
+  nextEligibleAt?: string;   // ISO timestamp
+  lastActionAt?: string;     // ISO timestamp
+  lastReplyAt?: string;      // ISO timestamp
+
+  // Intent/outcome summary (derived)
+  intentCaptured?: boolean;
+  intentSummary?: string;        // e.g. "PTP 12 Feb"
+  expectedPaymentDate?: string;  // YYYY-MM-DD
+  confidenceBand?: ConfidenceBand;
+
+  // UI helpers
+  isBatchSelectable: boolean;
+}
