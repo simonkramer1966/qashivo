@@ -24435,7 +24435,7 @@ ${tenant.name}
           .insert(contacts)
           .values({
             tenantId,
-            name: "Simon Ritchie",
+            name: "Simon Kramer",
             companyName: customerName,
             email: "simon@nexuskpi.com",
             phone: "+447716273336",
@@ -24446,7 +24446,7 @@ ${tenant.name}
             preferredContactMethod: "email",
             riskBand: "B",
             riskScore: 68,
-            arContactName: "Simon Ritchie",
+            arContactName: "Simon Kramer",
             arContactEmail: "simon@nexuskpi.com",
             arContactPhone: "+447716273336",
           })
