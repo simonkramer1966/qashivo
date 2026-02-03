@@ -27,11 +27,14 @@ This document outlines a strategy to build a proprietary intelligence layer that
 
 | Data Source | Example | Status |
 |-------------|---------|--------|
+| **Qashivo Payment Portal Data** | Payment completions, amounts, timing, method chosen | ✅ **First-party, fully usable** |
 | Qashivo Communication Data | Email opens, response times, call outcomes | ✅ First-party, fully usable |
 | User-Entered Data | Customer tiers, notes, manual risk assessments | ✅ First-party, fully usable |
 | Debtor Portal Behaviour | Login frequency, time on page, actions taken | ✅ First-party, fully usable |
 | Charlie Voice AI Data | Call duration, sentiment, objections raised | ✅ First-party, fully usable |
 | PTP/Outcome Data | Promises made, breach rates, resolution patterns | ✅ First-party, fully usable |
+
+> **Strategic Insight:** The Qashivo Payment Portal is the single most valuable first-party data source because it captures **actual payment behaviour**—the ultimate ground truth for ML predictions. By routing payments through our portal (via Stripe), we own the complete payment event chain, not Xero.
 
 ---
 
@@ -90,9 +93,46 @@ Data captured when debtors make payment commitments.
 
 ---
 
-### 3. Debtor Self-Service Portal Behaviour
+### 3. Payment Portal Transaction Data (THE KEY ASSET)
 
-Data captured when debtors interact with their payment portal.
+**Why This Matters Most:**
+
+When debtors pay through the Qashivo payment portal (powered by Stripe), the payment event occurs within our system—not Xero. This creates first-party payment data that is completely separate from Xero API restrictions.
+
+**Data Ownership Chain:**
+```
+Debtor → Qashivo Portal → Stripe → Qashivo Database → (syncs to) Xero
+                ↑                        ↑
+         First-party payment      First-party record
+         intent signals           of payment completion
+```
+
+The critical distinction: we capture payment events as they happen in our system, then push the result to Xero. The payment data originates in Qashivo, not from Xero's API.
+
+**Captured Fields (All First-Party):**
+- Payment timestamp (when debtor completed payment)
+- Payment amount
+- Payment method (card, bank transfer, partial)
+- Invoices paid (which invoices selected)
+- Partial payment flag
+- Payment attempts (including failures)
+- Time from portal login to payment
+- Device/browser used
+- Geographic location
+- Session before payment (pages viewed, time spent)
+
+**ML Applications (Fully Compliant):**
+- **Payment Likelihood Scoring**: Train on actual payment completions vs. non-payments
+- **Expected Payment Date Prediction**: Model based on time-to-payment after communication
+- **Optimal Communication Timing**: When to chase based on when payments happen
+- **Payment Method Preferences**: Predict which payment options to highlight per customer
+- **Partial Payment Patterns**: Identify customers likely to pay in installments
+
+---
+
+### 4. Debtor Self-Service Portal Behaviour
+
+Data captured when debtors interact with their payment portal (before payment).
 
 **Captured Fields:**
 - Login frequency
@@ -103,16 +143,18 @@ Data captured when debtors interact with their payment portal.
 - Partial payment attempts
 - Payment method selection
 - Abandoned payment attempts
+- Payment page drop-off points
 
 **ML Applications:**
 - Predict payment intent from browsing behaviour
 - Identify friction points in payment journey
 - Score debtor engagement level
 - Recommend proactive outreach for high-intent but non-converting visitors
+- Predict which invoices will be paid first (based on viewing patterns)
 
 ---
 
-### 4. User-Entered Classifications
+### 5. User-Entered Classifications
 
 Data provided by Qashivo users about their customers.
 
@@ -133,7 +175,7 @@ Data provided by Qashivo users about their customers.
 
 ---
 
-### 5. Workflow Execution Data
+### 6. Workflow Execution Data
 
 Data captured from automated collection workflows.
 
@@ -154,7 +196,7 @@ Data captured from automated collection workflows.
 
 ---
 
-### 6. Action Centre Activity
+### 7. Action Centre Activity
 
 Data captured from user interactions in the Action Centre.
 
@@ -256,6 +298,47 @@ CREATE TABLE portal_sessions (
     payment_attempted BOOLEAN DEFAULT FALSE,
     payment_completed BOOLEAN DEFAULT FALSE  -- First-party payment signal for ML labels
 );
+
+-- Portal payments (THE KEY ML ASSET - First-party payment data from Stripe)
+CREATE TABLE portal_payments (
+    id UUID PRIMARY KEY,
+    tenant_id UUID NOT NULL,
+    debtor_id UUID NOT NULL,
+    session_id UUID REFERENCES portal_sessions(id),
+    stripe_payment_intent_id VARCHAR(100),
+    
+    -- Payment details (all first-party!)
+    amount DECIMAL(15,2) NOT NULL,
+    currency VARCHAR(3) DEFAULT 'GBP',
+    payment_method VARCHAR(50),  -- card, bank_transfer, etc.
+    card_brand VARCHAR(20),  -- visa, mastercard, amex
+    card_last_four VARCHAR(4),
+    
+    -- Invoice linkage
+    invoices_paid JSONB,  -- Array of {invoice_id, amount_applied}
+    is_partial_payment BOOLEAN DEFAULT FALSE,
+    
+    -- Timing signals (critical for ML)
+    payment_initiated_at TIMESTAMP,
+    payment_completed_at TIMESTAMP,
+    time_from_link_click_ms INTEGER,  -- Time from email/SMS link to payment
+    time_on_payment_page_ms INTEGER,
+    
+    -- Context
+    device_type VARCHAR(20),  -- mobile, desktop, tablet
+    browser VARCHAR(50),
+    country_code VARCHAR(2),
+    
+    -- Outcome
+    status VARCHAR(20),  -- succeeded, failed, refunded
+    failure_reason VARCHAR(100),
+    
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Index for ML feature extraction
+CREATE INDEX idx_portal_payments_debtor ON portal_payments(tenant_id, debtor_id);
+CREATE INDEX idx_portal_payments_timing ON portal_payments(payment_completed_at);
 
 -- Action Centre events (user decisions on AI recommendations)
 CREATE TABLE action_centre_events (
@@ -372,6 +455,44 @@ For ML models trained on data across multiple tenants (to improve predictions fo
 
 ---
 
+## The Payment Portal Imperative
+
+### Why Payment Portal is the #1 Priority
+
+The Qashivo payment portal isn't just a convenience for debtors—it's the foundation of our entire ML strategy. Without it, we have no compliant source of payment ground truth.
+
+**Without Payment Portal:**
+- Can only use Xero payment dates for display (not ML)
+- Limited to communication/engagement signals for predictions
+- Predictions have no ground truth to validate against
+
+**With Payment Portal:**
+- Own complete payment event data
+- Can build true predictive models (intent → payment)
+- Can measure and improve prediction accuracy
+- Can personalise collection strategies based on proven patterns
+
+### Adoption Strategy
+
+To maximise first-party payment data, we must drive payment portal adoption:
+
+1. **Convenience**: Make portal the easiest way to pay (save cards, one-click payments)
+2. **Incentives**: Consider early payment discounts for portal users
+3. **Visibility**: Prominent "Pay Now" buttons in all communications
+4. **Friction Reduction**: Magic links, no password required, mobile-optimised
+5. **Partial Payments**: Allow flexibility that bank transfers don't
+
+### Metrics to Track
+
+| Metric | Target | Why It Matters |
+|--------|--------|----------------|
+| Portal Payment Rate | >50% of payments | More data = better models |
+| Portal Adoption (unique debtors) | >70% of contacted debtors | Breadth of behavioural data |
+| Time from Link to Payment | Decreasing trend | Measures friction reduction |
+| Payment Completion Rate | >80% of attempts | Conversion optimisation |
+
+---
+
 ## Summary
 
 By focusing on first-party data captured within Qashivo, we can build a powerful ML/AI capability that:
@@ -381,14 +502,17 @@ By focusing on first-party data captured within Qashivo, we can build a powerful
 3. **Improves** over time as data accumulates
 4. **Provides** genuine predictive value beyond simple calculations
 
-The key insight: Xero restricts what we can do with *their* data, but places no limits on what we can do with data we capture ourselves through our own platform interactions.
+**The key insight:** Xero restricts what we can do with *their* data, but places no limits on what we can do with data we capture ourselves through our own platform interactions.
+
+**The strategic priority:** The payment portal is not optional—it is the single most important feature for enabling ML capabilities. Every payment that happens outside the portal is data we can't use for training.
 
 ---
 
 ## Next Steps
 
-1. Prioritise event capture implementation for SendGrid/Vonage webhooks
-2. Add communication_events table to schema
-3. Implement PTP tracking with breach detection
-4. Plan portal analytics integration
-5. Begin accumulating data for Phase 2 feature engineering
+1. **PRIORITY: Maximise payment portal adoption** - This is the linchpin of the entire strategy
+2. Add portal_payments table to capture all Stripe payment events
+3. Implement communication_events table for engagement tracking
+4. Implement PTP tracking with breach detection
+5. Build portal analytics for session behaviour
+6. Begin accumulating data for Phase 2 feature engineering
