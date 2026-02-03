@@ -83,9 +83,12 @@ export default function Invoices() {
       criticalCount: number; 
       totalInvoices: number;
       agingBuckets: {
-        '0-30': AgingBucket;
-        '30-60': AgingBucket;
-        '60-90': AgingBucket;
+        'total': AgingBucket;
+        'due': AgingBucket;
+        'overdue': AgingBucket;
+        '1-30': AgingBucket;
+        '31-60': AgingBucket;
+        '61-90': AgingBucket;
         '90+': AgingBucket;
       };
     };
@@ -97,9 +100,12 @@ export default function Invoices() {
   const invoices = invoicesData?.invoices || [];
   const pagination = invoicesData?.pagination || { total: 0, page: 1, limit: 20, totalPages: 1 };
   const agingBuckets = invoicesData?.aggregates?.agingBuckets || {
-    '0-30': { amount: 0, count: 0 },
-    '30-60': { amount: 0, count: 0 },
-    '60-90': { amount: 0, count: 0 },
+    'total': { amount: 0, count: 0 },
+    'due': { amount: 0, count: 0 },
+    'overdue': { amount: 0, count: 0 },
+    '1-30': { amount: 0, count: 0 },
+    '31-60': { amount: 0, count: 0 },
+    '61-90': { amount: 0, count: 0 },
     '90+': { amount: 0, count: 0 },
   };
 
@@ -192,41 +198,71 @@ export default function Invoices() {
 
             <section className="mb-6 flex-shrink-0">
               <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-4">Aging Analysis</p>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-8">
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4 sm:gap-6">
+                <div>
+                  <p className="text-[12px] text-slate-500 mb-1 flex items-center gap-2">
+                    <span className="inline-block w-2.5 h-2.5 rounded-full border border-slate-300 bg-white" />
+                    Total
+                  </p>
+                  <p className="text-[20px] font-semibold text-slate-900 tabular-nums">
+                    {formatCurrency(agingBuckets['total'].amount)}
+                    <span className="text-[12px] font-normal text-slate-400 ml-1">({agingBuckets['total'].count})</span>
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[12px] text-slate-500 mb-1 flex items-center gap-2">
+                    <span className="inline-block w-2.5 h-2.5 rounded-full bg-blue-500" />
+                    Due
+                  </p>
+                  <p className="text-[20px] font-semibold text-slate-900 tabular-nums">
+                    {formatCurrency(agingBuckets['due'].amount)}
+                    <span className="text-[12px] font-normal text-slate-400 ml-1">({agingBuckets['due'].count})</span>
+                  </p>
+                </div>
                 <div>
                   <p className="text-[12px] text-slate-500 mb-1 flex items-center gap-2">
                     <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-500" />
-                    0-30 days
+                    Overdue
                   </p>
                   <p className="text-[20px] font-semibold text-slate-900 tabular-nums">
-                    {formatCurrency(agingBuckets['0-30'].amount)}
-                    <span className="text-[12px] font-normal text-slate-400 ml-1">({agingBuckets['0-30'].count})</span>
+                    {formatCurrency(agingBuckets['overdue'].amount)}
+                    <span className="text-[12px] font-normal text-slate-400 ml-1">({agingBuckets['overdue'].count})</span>
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[12px] text-slate-500 mb-1 flex items-center gap-2">
+                    <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-500" />
+                    1-30
+                  </p>
+                  <p className="text-[20px] font-semibold text-slate-900 tabular-nums">
+                    {formatCurrency(agingBuckets['1-30'].amount)}
+                    <span className="text-[12px] font-normal text-slate-400 ml-1">({agingBuckets['1-30'].count})</span>
                   </p>
                 </div>
                 <div>
                   <p className="text-[12px] text-slate-500 mb-1 flex items-center gap-2">
                     <span className="inline-block w-2.5 h-2.5 rounded-full bg-orange-500" />
-                    30-60 days
+                    31-60
                   </p>
                   <p className="text-[20px] font-semibold text-slate-900 tabular-nums">
-                    {formatCurrency(agingBuckets['30-60'].amount)}
-                    <span className="text-[12px] font-normal text-slate-400 ml-1">({agingBuckets['30-60'].count})</span>
+                    {formatCurrency(agingBuckets['31-60'].amount)}
+                    <span className="text-[12px] font-normal text-slate-400 ml-1">({agingBuckets['31-60'].count})</span>
                   </p>
                 </div>
                 <div>
                   <p className="text-[12px] text-slate-500 mb-1 flex items-center gap-2">
                     <span className="inline-block w-2.5 h-2.5 rounded-full bg-rose-500" />
-                    60-90 days
+                    61-90
                   </p>
                   <p className="text-[20px] font-semibold text-slate-900 tabular-nums">
-                    {formatCurrency(agingBuckets['60-90'].amount)}
-                    <span className="text-[12px] font-normal text-slate-400 ml-1">({agingBuckets['60-90'].count})</span>
+                    {formatCurrency(agingBuckets['61-90'].amount)}
+                    <span className="text-[12px] font-normal text-slate-400 ml-1">({agingBuckets['61-90'].count})</span>
                   </p>
                 </div>
                 <div>
                   <p className="text-[12px] text-slate-500 mb-1 flex items-center gap-2">
                     <span className="inline-block w-2.5 h-2.5 rounded-full bg-red-700" />
-                    90+ days
+                    90+
                   </p>
                   <p className="text-[20px] font-semibold text-slate-900 tabular-nums">
                     {formatCurrency(agingBuckets['90+'].amount)}

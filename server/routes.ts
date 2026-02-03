@@ -2646,9 +2646,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Calculate aggregates across ALL filtered invoices
       const agingBuckets = {
-        '0-30': { amount: 0, count: 0 },
-        '30-60': { amount: 0, count: 0 },
-        '60-90': { amount: 0, count: 0 },
+        'total': { amount: 0, count: 0 },
+        'due': { amount: 0, count: 0 },
+        'overdue': { amount: 0, count: 0 },
+        '1-30': { amount: 0, count: 0 },
+        '31-60': { amount: 0, count: 0 },
+        '61-90': { amount: 0, count: 0 },
         '90+': { amount: 0, count: 0 },
       };
       
@@ -2657,24 +2660,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const dueDate = new Date(inv.dueDate);
         const today = new Date();
         const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
-        if (daysOverdue <= 0) return;
         
         const amount = Number(inv.amount) || 0;
         const amountPaid = Number(inv.amountPaid) || 0;
         const outstanding = amount - amountPaid;
         
-        if (daysOverdue <= 30) {
-          agingBuckets['0-30'].amount += outstanding;
-          agingBuckets['0-30'].count++;
-        } else if (daysOverdue <= 60) {
-          agingBuckets['30-60'].amount += outstanding;
-          agingBuckets['30-60'].count++;
-        } else if (daysOverdue <= 90) {
-          agingBuckets['60-90'].amount += outstanding;
-          agingBuckets['60-90'].count++;
+        // Total always includes all outstanding invoices
+        agingBuckets['total'].amount += outstanding;
+        agingBuckets['total'].count++;
+        
+        if (daysOverdue <= 0) {
+          // Due (not yet overdue)
+          agingBuckets['due'].amount += outstanding;
+          agingBuckets['due'].count++;
         } else {
-          agingBuckets['90+'].amount += outstanding;
-          agingBuckets['90+'].count++;
+          // Overdue (total of all overdue)
+          agingBuckets['overdue'].amount += outstanding;
+          agingBuckets['overdue'].count++;
+          
+          // Individual overdue buckets
+          if (daysOverdue <= 30) {
+            agingBuckets['1-30'].amount += outstanding;
+            agingBuckets['1-30'].count++;
+          } else if (daysOverdue <= 60) {
+            agingBuckets['31-60'].amount += outstanding;
+            agingBuckets['31-60'].count++;
+          } else if (daysOverdue <= 90) {
+            agingBuckets['61-90'].amount += outstanding;
+            agingBuckets['61-90'].count++;
+          } else {
+            agingBuckets['90+'].amount += outstanding;
+            agingBuckets['90+'].count++;
+          }
         }
       });
       
