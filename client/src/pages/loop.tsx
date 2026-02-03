@@ -409,7 +409,7 @@ export default function Loop() {
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="flex-1 flex overflow-hidden">
           {/* Left Pane: Debtor Queue */}
-          <div className="w-80 border-r flex flex-col">
+          <div className="flex-1 border-r flex flex-col">
             <div className="p-3 border-b">
               <h1 className="font-semibold mb-3">Loop</h1>
               
@@ -496,7 +496,7 @@ export default function Loop() {
           </div>
 
           {/* Right Pane: Timeline */}
-          <div className="w-80">
+          <div className="flex-1">
             <Timeline selectedPack={selectedPack} />
           </div>
         </div>
