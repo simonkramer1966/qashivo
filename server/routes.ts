@@ -2703,7 +2703,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const avgDays = contactAvgDays.get(invoice.contactId);
         if (avgDays !== undefined && avgDays > 0) {
           const issueDate = new Date(invoice.issueDate);
-          const epdFromHistory = new Date(issueDate.getTime() + avgDays * 24 * 60 * 60 * 1000);
+          let epdFromHistory = new Date(issueDate.getTime() + avgDays * 24 * 60 * 60 * 1000);
+          
+          // If historical EPD is in the past, auto-adjust to today +7 days with low confidence
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          if (epdFromHistory < today) {
+            epdFromHistory = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+            return {
+              date: epdFromHistory.toISOString(),
+              confidence: 'low',
+              source: 'adjusted',
+              sourceLabel: 'Auto-adjusted (+7d)'
+            };
+          }
+          
           return {
             date: epdFromHistory.toISOString(),
             confidence: 'medium',
@@ -2713,6 +2727,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // 4. Fall back to due date (low confidence)
+        // If due date is in the past, auto-adjust to today +7 days
+        const dueDate = new Date(invoice.dueDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        if (dueDate < today) {
+          const adjustedDate = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+          return {
+            date: adjustedDate.toISOString(),
+            confidence: 'low',
+            source: 'adjusted',
+            sourceLabel: 'Auto-adjusted (+7d)'
+          };
+        }
+        
         return {
           date: invoice.dueDate,
           confidence: 'low',
