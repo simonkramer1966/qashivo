@@ -2,6 +2,7 @@ import { db } from "../db";
 import { eq, and, desc } from "drizzle-orm";
 import { 
   emailClarifications, 
+  emailMessages,
   inboundMessages, 
   contacts, 
   invoices, 
@@ -98,6 +99,23 @@ class EmailClarificationService {
         console.error(`❌ Failed to send clarification email: ${result.error}`);
         return { success: false, error: result.error };
       }
+      
+      // Store in email_messages table so replies can be routed correctly
+      await db.insert(emailMessages).values({
+        id: emailId,
+        tenantId: context.tenantId,
+        direction: 'OUTBOUND',
+        channel: 'EMAIL',
+        contactId: context.contactId,
+        conversationId,
+        toEmail: context.contactEmail,
+        fromEmail: SENDGRID_FROM_EMAIL,
+        subject,
+        textBody: textContent,
+        htmlBody: htmlContent,
+        status: 'SENT',
+        sentAt: new Date(),
+      });
       
       // Create clarification record
       const [clarification] = await db
