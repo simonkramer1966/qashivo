@@ -458,6 +458,7 @@ export default function Overview2() {
                         tickLine={false}
                         axisLine={false}
                         height={45}
+                        interval={0}
                       />
                       <YAxis 
                         tick={{ fontSize: 11, fill: '#9ca3af' }}
