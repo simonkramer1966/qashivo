@@ -766,6 +766,46 @@ export const inboundMessages = pgTable("inbound_messages", {
   index("idx_inbound_analyzed").on(table.intentAnalyzed),
 ]);
 
+// Email Clarifications - track when system needs more information from debtor
+export const emailClarifications = pgTable("email_clarifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id),
+  conversationId: varchar("conversation_id").references(() => conversations.id),
+  
+  // Link to original message that triggered clarification
+  originalMessageId: varchar("original_message_id").references(() => inboundMessages.id),
+  
+  // What was unclear
+  ambiguityType: varchar("ambiguity_type").notNull(), // invoice_reference, payment_amount, payment_date, multiple_invoices
+  ambiguityDetails: jsonb("ambiguity_details"), // Specific details about what's unclear
+  
+  // Outbound clarification email
+  clarificationEmailId: varchar("clarification_email_id"), // ID of sent clarification email
+  clarificationSentAt: timestamp("clarification_sent_at"),
+  
+  // Response tracking
+  responseMessageId: varchar("response_message_id").references(() => inboundMessages.id),
+  responseReceivedAt: timestamp("response_received_at"),
+  
+  // Resolution
+  status: varchar("status").notNull().default("pending"), // pending, resolved, expired, cancelled
+  resolvedIntentType: varchar("resolved_intent_type"), // Final intent after clarification
+  resolvedData: jsonb("resolved_data"), // Final extracted data (PTP date, amount, invoices)
+  
+  // Confirmation email
+  confirmationEmailId: varchar("confirmation_email_id"),
+  confirmationSentAt: timestamp("confirmation_sent_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  expiresAt: timestamp("expires_at"), // Auto-expire if no response
+}, (table) => [
+  index("idx_email_clarifications_tenant").on(table.tenantId),
+  index("idx_email_clarifications_contact").on(table.contactId),
+  index("idx_email_clarifications_status").on(table.status),
+]);
+
 // Conversations - unified grouping for all communication types (email, voice, SMS)
 export const conversations = pgTable("conversations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

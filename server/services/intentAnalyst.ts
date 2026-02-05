@@ -1,8 +1,9 @@
 import OpenAI from "openai";
 import { db } from "../db";
-import { inboundMessages, actions, contacts, invoices, paymentPlans, paymentPlanInvoices, users, outcomes } from "@shared/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { inboundMessages, actions, contacts, invoices, paymentPlans, paymentPlanInvoices, users, outcomes, emailClarifications, tenants } from "@shared/schema";
+import { eq, and, desc, inArray } from "drizzle-orm";
 import { getPromiseReliabilityService } from "./promiseReliabilityService.js";
+import { emailClarificationService } from "./emailClarificationService.js";
 
 // Outcome types that map to CharlieIntentType
 type OutcomeType = 
@@ -59,6 +60,21 @@ type CharlieIntentType =
   | 'admin_issue'         // Missing PO, wrong address, not received, etc.
   | 'unknown';            // Intent unclear
 
+// Ambiguity types for clarification requests
+type AmbiguityType = 'invoice_reference' | 'payment_amount' | 'payment_date' | 'multiple_invoices' | 'none';
+
+interface AmbiguityInfo {
+  hasAmbiguity: boolean;
+  types: AmbiguityType[];
+  details: {
+    unclearInvoices?: boolean;    // Can't determine which invoice(s)
+    unclearAmount?: boolean;      // Amount mentioned doesn't match or is vague
+    unclearDate?: boolean;        // No date given or date is vague
+    multipleInvoices?: boolean;   // Debtor has multiple invoices, unclear which they mean
+    clarificationQuestions?: string[]; // Specific questions to ask
+  };
+}
+
 interface IntentAnalysisResult {
   intentType: CharlieIntentType;
   confidence: number; // 0.00 to 1.00
@@ -74,6 +90,7 @@ interface IntentAnalysisResult {
   reasoning: string;
   requiresHumanReview: boolean;    // Flag for vulnerability/edge cases
   suggestedNextAction?: string;    // Charlie's recommended action
+  ambiguity?: AmbiguityInfo;       // Ambiguity details for clarification flow
 }
 
 /**
@@ -141,6 +158,23 @@ Respond with valid JSON only, no markdown formatting.`
         (result.confidence || 0) < this.CONFIDENCE_THRESHOLD ||
         result.requiresHumanReview === true;
       
+      // Parse ambiguity info
+      const ambiguity: AmbiguityInfo = result.ambiguity ? {
+        hasAmbiguity: result.ambiguity.hasAmbiguity || false,
+        types: result.ambiguity.types || [],
+        details: {
+          unclearInvoices: result.ambiguity.details?.unclearInvoices || false,
+          unclearAmount: result.ambiguity.details?.unclearAmount || false,
+          unclearDate: result.ambiguity.details?.unclearDate || false,
+          multipleInvoices: result.ambiguity.details?.multipleInvoices || false,
+          clarificationQuestions: result.ambiguity.details?.clarificationQuestions || []
+        }
+      } : {
+        hasAmbiguity: false,
+        types: [],
+        details: {}
+      };
+      
       return {
         intentType,
         confidence: Math.min(Math.max(result.confidence || 0, 0), 1),
@@ -148,7 +182,8 @@ Respond with valid JSON only, no markdown formatting.`
         extractedEntities: result.extractedEntities || {},
         reasoning: result.reasoning || '',
         requiresHumanReview,
-        suggestedNextAction: result.suggestedNextAction
+        suggestedNextAction: result.suggestedNextAction,
+        ambiguity
       };
     } catch (error) {
       console.error('❌ Intent analysis failed:', error);
@@ -158,7 +193,8 @@ Respond with valid JSON only, no markdown formatting.`
         sentiment: 'neutral',
         extractedEntities: {},
         reasoning: 'Analysis failed',
-        requiresHumanReview: true
+        requiresHumanReview: true,
+        ambiguity: { hasAmbiguity: false, types: [], details: {} }
       };
     }
   }
@@ -204,8 +240,27 @@ Respond with valid JSON only, no markdown formatting.`
   },
   "reasoning": "brief explanation of your classification",
   "requiresHumanReview": true/false,
-  "suggestedNextAction": "what Charlie recommends as next step (e.g., 'Schedule callback', 'Resend invoice with PO', 'Record PTP and monitor')"
-}`;
+  "suggestedNextAction": "what Charlie recommends as next step (e.g., 'Schedule callback', 'Resend invoice with PO', 'Record PTP and monitor')",
+  "ambiguity": {
+    "hasAmbiguity": true/false,
+    "types": ["invoice_reference" | "payment_amount" | "payment_date" | "multiple_invoices"],
+    "details": {
+      "unclearInvoices": true/false,
+      "unclearAmount": true/false,
+      "unclearDate": true/false,
+      "multipleInvoices": true/false,
+      "clarificationQuestions": ["specific polite questions to ask the debtor to clarify the ambiguity"]
+    }
+  }
+}
+
+IMPORTANT for ambiguity detection:
+- If the customer mentions payment but doesn't specify WHICH invoice or invoices, set unclearInvoices: true
+- If the customer promises to pay but the amount is vague or doesn't match known invoice amounts, set unclearAmount: true  
+- If the customer promises to pay but gives no specific date (just "soon", "next week" without a day), set unclearDate: true
+- If the customer has multiple outstanding invoices and it's unclear which they're referring to, set multipleInvoices: true
+- Generate 1-3 polite, professional clarification questions to resolve the ambiguity
+- hasAmbiguity should be true if ANY of the above are unclear for promise_to_pay or payment_plan intents`;
 
     return prompt;
   }
@@ -278,6 +333,61 @@ Respond with valid JSON only, no markdown formatting.`
         .where(eq(inboundMessages.id, messageId));
 
       console.log(`✅ Intent analyzed: ${analysis.intentType} (${(analysis.confidence * 100).toFixed(0)}% confidence)${analysis.requiresHumanReview ? ' [HUMAN REVIEW]' : ''}`);
+      
+      // Check if this is a response to a pending clarification (EMAIL only)
+      if (message.channel === 'email' || message.channel === 'EMAIL') {
+        const pendingResult = message.contactId 
+          ? await emailClarificationService.checkForPendingClarification(message.contactId, message.tenantId)
+          : { hasPending: false };
+        
+        if (pendingResult.hasPending && pendingResult.clarification) {
+          console.log(`📧 This email is a response to pending clarification ${pendingResult.clarification.id}`);
+          await this.handleClarificationResponse(message, analysis, pendingResult.clarification, context);
+          return; // Don't process further - clarification response handled
+        }
+        
+        // Check if this is a PTP/payment_plan with ambiguity - send clarification email
+        const needsClarification = 
+          analysis.ambiguity?.hasAmbiguity === true &&
+          (analysis.intentType === 'promise_to_pay' || analysis.intentType === 'payment_plan') &&
+          message.contactId &&
+          message.from; // Need email address
+        
+        if (needsClarification) {
+          console.log(`🤔 Ambiguity detected in ${analysis.intentType} - sending clarification email`);
+          const clarificationResult = await this.sendClarificationForAmbiguity(message, analysis, context);
+          
+          // Create a pending action for tracking (don't skip action creation)
+          // This ensures ambiguous messages are tracked even if debtor never responds
+          await this.createActionFromIntent(message, analysis);
+          
+          // Create a "clarification_pending" outcome linked to the clarification record
+          if (message.contactId) {
+            await this.createPendingClarificationOutcome(
+              message, 
+              analysis, 
+              context,
+              clarificationResult?.clarificationId
+            );
+          }
+          
+          // Don't continue to confirmation/standard flow, but don't return without tracking
+          return;
+        }
+        
+        // If high confidence PTP or payment_plan with no ambiguity, send confirmation
+        const shouldConfirm = 
+          (analysis.intentType === 'promise_to_pay' || analysis.intentType === 'payment_plan') &&
+          analysis.confidence >= this.CONFIDENCE_THRESHOLD &&
+          !analysis.ambiguity?.hasAmbiguity &&
+          message.contactId &&
+          message.from;
+        
+        if (shouldConfirm) {
+          console.log(`✅ Clear ${analysis.intentType} detected - sending confirmation email`);
+          await this.sendConfirmationEmail(message, analysis, context);
+        }
+      }
 
       // Determine if we should create an action
       const shouldCreateAction = 
@@ -1126,6 +1236,601 @@ Respond with valid JSON only, no markdown formatting.`
     } catch (error) {
       console.error('Failed to flag contact as vulnerable:', error);
     }
+  }
+
+  /**
+   * Handle a response to a pending clarification
+   */
+  private async handleClarificationResponse(
+    message: typeof inboundMessages.$inferSelect,
+    analysis: IntentAnalysisResult,
+    clarification: typeof emailClarifications.$inferSelect,
+    context: any
+  ): Promise<void> {
+    try {
+      // If the response still has ambiguity, we might need another clarification
+      if (analysis.ambiguity?.hasAmbiguity && 
+          (analysis.intentType === 'promise_to_pay' || analysis.intentType === 'payment_plan')) {
+        console.log(`⚠️  Response still has ambiguity - may need another clarification`);
+        // Could send another clarification, but for now mark as needing manual review
+      }
+      
+      // Resolve invoice references from the clarification response
+      let resolvedInvoices: { invoiceId: string | null; linkedInvoices: Array<{ id: string; invoiceNumber: string; amount: number }> } = 
+        { invoiceId: null, linkedInvoices: [] };
+      
+      if (message.contactId) {
+        resolvedInvoices = await this.resolveInvoiceReferences(
+          analysis,
+          message.tenantId,
+          message.contactId
+        );
+      }
+      
+      // Calculate resolved amount from invoices if not extracted
+      const extractedAmount = this.extractPtpAmount(analysis, null);
+      const resolvedAmount = extractedAmount || 
+        (resolvedInvoices.linkedInvoices.length > 0 
+          ? resolvedInvoices.linkedInvoices.reduce((sum, inv) => sum + inv.amount, 0)
+          : context.invoiceAmount);
+      
+      // Resolve the clarification with resolved invoice data
+      const resolvedData = {
+        intentType: analysis.intentType,
+        extractedEntities: analysis.extractedEntities,
+        promiseToPayDate: this.extractPtpDate(analysis),
+        promiseToPayAmount: resolvedAmount,
+        confidence: analysis.confidence,
+        resolvedInvoices: resolvedInvoices.linkedInvoices.map(inv => ({
+          invoiceId: inv.id,
+          invoiceNumber: inv.invoiceNumber,
+          amount: inv.amount
+        }))
+      };
+      
+      await emailClarificationService.resolveClarification(
+        clarification.id,
+        message.id,
+        analysis.intentType,
+        resolvedData
+      );
+      
+      // Update context with resolved invoice info for outcome creation
+      if (resolvedInvoices.invoiceId && !message.invoiceId) {
+        context.invoiceAmount = resolvedInvoices.linkedInvoices.reduce((sum, inv) => sum + inv.amount, 0);
+      }
+      
+      // If we now have a clear PTP or payment plan, send confirmation and create outcome
+      const isConfirmable = 
+        (analysis.intentType === 'promise_to_pay' || analysis.intentType === 'payment_plan') &&
+        analysis.confidence >= this.CONFIDENCE_THRESHOLD;
+      
+      if (isConfirmable && message.contactId) {
+        // Send confirmation email with resolved invoice data
+        await this.sendConfirmationEmailWithResolvedData(
+          message, 
+          analysis, 
+          context, 
+          resolvedInvoices.linkedInvoices, 
+          resolvedAmount
+        );
+        
+        // Create the outcome with resolved invoice linkage
+        await this.createOutcomeFromIntentWithInvoices(
+          message, 
+          analysis, 
+          context, 
+          resolvedInvoices.invoiceId, 
+          resolvedInvoices.linkedInvoices.map(inv => inv.id)
+        );
+        
+        // Update clarification with confirmation sent
+        await db
+          .update(emailClarifications)
+          .set({
+            confirmationSentAt: new Date(),
+            updatedAt: new Date()
+          })
+          .where(eq(emailClarifications.id, clarification.id));
+        
+        console.log(`✅ Clarification resolved and confirmation sent`);
+      }
+      
+      // Create action for this response
+      await this.createActionFromIntent(message, analysis);
+      
+    } catch (error) {
+      console.error('Failed to handle clarification response:', error);
+    }
+  }
+
+  /**
+   * Create a pending clarification outcome for forecasting
+   * This marks the intent as "awaiting clarification" so forecasting knows about it
+   */
+  private async createPendingClarificationOutcome(
+    message: typeof inboundMessages.$inferSelect,
+    analysis: IntentAnalysisResult,
+    context: any,
+    clarificationId?: string
+  ): Promise<void> {
+    try {
+      if (!message.contactId) return;
+      
+      const outcomeType = INTENT_TO_OUTCOME_TYPE[analysis.intentType];
+      
+      // Create an outcome with MANUAL_REVIEW effect to indicate it needs clarification
+      const [outcome] = await db
+        .insert(outcomes)
+        .values({
+          tenantId: message.tenantId,
+          debtorId: message.contactId,
+          invoiceId: message.invoiceId || null,
+          linkedInvoiceIds: [],
+          type: outcomeType,
+          confidence: analysis.confidence.toFixed(2),
+          confidenceBand: 'LOW', // Mark as low confidence since ambiguous
+          requiresHumanReview: true,
+          effect: 'MANUAL_REVIEW', // Pending clarification
+          extracted: {
+            clarificationPending: true,
+            clarificationId: clarificationId || null, // Link to clarification record for reconciliation
+            ambiguityDetails: analysis.ambiguity?.details || {},
+            freeTextNotes: `Awaiting clarification response. ${analysis.reasoning}`
+          },
+          sourceChannel: (message.channel?.toUpperCase() || 'EMAIL') as string,
+          sourceMessageId: message.id,
+          rawSnippet: message.content?.substring(0, 500) || '',
+        })
+        .returning();
+      
+      console.log(`📋 Created pending clarification outcome: ${outcome.id}${clarificationId ? ` (linked to clarification ${clarificationId})` : ''}`);
+    } catch (error) {
+      console.error('Failed to create pending clarification outcome:', error);
+    }
+  }
+
+  /**
+   * Resolve invoice references from analysis to actual invoice IDs
+   */
+  private async resolveInvoiceReferences(
+    analysis: IntentAnalysisResult,
+    tenantId: string,
+    contactId: string
+  ): Promise<{ invoiceId: string | null; linkedInvoices: Array<{ id: string; invoiceNumber: string; amount: number }> }> {
+    const invoiceRefs = analysis.extractedEntities.invoiceReferences || [];
+    
+    // Get all outstanding invoices for this contact once
+    const allOutstanding = await db
+      .select({ id: invoices.id, invoiceNumber: invoices.invoiceNumber, amount: invoices.amount })
+      .from(invoices)
+      .where(and(
+        eq(invoices.tenantId, tenantId),
+        eq(invoices.contactId, contactId),
+        eq(invoices.status, 'OPEN')
+      ))
+      .limit(50);
+    
+    if (invoiceRefs.length === 0) {
+      // No references provided
+      // If only one outstanding, assume that's what they mean
+      if (allOutstanding.length === 1) {
+        return { 
+          invoiceId: allOutstanding[0].id, 
+          linkedInvoices: allOutstanding.map(inv => ({ 
+            id: inv.id, 
+            invoiceNumber: inv.invoiceNumber || '', 
+            amount: Number(inv.amount) 
+          }))
+        };
+      }
+      
+      // Multiple outstanding, no references - can't resolve, return all for context
+      // The confirmation will list all or require manual review
+      return { 
+        invoiceId: null, 
+        linkedInvoices: allOutstanding.map(inv => ({ 
+          id: inv.id, 
+          invoiceNumber: inv.invoiceNumber || '', 
+          amount: Number(inv.amount) 
+        }))
+      };
+    }
+    
+    // Try to match references to actual invoices
+    const matchedInvoices: Array<{ id: string; invoiceNumber: string; amount: number }> = [];
+    
+    for (const ref of invoiceRefs) {
+      // Normalize reference - remove common prefixes like "INV-", "Invoice ", etc.
+      const normalizedRef = ref.toLowerCase().replace(/^(inv[-\s]?|invoice[-\s]?|#)/i, '').trim();
+      
+      for (const inv of allOutstanding) {
+        const invNum = (inv.invoiceNumber || '').toLowerCase();
+        const normalizedInvNum = invNum.replace(/^(inv[-\s]?|invoice[-\s]?|#)/i, '').trim();
+        
+        // Match if: exact match, invNum contains ref, ref contains invNum, or normalized versions match
+        const isMatch = 
+          invNum === normalizedRef ||
+          normalizedInvNum === normalizedRef ||
+          invNum.includes(normalizedRef) ||
+          normalizedRef.includes(normalizedInvNum) ||
+          normalizedInvNum.includes(normalizedRef);
+        
+        if (isMatch && !matchedInvoices.find(m => m.id === inv.id)) {
+          matchedInvoices.push({
+            id: inv.id,
+            invoiceNumber: inv.invoiceNumber || '',
+            amount: Number(inv.amount)
+          });
+        }
+      }
+    }
+    
+    return {
+      invoiceId: matchedInvoices.length > 0 ? matchedInvoices[0].id : null,
+      linkedInvoices: matchedInvoices
+    };
+  }
+
+  /**
+   * Send a clarification email when ambiguity is detected
+   * Returns the clarificationId if successful
+   */
+  private async sendClarificationForAmbiguity(
+    message: typeof inboundMessages.$inferSelect,
+    analysis: IntentAnalysisResult,
+    context: any
+  ): Promise<{ clarificationId?: string } | null> {
+    try {
+      if (!message.contactId || !message.from) {
+        console.warn('Cannot send clarification - missing contact or email');
+        return null;
+      }
+      
+      // Get contact and tenant info
+      const [contact] = await db
+        .select()
+        .from(contacts)
+        .where(eq(contacts.id, message.contactId))
+        .limit(1);
+      
+      if (!contact) {
+        console.warn('Cannot send clarification - contact not found');
+        return null;
+      }
+      
+      const [tenant] = await db
+        .select()
+        .from(tenants)
+        .where(eq(tenants.id, message.tenantId))
+        .limit(1);
+      
+      // Get outstanding invoices for this contact
+      const outstandingInvoices = await db
+        .select({
+          id: invoices.id,
+          invoiceNumber: invoices.invoiceNumber,
+          amount: invoices.amount,
+          dueDate: invoices.dueDate
+        })
+        .from(invoices)
+        .where(and(
+          eq(invoices.tenantId, message.tenantId),
+          eq(invoices.contactId, message.contactId),
+          eq(invoices.status, 'OPEN')
+        ))
+        .orderBy(invoices.dueDate)
+        .limit(10);
+      
+      // Determine ambiguity type
+      let ambiguityType = 'unknown';
+      if (analysis.ambiguity?.details.unclearDate) ambiguityType = 'payment_date';
+      else if (analysis.ambiguity?.details.unclearAmount) ambiguityType = 'payment_amount';
+      else if (analysis.ambiguity?.details.multipleInvoices || analysis.ambiguity?.details.unclearInvoices) ambiguityType = 'invoice_reference';
+      
+      // Send clarification email
+      const result = await emailClarificationService.sendClarificationEmail({
+        tenantId: message.tenantId,
+        contactId: message.contactId,
+        messageId: message.id,
+        contactEmail: message.from,
+        contactName: contact.name || contact.companyName || 'Customer',
+        companyName: contact.companyName || contact.name || '',
+        tenantName: tenant?.name || 'Our company',
+        ambiguityType,
+        ambiguityDetails: analysis.ambiguity?.details || {},
+        outstandingInvoices: outstandingInvoices.map(inv => ({
+          id: inv.id,
+          invoiceNumber: inv.invoiceNumber || 'Unknown',
+          amount: Number(inv.amount),
+          dueDate: inv.dueDate
+        }))
+      });
+      
+      if (result.success) {
+        console.log(`📧 Clarification email sent for ambiguous ${analysis.intentType} (ID: ${result.clarificationId})`);
+        return { clarificationId: result.clarificationId };
+      } else {
+        console.error(`❌ Failed to send clarification: ${result.error}`);
+        return null;
+      }
+      
+    } catch (error) {
+      console.error('Failed to send clarification for ambiguity:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Send a confirmation email when PTP or payment plan is clear
+   */
+  private async sendConfirmationEmail(
+    message: typeof inboundMessages.$inferSelect,
+    analysis: IntentAnalysisResult,
+    context: any
+  ): Promise<void> {
+    try {
+      if (!message.contactId || !message.from) {
+        console.warn('Cannot send confirmation - missing contact or email');
+        return;
+      }
+      
+      // Get contact info
+      const [contact] = await db
+        .select()
+        .from(contacts)
+        .where(eq(contacts.id, message.contactId))
+        .limit(1);
+      
+      if (!contact) {
+        console.warn('Cannot send confirmation - contact not found');
+        return;
+      }
+      
+      const [tenant] = await db
+        .select()
+        .from(tenants)
+        .where(eq(tenants.id, message.tenantId))
+        .limit(1);
+      
+      // Get invoice info if linked
+      let linkedInvoices: Array<{ invoiceNumber: string; amount: number }> = [];
+      if (message.invoiceId) {
+        const [invoice] = await db
+          .select()
+          .from(invoices)
+          .where(eq(invoices.id, message.invoiceId))
+          .limit(1);
+        
+        if (invoice) {
+          linkedInvoices.push({
+            invoiceNumber: invoice.invoiceNumber || 'Unknown',
+            amount: Number(invoice.amount)
+          });
+        }
+      }
+      
+      const ptpDate = this.extractPtpDate(analysis);
+      const ptpAmount = this.extractPtpAmount(analysis, context.invoiceAmount);
+      
+      // Build payment plan details if applicable
+      let paymentPlanDetails: { totalAmount: number; installments: Array<{ date: string; amount: number }> } | undefined;
+      if (analysis.intentType === 'payment_plan') {
+        const dates = analysis.extractedEntities.dates || [];
+        const amounts = analysis.extractedEntities.amounts || [];
+        
+        if (dates.length > 0) {
+          const installments: Array<{ date: string; amount: number }> = [];
+          for (let i = 0; i < dates.length; i++) {
+            const parsedDate = this.parsePromisedDate(dates[i]);
+            if (parsedDate) {
+              const amount = amounts[i] ? (this.parseAmount(amounts[i]) || 0) : (context.invoiceAmount / dates.length);
+              installments.push({
+                date: parsedDate.toISOString().split('T')[0],
+                amount
+              });
+            }
+          }
+          paymentPlanDetails = {
+            totalAmount: ptpAmount || context.invoiceAmount || 0,
+            installments
+          };
+        }
+      }
+      
+      // Send confirmation email
+      const result = await emailClarificationService.sendConfirmationEmail({
+        tenantId: message.tenantId,
+        contactId: message.contactId,
+        contactEmail: message.from,
+        contactName: contact.name || contact.companyName || 'Customer',
+        tenantName: tenant?.name || 'Our company',
+        intentType: analysis.intentType as 'promise_to_pay' | 'payment_plan',
+        ptpDate: ptpDate || undefined,
+        ptpAmount: ptpAmount || undefined,
+        invoices: linkedInvoices.length > 0 ? linkedInvoices : undefined,
+        paymentPlanDetails
+      });
+      
+      if (result.success) {
+        console.log(`✅ Confirmation email sent for ${analysis.intentType}`);
+      } else {
+        console.error(`❌ Failed to send confirmation: ${result.error}`);
+      }
+      
+    } catch (error) {
+      console.error('Failed to send confirmation email:', error);
+    }
+  }
+
+  /**
+   * Send confirmation email with pre-resolved invoice data (used after clarification)
+   */
+  private async sendConfirmationEmailWithResolvedData(
+    message: typeof inboundMessages.$inferSelect,
+    analysis: IntentAnalysisResult,
+    context: any,
+    resolvedInvoices: Array<{ id: string; invoiceNumber: string; amount: number }>,
+    resolvedAmount: number | null
+  ): Promise<void> {
+    try {
+      if (!message.contactId || !message.from) {
+        console.warn('Cannot send confirmation - missing contact or email');
+        return;
+      }
+      
+      const [contact] = await db
+        .select()
+        .from(contacts)
+        .where(eq(contacts.id, message.contactId))
+        .limit(1);
+      
+      if (!contact) {
+        console.warn('Cannot send confirmation - contact not found');
+        return;
+      }
+      
+      const [tenant] = await db
+        .select()
+        .from(tenants)
+        .where(eq(tenants.id, message.tenantId))
+        .limit(1);
+      
+      const ptpDate = this.extractPtpDate(analysis);
+      const finalAmount = resolvedAmount || this.extractPtpAmount(analysis, context.invoiceAmount);
+      
+      // Build payment plan details if applicable
+      let paymentPlanDetails: { totalAmount: number; installments: Array<{ date: string; amount: number }> } | undefined;
+      if (analysis.intentType === 'payment_plan') {
+        const dates = analysis.extractedEntities.dates || [];
+        if (dates.length > 0) {
+          const installments: Array<{ date: string; amount: number }> = [];
+          for (const dateStr of dates) {
+            const parsedDate = this.parsePromisedDate(dateStr);
+            if (parsedDate) {
+              installments.push({
+                date: parsedDate.toISOString().split('T')[0],
+                amount: finalAmount ? finalAmount / dates.length : 0
+              });
+            }
+          }
+          paymentPlanDetails = {
+            totalAmount: finalAmount || 0,
+            installments
+          };
+        }
+      }
+      
+      const result = await emailClarificationService.sendConfirmationEmail({
+        tenantId: message.tenantId,
+        contactId: message.contactId,
+        contactEmail: message.from,
+        contactName: contact.name || contact.companyName || 'Customer',
+        tenantName: tenant?.name || 'Our company',
+        intentType: analysis.intentType as 'promise_to_pay' | 'payment_plan',
+        ptpDate: ptpDate || undefined,
+        ptpAmount: finalAmount || undefined,
+        invoices: resolvedInvoices.map(inv => ({
+          invoiceNumber: inv.invoiceNumber,
+          amount: inv.amount
+        })),
+        paymentPlanDetails
+      });
+      
+      if (result.success) {
+        console.log(`✅ Confirmation email sent with resolved data for ${analysis.intentType}`);
+      } else {
+        console.error(`❌ Failed to send confirmation: ${result.error}`);
+      }
+      
+    } catch (error) {
+      console.error('Failed to send confirmation email with resolved data:', error);
+    }
+  }
+
+  /**
+   * Create an outcome with explicit invoice linkage (used after clarification)
+   */
+  private async createOutcomeFromIntentWithInvoices(
+    message: typeof inboundMessages.$inferSelect,
+    analysis: IntentAnalysisResult,
+    context: any,
+    primaryInvoiceId: string | null,
+    linkedInvoiceIds: string[]
+  ): Promise<void> {
+    try {
+      if (!message.contactId) {
+        console.warn('Cannot create outcome - no contactId');
+        return;
+      }
+      
+      const outcomeType = INTENT_TO_OUTCOME_TYPE[analysis.intentType];
+      const effect = OUTCOME_FORECAST_EFFECTS[outcomeType];
+      
+      // Determine confidence band
+      let confidenceBand: 'HIGH' | 'MEDIUM' | 'LOW';
+      if (analysis.confidence >= 0.85) {
+        confidenceBand = 'HIGH';
+      } else if (analysis.confidence >= 0.6) {
+        confidenceBand = 'MEDIUM';
+      } else {
+        confidenceBand = 'LOW';
+      }
+      
+      const sourceChannel = message.channel?.toUpperCase() || 'EMAIL';
+      const extracted = this.buildExtractedData(analysis, context);
+      
+      // Create the outcome with explicit invoice linkage
+      const [outcome] = await db
+        .insert(outcomes)
+        .values({
+          tenantId: message.tenantId,
+          debtorId: message.contactId,
+          invoiceId: primaryInvoiceId,
+          linkedInvoiceIds: linkedInvoiceIds,
+          type: outcomeType,
+          confidence: analysis.confidence.toFixed(2),
+          confidenceBand,
+          requiresHumanReview: analysis.requiresHumanReview,
+          effect,
+          extracted: {
+            ...extracted,
+            resolvedFromClarification: true
+          },
+          sourceChannel,
+          sourceMessageId: message.id,
+          rawSnippet: message.content?.substring(0, 500) || '',
+        })
+        .returning();
+      
+      console.log(`✅ Outcome created with resolved invoices: ${outcomeType} (${confidenceBand})`);
+      
+    } catch (error) {
+      console.error('Failed to create outcome with invoices:', error);
+    }
+  }
+
+  /**
+   * Extract PTP date from analysis
+   */
+  private extractPtpDate(analysis: IntentAnalysisResult): string | null {
+    const dates = analysis.extractedEntities.dates || [];
+    if (dates.length > 0) {
+      const parsed = this.parsePromisedDate(dates[0]);
+      return parsed ? parsed.toISOString().split('T')[0] : null;
+    }
+    return null;
+  }
+
+  /**
+   * Extract PTP amount from analysis
+   */
+  private extractPtpAmount(analysis: IntentAnalysisResult, fallbackAmount?: number): number | null {
+    const amounts = analysis.extractedEntities.amounts || [];
+    if (amounts.length > 0) {
+      return this.parseAmount(amounts[0]) || null;
+    }
+    return fallbackAmount || null;
   }
 
   /**
