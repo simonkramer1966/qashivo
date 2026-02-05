@@ -1142,8 +1142,18 @@ export class DatabaseStorage implements IStorage {
     }
 
     // Overdue category filtering using SQL date math
-    if (overdueCategory && overdueCategory !== 'all') {
-      if (overdueCategory === 'paid') {
+    if (overdueCategory) {
+      if (overdueCategory === 'all') {
+        // 'all' means ALL overdue invoices (any past due date, not all invoices)
+        // Filter for dueDate < today AND exclude paid/cancelled
+        conditions.push(
+          and(
+            ne(invoices.status, 'paid'),
+            ne(invoices.status, 'cancelled'),
+            lt(invoices.dueDate, today)
+          )!
+        );
+      } else if (overdueCategory === 'paid') {
         // For paid status, use database status
         conditions.push(eq(invoices.status, 'paid'));
       } else {
