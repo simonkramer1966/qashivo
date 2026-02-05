@@ -122,7 +122,7 @@ const invoicesQuerySchema = z.object({
   search: z.string().optional(),
   overdue: z.enum(['paid', 'due', 'overdue', 'serious', 'escalation', 'all']).optional().default('all'),
   contactId: z.string().optional(),
-  sortBy: z.enum(['date', 'invoiceNumber', 'customer', 'daysOverdue', 'status', 'amount']).optional().default('daysOverdue'),
+  sortBy: z.enum(['date', 'invoiceNumber', 'customer', 'daysOverdue', 'invoiceAge', 'status', 'amount', 'epd']).optional().default('daysOverdue'),
   sortDir: z.enum(['asc', 'desc']).optional().default('desc'),
   page: z.string().optional().default('1').transform(Number),
   limit: z.string().optional().default('50').transform(Number)

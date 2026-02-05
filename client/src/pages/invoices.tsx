@@ -51,7 +51,7 @@ interface Invoice {
   } | null;
 }
 
-type SortField = 'date' | 'invoiceNumber' | 'customer' | 'daysOverdue' | 'invoiceAge' | 'status' | 'amount';
+type SortField = 'date' | 'invoiceNumber' | 'customer' | 'daysOverdue' | 'invoiceAge' | 'status' | 'amount' | 'epd';
 type SortDirection = 'asc' | 'desc';
 
 export default function Invoices() {
@@ -63,6 +63,30 @@ export default function Invoices() {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [sortField, setSortField] = useState<SortField>('daysOverdue');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [ageingFilter, setAgeingFilter] = useState<string>('all');
+
+  type AgeingBucket = 'all' | 'due' | 'overdue' | '1-30' | '31-60' | '61-90' | '90+';
+  
+  const handleAgeingFilter = (bucket: AgeingBucket) => {
+    if (ageingFilter === bucket) {
+      setAgeingFilter('all');
+    } else {
+      setAgeingFilter(bucket);
+    }
+    setPage(1);
+  };
+  
+  const getAgeingOverdueParam = (bucket: string): string => {
+    switch (bucket) {
+      case 'due': return 'due';
+      case 'overdue': return 'overdue';
+      case '1-30': return 'overdue';
+      case '31-60': return 'serious';
+      case '61-90': return 'escalation';
+      case '90+': return 'escalation';
+      default: return 'all';
+    }
+  };
 
   const formatDateShort = (dateStr: string | null) => {
     if (!dateStr) return '-';
@@ -112,7 +136,7 @@ export default function Invoices() {
     };
     pagination: { total: number; page: number; limit: number; totalPages: number };
   }>({
-    queryKey: ['/api/invoices', { status: 'all', search, sortBy: sortField, sortDir: sortDirection, page, limit }],
+    queryKey: ['/api/invoices', { status: 'all', search, overdue: getAgeingOverdueParam(ageingFilter), sortBy: sortField, sortDir: sortDirection, page, limit }],
   });
 
   const invoices = invoicesData?.invoices || [];
@@ -196,25 +220,6 @@ export default function Invoices() {
     }
   };
 
-  const getStatusDot = (invoice: Invoice) => {
-    const daysOverdue = getDaysOverdue(invoice.dueDate);
-    
-    let dotColor = 'bg-slate-300';
-    if (invoice.status === 'paid') {
-      dotColor = 'bg-emerald-500';
-    } else if (daysOverdue <= 0) {
-      dotColor = 'bg-blue-500';
-    } else if (daysOverdue <= 30) {
-      dotColor = 'bg-amber-500';
-    } else if (daysOverdue <= 60) {
-      dotColor = 'bg-orange-500';
-    } else {
-      dotColor = 'bg-rose-500';
-    }
-    
-    return <span className={`inline-block w-2.5 h-2.5 rounded-full ${dotColor}`} />;
-  };
-
   return (
     <div className="flex h-screen bg-white">
       <div className="hidden lg:block">
@@ -244,7 +249,7 @@ export default function Invoices() {
           <div className="container-apple py-4 sm:py-6 flex-1 flex flex-col min-h-0">
 
             <section className="mb-6 flex-shrink-0">
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-4">Aging Analysis</p>
+              <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-4">Ageing Analysis</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4 sm:gap-6">
                 <div>
                   <p className="text-[12px] text-slate-500 mb-1 flex items-center gap-2">
@@ -256,7 +261,10 @@ export default function Invoices() {
                     <span className="text-[12px] font-normal text-slate-400 ml-1">({agingBuckets['total'].count})</span>
                   </p>
                 </div>
-                <div>
+                <div 
+                  className={`cursor-pointer rounded-md p-2 -m-2 transition-colors ${ageingFilter === 'due' ? 'bg-blue-50 ring-1 ring-blue-200' : 'hover:bg-slate-50'}`}
+                  onClick={() => handleAgeingFilter('due')}
+                >
                   <p className="text-[12px] text-slate-500 mb-1 flex items-center gap-2">
                     <span className="inline-block w-2.5 h-2.5 rounded-full bg-blue-500" />
                     Due
@@ -266,7 +274,10 @@ export default function Invoices() {
                     <span className="text-[12px] font-normal text-slate-400 ml-1">({agingBuckets['due'].count})</span>
                   </p>
                 </div>
-                <div>
+                <div 
+                  className={`cursor-pointer rounded-md p-2 -m-2 transition-colors ${ageingFilter === 'overdue' ? 'bg-amber-50 ring-1 ring-amber-200' : 'hover:bg-slate-50'}`}
+                  onClick={() => handleAgeingFilter('overdue')}
+                >
                   <p className="text-[12px] text-slate-500 mb-1 flex items-center gap-2">
                     <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-500" />
                     Overdue
@@ -276,7 +287,10 @@ export default function Invoices() {
                     <span className="text-[12px] font-normal text-slate-400 ml-1">({agingBuckets['overdue'].count})</span>
                   </p>
                 </div>
-                <div>
+                <div 
+                  className={`cursor-pointer rounded-md p-2 -m-2 transition-colors ${ageingFilter === '1-30' ? 'bg-amber-50 ring-1 ring-amber-200' : 'hover:bg-slate-50'}`}
+                  onClick={() => handleAgeingFilter('1-30')}
+                >
                   <p className="text-[12px] text-slate-500 mb-1 flex items-center gap-2">
                     <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-500" />
                     1-30
@@ -286,7 +300,10 @@ export default function Invoices() {
                     <span className="text-[12px] font-normal text-slate-400 ml-1">({agingBuckets['1-30'].count})</span>
                   </p>
                 </div>
-                <div>
+                <div 
+                  className={`cursor-pointer rounded-md p-2 -m-2 transition-colors ${ageingFilter === '31-60' ? 'bg-orange-50 ring-1 ring-orange-200' : 'hover:bg-slate-50'}`}
+                  onClick={() => handleAgeingFilter('31-60')}
+                >
                   <p className="text-[12px] text-slate-500 mb-1 flex items-center gap-2">
                     <span className="inline-block w-2.5 h-2.5 rounded-full bg-orange-500" />
                     31-60
@@ -296,7 +313,10 @@ export default function Invoices() {
                     <span className="text-[12px] font-normal text-slate-400 ml-1">({agingBuckets['31-60'].count})</span>
                   </p>
                 </div>
-                <div>
+                <div 
+                  className={`cursor-pointer rounded-md p-2 -m-2 transition-colors ${ageingFilter === '61-90' ? 'bg-rose-50 ring-1 ring-rose-200' : 'hover:bg-slate-50'}`}
+                  onClick={() => handleAgeingFilter('61-90')}
+                >
                   <p className="text-[12px] text-slate-500 mb-1 flex items-center gap-2">
                     <span className="inline-block w-2.5 h-2.5 rounded-full bg-rose-500" />
                     61-90
@@ -306,7 +326,10 @@ export default function Invoices() {
                     <span className="text-[12px] font-normal text-slate-400 ml-1">({agingBuckets['61-90'].count})</span>
                   </p>
                 </div>
-                <div>
+                <div 
+                  className={`cursor-pointer rounded-md p-2 -m-2 transition-colors ${ageingFilter === '90+' ? 'bg-red-50 ring-1 ring-red-200' : 'hover:bg-slate-50'}`}
+                  onClick={() => handleAgeingFilter('90+')}
+                >
                   <p className="text-[12px] text-slate-500 mb-1 flex items-center gap-2">
                     <span className="inline-block w-2.5 h-2.5 rounded-full bg-red-700" />
                     90+
@@ -347,12 +370,9 @@ export default function Invoices() {
                     >
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            {getStatusDot(invoice)}
-                            <p className="text-[14px] font-medium text-slate-900 truncate">
-                              {invoice.invoiceNumber}
-                            </p>
-                          </div>
+                          <p className="text-[14px] font-medium text-slate-900 truncate">
+                            {invoice.invoiceNumber}
+                          </p>
                           <p className="text-[12px] text-slate-500 truncate mt-1">
                             {invoice.contact?.companyName || invoice.contact?.name || 'Unknown'}
                           </p>
@@ -438,10 +458,12 @@ export default function Invoices() {
                         >
                           Amount{getSortIcon('amount')}
                         </th>
-                        <th className="text-left px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider">
-                          EPD
+                        <th 
+                          className="text-left px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 select-none"
+                          onClick={() => handleSort('epd')}
+                        >
+                          EPD{getSortIcon('epd')}
                         </th>
-                        <th className="w-8 px-2"></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -517,10 +539,6 @@ export default function Invoices() {
                               ) : (
                                 <span className="text-[13px] text-slate-400">-</span>
                               )}
-                            </td>
-
-                            <td className="py-[5px] px-2 text-center">
-                              {getStatusDot(invoice)}
                             </td>
                           </tr>
                         );

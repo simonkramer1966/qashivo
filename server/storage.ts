@@ -1224,19 +1224,23 @@ export class DatabaseStorage implements IStorage {
           return contacts.companyName;
         case 'daysOverdue':
           return invoices.dueDate; // Sort by dueDate, earlier = more overdue
+        case 'invoiceAge':
+          return invoices.issueDate; // Sort by issueDate, earlier = older invoice
         case 'status':
           return invoices.status;
         case 'amount':
           return invoices.amount;
+        case 'epd':
+          return invoices.dueDate; // EPD fallback is based on due date, so use that as proxy
         default:
           return invoices.dueDate;
       }
     };
     
     const sortColumn = getSortColumn();
-    // For daysOverdue, invert direction since earlier dueDate = more days overdue
-    const effectiveDir = sortBy === 'daysOverdue' 
-      ? (sortDir === 'desc' ? 'asc' : 'desc') // Invert for daysOverdue
+    // For daysOverdue and invoiceAge, invert direction since earlier date = more days
+    const effectiveDir = (sortBy === 'daysOverdue' || sortBy === 'invoiceAge')
+      ? (sortDir === 'desc' ? 'asc' : 'desc') // Invert for date-based age columns
       : sortDir;
     const orderByClause = effectiveDir === 'desc' ? desc(sortColumn) : asc(sortColumn);
 
