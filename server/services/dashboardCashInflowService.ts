@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { invoices, contacts, actions, promisesToPay, forecastPoints } from '@shared/schema';
+import { invoices, contacts, actions, promisesToPay, forecastPoints, paymentPromises, paymentPlans, paymentPlanInvoices } from '@shared/schema';
 import { eq, and, or, inArray, desc, gte, sql } from 'drizzle-orm';
 
 export type CashInflowPoint = {
@@ -88,9 +88,15 @@ export async function computeCashInflow(
     );
 
   const invoiceIds = openInvoices.map(r => r.invoice.id);
+  const contactIds = Array.from(new Set(openInvoices.map(r => r.invoice.contactId)));
   
-  let latestPtpByInvoice: Map<string, { promisedDate: Date; status: string }> = new Map();
+  // Consolidated PTP lookup from BOTH tables
+  // promisesToPay: active statuses are 'pending', 'active'
+  // paymentPromises: active status is 'open'
+  let latestPtpByInvoice: Map<string, { promisedDate: Date; status: string; createdAt: Date; source: string }> = new Map();
+  
   if (invoiceIds.length > 0) {
+    // Query promisesToPay table (older table)
     const ptpRecords = await db
       .select()
       .from(promisesToPay)
@@ -103,10 +109,73 @@ export async function computeCashInflow(
       .orderBy(desc(promisesToPay.createdAt));
     
     for (const ptp of ptpRecords) {
-      if (!latestPtpByInvoice.has(ptp.invoiceId)) {
+      const existing = latestPtpByInvoice.get(ptp.invoiceId);
+      const createdAt = ptp.createdAt ? new Date(ptp.createdAt) : new Date(0);
+      if (!existing || createdAt > existing.createdAt) {
         latestPtpByInvoice.set(ptp.invoiceId, {
           promisedDate: new Date(ptp.promisedDate),
-          status: ptp.status
+          status: ptp.status,
+          createdAt,
+          source: 'promisesToPay'
+        });
+      }
+    }
+    
+    // Query paymentPromises table (newer table - where drawer PTPs go)
+    const paymentPromiseRecords = await db
+      .select()
+      .from(paymentPromises)
+      .where(
+        and(
+          eq(paymentPromises.tenantId, tenantId),
+          inArray(paymentPromises.invoiceId, invoiceIds)
+        )
+      )
+      .orderBy(desc(paymentPromises.createdAt));
+    
+    for (const ptp of paymentPromiseRecords) {
+      const existing = latestPtpByInvoice.get(ptp.invoiceId);
+      const createdAt = ptp.createdAt ? new Date(ptp.createdAt) : new Date(0);
+      // Use the most recent PTP from either table
+      if (!existing || createdAt > existing.createdAt) {
+        // Map 'open' status to 'pending' for consistent handling
+        const normalizedStatus = ptp.status === 'open' ? 'pending' : ptp.status;
+        latestPtpByInvoice.set(ptp.invoiceId, {
+          promisedDate: new Date(ptp.promisedDate),
+          status: normalizedStatus,
+          createdAt,
+          source: 'paymentPromises'
+        });
+      }
+    }
+  }
+  
+  // Query payment_plans for multi-invoice payment plans
+  let paymentPlanByInvoice: Map<string, { planStartDate: Date; status: string; numberOfPayments: number; frequency: string }> = new Map();
+  if (invoiceIds.length > 0) {
+    // Get active payment plans that include any of our invoices
+    const planInvoiceLinks = await db
+      .select({
+        plan: paymentPlans,
+        invoiceId: paymentPlanInvoices.invoiceId
+      })
+      .from(paymentPlanInvoices)
+      .innerJoin(paymentPlans, eq(paymentPlanInvoices.paymentPlanId, paymentPlans.id))
+      .where(
+        and(
+          eq(paymentPlans.tenantId, tenantId),
+          eq(paymentPlans.status, 'active'),
+          inArray(paymentPlanInvoices.invoiceId, invoiceIds)
+        )
+      );
+    
+    for (const link of planInvoiceLinks) {
+      if (!paymentPlanByInvoice.has(link.invoiceId)) {
+        paymentPlanByInvoice.set(link.invoiceId, {
+          planStartDate: new Date(link.plan.planStartDate),
+          status: link.plan.status,
+          numberOfPayments: link.plan.numberOfPayments,
+          frequency: link.plan.paymentFrequency
         });
       }
     }
@@ -156,16 +225,23 @@ export async function computeCashInflow(
     let reason: string;
 
     const ptp = latestPtpByInvoice.get(inv.id);
+    const paymentPlan = paymentPlanByInvoice.get(inv.id);
     const intent = latestIntentByInvoice.get(inv.id);
 
-    if (ptp && ptp.status === 'pending') {
+    // Priority: 1) PTP (highest confidence) 2) Payment Plan 3) Invoice pause state 4) Intent 5) outcomeOverride 6) Due date
+    if (ptp && (ptp.status === 'pending' || ptp.status === 'active')) {
       expectedDate = ptp.promisedDate;
       baseConfidence = 0.85;
-      reason = 'Promise to Pay';
+      reason = `Promise to Pay (${ptp.source})`;
+    } else if (paymentPlan && paymentPlan.status === 'active') {
+      // Use plan start date as expected payment date
+      expectedDate = paymentPlan.planStartDate;
+      baseConfidence = 0.80;
+      reason = 'Payment Plan';
     } else if (inv.pauseState === 'ptp' && inv.pausedUntil) {
       expectedDate = new Date(inv.pausedUntil);
       baseConfidence = 0.85;
-      reason = 'Promise to Pay';
+      reason = 'Promise to Pay (pause)';
     } else if (intent?.intentType === 'promise_to_pay') {
       expectedDate = new Date(today);
       expectedDate.setDate(expectedDate.getDate() + 7);
@@ -176,13 +252,33 @@ export async function computeCashInflow(
       expectedDate.setDate(expectedDate.getDate() + 2);
       baseConfidence = 0.90;
       reason = 'Payment Confirmation';
+    } else if (intent?.intentType === 'payment_plan') {
+      // Intent detected payment plan but no record created yet
+      expectedDate = new Date(today);
+      expectedDate.setDate(expectedDate.getDate() + 14);
+      baseConfidence = 0.70;
+      reason = 'Payment Plan (intent)';
     } else if (intent?.intentType === 'query' || intent?.intentType === 'general_query') {
       expectedDate = new Date(today);
       expectedDate.setDate(expectedDate.getDate() + 14);
       baseConfidence = 0.55;
       reason = 'Request More Time';
-    } else if (intent?.intentType === 'dispute') {
+    } else if (intent?.intentType === 'dispute' || inv.outcomeOverride === 'Disputed') {
+      // Disputed invoices excluded from forecast
       continue;
+    } else if (inv.outcomeOverride === 'Plan') {
+      // Invoice has Plan outcome but no explicit PTP record found - use reasonable default
+      expectedDate = new Date(today);
+      expectedDate.setDate(expectedDate.getDate() + 14);
+      baseConfidence = 0.70;
+      reason = 'Payment Plan (outcome)';
+    } else if (inv.outcomeOverride === 'Silent') {
+      // Action taken but no response - lower confidence
+      const dueDate = new Date(inv.dueDate);
+      expectedDate = dueDate < today ? new Date(today) : dueDate;
+      expectedDate.setDate(expectedDate.getDate() + 7);
+      baseConfidence = 0.30;
+      reason = 'Silent (no response)';
     } else {
       const dueDate = new Date(inv.dueDate);
       if (dueDate < today) {
