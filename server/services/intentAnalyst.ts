@@ -1,8 +1,47 @@
 import OpenAI from "openai";
 import { db } from "../db";
-import { inboundMessages, actions, contacts, invoices, paymentPlans, paymentPlanInvoices, users } from "@shared/schema";
+import { inboundMessages, actions, contacts, invoices, paymentPlans, paymentPlanInvoices, users, outcomes } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { getPromiseReliabilityService } from "./promiseReliabilityService.js";
+
+// Outcome types that map to CharlieIntentType
+type OutcomeType = 
+  | 'PROMISE_TO_PAY'
+  | 'PAYMENT_PLAN' 
+  | 'DISPUTE'
+  | 'PAYMENT_CONFIRMATION'
+  | 'VULNERABILITY'
+  | 'CALLBACK_REQUEST'
+  | 'ADMIN_BLOCKER'
+  | 'QUERY'
+  | 'UNKNOWN';
+
+// Map intent types to outcome types
+const INTENT_TO_OUTCOME_TYPE: Record<CharlieIntentType, OutcomeType> = {
+  'promise_to_pay': 'PROMISE_TO_PAY',
+  'payment_plan': 'PAYMENT_PLAN',
+  'dispute': 'DISPUTE',
+  'payment_confirmation': 'PAYMENT_CONFIRMATION',
+  'vulnerability': 'VULNERABILITY',
+  'callback_request': 'CALLBACK_REQUEST',
+  'admin_issue': 'ADMIN_BLOCKER',
+  'general_query': 'QUERY',
+  'unknown': 'UNKNOWN'
+};
+
+// Forecast effect for each outcome type
+type ForecastEffect = 'FORECAST_UPDATED' | 'ROUTED_TO_ATTENTION' | 'MANUAL_REVIEW' | 'NO_EFFECT';
+const OUTCOME_FORECAST_EFFECTS: Record<OutcomeType, ForecastEffect> = {
+  'PROMISE_TO_PAY': 'FORECAST_UPDATED',
+  'PAYMENT_PLAN': 'FORECAST_UPDATED',
+  'DISPUTE': 'ROUTED_TO_ATTENTION',
+  'PAYMENT_CONFIRMATION': 'FORECAST_UPDATED',
+  'VULNERABILITY': 'MANUAL_REVIEW',
+  'CALLBACK_REQUEST': 'NO_EFFECT',
+  'ADMIN_BLOCKER': 'ROUTED_TO_ATTENTION',
+  'QUERY': 'NO_EFFECT',
+  'UNKNOWN': 'MANUAL_REVIEW'
+};
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -249,7 +288,14 @@ Respond with valid JSON only, no markdown formatting.`
       if (shouldCreateAction) {
         await this.createActionFromIntent(message, analysis);
         
+        // ALWAYS create unified outcome for forecast-affecting intents (all channels)
+        // This ensures email, SMS, and voice intents all feed into the forecast
+        if (message.contactId && analysis.intentType !== 'unknown') {
+          await this.createOutcomeFromIntent(message, analysis, context);
+        }
+        
         // Create promise record if this is a promise_to_pay intent with high confidence
+        // (Legacy table - kept for backwards compatibility)
         if (analysis.intentType === 'promise_to_pay' && 
             analysis.confidence >= this.CONFIDENCE_THRESHOLD &&
             message.contactId && message.invoiceId) {
@@ -278,6 +324,11 @@ Respond with valid JSON only, no markdown formatting.`
         console.log(`⚠️  Low confidence (${(analysis.confidence * 100).toFixed(0)}%) - flagged for manual review`);
         // Still create action for low confidence - route to Queries tab
         await this.createActionFromIntent(message, analysis);
+        
+        // Create outcome even for low confidence - marked for manual review
+        if (message.contactId) {
+          await this.createOutcomeFromIntent(message, analysis, context);
+        }
       }
 
     } catch (error) {
@@ -368,6 +419,195 @@ Respond with valid JSON only, no markdown formatting.`
     } catch (error) {
       console.error('❌ Error creating action:', error);
     }
+  }
+
+  /**
+   * Create a unified outcome record for forecast integration
+   * This is the SINGLE source of truth for all intent outcomes across all channels
+   */
+  private async createOutcomeFromIntent(
+    message: typeof inboundMessages.$inferSelect,
+    analysis: IntentAnalysisResult,
+    context: { contactName?: string; invoiceAmount?: number; daysPastDue?: number }
+  ): Promise<void> {
+    try {
+      if (!message.contactId) {
+        console.warn(`⚠️  Cannot create outcome - no contactId on message ${message.id}`);
+        return;
+      }
+
+      const outcomeType = INTENT_TO_OUTCOME_TYPE[analysis.intentType];
+      const effect = OUTCOME_FORECAST_EFFECTS[outcomeType];
+      
+      // Determine confidence band
+      let confidenceBand: 'HIGH' | 'MEDIUM' | 'LOW';
+      if (analysis.confidence >= 0.85) {
+        confidenceBand = 'HIGH';
+      } else if (analysis.confidence >= 0.6) {
+        confidenceBand = 'MEDIUM';
+      } else {
+        confidenceBand = 'LOW';
+      }
+
+      // Map channel to source channel format
+      const sourceChannel = message.channel?.toUpperCase() || 'EMAIL';
+
+      // Build extracted structured data based on intent type
+      const extracted = this.buildExtractedData(analysis, context);
+
+      // Create the unified outcome record
+      // Use null explicitly for nullable fields (not undefined)
+      const [outcome] = await db
+        .insert(outcomes)
+        .values({
+          tenantId: message.tenantId,
+          debtorId: message.contactId,
+          invoiceId: message.invoiceId || null,
+          linkedInvoiceIds: [],
+          type: outcomeType,
+          confidence: analysis.confidence.toFixed(2),
+          confidenceBand,
+          requiresHumanReview: analysis.requiresHumanReview,
+          effect,
+          extracted,
+          sourceChannel,
+          sourceMessageId: message.id,
+          rawSnippet: message.content?.substring(0, 500) || '',
+        })
+        .returning();
+
+      console.log(`✅ Outcome created: ${outcomeType} (${confidenceBand} confidence) - effect: ${effect}`);
+      
+    } catch (error) {
+      console.error('❌ Error creating outcome:', error);
+    }
+  }
+
+  /**
+   * Build extracted structured data from intent analysis
+   * Maps analysis entities to the unified outcome.extracted schema
+   */
+  private buildExtractedData(
+    analysis: IntentAnalysisResult,
+    context: { contactName?: string; invoiceAmount?: number; daysPastDue?: number }
+  ): {
+    promiseToPayDate?: string;
+    promiseToPayAmount?: number;
+    confirmedBy?: string;
+    paymentPlanSchedule?: Array<{ date: string; amount: number }>;
+    paymentProcessWindow?: { earliest?: string; latest?: string };
+    disputeCategory?: 'PRICING' | 'DELIVERY' | 'QUALITY' | 'OTHER';
+    docsRequested?: Array<'INVOICE_COPY' | 'STATEMENT' | 'REMITTANCE' | 'PO'>;
+    oooUntil?: string;
+    freeTextNotes?: string;
+  } {
+    const extracted: any = {};
+    const entities = analysis.extractedEntities;
+
+    // Extract promise to pay date
+    if (analysis.intentType === 'promise_to_pay' || analysis.intentType === 'payment_confirmation') {
+      if (entities.dates?.length) {
+        const parsedDate = this.parsePromisedDate(entities.dates[0]);
+        if (parsedDate) {
+          extracted.promiseToPayDate = parsedDate.toISOString().split('T')[0];
+        }
+      }
+      
+      // Extract amount if mentioned
+      if (entities.amounts?.length) {
+        const amount = this.parseAmount(entities.amounts[0]);
+        if (amount && amount > 0) {
+          extracted.promiseToPayAmount = amount;
+        }
+      } else if (context.invoiceAmount) {
+        // Use invoice amount as fallback for full payment promise
+        extracted.promiseToPayAmount = context.invoiceAmount;
+      }
+      
+      if (context.contactName) {
+        extracted.confirmedBy = context.contactName;
+      }
+    }
+
+    // Extract payment plan schedule
+    if (analysis.intentType === 'payment_plan') {
+      // Try to build a schedule from extracted dates and amounts
+      const dates = entities.dates || [];
+      const amounts = entities.amounts || [];
+      
+      if (dates.length > 0) {
+        const schedule: Array<{ date: string; amount: number }> = [];
+        
+        for (let i = 0; i < dates.length; i++) {
+          const parsedDate = this.parsePromisedDate(dates[i]);
+          if (parsedDate) {
+            // Use corresponding amount if available, otherwise divide total
+            let amount: number;
+            if (amounts[i]) {
+              amount = this.parseAmount(amounts[i]) || 0;
+            } else if (context.invoiceAmount && dates.length > 0) {
+              // Divide invoice amount equally among dates
+              amount = context.invoiceAmount / dates.length;
+            } else {
+              amount = 0;
+            }
+            
+            schedule.push({
+              date: parsedDate.toISOString().split('T')[0],
+              amount
+            });
+          }
+        }
+        
+        if (schedule.length > 0) {
+          extracted.paymentPlanSchedule = schedule;
+        }
+      }
+      
+      // If no dates extracted, create a default 14-day first payment
+      if (!extracted.paymentPlanSchedule) {
+        const firstPaymentDate = new Date();
+        firstPaymentDate.setDate(firstPaymentDate.getDate() + 14);
+        extracted.paymentPlanSchedule = [{
+          date: firstPaymentDate.toISOString().split('T')[0],
+          amount: context.invoiceAmount || 0
+        }];
+      }
+    }
+
+    // Extract dispute category
+    if (analysis.intentType === 'dispute') {
+      const reasons = (entities.reasons || []).join(' ').toLowerCase();
+      if (reasons.includes('price') || reasons.includes('cost') || reasons.includes('amount')) {
+        extracted.disputeCategory = 'PRICING';
+      } else if (reasons.includes('delivery') || reasons.includes('shipping') || reasons.includes('late')) {
+        extracted.disputeCategory = 'DELIVERY';
+      } else if (reasons.includes('quality') || reasons.includes('damage') || reasons.includes('defect')) {
+        extracted.disputeCategory = 'QUALITY';
+      } else {
+        extracted.disputeCategory = 'OTHER';
+      }
+    }
+
+    // Extract admin/docs requested
+    if (analysis.intentType === 'admin_issue') {
+      const docsRequested: string[] = [];
+      const content = (entities.reasons || []).join(' ').toLowerCase();
+      if (content.includes('invoice') || content.includes('copy')) docsRequested.push('INVOICE_COPY');
+      if (content.includes('statement')) docsRequested.push('STATEMENT');
+      if (content.includes('remittance')) docsRequested.push('REMITTANCE');
+      if (content.includes('po') || content.includes('purchase order')) docsRequested.push('PO');
+      if (docsRequested.length > 0) {
+        extracted.docsRequested = docsRequested;
+      }
+    }
+
+    // Always include reasoning as freeTextNotes
+    if (analysis.reasoning) {
+      extracted.freeTextNotes = analysis.reasoning;
+    }
+
+    return extracted;
   }
 
   /**

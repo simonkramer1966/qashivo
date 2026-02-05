@@ -1,6 +1,19 @@
 import { db } from '../db';
-import { invoices, contacts, actions, promisesToPay, forecastPoints, paymentPromises, paymentPlans, paymentPlanInvoices } from '@shared/schema';
+import { invoices, contacts, actions, promisesToPay, forecastPoints, paymentPromises, paymentPlans, paymentPlanInvoices, outcomes } from '@shared/schema';
 import { eq, and, or, inArray, desc, gte, sql } from 'drizzle-orm';
+
+// Outcome types that affect forecasts
+type OutcomeExtracted = {
+  promiseToPayDate?: string;
+  promiseToPayAmount?: number;
+  confirmedBy?: string;
+  paymentPlanSchedule?: Array<{ date: string; amount: number }>;
+  paymentProcessWindow?: { earliest?: string; latest?: string };
+  disputeCategory?: 'PRICING' | 'DELIVERY' | 'QUALITY' | 'OTHER';
+  docsRequested?: Array<'INVOICE_COPY' | 'STATEMENT' | 'REMITTANCE' | 'PO'>;
+  oooUntil?: string;
+  freeTextNotes?: string;
+};
 
 export type CashInflowPoint = {
   date: string;
@@ -181,6 +194,84 @@ export async function computeCashInflow(
     }
   }
 
+  // Query unified outcomes table - PRIMARY source of truth for forecast-affecting signals
+  // This includes PTP, payment plans, disputes, and other intent outcomes from ALL channels
+  let latestOutcomeByInvoice: Map<string, { 
+    type: string; 
+    extracted: OutcomeExtracted; 
+    confidence: number;
+    confidenceBand: string;
+    createdAt: Date;
+  }> = new Map();
+  
+  // Also check for debtor-level outcomes (outcomes linked to contact, not specific invoice)
+  let latestOutcomeByDebtor: Map<string, { 
+    type: string; 
+    extracted: OutcomeExtracted; 
+    confidence: number;
+    confidenceBand: string;
+    createdAt: Date;
+  }> = new Map();
+  
+  if (invoiceIds.length > 0 || contactIds.length > 0) {
+    // Get outcomes for these invoices or contacts
+    // Build where conditions safely - avoid undefined in or()
+    const orConditions = [];
+    if (invoiceIds.length > 0) {
+      orConditions.push(inArray(outcomes.invoiceId, invoiceIds));
+    }
+    if (contactIds.length > 0) {
+      orConditions.push(inArray(outcomes.debtorId, contactIds));
+    }
+    
+    const outcomeRecords = orConditions.length > 0 
+      ? await db
+          .select()
+          .from(outcomes)
+          .where(
+            and(
+              eq(outcomes.tenantId, tenantId),
+              or(...orConditions)
+            )
+          )
+          .orderBy(desc(outcomes.createdAt))
+      : [];
+    
+    for (const outcome of outcomeRecords) {
+      const createdAt = outcome.createdAt ? new Date(outcome.createdAt) : new Date(0);
+      const confidence = Number(outcome.confidence) || 0;
+      const extracted = (outcome.extracted || {}) as OutcomeExtracted;
+      
+      // Store by invoice if linked to specific invoice
+      if (outcome.invoiceId) {
+        const existing = latestOutcomeByInvoice.get(outcome.invoiceId);
+        if (!existing || createdAt > existing.createdAt) {
+          latestOutcomeByInvoice.set(outcome.invoiceId, {
+            type: outcome.type,
+            extracted,
+            confidence,
+            confidenceBand: outcome.confidenceBand,
+            createdAt
+          });
+        }
+      }
+      
+      // Also store by debtor for debtor-level outcomes
+      if (outcome.debtorId) {
+        const existing = latestOutcomeByDebtor.get(outcome.debtorId);
+        if (!existing || createdAt > existing.createdAt) {
+          latestOutcomeByDebtor.set(outcome.debtorId, {
+            type: outcome.type,
+            extracted,
+            confidence,
+            confidenceBand: outcome.confidenceBand,
+            createdAt
+          });
+        }
+      }
+    }
+  }
+
   let latestIntentByInvoice: Map<string, { intentType: string; createdAt: Date }> = new Map();
   if (invoiceIds.length > 0) {
     const recentActions = await db
@@ -224,24 +315,75 @@ export async function computeCashInflow(
     let baseConfidence: number;
     let reason: string;
 
+    // Get all data sources
     const ptp = latestPtpByInvoice.get(inv.id);
     const paymentPlan = paymentPlanByInvoice.get(inv.id);
     const intent = latestIntentByInvoice.get(inv.id);
+    const invoiceOutcome = latestOutcomeByInvoice.get(inv.id);
+    const debtorOutcome = inv.contactId ? latestOutcomeByDebtor.get(inv.contactId) : undefined;
+    
+    // Use invoice-level outcome first, fall back to debtor-level
+    const outcome = invoiceOutcome || debtorOutcome;
 
-    // Priority: 1) PTP (highest confidence) 2) Payment Plan 3) Invoice pause state 4) Intent 5) outcomeOverride 6) Due date
-    if (ptp && (ptp.status === 'pending' || ptp.status === 'active')) {
+    // NEW Priority: 
+    // 1) Unified Outcomes (HIGHEST - includes structured PTP dates from email/voice/SMS)
+    // 2) Legacy PTP tables
+    // 3) Payment Plans
+    // 4) Invoice pause state
+    // 5) Intent from actions
+    // 6) outcomeOverride
+    // 7) Due date
+    
+    // Check for dispute outcomes first - exclude from forecast
+    if (outcome?.type === 'DISPUTE' || inv.outcomeOverride === 'Disputed') {
+      continue;
+    }
+    
+    // 1) Unified Outcomes - HIGHEST PRIORITY with structured extracted data
+    if (outcome?.type === 'PROMISE_TO_PAY' && outcome.extracted?.promiseToPayDate) {
+      expectedDate = new Date(outcome.extracted.promiseToPayDate);
+      // Use confidence band from outcome
+      baseConfidence = outcome.confidenceBand === 'HIGH' ? 0.90 : 
+                       outcome.confidenceBand === 'MEDIUM' ? 0.80 : 0.65;
+      reason = 'Promise to Pay (outcome)';
+    } else if (outcome?.type === 'PAYMENT_CONFIRMATION') {
+      expectedDate = new Date(today);
+      expectedDate.setDate(expectedDate.getDate() + 2);
+      baseConfidence = 0.92;
+      reason = 'Payment Confirmation (outcome)';
+    } else if (outcome?.type === 'PAYMENT_PLAN' && outcome.extracted?.paymentPlanSchedule?.length) {
+      // Use first scheduled payment date
+      expectedDate = new Date(outcome.extracted.paymentPlanSchedule[0].date);
+      baseConfidence = 0.82;
+      reason = 'Payment Plan (outcome)';
+    } else if (outcome?.type === 'PROMISE_TO_PAY') {
+      // PTP outcome without specific date - use 7-day default
+      expectedDate = new Date(today);
+      expectedDate.setDate(expectedDate.getDate() + 7);
+      baseConfidence = outcome.confidenceBand === 'HIGH' ? 0.85 : 0.75;
+      reason = 'Promise to Pay (outcome, no date)';
+    } else if (outcome?.type === 'VULNERABILITY' || outcome?.type === 'ADMIN_BLOCKER') {
+      // Lower confidence, push out expected date
+      expectedDate = new Date(today);
+      expectedDate.setDate(expectedDate.getDate() + 30);
+      baseConfidence = 0.35;
+      reason = outcome.type === 'VULNERABILITY' ? 'Vulnerability (review required)' : 'Admin Blocker';
+    // 2) Legacy PTP tables
+    } else if (ptp && (ptp.status === 'pending' || ptp.status === 'active')) {
       expectedDate = ptp.promisedDate;
       baseConfidence = 0.85;
       reason = `Promise to Pay (${ptp.source})`;
+    // 3) Payment Plans
     } else if (paymentPlan && paymentPlan.status === 'active') {
-      // Use plan start date as expected payment date
       expectedDate = paymentPlan.planStartDate;
       baseConfidence = 0.80;
       reason = 'Payment Plan';
+    // 4) Invoice pause state
     } else if (inv.pauseState === 'ptp' && inv.pausedUntil) {
       expectedDate = new Date(inv.pausedUntil);
       baseConfidence = 0.85;
       reason = 'Promise to Pay (pause)';
+    // 5) Intent from actions (legacy fallback)
     } else if (intent?.intentType === 'promise_to_pay') {
       expectedDate = new Date(today);
       expectedDate.setDate(expectedDate.getDate() + 7);
@@ -253,7 +395,6 @@ export async function computeCashInflow(
       baseConfidence = 0.90;
       reason = 'Payment Confirmation';
     } else if (intent?.intentType === 'payment_plan') {
-      // Intent detected payment plan but no record created yet
       expectedDate = new Date(today);
       expectedDate.setDate(expectedDate.getDate() + 14);
       baseConfidence = 0.70;
@@ -263,11 +404,10 @@ export async function computeCashInflow(
       expectedDate.setDate(expectedDate.getDate() + 14);
       baseConfidence = 0.55;
       reason = 'Request More Time';
-    } else if (intent?.intentType === 'dispute' || inv.outcomeOverride === 'Disputed') {
-      // Disputed invoices excluded from forecast
+    } else if (intent?.intentType === 'dispute') {
       continue;
+    // 6) outcomeOverride
     } else if (inv.outcomeOverride === 'Plan') {
-      // Invoice has Plan outcome but no explicit PTP record found - use reasonable default
       expectedDate = new Date(today);
       expectedDate.setDate(expectedDate.getDate() + 14);
       baseConfidence = 0.70;
