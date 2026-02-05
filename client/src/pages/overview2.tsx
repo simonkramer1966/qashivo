@@ -150,6 +150,16 @@ export default function Overview2() {
     });
   };
 
+  // Calculate dynamic interval to prevent label overlap
+  // Aims for roughly 15-20 visible labels max for readability
+  const getXAxisInterval = () => {
+    const dataLength = cashInflowData?.points?.length || 0;
+    if (dataLength <= 20) return 0; // Show all labels
+    if (dataLength <= 40) return 1; // Show every 2nd label
+    if (dataLength <= 60) return 2; // Show every 3rd label
+    return Math.floor(dataLength / 20); // Dynamic for larger datasets
+  };
+
   const CustomXAxisTick = ({ x, y, payload }: any) => {
     const value = payload?.value || '';
     const parts = value.split(' ');
@@ -458,7 +468,7 @@ export default function Overview2() {
                         tickLine={false}
                         axisLine={false}
                         height={45}
-                        interval={0}
+                        interval={getXAxisInterval()}
                       />
                       <YAxis 
                         tick={{ fontSize: 11, fill: '#9ca3af' }}
