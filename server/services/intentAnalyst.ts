@@ -987,17 +987,30 @@ IMPORTANT for ambiguity detection:
         }
       }
       
-      // UK date format: "15/01/2025" or "15-01-2025" or "15 Jan 2025"
-      const ukDateMatch = lowerStr.match(/(\d{1,2})[\/\-\s]+(\d{1,2}|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[\/\-\s]+(\d{2,4})/i);
+      // Helper to parse month names (full or abbreviated)
+      const monthNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+      const fullMonthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+      
+      const parseMonthName = (monthStr: string): number => {
+        const lower = monthStr.toLowerCase();
+        // Check full month names first
+        const fullIdx = fullMonthNames.findIndex(m => lower.startsWith(m) || m.startsWith(lower));
+        if (fullIdx >= 0) return fullIdx;
+        // Then abbreviated
+        return monthNames.indexOf(lower.substring(0, 3));
+      };
+      
+      // UK date format with ordinal: "16th March 2026", "1st January 2025", "15/01/2025", "15 Jan 2025"
+      // Handle ordinal suffixes (st, nd, rd, th) and full month names
+      const ukDateMatch = lowerStr.match(/(\d{1,2})(?:st|nd|rd|th)?[\/\-\s]+(\d{1,2}|january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[\/\-\s]+(\d{2,4})/i);
       if (ukDateMatch) {
         const day = parseInt(ukDateMatch[1], 10);
         let month: number;
         const monthStr = ukDateMatch[2];
         
         if (isNaN(parseInt(monthStr, 10))) {
-          // Month name
-          const monthNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
-          month = monthNames.indexOf(monthStr.toLowerCase().substring(0, 3));
+          // Month name (full or abbreviated)
+          month = parseMonthName(monthStr);
         } else {
           month = parseInt(monthStr, 10) - 1; // JS months are 0-indexed
         }
@@ -1010,13 +1023,27 @@ IMPORTANT for ambiguity detection:
         }
       }
       
-      // "15 January" or "January 15" without year
-      const monthDayMatch = lowerStr.match(/(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)|(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+(\d{1,2})/i);
+      // Month-first with year: "March 16th 2026", "January 1st 2025"
+      const monthFirstWithYearMatch = lowerStr.match(/(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+(\d{1,2})(?:st|nd|rd|th)?[\s,]+(\d{2,4})/i);
+      if (monthFirstWithYearMatch) {
+        const monthStr = monthFirstWithYearMatch[1];
+        const day = parseInt(monthFirstWithYearMatch[2], 10);
+        let year = parseInt(monthFirstWithYearMatch[3], 10);
+        const month = parseMonthName(monthStr);
+        
+        if (year < 100) year += 2000; // Handle 2-digit years
+        
+        if (day >= 1 && day <= 31 && month >= 0 && month <= 11) {
+          return new Date(year, month, day);
+        }
+      }
+      
+      // "15th January" or "January 15th" without year - handles ordinals and full month names
+      const monthDayMatch = lowerStr.match(/(\d{1,2})(?:st|nd|rd|th)?\s+(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)|(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+(\d{1,2})(?:st|nd|rd|th)?/i);
       if (monthDayMatch) {
-        const monthNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
         const day = parseInt(monthDayMatch[1] || monthDayMatch[4], 10);
-        const monthStr = (monthDayMatch[2] || monthDayMatch[3]).toLowerCase().substring(0, 3);
-        const month = monthNames.indexOf(monthStr);
+        const monthStr = (monthDayMatch[2] || monthDayMatch[3]);
+        const month = parseMonthName(monthStr);
         
         if (day >= 1 && day <= 31 && month >= 0) {
           let year = now.getFullYear();
@@ -1268,7 +1295,7 @@ IMPORTANT for ambiguity detection:
       }
       
       // Calculate resolved amount from invoices if not extracted
-      const extractedAmount = this.extractPtpAmount(analysis, null);
+      const extractedAmount = this.extractPtpAmount(analysis, undefined);
       const resolvedAmount = extractedAmount || 
         (resolvedInvoices.linkedInvoices.length > 0 
           ? resolvedInvoices.linkedInvoices.reduce((sum, inv) => sum + inv.amount, 0)
@@ -1373,10 +1400,7 @@ IMPORTANT for ambiguity detection:
           requiresHumanReview: true,
           effect: 'MANUAL_REVIEW', // Pending clarification
           extracted: {
-            clarificationPending: true,
-            clarificationId: clarificationId || null, // Link to clarification record for reconciliation
-            ambiguityDetails: analysis.ambiguity?.details || {},
-            freeTextNotes: `Awaiting clarification response. ${analysis.reasoning}`
+            freeTextNotes: `Awaiting clarification (ID: ${clarificationId || 'pending'}). ${analysis.reasoning}`
           },
           sourceChannel: (message.channel?.toUpperCase() || 'EMAIL') as string,
           sourceMessageId: message.id,
@@ -1793,10 +1817,7 @@ IMPORTANT for ambiguity detection:
           confidenceBand,
           requiresHumanReview: analysis.requiresHumanReview,
           effect,
-          extracted: {
-            ...extracted,
-            resolvedFromClarification: true
-          },
+          extracted,
           sourceChannel,
           sourceMessageId: message.id,
           rawSnippet: message.content?.substring(0, 500) || '',
