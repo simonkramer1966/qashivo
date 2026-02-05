@@ -1,12 +1,58 @@
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { useLocation } from "wouter";
 import { Menu, X, Check, Rocket, Lightbulb, GraduationCap, TrendingUp, Handshake, BarChart3, Bot, Shield, Zap, Brain, Lock, Plug } from "lucide-react";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { useToast } from "@/hooks/use-toast";
 import logo from "@assets/Main_Nexus_Logo_copy_1768893717341.png";
+
+interface PilotFormData {
+  name: string;
+  email: string;
+  company: string;
+  phone: string;
+  message: string;
+}
 
 export default function PilotPartner() {
   const [, setLocation] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<PilotFormData>();
+
+  const onSubmit = async (data: PilotFormData) => {
+    setIsSubmitting(true);
+    try {
+      const response = await fetch('/api/public/sales-enquiry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...data,
+          enquiryType: 'partnership'
+        })
+      });
+      
+      if (!response.ok) throw new Error('Failed to submit');
+      
+      toast({
+        title: "Application received",
+        description: "We'll be in touch within 24 hours to discuss the pilot program.",
+      });
+      reset();
+    } catch (error) {
+      toast({
+        title: "Something went wrong",
+        description: "Please try again or email us directly at hello@qashivo.com",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white">
@@ -65,21 +111,118 @@ export default function PilotPartner() {
 
       {/* Hero */}
       <section className="py-16 md:py-24 border-b border-[#E6E8EC]">
-        <div className="max-w-[800px] mx-auto px-6 text-center">
-          <p className="text-[13px] font-medium text-[#12B8C4] uppercase tracking-wide mb-4">Pilot Partner Program</p>
-          <h1 className="text-[36px] md:text-[48px] font-semibold text-[#0B0F17] leading-[1.1] tracking-tight mb-6">
-            Shape the Future of AI-Powered Credit Control
-          </h1>
-          <p className="text-[17px] md:text-[19px] text-[#556070] leading-relaxed mb-8 max-w-[680px] mx-auto">
-            Join us in developing the next generation of autonomous credit control and intelligent cashflow forecasting. 
-            Be among the first accounting firms to deliver AI-powered financial management to your clients.
-          </p>
-          <Button
-            onClick={() => window.location.href = 'mailto:partners@qashivo.com?subject=Pilot%20Partner%20Application'}
-            className="bg-[#12B8C4] hover:bg-[#0fa3ae] text-white h-12 px-8 rounded-full text-[15px] font-medium"
-          >
-            Apply to Become a Pilot Partner
-          </Button>
+        <div className="max-w-[1100px] mx-auto px-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
+            {/* Left: Text content */}
+            <div className="text-left">
+              <p className="text-[13px] font-medium text-[#12B8C4] uppercase tracking-wide mb-4">Pilot Partner Program</p>
+              <h1 className="text-[32px] md:text-[42px] font-semibold text-[#0B0F17] leading-[1.15] tracking-tight mb-6">
+                Shape the Future of AI-Powered Credit Control
+              </h1>
+              <p className="text-[16px] md:text-[18px] text-[#556070] leading-relaxed mb-6">
+                Join us in developing the next generation of autonomous credit control and intelligent cashflow forecasting. 
+                Be among the first accounting firms to deliver AI-powered financial management to your clients.
+              </p>
+              <div className="space-y-3 text-[15px] text-[#556070]">
+                <div className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-[#22C55E]" />
+                  <span>Early access to v1, v2 & v3 features</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-[#22C55E]" />
+                  <span>Direct influence on product roadmap</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-[#22C55E]" />
+                  <span>Dedicated training & support</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-[#22C55E]" />
+                  <span>Favorable commercial terms</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Sign up form */}
+            <div className="bg-[#F8FAFB] p-6 md:p-8 rounded-xl border border-[#E6E8EC]">
+              <h2 className="text-[20px] font-semibold text-[#0B0F17] mb-2">Apply to become a pilot partner</h2>
+              <p className="text-[14px] text-[#556070] mb-6">We'll get back to you within 24 hours.</p>
+              
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[13px] font-medium text-[#0B0F17] mb-1.5">Your name *</label>
+                    <Input
+                      {...register("name", { required: "Name is required" })}
+                      placeholder="Jane Smith"
+                      className="h-11 bg-white border-[#E6E8EC] rounded-lg text-[14px] placeholder:text-[#9CA3AF]"
+                    />
+                    {errors.name && <p className="text-red-500 text-[12px] mt-1">{errors.name.message}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-[13px] font-medium text-[#0B0F17] mb-1.5">Company *</label>
+                    <Input
+                      {...register("company", { required: "Company is required" })}
+                      placeholder="Smith & Co Accountants"
+                      className="h-11 bg-white border-[#E6E8EC] rounded-lg text-[14px] placeholder:text-[#9CA3AF]"
+                    />
+                    {errors.company && <p className="text-red-500 text-[12px] mt-1">{errors.company.message}</p>}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[13px] font-medium text-[#0B0F17] mb-1.5">Email *</label>
+                    <Input
+                      {...register("email", { 
+                        required: "Email is required",
+                        pattern: { value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i, message: "Invalid email" }
+                      })}
+                      type="email"
+                      placeholder="jane@smithco.com"
+                      className="h-11 bg-white border-[#E6E8EC] rounded-lg text-[14px] placeholder:text-[#9CA3AF]"
+                    />
+                    {errors.email && <p className="text-red-500 text-[12px] mt-1">{errors.email.message}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-[13px] font-medium text-[#0B0F17] mb-1.5">Phone</label>
+                    <Input
+                      {...register("phone")}
+                      type="tel"
+                      placeholder="+44 7700 900000"
+                      className="h-11 bg-white border-[#E6E8EC] rounded-lg text-[14px] placeholder:text-[#9CA3AF]"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[13px] font-medium text-[#0B0F17] mb-1.5">Tell us about your practice *</label>
+                  <Textarea
+                    {...register("message", { 
+                      required: "Please tell us about your practice",
+                      minLength: { value: 10, message: "Please provide more details (at least 10 characters)" }
+                    })}
+                    placeholder="How many clients do you serve? What challenges do they face with credit control?"
+                    rows={4}
+                    className="bg-white border-[#E6E8EC] rounded-lg text-[14px] placeholder:text-[#9CA3AF] resize-none"
+                  />
+                  {errors.message && <p className="text-red-500 text-[12px] mt-1">{errors.message.message}</p>}
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full bg-[#12B8C4] hover:bg-[#0fa3ae] text-white h-11 rounded-lg text-[14px] font-medium"
+                >
+                  {isSubmitting ? "Submitting..." : "Submit Application"}
+                </Button>
+                
+                <p className="text-[12px] text-[#9CA3AF] text-center">
+                  Or email us directly at <a href="mailto:hello@qashivo.com" className="text-[#12B8C4] hover:underline">hello@qashivo.com</a>
+                </p>
+              </form>
+            </div>
+          </div>
         </div>
       </section>
 
