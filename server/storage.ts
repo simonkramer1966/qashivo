@@ -1118,6 +1118,16 @@ export class DatabaseStorage implements IStorage {
           );
           break;
         
+        case 'open':
+          // Open = all invoices that are not paid or cancelled
+          conditions.push(
+            and(
+              ne(invoices.status, 'paid'),
+              ne(invoices.status, 'cancelled')
+            )!
+          );
+          break;
+        
         case 'paid':
         case 'cancelled':
           // For paid/cancelled, filter by actual database status

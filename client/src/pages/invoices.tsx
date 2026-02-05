@@ -136,7 +136,7 @@ export default function Invoices() {
     };
     pagination: { total: number; page: number; limit: number; totalPages: number };
   }>({
-    queryKey: ['/api/invoices', { status: 'all', search, overdue: getAgeingOverdueParam(ageingFilter), sortBy: sortField, sortDir: sortDirection, page, limit }],
+    queryKey: ['/api/invoices', { status: 'open', search, overdue: getAgeingOverdueParam(ageingFilter), sortBy: sortField, sortDir: sortDirection, page, limit }],
   });
 
   const { data: aggregatesData } = useQuery<{
@@ -152,7 +152,7 @@ export default function Invoices() {
       };
     };
   }>({
-    queryKey: ['/api/invoices', { status: 'all', overdue: 'all', limit: 1 }],
+    queryKey: ['/api/invoices', { status: 'open', overdue: 'all', limit: 1 }],
     staleTime: 60000,
   });
 

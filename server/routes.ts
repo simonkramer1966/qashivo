@@ -118,7 +118,7 @@ const nudgeInvoiceSchema = z.object({
 
 // Invoice filtering query schema for server-side filtering
 const invoicesQuerySchema = z.object({
-  status: z.enum(['pending', 'overdue', 'paid', 'cancelled', 'all']).optional().default('all'),
+  status: z.enum(['pending', 'overdue', 'paid', 'cancelled', 'open', 'all']).optional().default('open'),
   search: z.string().optional(),
   overdue: z.enum(['paid', 'due', 'overdue', 'serious', 'escalation', 'all']).optional().default('all'),
   contactId: z.string().optional(),
