@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import { db } from "../db";
-import { inboundMessages, actions, contacts, invoices } from "@shared/schema";
-import { eq, and } from "drizzle-orm";
+import { inboundMessages, actions, contacts, invoices, paymentPlans, paymentPlanInvoices, users } from "@shared/schema";
+import { eq, and, desc } from "drizzle-orm";
 import { getPromiseReliabilityService } from "./promiseReliabilityService.js";
 
 const openai = new OpenAI({
@@ -254,6 +254,20 @@ Respond with valid JSON only, no markdown formatting.`
             analysis.confidence >= this.CONFIDENCE_THRESHOLD &&
             message.contactId && message.invoiceId) {
           await this.createPromiseFromIntent(message, analysis, context);
+        }
+        
+        // Handle payment plan requests - update invoice outcome and create notification
+        if (analysis.intentType === 'payment_plan' && 
+            analysis.confidence >= this.CONFIDENCE_THRESHOLD &&
+            message.contactId) {
+          await this.handlePaymentPlanIntent(message, analysis);
+        }
+        
+        // Handle dispute intents - update invoice outcome
+        if (analysis.intentType === 'dispute' && 
+            analysis.confidence >= this.CONFIDENCE_THRESHOLD &&
+            message.invoiceId) {
+          await this.handleDisputeIntent(message, analysis);
         }
         
         // Flag contact as potentially vulnerable if vulnerability detected
@@ -689,6 +703,144 @@ Respond with valid JSON only, no markdown formatting.`
       return isNaN(amount) ? undefined : amount;
     } catch (error) {
       return undefined;
+    }
+  }
+
+  /**
+   * Handle payment plan intent - create payment plan record and update invoice
+   * This creates an actual payment_plans record so EPD/cash-inflow forecasts update
+   */
+  private async handlePaymentPlanIntent(
+    message: typeof inboundMessages.$inferSelect,
+    analysis: IntentAnalysisResult
+  ): Promise<void> {
+    try {
+      console.log(`💰 Payment plan intent detected for contact ${message.contactId}`);
+      
+      if (!message.contactId) {
+        console.warn(`⚠️  Cannot create payment plan - no contactId on message ${message.id}`);
+        return;
+      }
+      
+      // Extract amount from entities (use first amount or estimate from invoice)
+      let totalAmount = 0;
+      if (analysis.extractedEntities.amounts?.length) {
+        const amountStr = analysis.extractedEntities.amounts[0];
+        const cleaned = amountStr.replace(/[£$€,]/g, '').trim();
+        totalAmount = parseFloat(cleaned) || 0;
+      }
+      
+      // If no amount extracted but we have an invoice, use invoice balance (tenant-scoped)
+      if (totalAmount === 0 && message.invoiceId) {
+        const invoice = await db.select().from(invoices)
+          .where(and(
+            eq(invoices.id, message.invoiceId),
+            eq(invoices.tenantId, message.tenantId)
+          ))
+          .limit(1);
+        if (invoice.length > 0) {
+          const inv = invoice[0];
+          totalAmount = Number(inv.amount) - Number(inv.amountPaid || 0);
+        }
+      }
+      
+      // Default to a reasonable estimate if still no amount
+      if (totalAmount === 0) {
+        totalAmount = 1000; // Default placeholder
+      }
+      
+      // Parse start date from entities (default to tomorrow)
+      let planStartDate = new Date();
+      planStartDate.setDate(planStartDate.getDate() + 1); // Tomorrow by default
+      
+      if (analysis.extractedEntities.dates?.length) {
+        const parsedDate = this.parsePromisedDate(analysis.extractedEntities.dates[0]);
+        if (parsedDate) {
+          planStartDate = parsedDate;
+        }
+      }
+      
+      // Get a user from this tenant for the addedByUserId field (required FK)
+      const tenantUser = await db.select().from(users)
+        .where(eq(users.tenantId, message.tenantId))
+        .limit(1);
+      
+      if (tenantUser.length === 0) {
+        console.warn(`⚠️  Cannot create payment plan - no users found for tenant ${message.tenantId}`);
+        return;
+      }
+      const addedByUserId = tenantUser[0].id;
+      
+      // Create the payment plan record
+      const [newPlan] = await db.insert(paymentPlans).values({
+        tenantId: message.tenantId,
+        contactId: message.contactId,
+        totalAmount: totalAmount.toFixed(2),
+        paymentFrequency: 'monthly', // Default for MVP
+        numberOfPayments: 3, // Default for MVP
+        planStartDate: planStartDate,
+        status: 'active',
+        outstandingAtCreation: totalAmount.toFixed(2),
+        nextCheckDate: planStartDate, // Check on plan start date
+        source: 'inbound_intent'
+      }).returning();
+      
+      console.log(`✅ Created payment plan ${newPlan.id} for contact ${message.contactId}`);
+      
+      // If we have an invoice, link it to the plan and update outcomeOverride
+      if (message.invoiceId) {
+        await db.insert(paymentPlanInvoices).values({
+          paymentPlanId: newPlan.id,
+          invoiceId: message.invoiceId,
+          addedByUserId: addedByUserId
+        });
+        
+        await db
+          .update(invoices)
+          .set({
+            outcomeOverride: 'Plan',
+            updatedAt: new Date()
+          })
+          .where(and(eq(invoices.id, message.invoiceId), eq(invoices.tenantId, message.tenantId)));
+        
+        console.log(`✅ Linked invoice ${message.invoiceId} to payment plan and updated outcomeOverride`);
+      }
+      
+      console.log(`💰 Payment plan created. Amount: £${totalAmount.toFixed(2)}, Start: ${planStartDate.toISOString()}`);
+    } catch (error) {
+      console.error('❌ Error handling payment plan intent:', error);
+    }
+  }
+
+  /**
+   * Handle dispute intent - update invoice pauseState and outcomeOverride
+   */
+  private async handleDisputeIntent(
+    message: typeof inboundMessages.$inferSelect,
+    analysis: IntentAnalysisResult
+  ): Promise<void> {
+    try {
+      console.log(`⚠️ Dispute intent detected for invoice ${message.invoiceId}`);
+      
+      // Update invoice with dispute status
+      if (message.invoiceId) {
+        await db
+          .update(invoices)
+          .set({
+            outcomeOverride: 'Disputed',
+            pauseState: 'dispute',
+            updatedAt: new Date()
+          })
+          .where(and(eq(invoices.id, message.invoiceId), eq(invoices.tenantId, message.tenantId)));
+        
+        console.log(`✅ Updated invoice ${message.invoiceId} to disputed status`);
+      }
+      
+      // Extract dispute reason if mentioned
+      const disputeReason = analysis.extractedEntities.reasons?.join('; ') || analysis.reasoning;
+      console.log(`⚠️ Dispute recorded. Reason: ${disputeReason}`);
+    } catch (error) {
+      console.error('❌ Error handling dispute intent:', error);
     }
   }
 

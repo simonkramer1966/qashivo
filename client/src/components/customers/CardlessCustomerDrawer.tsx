@@ -873,6 +873,25 @@ export function CardlessCustomerDrawer({
       resetPtpMode();
       queryClient.invalidateQueries({ queryKey: [`/api/contacts/${customerId}/preview`] });
       
+      // Invalidate invoice list so EPD updates immediately
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return key === '/api/invoices';
+        }
+      });
+      
+      // Invalidate dashboard charts so cash inflow forecast updates
+      console.log('📊 [PTP] Invalidating dashboard charts after PTP recorded');
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return key === '/api/dashboard/cash-inflow' || 
+                 key === '/api/dashboard/metrics';
+        },
+        refetchType: 'all'
+      });
+      
       const confirmedByContact = preview?.allCreditControlContacts?.find(
         c => c.name === savedPtpDetails.confirmedBy || c.id === savedPtpDetails.confirmedBy
       );
