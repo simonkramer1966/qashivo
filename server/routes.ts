@@ -78,7 +78,7 @@ import {
 } from "@shared/schema";
 import { getOverdueCategoryFromDueDate } from "@shared/utils/overdueUtils";
 import { calculateLatePaymentInterest } from "./utils/interestCalculator";
-import { eq, and, desc, asc, sql, count, avg, gte, lte, lt, inArray, or, isNull, gt, not } from 'drizzle-orm';
+import { eq, and, desc, asc, sql, count, avg, gte, lte, lt, inArray, or, isNull, isNotNull, gt, not } from 'drizzle-orm';
 import { db } from './db';
 import { z } from "zod";
 
