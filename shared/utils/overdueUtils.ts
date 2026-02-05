@@ -7,7 +7,9 @@ export type OverdueCategory =
   | 'due'                  // Due within next 7 days (-7 to 0 days)
   | 'overdue'              // 1-30 days overdue (immediate collection actions)
   | 'serious'              // 31-60 days overdue (intensive collection efforts)
-  | 'escalation';          // 60+ days overdue (legal/external collection)
+  | 'escalation'           // 60+ days overdue (legal/external collection)
+  | '61-90'                // 61-90 days overdue (for bucket filtering)
+  | '90+';                 // 90+ days overdue (for bucket filtering)
 
 /**
  * Shared constants for overdue category day ranges
@@ -17,7 +19,9 @@ export const CATEGORY_DAY_RANGES: Record<OverdueCategory, [number, number]> = {
   due: [-7, 0],           // Due within next 7 days to today
   overdue: [1, 30],       // Recently overdue (1-30 days)
   serious: [31, 60],      // Intensive collection efforts (31-60 days)
-  escalation: [61, Infinity] // Legal/external collection (60+ days)
+  escalation: [61, Infinity], // Legal/external collection (60+ days)
+  '61-90': [61, 90],      // 61-90 days overdue (for ageing bucket filtering)
+  '90+': [91, Infinity]   // 90+ days overdue (for ageing bucket filtering)
 };
 
 export interface OverdueCategoryInfo {

@@ -82,8 +82,8 @@ export default function Invoices() {
       case 'overdue': return 'overdue';
       case '1-30': return 'overdue';
       case '31-60': return 'serious';
-      case '61-90': return 'escalation';
-      case '90+': return 'escalation';
+      case '61-90': return '61-90';
+      case '90+': return '90+';
       default: return 'all';
     }
   };

@@ -1163,9 +1163,10 @@ export class DatabaseStorage implements IStorage {
           const startDate = new Date(today);
           const endDate = new Date(today);
           
-          if (minDays === Infinity || maxDays === Infinity) {
-            // For escalation category (60+ days overdue)
-            startDate.setDate(today.getDate() - 61);
+          if (maxDays === Infinity) {
+            // For categories with no upper bound (escalation, 90+)
+            // Use minDays to set the threshold
+            startDate.setDate(today.getDate() - minDays);
             conditions.push(lte(invoices.dueDate, startDate));
           } else {
             // For specific day ranges

@@ -120,7 +120,7 @@ const nudgeInvoiceSchema = z.object({
 const invoicesQuerySchema = z.object({
   status: z.enum(['pending', 'overdue', 'paid', 'cancelled', 'open', 'all']).optional().default('open'),
   search: z.string().optional(),
-  overdue: z.enum(['paid', 'due', 'overdue', 'serious', 'escalation', 'all']).optional().default('all'),
+  overdue: z.enum(['paid', 'due', 'overdue', 'serious', 'escalation', '61-90', '90+', 'all']).optional().default('all'),
   contactId: z.string().optional(),
   sortBy: z.enum(['date', 'invoiceNumber', 'customer', 'daysOverdue', 'invoiceAge', 'status', 'amount', 'epd']).optional().default('daysOverdue'),
   sortDir: z.enum(['asc', 'desc']).optional().default('desc'),
