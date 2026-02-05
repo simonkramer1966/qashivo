@@ -251,7 +251,10 @@ export default function Invoices() {
             <section className="mb-6 flex-shrink-0">
               <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-4">Ageing Analysis</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4 sm:gap-6">
-                <div>
+                <div 
+                  className={`cursor-pointer rounded-md p-2 -m-2 transition-colors ${ageingFilter === 'all' ? 'bg-slate-100 ring-1 ring-slate-200' : 'hover:bg-slate-50'}`}
+                  onClick={() => setAgeingFilter('all')}
+                >
                   <p className="text-[12px] text-slate-500 mb-1 flex items-center gap-2">
                     <span className="inline-block w-2.5 h-2.5 rounded-full border border-slate-300 bg-white" />
                     Total
