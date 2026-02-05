@@ -65,23 +65,35 @@ export function useDashboardWebSocket({
           case 'action_created':
             queryClient.invalidateQueries({ queryKey: ['/api/actions'] });
             queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/dashboard/cash-inflow'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/dashboard/leaderboards'] });
             queryClient.invalidateQueries({ queryKey: ['/api/metrics'] });
             break;
           case 'invoice_updated':
           case 'payment_received':
             queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
             queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/dashboard/cash-inflow'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/dashboard/leaderboards'] });
             queryClient.invalidateQueries({ queryKey: ['/api/metrics'] });
             break;
           case 'ptp_created':
             queryClient.invalidateQueries({ queryKey: ['/api/payment-promises'] });
             queryClient.invalidateQueries({ queryKey: ['/api/actions'] });
             queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/dashboard/cash-inflow'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/dashboard/leaderboards'] });
             break;
           case 'sync_completed':
             queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
             queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
             queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/dashboard/cash-inflow'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/dashboard/leaderboards'] });
             break;
           case 'data_refresh':
             queryClient.invalidateQueries();

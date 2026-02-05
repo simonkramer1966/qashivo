@@ -4,7 +4,8 @@ import NewSidebar from "@/components/layout/new-sidebar";
 import BottomNav from "@/components/layout/bottom-nav";
 import { useCurrency } from "@/hooks/useCurrency";
 import { ComposedChart, Bar, Line, XAxis, YAxis, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface CashInflowPoint {
   date: string;
@@ -84,12 +85,16 @@ interface Leaderboard {
 
 export default function Overview2() {
   const { formatCurrency } = useCurrency();
+  const queryClient = useQueryClient();
   const [forecastRange, setForecastRange] = useState<30 | 60 | 90>(60);
   const [forecastBucket, setForecastBucket] = useState<"day" | "week">("week");
   const [showAllMetrics, setShowAllMetrics] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const { data: metrics, isLoading: metricsLoading } = useQuery<CashMetrics>({
     queryKey: ["/api/dashboard/metrics"],
+    staleTime: 30000,
+    refetchInterval: 60000,
   });
 
   const { data: cashInflowData, isLoading: cashInflowLoading } = useQuery<CashInflowResponse>({
@@ -98,12 +103,26 @@ export default function Overview2() {
       const res = await fetch(`/api/dashboard/cash-inflow?range=${forecastRange}&bucket=${forecastBucket}`);
       if (!res.ok) throw new Error('Failed to fetch cash inflow');
       return res.json();
-    }
+    },
+    staleTime: 30000,
+    refetchInterval: 60000,
   });
 
   const { data: leaderboards, isLoading: leaderboardsLoading } = useQuery<Leaderboard>({
     queryKey: ["/api/dashboard/leaderboards"],
+    staleTime: 30000,
+    refetchInterval: 60000,
   });
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] }),
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/cash-inflow"] }),
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/leaderboards"] }),
+    ]);
+    setIsRefreshing(false);
+  };
 
   const totalOutstanding = metrics?.totalOutstanding || 0;
   const totalInvoiceCount = metrics?.totalInvoiceCount || 0;
@@ -338,7 +357,17 @@ export default function Overview2() {
             <section className="flex-1 flex flex-col min-h-0 py-4 lg:py-5 border-t lg:border-t-0 lg:border-b border-gray-100" data-testid="card-cashflow-chart">
               {/* Chart Header & Controls */}
               <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 lg:mb-3 gap-3 flex-shrink-0">
-                <h3 className="text-sm lg:text-[11px] font-medium text-gray-500 lg:text-gray-400 lg:uppercase lg:tracking-wider">{getForecastTitle()}</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm lg:text-[11px] font-medium text-gray-500 lg:text-gray-400 lg:uppercase lg:tracking-wider">{getForecastTitle()}</h3>
+                  <button
+                    onClick={handleManualRefresh}
+                    disabled={isRefreshing || cashInflowLoading}
+                    className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50 transition-colors"
+                    title="Refresh data"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  </button>
+                </div>
                 
                 {/* Mobile Controls - 44px (h-11) touch targets, segmented control style */}
                 <div className="lg:hidden flex items-center gap-2" data-testid="radio-forecast-period">
