@@ -2606,8 +2606,125 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get total system count (all invoices regardless of filters)
       const systemTotal = await storage.getInvoicesCount(user.tenantId);
       
-      // Add overdue category info to each invoice based on status
+      // Fetch EPD-related data for all invoices in the result
+      const invoiceIds = result.invoices.map((inv: any) => inv.id);
+      const contactIds = [...new Set(result.invoices.map((inv: any) => inv.contactId))];
+      
+      // Get active PTPs for these invoices (tenant-scoped for security)
+      const activePtps = invoiceIds.length > 0 ? await db.select()
+        .from(promisesToPay)
+        .where(and(
+          eq(promisesToPay.tenantId, user.tenantId),
+          inArray(promisesToPay.invoiceId, invoiceIds),
+          eq(promisesToPay.status, 'active')
+        )) : [];
+      const ptpByInvoice = new Map(activePtps.map(ptp => [ptp.invoiceId, ptp]));
+      
+      // Get active payment plans for these contacts
+      const activePlans = contactIds.length > 0 ? await db.select()
+        .from(paymentPlans)
+        .where(and(
+          eq(paymentPlans.tenantId, user.tenantId),
+          inArray(paymentPlans.contactId, contactIds as string[]),
+          eq(paymentPlans.status, 'active')
+        )) : [];
+      const planByContact = new Map(activePlans.map(plan => [plan.contactId, plan]));
+      
+      // Get historical avg days to pay for contacts (from paid invoices within this tenant)
+      const contactAvgDays = new Map<string, number>();
+      if (contactIds.length > 0) {
+        const paidInvoices = await db.select({
+          contactId: invoices.contactId,
+          issueDate: invoices.issueDate,
+          paidDate: invoices.paidDate,
+        })
+        .from(invoices)
+        .where(and(
+          eq(invoices.tenantId, user.tenantId),
+          inArray(invoices.contactId, contactIds as string[]),
+          eq(invoices.status, 'paid'),
+          isNotNull(invoices.paidDate)
+        ));
+        
+        // Group by contact and calculate average days to pay
+        const contactPaymentDays = new Map<string, number[]>();
+        for (const inv of paidInvoices) {
+          if (inv.paidDate && inv.issueDate) {
+            const days = Math.floor((new Date(inv.paidDate).getTime() - new Date(inv.issueDate).getTime()) / (1000 * 60 * 60 * 24));
+            if (days >= 0) {
+              const existing = contactPaymentDays.get(inv.contactId) || [];
+              existing.push(days);
+              contactPaymentDays.set(inv.contactId, existing);
+            }
+          }
+        }
+        for (const [contactId, days] of contactPaymentDays) {
+          if (days.length > 0) {
+            contactAvgDays.set(contactId, Math.round(days.reduce((a, b) => a + b, 0) / days.length));
+          }
+        }
+      }
+      
+      // Calculate EPD for each invoice
+      type EpdConfidence = 'high' | 'medium' | 'low';
+      type EpdSource = 'ptp' | 'plan' | 'history' | 'due_date';
+      
+      const calculateEpd = (invoice: any): { date: string; confidence: EpdConfidence; source: EpdSource; sourceLabel: string } => {
+        // 1. Check for active PTP (highest confidence)
+        const ptp = ptpByInvoice.get(invoice.id);
+        if (ptp?.promisedDate) {
+          return {
+            date: new Date(ptp.promisedDate).toISOString(),
+            confidence: 'high',
+            source: 'ptp',
+            sourceLabel: 'Promise to Pay'
+          };
+        }
+        
+        // 2. Check for active payment plan (use next check date or plan start date as EPD proxy)
+        const plan = planByContact.get(invoice.contactId);
+        if (plan) {
+          const planDate = plan.nextCheckDate 
+            ? new Date(plan.nextCheckDate) 
+            : plan.planStartDate 
+              ? new Date(plan.planStartDate) 
+              : null;
+          if (planDate) {
+            return {
+              date: planDate.toISOString(),
+              confidence: 'high',
+              source: 'plan',
+              sourceLabel: 'Payment Plan'
+            };
+          }
+        }
+        
+        // 3. Calculate from historical average days to pay (from issue date)
+        const avgDays = contactAvgDays.get(invoice.contactId);
+        if (avgDays !== undefined && avgDays > 0) {
+          const issueDate = new Date(invoice.issueDate);
+          const epdFromHistory = new Date(issueDate.getTime() + avgDays * 24 * 60 * 60 * 1000);
+          return {
+            date: epdFromHistory.toISOString(),
+            confidence: 'medium',
+            source: 'history',
+            sourceLabel: `Avg ${avgDays}d to pay`
+          };
+        }
+        
+        // 4. Fall back to due date (low confidence)
+        return {
+          date: invoice.dueDate,
+          confidence: 'low',
+          source: 'due_date',
+          sourceLabel: 'Due Date'
+        };
+      };
+      
+      // Add overdue category info and EPD to each invoice based on status
       const invoicesWithCategories = result.invoices.map((invoice: any) => {
+        const epd = invoice.status !== 'paid' ? calculateEpd(invoice) : null;
+        
         if (invoice.status === 'paid') {
           // Paid invoices always have category "paid"
           return {
@@ -2619,7 +2736,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               color: 'text-green-800',
               bgColor: 'bg-green-100',
               daysOverdue: null
-            }
+            },
+            epd: null
           };
         } else {
           // Pending/overdue invoices get calculated categories
@@ -2627,7 +2745,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return {
             ...invoice,
             overdueCategory: categoryInfo.category,
-            overdueCategoryInfo: categoryInfo
+            overdueCategoryInfo: categoryInfo,
+            epd
           };
         }
       });

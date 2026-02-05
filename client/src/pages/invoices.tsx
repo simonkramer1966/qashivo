@@ -14,6 +14,14 @@ import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/header";
 import { useCurrency } from "@/hooks/useCurrency";
 import { InvoiceDetailDialog } from "@/components/invoices/InvoiceDetailDialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+interface Epd {
+  date: string;
+  confidence: 'high' | 'medium' | 'low';
+  source: 'ptp' | 'plan' | 'history' | 'due_date';
+  sourceLabel: string;
+}
 
 interface Invoice {
   id: string;
@@ -26,6 +34,7 @@ interface Invoice {
   paidDate?: string;
   invoiceAge?: number;
   daysOverdue?: number;
+  epd?: Epd | null;
   contact: {
     name: string;
     email: string;
@@ -138,6 +147,35 @@ export default function Invoices() {
     return sortDirection === 'asc' 
       ? <ChevronUp className="h-3 w-3 inline ml-1" />
       : <ChevronDown className="h-3 w-3 inline ml-1" />;
+  };
+
+  const formatEpdDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = date.toLocaleString('en-US', { month: 'short' });
+    return `${day} ${month}`;
+  };
+
+  const getConfidenceChip = (confidence: 'high' | 'medium' | 'low', sourceLabel: string) => {
+    const colors = {
+      high: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+      medium: 'bg-amber-50 text-amber-700 border-amber-200',
+      low: 'bg-slate-50 text-slate-500 border-slate-200',
+    };
+    return (
+      <TooltipProvider delayDuration={200}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className={`inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded border cursor-help ${colors[confidence]}`}>
+              {confidence === 'high' ? 'H' : confidence === 'medium' ? 'M' : 'L'}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="text-xs">
+            {sourceLabel}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
   };
 
 
@@ -329,6 +367,12 @@ export default function Invoices() {
                             {daysOverdue > 0 && (
                               <span className="text-rose-500 tabular-nums">{daysOverdue} days overdue</span>
                             )}
+                            {invoice.epd && (
+                              <span className="flex items-center gap-1">
+                                EPD: {formatEpdDate(invoice.epd.date)}
+                                {getConfidenceChip(invoice.epd.confidence, invoice.epd.sourceLabel)}
+                              </span>
+                            )}
                           </div>
                         </div>
                         <ChevronRight className="h-4 w-4 text-slate-300 flex-shrink-0" />
@@ -394,6 +438,9 @@ export default function Invoices() {
                         >
                           Amount{getSortIcon('amount')}
                         </th>
+                        <th className="text-left px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider">
+                          EPD
+                        </th>
                         <th className="w-8 px-2"></th>
                       </tr>
                     </thead>
@@ -457,6 +504,19 @@ export default function Invoices() {
                               <span className="text-[13px] text-slate-700 tabular-nums font-medium">
                                 {formatCurrency(invoice.status === 'paid' ? invoice.amount : outstanding)}
                               </span>
+                            </td>
+
+                            <td className="py-[5px] px-3">
+                              {invoice.epd ? (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[13px] text-slate-700 tabular-nums">
+                                    {formatEpdDate(invoice.epd.date)}
+                                  </span>
+                                  {getConfidenceChip(invoice.epd.confidence, invoice.epd.sourceLabel)}
+                                </div>
+                              ) : (
+                                <span className="text-[13px] text-slate-400">-</span>
+                              )}
                             </td>
 
                             <td className="py-[5px] px-2 text-center">
