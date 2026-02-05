@@ -139,9 +139,26 @@ export default function Invoices() {
     queryKey: ['/api/invoices', { status: 'all', search, overdue: getAgeingOverdueParam(ageingFilter), sortBy: sortField, sortDir: sortDirection, page, limit }],
   });
 
+  const { data: aggregatesData } = useQuery<{
+    aggregates: { 
+      agingBuckets: {
+        'total': AgingBucket;
+        'due': AgingBucket;
+        'overdue': AgingBucket;
+        '1-30': AgingBucket;
+        '31-60': AgingBucket;
+        '61-90': AgingBucket;
+        '90+': AgingBucket;
+      };
+    };
+  }>({
+    queryKey: ['/api/invoices', { status: 'all', overdue: 'all', limit: 1 }],
+    staleTime: 60000,
+  });
+
   const invoices = invoicesData?.invoices || [];
   const pagination = invoicesData?.pagination || { total: 0, page: 1, limit: 20, totalPages: 1 };
-  const agingBuckets = invoicesData?.aggregates?.agingBuckets || {
+  const agingBuckets = aggregatesData?.aggregates?.agingBuckets || invoicesData?.aggregates?.agingBuckets || {
     'total': { amount: 0, count: 0 },
     'due': { amount: 0, count: 0 },
     'overdue': { amount: 0, count: 0 },
