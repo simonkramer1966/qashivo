@@ -1578,6 +1578,8 @@ Return JSON with:
 - promisedPaymentAmount: number if amount mentioned
 - disputeCategory: PRICING|DELIVERY|QUALITY|OTHER if dispute
 - docsRequested: array of INVOICE_COPY|STATEMENT|REMITTANCE|PO if docs requested
+- sentiment: One of: cooperative, neutral, frustrated, hostile
+- intent: Brief label of the debtor's primary intent (e.g. "will_pay", "needs_time", "disputes_amount", "avoiding")
 - summary: Brief 1-2 sentence summary`
           }, {
             role: "user",
@@ -1600,6 +1602,8 @@ Return JSON with:
         if (analysis.disputeCategory) extracted.disputeCategory = analysis.disputeCategory;
         if (analysis.docsRequested) extracted.docsRequested = analysis.docsRequested;
         if (analysis.summary) extracted.freeTextNotes = analysis.summary;
+        if (analysis.sentiment) extracted.sentiment = analysis.sentiment;
+        if (analysis.intent) extracted.intent = analysis.intent;
 
         // Idempotent outcome creation using try/catch for race conditions
         try {
@@ -1738,9 +1742,11 @@ Return JSON with:
           };
           const timelineOutcomeType = outcomeTypeMap[callOutcome] || 'other';
           
-          // Extract sentiment from call_analysis or OpenAI analysis
-          const sentiment = call_analysis?.sentiment || call_analysis?.customer_sentiment || null;
-          const intent = call_analysis?.intent || call_analysis?.primary_intent || null;
+          // Extract sentiment from call_analysis (Retell uses user_sentiment) or OpenAI analysis
+          const sentiment = call_analysis?.user_sentiment || call_analysis?.sentiment || call_analysis?.customer_sentiment 
+            || newOutcome?.extracted?.sentiment || null;
+          const intent = call_analysis?.intent || call_analysis?.primary_intent 
+            || newOutcome?.extracted?.intent || null;
           const confidenceScore = call_analysis?.confidence || 0.8;
           
           // Build extracted data for the outcome, merging Retell + OpenAI analysis
@@ -1783,6 +1789,12 @@ Return JSON with:
             }
             if (newOutcome.extracted?.disputeCategory) {
               extractedData.disputeCategory = newOutcome.extracted.disputeCategory;
+            }
+            if (!extractedData.sentiment && newOutcome.extracted?.sentiment) {
+              extractedData.sentiment = newOutcome.extracted.sentiment;
+            }
+            if (!extractedData.intent && newOutcome.extracted?.intent) {
+              extractedData.intent = newOutcome.extracted.intent;
             }
           }
           
