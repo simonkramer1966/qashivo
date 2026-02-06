@@ -9,6 +9,7 @@
 import { db } from "../db";
 import { contacts, invoices, disputes, promisesToPay, tenants, actions } from "@shared/schema";
 import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
+import { CharlieInvoiceState, CHARLIE_STATES } from "./invoiceStateMachine";
 
 // ============================================================================
 // ENUMS & CONSTANTS
@@ -122,6 +123,114 @@ export const PriorityBand = {
   LOW: 'LOW',
 } as const;
 export type PriorityBand = typeof PriorityBand[keyof typeof PriorityBand];
+
+// ============================================================================
+// CHARLIE DECISION ENGINE SHARED TYPES
+// ============================================================================
+
+export type PriorityTier = 
+  | 'critical'
+  | 'high'
+  | 'medium'
+  | 'low'
+  | 'excluded';
+
+export type CharlieChannel = 'email' | 'sms' | 'voice' | 'none';
+
+export type CustomerSegment = 
+  | 'new_customer'
+  | 'good_payer'
+  | 'chronic_late_payer'
+  | 'enterprise'
+  | 'small_business'
+  | 'standard';
+
+export type EscalationTrigger = 
+  | 'missed_ptp'
+  | 'repeated_non_response'
+  | 'overdue_30_plus_no_progress'
+  | 'high_value_avoidance'
+  | 'pattern_change'
+  | 'none';
+
+export interface CadenceRule {
+  channel: CharlieChannel;
+  minDaysBetweenContacts: number;
+  maxContactsPerWeek: number;
+  businessHoursOnly: boolean;
+  preferredDays: number[];
+  preferredHoursStart: number;
+  preferredHoursEnd: number;
+}
+
+export interface CharlieDecision {
+  invoiceId: string;
+  contactId: string;
+  tenantId: string;
+  
+  charlieState: CharlieInvoiceState;
+  stateMetadata: typeof CHARLIE_STATES[CharlieInvoiceState];
+  
+  priorityTier: PriorityTier;
+  priorityScore: number;
+  priorityReasons: string[];
+  
+  recommendedChannel: CharlieChannel;
+  channelReason: string;
+  
+  customerSegment: CustomerSegment;
+  
+  shouldEscalate: boolean;
+  escalationTrigger: EscalationTrigger;
+  
+  nextActionDate: Date;
+  cooldownUntil: Date | null;
+  
+  confidence: number;
+  requiresHumanReview: boolean;
+  
+  invoice: {
+    invoiceNumber: string;
+    amount: number;
+    daysOverdue: number;
+    dueDate: Date;
+  };
+  
+  contact: {
+    name: string;
+    email: string | null;
+    phone: string | null;
+    lastContactDate: Date | null;
+    daysSinceLastContact: number | null;
+  };
+  
+  templateId: TemplateId | null;
+  toneProfile: ToneProfile;
+  voiceTone: VoiceTone;
+  cadence: CadenceRule;
+  isWithinCadence: boolean;
+}
+
+export interface DailyPlan {
+  tenantId: string;
+  generatedAt: Date;
+  decisions: CharlieDecision[];
+  summary: {
+    total: number;
+    byCriticalPriority: number;
+    byHighPriority: number;
+    byMediumPriority: number;
+    byLowPriority: number;
+    excluded: number;
+    byChannel: {
+      email: number;
+      sms: number;
+      voice: number;
+    };
+    escalationRequired: number;
+    humanReviewRequired: number;
+  };
+}
 
 // ============================================================================
 // TYPES

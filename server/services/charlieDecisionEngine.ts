@@ -1,138 +1,20 @@
 import { db } from "../db";
-import { invoices, contacts, actions, tenants } from "@shared/schema";
+import { invoices, contacts, actions, tenants, collectionSchedules, workflows, schedulerState } from "@shared/schema";
 import { eq, and, desc, gt, lt, isNull, or, sql } from "drizzle-orm";
 import { invoiceStateMachine, CharlieInvoiceState, CHARLIE_STATES } from "./invoiceStateMachine";
 import { 
   charliePlaybook, 
-  CadenceRule, 
   PreparedMessage, 
   TemplateContext 
 } from "./charliePlaybook";
-import { TemplateId, ToneProfile, VoiceTone } from "./playbookEngine";
+import {
+  TemplateId, ToneProfile, VoiceTone,
+  PriorityTier, CharlieChannel, CustomerSegment, EscalationTrigger,
+  CadenceRule, CharlieDecision, DailyPlan,
+} from "./playbookEngine";
+import { projectedDSO, getDSOMetadata } from "../lib/dso";
 
-/**
- * Charlie Decision Engine
- * 
- * Implements the decision-making logic from Charlie Requirements document:
- * - Prioritization: Which invoices to chase first
- * - Channel Selection: Email → SMS → Call based on context
- * - Escalation: When to move from friendly to formal
- * 
- * Design principles:
- * - Charlie IS the credit controller (autonomous execution)
- * - User supervises, Charlie executes
- * - Protect relationships while securing payment
- */
-
-// Priority tiers from Charlie Requirements Section 4
-export type PriorityTier = 
-  | 'critical'      // Missed PTP - top priority
-  | 'high'          // 60+ days overdue high value, or 30-60 moderate/high
-  | 'medium'        // Newly overdue high value / new customer
-  | 'low'           // Everything else
-  | 'excluded';     // On hold, disputed, or in PTP
-
-// Channel options
-export type CharlieChannel = 'email' | 'sms' | 'voice' | 'none';
-
-// Customer segment for approach adjustment (Section 6)
-export type CustomerSegment = 
-  | 'new_customer'          // Tighter follow-up, confirm AP process
-  | 'good_payer'            // Assume admin slip, friendly tone
-  | 'chronic_late_payer'    // Shorter cadence, earlier escalation
-  | 'enterprise'            // Process-driven, PO/portal focus
-  | 'small_business'        // More cashflow-driven, phone effective
-  | 'standard';             // Default segment
-
-// Escalation trigger reasons
-export type EscalationTrigger = 
-  | 'missed_ptp'
-  | 'repeated_non_response'
-  | 'overdue_30_plus_no_progress'
-  | 'high_value_avoidance'
-  | 'pattern_change'
-  | 'none';
-
-// Decision output structure
-export interface CharlieDecision {
-  invoiceId: string;
-  contactId: string;
-  tenantId: string;
-  
-  // Current state
-  charlieState: CharlieInvoiceState;
-  stateMetadata: typeof CHARLIE_STATES[CharlieInvoiceState];
-  
-  // Priority
-  priorityTier: PriorityTier;
-  priorityScore: number;  // 0-100
-  priorityReasons: string[];
-  
-  // Channel recommendation
-  recommendedChannel: CharlieChannel;
-  channelReason: string;
-  
-  // Customer context
-  customerSegment: CustomerSegment;
-  
-  // Escalation
-  shouldEscalate: boolean;
-  escalationTrigger: EscalationTrigger;
-  
-  // Timing
-  nextActionDate: Date;
-  cooldownUntil: Date | null;
-  
-  // Confidence
-  confidence: number;  // 0-1
-  requiresHumanReview: boolean;
-  
-  // Invoice details for context
-  invoice: {
-    invoiceNumber: string;
-    amount: number;
-    daysOverdue: number;
-    dueDate: Date;
-  };
-  
-  // Contact details
-  contact: {
-    name: string;
-    email: string | null;
-    phone: string | null;
-    lastContactDate: Date | null;
-    daysSinceLastContact: number | null;
-  };
-  
-  // Template and messaging (from Playbook)
-  templateId: TemplateId | null;
-  toneProfile: ToneProfile;
-  voiceTone: VoiceTone;
-  cadence: CadenceRule;
-  isWithinCadence: boolean;
-}
-
-// Decision batch for daily planning
-export interface DailyPlan {
-  tenantId: string;
-  generatedAt: Date;
-  decisions: CharlieDecision[];
-  summary: {
-    total: number;
-    byCriticalPriority: number;
-    byHighPriority: number;
-    byMediumPriority: number;
-    byLowPriority: number;
-    excluded: number;
-    byChannel: {
-      email: number;
-      sms: number;
-      voice: number;
-    };
-    escalationRequired: number;
-    humanReviewRequired: number;
-  };
-}
+export type { PriorityTier, CharlieChannel, CustomerSegment, EscalationTrigger, CharlieDecision, DailyPlan, CadenceRule };
 
 /**
  * Charlie Decision Engine Class
@@ -959,6 +841,284 @@ class CharlieDecisionEngine {
         (!d.cooldownUntil || d.cooldownUntil <= now)
       )
       .slice(0, limit);
+  }
+}
+
+// ============================================================================
+// PORTFOLIO CONTROLLER (merged from portfolioController.ts)
+// ============================================================================
+
+export async function recomputeUrgency(
+  tenantId: string,
+  scheduleId?: string
+): Promise<{
+  tenantId: string;
+  scheduleId: string | null;
+  dsoProjected: number;
+  targetDSO: number;
+  urgencyFactor: number;
+  previousUrgency: number;
+  adjusted: boolean;
+}> {
+  try {
+    const adaptiveWorkflows = await db
+      .select({
+        id: workflows.id,
+        adaptiveSettings: workflows.adaptiveSettings,
+      })
+      .from(workflows)
+      .where(
+        and(
+          eq(workflows.tenantId, tenantId),
+          eq(workflows.schedulerType, "adaptive"),
+          eq(workflows.isActive, true)
+        )
+      );
+
+    if (adaptiveWorkflows.length === 0) {
+      console.log(`[Portfolio Controller] No adaptive schedules found for tenant ${tenantId}`);
+      return {
+        tenantId,
+        scheduleId: null,
+        dsoProjected: 0,
+        targetDSO: 0,
+        urgencyFactor: 0.5,
+        previousUrgency: 0.5,
+        adjusted: false,
+      };
+    }
+
+    const workflow = adaptiveWorkflows[0];
+    const settings = workflow.adaptiveSettings as any || {};
+    const targetDSO = Number(settings.targetDSO || 45);
+
+    const dsoProj = await projectedDSO(tenantId);
+    
+    const currentState = await db
+      .select()
+      .from(schedulerState)
+      .where(
+        and(
+          eq(schedulerState.tenantId, tenantId),
+          scheduleId ? eq(schedulerState.scheduleId, scheduleId) : sql`${schedulerState.scheduleId} IS NULL`
+        )
+      )
+      .limit(1);
+
+    const previousUrgency = currentState.length > 0
+      ? Number(currentState[0].urgencyFactor || 0.5)
+      : 0.5;
+
+    let newUrgency = previousUrgency;
+    let adjusted = false;
+
+    if (dsoProj > targetDSO + 1) {
+      newUrgency = Math.min(1.0, previousUrgency + 0.1);
+      adjusted = true;
+      console.log(
+        `[Portfolio Controller] Tenant ${tenantId}: DSO ${dsoProj} > target ${targetDSO}, ` +
+        `increasing urgency ${previousUrgency.toFixed(2)} → ${newUrgency.toFixed(2)}`
+      );
+    } else if (dsoProj < targetDSO - 1) {
+      newUrgency = Math.max(0.1, previousUrgency - 0.1);
+      adjusted = true;
+      console.log(
+        `[Portfolio Controller] Tenant ${tenantId}: DSO ${dsoProj} < target ${targetDSO}, ` +
+        `decreasing urgency ${previousUrgency.toFixed(2)} → ${newUrgency.toFixed(2)}`
+      );
+    } else {
+      console.log(
+        `[Portfolio Controller] Tenant ${tenantId}: DSO ${dsoProj} on target ${targetDSO}, ` +
+        `maintaining urgency ${previousUrgency.toFixed(2)}`
+      );
+    }
+
+    const metadata = await getDSOMetadata(tenantId);
+
+    if (currentState.length > 0) {
+      await db
+        .update(schedulerState)
+        .set({
+          dsoProjected: dsoProj.toString(),
+          urgencyFactor: newUrgency.toString(),
+          lastComputedAt: new Date(),
+          computationMetadata: metadata,
+          updatedAt: new Date(),
+        })
+        .where(eq(schedulerState.id, currentState[0].id));
+    } else {
+      await db.insert(schedulerState).values({
+        tenantId,
+        scheduleId: scheduleId || null,
+        dsoProjected: dsoProj.toString(),
+        urgencyFactor: newUrgency.toString(),
+        lastComputedAt: new Date(),
+        computationMetadata: metadata,
+      });
+    }
+
+    await db
+      .update(workflows)
+      .set({
+        adaptiveSettings: {
+          ...settings,
+          urgencyFactor: newUrgency,
+        },
+        updatedAt: new Date(),
+      })
+      .where(eq(workflows.id, workflow.id));
+
+    return {
+      tenantId,
+      scheduleId: workflow.id,
+      dsoProjected: dsoProj,
+      targetDSO,
+      urgencyFactor: newUrgency,
+      previousUrgency,
+      adjusted,
+    };
+  } catch (error) {
+    console.error(`[Portfolio Controller] Error recomputing urgency for tenant ${tenantId}:`, error);
+    throw error;
+  }
+}
+
+export async function runNightly(): Promise<{
+  processedTenants: number;
+  adjustedTenants: number;
+  errors: number;
+}> {
+  console.log("[Portfolio Controller] Starting nightly run...");
+  
+  try {
+    const tenantsWithAdaptive = await db
+      .selectDistinct({
+        tenantId: workflows.tenantId,
+      })
+      .from(workflows)
+      .where(
+        and(
+          eq(workflows.schedulerType, "adaptive"),
+          eq(workflows.isActive, true)
+        )
+      );
+
+    console.log(`[Portfolio Controller] Found ${tenantsWithAdaptive.length} tenants with adaptive scheduling`);
+
+    let processedTenants = 0;
+    let adjustedTenants = 0;
+    let errors = 0;
+
+    for (const { tenantId } of tenantsWithAdaptive) {
+      try {
+        const result = await recomputeUrgency(tenantId);
+        processedTenants++;
+        
+        if (result.adjusted) {
+          adjustedTenants++;
+        }
+
+        console.log(
+          `[Portfolio Controller] ✓ Tenant ${tenantId}: ` +
+          `DSO ${result.dsoProjected.toFixed(1)} / target ${result.targetDSO}, ` +
+          `urgency ${result.urgencyFactor.toFixed(2)}`
+        );
+      } catch (error) {
+        console.error(`[Portfolio Controller] Error processing tenant ${tenantId}:`, error);
+        errors++;
+      }
+    }
+
+    console.log(
+      `[Portfolio Controller] Nightly run complete: ` +
+      `${processedTenants} processed, ${adjustedTenants} adjusted, ${errors} errors`
+    );
+
+    return {
+      processedTenants,
+      adjustedTenants,
+      errors,
+    };
+  } catch (error) {
+    console.error("[Portfolio Controller] Fatal error in nightly run:", error);
+    throw error;
+  }
+}
+
+export async function runOnce(): Promise<any> {
+  console.log("[Portfolio Controller] Running on-demand urgency recomputation...");
+  return await runNightly();
+}
+
+export async function getPortfolioHealth(tenantId: string): Promise<{
+  tenantId: string;
+  dsoProjected: number;
+  targetDSO: number;
+  urgencyFactor: number;
+  lastComputed: Date | null;
+  metadata: any;
+} | null> {
+  try {
+    const state = await db
+      .select()
+      .from(schedulerState)
+      .where(eq(schedulerState.tenantId, tenantId))
+      .limit(1);
+
+    if (state.length === 0) {
+      await recomputeUrgency(tenantId);
+      
+      const newState = await db
+        .select()
+        .from(schedulerState)
+        .where(eq(schedulerState.tenantId, tenantId))
+        .limit(1);
+
+      if (newState.length === 0) {
+        return null;
+      }
+
+      const s = newState[0];
+      return {
+        tenantId: s.tenantId,
+        dsoProjected: Number(s.dsoProjected || 0),
+        targetDSO: 45,
+        urgencyFactor: Number(s.urgencyFactor || 0.5),
+        lastComputed: s.lastComputedAt,
+        metadata: s.computationMetadata || {},
+      };
+    }
+
+    const s = state[0];
+    
+    const workflow = await db
+      .select({
+        adaptiveSettings: workflows.adaptiveSettings,
+      })
+      .from(workflows)
+      .where(
+        and(
+          eq(workflows.tenantId, tenantId),
+          eq(workflows.schedulerType, "adaptive"),
+          eq(workflows.isActive, true)
+        )
+      )
+      .limit(1);
+
+    const settings = workflow.length > 0 ? (workflow[0].adaptiveSettings as any || {}) : {};
+    const targetDSO = Number(settings.targetDSO || 45);
+
+    return {
+      tenantId: s.tenantId,
+      dsoProjected: Number(s.dsoProjected || 0),
+      targetDSO,
+      urgencyFactor: Number(s.urgencyFactor || 0.5),
+      lastComputed: s.lastComputedAt,
+      metadata: s.computationMetadata || {},
+    };
+  } catch (error) {
+    console.error(`[Portfolio Controller] Error getting portfolio health for tenant ${tenantId}:`, error);
+    return null;
   }
 }
 

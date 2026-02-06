@@ -3,7 +3,8 @@ import { db } from "../db";
 import { actions, tenants, invoices } from "@shared/schema";
 import { generateInvoiceTableHtml } from "./collectionsAutomation";
 import { setupDefaultWorkflow } from "./defaultWorkflowSetup";
-import { charlieDecisionEngine, type CharlieDecision, type DailyPlan } from "./charlieDecisionEngine";
+import { charlieDecisionEngine } from "./charlieDecisionEngine";
+import type { CharlieDecision, DailyPlan } from "./playbookEngine";
 import { charliePlaybook, prepareMessageFromDecision } from "./charliePlaybook";
 import { prepareMessageFromWorkflowProfile } from "./workflowProfileMessageService";
 

@@ -355,7 +355,7 @@ app.use((req, res, next) => {
     try {
       console.log("📊 Initializing portfolio controller...");
       const cron = await import("node-cron");
-      const { runNightly } = await import("./services/portfolioController");
+      const { runNightly } = await import("./services/charlieDecisionEngine");
       const { planAdaptiveActions } = await import("./services/actionPlanner");
       const { workflows } = await import("@shared/schema");
       const { eq, and } = await import("drizzle-orm");

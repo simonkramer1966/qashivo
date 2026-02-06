@@ -1,6 +1,5 @@
-import { ToneProfile, VoiceTone, TemplateId } from "./playbookEngine";
+import { ToneProfile, VoiceTone, TemplateId, CharlieChannel, CustomerSegment, CharlieDecision, CadenceRule } from "./playbookEngine";
 import { CharlieInvoiceState } from "./invoiceStateMachine";
-import { CharlieChannel, CustomerSegment, CharlieDecision } from "./charlieDecisionEngine";
 
 /**
  * Charlie Playbook System
@@ -20,16 +19,6 @@ import { CharlieChannel, CustomerSegment, CharlieDecision } from "./charlieDecis
 // ============================================================================
 // CADENCE CONFIGURATION
 // ============================================================================
-
-export interface CadenceRule {
-  channel: CharlieChannel;
-  minDaysBetweenContacts: number;
-  maxContactsPerWeek: number;
-  businessHoursOnly: boolean;
-  preferredDays: number[];  // 0=Sunday, 1=Monday, etc.
-  preferredHoursStart: number;  // 9 = 9am
-  preferredHoursEnd: number;    // 17 = 5pm
-}
 
 export const DEFAULT_CADENCE: Record<CharlieChannel, CadenceRule> = {
   email: {

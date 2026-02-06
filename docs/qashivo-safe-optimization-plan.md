@@ -2,7 +2,7 @@
 ## v2.1 — CTO Approved with Minor Refinements
 
 **Last Updated:** February 2026
-**Status:** APPROVED — Ready to Execute (98% confidence per CTO review)
+**Status:** IN PROGRESS — Phase 0 + Phase 1 + Phase 2 COMPLETE (120 → 90 tables, 72 → 65 services)
 
 ---
 
@@ -336,17 +336,19 @@ Rationale:
 
 ---
 
-### Phase 2 Summary (REVISED)
+### Phase 2 Summary (COMPLETED)
 
-| Action | Files Affected | Lines Saved |
-|--------|---------------|-------------|
-| Delete orphan (`outcomeDetection.ts`) | 1 file deleted | ~400 lines |
-| Consolidate Playbook cluster (2 sub-phases) | 4 files → 3 files | ~800 lines |
+| Action | Files Affected | Lines Saved | Status |
+|--------|---------------|-------------|--------|
+| ~~Delete orphans (`outcomeDetection.ts`, `customerSegmentationService.ts`)~~ | 2 files deleted | ~1,668 lines | DONE |
+| ~~Remove stubs (`businessAnalytics.ts`, `seasonalPatternService.ts`, `predictivePaymentService.ts`)~~ | 3 files deleted + route cleanup | ~400 lines (files + routes) | DONE |
+| ~~Merge Risk/Scoring~~ | 2 files → 1 file | ~200 lines | DONE |
+| ~~Playbook Sub-phase A: portfolioController merge~~ | Already done (prior session) | — | DONE |
+| ~~Playbook Sub-phase B: Circular dependency fix~~ | Types moved to playbookEngine.ts | — | DONE |
 | ~~Consolidate Action Planning~~ | ~~4 → 2~~ | ~~Cancelled — already well-structured~~ |
-| Merge Risk/Scoring | 2 files → 1 file | ~200 lines |
 | ~~Merge Demo~~ | ~~2 → 1~~ | ~~Cancelled — architecturally distinct~~ |
-| Remove stubs | 3 files deleted | ~120 lines |
-| **Total** | **72 → ~61 files** | **~1,520 lines** |
+| ~~Merge charliePlaybook + charlieDecisionEngine~~ | ~~2 → 1~~ | ~~Cancelled — would create ~1,800 line monolith~~ |
+| **Total** | **72 → 65 files** | **~1,463 lines** |
 
 ---
 
@@ -495,15 +497,15 @@ ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
 | **0D: Backup verification** | 15 min | — | 15 min | None | Must complete before Phase 1 — only remaining Phase 0 item |
 | 1A: Drop 12 safe tables | 2 hours | 15 min smoke test | 2.25 hours | None | Phase 0 complete |
 | 4: Add indexes (with benchmarks) | 30 min | 15 min benchmark | 45 min | None | Phase 0 found most indexes already exist; only 1 composite index candidate remains |
-| 2A: Delete orphan service | 15 min | 5 min test | 20 min | None | — |
+| ~~2A: Delete orphans + stubs~~ | ~~30 min~~ | ~~5 min~~ | DONE | None | 7 files removed (2 orphans + 3 stubs + creditScoring merged + portfolioController merged). 72 → 65 services. |
 | ~~Tier 2B verification~~ | ~~1 hour~~ | — | DONE | None | Completed Phase 0: both tables reclassified to KEEP |
 | 1B: Drop 18 confirmed tables | 6 hours | 30 min smoke test | 6.5 hours | Low | Verify references cleaned |
 | **Specify transaction boundaries** | 30 min | — | 30 min | None | Document decisions before Phase 3 |
 | 3: Fix N+1 queries | 6 hours | 1 hour testing | 7 hours | Low | Test with 100+ records; inject failures |
-| 2B: Consolidate Playbook (sub-phase A) | 2 hours | 30 min test | 2.5 hours | Medium | Test decision outputs |
-| 2B: Consolidate Playbook (sub-phase B) | 4 hours | 1 hour test | 5 hours | Medium | Full regression test |
-| 2B: Merge Risk/Scoring | 2 hours | 15 min test | 2.25 hours | Low | Verify 6 import sites |
-| 2C: Remove stubs | 1 hour | 15 min test | 1.25 hours | Low | Verify no active imports |
+| ~~2B: Consolidate Playbook (sub-phase A)~~ | — | — | DONE | None | portfolioController already merged into charlieDecisionEngine (prior session) |
+| ~~2B: Consolidate Playbook (sub-phase B)~~ | — | — | DONE | None | Circular dependency fixed: shared types moved to playbookEngine.ts |
+| ~~2B: Merge Risk/Scoring~~ | ~~30 min~~ | ~~5 min~~ | DONE | None | creditScoringService merged into dynamicRiskScoringService. 1 import site updated. |
+| ~~2C: Remove stubs~~ | ~~30 min~~ | ~~5 min~~ | DONE | None | 3 stubs + 4 business analytics routes + 7 ML routes removed |
 | 5: Frontend optimizations | 4 hours | 30 min test | 4.5 hours | Low | Start with 15 pages, measure, iterate |
 | **Total** | **~30 hours** | **~4 hours** | **~34 hours** | | |
 

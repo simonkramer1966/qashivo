@@ -1,7 +1,7 @@
 import { db } from "../db";
 import { eq, and } from "drizzle-orm";
 import { workflowProfiles, workflowMessageVariants } from "@shared/schema";
-import { CharlieDecision, CharlieChannel } from "./charlieDecisionEngine";
+import { CharlieDecision, CharlieChannel } from "./playbookEngine";
 import { CharlieInvoiceState } from "./invoiceStateMachine";
 
 export interface WorkflowPreparedMessage {

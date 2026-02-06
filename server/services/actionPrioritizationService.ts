@@ -13,7 +13,6 @@ import {
   type RiskScore,
   type CustomerLearningProfile,
 } from '@shared/schema';
-import { PredictivePaymentService } from './predictivePaymentService';
 import { DynamicRiskScoringService } from './dynamicRiskScoringService';
 import { CollectionLearningService } from './collectionLearningService';
 import { categorizeOverdueStatus, calculateDaysOverdue, type OverdueCategory } from '../../shared/utils/overdueUtils';
@@ -91,7 +90,6 @@ interface QueueConfig {
  * Integrates with existing ML services to optimize action ordering.
  */
 export class ActionPrioritizationService {
-  private predictiveService: PredictivePaymentService;
   private riskService: DynamicRiskScoringService;
   private learningService: CollectionLearningService;
   
@@ -156,7 +154,6 @@ export class ActionPrioritizationService {
   };
 
   constructor() {
-    this.predictiveService = new PredictivePaymentService();
     this.riskService = new DynamicRiskScoringService();
     this.learningService = new CollectionLearningService();
   }

@@ -652,3 +652,222 @@ export class DynamicRiskScoringService {
     };
   }
 }
+
+// =============================================================================
+// Static Credit Scoring (merged from creditScoringService.ts)
+// =============================================================================
+
+export interface CreditSignals {
+  companyAgeMonths: number;
+  filingsOnTime: boolean;
+  adverseCount: number;
+  directorChanges12m: number;
+  sectorRisk: 'low' | 'medium' | 'high';
+  bureauScore: number; // 0-100
+  dbtDays: number; // Days beyond terms
+  internalLateCount12m: number;
+}
+
+export interface TradingProfile {
+  estimatedMonthlySales: number;
+  avgInvoiceValue: number;
+  peakExposure: number;
+  paymentMethodPref: 'bank_transfer' | 'card' | 'direct_debit' | 'other';
+  buyerType: 'end_customer' | 'reseller' | 'agency' | 'other';
+}
+
+export interface StaticRiskScore {
+  value: number; // 0-100
+  band: 'A' | 'B' | 'C' | 'D' | 'E';
+  explain: string[]; // Top 3 drivers
+}
+
+export interface CreditRecommendation {
+  score: StaticRiskScore;
+  creditLimit: number;
+  paymentTerms: string; // e.g., "NET30", "NET14", "Due on receipt"
+  conditions: string[];
+}
+
+export function calculateStaticRiskScore(signals: CreditSignals): StaticRiskScore {
+  let score = 0;
+  const explanations: Array<{ text: string; points: number }> = [];
+
+  if (signals.companyAgeMonths >= 36) {
+    score += 10;
+    explanations.push({ text: 'Established company (3+ years)', points: 10 });
+  } else if (signals.companyAgeMonths >= 12) {
+    score += 4;
+    explanations.push({ text: 'Growing company (1-3 years)', points: 4 });
+  } else {
+    explanations.push({ text: 'Young company (<1 year)', points: 0 });
+  }
+
+  if (signals.filingsOnTime) {
+    score += 8;
+    explanations.push({ text: 'All filings on time', points: 8 });
+  } else {
+    score -= 6;
+    explanations.push({ text: 'Late filings', points: -6 });
+  }
+
+  if (signals.adverseCount === 0) {
+    score += 8;
+    explanations.push({ text: 'No adverse filings', points: 8 });
+  } else if (signals.adverseCount === 1) {
+    explanations.push({ text: 'Minor adverse filing', points: 0 });
+  } else {
+    score -= 20;
+    explanations.push({ text: 'Active adverse filings', points: -20 });
+  }
+
+  const bureauPoints = Math.round((signals.bureauScore / 100) * 30);
+  score += bureauPoints;
+  if (bureauPoints > 20) {
+    explanations.push({ text: `Strong bureau score (${signals.bureauScore})`, points: bureauPoints });
+  } else if (bureauPoints > 10) {
+    explanations.push({ text: `Moderate bureau score (${signals.bureauScore})`, points: bureauPoints });
+  } else {
+    explanations.push({ text: `Low bureau score (${signals.bureauScore})`, points: bureauPoints });
+  }
+
+  if (signals.directorChanges12m <= 1) {
+    score += 4;
+    explanations.push({ text: 'Stable management', points: 4 });
+  } else {
+    score -= 6;
+    explanations.push({ text: 'High director turnover', points: -6 });
+  }
+
+  if (signals.sectorRisk === 'low') {
+    score += 6;
+    explanations.push({ text: 'Low-risk sector', points: 6 });
+  } else if (signals.sectorRisk === 'high') {
+    score -= 8;
+    explanations.push({ text: 'High-risk sector', points: -8 });
+  } else {
+    explanations.push({ text: 'Medium-risk sector', points: 0 });
+  }
+
+  if (signals.dbtDays <= 0) {
+    score += 10;
+    explanations.push({ text: 'Excellent payment history', points: 10 });
+  } else if (signals.dbtDays <= 10) {
+    score += 4;
+    explanations.push({ text: 'Good payment timing', points: 4 });
+  } else {
+    score -= 8;
+    explanations.push({ text: `Late payments (avg ${signals.dbtDays} days)`, points: -8 });
+  }
+
+  if (signals.internalLateCount12m === 0) {
+    score += 0;
+  } else if (signals.internalLateCount12m <= 2) {
+    score -= 4;
+    explanations.push({ text: '1-2 late payments', points: -4 });
+  } else {
+    score -= 10;
+    explanations.push({ text: 'Multiple late payments', points: -10 });
+  }
+
+  score = Math.max(0, Math.min(100, score));
+
+  let band: 'A' | 'B' | 'C' | 'D' | 'E';
+  if (score >= 80) band = 'A';
+  else if (score >= 65) band = 'B';
+  else if (score >= 50) band = 'C';
+  else if (score >= 35) band = 'D';
+  else band = 'E';
+
+  const topExplanations = explanations
+    .sort((a, b) => Math.abs(b.points) - Math.abs(a.points))
+    .slice(0, 3)
+    .map(e => e.text);
+
+  return {
+    value: score,
+    band,
+    explain: topExplanations,
+  };
+}
+
+export function calculateCreditLimit(
+  tradingProfile: TradingProfile,
+  riskBand: 'A' | 'B' | 'C' | 'D' | 'E',
+  policyCap: number = 100000
+): number {
+  const baseLimit = Math.min(tradingProfile.estimatedMonthlySales * 1.5, policyCap);
+
+  const multipliers: Record<string, number> = {
+    A: 1.2,
+    B: 1.0,
+    C: 0.6,
+    D: 0.3,
+    E: 0,
+  };
+
+  const multiplier = multipliers[riskBand];
+  const finalLimit = Math.round((baseLimit * multiplier) / 100) * 100;
+
+  return finalLimit;
+}
+
+export function getPaymentTerms(riskBand: 'A' | 'B' | 'C' | 'D' | 'E'): string {
+  const termsMap: Record<string, string> = {
+    A: 'NET30',
+    B: 'NET30',
+    C: 'NET14',
+    D: 'NET7',
+    E: 'Prepaid',
+  };
+
+  return termsMap[riskBand];
+}
+
+export function getConditions(
+  riskBand: 'A' | 'B' | 'C' | 'D' | 'E',
+  tradingProfile: TradingProfile,
+  signals: CreditSignals
+): string[] {
+  const conditions: string[] = [];
+
+  if (riskBand === 'C' && tradingProfile.avgInvoiceValue > 10000) {
+    conditions.push('25% deposit required');
+  }
+
+  if (riskBand === 'D' && signals.dbtDays > 15) {
+    conditions.push('Direct Debit mandate required');
+  }
+
+  if (signals.adverseCount > 1) {
+    conditions.push('Manual review required');
+  }
+
+  if (riskBand === 'E') {
+    conditions.push('Prepayment required for all orders');
+  }
+
+  if (conditions.length === 0) {
+    conditions.push('None');
+  }
+
+  return conditions;
+}
+
+export function generateCreditRecommendation(
+  signals: CreditSignals,
+  tradingProfile: TradingProfile,
+  policyCap: number = 100000
+): CreditRecommendation {
+  const score = calculateStaticRiskScore(signals);
+  const creditLimit = calculateCreditLimit(tradingProfile, score.band, policyCap);
+  const paymentTerms = getPaymentTerms(score.band);
+  const conditions = getConditions(score.band, tradingProfile, signals);
+
+  return {
+    score,
+    creditLimit,
+    paymentTerms,
+    conditions,
+  };
+}

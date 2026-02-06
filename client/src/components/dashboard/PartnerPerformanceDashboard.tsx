@@ -438,6 +438,7 @@ function PartnerPerformanceSkeleton() {
 export default function PartnerPerformanceDashboard() {
   const { data: partnerMetrics, isLoading, error } = useQuery<PartnerMetrics>({
     queryKey: ['/api/business/analytics/partners'],
+    retry: false,
   });
 
   if (isLoading) {
