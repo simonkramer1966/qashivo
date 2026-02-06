@@ -3,7 +3,7 @@ import { webhookEvents } from "@shared/schema";
 import { eq, and, sql, lt } from "drizzle-orm";
 
 type WebhookSource = "sendgrid" | "retell" | "stripe" | "vonage" | "xero";
-type WebhookStatus = "processing" | "processed" | "failed" | "skipped";
+type WebhookStatus = "processing" | "processed" | "failed" | "skipped" | "pending_transcript";
 
 export async function tryReserveWebhook(params: {
   idempotencyKey: string;
@@ -65,6 +65,34 @@ export async function completeWebhook(params: {
   } catch (err) {
     console.error(`❌ Error completing webhook: ${err}`);
     return false;
+  }
+}
+
+export async function reReserveWebhook(params: {
+  idempotencyKey: string;
+  source: WebhookSource;
+  allowedStatuses: string[];
+}): Promise<{ reserved: boolean }> {
+  const { idempotencyKey, source, allowedStatuses } = params;
+  const fullKey = `${source}:${idempotencyKey}`;
+
+  try {
+    const result = await db.update(webhookEvents)
+      .set({
+        status: "processing",
+        processedAt: null,
+        errorMessage: null,
+      })
+      .where(and(
+        eq(webhookEvents.idempotencyKey, fullKey),
+        sql`${webhookEvents.status} IN (${sql.join(allowedStatuses.map(s => sql`${s}`), sql`, `)})`
+      ))
+      .returning({ id: webhookEvents.id });
+
+    return { reserved: result.length > 0 };
+  } catch (err) {
+    console.error(`❌ Error re-reserving webhook: ${err}`);
+    return { reserved: false };
   }
 }
 

@@ -19,6 +19,7 @@ import {
 import {
   tryReserveWebhook,
   completeWebhook,
+  reReserveWebhook,
 } from "../services/webhookIdempotency";
 import type { NormalizedInboundEmail } from "../../shared/types/inboundEmail";
 import { websocketService } from "../services/websocketService";
@@ -982,27 +983,52 @@ export function registerWebhookRoutes(app: Express) {
         tenantId,
       });
       
+      let isReprocessing = false;
       if (!reservation.reserved) {
-        console.log(`🎙️  [WEBHOOK] Call ${call_id} already processed (status: ${reservation.existingStatus}), skipping`);
-        return res.status(200).json({ message: 'Already processed', call_id });
+        if (reservation.existingStatus === 'pending_transcript' && transcriptText) {
+          console.log(`🎙️  [WEBHOOK] Call ${call_id} was pending transcript — re-processing with transcript (${transcriptText.length} chars)`);
+          const reReservation = await reReserveWebhook({
+            idempotencyKey: voiceIdempotencyKey,
+            source: "retell",
+            allowedStatuses: ["pending_transcript"],
+          });
+          if (!reReservation.reserved) {
+            console.log(`🎙️  [WEBHOOK] Call ${call_id} re-reservation failed (race condition), skipping`);
+            return res.status(200).json({ message: 'Already processed', call_id });
+          }
+          isReprocessing = true;
+        } else {
+          console.log(`🎙️  [WEBHOOK] Call ${call_id} already processed (status: ${reservation.existingStatus}), skipping`);
+          return res.status(200).json({ message: 'Already processed', call_id });
+        }
       }
 
       // Atomic check-and-set on action: Update only if not already processed
+      // For re-processing (pending_transcript → real transcript), also allow update when
+      // action was previously routed to ATTENTION with DATA_QUALITY subtype
       if (actionId) {
+        const actionUpdateSet: any = {
+          voiceStatus,
+          voiceCompletedAt: new Date(),
+          voiceTranscriptSnippet: transcriptSnippet,
+          voiceSummarySnippet: summarySnippet,
+          voiceRecordingUrl: recording_url || null,
+          voiceLastPolledAt: new Date(),
+          updatedAt: new Date(),
+        };
+
+        if (isReprocessing) {
+          actionUpdateSet.voiceProcessedAt = null;
+        }
+
         const updateResult = await db.update(actions)
-          .set({
-            voiceStatus,
-            voiceCompletedAt: new Date(),
-            voiceTranscriptSnippet: transcriptSnippet,
-            voiceSummarySnippet: summarySnippet,
-            voiceRecordingUrl: recording_url || null,
-            voiceLastPolledAt: new Date(),
-            updatedAt: new Date(),
-          })
+          .set(actionUpdateSet)
           .where(and(
             eq(actions.id, actionId),
             eq(actions.tenantId, tenantId),
-            sql`${actions.voiceProcessedAt} IS NULL`
+            isReprocessing
+              ? sql`(${actions.voiceProcessedAt} IS NULL OR ${actions.inFlightState} = 'DATA_QUALITY')`
+              : sql`${actions.voiceProcessedAt} IS NULL`
           ))
           .returning({ id: actions.id });
 
@@ -1371,6 +1397,9 @@ export function registerWebhookRoutes(app: Express) {
 
       console.log(`🎙️  [WEBHOOK] Outcome extracted: ${callOutcome}`);
 
+      let newOutcome: any;
+      let wasNewlyCreated = false;
+
       // For completed calls, create detected outcome and route via workStateService
       if (voiceStatus === 'completed' && actionId) {
         const summaryText = call_analysis?.call_summary || '';
@@ -1419,12 +1448,12 @@ export function registerWebhookRoutes(app: Express) {
             actor: 'SYSTEM',
           });
 
-          console.log(`🎙️  [WEBHOOK] completed but no transcript → ATTENTION`);
+          console.log(`🎙️  [WEBHOOK] completed but no transcript → ATTENTION (pending re-processing)`);
 
           await completeWebhook({
             idempotencyKey: voiceIdempotencyKey,
             source: "retell",
-            status: "processed",
+            status: "pending_transcript",
           });
 
           return res.status(200).json({
@@ -1432,7 +1461,8 @@ export function registerWebhookRoutes(app: Express) {
             call_id,
             voiceStatus,
             workState: 'ATTENTION',
-            transcriptMissing: true
+            transcriptMissing: true,
+            pendingReprocessing: true,
           });
         }
 
@@ -1446,7 +1476,7 @@ export function registerWebhookRoutes(app: Express) {
           ))
           .limit(1);
 
-        if (existingOutcome) {
+        if (existingOutcome && !isReprocessing) {
           console.log(`🎙️  [WEBHOOK] Outcome already exists for call ${call_id}, skipping OpenAI analysis`);
           
           // Check if action was already processed (voiceProcessedAt set)
@@ -1507,6 +1537,13 @@ export function registerWebhookRoutes(app: Express) {
           });
         }
 
+        // If re-processing, remove the old no-transcript outcome so OpenAI can create a proper one
+        if (isReprocessing && existingOutcome) {
+          console.log(`🎙️  [WEBHOOK] Re-processing: removing old no-transcript outcome ${existingOutcome.id}`);
+          await db.delete(outcomes)
+            .where(eq(outcomes.id, existingOutcome.id));
+        }
+
         // Run intent extraction with OpenAI
         const OpenAI = (await import('openai')).default;
         const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -1565,9 +1602,6 @@ Return JSON with:
         if (analysis.summary) extracted.freeTextNotes = analysis.summary;
 
         // Idempotent outcome creation using try/catch for race conditions
-        let newOutcome: any;
-        let wasNewlyCreated = false;
-        
         try {
           // Try to create outcome
           const [createdOutcome] = await db.insert(outcomes)
