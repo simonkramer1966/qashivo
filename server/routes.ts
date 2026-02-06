@@ -24883,6 +24883,20 @@ ${tenant.name}
           })
           .returning();
 
+        // Create primary credit control contact person
+        await tx
+          .insert(customerContactPersons)
+          .values({
+            tenantId,
+            contactId: contact.id,
+            name: "Simon Kramer",
+            email: "simon@qashivo.com",
+            phone: "07716273336",
+            smsNumber: "07716273336",
+            jobTitle: "Credit Controller",
+            isPrimaryCreditControl: true,
+          });
+
         // Create 8 invoices with random amounts and unique invoice numbers
         const now = new Date();
         const randomAmount = () => {
