@@ -1,6 +1,6 @@
 import { eq, and, lte, sql, isNotNull, inArray } from "drizzle-orm";
 import { db } from "../db";
-import { actions, contacts, invoices, tenants, messageDrafts } from "@shared/schema";
+import { actions, contacts, invoices, tenants, messageDrafts, emailMessages } from "@shared/schema";
 import { sendEmail } from "./sendgrid";
 import { sendSMS } from "./vonage";
 import { RetellService } from "../retell-service";
@@ -8,6 +8,7 @@ import { websocketService } from "./websocketService";
 import { aiMessageGenerator, type MessageContext, type ToneSettings } from "./aiMessageGenerator";
 import { ToneProfile, PlaybookStage } from "./playbookEngine";
 import { messagePreGenerator } from "./messagePreGenerator";
+import { resolvePrimaryEmail, resolvePrimarySmsNumber } from "./contactEmailResolver";
 
 /**
  * Action Executor Service
@@ -336,7 +337,8 @@ export class ActionExecutor {
     tenant: any
   ): Promise<{ success: boolean; data?: any; error?: string }> {
     try {
-      if (!contact.email) {
+      const recipientEmail = await resolvePrimaryEmail(contact.id, action.tenantId, contact.email);
+      if (!recipientEmail) {
         return { success: false, error: 'Contact has no email address' };
       }
 
@@ -352,7 +354,6 @@ export class ActionExecutor {
           body: this.replaceTemplateVariables(action.content, contact, invoice)
         };
       } else {
-        // Check for pre-generated draft first
         const { draft, contextChanged } = await messagePreGenerator.getDraftForAction(
           action.id,
           'email',
@@ -368,7 +369,6 @@ export class ActionExecutor {
           };
           usedPreGenerated = true;
         } else {
-          // Generate on-demand if no valid draft
           console.log(`🤖 Generating AI email for ${contact.name}${contextChanged ? ' (context changed)' : ''}...`);
           const generated = await aiMessageGenerator.generateEmail(messageContext, toneSettings);
           emailContent = {
@@ -379,24 +379,50 @@ export class ActionExecutor {
         }
       }
 
+      const fromEmail = process.env.SENDGRID_FROM_EMAIL || 'noreply@qashivo.com';
+      const fromName = tenant.name ? `${tenant.name} via Qashivo` : 'Qashivo Credit Control';
+      const textBody = emailContent.body.replace(/<[^>]*>/g, '');
+
       const result = await sendEmail({
-        to: contact.email,
-        from: `${tenant.name} <noreply@qashivo.com>`,
+        to: recipientEmail,
+        from: `${fromName} <${fromEmail}>`,
         subject: emailContent.subject,
         html: emailContent.body,
-        text: emailContent.body.replace(/<[^>]*>/g, ''),
+        text: textBody,
       });
 
-      // Mark draft as used if we used a pre-generated one
       if (usedPreGenerated) {
         await messagePreGenerator.markDraftUsed(action.id);
       }
 
+      try {
+        await db.insert(emailMessages).values({
+          tenantId: action.tenantId,
+          direction: 'OUTBOUND',
+          channel: 'EMAIL',
+          actionId: action.id,
+          contactId: contact.id,
+          invoiceId: invoice?.id || null,
+          toEmail: recipientEmail,
+          toName: contact.name || null,
+          fromEmail,
+          fromName,
+          subject: emailContent.subject,
+          textBody,
+          htmlBody: emailContent.body,
+          status: result?.success ? 'SENT' : 'FAILED',
+          sendgridMessageId: result?.messageId || null,
+          sentAt: result?.success ? new Date() : null,
+        });
+      } catch (recordErr) {
+        console.warn(`⚠️ Email sent but failed to record in email_messages:`, recordErr);
+      }
+
       return { 
-        success: result, 
+        success: result?.success ?? !!result, 
         data: { 
           emailSent: true, 
-          to: contact.email,
+          to: recipientEmail,
           subject: emailContent.subject,
           aiGenerated: !action.content || action.content.trim() === '',
           usedPreGenerated
@@ -417,7 +443,8 @@ export class ActionExecutor {
     tenant: any
   ): Promise<{ success: boolean; data?: any; error?: string }> {
     try {
-      if (!contact.phone) {
+      const recipientPhone = await resolvePrimarySmsNumber(contact.id, action.tenantId, contact.phone);
+      if (!recipientPhone) {
         return { success: false, error: 'Contact has no phone number' };
       }
 
@@ -429,7 +456,6 @@ export class ActionExecutor {
       if (action.content && action.content.trim() !== '') {
         message = this.replaceTemplateVariables(action.content, contact, invoice);
       } else {
-        // Check for pre-generated draft first
         const { draft, contextChanged } = await messagePreGenerator.getDraftForAction(
           action.id,
           'sms',
@@ -450,7 +476,7 @@ export class ActionExecutor {
       }
 
       const result = await sendSMS({
-        to: contact.phone,
+        to: recipientPhone,
         message: message,
       });
 

@@ -12,6 +12,7 @@ import { sendEmail } from './sendgrid';
 import { sendSMS } from './vonage';
 import { randomUUID } from 'crypto';
 import { wrapInHtmlEmailTemplate } from './messagePostProcessor';
+import { resolvePrimaryEmail, resolvePrimarySmsNumber } from './contactEmailResolver';
 
 // Channel adapter interface - unified contract for all communication channels
 interface ChannelAdapter {
@@ -247,21 +248,23 @@ class CommunicationsOrchestrator {
   private async sendEmail(request: OutboundMessageRequest): Promise<OutboundMessageResult> {
     try {
       const contact = await storage.getContact(request.contactId, request.tenantId);
-      if (!contact?.email) {
+      if (!contact) {
+        throw new Error('Contact not found');
+      }
+      
+      const recipientEmail = await resolvePrimaryEmail(contact.id, request.tenantId, contact.email);
+      if (!recipientEmail) {
         throw new Error('Contact has no email address');
       }
       
       const tenant = await storage.getTenant(request.tenantId);
       
-      // Get tenant's configured email sender (default one)
       const emailSenders = await storage.getEmailSenders(request.tenantId);
       const defaultSender = emailSenders.find(s => s.isDefault) || emailSenders[0];
       
-      // Use tenant's sender email if configured, otherwise fall back to env var
       const fromEmail = defaultSender?.email || process.env.SENDGRID_FROM_EMAIL || 'noreply@qashivo.com';
       const fromName = defaultSender?.fromName || defaultSender?.name || tenant?.name || 'Qashivo';
       
-      // Wrap content in professional HTML email template
       const companyName = tenant?.name || 'Qashivo';
       const htmlContent = wrapInHtmlEmailTemplate(request.content, {
         companyName,
@@ -270,7 +273,7 @@ class CommunicationsOrchestrator {
       });
       
       const result = await sendEmail({
-        to: contact.email,
+        to: recipientEmail,
         subject: request.subject || 'Invoice Reminder',
         html: htmlContent,
         from: `${fromName} <${fromEmail}>`,
@@ -313,12 +316,16 @@ class CommunicationsOrchestrator {
   private async sendSMS(request: OutboundMessageRequest): Promise<OutboundMessageResult> {
     try {
       const contact = await storage.getContact(request.contactId, request.tenantId);
-      if (!contact?.phone) {
+      if (!contact) {
+        throw new Error('Contact not found');
+      }
+      const recipientPhone = await resolvePrimarySmsNumber(contact.id, request.tenantId, contact.phone);
+      if (!recipientPhone) {
         throw new Error('Contact has no phone number');
       }
       
       const result = await sendSMS({
-        to: contact.phone,
+        to: recipientPhone,
         message: request.content,
         invoiceId: request.invoiceIds?.[0],
         customerId: request.contactId,
@@ -349,17 +356,19 @@ class CommunicationsOrchestrator {
   private async sendVoice(request: OutboundMessageRequest): Promise<OutboundMessageResult> {
     try {
       const contact = await storage.getContact(request.contactId, request.tenantId);
-      if (!contact?.phone) {
+      if (!contact) {
+        throw new Error('Contact not found');
+      }
+      const recipientPhone = await resolvePrimarySmsNumber(contact.id, request.tenantId, contact.phone);
+      if (!recipientPhone) {
         throw new Error('Contact has no phone number');
       }
       
       const tenant = await storage.getTenant(request.tenantId);
       
-      // Import Retell service dynamically
       const { RetellService } = await import('../retell-service');
       const retellService = new RetellService();
       
-      // Get default from number from environment
       const fromNumber = process.env.RETELL_FROM_NUMBER || process.env.VONAGE_PHONE_NUMBER || '';
       
       if (!fromNumber) {
@@ -373,10 +382,9 @@ class CommunicationsOrchestrator {
         };
       }
       
-      // Create the call with dynamic variables for personalization
       const callResult = await retellService.createCall({
         fromNumber,
-        toNumber: contact.phone,
+        toNumber: recipientPhone,
         agentId: process.env.RETELL_AGENT_ID,
         dynamicVariables: {
           customer_name: contact.name || 'Customer',
@@ -421,12 +429,15 @@ class CommunicationsOrchestrator {
   // Validation helpers
   private async validateEmailContact(contactId: string, tenantId: string): Promise<{ valid: boolean; reason?: string }> {
     const contact = await storage.getContact(contactId, tenantId);
-    if (!contact?.email) {
+    if (!contact) {
+      return { valid: false, reason: 'Contact not found' };
+    }
+    const recipientEmail = await resolvePrimaryEmail(contactId, tenantId, contact.email);
+    if (!recipientEmail) {
       return { valid: false, reason: 'No email address' };
     }
-    // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(contact.email)) {
+    if (!emailRegex.test(recipientEmail)) {
       return { valid: false, reason: 'Invalid email format' };
     }
     return { valid: true };
@@ -434,11 +445,15 @@ class CommunicationsOrchestrator {
   
   private async validateSMSContact(contactId: string, tenantId: string): Promise<{ valid: boolean; reason?: string }> {
     const contact = await storage.getContact(contactId, tenantId);
-    if (!contact?.phone) {
+    if (!contact) {
+      return { valid: false, reason: 'Contact not found' };
+    }
+    const recipientPhone = await resolvePrimarySmsNumber(contactId, tenantId, contact.phone);
+    if (!recipientPhone) {
       return { valid: false, reason: 'No phone number' };
     }
     // Basic phone validation (should have digits)
-    const cleaned = contact.phone.replace(/\D/g, '');
+    const cleaned = recipientPhone.replace(/\D/g, '');
     if (cleaned.length < 10) {
       return { valid: false, reason: 'Phone number too short' };
     }

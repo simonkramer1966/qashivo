@@ -22,6 +22,7 @@ import {
 } from "../services/webhookIdempotency";
 import type { NormalizedInboundEmail } from "../../shared/types/inboundEmail";
 import { websocketService } from "../services/websocketService";
+import { resolvePrimaryEmail } from "../services/contactEmailResolver";
 
 /**
  * SendGrid IP ranges for Inbound Parse webhook
@@ -1071,13 +1072,13 @@ export function registerWebhookRoutes(app: Express) {
           const { emailClarificationService } = await import("../services/emailClarificationService");
           const ncContact = await storage.getContact(contactId, tenantId);
           const [ncTenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
-          const ncEmail = (ncContact as any)?.primaryCreditContact?.email || ncContact?.email;
+          const ncEmail = await resolvePrimaryEmail(contactId, tenantId, ncContact?.email);
           if (ncEmail && ncTenant) {
             await emailClarificationService.sendVoiceFollowUpEmail({
               tenantId,
               contactId,
               contactEmail: ncEmail,
-              contactName: (ncContact as any)?.primaryCreditContact?.name || ncContact?.name || ncContact?.companyName || 'Customer',
+              contactName: ncContact?.name || ncContact?.companyName || 'Customer',
               tenantName: ncTenant.name || 'Our company',
               callId: call_id,
               voiceStatus: voiceStatus as any,
@@ -1166,13 +1167,13 @@ export function registerWebhookRoutes(app: Express) {
           const { emailClarificationService } = await import("../services/emailClarificationService");
           const failContact = await storage.getContact(contactId, tenantId);
           const [failTenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
-          const failEmail = (failContact as any)?.primaryCreditContact?.email || failContact?.email;
+          const failEmail = await resolvePrimaryEmail(contactId, tenantId, failContact?.email);
           if (failEmail && failTenant) {
             await emailClarificationService.sendVoiceFollowUpEmail({
               tenantId,
               contactId,
               contactEmail: failEmail,
-              contactName: (failContact as any)?.primaryCreditContact?.name || failContact?.name || failContact?.companyName || 'Customer',
+              contactName: failContact?.name || failContact?.companyName || 'Customer',
               tenantName: failTenant.name || 'Our company',
               callId: call_id,
               voiceStatus: 'failed',
@@ -1281,7 +1282,7 @@ export function registerWebhookRoutes(app: Express) {
               promisedDate: capturedPtp.date ? new Date(capturedPtp.date) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
               paymentMethod: 'bank_transfer',
               contactName: contact.name || 'Unknown',
-              contactEmail: contact.email || undefined,
+              contactEmail: (await resolvePrimaryEmail(callMetadata.contact_id, callMetadata.tenant_id, contact.email)) || undefined,
               contactPhone: contact.phone || undefined,
               notes: `Captured via Charlie voice call ${call_id}`,
             });
@@ -1642,7 +1643,7 @@ Return JSON with:
                 const { emailClarificationService } = await import("../services/emailClarificationService");
                 const voiceContact = await storage.getContact(contactId, tenantId);
                 const [voiceTenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
-                const voiceEmail = (voiceContact as any)?.primaryCreditContact?.email || voiceContact?.email;
+                const voiceEmail = await resolvePrimaryEmail(contactId, tenantId, voiceContact?.email);
 
                 if (voiceEmail && voiceTenant) {
                   const callSummaryText = call_analysis?.call_summary || '';
@@ -1650,7 +1651,7 @@ Return JSON with:
                     tenantId,
                     contactId,
                     contactEmail: voiceEmail,
-                    contactName: (voiceContact as any)?.primaryCreditContact?.name || voiceContact?.name || voiceContact?.companyName || 'Customer',
+                    contactName: voiceContact?.name || voiceContact?.companyName || 'Customer',
                     tenantName: voiceTenant.name || 'Our company',
                     callId: call_id,
                     voiceStatus: 'completed',

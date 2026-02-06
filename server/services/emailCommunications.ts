@@ -3,6 +3,7 @@ import { eq, and, desc } from "drizzle-orm";
 import { actions, contacts, invoices, tenants, emailMessages, conversations } from "@shared/schema";
 import { sendEmail } from "./sendgrid";
 import { generateReplyTokenSignature } from "./inboundEmailNormalizer";
+import { resolvePrimaryEmail } from "./contactEmailResolver";
 import crypto from "crypto";
 import { v4 as uuidv4 } from "uuid";
 
@@ -197,11 +198,11 @@ export async function sendActionEmail(actionId: string): Promise<SendActionEmail
       console.log(`Action ${actionId} has status ${action.status}, checking if approved...`);
     }
 
-    if (!contact.email) {
+    const recipientEmail = await resolvePrimaryEmail(contact.id, action.tenantId, contact.email);
+    if (!recipientEmail) {
       return { success: false, error: "Contact has no email address" };
     }
 
-    // Find or create conversation for this contact
     const conversationId = await findOrCreateConversation(
       action.tenantId,
       contact.id,
@@ -266,7 +267,7 @@ export async function sendActionEmail(actionId: string): Promise<SendActionEmail
         actionId: action.id,
         contactId: contact.id,
         invoiceId: invoice?.id || null,
-        toEmail: contact.email,
+        toEmail: recipientEmail,
         toName: contact.name || null,
         fromEmail: SENDGRID_FROM_EMAIL,
         fromName: tenant.name ? `${tenant.name} via Qashivo` : SENDGRID_FROM_NAME,
@@ -286,7 +287,7 @@ export async function sendActionEmail(actionId: string): Promise<SendActionEmail
 
     try {
       const sendResult = await sendEmail({
-        to: contact.email,
+        to: recipientEmail,
         from: `${tenant.name ? `${tenant.name} via Qashivo` : SENDGRID_FROM_NAME} <${SENDGRID_FROM_EMAIL}>`,
         replyTo: replyToEmail,
         subject,
@@ -308,7 +309,7 @@ export async function sendActionEmail(actionId: string): Promise<SendActionEmail
         // Update conversation stats
         await updateConversationStats(conversationId, "outbound");
 
-        console.log(`✅ Email sent to ${contact.email} for action ${action.id} (conversation: ${conversationId})`);
+        console.log(`✅ Email sent to ${recipientEmail} for action ${action.id} (conversation: ${conversationId})`);
 
         return {
           success: true,
