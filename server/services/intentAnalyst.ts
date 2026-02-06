@@ -11,7 +11,6 @@ type OutcomeType =
   | 'PAYMENT_PLAN' 
   | 'DISPUTE'
   | 'PAYMENT_CONFIRMATION'
-  | 'VULNERABILITY'
   | 'CALLBACK_REQUEST'
   | 'ADMIN_BLOCKER'
   | 'QUERY'
@@ -23,7 +22,6 @@ const INTENT_TO_OUTCOME_TYPE: Record<CharlieIntentType, OutcomeType> = {
   'payment_plan': 'PAYMENT_PLAN',
   'dispute': 'DISPUTE',
   'payment_confirmation': 'PAYMENT_CONFIRMATION',
-  'vulnerability': 'VULNERABILITY',
   'callback_request': 'CALLBACK_REQUEST',
   'admin_issue': 'ADMIN_BLOCKER',
   'general_query': 'QUERY',
@@ -37,7 +35,6 @@ const OUTCOME_FORECAST_EFFECTS: Record<OutcomeType, ForecastEffect> = {
   'PAYMENT_PLAN': 'FORECAST_UPDATED',
   'DISPUTE': 'ROUTED_TO_ATTENTION',
   'PAYMENT_CONFIRMATION': 'FORECAST_UPDATED',
-  'VULNERABILITY': 'MANUAL_REVIEW',
   'CALLBACK_REQUEST': 'NO_EFFECT',
   'ADMIN_BLOCKER': 'ROUTED_TO_ATTENTION',
   'QUERY': 'NO_EFFECT',
@@ -54,7 +51,6 @@ type CharlieIntentType =
   | 'dispute'             // Customer disputes the invoice
   | 'promise_to_pay'      // Customer commits to paying by specific date
   | 'payment_confirmation'// Customer confirms payment has been made
-  | 'vulnerability'       // Hardship/vulnerability indicator detected
   | 'callback_request'    // Customer requests a phone call back
   | 'general_query'       // General questions about invoice/payment
   | 'admin_issue'         // Missing PO, wrong address, not received, etc.
@@ -88,7 +84,7 @@ interface IntentAnalysisResult {
     contactPreferences?: string[]; // Phone, email preferences
   };
   reasoning: string;
-  requiresHumanReview: boolean;    // Flag for vulnerability/edge cases
+  requiresHumanReview: boolean;    // Flag for edge cases
   suggestedNextAction?: string;    // Charlie's recommended action
   ambiguity?: AmbiguityInfo;       // Ambiguity details for clarification flow
 }
@@ -120,7 +116,6 @@ class IntentAnalyst {
 Your role is to detect intent, extract actionable information, and recommend next steps.
 
 Intent Types (in priority order):
-- vulnerability: Customer indicates hardship, financial distress, mental health issues, or vulnerability. ALWAYS flag for human review.
 - dispute: Customer disputes the invoice (quality, delivery, pricing, scope issues)
 - promise_to_pay: Customer commits to paying by a specific date/timeframe
 - payment_confirmation: Customer confirms payment has already been made or is in process
@@ -131,11 +126,10 @@ Intent Types (in priority order):
 - unknown: Intent is genuinely unclear
 
 Critical Rules:
-1. If ANY vulnerability/hardship indicator is detected, ALWAYS classify as 'vulnerability' regardless of other content
-2. Look for admin blockers (missing PO, wrong address) - these are common in B2B
-3. Extract invoice/PO references when mentioned
-4. Note preferred contact methods
-5. Consider B2B context: professional tone expected, process-driven issues common
+1. Look for admin blockers (missing PO, wrong address) - these are common in B2B
+2. Extract invoice/PO references when mentioned
+3. Note preferred contact methods
+4. Consider B2B context: professional tone expected, process-driven issues common
 
 Respond with valid JSON only, no markdown formatting.`
           },
@@ -153,7 +147,6 @@ Respond with valid JSON only, no markdown formatting.`
       
       // Determine if human review is required
       const requiresHumanReview = 
-        intentType === 'vulnerability' ||
         intentType === 'dispute' ||
         (result.confidence || 0) < this.CONFIDENCE_THRESHOLD ||
         result.requiresHumanReview === true;
@@ -227,7 +220,7 @@ Respond with valid JSON only, no markdown formatting.`
 
     prompt += `Respond with JSON:
 {
-  "intentType": "vulnerability" | "dispute" | "promise_to_pay" | "payment_confirmation" | "callback_request" | "admin_issue" | "payment_plan" | "general_query" | "unknown",
+  "intentType": "dispute" | "promise_to_pay" | "payment_confirmation" | "callback_request" | "admin_issue" | "payment_plan" | "general_query" | "unknown",
   "confidence": 0.0 to 1.0,
   "sentiment": "positive" | "neutral" | "negative",
   "extractedEntities": {
@@ -402,7 +395,6 @@ IMPORTANT for ambiguity detection:
 
       // Determine if we should create an action
       const shouldCreateAction = 
-        analysis.intentType === 'vulnerability' || // Always create for vulnerability
         analysis.intentType === 'dispute' ||       // Always create for disputes
         (analysis.confidence >= this.CONFIDENCE_THRESHOLD && analysis.intentType !== 'unknown');
       
@@ -437,10 +429,6 @@ IMPORTANT for ambiguity detection:
           await this.handleDisputeIntent(message, analysis);
         }
         
-        // Flag contact as potentially vulnerable if vulnerability detected
-        if (analysis.intentType === 'vulnerability' && message.contactId) {
-          await this.flagContactAsVulnerable(message.contactId, message.tenantId, analysis);
-        }
       } else {
         console.log(`⚠️  Low confidence (${(analysis.confidence * 100).toFixed(0)}%) - flagged for manual review`);
         // Still create action for low confidence - route to Queries tab
@@ -533,7 +521,6 @@ IMPORTANT for ambiguity detection:
 
       // Determine action priority based on intent
       const priorityMap: Record<CharlieIntentType, string> = {
-        vulnerability: 'urgent',
         dispute: 'high',
         promise_to_pay: 'medium',
         payment_confirmation: 'low',
@@ -558,8 +545,7 @@ IMPORTANT for ambiguity detection:
           type: message.channel,
           status: actionStatus,
           exceptionReason: analysis.requiresHumanReview ? 
-            (analysis.intentType === 'vulnerability' ? 'vulnerability_detected' : 
-             analysis.intentType === 'dispute' ? 'dispute_detected' : 
+            (analysis.intentType === 'dispute' ? 'dispute_detected' : 
              'low_confidence') : undefined,
           subject: actionSubject,
           content: actionContent,
@@ -799,7 +785,6 @@ IMPORTANT for ambiguity detection:
    */
   private generateActionSubject(analysis: IntentAnalysisResult): string {
     const subjects: Record<CharlieIntentType, string> = {
-      vulnerability: '🔴 URGENT: Vulnerability Indicator - Human Review Required',
       dispute: '⚠️ Invoice Dispute',
       promise_to_pay: '✅ Payment Promise Received',
       payment_confirmation: '💳 Payment Confirmation',
@@ -1328,50 +1313,6 @@ IMPORTANT for ambiguity detection:
       console.log(`⚠️ Dispute recorded. Reason: ${disputeReason}`);
     } catch (error) {
       console.error('❌ Error handling dispute intent:', error);
-    }
-  }
-
-  /**
-   * Flag a contact as potentially vulnerable based on detected intent
-   * Creates an urgent action to notify human operators
-   */
-  private async flagContactAsVulnerable(
-    contactId: string,
-    tenantId: string,
-    analysis: IntentAnalysisResult
-  ): Promise<void> {
-    try {
-      // Update contact vulnerability flag
-      await db
-        .update(contacts)
-        .set({
-          isPotentiallyVulnerable: true,
-          updatedAt: new Date()
-        })
-        .where(and(eq(contacts.id, contactId), eq(contacts.tenantId, tenantId)));
-      
-      // Create an urgent notification action for human review
-      await db
-        .insert(actions)
-        .values({
-          tenantId,
-          contactId,
-          type: 'note',
-          status: 'exception',
-          exceptionReason: 'vulnerability_detected',
-          subject: '🔴 URGENT: Vulnerability Indicator Detected',
-          content: `This contact has been automatically flagged as potentially vulnerable.\n\nDetection: ${new Date().toISOString()}\nReasoning: ${analysis.reasoning}\n\nAll automated communications have been paused. Please review and confirm vulnerability status before proceeding with any collection activity.\n\nCompliance Note: Special handling required under FCA/vulnerability guidelines.`,
-          source: 'charlie_inbound',
-          recommended: {
-            priority: 'urgent',
-            requiresHumanReview: true
-          },
-          aiGenerated: true
-        });
-      
-      console.log(`🔴 Contact ${contactId} flagged as potentially vulnerable - urgent action created`);
-    } catch (error) {
-      console.error('Failed to flag contact as vulnerable:', error);
     }
   }
 

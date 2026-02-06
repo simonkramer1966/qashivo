@@ -845,13 +845,8 @@ class CharlieDecisionEngine {
       return true;
     }
     
-    // Vulnerable customer flag (check notes for vulnerability indicators)
-    const notes = contact.notes?.toLowerCase() || '';
-    if (notes.includes('vulnerable') || notes.includes('vulnerability')) {
-      return true;
-    }
-    
     // VIP customer (check notes for VIP indicators)
+    const notes = contact.notes?.toLowerCase() || '';
     if (notes.includes('vip') || notes.includes('key account')) {
       return true;
     }

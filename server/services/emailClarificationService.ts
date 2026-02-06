@@ -955,8 +955,8 @@ ${htmlBody}
         const val = (headers['precedence'] || headers['Precedence']).toLowerCase();
         if (['bulk', 'junk', 'auto_reply', 'list'].includes(val)) return true;
       }
-      const returnPath = headers['return-path'] || headers['Return-Path'] || '';
-      if (returnPath === '<>' || returnPath === '') return true;
+      const returnPath = headers['return-path'] || headers['Return-Path'];
+      if (returnPath !== undefined && (returnPath === '<>' || returnPath === '')) return true;
     }
 
     if (subject) {

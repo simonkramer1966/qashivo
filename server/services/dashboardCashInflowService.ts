@@ -366,12 +366,11 @@ export async function computeCashInflow(
       expectedDate.setDate(expectedDate.getDate() + 7);
       baseConfidence = outcome.confidenceBand === 'HIGH' ? 0.85 : 0.75;
       reason = 'Promise to Pay (outcome, no date)';
-    } else if (outcome?.type === 'VULNERABILITY' || outcome?.type === 'ADMIN_BLOCKER') {
-      // Lower confidence, push out expected date
+    } else if (outcome?.type === 'ADMIN_BLOCKER') {
       expectedDate = new Date(today);
       expectedDate.setDate(expectedDate.getDate() + 30);
       baseConfidence = 0.35;
-      reason = outcome.type === 'VULNERABILITY' ? 'Vulnerability (review required)' : 'Admin Blocker';
+      reason = 'Admin Blocker';
     // 2) Legacy PTP tables
     } else if (ptp && (ptp.status === 'pending' || ptp.status === 'active')) {
       expectedDate = ptp.promisedDate;
