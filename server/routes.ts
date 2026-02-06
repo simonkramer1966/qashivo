@@ -3014,6 +3014,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`📊 Triggered payment signal collection for invoice ${invoice.id} from manual mark-paid`);
 
+      import('./services/emailCommunications.js').then(({ sendPaymentThankYouEmail }) => {
+        sendPaymentThankYouEmail(invoice.id, user.tenantId).catch(err =>
+          console.error(`[ThankYou] Failed for invoice ${invoice.id}:`, err.message)
+        );
+      }).catch(err => console.error('[ThankYou] Import failed:', err.message));
+
       // Send thank you SMS if contact has a phone number
       if (contact.phone) {
         const customerName = contact.name || contact.companyName || "Customer";
@@ -25104,6 +25110,14 @@ ${tenant.name}
           reference: `PAY-${Date.now()}`,
         },
       });
+
+      if (isFullyPaid) {
+        import('./services/emailCommunications.js').then(({ sendPaymentThankYouEmail }) => {
+          sendPaymentThankYouEmail(targetInvoice.id, tenantId).catch(err =>
+            console.error(`[ThankYou] Failed for invoice ${targetInvoice.id}:`, err.message)
+          );
+        }).catch(err => console.error('[ThankYou] Import failed:', err.message));
+      }
 
       res.json({ 
         success: true, 

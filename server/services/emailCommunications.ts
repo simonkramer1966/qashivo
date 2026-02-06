@@ -345,6 +345,132 @@ export async function sendActionEmail(actionId: string): Promise<SendActionEmail
   }
 }
 
+/**
+ * Send a thank-you email to the primary contact when an invoice is marked as paid.
+ * Fire-and-forget: errors are logged but don't propagate.
+ */
+export async function sendPaymentThankYouEmail(
+  invoiceId: string,
+  tenantId: string
+): Promise<void> {
+  try {
+    const [invoiceRecord] = await db
+      .select({
+        invoice: invoices,
+        contact: contacts,
+        tenant: tenants,
+      })
+      .from(invoices)
+      .innerJoin(contacts, eq(invoices.contactId, contacts.id))
+      .innerJoin(tenants, eq(invoices.tenantId, tenants.id))
+      .where(and(eq(invoices.id, invoiceId), eq(invoices.tenantId, tenantId)))
+      .limit(1);
+
+    if (!invoiceRecord) {
+      console.warn(`[ThankYou] Invoice ${invoiceId} not found for tenant ${tenantId}`);
+      return;
+    }
+
+    const { invoice, contact, tenant } = invoiceRecord;
+
+    const recipientEmail = await resolvePrimaryEmail(contact.id, tenantId, contact.email);
+    if (!recipientEmail) {
+      console.warn(`[ThankYou] No email address for contact ${contact.id}`);
+      return;
+    }
+
+    const conversationId = await findOrCreateConversation(
+      tenantId,
+      contact.id,
+      `Payment received — Invoice ${invoice.invoiceNumber}`
+    );
+
+    const emailMessageId = uuidv4();
+    const replyToEmail = generateReplyToEmail(tenantId, conversationId, emailMessageId);
+    const replyToken = `${tenantId}.${conversationId}.${emailMessageId}`;
+    const threadKey = generateThreadKey(invoice.id, contact.id);
+
+    const customerName = contact.name || "Customer";
+    const companyName = contact.companyName || contact.name || "Customer";
+    const tenantName = tenant.name || "Accounts Team";
+    const amountFormatted = formatAmount(invoice.amount);
+    const invNum = invoice.invoiceNumber || "your invoice";
+
+    const subject = `Thank you for your payment — ${invNum}`;
+
+    const htmlBody = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+        <p>Dear ${customerName},</p>
+        <p>Thank you for your payment of <strong>${amountFormatted}</strong> against invoice <strong>${invNum}</strong>. We have received it and your account has been updated accordingly.</p>
+        <p>We truly value your business and look forward to continuing to work with ${companyName}.</p>
+        <p>If you have any questions, please don't hesitate to get in touch.</p>
+        <p>Kind regards,<br/>${tenantName}</p>
+      </div>
+    `;
+
+    const textBody = htmlBody.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
+
+    const fromName = tenant.name ? `${tenant.name} via Qashivo` : SENDGRID_FROM_NAME;
+
+    const [emailMessage] = await db
+      .insert(emailMessages)
+      .values({
+        id: emailMessageId,
+        tenantId,
+        conversationId,
+        direction: "OUTBOUND",
+        channel: "EMAIL",
+        contactId: contact.id,
+        invoiceId: invoice.id,
+        toEmail: recipientEmail,
+        toName: contact.name || null,
+        fromEmail: SENDGRID_FROM_EMAIL,
+        fromName,
+        subject,
+        textBody,
+        htmlBody,
+        threadKey,
+        replyToken,
+        status: "QUEUED",
+      })
+      .returning();
+
+    const sendResult = await sendEmail({
+      to: recipientEmail,
+      from: `${fromName} <${SENDGRID_FROM_EMAIL}>`,
+      replyTo: replyToEmail,
+      subject,
+      html: htmlBody,
+      text: textBody,
+      headers: {
+        "X-Qashivo-Contact-Id": contact.id,
+        "X-Qashivo-Invoice-Id": invoice.id,
+        "X-Qashivo-Thread-Key": threadKey,
+      },
+    });
+
+    if (sendResult?.success) {
+      await db
+        .update(emailMessages)
+        .set({ status: "SENT", sentAt: new Date(), updatedAt: new Date() })
+        .where(eq(emailMessages.id, emailMessage.id));
+
+      await updateConversationStats(conversationId, "outbound");
+
+      console.log(`✅ [ThankYou] Payment thank-you email sent to ${recipientEmail} for invoice ${invNum}`);
+    } else {
+      await db
+        .update(emailMessages)
+        .set({ status: "FAILED", error: "SendGrid returned false", updatedAt: new Date() })
+        .where(eq(emailMessages.id, emailMessage.id));
+
+      console.warn(`[ThankYou] Failed to send thank-you email for invoice ${invNum}`);
+    }
+  } catch (error: any) {
+    console.error(`[ThankYou] Error sending payment thank-you email for invoice ${invoiceId}:`, error.message);
+  }
+}
+
 export async function getEmailThreadForContact(
   tenantId: string,
   contactId: string,

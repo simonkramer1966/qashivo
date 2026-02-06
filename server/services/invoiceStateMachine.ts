@@ -331,6 +331,14 @@ class InvoiceStateMachine {
       
       console.log(`📊 Invoice ${invoiceId} transitioned: ${fromState} → ${toState} (${options.reason})`);
       
+      if (toState === 'ptp_met') {
+        import('./emailCommunications.js').then(({ sendPaymentThankYouEmail }) => {
+          sendPaymentThankYouEmail(invoiceId, tenantId).catch(err =>
+            console.error(`[ThankYou] Failed for invoice ${invoiceId}:`, err.message)
+          );
+        }).catch(err => console.error('[ThankYou] Import failed:', err.message));
+      }
+      
       return { success: true, invoice: updatedInvoice };
     } catch (error) {
       console.error('❌ State transition failed:', error);
