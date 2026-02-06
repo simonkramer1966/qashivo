@@ -10,6 +10,7 @@ type OutcomeExtracted = {
   promisedPaymentAmount?: number; // legacy voice field name
   confirmedBy?: string;
   paymentPlanSchedule?: Array<{ date: string; amount: number }>;
+  invoiceAllocation?: string;
   paymentProcessWindow?: { earliest?: string; latest?: string };
   disputeCategory?: 'PRICING' | 'DELIVERY' | 'QUALITY' | 'OTHER';
   docsRequested?: Array<'INVOICE_COPY' | 'STATEMENT' | 'REMITTANCE' | 'PO'>;
@@ -297,6 +298,46 @@ export async function computeCashInflow(
     }
   }
 
+  const paymentPlanInvoiceDateMap: Map<string, Date> = new Map();
+  for (const [debtorId, outcome] of Array.from(latestOutcomeByDebtor.entries())) {
+    if (outcome.type === 'PAYMENT_PLAN' && outcome.extracted?.paymentPlanSchedule?.length) {
+      const schedule = outcome.extracted.paymentPlanSchedule;
+      const debtorInvoices = openInvoices
+        .filter(r => r.invoice.contactId === debtorId && r.invoice.status !== 'PAID')
+        .sort((a, b) => {
+          const dateA = a.invoice.dueDate ? new Date(a.invoice.dueDate).getTime() : 0;
+          const dateB = b.invoice.dueDate ? new Date(b.invoice.dueDate).getTime() : 0;
+          return dateA - dateB;
+        });
+
+      let invoiceIdx = 0;
+      for (let schedIdx = 0; schedIdx < schedule.length; schedIdx++) {
+        const installment = schedule[schedIdx];
+        const installmentDate = new Date(installment.date);
+        let allocated = 0;
+
+        while (invoiceIdx < debtorInvoices.length) {
+          const inv = debtorInvoices[invoiceIdx].invoice;
+          const invAmount = Number(inv.amount) - Number(inv.amountPaid || 0);
+
+          if (allocated > 0 && allocated >= installment.amount) {
+            break;
+          }
+
+          paymentPlanInvoiceDateMap.set(inv.id, installmentDate);
+          allocated += invAmount;
+          invoiceIdx++;
+        }
+      }
+
+      const lastDate = new Date(schedule[schedule.length - 1].date);
+      while (invoiceIdx < debtorInvoices.length) {
+        paymentPlanInvoiceDateMap.set(debtorInvoices[invoiceIdx].invoice.id, lastDate);
+        invoiceIdx++;
+      }
+    }
+  }
+
   const forecasts: InvoiceForecast[] = [];
   
   for (const row of openInvoices) {
@@ -356,8 +397,12 @@ export async function computeCashInflow(
       baseConfidence = 0.92;
       reason = 'Payment Confirmation (outcome)';
     } else if (outcome?.type === 'PAYMENT_PLAN' && outcome.extracted?.paymentPlanSchedule?.length) {
-      // Use first scheduled payment date
-      expectedDate = new Date(outcome.extracted.paymentPlanSchedule[0].date);
+      const allocatedDate = paymentPlanInvoiceDateMap.get(inv.id);
+      if (allocatedDate) {
+        expectedDate = new Date(allocatedDate);
+      } else {
+        expectedDate = new Date(outcome.extracted.paymentPlanSchedule[0].date);
+      }
       baseConfidence = 0.82;
       reason = 'Payment Plan (outcome)';
     } else if (outcome?.type === 'PROMISE_TO_PAY') {

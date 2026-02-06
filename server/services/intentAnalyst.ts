@@ -1585,10 +1585,10 @@ CRITICAL: Each payment tranche on a DIFFERENT date MUST be a SEPARATE entry in t
           }
         }
 
-        await this.createOutcomeFromIntentWithInvoices(
+        await this.createOutcomeFromArrangement(
           message,
-          { ...analysis, intentType: arrangement.intentType as CharlieIntentType, confidence: arrangement.confidence },
-          { ...context, invoiceAmount: arrangement.totalAmount },
+          arrangement,
+          context,
           resolvedInvoices.invoiceId,
           linkedInvoices.map(inv => inv.id)
         );
@@ -2082,6 +2082,86 @@ CRITICAL: Each payment tranche on a DIFFERENT date MUST be a SEPARATE entry in t
       
     } catch (error) {
       console.error('Failed to create outcome with invoices:', error);
+    }
+  }
+
+  private async createOutcomeFromArrangement(
+    message: typeof inboundMessages.$inferSelect,
+    arrangement: {
+      intentType: 'promise_to_pay' | 'payment_plan';
+      confidence: number;
+      installments: Array<{ date: string; amount: number; description: string }>;
+      totalAmount: number;
+      invoiceAllocation: string;
+    },
+    context: any,
+    primaryInvoiceId: string | null,
+    linkedInvoiceIds: string[]
+  ): Promise<void> {
+    try {
+      if (!message.contactId) {
+        console.warn('Cannot create outcome - no contactId');
+        return;
+      }
+
+      const outcomeType = arrangement.intentType === 'payment_plan' ? 'PAYMENT_PLAN' : 'PROMISE_TO_PAY';
+      const effect = OUTCOME_FORECAST_EFFECTS[outcomeType];
+
+      let confidenceBand: 'HIGH' | 'MEDIUM' | 'LOW';
+      if (arrangement.confidence >= 0.85) {
+        confidenceBand = 'HIGH';
+      } else if (arrangement.confidence >= 0.6) {
+        confidenceBand = 'MEDIUM';
+      } else {
+        confidenceBand = 'LOW';
+      }
+
+      const sourceChannel = message.channel?.toUpperCase() || 'EMAIL';
+
+      const extracted: any = {
+        promiseToPayAmount: arrangement.totalAmount,
+      };
+
+      if (arrangement.installments.length === 1) {
+        extracted.promiseToPayDate = arrangement.installments[0].date;
+      } else if (arrangement.installments.length > 1) {
+        extracted.paymentPlanSchedule = arrangement.installments.map(inst => ({
+          date: inst.date,
+          amount: inst.amount,
+        }));
+        extracted.promiseToPayDate = arrangement.installments[0].date;
+      }
+
+      if (arrangement.invoiceAllocation && arrangement.invoiceAllocation !== 'not specified') {
+        extracted.invoiceAllocation = arrangement.invoiceAllocation;
+      }
+
+      if (context.contactName) {
+        extracted.confirmedBy = context.contactName;
+      }
+
+      const [outcome] = await db
+        .insert(outcomes)
+        .values({
+          tenantId: message.tenantId,
+          debtorId: message.contactId,
+          invoiceId: primaryInvoiceId,
+          linkedInvoiceIds: linkedInvoiceIds,
+          type: outcomeType,
+          confidence: arrangement.confidence.toFixed(2),
+          confidenceBand,
+          requiresHumanReview: false,
+          effect,
+          extracted,
+          sourceChannel,
+          sourceMessageId: message.id,
+          rawSnippet: message.content?.substring(0, 500) || '',
+        })
+        .returning();
+
+      console.log(`✅ Outcome created from arrangement: ${outcomeType} (${confidenceBand}) with ${arrangement.installments.length} installment(s)`);
+    } catch (error) {
+      console.error('Failed to create outcome from arrangement:', error);
     }
   }
 

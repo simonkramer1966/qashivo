@@ -1,7 +1,7 @@
 # Qashivo
 
 ## Overview
-Qashivo is an AI-first autonomous cashflow management solution for UK SMEs, acting as an AI credit controller. It focuses on a supervised autonomy model where AI agents perform collections work under user supervision, aiming to reduce user effort from hours to minutes daily. Key capabilities include rapid Xero integration with instant AI analysis, a voice-driven natural language interface, and a commitment to a 90-day DSO (Days Sales Outstanding) guarantee. The project targets an MVP by December 15, 2025, with an initial goal of 10 paying customers.
+Qashivo is an AI-first autonomous cashflow management solution for UK SMEs, acting as an AI credit controller. It operates on a supervised autonomy model, using AI agents to manage collections under user oversight, aiming to drastically reduce daily user effort. Key features include rapid integration with Xero for instant AI analysis, a voice-driven natural language interface, and a guarantee to achieve a 90-day Days Sales Outstanding (DSO). The project aims for an MVP by December 15, 2025, with an initial target of 10 paying customers.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -33,33 +33,39 @@ All data visualizations must adhere to the principles espoused by **Edward Tufte
 ## System Architecture
 
 ### UI/UX Design System
-Qashivo employs two distinct design systems:
--   **Cardless v2.0 (Compact) - Desktop Application Standard**: Prioritizes data density, typography, and minimalism with pure white backgrounds, a specific color palette (Green, Amber, Red, Teal), and compact spacing. It features responsive tables, sortable columns, and a full-height drawer layout.
--   **Cardless v3.0 - Mobile Application**: Inspired by Apple HIG, focusing on progressive disclosure, one-handed operation, generous spacing, and card-based layouts. It uses larger touch targets and specific typography scales for mobile.
+Qashivo uses two design systems:
+-   **Cardless v2.0 (Compact) - Desktop**: Focuses on data density, typography, and minimalism with a specific color palette (Green, Amber, Red, Teal), pure white backgrounds, and compact spacing. It includes responsive tables, sortable columns, and a full-height drawer.
+-   **Cardless v3.0 - Mobile**: Inspired by Apple HIG, emphasizing progressive disclosure, one-handed operation, generous spacing, and card-based layouts with larger touch targets and mobile-optimized typography.
 
 ### Technical Implementation
--   **Frontend**: React with TypeScript (Vite), Shadcn/ui (Radix UI), Tailwind CSS, Wouter for routing, TanStack Query, React Hook Form with Zod validation.
+-   **Frontend**: React with TypeScript (Vite), Shadcn/ui (Radix UI), Tailwind CSS, Wouter for routing, TanStack Query, React Hook Form with Zod.
 -   **Backend**: Node.js with Express.js (TypeScript ES modules), RESTful API, Express sessions.
--   **Database**: PostgreSQL (Neon serverless) with Drizzle ORM and Drizzle Kit, designed for multi-tenancy.
+-   **Database**: PostgreSQL (Neon serverless) with Drizzle ORM and Drizzle Kit, supporting multi-tenancy.
 -   **Authentication**: Replit Auth (OpenID Connect) via Passport.js.
 
 ### Partner Architecture (B2B2B Model)
-A three-tier hierarchy supporting accounting firms (partners) managing multiple client businesses (tenants) with role-based access control, session-based tenant switching, and enforced data isolation.
+A three-tier hierarchy enabling accounting firms to manage multiple client businesses with role-based access control, session-based tenant switching, and enforced data isolation.
 
 ### Platform Admin System
-A secure, internal administration interface for Qashivo employees to manage and monitor the platform, protected by a `platformAdmin` flag and dedicated middleware.
+A secure, internal interface for Qashivo employees to manage and monitor the platform, protected by a `platformAdmin` flag and dedicated middleware.
 
 ### Security Architecture
-Features robust authentication (OAuth 2.0 with Replit OIDC), granular RBAC (50+ permissions), strict multi-tenant isolation, comprehensive input validation (Zod, Drizzle ORM), and webhook security (HMAC verification).
+Includes robust authentication (OAuth 2.0 with Replit OIDC), granular Role-Based Access Control (RBAC), strict multi-tenant isolation, comprehensive input validation (Zod, Drizzle ORM), and webhook security (HMAC verification).
 
 ### Feature Specifications
--   **Intent Analyst System**: AI for inbound communication analysis (email, SMS, voice) using OpenAI for intent detection, sentiment analysis, and automated action generation.
--   **AI Voice Dialog**: Intelligent voice call initiation with personalized, dynamic scripts and compliance features via Retell.
--   **Universal API Middleware**: Standardized interface for accounting software integrations (e.g., XeroProvider), handling OAuth and data transformation.
--   **Workflow Engine**: Customizable collection processes with pre-built templates and trackable communication.
+-   **Intent Analyst System**: AI for analyzing inbound communications (email, SMS, voice) using OpenAI for intent detection, sentiment analysis, and automated action generation.
+-   **AI Voice Dialog**: Initiates intelligent voice calls with personalized, dynamic scripts and compliance features via Retell.
+-   **Universal API Middleware**: Standardizes interfaces for accounting software integrations (e.g., XeroProvider), handling OAuth and data transformation.
+-   **Workflow Engine**: Provides customizable collection processes with pre-built templates and trackable communication.
 -   **Auto-Documentation System**: AI-powered system using OpenAI to generate and update technical documentation from git diffs.
--   **Debtor Self-Service Portal**: Secure portal for debtors to manage invoices, submit disputes, make promises to pay, and process payments, with magic link + OTP authentication and Stripe integration.
--   **PTP Breach Detection Service**: Background job monitoring promises to pay, flagging breaches and creating follow-up actions.
+-   **Debtor Self-Service Portal**: A secure portal for debtors to manage invoices, disputes, promises to pay, and payments, featuring magic link + OTP authentication and Stripe integration.
+-   **PTP Breach Detection Service**: A background job monitoring promises to pay, flagging breaches and creating follow-up actions.
+-   **Invoice Status Model**: Uses `OPEN`, `PAID`, `VOID` from accounting software, computes `Days Overdue`, and tracks `Outcome Override` (e.g., `Silent`, `Disputed`, `Plan`).
+-   **Payment Plans**: Supports multi-invoice payment plans with plan-level breach detection, running daily to create follow-up actions if outstanding amounts haven't decreased.
+-   **Unified Inbound Communications Pipeline**: All inbound communications (email, SMS, voice) are processed through a single entry point (`intentAnalyst.processInboundMessage()`), writing to a unified `outcomes` table with canonical field names.
+-   **Universal Voice Call Follow-Up Emails**: Every voice call triggers an AI-generated personalized follow-up email, respecting tenant-specific channel cooldowns and touch limits. It gathers debtor context, generates content via OpenAI, and stores the email for visibility.
+-   **Active Conversation Auto-Reply & Escalation**: When a debtor replies to an email, the AI responds immediately, bypassing cadence restrictions. It detects escalation triggers (e.g., requests to speak to a person, hostile language) using OpenAI to decide whether to continue the conversation or create an action for a human agent.
+-   **Full-Conversation-Context Clarification Resolution**: When debtors reply to clarification emails, the system now analyzes the entire email conversation thread (not just the latest reply) using OpenAI to extract multi-tranche payment arrangements, resolve invoice references, and accurately forecast cash inflow.
 
 ## External Dependencies
 
@@ -83,133 +89,3 @@ Features robust authentication (OAuth 2.0 with Replit OIDC), granular RBAC (50+ 
 -   **Lucide**: Icon library.
 -   **Tailwind CSS**: Utility-first CSS framework.
 -   **Class Variance Authority**: Component variant management.
-
-## Simplified Invoice Status Model (Jan 2026)
-
-The system uses a simplified model with invoice status from accounting software and outcome tracking:
-
-### Invoice Status (from Xero/QB - Source of Truth)
-- `OPEN`: Invoice is unpaid/outstanding
-- `PAID`: Invoice has been fully paid
-- `VOID`: Invoice was voided/cancelled
-
-### Days Overdue
-Computed as `today - dueDate`. Negative values mean the invoice is not yet due.
-
-### Outcome Override (Debtor Response Tracking)
-Stored on invoice, persists after payment for learning/analytics:
-- `null`: No action taken yet
-- `Silent`: Action taken, no response received
-- `Disputed`: Invoice is disputed
-- `Plan`: Payment plan in place (see payment_plans table)
-
-### Payment Plans (Simplified for MVP)
-Multi-invoice payment plans with plan-level breach detection:
-- `payment_plans` - Main plan record with total amount, frequency, source, and breach detection fields (outstanding_at_creation, next_check_date, last_checked_outstanding)
-- `payment_plan_invoices` - Junction table linking invoices to plans
-
-Breach detection runs daily: if total outstanding hasn't decreased by next_check_date, a follow-up action is created. No individual installment tracking for MVP.
-
-### Key Files
-- Schema: `shared/schema.ts` (invoices.outcomeOverride, payment_plans tables)
-- Types: `client/src/components/action-centre/types.ts` (OutcomeOverride type)
-- Utils: `client/src/components/action-centre/utils.ts` (getDebtorStatus with outcome mapping)
-- Breach Detection: `server/services/ptpBreachDetector.ts` (PTP and payment plan breach detection)
-
-### Documentation
-See `Invoice-Status-Outcomes.md` for detailed documentation for production developers.
-
-## Unified Inbound Communications Pipeline (Feb 2026)
-
-All inbound communications (email, SMS, voice) flow through a single unified pipeline:
-
-### Architecture
-- **Single entry point**: `intentAnalyst.processInboundMessage()` handles all channels
-- **Single data store**: All outcomes written to `outcomes` table (not `detectedOutcomes`)
-- **Canonical field names**: `promiseToPayDate` and `promiseToPayAmount` in outcome `extracted` JSON
-- **Legacy field support**: Services check both canonical names AND legacy `promisedPaymentDate`/`promisedPaymentAmount` for backwards compatibility
-
-### Channel Processing
-- **Email/SMS**: Webhook → `intentAnalyst.processInboundMessage()` → `outcomes` table
-- **Voice**: Retell webhook → OpenAI analysis → field name normalization → `outcomes` table
-
-### Retired Systems
-- `processInboundEmailOutcome()` function removed (was a duplicate regex-based path writing to `detectedOutcomes`)
-- `detectedOutcomes` table retained for historical data only; admin review routes still functional
-- New inbound emails no longer write to `detectedOutcomes` table
-
-### Key Files
-- Voice webhook: `server/routes/webhooks.ts` (call-ended handler)
-- Intent analysis: `server/services/intentAnalyst.ts`
-- Cash inflow chart: `server/services/dashboardCashInflowService.ts`
-- Work state: `server/services/workStateService.ts`
-- Email clarification: `server/services/emailClarificationService.ts`
-
-## Universal Voice Call Follow-Up Emails (Feb 2026)
-
-Every voice call — regardless of outcome — triggers an AI-generated personalised follow-up email.
-
-### How It Works
-1. **Cadence check**: Before sending, `checkEmailCadence()` validates the tenant's `channelCooldowns.email` (default 3 days) and `maxTouchesPerWindow` (default 3 per 14 days). If cooldown is active or touch limit exceeded, the follow-up is skipped gracefully.
-2. **Debtor context gathering**: `gatherDebtorContext()` pulls outstanding invoices, recent outcomes, and communication history for the contact.
-3. **AI email generation**: `generateFollowUpWithAI()` prompts OpenAI (gpt-4o-mini) with call disposition, transcript/summary, debtor context, and strict guardrails (concrete dates/amounts only, no placeholder text, professional tone, <150 words).
-4. **Storage**: Email saved to `email_messages` (visible in Customer Drawer) and `timeline_events` (visible in Activity tab).
-
-### Call Dispositions Handled
-- **Completed** (any outcome: PTP, dispute, docs requested, callback, etc.) — confirms what was discussed + next steps
-- **No answer** — polite "we tried to call" with reason for the call
-- **Voicemail** — follow-up noting voicemail left
-- **Busy** — similar to no answer, softer tone
-- **Failed** — possible wrong number, asks to confirm contact details
-
-### Key Files
-- Follow-up logic: `server/services/emailClarificationService.ts` (`sendVoiceFollowUpEmail`, `checkEmailCadence`, `gatherDebtorContext`, `generateFollowUpWithAI`)
-- Webhook wiring: `server/routes/webhooks.ts` (three exit points in call-ended handler: non-connected, failed, completed)
-
-## Active Conversation Auto-Reply & Escalation (Feb 2026)
-
-When a debtor replies to an email (active conversation), the AI responds immediately without cadence restrictions. It continues the dialogue until escalation is appropriate.
-
-### Two Cadence Modes
-- **Cold outreach**: Standard tenant cooldown (channelCooldowns.email days) and max touches per window apply
-- **Active conversation**: Debtor replied within 48h → cadence bypassed entirely, AI responds immediately
-
-### Escalation Detection
-`shouldEscalate()` uses OpenAI (gpt-4o-mini) to assess each debtor reply and decide whether to continue or hand off. Escalation triggers:
-- Debtor asks to speak to a person/manager
-- Hostile, abusive, or threatening language
-- Legal threats (solicitors/lawyers/legal action)
-- Requests exceeding AI authority (write-offs, credit notes, unusual terms)
-- 10+ exchanges in 14 days without resolution
-- Significant sentiment deterioration
-- Complex multi-party disputes
-
-### Escalation Flow
-When escalating: creates an action (status: `exception`, workState: `ATTENTION`) with full conversation history, AI summary, and suggested focus for the human agent. Timeline event also recorded. AI stops auto-replying on that thread.
-
-### AI Reply Flow
-When continuing: `generateConversationReplyWithAI()` uses full conversation history + debtor context to draft a contextual reply. Stores in `email_messages` and `timeline_events`.
-
-### Key Files
-- Active conversation logic: `server/services/emailClarificationService.ts` (`isActiveConversation`, `shouldEscalate`, `handleActiveConversationReply`, `createEscalationAction`, `generateConversationReplyWithAI`)
-- Intent analyst wiring: `server/services/intentAnalyst.ts` (`handleActiveConversationAutoReply` — triggered after intent analysis for email channel)
-
-## Full-Conversation-Context Clarification Resolution (Feb 2026)
-
-When a debtor replies to a clarification email, the system now uses the **entire email conversation thread** (not just the latest reply) to extract payment arrangements.
-
-### How It Works
-1. **Thread retrieval**: `buildConversationThread()` pulls all `email_messages` (inbound + outbound) for the contact in chronological order
-2. **Full-context AI analysis**: `analyzeConversationForPaymentArrangement()` sends the complete thread + outstanding invoices to OpenAI (gpt-4o-mini) with a dedicated prompt
-3. **Multi-tranche extraction**: The AI extracts separate installments for each date+amount pair (e.g. "£20k on 13th Feb, balance at end of Feb" → two installments)
-4. **Invoice resolution**: `resolveInvoiceReferences()` matches specific invoice references from the debtor's messages to actual invoices
-5. **Confirmation**: `sendConfirmationEmail()` renders the arrangement as a payment plan table with each instalment on a separate row
-
-### Why This Matters
-Previously, the AI only analysed the latest reply text, losing context from earlier messages. This caused wrong dates and collapsed multi-tranche plans into single entries.
-
-### Key Files
-- Conversation thread builder: `server/services/intentAnalyst.ts` (`buildConversationThread`)
-- Payment arrangement analyser: `server/services/intentAnalyst.ts` (`analyzeConversationForPaymentArrangement`)
-- Clarification response handler: `server/services/intentAnalyst.ts` (`handleClarificationResponse`)
-- Confirmation email builder: `server/services/emailClarificationService.ts` (`buildConfirmationEmail`)
