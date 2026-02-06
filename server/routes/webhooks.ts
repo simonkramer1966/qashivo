@@ -1,8 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { db } from "../db";
-import { inboundMessages, contacts, emailMessages, detectedOutcomes, actions, invoices, timelineEvents, outcomes, conversations } from "@shared/schema";
+import { inboundMessages, contacts, emailMessages, actions, invoices, timelineEvents, outcomes, conversations } from "@shared/schema";
 import { intentAnalyst } from "../services/intentAnalyst";
-import { detectOutcomeFromText } from "../services/outcomeDetection";
 import { eq, or, and, desc, sql } from "drizzle-orm";
 import crypto from "crypto";
 import multer from "multer";
@@ -507,12 +506,7 @@ export function registerWebhookRoutes(app: Express) {
         timestamp: new Date(),
       }).catch(err => console.error('Failed to record email signal:', err));
 
-      // Trigger outcome detection asynchronously
-      processInboundEmailOutcome(emailMessage.id, text || html || '', linkedContact, linkedAction, linkedInvoice).catch(err => 
-        console.error('❌ Outcome detection error:', err)
-      );
-      
-      // Trigger legacy intent analysis asynchronously
+      // Trigger unified intent analysis asynchronously (handles all channels consistently)
       intentAnalyst.processInboundMessage(legacyMessage.id).catch(err => 
         console.error('❌ Intent analysis error:', err)
       );
@@ -1512,10 +1506,11 @@ Return JSON with:
         const confidenceBand = confidenceScore >= 0.85 ? 'HIGH' : confidenceScore >= 0.65 ? 'MEDIUM' : 'LOW';
         const requiresHumanReview = confidenceScore < 0.65 || ['BANK_DETAILS_CHANGE_REQUEST', 'DISPUTE'].includes(outcomeType);
 
-        // Build extracted data
+        // Build extracted data - normalize to promiseToPayDate/promiseToPayAmount
+        // (matching intentAnalyst convention used by email/SMS channels)
         const extracted: Record<string, any> = {};
-        if (analysis.promisedPaymentDate) extracted.promisedPaymentDate = analysis.promisedPaymentDate;
-        if (analysis.promisedPaymentAmount) extracted.promisedPaymentAmount = analysis.promisedPaymentAmount;
+        if (analysis.promisedPaymentDate) extracted.promiseToPayDate = analysis.promisedPaymentDate;
+        if (analysis.promisedPaymentAmount) extracted.promiseToPayAmount = analysis.promisedPaymentAmount;
         if (analysis.disputeCategory) extracted.disputeCategory = analysis.disputeCategory;
         if (analysis.docsRequested) extracted.docsRequested = analysis.docsRequested;
         if (analysis.summary) extracted.freeTextNotes = analysis.summary;
@@ -2085,11 +2080,7 @@ async function processNormalizedInboundEmail(
       timestamp: new Date(),
     }).catch(err => console.error('Failed to record email signal:', err));
     
-    // Trigger outcome detection asynchronously
-    processInboundEmailOutcome(emailMessage.id, text || html || '', linkedContact, linkedAction, linkedInvoice)
-      .catch(err => console.error('❌ Outcome detection error:', err));
-    
-    // Trigger legacy intent analysis asynchronously
+    // Trigger unified intent analysis asynchronously (handles all channels consistently)
     intentAnalyst.processInboundMessage(legacyMessage.id)
       .catch(err => console.error('❌ Intent analysis error:', err));
     
@@ -2167,55 +2158,3 @@ function extractName(emailString: string): string | null {
   return null;
 }
 
-/**
- * Process inbound email to detect outcomes (MVP heuristics)
- */
-async function processInboundEmailOutcome(
-  emailMessageId: string,
-  messageText: string,
-  contact: any,
-  action: any | null,
-  invoice: any | null
-): Promise<void> {
-  try {
-    const detection = detectOutcomeFromText(messageText);
-    
-    if (!detection.outcomeType) {
-      console.log(`📧 No outcome detected for email ${emailMessageId}`);
-      return;
-    }
-    
-    console.log(`📧 Detected outcome: ${detection.outcomeType} (${detection.confidence})`);
-    
-    // Store in detectedOutcomes table
-    await db
-      .insert(detectedOutcomes)
-      .values({
-        tenantId: contact.tenantId,
-        emailMessageId,
-        contactId: contact.id,
-        invoiceId: invoice?.id || null,
-        outcomeType: detection.outcomeType,
-        confidence: detection.confidence.toString(),
-        amount: detection.extractedAmount || null,
-        promiseDate: detection.extractedDate || null,
-        notes: detection.extractedReason || null,
-        needsReview: detection.confidence < 0.65,
-        originalOutcomeType: detection.outcomeType,
-        originalConfidence: detection.confidence.toString(),
-      });
-    
-    // Update email message with outcome
-    await db
-      .update(emailMessages)
-      .set({
-        status: 'PARSED',
-        updatedAt: new Date(),
-      })
-      .where(eq(emailMessages.id, emailMessageId));
-    
-    console.log(`✅ Outcome stored for email ${emailMessageId}`);
-  } catch (error) {
-    console.error('Failed to process email outcome:', error);
-  }
-}

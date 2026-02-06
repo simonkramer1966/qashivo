@@ -5,7 +5,9 @@ import { eq, and, or, inArray, desc, gte, sql } from 'drizzle-orm';
 // Outcome types that affect forecasts
 type OutcomeExtracted = {
   promiseToPayDate?: string;
+  promisedPaymentDate?: string; // legacy voice field name
   promiseToPayAmount?: number;
+  promisedPaymentAmount?: number; // legacy voice field name
   confirmedBy?: string;
   paymentPlanSchedule?: Array<{ date: string; amount: number }>;
   paymentProcessWindow?: { earliest?: string; latest?: string };
@@ -340,8 +342,10 @@ export async function computeCashInflow(
     }
     
     // 1) Unified Outcomes - HIGHEST PRIORITY with structured extracted data
-    if (outcome?.type === 'PROMISE_TO_PAY' && outcome.extracted?.promiseToPayDate) {
-      expectedDate = new Date(outcome.extracted.promiseToPayDate);
+    // Check both field names: promiseToPayDate (email/SMS) and promisedPaymentDate (legacy voice)
+    const ptpDate = outcome?.extracted?.promiseToPayDate || outcome?.extracted?.promisedPaymentDate;
+    if (outcome?.type === 'PROMISE_TO_PAY' && ptpDate) {
+      expectedDate = new Date(ptpDate);
       // Use confidence band from outcome
       baseConfidence = outcome.confidenceBand === 'HIGH' ? 0.90 : 
                        outcome.confidenceBand === 'MEDIUM' ? 0.80 : 0.65;

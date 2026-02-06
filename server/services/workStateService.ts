@@ -434,11 +434,13 @@ export class WorkStateService {
     const extracted = latestOutcome.extracted as any;
 
     // PROMISE_TO_PAY with date = HIGH confidence
-    if (outcomeType === OUTCOME_TYPE.PROMISE_TO_PAY && extracted?.promisedPaymentDate) {
+    // Check both field names: promiseToPayDate (email/SMS) and promisedPaymentDate (legacy voice)
+    const ptpDate = extracted?.promiseToPayDate || extracted?.promisedPaymentDate;
+    if (outcomeType === OUTCOME_TYPE.PROMISE_TO_PAY && ptpDate) {
       return {
-        expectedPaymentDate: new Date(extracted.promisedPaymentDate),
+        expectedPaymentDate: new Date(ptpDate),
         confidenceBand: 'HIGH',
-        paymentAmount: extracted?.promisedAmount || null,
+        paymentAmount: extracted?.promiseToPayAmount || extracted?.promisedAmount || null,
         reason: 'Promise to pay with specific date',
       };
     }
