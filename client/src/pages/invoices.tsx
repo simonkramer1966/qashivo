@@ -152,7 +152,7 @@ export default function Invoices() {
       };
     };
   }>({
-    queryKey: ['/api/invoices', { status: 'open', overdue: 'all', limit: 1 }],
+    queryKey: ['/api/invoices', { status: 'open', limit: 1 }],
     staleTime: 60000,
   });
 
