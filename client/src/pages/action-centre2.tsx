@@ -108,7 +108,7 @@ export default function ActionCentre2() {
     tomorrow.setDate(tomorrow.getDate() + 1);
     return tomorrow.toISOString().split('T')[0];
   });
-  const [scheduledTime, setScheduledTime] = useState(dailyPlan?.tenantPolicies?.executionTime || '09:00');
+  const [scheduledTime, setScheduledTime] = useState('09:00');
 
   useEffect(() => {
     const params = new URLSearchParams(searchString);
@@ -124,6 +124,12 @@ export default function ActionCentre2() {
     queryKey: ['/api/automation/daily-plan'],
     enabled: activeTab === 'planned',
   });
+
+  useEffect(() => {
+    if (dailyPlan?.tenantPolicies?.executionTime) {
+      setScheduledTime(dailyPlan.tenantPolicies.executionTime);
+    }
+  }, [dailyPlan?.tenantPolicies?.executionTime]);
 
   const { data: allActions = [], isLoading: isLoadingActions } = useQuery<any[]>({
     queryKey: ['/api/actions'],
