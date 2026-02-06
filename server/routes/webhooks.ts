@@ -1,6 +1,6 @@
 import type { Express, Request, Response } from "express";
 import { db } from "../db";
-import { inboundMessages, contacts, emailMessages, actions, invoices, timelineEvents, outcomes, conversations } from "@shared/schema";
+import { inboundMessages, contacts, emailMessages, actions, invoices, timelineEvents, outcomes, conversations, tenants } from "@shared/schema";
 import { intentAnalyst } from "../services/intentAnalyst";
 import { eq, or, and, desc, sql } from "drizzle-orm";
 import crypto from "crypto";
@@ -1587,6 +1587,41 @@ Return JSON with:
 
             // Process outcome through Loop routing
             await workStateService.processOutcome(newOutcome);
+            
+            // Send confirmation email for PTP outcomes from voice calls
+            if (outcomeType === 'PROMISE_TO_PAY' && contactId) {
+              try {
+                const { emailClarificationService } = await import("../services/emailClarificationService");
+                const voiceContact = await storage.getContact(contactId, tenantId);
+                const [voiceTenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+                
+                if (voiceContact?.email && voiceTenant) {
+                  const ptpDate = extracted.promiseToPayDate || null;
+                  const ptpAmount = extracted.promiseToPayAmount || null;
+                  
+                  // Only send confirmation if we have a concrete date
+                  if (ptpDate) {
+                    await emailClarificationService.sendConfirmationEmail({
+                      tenantId,
+                      contactId,
+                      contactEmail: voiceContact.email,
+                      contactName: voiceContact.name || voiceContact.companyName || 'Customer',
+                      tenantName: voiceTenant.name || 'Our company',
+                      intentType: 'promise_to_pay',
+                      ptpDate,
+                      ptpAmount: ptpAmount || undefined,
+                      invoiceId: linkedInvoiceIds[0] || undefined,
+                      sourceChannel: 'voice',
+                    });
+                    console.log(`✅ Confirmation email sent for voice PTP: ${ptpAmount ? `£${ptpAmount}` : 'amount pending'} by ${ptpDate}`);
+                  } else {
+                    console.log(`⚠️ Voice PTP captured but no concrete date - skipping confirmation email`);
+                  }
+                }
+              } catch (confirmErr) {
+                console.error('Failed to send voice PTP confirmation email:', confirmErr);
+              }
+            }
           }
 
           // ALWAYS update action with voiceProcessedAt (even for duplicate outcomes)

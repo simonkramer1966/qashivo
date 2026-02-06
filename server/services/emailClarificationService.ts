@@ -7,7 +7,8 @@ import {
   contacts, 
   invoices, 
   tenants,
-  conversations 
+  conversations,
+  timelineEvents
 } from "@shared/schema";
 import { sendEmail } from "./sendgrid";
 import { generateReplyToEmail, findOrCreateConversation, updateConversationStats } from "./emailCommunications";
@@ -52,6 +53,7 @@ interface ConfirmationContext {
   intentType: 'promise_to_pay' | 'payment_plan';
   ptpDate?: string;
   ptpAmount?: number;
+  invoiceId?: string;
   invoices?: Array<{
     invoiceNumber: string;
     amount: number;
@@ -60,6 +62,7 @@ interface ConfirmationContext {
     totalAmount: number;
     installments: Array<{ date: string; amount: number }>;
   };
+  sourceChannel?: string;
 }
 
 class EmailClarificationService {
@@ -194,10 +197,72 @@ class EmailClarificationService {
         return { success: false, error: result.error };
       }
       
+      // Store in email_messages table (appears in Customer Drawer conversation list)
+      await db.insert(emailMessages).values({
+        id: emailId,
+        tenantId: context.tenantId,
+        direction: 'OUTBOUND',
+        channel: 'EMAIL',
+        contactId: context.contactId,
+        invoiceId: context.invoiceId || null,
+        conversationId,
+        toEmail: context.contactEmail,
+        toName: context.contactName,
+        fromEmail: SENDGRID_FROM_EMAIL,
+        fromName: `${context.tenantName} via Qashivo`,
+        subject,
+        textBody: textContent,
+        htmlBody: htmlContent,
+        replyToken: replyTo.split('@')[0],
+        status: 'SENT',
+        sentAt: new Date(),
+      });
+      
+      // Build confirmation summary for timeline
+      const formattedDate = context.ptpDate ? new Date(context.ptpDate).toLocaleDateString('en-GB', { 
+        day: 'numeric', month: 'long', year: 'numeric' 
+      }) : null;
+      const formattedAmount = context.ptpAmount ? `£${context.ptpAmount.toFixed(2)}` : null;
+      
+      let timelineSummary: string;
+      if (context.intentType === 'promise_to_pay') {
+        const parts = ['Payment promise confirmation sent'];
+        if (formattedAmount) parts.push(`for ${formattedAmount}`);
+        if (formattedDate) parts.push(`due ${formattedDate}`);
+        timelineSummary = parts.join(' ');
+      } else {
+        timelineSummary = `Payment plan confirmation sent${formattedAmount ? ` for ${formattedAmount}` : ''}`;
+      }
+      
+      // Create timeline event (appears in Activity tab)
+      await db.insert(timelineEvents).values({
+        tenantId: context.tenantId,
+        customerId: context.contactId,
+        invoiceId: context.invoiceId || null,
+        occurredAt: new Date(),
+        direction: 'outbound',
+        channel: 'email',
+        summary: timelineSummary,
+        preview: textContent.substring(0, 240),
+        subject,
+        body: textContent,
+        status: 'sent',
+        provider: 'sendgrid',
+        providerMessageId: emailId,
+        createdByType: 'system',
+        createdByName: 'Qashivo AI',
+        outcomeType: context.intentType === 'promise_to_pay' ? 'promise_to_pay' : 'payment_plan',
+        outcomeExtracted: {
+          ptpDate: context.ptpDate || null,
+          ptpAmount: context.ptpAmount || null,
+          sourceChannel: context.sourceChannel || 'email',
+        },
+      });
+      
       // Update conversation stats
       await updateConversationStats(conversationId, "outbound");
       
-      console.log(`✅ Confirmation email sent`);
+      console.log(`✅ Confirmation email sent and stored (email_messages + timeline_events)`);
       
       return { success: true };
       

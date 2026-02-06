@@ -920,6 +920,15 @@ IMPORTANT for ambiguity detection:
         return nextWeek;
       }
       
+      // "end of next week" - Friday of next week
+      if (lowerStr.includes('end of next week')) {
+        const friday = new Date(now);
+        const dayOfWeek = friday.getDay();
+        const daysUntilFriday = dayOfWeek <= 5 ? (5 - dayOfWeek) : (7 - dayOfWeek + 5);
+        friday.setDate(friday.getDate() + daysUntilFriday + 7);
+        return friday;
+      }
+
       // "end of week" / "by end of week" / "by friday"
       if (lowerStr.includes('end of week') || lowerStr.includes('end of the week')) {
         const friday = new Date(now);
@@ -927,6 +936,24 @@ IMPORTANT for ambiguity detection:
         const daysUntilFriday = dayOfWeek <= 5 ? (5 - dayOfWeek) : (7 - dayOfWeek + 5);
         friday.setDate(friday.getDate() + daysUntilFriday);
         return friday;
+      }
+
+      // "end of [month name]" - e.g. "end of February", "end of March"
+      const endOfNamedMonthMatch = lowerStr.match(/end\s+of\s+(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i);
+      if (endOfNamedMonthMatch) {
+        const monthNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+        const fullMonthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+        const monthStr = endOfNamedMonthMatch[1].toLowerCase();
+        let monthIdx = fullMonthNames.indexOf(monthStr);
+        if (monthIdx < 0) monthIdx = monthNames.indexOf(monthStr.substring(0, 3));
+        if (monthIdx >= 0) {
+          let year = now.getFullYear();
+          const lastDay = new Date(year, monthIdx + 1, 0);
+          if (lastDay < now) {
+            lastDay.setFullYear(year + 1);
+          }
+          return lastDay;
+        }
       }
       
       // "end of month" / "by month end"
@@ -940,6 +967,15 @@ IMPORTANT for ambiguity detection:
         const nextMonth = new Date(now);
         nextMonth.setMonth(nextMonth.getMonth() + 1);
         return nextMonth;
+      }
+      
+      // "in X weeks" pattern (e.g., "in 2 weeks", "within 3 weeks")
+      const weeksMatch = lowerStr.match(/(?:in|within)\s+(\d+)\s+weeks?/);
+      if (weeksMatch) {
+        const weeks = parseInt(weeksMatch[1], 10);
+        const result = new Date(now);
+        result.setDate(result.getDate() + (weeks * 7));
+        return result;
       }
       
       // "in X days" pattern (e.g., "in 3 days", "within 5 days")
@@ -1635,7 +1671,15 @@ IMPORTANT for ambiguity detection:
       }
       
       const ptpDate = this.extractPtpDate(analysis);
-      const ptpAmount = this.extractPtpAmount(analysis, context.invoiceAmount);
+      const invoiceFallbackAmount = context.invoiceAmount || (linkedInvoices.length > 0 ? linkedInvoices.reduce((sum: number, inv: any) => sum + inv.amount, 0) : undefined);
+      const ptpAmount = this.extractPtpAmount(analysis, invoiceFallbackAmount);
+      
+      // Guard: if we don't have a concrete date, send clarification instead
+      if (!ptpDate && analysis.intentType === 'promise_to_pay') {
+        console.log(`⚠️ Cannot compute concrete date for PTP - sending clarification instead of vague confirmation`);
+        await this.sendClarificationForAmbiguity(message, analysis, context);
+        return;
+      }
       
       // Build payment plan details if applicable
       let paymentPlanDetails: { totalAmount: number; installments: Array<{ date: string; amount: number }> } | undefined;
@@ -1648,7 +1692,7 @@ IMPORTANT for ambiguity detection:
           for (let i = 0; i < dates.length; i++) {
             const parsedDate = this.parsePromisedDate(dates[i]);
             if (parsedDate) {
-              const amount = amounts[i] ? (this.parseAmount(amounts[i]) || 0) : (context.invoiceAmount / dates.length);
+              const amount = amounts[i] ? (this.parseAmount(amounts[i]) || 0) : ((invoiceFallbackAmount || 0) / dates.length);
               installments.push({
                 date: parsedDate.toISOString().split('T')[0],
                 amount
@@ -1656,7 +1700,7 @@ IMPORTANT for ambiguity detection:
             }
           }
           paymentPlanDetails = {
-            totalAmount: ptpAmount || context.invoiceAmount || 0,
+            totalAmount: ptpAmount || invoiceFallbackAmount || 0,
             installments
           };
         }
@@ -1672,8 +1716,10 @@ IMPORTANT for ambiguity detection:
         intentType: analysis.intentType as 'promise_to_pay' | 'payment_plan',
         ptpDate: ptpDate || undefined,
         ptpAmount: ptpAmount || undefined,
+        invoiceId: message.invoiceId || undefined,
         invoices: linkedInvoices.length > 0 ? linkedInvoices : undefined,
-        paymentPlanDetails
+        paymentPlanDetails,
+        sourceChannel: message.channel || 'email',
       });
       
       if (result.success) {
@@ -1754,11 +1800,13 @@ IMPORTANT for ambiguity detection:
         intentType: analysis.intentType as 'promise_to_pay' | 'payment_plan',
         ptpDate: ptpDate || undefined,
         ptpAmount: finalAmount || undefined,
+        invoiceId: message.invoiceId || resolvedInvoices[0]?.id || undefined,
         invoices: resolvedInvoices.map(inv => ({
           invoiceNumber: inv.invoiceNumber,
           amount: inv.amount
         })),
-        paymentPlanDetails
+        paymentPlanDetails,
+        sourceChannel: message.channel || 'email',
       });
       
       if (result.success) {
@@ -1832,24 +1880,28 @@ IMPORTANT for ambiguity detection:
   }
 
   /**
-   * Extract PTP date from analysis
+   * Extract PTP date from analysis - tries all extracted dates until one parses
    */
   private extractPtpDate(analysis: IntentAnalysisResult): string | null {
     const dates = analysis.extractedEntities.dates || [];
-    if (dates.length > 0) {
-      const parsed = this.parsePromisedDate(dates[0]);
-      return parsed ? parsed.toISOString().split('T')[0] : null;
+    for (const dateStr of dates) {
+      const parsed = this.parsePromisedDate(dateStr);
+      if (parsed) {
+        return parsed.toISOString().split('T')[0];
+      }
     }
     return null;
   }
 
   /**
    * Extract PTP amount from analysis
+   * Falls back to invoice amount so confirmation emails always have a value
    */
   private extractPtpAmount(analysis: IntentAnalysisResult, fallbackAmount?: number): number | null {
     const amounts = analysis.extractedEntities.amounts || [];
     if (amounts.length > 0) {
-      return this.parseAmount(amounts[0]) || null;
+      const parsed = this.parseAmount(amounts[0]);
+      if (parsed) return parsed;
     }
     return fallbackAmount || null;
   }
