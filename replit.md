@@ -165,3 +165,31 @@ Every voice call — regardless of outcome — triggers an AI-generated personal
 ### Key Files
 - Follow-up logic: `server/services/emailClarificationService.ts` (`sendVoiceFollowUpEmail`, `checkEmailCadence`, `gatherDebtorContext`, `generateFollowUpWithAI`)
 - Webhook wiring: `server/routes/webhooks.ts` (three exit points in call-ended handler: non-connected, failed, completed)
+
+## Active Conversation Auto-Reply & Escalation (Feb 2026)
+
+When a debtor replies to an email (active conversation), the AI responds immediately without cadence restrictions. It continues the dialogue until escalation is appropriate.
+
+### Two Cadence Modes
+- **Cold outreach**: Standard tenant cooldown (channelCooldowns.email days) and max touches per window apply
+- **Active conversation**: Debtor replied within 48h → cadence bypassed entirely, AI responds immediately
+
+### Escalation Detection
+`shouldEscalate()` uses OpenAI (gpt-4o-mini) to assess each debtor reply and decide whether to continue or hand off. Escalation triggers:
+- Debtor asks to speak to a person/manager
+- Hostile, abusive, or threatening language
+- Legal threats (solicitors/lawyers/legal action)
+- Requests exceeding AI authority (write-offs, credit notes, unusual terms)
+- 10+ exchanges in 14 days without resolution
+- Significant sentiment deterioration
+- Complex multi-party disputes
+
+### Escalation Flow
+When escalating: creates an action (status: `exception`, workState: `ATTENTION`) with full conversation history, AI summary, and suggested focus for the human agent. Timeline event also recorded. AI stops auto-replying on that thread.
+
+### AI Reply Flow
+When continuing: `generateConversationReplyWithAI()` uses full conversation history + debtor context to draft a contextual reply. Stores in `email_messages` and `timeline_events`.
+
+### Key Files
+- Active conversation logic: `server/services/emailClarificationService.ts` (`isActiveConversation`, `shouldEscalate`, `handleActiveConversationReply`, `createEscalationAction`, `generateConversationReplyWithAI`)
+- Intent analyst wiring: `server/services/intentAnalyst.ts` (`handleActiveConversationAutoReply` — triggered after intent analysis for email channel)

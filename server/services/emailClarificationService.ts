@@ -70,6 +70,25 @@ interface ConfirmationContext {
 
 type VoiceCallDisposition = 'completed' | 'no_answer' | 'busy' | 'voicemail' | 'failed';
 
+interface ConversationReplyContext {
+  tenantId: string;
+  contactId: string;
+  contactEmail: string;
+  contactName: string;
+  tenantName: string;
+  inboundMessageText: string;
+  inboundSubject?: string;
+  linkedInvoiceIds?: string[];
+  conversationId?: string;
+}
+
+interface EscalationResult {
+  shouldEscalate: boolean;
+  reason: string;
+  category?: 'human_request' | 'hostility' | 'legal_threat' | 'authority_exceeded' | 'unresolved_loop' | 'sentiment_drop' | 'complex_dispute';
+  suggestedHandoff?: string;
+}
+
 interface VoiceFollowUpContext {
   tenantId: string;
   contactId: string;
@@ -576,11 +595,50 @@ This email was sent on behalf of ${tenantName} via Qashivo credit control.`;
   }
   
   /**
-   * Check if email cadence rules allow sending an email to this contact.
-   * Returns true if we can send, false if within cooldown period.
+   * Check if this contact has recently replied (within 48h), indicating an active conversation
+   * where the AI should respond immediately without cooldown restrictions.
    */
-  async checkEmailCadence(tenantId: string, contactId: string): Promise<{ canSend: boolean; reason?: string; lastEmailAt?: Date }> {
+  async isActiveConversation(tenantId: string, contactId: string): Promise<{ active: boolean; lastInboundAt?: Date }> {
     try {
+      const activeWindow = new Date();
+      activeWindow.setHours(activeWindow.getHours() - 48);
+
+      const [recentInbound] = await db.select({ receivedAt: emailMessages.receivedAt, createdAt: emailMessages.createdAt })
+        .from(emailMessages)
+        .where(and(
+          eq(emailMessages.tenantId, tenantId),
+          eq(emailMessages.contactId, contactId),
+          eq(emailMessages.direction, 'INBOUND'),
+          sql`COALESCE(${emailMessages.receivedAt}, ${emailMessages.createdAt}) >= ${activeWindow}`
+        ))
+        .orderBy(desc(sql`COALESCE(${emailMessages.receivedAt}, ${emailMessages.createdAt})`))
+        .limit(1);
+
+      if (recentInbound) {
+        const lastInboundAt = recentInbound.receivedAt || recentInbound.createdAt;
+        return { active: true, lastInboundAt: lastInboundAt ? new Date(lastInboundAt) : undefined };
+      }
+
+      return { active: false };
+    } catch (error: any) {
+      console.error('Error checking active conversation:', error);
+      return { active: false };
+    }
+  }
+
+  /**
+   * Check if email cadence rules allow sending an email to this contact.
+   * For active conversations (debtor has replied within 48h), cadence is bypassed entirely.
+   * For cold outreach, standard tenant cooldown and max-touches rules apply.
+   */
+  async checkEmailCadence(tenantId: string, contactId: string): Promise<{ canSend: boolean; reason?: string; lastEmailAt?: Date; isActiveConversation?: boolean }> {
+    try {
+      const activeConvo = await this.isActiveConversation(tenantId, contactId);
+      if (activeConvo.active) {
+        console.log(`💬 Active conversation detected for contact ${contactId} — cadence bypassed (last inbound: ${activeConvo.lastInboundAt?.toISOString()})`);
+        return { canSend: true, isActiveConversation: true };
+      }
+
       const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
       const cooldowns = (tenant?.channelCooldowns as { email?: number; sms?: number; voice?: number }) || { email: 3, sms: 5, voice: 7 };
       const emailCooldownDays = cooldowns.email || 3;
@@ -634,6 +692,448 @@ This email was sent on behalf of ${tenantName} via Qashivo credit control.`;
     } catch (error: any) {
       console.error('Error checking email cadence:', error);
       return { canSend: true };
+    }
+  }
+
+  /**
+   * Assess whether the AI should continue the conversation or escalate to a human.
+   * Uses OpenAI to analyse the debtor's latest message in context of the conversation history.
+   */
+  async shouldEscalate(tenantId: string, contactId: string, latestMessage: string, conversationHistory: string): Promise<EscalationResult> {
+    try {
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+      const exchangeCountResult = await db.select({ count: sql<number>`count(*)::int` })
+        .from(emailMessages)
+        .where(and(
+          eq(emailMessages.tenantId, tenantId),
+          eq(emailMessages.contactId, contactId),
+          sql`COALESCE(${emailMessages.sentAt}, ${emailMessages.receivedAt}, ${emailMessages.createdAt}) >= NOW() - INTERVAL '14 days'`
+        ));
+      const recentExchangeCount = exchangeCountResult[0]?.count || 0;
+
+      const prompt = `You are an AI credit control assistant deciding whether to continue handling a debtor conversation autonomously or escalate to a human agent.
+
+CONVERSATION HISTORY:
+${conversationHistory}
+
+LATEST DEBTOR MESSAGE:
+"${latestMessage}"
+
+TOTAL RECENT EXCHANGES (last 14 days): ${recentExchangeCount}
+
+Analyse the latest message and decide: should the AI continue this conversation, or should it be escalated to a human?
+
+ESCALATION TRIGGERS (escalate if ANY of these are true):
+1. Debtor explicitly asks to speak to a person, manager, or someone senior
+2. Hostile, abusive, or threatening language
+3. Legal threats or mention of solicitors/lawyers/legal action
+4. Requests that exceed AI authority: write-offs, credit notes, payment term changes, unusual arrangements
+5. More than 10 exchanges in the last 14 days without reaching a clear resolution (payment plan, PTP, or dispute filed)
+6. Significant sentiment deterioration — debtor becoming increasingly frustrated or aggressive
+7. Complex multi-party disputes or situations needing judgement calls
+
+CONTINUE if the debtor is:
+- Asking straightforward questions about invoices, amounts, or due dates
+- Negotiating payment timing or amounts within normal parameters
+- Providing information or documents
+- Agreeing to arrangements
+- Making a promise to pay
+- Requesting a payment plan
+- Being generally cooperative even if unhappy
+
+Return a JSON object:
+{
+  "shouldEscalate": boolean,
+  "reason": "Brief explanation of the decision",
+  "category": "human_request" | "hostility" | "legal_threat" | "authority_exceeded" | "unresolved_loop" | "sentiment_drop" | "complex_dispute" | null,
+  "suggestedHandoff": "A brief note for the human agent on what to focus on (only if escalating)"
+}`;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: prompt },
+          { role: "user", content: "Analyse and decide." }
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.2,
+      });
+
+      const result = JSON.parse(completion.choices[0].message.content || '{}');
+      return {
+        shouldEscalate: result.shouldEscalate === true,
+        reason: result.reason || 'No reason provided',
+        category: result.category || undefined,
+        suggestedHandoff: result.suggestedHandoff || undefined,
+      };
+    } catch (error: any) {
+      console.error('Error in escalation check:', error);
+      return { shouldEscalate: false, reason: 'Escalation check failed — defaulting to continue' };
+    }
+  }
+
+  /**
+   * Create an escalation action for human review when AI determines it can no longer
+   * handle the conversation autonomously.
+   */
+  async createEscalationAction(
+    tenantId: string,
+    contactId: string,
+    escalation: EscalationResult,
+    conversationSummary: string,
+    latestMessage: string,
+    conversationId?: string,
+  ): Promise<string | null> {
+    try {
+      const [contact] = await db.select().from(contacts).where(eq(contacts.id, contactId)).limit(1);
+      const contactName = contact?.companyName || contact?.name || 'Unknown';
+
+      const [action] = await db.insert(actions).values({
+        tenantId,
+        contactId,
+        type: 'email',
+        status: 'exception',
+        exceptionReason: `ai_escalation_${escalation.category || 'general'}`,
+        subject: `AI Escalation: ${contactName} — ${escalation.category?.replace(/_/g, ' ') || 'requires human attention'}`,
+        content: `The AI has been managing an email conversation with ${contactName} and has determined that human intervention is now needed.
+
+ESCALATION REASON: ${escalation.reason}
+CATEGORY: ${escalation.category || 'general'}
+
+LATEST DEBTOR MESSAGE:
+"${latestMessage}"
+
+CONVERSATION SUMMARY:
+${conversationSummary}
+
+${escalation.suggestedHandoff ? `SUGGESTED FOCUS:\n${escalation.suggestedHandoff}` : ''}`,
+        source: 'charlie_inbound',
+        aiGenerated: true,
+        workState: 'ATTENTION',
+        confidenceScore: '0.95',
+        recommended: {
+          priority: 'high',
+          suggestedNextAction: escalation.suggestedHandoff || 'Review conversation and respond manually',
+          requiresHumanReview: true,
+          escalationCategory: escalation.category,
+        },
+        metadata: {
+          escalation: true,
+          escalationCategory: escalation.category,
+          escalationReason: escalation.reason,
+          conversationId: conversationId || null,
+          suggestedHandoff: escalation.suggestedHandoff,
+        },
+      }).returning();
+
+      await db.insert(timelineEvents).values({
+        tenantId,
+        customerId: contactId,
+        occurredAt: new Date(),
+        direction: 'system',
+        channel: 'email',
+        summary: `AI escalated conversation to human — ${escalation.category?.replace(/_/g, ' ') || 'requires attention'}`,
+        preview: escalation.reason.substring(0, 240),
+        status: 'escalated',
+        createdByType: 'system',
+        createdByName: 'Qashivo AI',
+        actionId: action.id,
+      });
+
+      await db.update(conversations)
+        .set({ status: 'escalated', updatedAt: new Date() })
+        .where(and(
+          eq(conversations.tenantId, tenantId),
+          eq(conversations.contactId, contactId),
+          eq(conversations.status, 'open')
+        ));
+
+      console.log(`🚨 Escalation action created: ${action.id} — ${escalation.category} — ${escalation.reason}`);
+      return action.id;
+    } catch (error: any) {
+      console.error('Error creating escalation action:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Generate an AI reply to a debtor's email in an active conversation.
+   * Uses the full conversation history and debtor context.
+   */
+  private async generateConversationReplyWithAI(
+    context: ConversationReplyContext,
+    debtorContext: string,
+    conversationHistory: string,
+  ): Promise<{ subject: string; htmlContent: string; textContent: string; timelineSummary: string }> {
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const currentDate = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+    const prompt = `You are a professional credit control assistant replying to a debtor's email. You are continuing an active conversation — respond naturally as if you are a human accounts team member.
+
+TODAY'S DATE: ${currentDate}
+TENANT (creditor) NAME: ${context.tenantName}
+DEBTOR NAME: ${context.contactName}
+
+CONVERSATION HISTORY (most recent first):
+${conversationHistory}
+
+LATEST DEBTOR MESSAGE:
+"${context.inboundMessageText}"
+
+${debtorContext}
+
+RULES — YOU MUST FOLLOW THESE:
+1. NEVER use placeholder text like "the agreed date", "the agreed amount", "your outstanding balance", or "[amount]". Use concrete figures from the debtor context or conversation history. If you don't have a specific figure, don't reference it.
+2. Respond directly to what the debtor said. This is a conversation — don't repeat introductions or context they already know.
+3. Keep responses concise — no more than 120 words in the body.
+4. If the debtor is asking a question, answer it clearly using the invoice/account data available.
+5. If the debtor is negotiating payment terms, engage constructively. You can accept reasonable payment dates and amounts. Suggest payment plans if the total is large and the debtor seems willing.
+6. If the debtor is providing information (e.g. remittance details, PO numbers), acknowledge receipt and confirm next steps.
+7. If the debtor confirms a payment promise, confirm the exact date and amount back to them.
+8. Be warm but professional. No overly formal language. No grovelling. Treat them as a business partner.
+9. Reference specific invoice numbers and amounts when relevant.
+10. Sign off as "${context.tenantName} Accounts Team".
+11. Do NOT include any Qashivo branding in the body — only in the footer.
+12. The subject line should be a reply (Re: ...) to maintain the thread.
+
+Return a JSON object with exactly these fields:
+- "subject": Email subject line (typically "Re: [original subject]")
+- "body_text": The plain text email body (include greeting and sign-off)
+- "body_html": The same email wrapped in clean, minimal HTML (use inline styles, no external CSS)
+- "timeline_summary": A one-line summary for the activity timeline (e.g. "AI replied to debtor query about INV-1234")`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: prompt },
+        { role: "user", content: "Generate the reply email." }
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.4,
+    });
+
+    const result = JSON.parse(completion.choices[0].message.content || '{}');
+
+    const subject = result.subject || `Re: ${context.inboundSubject || 'Your account'}`;
+    const textContent = result.body_text || '';
+    const htmlBody = result.body_html || `<p>${textContent.replace(/\n/g, '<br>')}</p>`;
+    const timelineSummary = result.timeline_summary || 'AI replied to debtor email';
+
+    const htmlContent = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+${htmlBody}
+<div style="margin-top: 30px; font-size: 12px; color: #666; border-top: 1px solid #eee; padding-top: 10px;">
+  <p>This email was sent on behalf of ${context.tenantName} via Qashivo credit control.</p>
+</div>
+</body>
+</html>`;
+
+    return {
+      subject,
+      htmlContent,
+      textContent: textContent + `\n\n---\nThis email was sent on behalf of ${context.tenantName} via Qashivo credit control.`,
+      timelineSummary,
+    };
+  }
+
+  /**
+   * Detect auto-reply / out-of-office / bounce messages that should NOT trigger AI responses.
+   * Prevents infinite reply loops between AI and auto-responders.
+   */
+  isAutoReply(subject?: string, messageText?: string, headers?: Record<string, any>): boolean {
+    if (headers) {
+      if (headers['auto-submitted'] || headers['Auto-Submitted']) {
+        const val = (headers['auto-submitted'] || headers['Auto-Submitted']).toLowerCase();
+        if (val !== 'no') return true;
+      }
+      if (headers['x-auto-response-suppress'] || headers['X-Auto-Response-Suppress']) return true;
+      if (headers['x-autoreply'] || headers['X-Autoreply'] || headers['X-AutoReply']) return true;
+      if (headers['precedence'] || headers['Precedence']) {
+        const val = (headers['precedence'] || headers['Precedence']).toLowerCase();
+        if (['bulk', 'junk', 'auto_reply', 'list'].includes(val)) return true;
+      }
+      const returnPath = headers['return-path'] || headers['Return-Path'] || '';
+      if (returnPath === '<>' || returnPath === '') return true;
+    }
+
+    if (subject) {
+      const subjectLower = subject.toLowerCase();
+      const autoReplyPatterns = [
+        'out of office', 'out of the office', 'automatic reply', 'auto-reply', 'autoreply',
+        'on vacation', 'on holiday', 'away from', 'delivery status', 'undeliverable',
+        'mail delivery failed', 'returned mail', 'delivery failure',
+        'do not reply', 'noreply', 'no-reply', 'mailer-daemon',
+      ];
+      if (autoReplyPatterns.some(p => subjectLower.includes(p))) return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Check if this conversation has been escalated to a human and should not receive AI auto-replies.
+   */
+  private async isConversationEscalated(tenantId: string, contactId: string): Promise<boolean> {
+    try {
+      const [escalatedConv] = await db.select({ id: conversations.id })
+        .from(conversations)
+        .where(and(
+          eq(conversations.tenantId, tenantId),
+          eq(conversations.contactId, contactId),
+          eq(conversations.status, 'escalated')
+        ))
+        .limit(1);
+      return !!escalatedConv;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /**
+   * Handle an inbound debtor email in an active conversation.
+   * Checks escalation first, then generates and sends an immediate AI reply.
+   * Returns the result including whether it was escalated or replied to.
+   */
+  async handleActiveConversationReply(context: ConversationReplyContext): Promise<{
+    success: boolean;
+    action: 'replied' | 'escalated' | 'skipped';
+    reason?: string;
+    error?: string;
+  }> {
+    try {
+      console.log(`💬 Active conversation reply: ${context.contactName} (${context.contactEmail})`);
+
+      const alreadyEscalated = await this.isConversationEscalated(context.tenantId, context.contactId);
+      if (alreadyEscalated) {
+        console.log(`⏸️ Conversation already escalated to human — skipping AI auto-reply for ${context.contactId}`);
+        return { success: true, action: 'skipped', reason: 'Conversation previously escalated to human agent' };
+      }
+
+      const debtorContext = await this.gatherDebtorContext(context.tenantId, context.contactId, context.linkedInvoiceIds);
+
+      const recentEmails = await db.select({
+        direction: emailMessages.direction,
+        subject: emailMessages.subject,
+        textBody: emailMessages.textBody,
+        inboundText: emailMessages.inboundText,
+        sentAt: emailMessages.sentAt,
+        receivedAt: emailMessages.receivedAt,
+        createdAt: emailMessages.createdAt,
+      })
+        .from(emailMessages)
+        .where(and(
+          eq(emailMessages.tenantId, context.tenantId),
+          eq(emailMessages.contactId, context.contactId),
+        ))
+        .orderBy(desc(sql`COALESCE(${emailMessages.sentAt}, ${emailMessages.receivedAt}, ${emailMessages.createdAt})`))
+        .limit(10);
+
+      const conversationHistory = recentEmails.map(e => {
+        const date = (e.sentAt || e.receivedAt || e.createdAt);
+        const dateStr = date ? new Date(date).toLocaleString('en-GB') : 'unknown';
+        const body = e.direction === 'OUTBOUND' ? (e.textBody || '').substring(0, 300) : (e.inboundText || '').substring(0, 300);
+        return `[${e.direction} — ${dateStr}] Subject: ${e.subject || '(no subject)'}\n${body}`;
+      }).join('\n---\n');
+
+      const escalation = await this.shouldEscalate(context.tenantId, context.contactId, context.inboundMessageText, conversationHistory);
+
+      if (escalation.shouldEscalate) {
+        console.log(`🚨 Escalating conversation: ${escalation.reason} (${escalation.category})`);
+
+        const conversationSummary = recentEmails.slice(0, 5).map(e => {
+          const dir = e.direction === 'OUTBOUND' ? 'Us' : 'Debtor';
+          const body = e.direction === 'OUTBOUND' ? (e.textBody || '').substring(0, 150) : (e.inboundText || '').substring(0, 150);
+          return `${dir}: ${body}`;
+        }).join('\n');
+
+        await this.createEscalationAction(
+          context.tenantId,
+          context.contactId,
+          escalation,
+          conversationSummary,
+          context.inboundMessageText,
+          context.conversationId,
+        );
+
+        return { success: true, action: 'escalated', reason: escalation.reason };
+      }
+
+      const { subject, htmlContent, textContent, timelineSummary } = await this.generateConversationReplyWithAI(
+        context, debtorContext, conversationHistory
+      );
+
+      const conversationId = context.conversationId || await findOrCreateConversation(
+        context.tenantId,
+        context.contactId,
+        subject
+      );
+
+      const emailId = uuidv4();
+      const replyTo = generateReplyToEmail(context.tenantId, conversationId, emailId);
+
+      const result = await sendEmail({
+        to: context.contactEmail,
+        from: `${context.tenantName} via Qashivo <${SENDGRID_FROM_EMAIL}>`,
+        replyTo,
+        subject,
+        html: htmlContent,
+        text: textContent,
+      });
+
+      if (!result.success) {
+        console.error(`❌ Failed to send conversation reply: ${result.error}`);
+        return { success: false, action: 'replied', error: result.error };
+      }
+
+      await db.insert(emailMessages).values({
+        id: emailId,
+        tenantId: context.tenantId,
+        direction: 'OUTBOUND',
+        channel: 'EMAIL',
+        contactId: context.contactId,
+        invoiceId: context.linkedInvoiceIds?.[0] || null,
+        conversationId,
+        toEmail: context.contactEmail,
+        toName: context.contactName,
+        fromEmail: SENDGRID_FROM_EMAIL,
+        fromName: `${context.tenantName} via Qashivo`,
+        subject,
+        textBody: textContent,
+        htmlBody: htmlContent,
+        replyToken: replyTo.split('@')[0],
+        status: 'SENT',
+        sentAt: new Date(),
+      });
+
+      await db.insert(timelineEvents).values({
+        tenantId: context.tenantId,
+        customerId: context.contactId,
+        invoiceId: context.linkedInvoiceIds?.[0] || null,
+        occurredAt: new Date(),
+        direction: 'outbound',
+        channel: 'email',
+        summary: timelineSummary,
+        preview: textContent.substring(0, 240),
+        subject,
+        body: textContent,
+        status: 'sent',
+        provider: 'sendgrid',
+        providerMessageId: emailId,
+        createdByType: 'system',
+        createdByName: 'Qashivo AI',
+      });
+
+      await updateConversationStats(conversationId, "outbound");
+
+      console.log(`✅ AI conversation reply sent: ${timelineSummary}`);
+      return { success: true, action: 'replied' };
+
+    } catch (error: any) {
+      console.error(`❌ Error in active conversation reply:`, error);
+      return { success: false, action: 'skipped', error: error.message };
     }
   }
 

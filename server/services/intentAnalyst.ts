@@ -383,9 +383,20 @@ IMPORTANT for ambiguity detection:
           message.contactId &&
           message.from;
         
+        let confirmationSent = false;
         if (shouldConfirm) {
           console.log(`✅ Clear ${analysis.intentType} detected - sending confirmation email`);
           await this.sendConfirmationEmail(message, analysis, context);
+          confirmationSent = true;
+        }
+
+        // Active conversation auto-reply: if the debtor is in an active conversation
+        // (replied within 48h) and we haven't already sent a confirmation/clarification,
+        // check escalation and send an immediate AI reply.
+        if (!confirmationSent && message.contactId && message.from) {
+          this.handleActiveConversationAutoReply(message).catch(err => 
+            console.error('❌ Active conversation auto-reply error:', err)
+          );
         }
       }
 
@@ -443,6 +454,69 @@ IMPORTANT for ambiguity detection:
 
     } catch (error) {
       console.error(`❌ Error processing message ${messageId}:`, error);
+    }
+  }
+
+  /**
+   * Handle active conversation auto-reply asynchronously.
+   * Checks if the contact is in an active conversation (replied within 48h),
+   * then either sends an AI reply or escalates to a human.
+   */
+  private async handleActiveConversationAutoReply(
+    message: typeof inboundMessages.$inferSelect
+  ): Promise<void> {
+    if (!message.contactId || !message.from) return;
+
+    const rawPayload = message.rawPayload as any;
+    const headers = rawPayload?.normalized?.email?.headers || rawPayload?.headers || {};
+    if (emailClarificationService.isAutoReply(message.subject || undefined, message.content || undefined, headers)) {
+      console.log(`🤖 Auto-reply/bounce detected — skipping AI response to prevent loop (${message.subject})`);
+      return;
+    }
+
+    const activeConvo = await emailClarificationService.isActiveConversation(message.tenantId, message.contactId);
+    if (!activeConvo.active) {
+      return;
+    }
+
+    console.log(`💬 Active conversation detected for ${message.contactId} — triggering AI auto-reply`);
+
+    const [contact] = await db
+      .select()
+      .from(contacts)
+      .where(eq(contacts.id, message.contactId))
+      .limit(1);
+
+    if (!contact) return;
+
+    const [tenant] = await db
+      .select()
+      .from(tenants)
+      .where(eq(tenants.id, message.tenantId))
+      .limit(1);
+
+    if (!tenant) return;
+
+    const contactEmail = (contact as any).primaryCreditContact?.email || contact.email || message.from;
+    if (!contactEmail) return;
+
+    const result = await emailClarificationService.handleActiveConversationReply({
+      tenantId: message.tenantId,
+      contactId: message.contactId,
+      contactEmail,
+      contactName: contact.companyName || contact.name || 'Customer',
+      tenantName: tenant.name || 'Accounts Team',
+      inboundMessageText: message.content || '',
+      inboundSubject: message.subject || undefined,
+      linkedInvoiceIds: message.invoiceId ? [message.invoiceId] : undefined,
+    });
+
+    if (result.action === 'escalated') {
+      console.log(`🚨 Active conversation escalated: ${result.reason}`);
+    } else if (result.action === 'replied') {
+      console.log(`✅ Active conversation AI reply sent`);
+    } else {
+      console.log(`⏸️ Active conversation reply skipped: ${result.reason || result.error}`);
     }
   }
 
