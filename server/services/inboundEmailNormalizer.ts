@@ -267,27 +267,42 @@ function extractSendGridAttachments(body: any): InboundEmailAttachment[] {
  * Uses stable fields only - no timestamps to ensure duplicates are detected
  */
 function generateIdempotencyKey(body: any): string {
-  // Prefer Message-ID header if available (most reliable)
+  // 1. Try Message-ID from parsed headers field (if SendGrid provides it)
   const headers = body.headers;
   if (headers) {
     try {
       const parsedHeaders = typeof headers === 'string' ? JSON.parse(headers) : headers;
       const messageId = parsedHeaders['Message-ID'] || parsedHeaders['message-id'];
       if (messageId) {
+        console.log(`📧 Idempotency: Using Message-ID from headers: ${messageId}`);
         return `sendgrid:${messageId.replace(/<|>/g, '')}`;
       }
     } catch {}
   }
+
+  // 2. Extract Message-ID from raw MIME content (body.email)
+  //    SendGrid inbound parse often doesn't provide a separate headers field,
+  //    but the raw MIME always contains a Message-ID header
+  if (body.email && typeof body.email === 'string') {
+    const messageIdMatch = body.email.match(/^Message-I[Dd]:\s*<([^>]+)>/m)
+      || body.email.match(/^Message-I[Dd]:\s*(\S+)\s*$/m);
+    if (messageIdMatch) {
+      const messageId = messageIdMatch[1].replace(/<|>/g, '');
+      console.log(`📧 Idempotency: Using Message-ID from raw MIME: ${messageId}`);
+      return `sendgrid:${messageId}`;
+    }
+  }
   
-  // Fall back to hash of stable fields only (no timestamp!)
-  // These fields uniquely identify an email without timestamp
+  // 3. Fall back to hash of stable fields — use FULL text body to differentiate
+  //    replies in the same thread (same subject/from/to but different content)
   const envelope = typeof body.envelope === 'string' ? body.envelope : JSON.stringify(body.envelope || {});
   const from = body.from || '';
   const to = body.to || '';
   const subject = body.subject || '';
-  const textPreview = (body.text || body.html || '').substring(0, 200);
+  const textContent = body.text || body.html || '';
   
-  const hash = sha256(`${envelope}${from}${to}${subject}${textPreview}`).substring(0, 32);
+  const hash = sha256(`${envelope}${from}${to}${subject}${textContent}`).substring(0, 32);
+  console.log(`📧 Idempotency: Using content hash (no Message-ID found): ${hash}`);
   return `sendgrid:hash:${hash}`;
 }
 
