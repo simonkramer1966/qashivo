@@ -48,6 +48,11 @@ export function useDashboardWebSocket({
   const mountedRef = useRef(true);
   const messageHandlerRef = useRef<((event: MessageEvent) => void) | null>(null);
 
+  const WEBSOCKET_DISABLED = true;
+  if (WEBSOCKET_DISABLED) {
+    return { isConnected: false, lastEvent: null };
+  }
+
   const handleMessage = useCallback((event: MessageEvent) => {
     try {
       const data: DashboardEvent = JSON.parse(event.data);
