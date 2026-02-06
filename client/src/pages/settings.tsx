@@ -878,6 +878,7 @@ function TestTabContent() {
 function DemoDataTabContent() {
   const { toast } = useToast();
   const [isResetting, setIsResetting] = useState(false);
+  const [isResettingComms, setIsResettingComms] = useState(false);
   const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
   const [isGeneratingInvoice, setIsGeneratingInvoice] = useState(false);
   const [isSimulatingPayment, setIsSimulatingPayment] = useState(false);
@@ -918,6 +919,36 @@ function DemoDataTabContent() {
       });
     } finally {
       setIsResetting(false);
+    }
+  };
+
+  const handleResetComms = async () => {
+    if (!confirm('Reset all communications data? This clears emails, outcomes, timeline, actions, and promises but keeps customers and invoices.')) {
+      return;
+    }
+
+    setIsResettingComms(true);
+    try {
+      const response = await apiRequest("POST", "/api/demo-data/reset-comms");
+      if (response.ok) {
+        const data = await response.json();
+        queryClient.invalidateQueries();
+        refetchStats();
+        toast({
+          title: "Communications Reset",
+          description: data.message || "All communications data has been cleared.",
+        });
+      } else {
+        throw new Error("Failed to reset communications");
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to reset communications data. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsResettingComms(false);
     }
   };
 
@@ -1150,16 +1181,28 @@ function DemoDataTabContent() {
           Completely reset all demo data. This action cannot be undone.
         </p>
         
-        <Button 
-          onClick={handleResetAll}
-          disabled={isResetting}
-          variant="destructive"
-          className="h-9 rounded-lg bg-red-600 hover:bg-red-700 text-white"
-          data-testid="button-reset-all"
-        >
-          <Trash2 className="h-4 w-4 mr-2" />
-          {isResetting ? 'Resetting...' : 'Reset All Data'}
-        </Button>
+        <div className="flex gap-3">
+          <Button 
+            onClick={handleResetAll}
+            disabled={isResetting}
+            variant="destructive"
+            className="h-9 rounded-lg bg-red-600 hover:bg-red-700 text-white"
+            data-testid="button-reset-all"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            {isResetting ? 'Resetting...' : 'Reset All Data'}
+          </Button>
+          <Button 
+            onClick={handleResetComms}
+            disabled={isResettingComms}
+            variant="outline"
+            className="h-9 rounded-lg border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700"
+            data-testid="button-reset-comms"
+          >
+            <RotateCcw className="h-4 w-4 mr-2" />
+            {isResettingComms ? 'Resetting...' : 'Reset Comms'}
+          </Button>
+        </div>
       </div>
     </div>
   );

@@ -24731,6 +24731,88 @@ ${tenant.name}
     }
   });
 
+  app.post("/api/demo-data/reset-comms", isAuthenticated, async (req: any, res) => {
+    try {
+      const tenantId = req.user?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "No tenant associated with user" });
+      }
+
+      const {
+        timelineEvents, emailMessages, inboundMessages, detectedOutcomes, contactOutcomes,
+        emailClarifications, conversations, promisesToPay, paymentPlans, paymentPlanInvoices,
+        outcomes, attentionItems, voiceCalls, smsMessages, messageDrafts,
+        paymentPromises, disputes, workflowTimers, policyDecisions
+      } = await import('@shared/schema.js');
+
+      const result = await db.transaction(async (tx) => {
+        const deletedTimeline = await tx.delete(timelineEvents).where(eq(timelineEvents.tenantId, tenantId)).returning();
+        const deletedDetectedOutcomes = await tx.delete(detectedOutcomes).where(eq(detectedOutcomes.tenantId, tenantId)).returning();
+        const deletedContactOutcomes = await tx.delete(contactOutcomes).where(eq(contactOutcomes.tenantId, tenantId)).returning();
+        const deletedOutcomes = await tx.delete(outcomes).where(eq(outcomes.tenantId, tenantId)).returning();
+        const deletedAttention = await tx.delete(attentionItems).where(eq(attentionItems.tenantId, tenantId)).returning();
+        const deletedClarifications = await tx.delete(emailClarifications).where(eq(emailClarifications.tenantId, tenantId)).returning();
+        const deletedEmails = await tx.delete(emailMessages).where(eq(emailMessages.tenantId, tenantId)).returning();
+        const deletedSms = await tx.delete(smsMessages).where(eq(smsMessages.tenantId, tenantId)).returning();
+        const deletedVoice = await tx.delete(voiceCalls).where(eq(voiceCalls.tenantId, tenantId)).returning();
+        const deletedInbound = await tx.delete(inboundMessages).where(eq(inboundMessages.tenantId, tenantId)).returning();
+        const deletedDrafts = await tx.delete(messageDrafts).where(eq(messageDrafts.tenantId, tenantId)).returning();
+        const deletedConversations = await tx.delete(conversations).where(eq(conversations.tenantId, tenantId)).returning();
+        const deletedPromises = await tx.delete(promisesToPay).where(eq(promisesToPay.tenantId, tenantId)).returning();
+        const deletedPaymentPromises = await tx.delete(paymentPromises).where(eq(paymentPromises.tenantId, tenantId)).returning();
+        const deletedDisputes = await tx.delete(disputes).where(eq(disputes.tenantId, tenantId)).returning();
+        const deletedTimers = await tx.delete(workflowTimers).where(eq(workflowTimers.tenantId, tenantId)).returning();
+        const deletedPolicyDecisions = await tx.delete(policyDecisions).where(eq(policyDecisions.tenantId, tenantId)).returning();
+
+        const tenantPlans = await tx.select({ id: paymentPlans.id }).from(paymentPlans).where(eq(paymentPlans.tenantId, tenantId));
+        const planIds = tenantPlans.map(p => p.id);
+        let deletedPlanInvoices: any[] = [];
+        if (planIds.length > 0) {
+          deletedPlanInvoices = await tx.delete(paymentPlanInvoices).where(inArray(paymentPlanInvoices.paymentPlanId, planIds)).returning();
+        }
+        const deletedPlans = await tx.delete(paymentPlans).where(eq(paymentPlans.tenantId, tenantId)).returning();
+
+        const deletedActions = await tx.delete(actions).where(eq(actions.tenantId, tenantId)).returning();
+
+        await tx.update(invoices)
+          .set({ outcomeOverride: null })
+          .where(eq(invoices.tenantId, tenantId));
+
+        return {
+          timeline: deletedTimeline.length,
+          emails: deletedEmails.length,
+          sms: deletedSms.length,
+          voiceCalls: deletedVoice.length,
+          inboundMessages: deletedInbound.length,
+          conversations: deletedConversations.length,
+          outcomes: deletedOutcomes.length,
+          detectedOutcomes: deletedDetectedOutcomes.length,
+          contactOutcomes: deletedContactOutcomes.length,
+          clarifications: deletedClarifications.length,
+          attentionItems: deletedAttention.length,
+          promises: deletedPromises.length,
+          paymentPromises: deletedPaymentPromises.length,
+          disputes: deletedDisputes.length,
+          paymentPlans: deletedPlans.length,
+          paymentPlanInvoices: deletedPlanInvoices.length,
+          actions: deletedActions.length,
+          drafts: deletedDrafts.length,
+          timers: deletedTimers.length,
+          policyDecisions: deletedPolicyDecisions.length,
+        };
+      });
+
+      res.json({
+        success: true,
+        message: "Communications data cleared successfully",
+        stats: result
+      });
+    } catch (error) {
+      console.error("Error resetting comms data:", error);
+      res.status(500).json({ message: "Failed to reset communications data" });
+    }
+  });
+
   // Create demo customer with varied invoices
   const createDemoCustomerSchema = z.object({
     customerName: z.string().min(1).max(200).default("Nexus KPI Limited"),
