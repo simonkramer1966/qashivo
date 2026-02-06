@@ -253,7 +253,12 @@ IMPORTANT for ambiguity detection:
 - If the customer promises to pay but gives no specific date (just "soon", "next week" without a day), set unclearDate: true
 - If the customer has multiple outstanding invoices and it's unclear which they're referring to, set multipleInvoices: true
 - Generate 1-3 polite, professional clarification questions to resolve the ambiguity
-- hasAmbiguity should be true if ANY of the above are unclear for promise_to_pay or payment_plan intents`;
+- hasAmbiguity should be true if ANY of the above are unclear for promise_to_pay or payment_plan intents
+
+CRITICAL EXCEPTIONS - do NOT flag ambiguity when:
+- The customer says "full payment", "pay everything", "pay all", "settle the full balance", "pay the lot", "clear the account", "pay in full", or similar language indicating ALL outstanding invoices. This is NOT ambiguous - it means every open invoice. Set hasAmbiguity: false.
+- A specific date AND "full/all/everything" language is used together - this is a clear, unambiguous promise to pay. Set hasAmbiguity: false.
+- When the language clearly covers all invoices, do NOT set unclearInvoices, multipleInvoices, or invoice_reference ambiguity types.`;
 
     return prompt;
   }
@@ -1628,6 +1633,29 @@ CRITICAL: Each payment tranche on a DIFFERENT date MUST be a SEPARATE entry in t
       
       const outcomeType = INTENT_TO_OUTCOME_TYPE[analysis.intentType];
       
+      // Build extracted data preserving any date/amount info from the original analysis
+      const extractedData: Record<string, any> = {
+        freeTextNotes: `Awaiting clarification (ID: ${clarificationId || 'pending'}). ${analysis.reasoning}`
+      };
+      
+      // Preserve promise date from analysis so the chart can still show a forecast
+      const dates = analysis.extractedEntities?.dates || [];
+      if (dates.length > 0) {
+        const parsedDate = this.parsePromisedDate(dates[0]);
+        if (parsedDate) {
+          extractedData.promiseToPayDate = parsedDate.toISOString().split('T')[0];
+        }
+      }
+      
+      // Preserve amounts if available (use same field name and parsing as buildExtractedData)
+      const amounts = analysis.extractedEntities?.amounts || [];
+      if (amounts.length > 0) {
+        const parsedAmount = this.parseAmount(amounts[0]);
+        if (parsedAmount && parsedAmount > 0) {
+          extractedData.promiseToPayAmount = parsedAmount;
+        }
+      }
+      
       // Create an outcome with MANUAL_REVIEW effect to indicate it needs clarification
       const [outcome] = await db
         .insert(outcomes)
@@ -1641,9 +1669,7 @@ CRITICAL: Each payment tranche on a DIFFERENT date MUST be a SEPARATE entry in t
           confidenceBand: 'LOW', // Mark as low confidence since ambiguous
           requiresHumanReview: true,
           effect: 'MANUAL_REVIEW', // Pending clarification
-          extracted: {
-            freeTextNotes: `Awaiting clarification (ID: ${clarificationId || 'pending'}). ${analysis.reasoning}`
-          },
+          extracted: extractedData,
           sourceChannel: (message.channel?.toUpperCase() || 'EMAIL') as string,
           sourceMessageId: message.id,
           rawSnippet: message.content?.substring(0, 500) || '',
