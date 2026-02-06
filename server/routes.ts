@@ -24657,8 +24657,13 @@ ${tenant.name}
         userContactAssignments, walletTransactions
       } = await import('@shared/schema.js');
       
+      const { auditEvents, outcomes } = await import('@shared/schema.js');
+
       // Delete in order respecting foreign key constraints (child tables first)
       const result = await db.transaction(async (tx) => {
+        // Audit events must be deleted first (FK references to outcomes and actions)
+        const deletedAuditEvents = await tx.delete(auditEvents).where(eq(auditEvents.tenantId, tenantId)).returning();
+
         // Timeline and messaging
         const deletedTimeline = await tx.delete(timelineEvents).where(eq(timelineEvents.tenantId, tenantId)).returning();
         const deletedVoiceCalls = await tx.delete(voiceCalls).where(eq(voiceCalls.tenantId, tenantId)).returning();
@@ -24668,8 +24673,9 @@ ${tenant.name}
         const deletedDrafts = await tx.delete(messageDrafts).where(eq(messageDrafts.tenantId, tenantId)).returning();
         
         // Outcomes and decisions
-        const deletedOutcomes = await tx.delete(detectedOutcomes).where(eq(detectedOutcomes.tenantId, tenantId)).returning();
+        const deletedDetectedOutcomes = await tx.delete(detectedOutcomes).where(eq(detectedOutcomes.tenantId, tenantId)).returning();
         const deletedContactOutcomes = await tx.delete(contactOutcomes).where(eq(contactOutcomes.tenantId, tenantId)).returning();
+        const deletedOutcomes = await tx.delete(outcomes).where(eq(outcomes.tenantId, tenantId)).returning();
         const deletedPolicyDecisions = await tx.delete(policyDecisions).where(eq(policyDecisions.tenantId, tenantId)).returning();
         
         // Promises, disputes, workflow timers
@@ -24678,7 +24684,6 @@ ${tenant.name}
         const deletedTimers = await tx.delete(workflowTimers).where(eq(workflowTimers.tenantId, tenantId)).returning();
         
         // Payment plans (invoices depend on plans - they don't have tenantId, so delete via parent)
-        // First get all payment plan IDs for this tenant
         const tenantPaymentPlans = await tx.select({ id: paymentPlans.id }).from(paymentPlans).where(eq(paymentPlans.tenantId, tenantId));
         const planIds = tenantPaymentPlans.map(p => p.id);
         
@@ -24688,7 +24693,7 @@ ${tenant.name}
         }
         const deletedPlans = await tx.delete(paymentPlans).where(eq(paymentPlans.tenantId, tenantId)).returning();
         
-        // Actions
+        // Actions (after audit_events which references them)
         const deletedActions = await tx.delete(actions).where(eq(actions.tenantId, tenantId)).returning();
         
         // Invoices (before contacts due to foreign key)
@@ -24723,14 +24728,16 @@ ${tenant.name}
         const deletedContacts = await tx.delete(contacts).where(eq(contacts.tenantId, tenantId)).returning();
         
         return {
+          auditEvents: deletedAuditEvents.length,
           timeline: deletedTimeline.length,
           voiceCalls: deletedVoiceCalls.length,
           emails: deletedEmails.length,
           sms: deletedSms.length,
           inboundMessages: deletedInbound.length,
           messageDrafts: deletedDrafts.length,
-          outcomes: deletedOutcomes.length,
+          detectedOutcomes: deletedDetectedOutcomes.length,
           contactOutcomes: deletedContactOutcomes.length,
+          outcomes: deletedOutcomes.length,
           policyDecisions: deletedPolicyDecisions.length,
           promises: deletedPromises.length,
           disputes: deletedDisputes.length,
@@ -24772,7 +24779,11 @@ ${tenant.name}
         paymentPromises, disputes, workflowTimers, policyDecisions
       } = await import('@shared/schema.js');
 
+      const { auditEvents } = await import('@shared/schema.js');
+
       const result = await db.transaction(async (tx) => {
+        const deletedAuditEvents = await tx.delete(auditEvents).where(eq(auditEvents.tenantId, tenantId)).returning();
+
         const deletedTimeline = await tx.delete(timelineEvents).where(eq(timelineEvents.tenantId, tenantId)).returning();
         const deletedDetectedOutcomes = await tx.delete(detectedOutcomes).where(eq(detectedOutcomes.tenantId, tenantId)).returning();
         const deletedContactOutcomes = await tx.delete(contactOutcomes).where(eq(contactOutcomes.tenantId, tenantId)).returning();
@@ -24799,8 +24810,6 @@ ${tenant.name}
         }
         const deletedPlans = await tx.delete(paymentPlans).where(eq(paymentPlans.tenantId, tenantId)).returning();
 
-        const { auditEvents } = await import('@shared/schema.js');
-        const deletedAuditEvents = await tx.delete(auditEvents).where(eq(auditEvents.tenantId, tenantId)).returning();
         const deletedActions = await tx.delete(actions).where(eq(actions.tenantId, tenantId)).returning();
 
         await tx.update(invoices)
