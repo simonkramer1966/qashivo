@@ -205,6 +205,7 @@ export function CardlessCustomerDrawer({
   const [ptpValidationAttempted, setPtpValidationAttempted] = useState(false);
   
   const [expandedTimelineItems, setExpandedTimelineItems] = useState<Set<string>>(new Set());
+  const [expandedTranscripts, setExpandedTranscripts] = useState<Set<string>>(new Set());
   const [activitySearchOpen, setActivitySearchOpen] = useState(false);
   const [activitySearchQuery, setActivitySearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
@@ -1749,12 +1750,138 @@ ${signOff}`);
                                         
                                         {isItemExpanded && (
                                           <div className="pl-8 pr-3 pb-3 space-y-2">
-                                            {/* Voice transcript snippet */}
-                                            {isVoiceAI && transcriptSnippet && (
-                                              <div className="bg-gray-50 rounded p-2 text-xs text-gray-600 italic">
-                                                "{transcriptSnippet.length > 200 ? transcriptSnippet.substring(0, 200) + '...' : transcriptSnippet}"
-                                              </div>
-                                            )}
+                                            {/* Voice call rich detail view */}
+                                            {isVoiceAI && (() => {
+                                              const outcomeData = item.outcome?.extracted || {};
+                                              const voiceOutcomeType = outcomeData.outcomeType || item.outcome?.type;
+                                              const voiceSentiment = outcomeData.sentiment;
+                                              const voiceIntent = outcomeData.intent;
+                                              const voiceSummary = outcomeData.aiSummary || outcomeData.summary;
+                                              const isTranscriptExpanded = expandedTranscripts.has(item.id);
+                                              const fullTranscript = item.body;
+                                              
+                                              const outcomeLabel: Record<string, string> = {
+                                                'PROMISE_TO_PAY': 'Promise to Pay',
+                                                'PAYMENT_IN_PROCESS': 'Payment in Process',
+                                                'DISPUTE': 'Dispute',
+                                                'DOCS_REQUESTED': 'Documents Requested',
+                                                'REQUEST_CALL_BACK': 'Callback Requested',
+                                                'CONTACT_ISSUE': 'Contact Issue',
+                                                'CANNOT_PAY': 'Cannot Pay',
+                                                'NO_RESPONSE': 'No Commitment',
+                                                'CONFIRMATION': 'Acknowledged',
+                                                'promise_to_pay': 'Promise to Pay',
+                                                'dispute': 'Dispute',
+                                                'refused': 'Refused',
+                                                'wrong_contact': 'Wrong Contact',
+                                                'other': 'Completed',
+                                              };
+                                              const sentimentColor: Record<string, string> = {
+                                                'positive': 'bg-green-50 text-green-700',
+                                                'neutral': 'bg-gray-100 text-gray-600',
+                                                'negative': 'bg-red-50 text-red-700',
+                                                'frustrated': 'bg-amber-50 text-amber-700',
+                                                'cooperative': 'bg-green-50 text-green-700',
+                                                'hostile': 'bg-red-50 text-red-700',
+                                              };
+                                              const outcomeColor: Record<string, string> = {
+                                                'PROMISE_TO_PAY': 'bg-green-50 text-green-700',
+                                                'promise_to_pay': 'bg-green-50 text-green-700',
+                                                'PAYMENT_IN_PROCESS': 'bg-blue-50 text-blue-700',
+                                                'DISPUTE': 'bg-red-50 text-red-700',
+                                                'dispute': 'bg-red-50 text-red-700',
+                                                'refused': 'bg-red-50 text-red-700',
+                                                'CANNOT_PAY': 'bg-red-50 text-red-700',
+                                                'DOCS_REQUESTED': 'bg-amber-50 text-amber-700',
+                                                'REQUEST_CALL_BACK': 'bg-amber-50 text-amber-700',
+                                              };
+
+                                              return (
+                                                <div className="space-y-2">
+                                                  {/* Outcome, Intent, Sentiment badges */}
+                                                  {(voiceOutcomeType || voiceSentiment || voiceIntent) && (
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                      {voiceOutcomeType && (
+                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${outcomeColor[voiceOutcomeType] || 'bg-gray-100 text-gray-600'}`}>
+                                                          {outcomeLabel[voiceOutcomeType] || voiceOutcomeType}
+                                                        </span>
+                                                      )}
+                                                      {voiceSentiment && (
+                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${sentimentColor[voiceSentiment.toLowerCase()] || 'bg-gray-100 text-gray-600'}`}>
+                                                          {voiceSentiment.charAt(0).toUpperCase() + voiceSentiment.slice(1)}
+                                                        </span>
+                                                      )}
+                                                      {voiceIntent && (
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-600">
+                                                          {voiceIntent}
+                                                        </span>
+                                                      )}
+                                                      {outcomeData.confidenceBand && (
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-gray-50 text-gray-500">
+                                                          {outcomeData.confidenceBand} confidence
+                                                        </span>
+                                                      )}
+                                                    </div>
+                                                  )}
+                                                  
+                                                  {/* AI Summary */}
+                                                  {voiceSummary && (
+                                                    <p className="text-xs text-gray-600 leading-relaxed">
+                                                      {voiceSummary}
+                                                    </p>
+                                                  )}
+
+                                                  {/* PTP details if captured */}
+                                                  {(outcomeData.promiseToPayDate || outcomeData.promiseToPayAmount || outcomeData.promiseDate || outcomeData.amount) && (
+                                                    <div className="bg-green-50 rounded p-2 text-xs text-green-700">
+                                                      {(outcomeData.promiseToPayDate || outcomeData.promiseDate) && (
+                                                        <span>Pay by: {new Date(outcomeData.promiseToPayDate || outcomeData.promiseDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                                                      )}
+                                                      {(outcomeData.promiseToPayAmount || outcomeData.amount) && (
+                                                        <span>{(outcomeData.promiseToPayDate || outcomeData.promiseDate) ? ' · ' : ''}Amount: {formatCurrency(outcomeData.promiseToPayAmount || outcomeData.amount)}</span>
+                                                      )}
+                                                    </div>
+                                                  )}
+
+                                                  {/* Full transcript (collapsible) */}
+                                                  {fullTranscript && (
+                                                    <div className="border border-gray-100 rounded">
+                                                      <button
+                                                        onClick={(e) => {
+                                                          e.stopPropagation();
+                                                          setExpandedTranscripts(prev => {
+                                                            const next = new Set(prev);
+                                                            if (next.has(item.id)) next.delete(item.id);
+                                                            else next.add(item.id);
+                                                            return next;
+                                                          });
+                                                        }}
+                                                        className="w-full flex items-center justify-between px-2 py-1.5 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors"
+                                                      >
+                                                        <span>Full transcript</span>
+                                                        <ChevronRight className={`h-3 w-3 transition-transform ${isTranscriptExpanded ? 'rotate-90' : ''}`} />
+                                                      </button>
+                                                      {isTranscriptExpanded && (
+                                                        <div className="px-2 pb-2 max-h-64 overflow-y-auto">
+                                                          <div className="text-xs text-gray-600 whitespace-pre-wrap leading-relaxed font-mono">
+                                                            {fullTranscript}
+                                                          </div>
+                                                        </div>
+                                                      )}
+                                                    </div>
+                                                  )}
+
+                                                  {/* Fallback: show transcript snippet if no full transcript */}
+                                                  {!fullTranscript && transcriptSnippet && (
+                                                    <div className="bg-gray-50 rounded p-2 text-xs text-gray-600 italic">
+                                                      "{transcriptSnippet.length > 200 ? transcriptSnippet.substring(0, 200) + '...' : transcriptSnippet}"
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              );
+                                            })()}
+
+                                            {/* Non-voice message body */}
                                             {item.body && !isVoiceAI && (
                                               <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">
                                                 {item.body}

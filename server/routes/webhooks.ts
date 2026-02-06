@@ -1704,12 +1704,12 @@ Return JSON with:
           };
           const timelineOutcomeType = outcomeTypeMap[callOutcome] || 'other';
           
-          // Extract sentiment from call_analysis if available
+          // Extract sentiment from call_analysis or OpenAI analysis
           const sentiment = call_analysis?.sentiment || call_analysis?.customer_sentiment || null;
           const intent = call_analysis?.intent || call_analysis?.primary_intent || null;
           const confidenceScore = call_analysis?.confidence || 0.8;
           
-          // Build extracted data for the outcome
+          // Build extracted data for the outcome, merging Retell + OpenAI analysis
           const extractedData: Record<string, any> = {};
           if (capturedPtp) {
             if (capturedPtp.amount) extractedData.amount = capturedPtp.amount;
@@ -1732,6 +1732,24 @@ Return JSON with:
           }
           if (call_analysis?.next_steps) {
             extractedData.nextSteps = call_analysis.next_steps;
+          }
+          
+          // Enrich with OpenAI analysis if available (from the outcome creation above)
+          if (newOutcome) {
+            extractedData.outcomeType = newOutcome.type;
+            extractedData.confidenceBand = newOutcome.confidenceBand;
+            if (newOutcome.extracted?.freeTextNotes) {
+              extractedData.aiSummary = newOutcome.extracted.freeTextNotes;
+            }
+            if (newOutcome.extracted?.promiseToPayDate) {
+              extractedData.promiseToPayDate = newOutcome.extracted.promiseToPayDate;
+            }
+            if (newOutcome.extracted?.promiseToPayAmount) {
+              extractedData.promiseToPayAmount = newOutcome.extracted.promiseToPayAmount;
+            }
+            if (newOutcome.extracted?.disputeCategory) {
+              extractedData.disputeCategory = newOutcome.extracted.disputeCategory;
+            }
           }
           
           // Update the timeline event linked to this action
