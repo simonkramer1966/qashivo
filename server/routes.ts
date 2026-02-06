@@ -24792,6 +24792,8 @@ ${tenant.name}
         }
         const deletedPlans = await tx.delete(paymentPlans).where(eq(paymentPlans.tenantId, tenantId)).returning();
 
+        const { auditEvents } = await import('@shared/schema.js');
+        const deletedAuditEvents = await tx.delete(auditEvents).where(eq(auditEvents.tenantId, tenantId)).returning();
         const deletedActions = await tx.delete(actions).where(eq(actions.tenantId, tenantId)).returning();
 
         await tx.update(invoices)
@@ -24799,6 +24801,7 @@ ${tenant.name}
           .where(eq(invoices.tenantId, tenantId));
 
         return {
+          auditEvents: deletedAuditEvents.length,
           timeline: deletedTimeline.length,
           emails: deletedEmails.length,
           sms: deletedSms.length,
