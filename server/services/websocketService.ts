@@ -33,6 +33,12 @@ class WebSocketService {
   private sessionStore: any = null;
 
   async initialize(server: Server) {
+    const WEBSOCKET_DISABLED = true;
+    if (WEBSOCKET_DISABLED) {
+      console.log('⏸️ Dashboard WebSocket service disabled');
+      return;
+    }
+
     const pgStore = connectPg(session);
     this.sessionStore = new pgStore({
       conString: process.env.DATABASE_URL,
