@@ -193,3 +193,23 @@ When continuing: `generateConversationReplyWithAI()` uses full conversation hist
 ### Key Files
 - Active conversation logic: `server/services/emailClarificationService.ts` (`isActiveConversation`, `shouldEscalate`, `handleActiveConversationReply`, `createEscalationAction`, `generateConversationReplyWithAI`)
 - Intent analyst wiring: `server/services/intentAnalyst.ts` (`handleActiveConversationAutoReply` — triggered after intent analysis for email channel)
+
+## Full-Conversation-Context Clarification Resolution (Feb 2026)
+
+When a debtor replies to a clarification email, the system now uses the **entire email conversation thread** (not just the latest reply) to extract payment arrangements.
+
+### How It Works
+1. **Thread retrieval**: `buildConversationThread()` pulls all `email_messages` (inbound + outbound) for the contact in chronological order
+2. **Full-context AI analysis**: `analyzeConversationForPaymentArrangement()` sends the complete thread + outstanding invoices to OpenAI (gpt-4o-mini) with a dedicated prompt
+3. **Multi-tranche extraction**: The AI extracts separate installments for each date+amount pair (e.g. "£20k on 13th Feb, balance at end of Feb" → two installments)
+4. **Invoice resolution**: `resolveInvoiceReferences()` matches specific invoice references from the debtor's messages to actual invoices
+5. **Confirmation**: `sendConfirmationEmail()` renders the arrangement as a payment plan table with each instalment on a separate row
+
+### Why This Matters
+Previously, the AI only analysed the latest reply text, losing context from earlier messages. This caused wrong dates and collapsed multi-tranche plans into single entries.
+
+### Key Files
+- Conversation thread builder: `server/services/intentAnalyst.ts` (`buildConversationThread`)
+- Payment arrangement analyser: `server/services/intentAnalyst.ts` (`analyzeConversationForPaymentArrangement`)
+- Clarification response handler: `server/services/intentAnalyst.ts` (`handleClarificationResponse`)
+- Confirmation email builder: `server/services/emailClarificationService.ts` (`buildConfirmationEmail`)

@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import { db } from "../db";
-import { inboundMessages, actions, contacts, invoices, paymentPlans, paymentPlanInvoices, users, outcomes, emailClarifications, tenants } from "@shared/schema";
-import { eq, and, desc, inArray } from "drizzle-orm";
+import { inboundMessages, actions, contacts, invoices, paymentPlans, paymentPlanInvoices, users, outcomes, emailClarifications, tenants, emailMessages } from "@shared/schema";
+import { eq, and, desc, inArray, asc, sql } from "drizzle-orm";
 import { getPromiseReliabilityService } from "./promiseReliabilityService.js";
 import { emailClarificationService } from "./emailClarificationService.js";
 
@@ -1376,7 +1376,142 @@ IMPORTANT for ambiguity detection:
   }
 
   /**
-   * Handle a response to a pending clarification
+   * Build the full email conversation thread for a contact, formatted for AI analysis.
+   * Pulls all email_messages (inbound + outbound) in chronological order.
+   */
+  private async buildConversationThread(tenantId: string, contactId: string): Promise<string> {
+    const messages = await db
+      .select({
+        direction: emailMessages.direction,
+        subject: emailMessages.subject,
+        textBody: emailMessages.textBody,
+        inboundText: emailMessages.inboundText,
+        inboundSubject: emailMessages.inboundSubject,
+        fromName: emailMessages.fromName,
+        inboundFromName: emailMessages.inboundFromName,
+        sentAt: emailMessages.sentAt,
+        receivedAt: emailMessages.receivedAt,
+        createdAt: emailMessages.createdAt,
+      })
+      .from(emailMessages)
+      .where(and(
+        eq(emailMessages.tenantId, tenantId),
+        eq(emailMessages.contactId, contactId),
+      ))
+      .orderBy(asc(sql`COALESCE(${emailMessages.sentAt}, ${emailMessages.receivedAt}, ${emailMessages.createdAt})`))
+      .limit(30);
+
+    if (messages.length === 0) return 'No previous email messages found.';
+
+    return messages.map((msg, i) => {
+      const isOutbound = msg.direction === 'OUTBOUND';
+      const sender = isOutbound
+        ? (msg.fromName || 'Accounts Team')
+        : (msg.inboundFromName || 'Debtor');
+      const subject = isOutbound ? msg.subject : msg.inboundSubject;
+      const body = isOutbound ? msg.textBody : msg.inboundText;
+      const timestamp = msg.sentAt || msg.receivedAt || msg.createdAt;
+      const dateStr = timestamp ? new Date(timestamp).toISOString() : 'unknown';
+      const dir = isOutbound ? 'OUTBOUND (our email)' : 'INBOUND (debtor reply)';
+
+      const bodyText = body
+        ? body.split(/\n\nOn .* wrote:/)[0].trim().substring(0, 1500)
+        : '(no text content)';
+
+      return `--- Message ${i + 1} [${dir}] ${dateStr} ---\nFrom: ${sender}\nSubject: ${subject || '(no subject)'}\n\n${bodyText}`;
+    }).join('\n\n');
+  }
+
+  /**
+   * Use AI to analyze the full conversation thread and extract a structured payment arrangement.
+   * Handles multi-tranche plans (e.g. "£20k on 13th Feb, balance at end of Feb").
+   */
+  private async analyzeConversationForPaymentArrangement(
+    conversationThread: string,
+    outstandingInvoices: Array<{ invoiceNumber: string; amount: number; dueDate: string }>,
+    totalOutstanding: number
+  ): Promise<{
+    intentType: 'promise_to_pay' | 'payment_plan';
+    confidence: number;
+    installments: Array<{ date: string; amount: number; description: string }>;
+    totalAmount: number;
+    invoiceAllocation: string;
+    reasoning: string;
+  }> {
+    const invoiceList = outstandingInvoices.length > 0
+      ? outstandingInvoices.map(inv => `  - ${inv.invoiceNumber}: £${inv.amount.toFixed(2)} (due ${inv.dueDate})`).join('\n')
+      : '  (no specific invoices available)';
+
+    const prompt = `You are an AI credit controller assistant. Analyze the FULL email conversation thread below between our accounts team and a debtor. Extract the final agreed payment arrangement.
+
+FULL CONVERSATION THREAD (chronological order):
+${conversationThread}
+
+OUTSTANDING INVOICES:
+${invoiceList}
+Total Outstanding: £${totalOutstanding.toFixed(2)}
+
+TODAY'S DATE: ${new Date().toISOString().split('T')[0]}
+
+YOUR TASK:
+Read the ENTIRE conversation and extract the final agreed payment arrangement. Pay close attention to:
+- Specific dates mentioned for each payment (e.g. "13th February", "end of Feb", "next Friday")
+- Specific amounts for each payment tranche
+- Whether the debtor is proposing a single lump sum or multiple payments on different dates
+- Any invoice allocation preferences (e.g. "oldest first", "specific invoices")
+
+RULES:
+1. If the debtor mentioned DIFFERENT dates for DIFFERENT amounts, this is a MULTI-TRANCHE payment plan (intentType: "payment_plan") with separate installments for each date+amount pair.
+2. Convert all relative dates to concrete calendar dates (e.g. "end of Feb" → "2026-02-28", "next Friday" → specific date).
+3. If "the balance" or "remaining" is mentioned for a later date, calculate the actual amount (total outstanding minus earlier payments).
+4. If the debtor said "oldest invoices first", note that in invoiceAllocation.
+5. Only include arrangements the debtor has actually committed to — not questions or hypotheticals.
+6. Use the LATEST position from the conversation. If they revised their offer in a later message, use the revised version.
+
+Return JSON:
+{
+  "intentType": "promise_to_pay" | "payment_plan",
+  "confidence": 0.0 to 1.0,
+  "installments": [
+    { "date": "YYYY-MM-DD", "amount": numeric_amount, "description": "brief note e.g. first payment, balance payment" }
+  ],
+  "totalAmount": total numeric amount across all installments,
+  "invoiceAllocation": "how debtor wants payments allocated to invoices, or 'not specified'",
+  "reasoning": "brief explanation of how you extracted this from the conversation"
+}
+
+CRITICAL: Each payment tranche on a DIFFERENT date MUST be a SEPARATE entry in the installments array. Do NOT merge payments on different dates into one entry.`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: prompt },
+        { role: "user", content: "Extract the payment arrangement from this conversation." }
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.2,
+    });
+
+    const result = JSON.parse(completion.choices[0].message.content || '{}');
+
+    return {
+      intentType: result.intentType === 'payment_plan' ? 'payment_plan' : 'promise_to_pay',
+      confidence: Math.min(1, Math.max(0, result.confidence || 0.8)),
+      installments: (result.installments || []).map((inst: any) => ({
+        date: inst.date || '',
+        amount: Number(inst.amount) || 0,
+        description: inst.description || '',
+      })),
+      totalAmount: Number(result.totalAmount) || 0,
+      invoiceAllocation: result.invoiceAllocation || 'not specified',
+      reasoning: result.reasoning || '',
+    };
+  }
+
+  /**
+   * Handle a response to a pending clarification.
+   * Uses the FULL conversation thread (not just the latest reply) to extract
+   * accurate payment arrangements including multi-tranche plans.
    */
   private async handleClarificationResponse(
     message: typeof inboundMessages.$inferSelect,
@@ -1385,97 +1520,153 @@ IMPORTANT for ambiguity detection:
     context: any
   ): Promise<void> {
     try {
-      // If the response still has ambiguity, we might need another clarification
-      if (analysis.ambiguity?.hasAmbiguity && 
-          (analysis.intentType === 'promise_to_pay' || analysis.intentType === 'payment_plan')) {
-        console.log(`⚠️  Response still has ambiguity - may need another clarification`);
-        // Could send another clarification, but for now mark as needing manual review
+      if (!message.contactId) {
+        console.warn('Cannot handle clarification response - no contactId');
+        return;
       }
-      
-      // Resolve invoice references from the clarification response
-      let resolvedInvoices: { invoiceId: string | null; linkedInvoices: Array<{ id: string; invoiceNumber: string; amount: number }> } = 
-        { invoiceId: null, linkedInvoices: [] };
-      
-      if (message.contactId) {
-        resolvedInvoices = await this.resolveInvoiceReferences(
-          analysis,
-          message.tenantId,
-          message.contactId
-        );
+
+      if (!message.from) {
+        console.warn('Cannot handle clarification response - no sender email address');
+        return;
       }
-      
-      // Calculate resolved amount from invoices if not extracted
-      const extractedAmount = this.extractPtpAmount(analysis, undefined);
-      const resolvedAmount = extractedAmount || 
-        (resolvedInvoices.linkedInvoices.length > 0 
-          ? resolvedInvoices.linkedInvoices.reduce((sum, inv) => sum + inv.amount, 0)
-          : context.invoiceAmount);
-      
-      // Resolve the clarification with resolved invoice data
+
+      console.log(`📧 Processing clarification response with full conversation context...`);
+
+      const conversationThread = await this.buildConversationThread(message.tenantId, message.contactId);
+
+      let resolvedInvoices = await this.resolveInvoiceReferences(
+        analysis,
+        message.tenantId,
+        message.contactId
+      );
+
+      const allOutstanding = await db
+        .select({
+          id: invoices.id,
+          invoiceNumber: invoices.invoiceNumber,
+          amount: invoices.amount,
+          dueDate: invoices.dueDate,
+        })
+        .from(invoices)
+        .where(and(
+          eq(invoices.tenantId, message.tenantId),
+          eq(invoices.contactId, message.contactId),
+          eq(invoices.status, 'OPEN')
+        ))
+        .orderBy(asc(invoices.dueDate))
+        .limit(50);
+
+      const totalOutstanding = allOutstanding.reduce((sum, inv) => sum + Number(inv.amount), 0);
+
+      const arrangement = await this.analyzeConversationForPaymentArrangement(
+        conversationThread,
+        allOutstanding.map(inv => ({
+          invoiceNumber: inv.invoiceNumber || 'Unknown',
+          amount: Number(inv.amount),
+          dueDate: inv.dueDate ? new Date(inv.dueDate).toISOString().split('T')[0] : 'unknown',
+        })),
+        totalOutstanding
+      );
+
+      console.log(`📋 Extracted arrangement: ${arrangement.intentType}, ${arrangement.installments.length} installment(s), total £${arrangement.totalAmount.toFixed(2)}`);
+      arrangement.installments.forEach((inst, i) => {
+        console.log(`   Instalment ${i + 1}: £${inst.amount.toFixed(2)} on ${inst.date} (${inst.description})`);
+      });
+
+      const linkedInvoices = resolvedInvoices.linkedInvoices;
+
       const resolvedData = {
-        intentType: analysis.intentType,
+        intentType: arrangement.intentType,
         extractedEntities: analysis.extractedEntities,
-        promiseToPayDate: this.extractPtpDate(analysis),
-        promiseToPayAmount: resolvedAmount,
-        confidence: analysis.confidence,
-        resolvedInvoices: resolvedInvoices.linkedInvoices.map(inv => ({
+        promiseToPayDate: arrangement.installments[0]?.date || null,
+        promiseToPayAmount: arrangement.totalAmount,
+        confidence: arrangement.confidence,
+        installments: arrangement.installments,
+        invoiceAllocation: arrangement.invoiceAllocation,
+        resolvedInvoices: linkedInvoices.map(inv => ({
           invoiceId: inv.id,
           invoiceNumber: inv.invoiceNumber,
-          amount: inv.amount
-        }))
+          amount: inv.amount,
+        })),
       };
-      
+
       await emailClarificationService.resolveClarification(
         clarification.id,
         message.id,
-        analysis.intentType,
+        arrangement.intentType,
         resolvedData
       );
-      
-      // Update context with resolved invoice info for outcome creation
-      if (resolvedInvoices.invoiceId && !message.invoiceId) {
-        context.invoiceAmount = resolvedInvoices.linkedInvoices.reduce((sum, inv) => sum + inv.amount, 0);
-      }
-      
-      // If we now have a clear PTP or payment plan, send confirmation and create outcome
-      const isConfirmable = 
-        (analysis.intentType === 'promise_to_pay' || analysis.intentType === 'payment_plan') &&
-        analysis.confidence >= this.CONFIDENCE_THRESHOLD;
-      
-      if (isConfirmable && message.contactId) {
-        // Send confirmation email with resolved invoice data
-        await this.sendConfirmationEmailWithResolvedData(
-          message, 
-          analysis, 
-          context, 
-          resolvedInvoices.linkedInvoices, 
-          resolvedAmount
-        );
-        
-        // Create the outcome with resolved invoice linkage
+
+      const isConfirmable = arrangement.confidence >= this.CONFIDENCE_THRESHOLD &&
+        arrangement.installments.length > 0 &&
+        arrangement.installments.every(inst => inst.date && inst.amount > 0);
+
+      if (isConfirmable) {
+        let paymentPlanDetails: { totalAmount: number; installments: Array<{ date: string; amount: number }> } | undefined;
+
+        if (arrangement.intentType === 'payment_plan' || arrangement.installments.length > 1) {
+          paymentPlanDetails = {
+            totalAmount: arrangement.totalAmount,
+            installments: arrangement.installments.map(inst => ({
+              date: inst.date,
+              amount: inst.amount,
+            })),
+          };
+        }
+
+        const [contact] = await db.select().from(contacts).where(eq(contacts.id, message.contactId)).limit(1);
+        const [tenant] = await db.select().from(tenants).where(eq(tenants.id, message.tenantId)).limit(1);
+
+        if (contact && tenant) {
+          const intentTypeForEmail = arrangement.installments.length > 1 ? 'payment_plan' : arrangement.intentType;
+          const result = await emailClarificationService.sendConfirmationEmail({
+            tenantId: message.tenantId,
+            contactId: message.contactId,
+            contactEmail: message.from,
+            contactName: contact.name || contact.companyName || 'Customer',
+            tenantName: tenant.name || 'Our company',
+            intentType: intentTypeForEmail as 'promise_to_pay' | 'payment_plan',
+            ptpDate: arrangement.installments[0]?.date || undefined,
+            ptpAmount: arrangement.installments.length === 1 ? arrangement.installments[0].amount : arrangement.totalAmount,
+            invoiceId: message.invoiceId || resolvedInvoices.invoiceId || undefined,
+            invoices: linkedInvoices.map(inv => ({
+              invoiceNumber: inv.invoiceNumber,
+              amount: inv.amount,
+            })),
+            paymentPlanDetails,
+            sourceChannel: message.channel || 'email',
+          });
+
+          if (result.success) {
+            console.log(`✅ Confirmation email sent with full-conversation-resolved data`);
+          } else {
+            console.error(`❌ Failed to send confirmation: ${result.error}`);
+          }
+        }
+
         await this.createOutcomeFromIntentWithInvoices(
-          message, 
-          analysis, 
-          context, 
-          resolvedInvoices.invoiceId, 
-          resolvedInvoices.linkedInvoices.map(inv => inv.id)
+          message,
+          { ...analysis, intentType: arrangement.intentType as CharlieIntentType, confidence: arrangement.confidence },
+          { ...context, invoiceAmount: arrangement.totalAmount },
+          resolvedInvoices.invoiceId,
+          linkedInvoices.map(inv => inv.id)
         );
-        
-        // Update clarification with confirmation sent
+
         await db
           .update(emailClarifications)
           .set({
             confirmationSentAt: new Date(),
-            updatedAt: new Date()
+            updatedAt: new Date(),
           })
           .where(eq(emailClarifications.id, clarification.id));
-        
+
         console.log(`✅ Clarification resolved and confirmation sent`);
+      } else {
+        console.log(`⚠️ Arrangement not confirmable (confidence: ${arrangement.confidence}, installments: ${arrangement.installments.length}) — may need further clarification`);
       }
-      
-      // Create action for this response
+
       await this.createActionFromIntent(message, analysis);
-      
+
     } catch (error) {
       console.error('Failed to handle clarification response:', error);
     }
