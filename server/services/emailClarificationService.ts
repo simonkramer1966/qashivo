@@ -84,9 +84,11 @@ interface ConversationReplyContext {
 
 interface EscalationResult {
   shouldEscalate: boolean;
+  partialEscalation?: boolean;
   reason: string;
-  category?: 'human_request' | 'hostility' | 'legal_threat' | 'authority_exceeded' | 'unresolved_loop' | 'sentiment_drop' | 'complex_dispute';
+  category?: 'human_request' | 'hostility' | 'legal_threat' | 'authority_exceeded' | 'unresolved_loop' | 'sentiment_drop' | 'complex_dispute' | 'substantive_query';
   suggestedHandoff?: string;
+  debtorQuestion?: string;
 }
 
 interface VoiceFollowUpContext {
@@ -712,7 +714,7 @@ This email was sent on behalf of ${tenantName} via Qashivo credit control.`;
         ));
       const recentExchangeCount = exchangeCountResult[0]?.count || 0;
 
-      const prompt = `You are an AI credit control assistant deciding whether to continue handling a debtor conversation autonomously or escalate to a human agent.
+      const prompt = `You are an AI credit control assistant deciding whether to continue handling a debtor conversation autonomously, escalate fully to a human, or do a PARTIAL ESCALATION (reply to what you can, but flag a question for human follow-up).
 
 CONVERSATION HISTORY:
 ${conversationHistory}
@@ -722,9 +724,9 @@ LATEST DEBTOR MESSAGE:
 
 TOTAL RECENT EXCHANGES (last 14 days): ${recentExchangeCount}
 
-Analyse the latest message and decide: should the AI continue this conversation, or should it be escalated to a human?
+Analyse the latest message and decide the appropriate action.
 
-ESCALATION TRIGGERS (escalate if ANY of these are true):
+FULL ESCALATION TRIGGERS (escalate entirely — AI should NOT reply):
 1. Debtor explicitly asks to speak to a person, manager, or someone senior
 2. Hostile, abusive, or threatening language
 3. Legal threats or mention of solicitors/lawyers/legal action
@@ -733,7 +735,22 @@ ESCALATION TRIGGERS (escalate if ANY of these are true):
 6. Significant sentiment deterioration — debtor becoming increasingly frustrated or aggressive
 7. Complex multi-party disputes or situations needing judgement calls
 
-CONTINUE if the debtor is:
+PARTIAL ESCALATION (AI replies to what it can, but flags the question for a human colleague):
+Use partial escalation when the debtor's message contains BOTH:
+  (a) Something the AI can handle (e.g. confirming payment, agreeing to a plan, providing information)
+  AND
+  (b) A substantive business question that requires human judgement, such as:
+    - Late payment interest or surcharges
+    - Credit terms or payment terms negotiations
+    - Requests for account statements, credit notes, or adjustments
+    - Contractual, regulatory, or compliance queries
+    - Discount requests or fee waivers
+    - Queries about account status, credit limits, or trading terms
+    - Any question where the answer has financial or legal implications
+
+Also use partial escalation when the message ONLY contains a substantive business question (no other actionable content) — the AI should still acknowledge and hand off gracefully rather than attempting to answer.
+
+CONTINUE (AI handles autonomously) if the debtor is:
 - Asking straightforward questions about invoices, amounts, or due dates
 - Negotiating payment timing or amounts within normal parameters
 - Providing information or documents
@@ -744,10 +761,12 @@ CONTINUE if the debtor is:
 
 Return a JSON object:
 {
-  "shouldEscalate": boolean,
+  "shouldEscalate": boolean (true for FULL escalation, false for continue or partial),
+  "partialEscalation": boolean (true ONLY for partial escalation — AI should reply but also create a human follow-up),
   "reason": "Brief explanation of the decision",
-  "category": "human_request" | "hostility" | "legal_threat" | "authority_exceeded" | "unresolved_loop" | "sentiment_drop" | "complex_dispute" | null,
-  "suggestedHandoff": "A brief note for the human agent on what to focus on (only if escalating)"
+  "category": "human_request" | "hostility" | "legal_threat" | "authority_exceeded" | "unresolved_loop" | "sentiment_drop" | "complex_dispute" | "substantive_query" | null,
+  "suggestedHandoff": "A brief note for the human agent on what to focus on (if escalating or partial)",
+  "debtorQuestion": "The specific question the debtor asked that needs human follow-up (only for partial escalation)"
 }`;
 
       const completion = await openai.chat.completions.create({
@@ -763,9 +782,11 @@ Return a JSON object:
       const result = JSON.parse(completion.choices[0].message.content || '{}');
       return {
         shouldEscalate: result.shouldEscalate === true,
+        partialEscalation: result.partialEscalation === true,
         reason: result.reason || 'No reason provided',
         category: result.category || undefined,
         suggestedHandoff: result.suggestedHandoff || undefined,
+        debtorQuestion: result.debtorQuestion || undefined,
       };
     } catch (error: any) {
       console.error('Error in escalation check:', error);
@@ -865,9 +886,21 @@ ${escalation.suggestedHandoff ? `SUGGESTED FOCUS:\n${escalation.suggestedHandoff
     context: ConversationReplyContext,
     debtorContext: string,
     conversationHistory: string,
+    partialEscalation?: { debtorQuestion?: string; suggestedHandoff?: string },
   ): Promise<{ subject: string; htmlContent: string; textContent: string; timelineSummary: string }> {
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const currentDate = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+    const partialEscalationInstructions = partialEscalation ? `
+IMPORTANT — PARTIAL HANDOFF REQUIRED:
+The debtor's message contains a question that needs to be answered by a human colleague. You MUST:
+- Handle the parts you can (e.g. confirming a payment arrangement, acknowledging information)
+- For the question that needs human follow-up${partialEscalation.debtorQuestion ? ` ("${partialEscalation.debtorQuestion}")` : ''}, DO NOT attempt to answer it yourself
+- Instead, acknowledge the question naturally and tell them a colleague will come back to them personally on that matter
+- Use warm, natural phrasing like: "Regarding [their question], I'll pass that across to my colleague who will come back to you personally on that."
+- Do NOT say "I'm an AI" or "I can't answer that" — just naturally hand it off as a team member would
+- The handoff should feel seamless and reassuring, not like you're dodging the question
+` : '';
 
     const prompt = `You are a professional credit control assistant replying to a debtor's email. You are continuing an active conversation — respond naturally as if you are a human accounts team member.
 
@@ -882,12 +915,12 @@ LATEST DEBTOR MESSAGE:
 "${context.inboundMessageText}"
 
 ${debtorContext}
-
+${partialEscalationInstructions}
 RULES — YOU MUST FOLLOW THESE:
 1. NEVER use placeholder text like "the agreed date", "the agreed amount", "your outstanding balance", or "[amount]". Use concrete figures from the debtor context or conversation history. If you don't have a specific figure, don't reference it.
 2. Respond directly to what the debtor said. This is a conversation — don't repeat introductions or context they already know.
 3. Keep responses concise — no more than 120 words in the body.
-4. If the debtor is asking a question, answer it clearly using the invoice/account data available.
+4. If the debtor is asking a question you CAN answer, answer it clearly using the invoice/account data available.
 5. If the debtor is negotiating payment terms, engage constructively. You can accept reasonable payment dates and amounts. Suggest payment plans if the total is large and the debtor seems willing.
 6. If the debtor is providing information (e.g. remittance details, PO numbers), acknowledge receipt and confirm next steps.
 7. If the debtor confirms a payment promise, confirm the exact date and amount back to them.
@@ -1061,8 +1094,15 @@ ${htmlBody}
         return { success: true, action: 'escalated', reason: escalation.reason };
       }
 
+      const isPartialEscalation = escalation.partialEscalation === true;
+
+      if (isPartialEscalation) {
+        console.log(`🔀 Partial escalation: AI will reply with handoff — ${escalation.reason} (${escalation.category})`);
+      }
+
       const { subject, htmlContent, textContent, timelineSummary } = await this.generateConversationReplyWithAI(
-        context, debtorContext, conversationHistory
+        context, debtorContext, conversationHistory,
+        isPartialEscalation ? { debtorQuestion: escalation.debtorQuestion, suggestedHandoff: escalation.suggestedHandoff } : undefined
       );
 
       const conversationId = context.conversationId || await findOrCreateConversation(
@@ -1127,6 +1167,65 @@ ${htmlBody}
       });
 
       await updateConversationStats(conversationId, "outbound");
+
+      if (isPartialEscalation) {
+        const [contact] = await db.select().from(contacts).where(eq(contacts.id, context.contactId)).limit(1);
+        const contactName = contact?.companyName || contact?.name || context.contactName;
+        const questionDescription = escalation.debtorQuestion || 'Debtor asked a question requiring human follow-up';
+
+        await db.insert(actions).values({
+          tenantId: context.tenantId,
+          contactId: context.contactId,
+          invoiceId: context.linkedInvoiceIds?.[0] || null,
+          type: 'email',
+          status: 'exception',
+          exceptionReason: 'ai_escalation_substantive_query',
+          subject: `Follow-up needed: ${contactName} — ${questionDescription.substring(0, 80)}`,
+          content: `The AI has replied to ${contactName}'s email and handled what it could, but their message included a question that needs a human response.
+
+DEBTOR'S QUESTION: ${questionDescription}
+
+CONTEXT: ${escalation.suggestedHandoff || 'Please review the conversation and respond to the debtor\'s specific question.'}
+
+LATEST DEBTOR MESSAGE:
+"${context.inboundMessageText}"
+
+NOTE: The AI has already sent a reply acknowledging the question and letting the debtor know a colleague will follow up personally. Please respond directly to the debtor's question.`,
+          source: 'charlie_partial_escalation',
+          aiGenerated: true,
+          workState: 'ATTENTION',
+          confidenceScore: '0.90',
+          recommended: {
+            priority: 'medium',
+            suggestedNextAction: `Respond to debtor's question about: ${questionDescription.substring(0, 100)}`,
+            requiresHumanReview: true,
+            escalationCategory: 'substantive_query',
+          },
+          metadata: {
+            partialEscalation: true,
+            escalationCategory: 'substantive_query',
+            debtorQuestion: questionDescription,
+            aiReplySent: true,
+            conversationId: conversationId || null,
+          },
+        });
+
+        await db.insert(timelineEvents).values({
+          tenantId: context.tenantId,
+          customerId: context.contactId,
+          occurredAt: new Date(),
+          direction: 'system',
+          channel: 'email',
+          summary: `AI flagged debtor question for human follow-up: ${questionDescription.substring(0, 100)}`,
+          preview: `AI replied and handled what it could, but flagged: "${questionDescription.substring(0, 200)}"`,
+          status: 'attention',
+          createdByType: 'system',
+          createdByName: 'Qashivo AI',
+        });
+
+        console.log(`🔀 Partial escalation: AI replied + created Attention action for: ${questionDescription.substring(0, 80)}`);
+        return { success: true, action: 'replied', reason: `Partial escalation — AI replied with handoff, human follow-up needed for: ${questionDescription}` };
+      }
 
       console.log(`✅ AI conversation reply sent: ${timelineSummary}`);
       return { success: true, action: 'replied' };
