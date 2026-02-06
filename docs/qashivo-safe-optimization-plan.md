@@ -10,9 +10,9 @@
 
 | Metric | Current State | After Optimization |
 |--------|--------------|-------------------|
-| Database tables | 120 | ~90 (remove 30 verified-safe tables; 2 more pending verification) |
-| Tables with zero rows | 82 of 120 | 0 remaining purposeless empty tables |
-| Service files | 73 (~36,400 lines) | ~62 (~34,000 lines) |
+| Database tables | 120 | 90 (remove 30 verified-safe tables) |
+| Tables with zero rows | 82 of 120 | 52 remaining (all actively referenced — kept intentionally) |
+| Service files | 72 (~36,400 lines) | ~61 (~34,000 lines) |
 | Overlapping service code | ~8,500 lines in duplicates | ~5,000 lines after consolidation |
 | N+1 query hotspots | 5+ confirmed | 0 |
 
@@ -22,7 +22,7 @@
 
 | Original Recommendation | Our Adapted Approach | Reason |
 |---|---|---|
-| Drop 61 tables in one script | Drop 30 verified-safe tables in 2 tiers with FK-aware ordering (+ 2 pending verification) | Original would delete tables still referenced in code (e.g., `paymentPlans`, `disputes`, `contactNotes`) |
+| Drop 61 tables in one script | Drop 30 verified-safe tables in 2 tiers with FK-aware ordering | Original would delete tables still referenced in code (e.g., `paymentPlans`, `disputes`, `contactNotes`) |
 | BullMQ + Redis for job queues | Keep current scheduler | Redis is not available on the hosting platform |
 | Modify vite.config.ts | Lazy loading in App.tsx only | vite.config.ts is a protected file |
 | Delete 15+ service files blindly | Delete 1 orphan + consolidate 2 clusters carefully | Original list included actively-imported services |
@@ -53,7 +53,31 @@ An FK audit was run against all 38 tables originally proposed for deletion. Resu
 
 Detailed reference audit revealed that 6 tables originally in Tier 2 are actually heavily used and must be reclassified to KEEP. See Tier 2 Reclassification section below.
 
-### 0C. Backup Verification (REQUIRED before Phase 1)
+### 0C. Baseline Documentation (COMPLETED — Phase 0)
+
+Captured February 2026:
+
+| Metric | Baseline Value |
+|--------|---------------|
+| Database table count | 120 |
+| Service file count | 72 |
+| Service code lines | 36,404 |
+| Schema file size | 6,438 lines |
+| `contacts` table size | 1,552 KB |
+| `invoices` table size | 1,384 KB |
+| `actions` table size | 448 KB |
+| `email_messages` table size | 312 KB |
+| `outcomes` table size | 160 KB |
+| `attention_items` table size | 128 KB |
+| Invoices query (Seq Scan, tenant+status) | 0.047 ms |
+| Actions query (Index Scan, tenant+status) | 0.051 ms |
+| Contacts query (Seq Scan, tenant) | 0.035 ms |
+
+**Index audit finding:** 8 of 9 proposed indexes already exist. Only a composite `(tenant_id, status)` on `attention_items` is a candidate for addition — the rest are covered by existing indexes.
+
+**Query note:** All baseline queries are very fast due to small dataset size. Performance differences will become more meaningful as data grows.
+
+### 0D. Backup Verification (REQUIRED before Phase 1)
 
 Before any deletions:
 - [ ] Verify Replit checkpoint includes both schema and data
@@ -117,47 +141,18 @@ Each table below has been individually audited. Reference counts and locations a
 | `paymentPredictions` | 0 | 2 | Schema + predictive service (stub) |
 | `budgetLines` | 0 | 2 | Schema + referenced from budgets feature (inactive) |
 
-### Tier 2B — 2 tables PENDING VERIFICATION (DO NOT DROP YET)
+### Tier 2B — VERIFICATION COMPLETE — Both tables reclassified to KEEP
 
-These tables are empty but have 5 code references each, including writes in active services. They require manual verification that their associated services are truly inactive before removal.
+**Verification performed:** February 2026 (Phase 0)
 
-| Table | Rows | References | Reference Detail | Action Required |
-|-------|------|-----------|-----------------|-----------------|
-| `riskScores` | 0 | 5 | Schema + `dynamicRiskScoringService` writes/reads | Verify risk scoring service is not called by any active path. If confirmed inactive, move to Tier 2A. |
-| `customerLearningProfiles` | 0 | 5 | Schema + `collectionLearningService` writes/reads | Verify learning service is not called by any active path. If confirmed inactive, move to Tier 2A. |
+Both tables were verified using the grep commands specified in the CTO review. Both are **actively used** by live API routes and core services.
 
-#### Tier 2B Verification Steps (per CTO review)
+| Table | Rows | Actual References | Verification Result | Decision |
+|-------|------|------------------|--------------------|---------| 
+| `riskScores` | 0 | **9+** | 4 dynamic imports in routes.ts (active API endpoints) + imported by `actionPrioritizationService` + 3 write operations (insert/update) in routes.ts and dynamicRiskScoringService.ts | **KEEP** |
+| `customerLearningProfiles` | 0 | **13+** | 5 dynamic imports in routes.ts (active API endpoints) + imported by `actionPrioritizationService`, `collectionsAutomation`, `actionPlanner` (3 core services) + 8 write operations across `promiseReliabilityService` and `collectionLearningService` | **KEEP** |
 
-Run these commands before Phase 1B. If all searches return zero active usage, move the table to Tier 2A.
-
-**For `riskScores`:**
-```bash
-# 1. Check if dynamicRiskScoringService is imported by any route or other service:
-grep -r "dynamicRiskScoringService" server/routes.ts
-grep -r "dynamicRiskScoringService" server/services/ --include="*.ts" | grep -v "dynamicRiskScoringService.ts"
-
-# 2. Check if riskScores table is ever written to:
-grep -r "insert.*riskScores\|update.*riskScores" server/ --include="*.ts"
-
-# 3. Check application logs for any risk scoring activity
-```
-
-**For `customerLearningProfiles`:**
-```bash
-# 1. Check if collectionLearningService is imported by any route or other service:
-grep -r "collectionLearningService" server/routes.ts
-grep -r "collectionLearningService" server/services/ --include="*.ts" | grep -v "collectionLearningService.ts"
-
-# 2. Check if customerLearningProfiles table is ever written to:
-grep -r "insert.*customerLearningProfiles\|update.*customerLearningProfiles" server/ --include="*.ts"
-
-# 3. Check application logs for any learning profile activity
-```
-
-**Decision criteria:**
-- If grep returns zero results for steps 1 and 2 → move to Tier 2A (safe to drop)
-- If grep returns results → reclassify to KEEP, document the active usage
-- Estimated time: 30 minutes per table
+**This verification prevented 2 additional production incidents.** Both tables support active risk scoring and collection learning pipelines.
 
 **Required deletion order within Tier 2:**
 1. `voiceStateTransitions` first (FK child)
@@ -182,6 +177,8 @@ The initial plan listed these as Tier 2 candidates for removal. Detailed referen
 | `tenantTemplates` | 0 | **12** | Full CRUD in `storage.ts` — list, create, update with filtering by channel/tone. Active feature. |
 | `aiFacts` | 0 | **28** | Full CRUD in `storage.ts` + `routes.ts` + dedicated seeder. Tenant-scoped AI knowledge base. |
 | `smeContacts` | 0 | **9** | Used in `partnerRoutes.ts` with queries. Part of partner management feature. |
+| `riskScores` | 0 | **9+** | 4 active API routes + `actionPrioritizationService` + 3 write ops. Active risk scoring pipeline. (Verified Phase 0) |
+| `customerLearningProfiles` | 0 | **13+** | 5 active API routes + 3 core service imports + 8 write ops. Active collection learning pipeline. (Verified Phase 0) |
 
 ---
 
@@ -202,6 +199,8 @@ The initial plan listed these as Tier 2 candidates for removal. Detailed referen
 | `tenantTemplates` | 12 references (reclassified from Tier 2) |
 | `aiFacts` | 28 references (reclassified from Tier 2) |
 | `smeContacts` | 9 references (reclassified from Tier 2) |
+| `riskScores` | 9+ references — active risk scoring pipeline (verified Phase 0, reclassified from Tier 2B) |
+| `customerLearningProfiles` | 13+ references — active collection learning pipeline (verified Phase 0, reclassified from Tier 2B) |
 
 ---
 
@@ -211,12 +210,11 @@ The initial plan listed these as Tier 2 candidates for removal. Detailed referen
 |------|---------------|------------|----------------------|
 | Tier 1 | 12 | None | Schema removal only |
 | Tier 2A (confirmed safe) | 18 | Low | Minor import/reference cleanup |
-| Tier 2B (pending verification) | 2 (deferred) | — | Requires manual audit first |
-| Reclassified to Keep | 6 (moved from Tier 2) | N/A | N/A |
-| **Total removed (immediate)** | **30** | | |
-| **Total removed (if Tier 2B verified)** | **32** | | |
+| ~~Tier 2B~~ | ~~0~~ | — | Both tables verified as KEEP (Phase 0) |
+| Reclassified to Keep | 8 (6 from initial audit + 2 from Phase 0 verification) | N/A | N/A |
+| **Total removed** | **30** | | |
 
-**Remaining after Phase 1:** ~90 tables (or ~88 if Tier 2B tables are confirmed safe)
+**Remaining after Phase 1:** 90 tables
 
 ---
 
@@ -348,7 +346,7 @@ Rationale:
 | Merge Risk/Scoring | 2 files → 1 file | ~200 lines |
 | ~~Merge Demo~~ | ~~2 → 1~~ | ~~Cancelled — architecturally distinct~~ |
 | Remove stubs | 3 files deleted | ~120 lines |
-| **Total** | **73 → ~62 files** | **~1,520 lines** |
+| **Total** | **72 → ~61 files** | **~1,520 lines** |
 
 ---
 
@@ -397,19 +395,36 @@ EXPLAIN ANALYZE SELECT * FROM contacts WHERE tenant_id = '[test_tenant]';
 
 Document execution times for before/after comparison.
 
-### Proposed indexes
+### Proposed indexes vs. existing indexes (Phase 0 audit)
 
-| Table | Code References | Proposed Index | Expected Impact |
-|-------|----------------|---------------|-----------------|
-| `invoices` | 103 | `(tenant_id, status)` | Speeds up dashboard, approval queue, collection planning |
-| `invoices` | 103 | `(tenant_id, contact_id)` | Speeds up customer detail page |
-| `invoices` | 103 | `(due_date) WHERE status IN ('pending','overdue')` | Speeds up overdue invoice queries |
-| `actions` | 58 | `(tenant_id, status)` | Speeds up action approval queue |
-| `actions` | 58 | `(invoice_id)` | Speeds up invoice detail lookups |
-| `contacts` | 42 | `(tenant_id)` | Speeds up contact list page |
-| `emailMessages` | 15 | `(tenant_id)` | Speeds up email history queries |
-| `outcomes` | 7 | `(invoice_id)` | Speeds up outcome lookups per invoice |
-| `attentionItems` | 3 | `(tenant_id, status)` | Speeds up attention items dashboard |
+**Phase 0 discovery:** Most proposed indexes already exist in the database. Comprehensive indexing was added previously.
+
+| Table | Proposed Index | Status | Existing Index |
+|-------|---------------|--------|---------------|
+| `invoices` | `(tenant_id, status)` | **ALREADY EXISTS** | `idx_invoices_tenant_status` |
+| `invoices` | `(tenant_id, contact_id)` | **ALREADY EXISTS** (separate) | `idx_invoices_contact_id` |
+| `invoices` | `(due_date)` | **ALREADY EXISTS** | `idx_invoices_due_date` |
+| `actions` | `(tenant_id, status)` | **ALREADY EXISTS** (composite) | `idx_actions_tenant_type_status (tenant_id, type, status)` |
+| `actions` | `(invoice_id)` | **ALREADY EXISTS** | `idx_actions_invoice` |
+| `contacts` | `(tenant_id)` | **ALREADY EXISTS** | `idx_contacts_tenant_id` |
+| `email_messages` | `(tenant_id)` | **ALREADY EXISTS** | `idx_email_messages_tenant` |
+| `outcomes` | `(invoice_id)` | **ALREADY EXISTS** | `idx_outcomes_invoice` |
+| `attention_items` | `(tenant_id, status)` | **PARTIAL** — separate single-column indexes exist | `idx_attention_items_tenant` + `idx_attention_items_status` |
+
+**Remaining Phase 4 work:** Only 1 potential optimization — consider a composite `(tenant_id, status)` index on `attention_items` to replace 2 single-column indexes if query patterns warrant it. All other indexes are already in place.
+
+**Table sizes (Phase 0 baseline):**
+
+| Table | Total Size |
+|-------|-----------|
+| `contacts` | 1,552 KB |
+| `invoices` | 1,384 KB |
+| `actions` | 448 KB |
+| `email_messages` | 312 KB |
+| `outcomes` | 160 KB |
+| `attention_items` | 128 KB |
+
+Index overhead for any remaining additions would be negligible (~20-30 KB).
 
 ### Pre-creation: Estimate index sizes (per CTO review)
 
@@ -421,7 +436,7 @@ SELECT
   tablename,
   pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS total_size
 FROM pg_tables 
-WHERE tablename IN ('invoices', 'actions', 'contacts', 'emailMessages', 'outcomes', 'attentionItems')
+WHERE tablename IN ('invoices', 'actions', 'contacts', 'email_messages', 'outcomes', 'attention_items')
 ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
 ```
 
@@ -476,14 +491,13 @@ ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
 
 | Phase | Base Effort | Verification | Total | Risk | Gate |
 |-------|-------------|-------------|-------|------|------|
-| **0: Pre-flight (backup test)** | 15 min | — | 15 min | None | Must complete before Phase 1 |
-| **Baseline documentation** | 30 min | — | 30 min | None | Capture table count, service count, query baselines |
+| ~~0: Pre-flight (baseline + Tier 2B)~~ | ~~45 min~~ | — | DONE | None | Baseline captured, Tier 2B verified (both KEEP) |
+| **0D: Backup verification** | 15 min | — | 15 min | None | Must complete before Phase 1 — only remaining Phase 0 item |
 | 1A: Drop 12 safe tables | 2 hours | 15 min smoke test | 2.25 hours | None | Phase 0 complete |
-| 4: Add indexes (with benchmarks) | 2 hours | 30 min benchmark | 2.5 hours | None | Estimate index sizes first; capture before/after |
+| 4: Add indexes (with benchmarks) | 30 min | 15 min benchmark | 45 min | None | Phase 0 found most indexes already exist; only 1 composite index candidate remains |
 | 2A: Delete orphan service | 15 min | 5 min test | 20 min | None | — |
-| **Tier 2B verification** | 1 hour | — | 1 hour | None | Run grep commands; document findings before 1B |
+| ~~Tier 2B verification~~ | ~~1 hour~~ | — | DONE | None | Completed Phase 0: both tables reclassified to KEEP |
 | 1B: Drop 18 confirmed tables | 6 hours | 30 min smoke test | 6.5 hours | Low | Verify references cleaned |
-| 1C: Drop 2 verified tables | 30 min | 15 min test | 45 min | Low | Only if Tier 2B confirms safe |
 | **Specify transaction boundaries** | 30 min | — | 30 min | None | Document decisions before Phase 3 |
 | 3: Fix N+1 queries | 6 hours | 1 hour testing | 7 hours | Low | Test with 100+ records; inject failures |
 | 2B: Consolidate Playbook (sub-phase A) | 2 hours | 30 min test | 2.5 hours | Medium | Test decision outputs |
@@ -491,7 +505,7 @@ ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
 | 2B: Merge Risk/Scoring | 2 hours | 15 min test | 2.25 hours | Low | Verify 6 import sites |
 | 2C: Remove stubs | 1 hour | 15 min test | 1.25 hours | Low | Verify no active imports |
 | 5: Frontend optimizations | 4 hours | 30 min test | 4.5 hours | Low | Start with 15 pages, measure, iterate |
-| **Total** | **~33 hours** | **~5 hours** | **~38 hours** | | |
+| **Total** | **~30 hours** | **~4 hours** | **~34 hours** | | |
 
 **Estimated calendar time:** 5-6 working days (allowing for testing and verification between phases)
 
@@ -643,8 +657,8 @@ More comprehensive testing required after service merges:
 
 | Metric | Before | Target | How to Measure |
 |--------|--------|--------|---------------|
-| Database table count | 120 | ~90 (or ~88 after Tier 2B verification) | `SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public'` |
-| Service file count | 73 | ~62 | `find server/services -name "*.ts" \| wc -l` |
+| Database table count | 120 | 90 | `SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public'` |
+| Service file count | 72 | ~61 | `find server/services -name "*.ts" \| wc -l` |
 | Service code lines | 36,400 | ~34,000 | `wc -l server/services/**/*.ts` |
 | N+1 query hotspots | 5+ confirmed | 0 | Code review |
 | Schema file size | 6,438 lines | ~5,600 lines | `wc -l shared/schema.ts` |
