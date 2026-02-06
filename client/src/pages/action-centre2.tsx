@@ -42,8 +42,15 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertTriangle, HelpCircle, TrendingUp } from 'lucide-react';
 import { useAuth } from "@/hooks/useAuth";
@@ -94,6 +101,14 @@ export default function ActionCentre2() {
   const [selectedPlanAction, setSelectedPlanAction] = useState<any>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
+  const [approveMode, setApproveMode] = useState<'immediate' | 'scheduled'>('immediate');
+  const [scheduledDate, setScheduledDate] = useState(() => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toISOString().split('T')[0];
+  });
+  const [scheduledTime, setScheduledTime] = useState(dailyPlan?.tenantPolicies?.executionTime || '09:00');
 
   useEffect(() => {
     const params = new URLSearchParams(searchString);
@@ -270,10 +285,21 @@ export default function ActionCentre2() {
   });
 
   const approvePlanMutation = useMutation({
-    mutationFn: () => apiRequest('POST', '/api/automation/approve-plan'),
-    onSuccess: () => {
+    mutationFn: (params: { mode: 'immediate' | 'scheduled'; scheduledFor?: string }) =>
+      apiRequest('POST', '/api/automation/approve-plan', params),
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/automation/daily-plan'] });
-      toast({ title: "Plan approved", description: "Actions will execute at the scheduled time" });
+      queryClient.invalidateQueries({ queryKey: ['/api/actions'] });
+      setIsApproveDialogOpen(false);
+      if (variables.mode === 'immediate') {
+        toast({ title: "Executing now", description: "All actions are being sent immediately" });
+      } else {
+        const dt = variables.scheduledFor ? new Date(variables.scheduledFor) : new Date();
+        toast({
+          title: "Scheduled",
+          description: `Actions will execute on ${dt.toLocaleDateString('en-GB')} at ${dt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`,
+        });
+      }
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to approve plan", variant: "destructive" });
@@ -415,7 +441,7 @@ export default function ActionCentre2() {
               </div>
               {activeTab === 'planned' && (dailyPlan?.actions?.length ?? 0) > 0 && (
                 <button
-                  onClick={() => approvePlanMutation.mutate()}
+                  onClick={() => setIsApproveDialogOpen(true)}
                   disabled={approvePlanMutation.isPending || (dailyPlan?.actions?.filter((a: any) => a.status === 'pending_approval').length || 0) === 0}
                   className="h-9 px-4 text-[13px] font-medium bg-[#17B6C3] hover:bg-[#1396A1] text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
@@ -595,6 +621,107 @@ export default function ActionCentre2() {
           }
         }}
       />
+
+      <Dialog open={isApproveDialogOpen} onOpenChange={setIsApproveDialogOpen}>
+        <DialogContent className="sm:max-w-[400px] bg-white">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold text-gray-900">Approve All Actions</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <p className="text-[13px] text-gray-500">
+              {dailyPlan?.actions?.filter((a: any) => a.status === 'pending_approval').length || 0} actions will be approved. When should they execute?
+            </p>
+
+            <div className="space-y-3">
+              <label
+                className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                  approveMode === 'immediate'
+                    ? 'border-[#17B6C3] bg-[#17B6C3]/5'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+                onClick={() => setApproveMode('immediate')}
+              >
+                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                  approveMode === 'immediate' ? 'border-[#17B6C3]' : 'border-gray-300'
+                }`}>
+                  {approveMode === 'immediate' && <div className="w-2 h-2 rounded-full bg-[#17B6C3]" />}
+                </div>
+                <div>
+                  <span className="text-[13px] font-medium text-gray-900">Immediately</span>
+                  <p className="text-[12px] text-gray-400">Send all emails and initiate calls right now</p>
+                </div>
+              </label>
+
+              <label
+                className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                  approveMode === 'scheduled'
+                    ? 'border-[#17B6C3] bg-[#17B6C3]/5'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+                onClick={() => setApproveMode('scheduled')}
+              >
+                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                  approveMode === 'scheduled' ? 'border-[#17B6C3]' : 'border-gray-300'
+                }`}>
+                  {approveMode === 'scheduled' && <div className="w-2 h-2 rounded-full bg-[#17B6C3]" />}
+                </div>
+                <div>
+                  <span className="text-[13px] font-medium text-gray-900">Scheduled</span>
+                  <p className="text-[12px] text-gray-400">Choose a specific date and time</p>
+                </div>
+              </label>
+            </div>
+
+            {approveMode === 'scheduled' && (
+              <div className="flex gap-3 pl-7">
+                <div className="flex-1">
+                  <Label className="text-[12px] text-gray-500 mb-1 block">Date</Label>
+                  <Input
+                    type="date"
+                    value={scheduledDate}
+                    onChange={(e) => setScheduledDate(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                    className="h-9 text-[13px] bg-white border-gray-200 rounded-lg"
+                  />
+                </div>
+                <div className="w-28">
+                  <Label className="text-[12px] text-gray-500 mb-1 block">Time</Label>
+                  <Input
+                    type="time"
+                    value={scheduledTime}
+                    onChange={(e) => setScheduledTime(e.target.value)}
+                    className="h-9 text-[13px] bg-white border-gray-200 rounded-lg"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsApproveDialogOpen(false)}
+                className="flex-1 h-9 text-[13px] rounded-full border-gray-200"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (approveMode === 'immediate') {
+                    approvePlanMutation.mutate({ mode: 'immediate' });
+                  } else {
+                    const scheduledFor = new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString();
+                    approvePlanMutation.mutate({ mode: 'scheduled', scheduledFor });
+                  }
+                }}
+                disabled={approvePlanMutation.isPending}
+                className="flex-1 h-9 text-[13px] font-medium bg-[#17B6C3] hover:bg-[#1396A1] text-white rounded-full"
+              >
+                {approvePlanMutation.isPending ? 'Approving...' : approveMode === 'immediate' ? 'Execute Now' : 'Schedule'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <BottomNav />
     </div>

@@ -12981,13 +12981,13 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      // Get tenant for execution time
       const tenant = await storage.getTenant(user.tenantId);
       if (!tenant) {
         return res.status(404).json({ message: "Tenant not found" });
       }
 
-      // Get all pending_approval actions for this tenant
+      const { mode, scheduledFor } = req.body || {};
+
       const pendingActions = await db.query.actions.findMany({
         where: and(
           eq(actions.tenantId, user.tenantId),
@@ -13002,36 +13002,56 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         });
       }
 
-      // Calculate execution time for tomorrow
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      const [hours, minutes] = (tenant.executionTime || '09:00').split(':');
-      tomorrow.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-
-      // Batch update all pending actions to scheduled
       const actionIds = pendingActions.map(a => a.id);
-      await db.update(actions)
-        .set({
-          status: 'scheduled',
-          scheduledFor: tomorrow,
-          approvedBy: req.user.id,
-          approvedAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .where(
-          and(
-            eq(actions.tenantId, user.tenantId),
-            inArray(actions.id, actionIds)
-          )
-        );
 
-      console.log(`✅ Approved ${actionIds.length} actions for execution at ${tomorrow.toISOString()}`);
+      if (mode === 'immediate') {
+        res.json({
+          message: "Executing actions now",
+          approvedCount: actionIds.length,
+          mode: 'immediate',
+        });
 
-      res.json({
-        message: "Plan approved successfully",
-        approvedCount: actionIds.length,
-        executionTime: tomorrow.toISOString(),
-      });
+        const { actionExecutor } = await import("./services/actionExecutor");
+        actionExecutor.executeActionsByIds(actionIds, req.user.id).then(result => {
+          console.log(`✅ Immediate execution complete: ${result.successCount} success, ${result.errorCount} failed`);
+        }).catch(err => {
+          console.error("❌ Immediate execution error:", err);
+        });
+      } else {
+        let executionTime: Date;
+        if (scheduledFor) {
+          executionTime = new Date(scheduledFor);
+        } else {
+          executionTime = new Date();
+          executionTime.setDate(executionTime.getDate() + 1);
+          const [hours, minutes] = (tenant.executionTime || '09:00').split(':');
+          executionTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+        }
+
+        await db.update(actions)
+          .set({
+            status: 'scheduled',
+            scheduledFor: executionTime,
+            approvedBy: req.user.id,
+            approvedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(actions.tenantId, user.tenantId),
+              inArray(actions.id, actionIds)
+            )
+          );
+
+        console.log(`✅ Approved ${actionIds.length} actions for execution at ${executionTime.toISOString()}`);
+
+        res.json({
+          message: "Plan approved successfully",
+          approvedCount: actionIds.length,
+          mode: 'scheduled',
+          executionTime: executionTime.toISOString(),
+        });
+      }
     } catch (error: any) {
       console.error("Error approving plan:", error);
       res.status(500).json({ message: `Failed to approve plan: ${error.message}` });

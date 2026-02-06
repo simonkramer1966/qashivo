@@ -1,4 +1,4 @@
-import { eq, and, lte, sql, isNotNull } from "drizzle-orm";
+import { eq, and, lte, sql, isNotNull, inArray } from "drizzle-orm";
 import { db } from "../db";
 import { actions, contacts, invoices, tenants, messageDrafts } from "@shared/schema";
 import { sendEmail } from "./sendgrid";
@@ -139,6 +139,89 @@ export class ActionExecutor {
     } finally {
       this.isRunning = false;
     }
+  }
+
+  async executeActionsByIds(actionIds: number[], approvedBy: string): Promise<{ successCount: number; errorCount: number }> {
+    const startTime = Date.now();
+    let successCount = 0;
+    let errorCount = 0;
+
+    try {
+      console.log(`⚡ Immediate Executor: Executing ${actionIds.length} actions now`);
+
+      await db.update(actions)
+        .set({
+          status: 'scheduled',
+          scheduledFor: new Date(),
+          approvedBy,
+          approvedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(inArray(actions.id, actionIds));
+
+      const actionRecords = await db
+        .select({
+          action: actions,
+          contact: contacts,
+          invoice: invoices,
+          tenant: tenants,
+        })
+        .from(actions)
+        .innerJoin(contacts, eq(actions.contactId, contacts.id))
+        .leftJoin(invoices, eq(actions.invoiceId, invoices.id))
+        .innerJoin(tenants, eq(actions.tenantId, tenants.id))
+        .where(inArray(actions.id, actionIds));
+
+      for (const record of actionRecords) {
+        const { action, contact, invoice, tenant } = record;
+
+        try {
+          await db.update(actions)
+            .set({ status: 'executing' })
+            .where(eq(actions.id, action.id));
+
+          const result = await this.executeAction(action, contact, invoice, tenant);
+
+          if (result.success) {
+            await db.update(actions)
+              .set({
+                status: 'completed',
+                completedAt: new Date(),
+                metadata: { ...(action.metadata || {}), executionResult: result.data },
+              })
+              .where(eq(actions.id, action.id));
+            successCount++;
+            console.log(`✅ Immediately executed ${action.type} action for ${contact.name}`);
+            websocketService.broadcastActionCompleted(action.tenantId, action.id, action.type);
+          } else {
+            await db.update(actions)
+              .set({
+                status: 'failed',
+                metadata: { ...(action.metadata || {}), executionError: result.error },
+              })
+              .where(eq(actions.id, action.id));
+            errorCount++;
+            console.error(`❌ Failed ${action.type} action for ${contact.name}: ${result.error}`);
+          }
+        } catch (error: any) {
+          await db.update(actions)
+            .set({
+              status: 'failed',
+              metadata: { ...(action.metadata || {}), executionError: error.message },
+            })
+            .where(eq(actions.id, action.id));
+          errorCount++;
+          console.error(`❌ Error executing action ${action.id}:`, error.message);
+        }
+      }
+
+      const duration = Date.now() - startTime;
+      console.log(`✅ Immediate Executor: Completed in ${duration}ms - ${successCount} successful, ${errorCount} failed`);
+    } catch (error: any) {
+      console.error("❌ Immediate Executor error:", error);
+    }
+
+    return { successCount, errorCount };
   }
 
   /**
