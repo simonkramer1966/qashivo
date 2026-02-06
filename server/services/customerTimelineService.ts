@@ -10,7 +10,7 @@ import {
   contactOutcomes,
   auditEvents
 } from "@shared/schema";
-import { eq, and, desc, asc, lt, or, sql, ne } from "drizzle-orm";
+import { eq, and, desc, asc, lt, or, sql, ne, inArray } from "drizzle-orm";
 import type { 
   TimelineItem, 
   TimelineResponse, 
@@ -759,17 +759,22 @@ export class CustomerTimelineService {
       .orderBy(desc(actions.completedAt))
       .limit(100);
 
-    let synced = 0;
+    if (recentActions.length === 0) return 0;
 
-    for (const action of recentActions) {
-      const existing = await db.query.timelineEvents.findFirst({
-        where: eq(timelineEvents.actionId, action.id)
-      });
+    try {
+      const actionIds = recentActions.map(a => a.id);
+      const existingEvents = await db
+        .select({ actionId: timelineEvents.actionId })
+        .from(timelineEvents)
+        .where(inArray(timelineEvents.actionId, actionIds));
+      const existingActionIds = new Set(existingEvents.map(e => e.actionId));
 
-      if (!existing) {
+      const newEvents: typeof timelineEvents.$inferInsert[] = [];
+      for (const action of recentActions) {
+        if (existingActionIds.has(action.id)) continue;
         const channel = this.mapActionTypeToChannel(action.type);
         if (channel) {
-          await db.insert(timelineEvents).values({
+          newEvents.push({
             tenantId,
             customerId,
             invoiceId: action.invoiceId,
@@ -784,12 +789,18 @@ export class CustomerTimelineService {
             createdByType: action.aiGenerated ? "system" : "user",
             createdByUserId: action.userId || undefined
           });
-          synced++;
         }
       }
-    }
 
-    return synced;
+      if (newEvents.length > 0) {
+        await db.insert(timelineEvents).values(newEvents);
+      }
+
+      return newEvents.length;
+    } catch (error: any) {
+      console.error(`Timeline sync failed for customer ${customerId}:`, error.message);
+      return 0;
+    }
   }
 
   private mapActionTypeToChannel(actionType: string): TimelineChannel | null {

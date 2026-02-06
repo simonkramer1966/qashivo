@@ -503,24 +503,19 @@ class CommunicationsOrchestrator {
   
   private async checkActiveDisputes(invoiceIds: string[], tenantId: string): Promise<boolean> {
     try {
-      // Check if any of the invoices have an active dispute
-      for (const invoiceId of invoiceIds) {
-        const invoice = await storage.getInvoice(invoiceId, tenantId);
-        if (invoice) {
-          // Check invoice pause state for dispute
-          if (invoice.pauseState === 'dispute') {
-            return true;
-          }
-          // Check collection stage or status
-          if (invoice.collectionStage === 'disputed' || invoice.stage === 'disputed') {
-            return true;
-          }
+      const batchInvoices = await storage.getInvoicesByIds(invoiceIds, tenantId);
+      for (const invoice of batchInvoices) {
+        if (invoice.pauseState === 'dispute') {
+          return true;
+        }
+        if (invoice.collectionStage === 'disputed' || invoice.stage === 'disputed') {
+          return true;
         }
       }
       return false;
     } catch (error: any) {
       console.error('Error checking disputes:', error.message);
-      return false; // Fail open - allow send if check fails
+      return false;
     }
   }
   

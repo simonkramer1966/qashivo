@@ -1089,11 +1089,14 @@ class XeroService {
       const xeroInvoices = await this.getInvoices(tokens);
       const { storage } = await import('../storage');
 
+      const allContacts = await storage.getContacts(tenantId);
+      const contactsByXeroId = new Map(
+        allContacts.map(c => [c.xeroContactId, c])
+      );
+
       for (const xeroInvoice of xeroInvoices) {
         try {
-          // Find matching contact
-          const contacts = await storage.getContacts(tenantId);
-          const contact = contacts.find(c => c.xeroContactId === xeroInvoice.Contact.ContactID);
+          const contact = contactsByXeroId.get(xeroInvoice.Contact.ContactID);
           
           if (!contact) {
             results.errors.push(`Contact not found for invoice ${xeroInvoice.InvoiceNumber}`);

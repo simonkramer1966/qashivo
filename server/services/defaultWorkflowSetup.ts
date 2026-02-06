@@ -141,8 +141,62 @@ Yours faithfully,
 ];
 
 export async function ensureDefaultTemplates(tenantId: string): Promise<string[]> {
-  const templateIds: string[] = [];
+  let existingByName: Map<string, string>;
 
+  try {
+    const existingDefaults = await db
+      .select({ id: communicationTemplates.id, name: communicationTemplates.name })
+      .from(communicationTemplates)
+      .where(and(
+        eq(communicationTemplates.tenantId, tenantId),
+        eq(communicationTemplates.isDefault, true)
+      ));
+    existingByName = new Map(existingDefaults.map(t => [t.name, t.id]));
+  } catch (error: any) {
+    console.error(`Failed to prefetch templates for tenant ${tenantId}, falling back to individual queries:`, error.message);
+    return ensureDefaultTemplatesFallback(tenantId);
+  }
+
+  const templateIds: string[] = [];
+  const toInsert: typeof communicationTemplates.$inferInsert[] = [];
+
+  for (const template of DEFAULT_TEMPLATES) {
+    const existingId = existingByName.get(template.name);
+    if (existingId) {
+      templateIds.push(existingId);
+    } else {
+      toInsert.push({
+        tenantId,
+        name: template.name,
+        type: template.type,
+        category: template.category,
+        stage: template.stage,
+        subject: template.subject,
+        content: template.content,
+        toneOfVoice: template.toneOfVoice,
+        isDefault: template.isDefault,
+        isActive: true,
+        sendTiming: template.sendTiming,
+        variables: ["contactName", "invoiceNumber", "amount", "dueDate", "daysOverdue", "paymentLink", "companyName", "invoiceTable", "invoiceCount", "totalOverdue", "oldestInvoiceDays"]
+      });
+    }
+  }
+
+  if (toInsert.length > 0) {
+    const created = await db.transaction(async (tx) => {
+      return tx.insert(communicationTemplates).values(toInsert).returning();
+    });
+    for (const c of created) {
+      templateIds.push(c.id);
+      console.log(`Created default template: ${c.name}`);
+    }
+  }
+
+  return templateIds;
+}
+
+async function ensureDefaultTemplatesFallback(tenantId: string): Promise<string[]> {
+  const templateIds: string[] = [];
   for (const template of DEFAULT_TEMPLATES) {
     const existing = await db.query.communicationTemplates.findFirst({
       where: and(
@@ -151,12 +205,10 @@ export async function ensureDefaultTemplates(tenantId: string): Promise<string[]
         eq(communicationTemplates.isDefault, true)
       )
     });
-
     if (existing) {
       templateIds.push(existing.id);
       continue;
     }
-
     const [created] = await db.insert(communicationTemplates).values({
       tenantId,
       name: template.name,
@@ -171,11 +223,8 @@ export async function ensureDefaultTemplates(tenantId: string): Promise<string[]
       sendTiming: template.sendTiming,
       variables: ["contactName", "invoiceNumber", "amount", "dueDate", "daysOverdue", "paymentLink", "companyName", "invoiceTable", "invoiceCount", "totalOverdue", "oldestInvoiceDays"]
     }).returning();
-
     templateIds.push(created.id);
-    console.log(`✅ Created default template: ${template.name}`);
   }
-
   return templateIds;
 }
 

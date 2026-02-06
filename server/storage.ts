@@ -220,6 +220,7 @@ export interface IStorage {
     limit?: number;
   }): Promise<{ invoices: (Invoice & { contact: Contact; invoiceAge: number; daysOverdue: number })[]; total: number }>;
   getInvoice(id: string, tenantId: string): Promise<(Invoice & { contact: Contact; invoiceAge: number; daysOverdue: number }) | undefined>;
+  getInvoicesByIds(ids: string[], tenantId: string): Promise<Invoice[]>;
   createInvoice(invoice: InsertInvoice): Promise<Invoice>;
   updateInvoice(id: string, tenantId: string, updates: Partial<InsertInvoice>): Promise<Invoice>;
   getOverdueInvoices(tenantId: string): Promise<(Invoice & { contact: Contact })[]>;
@@ -1323,8 +1324,15 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
+  async getInvoicesByIds(ids: string[], tenantId: string): Promise<Invoice[]> {
+    if (ids.length === 0) return [];
+    return db
+      .select()
+      .from(invoices)
+      .where(and(inArray(invoices.id, ids), eq(invoices.tenantId, tenantId)));
+  }
+
   async createInvoice(invoiceData: InsertInvoice): Promise<Invoice> {
-    // Validate status matches due date reality
     const validatedData = this.validateInvoiceStatus(invoiceData);
     const [invoice] = await db.insert(invoices).values(validatedData).returning();
     return invoice;
