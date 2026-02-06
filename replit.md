@@ -118,3 +118,29 @@ Breach detection runs daily: if total outstanding hasn't decreased by next_check
 
 ### Documentation
 See `Invoice-Status-Outcomes.md` for detailed documentation for production developers.
+
+## Unified Inbound Communications Pipeline (Feb 2026)
+
+All inbound communications (email, SMS, voice) flow through a single unified pipeline:
+
+### Architecture
+- **Single entry point**: `intentAnalyst.processInboundMessage()` handles all channels
+- **Single data store**: All outcomes written to `outcomes` table (not `detectedOutcomes`)
+- **Canonical field names**: `promiseToPayDate` and `promiseToPayAmount` in outcome `extracted` JSON
+- **Legacy field support**: Services check both canonical names AND legacy `promisedPaymentDate`/`promisedPaymentAmount` for backwards compatibility
+
+### Channel Processing
+- **Email/SMS**: Webhook → `intentAnalyst.processInboundMessage()` → `outcomes` table
+- **Voice**: Retell webhook → OpenAI analysis → field name normalization → `outcomes` table
+
+### Retired Systems
+- `processInboundEmailOutcome()` function removed (was a duplicate regex-based path writing to `detectedOutcomes`)
+- `detectedOutcomes` table retained for historical data only; admin review routes still functional
+- New inbound emails no longer write to `detectedOutcomes` table
+
+### Key Files
+- Voice webhook: `server/routes/webhooks.ts` (call-ended handler)
+- Intent analysis: `server/services/intentAnalyst.ts`
+- Cash inflow chart: `server/services/dashboardCashInflowService.ts`
+- Work state: `server/services/workStateService.ts`
+- Email clarification: `server/services/emailClarificationService.ts`
