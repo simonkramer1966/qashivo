@@ -1,8 +1,8 @@
 # Qashivo Safe Optimization Plan
-## v2.0 — Updated with CTO Review Feedback & Detailed Audit Data
+## v2.1 — CTO Approved with Minor Refinements
 
 **Last Updated:** February 2026
-**Status:** Approved with modifications (per CTO review)
+**Status:** APPROVED — Ready to Execute (98% confidence per CTO review)
 
 ---
 
@@ -125,6 +125,39 @@ These tables are empty but have 5 code references each, including writes in acti
 |-------|------|-----------|-----------------|-----------------|
 | `riskScores` | 0 | 5 | Schema + `dynamicRiskScoringService` writes/reads | Verify risk scoring service is not called by any active path. If confirmed inactive, move to Tier 2A. |
 | `customerLearningProfiles` | 0 | 5 | Schema + `collectionLearningService` writes/reads | Verify learning service is not called by any active path. If confirmed inactive, move to Tier 2A. |
+
+#### Tier 2B Verification Steps (per CTO review)
+
+Run these commands before Phase 1B. If all searches return zero active usage, move the table to Tier 2A.
+
+**For `riskScores`:**
+```bash
+# 1. Check if dynamicRiskScoringService is imported by any route or other service:
+grep -r "dynamicRiskScoringService" server/routes.ts
+grep -r "dynamicRiskScoringService" server/services/ --include="*.ts" | grep -v "dynamicRiskScoringService.ts"
+
+# 2. Check if riskScores table is ever written to:
+grep -r "insert.*riskScores\|update.*riskScores" server/ --include="*.ts"
+
+# 3. Check application logs for any risk scoring activity
+```
+
+**For `customerLearningProfiles`:**
+```bash
+# 1. Check if collectionLearningService is imported by any route or other service:
+grep -r "collectionLearningService" server/routes.ts
+grep -r "collectionLearningService" server/services/ --include="*.ts" | grep -v "collectionLearningService.ts"
+
+# 2. Check if customerLearningProfiles table is ever written to:
+grep -r "insert.*customerLearningProfiles\|update.*customerLearningProfiles" server/ --include="*.ts"
+
+# 3. Check application logs for any learning profile activity
+```
+
+**Decision criteria:**
+- If grep returns zero results for steps 1 and 2 → move to Tier 2A (safe to drop)
+- If grep returns results → reclassify to KEEP, document the active usage
+- Estimated time: 30 minutes per table
 
 **Required deletion order within Tier 2:**
 1. `voiceStateTransitions` first (FK child)
@@ -331,6 +364,18 @@ Rationale:
 | `defaultWorkflowSetup.ts` | 146 | `db.query.communicationTemplates.findFirst()` inside `for (const template of DEFAULT_TEMPLATES)` loop | Pre-fetch all templates for tenant, then check existence in memory | If pre-fetch fails, fall back to individual queries (current behavior) |
 | `xero.ts` | 1094 | `storage.getContacts(tenantId)` called repeatedly inside sync loop | Cache result in Map at start of sync operation | If cache population fails, abort sync with error |
 
+### Transaction Boundary Decisions (per CTO review)
+
+Specify before implementation — which N+1 fixes need `db.transaction()` wrappers:
+
+| File | Location | Transaction? | Rationale |
+|------|----------|-------------|-----------|
+| `customerSegmentationService.ts` | Lines 191, 278, 361, 444 | **YES** | Segment creation should be atomic — partial inserts would leave inconsistent state |
+| `customerTimelineService.ts` | Line 764 | **NO** | Read-only operation (pre-fetch lookup map), no data mutation |
+| `communicationsOrchestrator.ts` | Line 507 | **NO** | Read-only batch fetch, graceful degradation on failure |
+| `defaultWorkflowSetup.ts` | Line 146 | **YES** | Setup operations should be atomic — partial template creation would leave broken defaults |
+| `xero.ts` | Line 1094 | **YES** | Sync operations should be atomic — partial sync would leave data inconsistent |
+
 **Testing requirement (per CTO):**
 - [ ] Test each fix with 100+ records to verify performance improvement
 - [ ] Verify transaction boundaries are correct
@@ -365,6 +410,22 @@ Document execution times for before/after comparison.
 | `emailMessages` | 15 | `(tenant_id)` | Speeds up email history queries |
 | `outcomes` | 7 | `(invoice_id)` | Speeds up outcome lookups per invoice |
 | `attentionItems` | 3 | `(tenant_id, status)` | Speeds up attention items dashboard |
+
+### Pre-creation: Estimate index sizes (per CTO review)
+
+Before creating indexes, estimate their size to verify database capacity:
+
+```sql
+SELECT 
+  schemaname,
+  tablename,
+  pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS total_size
+FROM pg_tables 
+WHERE tablename IN ('invoices', 'actions', 'contacts', 'emailMessages', 'outcomes', 'attentionItems')
+ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
+```
+
+**Rule of thumb:** Indexes typically add 20-30% to table size. Expected total index overhead: ~50-100MB (acceptable for our dataset size). If tables are unexpectedly large, reconsider partial indexes or defer to off-peak hours.
 
 **Risk:** None. `CREATE INDEX CONCURRENTLY` is non-blocking and safe on live databases. Indexes can be dropped instantly if issues arise.
 
@@ -411,24 +472,28 @@ Document execution times for before/after comparison.
 
 ---
 
-## Implementation Timeline (REVISED per CTO review)
+## Implementation Timeline (REVISED per CTO final review)
 
-| Phase | Effort | Risk | Dependencies | Gate |
-|-------|--------|------|-------------|------|
-| **0: Pre-flight checks** | **3 hours** | None | — | FK audit DONE. Backup verification REQUIRED. |
-| 1A: Drop 12 safe tables | 2 hours | None | Phase 0 complete | — |
-| 4: Add indexes (with benchmarks) | **2 hours** | None | — | Capture before/after metrics |
-| 2A: Delete orphan service | 15 min | None | — | — |
-| 1B: Drop 18 confirmed inactive tables | **6 hours** | Low | Phase 1A done | Verify each reference before cleanup |
-| 1C: Verify & drop 2 pending tables | **1 hour** | Low | Phase 1B done | Manual audit of risk/learning services |
-| 3: Fix N+1 queries | **6 hours** | Low | — | Test with 100+ records; add error handling |
-| 2B: Consolidate Playbook cluster | **6 hours** | Medium | Full test pass | Sub-phase A first, validate, then sub-phase B |
-| 2B: Merge Risk/Scoring | **2 hours** | Low | — | Verify 6 import sites updated |
-| 2C: Remove stubs | 1 hour | Low | — | Verify no active imports |
-| 5: Frontend optimizations | **4 hours** | Low | — | Start with 15 pages, measure, iterate |
-| **Total** | **~33 hours** | | | |
+| Phase | Base Effort | Verification | Total | Risk | Gate |
+|-------|-------------|-------------|-------|------|------|
+| **0: Pre-flight (backup test)** | 15 min | — | 15 min | None | Must complete before Phase 1 |
+| **Baseline documentation** | 30 min | — | 30 min | None | Capture table count, service count, query baselines |
+| 1A: Drop 12 safe tables | 2 hours | 15 min smoke test | 2.25 hours | None | Phase 0 complete |
+| 4: Add indexes (with benchmarks) | 2 hours | 30 min benchmark | 2.5 hours | None | Estimate index sizes first; capture before/after |
+| 2A: Delete orphan service | 15 min | 5 min test | 20 min | None | — |
+| **Tier 2B verification** | 1 hour | — | 1 hour | None | Run grep commands; document findings before 1B |
+| 1B: Drop 18 confirmed tables | 6 hours | 30 min smoke test | 6.5 hours | Low | Verify references cleaned |
+| 1C: Drop 2 verified tables | 30 min | 15 min test | 45 min | Low | Only if Tier 2B confirms safe |
+| **Specify transaction boundaries** | 30 min | — | 30 min | None | Document decisions before Phase 3 |
+| 3: Fix N+1 queries | 6 hours | 1 hour testing | 7 hours | Low | Test with 100+ records; inject failures |
+| 2B: Consolidate Playbook (sub-phase A) | 2 hours | 30 min test | 2.5 hours | Medium | Test decision outputs |
+| 2B: Consolidate Playbook (sub-phase B) | 4 hours | 1 hour test | 5 hours | Medium | Full regression test |
+| 2B: Merge Risk/Scoring | 2 hours | 15 min test | 2.25 hours | Low | Verify 6 import sites |
+| 2C: Remove stubs | 1 hour | 15 min test | 1.25 hours | Low | Verify no active imports |
+| 5: Frontend optimizations | 4 hours | 30 min test | 4.5 hours | Low | Start with 15 pages, measure, iterate |
+| **Total** | **~33 hours** | **~5 hours** | **~38 hours** | | |
 
-**Estimated calendar time:** 4-5 working days
+**Estimated calendar time:** 5-6 working days (allowing for testing and verification between phases)
 
 ---
 
@@ -462,6 +527,46 @@ Document execution times for before/after comparison.
 | 4 (Indexes) | Before/after `EXPLAIN ANALYZE` comparison |
 | 5 (Frontend) | Page load times; verify no blank screens; check that lazy-loaded pages render correctly |
 
+### Post-Phase Smoke Test Checklist (per CTO review)
+
+Run after every phase (5 minutes per test):
+
+- [ ] Dashboard loads without errors
+- [ ] Invoices page loads and displays data
+- [ ] Can view individual invoice details
+- [ ] Contacts page loads and displays data
+- [ ] Can view individual contact details
+- [ ] Actions page loads (if applicable for phase)
+- [ ] Can create new action (if applicable)
+- [ ] Outcomes display correctly (if applicable)
+- [ ] No console errors in browser DevTools
+- [ ] No errors in application logs
+- [ ] Core workflows still functional (e.g., can send test email)
+
+### Service Consolidation Regression Tests (run after Phase 2B)
+
+More comprehensive testing required after service merges:
+
+**Decision engine:**
+- [ ] Overdue invoice → should recommend email
+- [ ] New invoice → should recommend SMS
+- [ ] Repeat defaulter → should escalate tone
+- [ ] Decision outputs match pre-consolidation baseline
+
+**Collections scheduler:**
+- [ ] Daily plan generates successfully
+- [ ] Actions are created with correct priorities
+- [ ] No duplicate actions created
+
+**Portfolio controller nightly job:**
+- [ ] Runs without errors
+- [ ] Output matches previous behavior
+
+**Risk scoring:**
+- [ ] Test with 10 sample customers
+- [ ] Compare scores before/after consolidation
+- [ ] Variance should be <1%
+
 ### Monitoring during rollout:
 - [ ] Watch application logs for new errors after each phase
 - [ ] Monitor API response times for regression
@@ -475,6 +580,48 @@ Document execution times for before/after comparison.
 - **Code:** Each phase is a separate git commit. Any phase can be reverted independently via git.
 - **Verification:** After each phase, restart the application and confirm core flows still work (see Testing Strategy above).
 - **Indexes:** Can be dropped instantly with `DROP INDEX` if they cause issues.
+
+---
+
+## Failure Scenario Playbooks (per CTO review)
+
+### Scenario 1: A "safe" table deletion breaks something
+**Symptoms:** After Phase 1B, a feature stops working
+**Likely cause:** Reference was missed in the audit (edge case: dynamic table name, commented code that's actually used)
+**Response:**
+1. Check git diff to identify which table was deleted
+2. Restore from Replit checkpoint immediately (under 5 minutes)
+3. Search codebase more thoroughly for that table name (including dynamic references and string interpolation)
+4. Move table to KEEP list
+5. Document why the reference was missed to improve audit process
+
+### Scenario 2: Service consolidation introduces subtle bug
+**Symptoms:** Decision engine produces different recommendations after Phase 2B
+**Likely cause:** Hidden state dependency or timing assumption between the merged services
+**Response:**
+1. Rollback the Phase 2B commit via git
+2. Compare before/after code side-by-side
+3. Identify state initialization or timing difference
+4. Fix in isolation with targeted tests
+5. Re-attempt consolidation with the fix applied
+
+### Scenario 3: N+1 fix makes queries slower
+**Symptoms:** Batch query takes longer than the original individual queries
+**Likely cause:** Database query planner chooses bad execution plan for large IN clause
+**Response:**
+1. Run `EXPLAIN ANALYZE` on the slow query
+2. Check if indexes are being used (look for Seq Scan where Index Scan is expected)
+3. Consider adding a covering index
+4. If still slow, revert to original approach and document in code why the optimization was reverted
+
+### Scenario 4: Index creation takes >10 minutes
+**Symptoms:** `CREATE INDEX CONCURRENTLY` command hangs
+**Likely cause:** Lock contention or unexpectedly large table
+**Response:**
+1. Check for long-running transactions: `SELECT * FROM pg_stat_activity WHERE state='active';`
+2. Kill blocking queries if safe to do so
+3. If table is unexpectedly large, defer index creation to off-peak hours
+4. Document issue for review
 
 ---
 
@@ -579,4 +726,4 @@ demoModeService.ts (31 lines) — FEATURE FLAG
 
 ---
 
-*This plan prioritizes safety and verifiability. Every recommendation is backed by actual code analysis — table reference counts, import traces, FK constraint checks, and row counts from the live database. No table or service is removed without confirming it has zero active dependencies. Updated per CTO technical review to include pre-flight checks, FK-aware deletion ordering, corrected Tier 2 reclassification, revised service consolidation scope, detailed call site mappings, testing strategy, and monitoring requirements.*
+*This plan prioritizes safety and verifiability. Every recommendation is backed by actual code analysis — table reference counts, import traces, FK constraint checks, and row counts from the live database. No table or service is removed without confirming it has zero active dependencies. Updated per CTO technical review to include pre-flight checks, FK-aware deletion ordering, corrected Tier 2 reclassification, revised service consolidation scope, detailed call site mappings, testing strategy, monitoring requirements, transaction boundary decisions, index size estimation, post-phase smoke test checklists, regression test suites, and failure scenario playbooks.*
