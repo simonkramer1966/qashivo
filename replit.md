@@ -40,7 +40,7 @@ Qashivo uses two design systems:
 ### Technical Implementation
 -   **Frontend**: React with TypeScript (Vite), Shadcn/ui (Radix UI), Tailwind CSS, Wouter for routing, TanStack Query, React Hook Form with Zod.
 -   **Backend**: Node.js with Express.js (TypeScript ES modules), RESTful API, Express sessions.
--   **Database**: PostgreSQL (Neon serverless) with Drizzle ORM and Drizzle Kit, supporting multi-tenancy.
+-   **Database**: PostgreSQL (Neon serverless) with Drizzle ORM and Drizzle Kit, supporting multi-tenancy. 90 tables (reduced from 120 in Phase 1 optimization, Feb 2026).
 -   **Authentication**: Replit Auth (OpenID Connect) via Passport.js.
 
 ### Partner Architecture (B2B2B Model)

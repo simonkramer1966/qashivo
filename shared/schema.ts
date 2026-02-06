@@ -525,24 +525,6 @@ export const budgets = pgTable("budgets", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Budget lines table (individual budget line items)
-export const budgetLines = pgTable("budget_lines", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  budgetId: varchar("budget_id").notNull().references(() => budgets.id, { onDelete: "cascade" }),
-  category: varchar("category").notNull(), // income, expense, asset, liability
-  subcategory: varchar("subcategory"), // salaries, rent, marketing, etc.
-  description: text("description"),
-  budgetedAmount: decimal("budgeted_amount", { precision: 10, scale: 2 }).notNull(),
-  actualAmount: decimal("actual_amount", { precision: 10, scale: 2 }).default("0"),
-  variance: decimal("variance", { precision: 10, scale: 2 }).default("0"),
-  variancePercentage: decimal("variance_percentage", { precision: 5, scale: 2 }).default("0"),
-  period: varchar("period"), // monthly, quarterly, yearly breakdown
-  isActive: boolean("is_active").default(true),
-  notes: text("notes"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
 // Exchange rates table for multi-currency support
 // NOTE: Exchange rates are intentionally system-wide (no tenantId) as currency exchange rates
 // are global financial data that should be consistent across all tenants. This reduces 
@@ -892,42 +874,6 @@ export const emailMessages = pgTable("email_messages", {
   index("idx_email_messages_reply_token").on(table.replyToken),
 ]);
 
-// Detected Outcomes - structured outcome detection from inbound emails
-export const detectedOutcomes = pgTable("detected_outcomes", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  emailMessageId: varchar("email_message_id").notNull().references(() => emailMessages.id),
-  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
-  contactId: varchar("contact_id").references(() => contacts.id),
-  invoiceId: varchar("invoice_id").references(() => invoices.id),
-  
-  // Outcome classification
-  outcomeType: varchar("outcome_type").notNull(), // PROMISE_TO_PAY, REQUEST_MORE_TIME, PAYMENT_PLAN_REQUEST, DISPUTE, ALREADY_PAID, WRONG_CONTACT, UNKNOWN
-  
-  // Extracted data
-  promiseDate: timestamp("promise_date"),
-  amount: decimal("amount", { precision: 10, scale: 2 }),
-  notes: text("notes"),
-  
-  // Confidence and review
-  confidence: decimal("confidence", { precision: 3, scale: 2 }).notNull(), // 0.00 to 1.00
-  needsReview: boolean("needs_review").notNull().default(false),
-  reviewedBy: varchar("reviewed_by").references(() => users.id),
-  reviewedAt: timestamp("reviewed_at"),
-  
-  // Original vs confirmed values
-  originalOutcomeType: varchar("original_outcome_type"),
-  originalConfidence: decimal("original_confidence", { precision: 3, scale: 2 }),
-  
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => [
-  index("idx_detected_outcomes_email").on(table.emailMessageId),
-  index("idx_detected_outcomes_tenant").on(table.tenantId),
-  index("idx_detected_outcomes_contact").on(table.contactId),
-  index("idx_detected_outcomes_invoice").on(table.invoiceId),
-  index("idx_detected_outcomes_needs_review").on(table.tenantId, table.needsReview),
-]);
-
 // Contact Outcomes - unified log of all contact attempt outcomes
 export const contactOutcomes = pgTable("contact_outcomes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1167,22 +1113,6 @@ export const escalationRules = pgTable("escalation_rules", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// AI agent configurations
-export const aiAgentConfigs = pgTable("ai_agent_configs", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
-  name: varchar("name").notNull(),
-  type: varchar("type").notNull(), // "whatsapp", "voice", "email_generator"
-  personality: varchar("personality").default("professional"), // "professional", "friendly", "firm"
-  instructions: text("instructions").notNull(),
-  escalationTriggers: jsonb("escalation_triggers"), // When to escalate to human
-  responseTemplates: jsonb("response_templates"), // Pre-built responses
-  isActive: boolean("is_active").default(true),
-  modelSettings: jsonb("model_settings"), // AI model parameters
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
 // Customer Behavior Signals for Adaptive Scheduler
 export const customerBehaviorSignals = pgTable("customer_behavior_signals", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1257,57 +1187,6 @@ export const rolePermissions = pgTable("role_permissions", {
   unique("role_permission_unique").on(table.role, table.permissionId)
 ]);
 
-// User permissions table - custom permissions per user within a tenant
-export const userPermissions = pgTable("user_permissions", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-  permissionId: varchar("permission_id").notNull().references(() => permissions.id, { onDelete: "cascade" }),
-  granted: boolean("granted").notNull().default(true), // true = granted, false = explicitly revoked
-  grantedBy: varchar("granted_by").references(() => users.id), // Who assigned this permission
-  reason: text("reason"), // Optional reason for granting/revoking
-  expiresAt: timestamp("expires_at"), // Optional expiration for temporary permissions
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => [
-  unique("user_permission_unique").on(table.userId, table.tenantId, table.permissionId)
-]);
-
-// User invitations table - track pending user invitations
-export const userInvitations = pgTable("user_invitations", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-  email: varchar("email").notNull(),
-  role: varchar("role").notNull().default("user"), // Pre-assigned role
-  invitedBy: varchar("invited_by").notNull().references(() => users.id, { onDelete: "cascade" }),
-  invitationToken: varchar("invitation_token").notNull().unique(),
-  status: varchar("status").notNull().default("pending"), // pending, accepted, expired, revoked
-  message: text("message"), // Optional personal message
-  expiresAt: timestamp("expires_at").notNull(),
-  acceptedAt: timestamp("accepted_at"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => [
-  unique("invitation_tenant_email").on(table.tenantId, table.email)
-]);
-
-// Permission audit log - track permission changes
-export const permissionAuditLog = pgTable("permission_audit_log", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
-  userId: varchar("user_id").references(() => users.id), // The user whose permissions changed
-  changedBy: varchar("changed_by").notNull().references(() => users.id), // Who made the change
-  action: varchar("action").notNull(), // "role_assigned", "role_removed", "permission_granted", "permission_revoked"
-  entityType: varchar("entity_type").notNull(), // "role", "permission"
-  entityId: varchar("entity_id"), // Role name or permission ID
-  oldValue: varchar("old_value"), // Previous role/permission state
-  newValue: varchar("new_value"), // New role/permission state
-  reason: text("reason"), // Optional reason for change
-  ipAddress: varchar("ip_address"),
-  userAgent: text("user_agent"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
 // Channel performance analytics
 export const channelAnalytics = pgTable("channel_analytics", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1324,21 +1203,6 @@ export const channelAnalytics = pgTable("channel_analytics", {
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).default("0"),
   costPerCommunication: decimal("cost_per_communication", { precision: 6, scale: 4 }).default("0"),
   createdAt: timestamp("created_at").defaultNow(),
-});
-
-// Retell AI configurations
-export const retellConfigurations = pgTable("retell_configurations", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
-  apiKey: text("api_key").notNull(), // Encrypted Retell AI API key
-  agentId: varchar("agent_id").notNull(), // Retell AI agent ID for collections
-  phoneNumber: varchar("phone_number").notNull(), // From number in E.164 format
-  phoneNumberId: varchar("phone_number_id"), // Retell phone number ID if using their numbers
-  isActive: boolean("is_active").default(true),
-  webhookUrl: varchar("webhook_url"), // Webhook endpoint for call events
-  settings: jsonb("settings"), // Additional Retell AI settings
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Voice call logs for Retell AI calls
@@ -1419,93 +1283,6 @@ export const smsMessages = pgTable("sms_messages", {
   index("idx_sms_provider").on(table.provider),
 ]);
 
-// Voice workflows for conversational AI flows
-export const voiceWorkflows = pgTable("voice_workflows", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
-  name: varchar("name").notNull(),
-  description: text("description"),
-  category: varchar("category").default("collection"), // "collection", "sales", "support", "custom"
-  isActive: boolean("is_active").default(true),
-  isTemplate: boolean("is_template").default(false),
-  retellAgentId: varchar("retell_agent_id"), // Associated Retell agent
-  canvasData: jsonb("canvas_data"), // Visual workflow builder data (positions, zoom, etc.)
-  voiceSettings: jsonb("voice_settings"), // Voice-specific settings (tone, speed, etc.)
-  successRate: decimal("success_rate", { precision: 5, scale: 2 }),
-  averageCallDuration: integer("average_call_duration"), // Average duration in seconds
-  totalCalls: integer("total_calls").default(0),
-  deploymentStatus: varchar("deployment_status").default("draft"), // "draft", "deployed", "failed"
-  lastDeployedAt: timestamp("last_deployed_at"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-// Individual states within voice workflows
-export const voiceWorkflowStates = pgTable("voice_workflow_states", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  voiceWorkflowId: varchar("voice_workflow_id").notNull().references(() => voiceWorkflows.id, { onDelete: "cascade" }),
-  stateType: varchar("state_type").notNull(), // "greeting", "information_gathering", "decision_point", "payment_options", "confirmation", "schedule_followup", "call_ending"
-  label: varchar("label").notNull(),
-  position: jsonb("position").notNull(), // {x: number, y: number}
-  config: jsonb("config").notNull(), // State-specific configuration
-  isStartState: boolean("is_start_state").default(false),
-  isEndState: boolean("is_end_state").default(false),
-  prompt: text("prompt"), // What the AI says in this state
-  expectedResponses: jsonb("expected_responses"), // Expected customer responses
-  retellStateId: varchar("retell_state_id"), // Corresponding Retell AI state ID
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// Transitions between voice workflow states
-export const voiceStateTransitions = pgTable("voice_state_transitions", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  voiceWorkflowId: varchar("voice_workflow_id").notNull().references(() => voiceWorkflows.id, { onDelete: "cascade" }),
-  fromStateId: varchar("from_state_id").notNull().references(() => voiceWorkflowStates.id, { onDelete: "cascade" }),
-  toStateId: varchar("to_state_id").notNull().references(() => voiceWorkflowStates.id, { onDelete: "cascade" }),
-  condition: jsonb("condition"), // Condition for this transition
-  label: varchar("label"), // Optional label for the transition
-  transitionType: varchar("transition_type").default("default"), // "yes", "no", "timeout", "error", "default"
-  confidence: decimal("confidence", { precision: 5, scale: 2 }), // AI confidence for this transition
-  successRate: decimal("success_rate", { precision: 5, scale: 2 }), // Historical success rate
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// Voice message templates for non-conversational messages
-export const voiceMessageTemplates = pgTable("voice_message_templates", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
-  name: varchar("name").notNull(),
-  category: varchar("category").notNull(), // "payment_reminder", "overdue_notice", "thank_you", "follow_up", "custom"
-  stage: integer("stage"), // 1-5 for sequence stages
-  subject: varchar("subject"), // Brief description of the message
-  content: text("content").notNull(), // Message text that will be converted to speech
-  variables: jsonb("variables"), // Available variables for personalization
-  voiceSettings: jsonb("voice_settings"), // Voice-specific settings (voice_id, speed, tone)
-  isActive: boolean("is_active").default(true),
-  isDefault: boolean("is_default").default(false),
-  sendTiming: jsonb("send_timing"), // When to send: {daysOffset: number, timeOfDay: string, weekdaysOnly: boolean}
-  successRate: decimal("success_rate", { precision: 5, scale: 2 }),
-  usageCount: integer("usage_count").default(0),
-  averageListenDuration: integer("average_listen_duration"), // Average listening duration in seconds
-  toneOfVoice: varchar("tone_of_voice").default("professional"), // "professional", "friendly", "urgent", "formal"
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-// Leads table for CRM
-export const leads = pgTable("leads", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: varchar("name").notNull(),
-  email: varchar("email").notNull(),
-  phone: varchar("phone").notNull(),
-  company: varchar("company"),
-  status: varchar("status").notNull().default("new"), // "new", "contacted", "qualified", "converted", "closed"
-  source: varchar("source").notNull().default("demo"), // "demo", "website", "referral", etc.
-  notes: text("notes"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
 // AI CFO Facts Database - Knowledge base for accurate AI responses
 export const aiFacts = pgTable("ai_facts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1572,26 +1349,6 @@ export const disputes = pgTable("disputes", {
   index("idx_disputes_invoice").on(table.invoiceId),
   index("idx_disputes_tenant_status").on(table.tenantId, table.status),
   index("idx_disputes_contact").on(table.contactId),
-]);
-
-// Dispute Evidence - file attachments for disputes
-export const disputeEvidence = pgTable("dispute_evidence", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  disputeId: varchar("dispute_id").notNull().references(() => disputes.id),
-  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
-  filename: varchar("filename").notNull(),
-  originalFilename: varchar("original_filename").notNull(),
-  mimeType: varchar("mime_type").notNull(),
-  fileSize: integer("file_size").notNull(),
-  storageUrl: text("storage_url").notNull(),
-  uploadedBy: varchar("uploaded_by").notNull(),
-  uploadedByUserId: varchar("uploaded_by_user_id").references(() => users.id),
-  notes: text("notes"),
-  checksum: varchar("checksum"),
-  virusScanStatus: varchar("virus_scan_status").default("pending"),
-  createdAt: timestamp("created_at").defaultNow(),
-}, (table) => [
-  index("idx_dispute_evidence_dispute").on(table.disputeId),
 ]);
 
 // Promises to Pay - dated commitments from debtors
@@ -1693,34 +1450,6 @@ export const customerPreferences = pgTable("customer_preferences", {
   index("idx_customer_preferences_contact").on(table.contactId),
 ]);
 
-// Customer contact roles (credit control contact, escalation contact, etc.)
-export const customerContactRoles = pgTable("customer_contact_roles", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
-  customerId: varchar("customer_id").notNull().references(() => contacts.id), // The customer this role belongs to
-  
-  // Role type
-  role: varchar("role").notNull(), // credit_control, escalation, other
-  isPrimary: boolean("is_primary").default(true),
-  
-  // Contact details
-  name: varchar("name"),
-  email: varchar("email"),
-  phone: varchar("phone"),
-  
-  // Source tracking (Xero vs Qashivo override)
-  nameSource: varchar("name_source").default("qashivo"), // xero, qashivo
-  emailSource: varchar("email_source").default("qashivo"),
-  phoneSource: varchar("phone_source").default("qashivo"),
-  
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => [
-  index("idx_customer_contact_roles_tenant").on(table.tenantId),
-  index("idx_customer_contact_roles_customer").on(table.customerId),
-  index("idx_customer_contact_roles_role").on(table.role),
-]);
-
 // Unified Timeline Events table for complete communication/activity history
 export const timelineEvents = pgTable("timeline_events", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1802,12 +1531,8 @@ export const tenantsRelations = relations(tenants, ({ many }) => ({
   workflows: many(workflows),
   communicationTemplates: many(communicationTemplates),
   escalationRules: many(escalationRules),
-  aiAgentConfigs: many(aiAgentConfigs),
   channelAnalytics: many(channelAnalytics),
-  retellConfigurations: many(retellConfigurations),
   voiceCalls: many(voiceCalls),
-  voiceWorkflows: many(voiceWorkflows),
-  voiceMessageTemplates: many(voiceMessageTemplates),
   aiFacts: many(aiFacts),
 }));
 
@@ -1937,14 +1662,6 @@ export const budgetsRelations = relations(budgets, ({ one, many }) => ({
     fields: [budgets.approvedBy],
     references: [users.id],
   }),
-  budgetLines: many(budgetLines),
-}));
-
-export const budgetLinesRelations = relations(budgetLines, ({ one }) => ({
-  budget: one(budgets, {
-    fields: [budgetLines.budgetId],
-    references: [budgets.id],
-  }),
 }));
 
 export const syncStateRelations = relations(syncState, ({ one }) => ({
@@ -2034,13 +1751,6 @@ export const escalationRulesRelations = relations(escalationRules, ({ one }) => 
   }),
 }));
 
-export const aiAgentConfigsRelations = relations(aiAgentConfigs, ({ one }) => ({
-  tenant: one(tenants, {
-    fields: [aiAgentConfigs.tenantId],
-    references: [tenants.id],
-  }),
-}));
-
 export const channelAnalyticsRelations = relations(channelAnalytics, ({ one }) => ({
   tenant: one(tenants, {
     fields: [channelAnalytics.tenantId],
@@ -2049,13 +1759,6 @@ export const channelAnalyticsRelations = relations(channelAnalytics, ({ one }) =
   template: one(communicationTemplates, {
     fields: [channelAnalytics.templateId],
     references: [communicationTemplates.id],
-  }),
-}));
-
-export const retellConfigurationsRelations = relations(retellConfigurations, ({ one }) => ({
-  tenant: one(tenants, {
-    fields: [retellConfigurations.tenantId],
-    references: [tenants.id],
   }),
 }));
 
@@ -2071,52 +1774,6 @@ export const voiceCallsRelations = relations(voiceCalls, ({ one }) => ({
   invoice: one(invoices, {
     fields: [voiceCalls.invoiceId],
     references: [invoices.id],
-  }),
-}));
-
-export const voiceWorkflowsRelations = relations(voiceWorkflows, ({ one, many }) => ({
-  tenant: one(tenants, {
-    fields: [voiceWorkflows.tenantId],
-    references: [tenants.id],
-  }),
-  states: many(voiceWorkflowStates),
-  transitions: many(voiceStateTransitions),
-}));
-
-export const voiceWorkflowStatesRelations = relations(voiceWorkflowStates, ({ one, many }) => ({
-  voiceWorkflow: one(voiceWorkflows, {
-    fields: [voiceWorkflowStates.voiceWorkflowId],
-    references: [voiceWorkflows.id],
-  }),
-  outgoingTransitions: many(voiceStateTransitions, {
-    relationName: "fromState",
-  }),
-  incomingTransitions: many(voiceStateTransitions, {
-    relationName: "toState",
-  }),
-}));
-
-export const voiceStateTransitionsRelations = relations(voiceStateTransitions, ({ one }) => ({
-  voiceWorkflow: one(voiceWorkflows, {
-    fields: [voiceStateTransitions.voiceWorkflowId],
-    references: [voiceWorkflows.id],
-  }),
-  fromState: one(voiceWorkflowStates, {
-    fields: [voiceStateTransitions.fromStateId],
-    references: [voiceWorkflowStates.id],
-    relationName: "fromState",
-  }),
-  toState: one(voiceWorkflowStates, {
-    fields: [voiceStateTransitions.toStateId],
-    references: [voiceWorkflowStates.id],
-    relationName: "toState",
-  }),
-}));
-
-export const voiceMessageTemplatesRelations = relations(voiceMessageTemplates, ({ one }) => ({
-  tenant: one(tenants, {
-    fields: [voiceMessageTemplates.tenantId],
-    references: [tenants.id],
   }),
 }));
 
@@ -2186,28 +1843,6 @@ export const customerScheduleAssignments = pgTable("customer_schedule_assignment
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Template performance analytics enhanced for AI optimization
-export const templatePerformance = pgTable("template_performance", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
-  templateId: varchar("template_id").notNull().references(() => communicationTemplates.id),
-  date: timestamp("date").notNull(),
-  customerSegment: varchar("customer_segment"), // "small_business", "enterprise", "individual"
-  timeOfDaySent: varchar("time_of_day_sent"), // "morning", "afternoon", "evening"
-  dayOfWeekSent: integer("day_of_week_sent"), // 1-7 (Monday = 1)
-  sentCount: integer("sent_count").default(0),
-  deliveredCount: integer("delivered_count").default(0),
-  openedCount: integer("opened_count").default(0),
-  clickedCount: integer("clicked_count").default(0),
-  respondedCount: integer("responded_count").default(0),
-  paidCount: integer("paid_count").default(0),
-  disputedCount: integer("disputed_count").default(0),
-  totalAmountPaid: decimal("total_amount_paid", { precision: 10, scale: 2 }).default("0"),
-  averageResponseTime: integer("average_response_time"), // Hours to response
-  sentimentScore: decimal("sentiment_score", { precision: 3, scale: 2 }), // AI-analyzed sentiment of responses
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
 // Enhanced relations
 export const emailSendersRelations = relations(emailSenders, ({ one }) => ({
   tenant: one(tenants, {
@@ -2236,17 +1871,6 @@ export const customerScheduleAssignmentsRelations = relations(customerScheduleAs
   schedule: one(collectionSchedules, {
     fields: [customerScheduleAssignments.scheduleId],
     references: [collectionSchedules.id],
-  }),
-}));
-
-export const templatePerformanceRelations = relations(templatePerformance, ({ one }) => ({
-  tenant: one(tenants, {
-    fields: [templatePerformance.tenantId],
-    references: [tenants.id],
-  }),
-  template: one(communicationTemplates, {
-    fields: [templatePerformance.templateId],
-    references: [communicationTemplates.id],
   }),
 }));
 
@@ -2399,20 +2023,6 @@ export const onboardingProgress = pgTable("onboarding_progress", {
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
   unique("onboarding_progress_tenant").on(table.tenantId)
-]);
-
-// Industry-specific onboarding templates
-export const onboardingTemplates = pgTable("onboarding_templates", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  industry: varchar("industry").notNull(),
-  businessType: varchar("business_type").notNull(), // b2b, b2c, mixed
-  templateType: varchar("template_type").notNull(), // workflow, communication, automation_settings, collection_schedule
-  templateData: jsonb("template_data").notNull(),
-  isActive: boolean("is_active").default(true),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => [
-  index("idx_onboarding_templates_industry_type").on(table.industry, table.businessType, table.templateType)
 ]);
 
 // Wallet transactions table - unified financial hub for Qashivo
@@ -2687,12 +2297,6 @@ export const insertEmailMessageSchema = createInsertSchema(emailMessages).omit({
   updatedAt: true,
 });
 
-export const insertDetectedOutcomeSchema = createInsertSchema(detectedOutcomes).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
 export const insertContactOutcomeSchema = createInsertSchema(contactOutcomes).omit({
   id: true,
   createdAt: true,
@@ -2755,12 +2359,6 @@ export const insertEscalationRuleSchema = createInsertSchema(escalationRules).om
   updatedAt: true,
 });
 
-export const insertAiAgentConfigSchema = createInsertSchema(aiAgentConfigs).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
 export const insertCustomerBehaviorSignalSchema = createInsertSchema(customerBehaviorSignals).omit({
   id: true,
   createdAt: true,
@@ -2772,12 +2370,6 @@ export const insertChannelAnalyticsSchema = createInsertSchema(channelAnalytics)
   createdAt: true,
 });
 
-export const insertRetellConfigurationSchema = createInsertSchema(retellConfigurations).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
 export const insertVoiceCallSchema = createInsertSchema(voiceCalls).omit({
   id: true,
   createdAt: true,
@@ -2785,34 +2377,6 @@ export const insertVoiceCallSchema = createInsertSchema(voiceCalls).omit({
 });
 
 export const insertSmsMessageSchema = createInsertSchema(smsMessages).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertVoiceWorkflowSchema = createInsertSchema(voiceWorkflows).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertVoiceWorkflowStateSchema = createInsertSchema(voiceWorkflowStates).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertVoiceStateTransitionSchema = createInsertSchema(voiceStateTransitions).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertVoiceMessageTemplateSchema = createInsertSchema(voiceMessageTemplates).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertLeadSchema = createInsertSchema(leads).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
@@ -2841,11 +2405,6 @@ export const insertCustomerScheduleAssignmentSchema = createInsertSchema(custome
   id: true,
   createdAt: true,
   assignedAt: true,
-});
-
-export const insertTemplatePerformanceSchema = createInsertSchema(templatePerformance).omit({
-  id: true,
-  createdAt: true,
 });
 
 // Wallet transactions insert schemas
@@ -2907,12 +2466,6 @@ export const insertOnboardingProgressSchema = createInsertSchema(onboardingProgr
   startedAt: true,
 });
 
-export const insertOnboardingTemplateSchema = createInsertSchema(onboardingTemplates).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -2932,8 +2485,6 @@ export type InsertConversation = z.infer<typeof insertConversationSchema>;
 export type Conversation = typeof conversations.$inferSelect;
 export type InsertEmailMessage = z.infer<typeof insertEmailMessageSchema>;
 export type EmailMessageRecord = typeof emailMessages.$inferSelect;
-export type InsertDetectedOutcome = z.infer<typeof insertDetectedOutcomeSchema>;
-export type DetectedOutcome = typeof detectedOutcomes.$inferSelect;
 export type InsertContactOutcome = z.infer<typeof insertContactOutcomeSchema>;
 export type ContactOutcome = typeof contactOutcomes.$inferSelect;
 export type InsertPolicyDecision = z.infer<typeof insertPolicyDecisionSchema>;
@@ -2956,28 +2507,14 @@ export type InsertTenantTemplate = z.infer<typeof insertTenantTemplateSchema>;
 export type TenantTemplate = typeof tenantTemplates.$inferSelect;
 export type InsertEscalationRule = z.infer<typeof insertEscalationRuleSchema>;
 export type EscalationRule = typeof escalationRules.$inferSelect;
-export type InsertAiAgentConfig = z.infer<typeof insertAiAgentConfigSchema>;
-export type AiAgentConfig = typeof aiAgentConfigs.$inferSelect;
 export type InsertCustomerBehaviorSignal = z.infer<typeof insertCustomerBehaviorSignalSchema>;
 export type CustomerBehaviorSignal = typeof customerBehaviorSignals.$inferSelect;
 export type InsertChannelAnalytics = z.infer<typeof insertChannelAnalyticsSchema>;
 export type ChannelAnalytics = typeof channelAnalytics.$inferSelect;
-export type InsertRetellConfiguration = z.infer<typeof insertRetellConfigurationSchema>;
-export type RetellConfiguration = typeof retellConfigurations.$inferSelect;
 export type InsertVoiceCall = z.infer<typeof insertVoiceCallSchema>;
 export type VoiceCall = typeof voiceCalls.$inferSelect;
 export type InsertSmsMessage = z.infer<typeof insertSmsMessageSchema>;
 export type SmsMessage = typeof smsMessages.$inferSelect;
-export type InsertVoiceWorkflow = z.infer<typeof insertVoiceWorkflowSchema>;
-export type VoiceWorkflow = typeof voiceWorkflows.$inferSelect;
-export type InsertVoiceWorkflowState = z.infer<typeof insertVoiceWorkflowStateSchema>;
-export type VoiceWorkflowState = typeof voiceWorkflowStates.$inferSelect;
-export type InsertVoiceStateTransition = z.infer<typeof insertVoiceStateTransitionSchema>;
-export type VoiceStateTransition = typeof voiceStateTransitions.$inferSelect;
-export type InsertVoiceMessageTemplate = z.infer<typeof insertVoiceMessageTemplateSchema>;
-export type VoiceMessageTemplate = typeof voiceMessageTemplates.$inferSelect;
-export type InsertLead = z.infer<typeof insertLeadSchema>;
-export type Lead = typeof leads.$inferSelect;
 export type InsertAiFact = z.infer<typeof insertAiFactSchema>;
 export type AiFact = typeof aiFacts.$inferSelect;
 export type InsertEmailSender = z.infer<typeof insertEmailSenderSchema>;
@@ -2986,9 +2523,6 @@ export type InsertCollectionSchedule = z.infer<typeof insertCollectionScheduleSc
 export type CollectionSchedule = typeof collectionSchedules.$inferSelect;
 export type InsertCustomerScheduleAssignment = z.infer<typeof insertCustomerScheduleAssignmentSchema>;
 export type CustomerScheduleAssignment = typeof customerScheduleAssignments.$inferSelect;
-export type InsertTemplatePerformance = z.infer<typeof insertTemplatePerformanceSchema>;
-export type TemplatePerformance = typeof templatePerformance.$inferSelect;
-
 // AI Learning types
 export type InsertCustomerLearningProfile = z.infer<typeof insertCustomerLearningProfileSchema>;
 export type CustomerLearningProfile = typeof customerLearningProfiles.$inferSelect;
@@ -3000,8 +2534,6 @@ export type CollectionABTest = typeof collectionABTests.$inferSelect;
 // Onboarding types
 export type InsertOnboardingProgress = z.infer<typeof insertOnboardingProgressSchema>;
 export type OnboardingProgress = typeof onboardingProgress.$inferSelect;
-export type InsertOnboardingTemplate = z.infer<typeof insertOnboardingTemplateSchema>;
-export type OnboardingTemplate = typeof onboardingTemplates.$inferSelect;
 
 // Node Configuration Types
 export interface TriggerNodeConfig {
@@ -3217,44 +2749,6 @@ export const invoiceHealthScores = pgTable("invoice_health_scores", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Health Analytics Snapshots for trend tracking
-export const healthAnalyticsSnapshots = pgTable("health_analytics_snapshots", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
-  
-  // Snapshot metadata
-  snapshotDate: timestamp("snapshot_date").notNull(),
-  snapshotType: varchar("snapshot_type").notNull(), // daily, weekly, monthly
-  
-  // Overall portfolio health metrics
-  totalInvoicesAnalyzed: integer("total_invoices_analyzed").notNull(),
-  averageHealthScore: decimal("average_health_score", { precision: 5, scale: 2 }).notNull(),
-  averageRiskScore: decimal("average_risk_score", { precision: 5, scale: 2 }).notNull(),
-  
-  // Risk distribution
-  healthyCount: integer("healthy_count").notNull(),
-  atRiskCount: integer("at_risk_count").notNull(),
-  criticalCount: integer("critical_count").notNull(),
-  emergencyCount: integer("emergency_count").notNull(),
-  
-  // Collection difficulty distribution
-  easyCollectionCount: integer("easy_collection_count").notNull(),
-  moderateCollectionCount: integer("moderate_collection_count").notNull(),
-  difficultCollectionCount: integer("difficult_collection_count").notNull(),
-  veryDifficultCollectionCount: integer("very_difficult_collection_count").notNull(),
-  
-  // Predictive metrics
-  totalValueAtRisk: decimal("total_value_at_risk", { precision: 12, scale: 2 }).notNull(),
-  predictedCollectionRate: decimal("predicted_collection_rate", { precision: 5, scale: 2 }).notNull(),
-  averagePredictedDaysToPayment: decimal("average_predicted_days_to_payment", { precision: 5, scale: 2 }),
-  
-  // AI performance metrics
-  modelAccuracy: decimal("model_accuracy", { precision: 5, scale: 2 }),
-  predictionConfidence: decimal("prediction_confidence", { precision: 5, scale: 2 }).notNull(),
-  
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
 // Table relations for health scoring
 export const invoiceHealthScoresRelations = relations(invoiceHealthScores, ({ one }) => ({
   tenant: one(tenants, {
@@ -3268,13 +2762,6 @@ export const invoiceHealthScoresRelations = relations(invoiceHealthScores, ({ on
   contact: one(contacts, {
     fields: [invoiceHealthScores.contactId],
     references: [contacts.id],
-  }),
-}));
-
-export const healthAnalyticsSnapshotsRelations = relations(healthAnalyticsSnapshots, ({ one }) => ({
-  tenant: one(tenants, {
-    fields: [healthAnalyticsSnapshots.tenantId],
-    references: [tenants.id],
   }),
 }));
 
@@ -3309,12 +2796,6 @@ export const insertBudgetSchema = createInsertSchema(budgets).omit({
   updatedAt: true,
 });
 
-export const insertBudgetLineSchema = createInsertSchema(budgetLines).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
 export const insertExchangeRateSchema = createInsertSchema(exchangeRates).omit({
   id: true,
   createdAt: true,
@@ -3344,8 +2825,6 @@ export type BankTransaction = typeof bankTransactions.$inferSelect;
 export type InsertBankTransaction = z.infer<typeof insertBankTransactionSchema>;
 export type Budget = typeof budgets.$inferSelect;
 export type InsertBudget = z.infer<typeof insertBudgetSchema>;
-export type BudgetLine = typeof budgetLines.$inferSelect;
-export type InsertBudgetLine = z.infer<typeof insertBudgetLineSchema>;
 export type ExchangeRate = typeof exchangeRates.$inferSelect;
 export type InsertExchangeRate = z.infer<typeof insertExchangeRateSchema>;
 export type SyncState = typeof syncState.$inferSelect;
@@ -3360,25 +2839,13 @@ export const insertInvoiceHealthScoreSchema = createInsertSchema(invoiceHealthSc
   updatedAt: true,
 });
 
-export const insertHealthAnalyticsSnapshotSchema = createInsertSchema(healthAnalyticsSnapshots).omit({
-  id: true,
-  createdAt: true,
-});
-
 // Types for health scoring
 export type InvoiceHealthScore = typeof invoiceHealthScores.$inferSelect;
 export type InsertInvoiceHealthScore = z.infer<typeof insertInvoiceHealthScoreSchema>;
-export type HealthAnalyticsSnapshot = typeof healthAnalyticsSnapshots.$inferSelect;
-export type InsertHealthAnalyticsSnapshot = z.infer<typeof insertHealthAnalyticsSnapshotSchema>;
 
 // Enhanced WorkflowNode type for the frontend
 export interface WorkflowNodeWithConfig extends Omit<WorkflowNode, 'config'> {
   config: NodeConfigUnion;
-}
-
-// Enhanced VoiceWorkflowState type for the frontend  
-export interface VoiceWorkflowStateWithConfig extends Omit<VoiceWorkflowState, 'config'> {
-  config: VoiceStateConfig;
 }
 
 // Enhanced WorkflowConnection type for decision branches
@@ -3518,41 +2985,6 @@ export interface StandardExchangeRate {
 
 // === ADVANCED ML TABLES FOR WEEK 2 ===
 
-// Payment prediction models - ML predictions for payment probability and timing
-export const paymentPredictions = pgTable("payment_predictions", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
-  invoiceId: varchar("invoice_id").notNull().references(() => invoices.id),
-  contactId: varchar("contact_id").notNull().references(() => contacts.id),
-  
-  // Prediction metrics
-  paymentProbability: decimal("payment_probability", { precision: 5, scale: 4 }), // 0-1
-  predictedPaymentDate: timestamp("predicted_payment_date"),
-  paymentConfidenceScore: decimal("payment_confidence_score", { precision: 5, scale: 4 }), // 0-1
-  
-  // Risk assessment
-  defaultRisk: decimal("default_risk", { precision: 5, scale: 4 }), // 0-1
-  escalationRisk: decimal("escalation_risk", { precision: 5, scale: 4 }), // 0-1
-  
-  // Model metadata
-  modelVersion: varchar("model_version").notNull(),
-  predictionDate: timestamp("prediction_date").defaultNow(),
-  features: jsonb("features"), // Input features used for prediction
-  
-  // Validation tracking
-  actualPaymentDate: timestamp("actual_payment_date"),
-  actualOutcome: varchar("actual_outcome"), // paid, defaulted, escalated
-  predictionAccuracy: decimal("prediction_accuracy", { precision: 5, scale: 4 }), // 0-1
-  
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => [
-  index("payment_predictions_tenant_idx").on(table.tenantId),
-  index("payment_predictions_invoice_idx").on(table.invoiceId),
-  index("payment_predictions_contact_idx").on(table.contactId),
-  index("payment_predictions_date_idx").on(table.predictionDate),
-]);
-
 // Dynamic risk scores - Real-time risk assessment for customers
 export const riskScores = pgTable("risk_scores", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -3591,179 +3023,7 @@ export const riskScores = pgTable("risk_scores", {
   index("risk_scores_urgency_idx").on(table.urgencyLevel),
 ]);
 
-// Customer segments - ML-based customer clustering and segmentation
-export const customerSegments = pgTable("customer_segments", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
-  
-  // Segment definition
-  segmentName: varchar("segment_name").notNull(),
-  segmentType: varchar("segment_type").notNull(), // behavioral, demographic, payment_pattern, risk_based
-  description: text("description"),
-  
-  // Segment characteristics
-  segmentCriteria: jsonb("segment_criteria"), // Rules or ML cluster parameters
-  typicalBehavior: jsonb("typical_behavior"), // Common behaviors in segment
-  
-  // Performance metrics
-  averagePaymentTime: integer("average_payment_time"), // Days
-  paymentSuccessRate: decimal("payment_success_rate", { precision: 5, scale: 4 }),
-  preferredChannel: varchar("preferred_channel"),
-  responseRate: decimal("response_rate", { precision: 5, scale: 4 }),
-  
-  // Segment size and composition
-  memberCount: integer("member_count").default(0),
-  percentOfCustomers: decimal("percent_of_customers", { precision: 5, scale: 2 }),
-  
-  // ML clustering data
-  clusterCenter: jsonb("cluster_center"), // Centroid coordinates for ML clusters
-  clusterVariance: decimal("cluster_variance", { precision: 10, scale: 6 }),
-  
-  // Model metadata
-  modelVersion: varchar("model_version").notNull(),
-  lastRecalculated: timestamp("last_recalculated").defaultNow(),
-  isActive: boolean("is_active").default(true),
-  
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => [
-  index("customer_segments_tenant_idx").on(table.tenantId),
-  index("customer_segments_type_idx").on(table.segmentType),
-  index("customer_segments_active_idx").on(table.isActive),
-]);
-
-// Customer segment assignments - Which customers belong to which segments
-export const customerSegmentAssignments = pgTable("customer_segment_assignments", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
-  contactId: varchar("contact_id").notNull().references(() => contacts.id),
-  segmentId: varchar("segment_id").notNull().references(() => customerSegments.id),
-  
-  // Assignment metadata
-  assignmentConfidence: decimal("assignment_confidence", { precision: 5, scale: 4 }), // 0-1
-  distanceFromCenter: decimal("distance_from_center", { precision: 10, scale: 6 }),
-  
-  // Assignment history
-  previousSegmentId: varchar("previous_segment_id"),
-  assignmentDate: timestamp("assignment_date").defaultNow(),
-  
-  // Model metadata
-  modelVersion: varchar("model_version").notNull(),
-  
-  createdAt: timestamp("created_at").defaultNow(),
-}, (table) => [
-  unique("segment_assignments_tenant_contact").on(table.tenantId, table.contactId),
-  index("segment_assignments_tenant_idx").on(table.tenantId),
-  index("segment_assignments_contact_idx").on(table.contactId),
-  index("segment_assignments_segment_idx").on(table.segmentId),
-]);
-
-// Seasonal patterns - Time-based payment pattern recognition
-export const seasonalPatterns = pgTable("seasonal_patterns", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
-  contactId: varchar("contact_id"), // Null for global patterns, specific for customer patterns
-  
-  // Pattern identification
-  patternType: varchar("pattern_type").notNull(), // daily, weekly, monthly, quarterly, yearly
-  patternName: varchar("pattern_name").notNull(),
-  description: text("description"),
-  
-  // Temporal characteristics
-  timeComponent: varchar("time_component"), // monday, january, q1, holiday_season
-  cyclePeriod: integer("cycle_period"), // Length in days/weeks/months
-  
-  // Pattern strength and reliability
-  patternStrength: decimal("pattern_strength", { precision: 5, scale: 4 }), // 0-1
-  confidence: decimal("confidence", { precision: 5, scale: 4 }), // 0-1
-  reliability: decimal("reliability", { precision: 5, scale: 4 }), // 0-1
-  
-  // Statistical measures
-  averagePaymentDelay: integer("average_payment_delay"), // Days
-  paymentVariance: decimal("payment_variance", { precision: 10, scale: 6 }),
-  sampleSize: integer("sample_size"), // Number of observations
-  
-  // Pattern data
-  historicalData: jsonb("historical_data"), // Time series data points
-  trendDirection: varchar("trend_direction"), // increasing, decreasing, stable, cyclical
-  
-  // Prediction capabilities
-  nextPredictedPeak: timestamp("next_predicted_peak"),
-  nextPredictedTrough: timestamp("next_predicted_trough"),
-  seasonalMultiplier: decimal("seasonal_multiplier", { precision: 6, scale: 4 }), // Adjustment factor
-  
-  // Model metadata
-  modelVersion: varchar("model_version").notNull(),
-  lastUpdated: timestamp("last_updated").defaultNow(),
-  isActive: boolean("is_active").default(true),
-  
-  createdAt: timestamp("created_at").defaultNow(),
-}, (table) => [
-  index("seasonal_patterns_tenant_idx").on(table.tenantId),
-  index("seasonal_patterns_contact_idx").on(table.contactId),
-  index("seasonal_patterns_type_idx").on(table.patternType),
-  index("seasonal_patterns_strength_idx").on(table.patternStrength),
-]);
-
-// ML model performance tracking
-export const mlModelPerformance = pgTable("ml_model_performance", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
-  
-  // Model identification
-  modelName: varchar("model_name").notNull(), // payment_prediction, risk_scoring, segmentation
-  modelVersion: varchar("model_version").notNull(),
-  modelType: varchar("model_type").notNull(), // classification, regression, clustering
-  
-  // Performance metrics
-  accuracy: decimal("accuracy", { precision: 5, scale: 4 }),
-  precision: decimal("precision", { precision: 5, scale: 4 }),
-  recall: decimal("recall", { precision: 5, scale: 4 }),
-  f1Score: decimal("f1_score", { precision: 5, scale: 4 }),
-  auc: decimal("auc", { precision: 5, scale: 4 }), // Area under curve
-  
-  // Business metrics
-  businessImpact: jsonb("business_impact"), // Revenue, efficiency gains, etc.
-  predictionCount: integer("prediction_count"),
-  correctPredictions: integer("correct_predictions"),
-  
-  // Model details
-  trainingDataSize: integer("training_data_size"),
-  testDataSize: integer("test_data_size"),
-  features: jsonb("features"), // Features used in model
-  hyperparameters: jsonb("hyperparameters"),
-  
-  // Deployment tracking
-  deploymentDate: timestamp("deployment_date").defaultNow(),
-  isActive: boolean("is_active").default(true),
-  
-  // Performance over time
-  evaluationPeriodStart: timestamp("evaluation_period_start"),
-  evaluationPeriodEnd: timestamp("evaluation_period_end"),
-  
-  createdAt: timestamp("created_at").defaultNow(),
-}, (table) => [
-  index("ml_performance_tenant_idx").on(table.tenantId),
-  index("ml_performance_model_idx").on(table.modelName, table.modelVersion),
-  index("ml_performance_active_idx").on(table.isActive),
-]);
-
 // Relations for new ML tables
-export const paymentPredictionsRelations = relations(paymentPredictions, ({ one }) => ({
-  tenant: one(tenants, {
-    fields: [paymentPredictions.tenantId],
-    references: [tenants.id],
-  }),
-  invoice: one(invoices, {
-    fields: [paymentPredictions.invoiceId],
-    references: [invoices.id],
-  }),
-  contact: one(contacts, {
-    fields: [paymentPredictions.contactId],
-    references: [contacts.id],
-  }),
-}));
-
 export const riskScoresRelations = relations(riskScores, ({ one }) => ({
   tenant: one(tenants, {
     fields: [riskScores.tenantId],
@@ -3775,79 +3035,11 @@ export const riskScoresRelations = relations(riskScores, ({ one }) => ({
   }),
 }));
 
-export const customerSegmentsRelations = relations(customerSegments, ({ one, many }) => ({
-  tenant: one(tenants, {
-    fields: [customerSegments.tenantId],
-    references: [tenants.id],
-  }),
-  assignments: many(customerSegmentAssignments),
-}));
-
-export const customerSegmentAssignmentsRelations = relations(customerSegmentAssignments, ({ one }) => ({
-  tenant: one(tenants, {
-    fields: [customerSegmentAssignments.tenantId],
-    references: [tenants.id],
-  }),
-  contact: one(contacts, {
-    fields: [customerSegmentAssignments.contactId],
-    references: [contacts.id],
-  }),
-  segment: one(customerSegments, {
-    fields: [customerSegmentAssignments.segmentId],
-    references: [customerSegments.id],
-  }),
-}));
-
-export const seasonalPatternsRelations = relations(seasonalPatterns, ({ one }) => ({
-  tenant: one(tenants, {
-    fields: [seasonalPatterns.tenantId],
-    references: [tenants.id],
-  }),
-  contact: one(contacts, {
-    fields: [seasonalPatterns.contactId],
-    references: [contacts.id],
-  }),
-}));
-
-export const mlModelPerformanceRelations = relations(mlModelPerformance, ({ one }) => ({
-  tenant: one(tenants, {
-    fields: [mlModelPerformance.tenantId],
-    references: [tenants.id],
-  }),
-}));
-
 // Insert schemas for new ML tables
-export const insertPaymentPredictionSchema = createInsertSchema(paymentPredictions).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
 export const insertRiskScoreSchema = createInsertSchema(riskScores).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
-});
-
-export const insertCustomerSegmentSchema = createInsertSchema(customerSegments).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertCustomerSegmentAssignmentSchema = createInsertSchema(customerSegmentAssignments).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertSeasonalPatternSchema = createInsertSchema(seasonalPatterns).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertMlModelPerformanceSchema = createInsertSchema(mlModelPerformance).omit({
-  id: true,
-  createdAt: true,
 });
 
 // RBAC Insert Schemas
@@ -3862,23 +3054,6 @@ export const insertRolePermissionSchema = createInsertSchema(rolePermissions).om
   createdAt: true,
 });
 
-export const insertUserPermissionSchema = createInsertSchema(userPermissions).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertUserInvitationSchema = createInsertSchema(userInvitations).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertPermissionAuditLogSchema = createInsertSchema(permissionAuditLog).omit({
-  id: true,
-  createdAt: true,
-});
-
 // Type exports for RBAC tables
 export type Permission = typeof permissions.$inferSelect;
 export type InsertPermission = z.infer<typeof insertPermissionSchema>;
@@ -3886,33 +3061,9 @@ export type InsertPermission = z.infer<typeof insertPermissionSchema>;
 export type RolePermission = typeof rolePermissions.$inferSelect;
 export type InsertRolePermission = z.infer<typeof insertRolePermissionSchema>;
 
-export type UserPermission = typeof userPermissions.$inferSelect;
-export type InsertUserPermission = z.infer<typeof insertUserPermissionSchema>;
-
-export type UserInvitation = typeof userInvitations.$inferSelect;
-export type InsertUserInvitation = z.infer<typeof insertUserInvitationSchema>;
-
-export type PermissionAuditLog = typeof permissionAuditLog.$inferSelect;
-export type InsertPermissionAuditLog = z.infer<typeof insertPermissionAuditLogSchema>;
-
 // Type exports for new ML tables
-export type PaymentPrediction = typeof paymentPredictions.$inferSelect;
-export type InsertPaymentPrediction = z.infer<typeof insertPaymentPredictionSchema>;
-
 export type RiskScore = typeof riskScores.$inferSelect;
 export type InsertRiskScore = z.infer<typeof insertRiskScoreSchema>;
-
-export type CustomerSegment = typeof customerSegments.$inferSelect;
-export type InsertCustomerSegment = z.infer<typeof insertCustomerSegmentSchema>;
-
-export type CustomerSegmentAssignment = typeof customerSegmentAssignments.$inferSelect;
-export type InsertCustomerSegmentAssignment = z.infer<typeof insertCustomerSegmentAssignmentSchema>;
-
-export type SeasonalPattern = typeof seasonalPatterns.$inferSelect;
-export type InsertSeasonalPattern = z.infer<typeof insertSeasonalPatternSchema>;
-
-export type MlModelPerformance = typeof mlModelPerformance.$inferSelect;
-export type InsertMlModelPerformance = z.infer<typeof insertMlModelPerformanceSchema>;
 
 // Action Centre Tables
 
@@ -4004,7 +3155,6 @@ export const paymentPromises = pgTable("payment_promises", {
   index("idx_payment_promises_source").on(table.sourceType, table.sourceId),
   index("idx_payment_promises_promise_type").on(table.promiseType),
 ]);
-
 
 // Relations for Action Centre tables
 export const actionItemsRelations = relations(actionItems, ({ one, many }) => ({
@@ -4439,44 +3589,6 @@ export const smeContacts = pgTable("sme_contacts", {
   index("idx_sme_contacts_client").on(table.smeClientId),
 ]);
 
-// Partner Contracts - Contract details for SME clients
-export const partnerContracts = pgTable("partner_contracts", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  
-  smeClientId: varchar("sme_client_id").notNull().references(() => smeClients.id, { onDelete: "cascade" }),
-  
-  // Contract dates
-  contractStartDate: timestamp("contract_start_date"),
-  contractEndDate: timestamp("contract_end_date"),
-  
-  // Pricing: PILOT | STANDARD | PRO | CUSTOM
-  pricingTier: varchar("pricing_tier").default("STANDARD"),
-  
-  // Billing: BILLED_TO_SME | BILLED_TO_PARTNER
-  billingMode: varchar("billing_mode").default("BILLED_TO_PARTNER"),
-  
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => [
-  index("idx_partner_contracts_client").on(table.smeClientId),
-]);
-
-// Partner Contract Files - Uploaded contract documents
-export const partnerContractFiles = pgTable("partner_contract_files", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  
-  partnerContractId: varchar("partner_contract_id").notNull().references(() => partnerContracts.id, { onDelete: "cascade" }),
-  
-  // File type: SIGNED_CONTRACT | SIGNED_TCS
-  type: varchar("type").notNull(),
-  
-  fileUrl: varchar("file_url").notNull(),
-  
-  uploadedAt: timestamp("uploaded_at").defaultNow(),
-}, (table) => [
-  index("idx_partner_contract_files_contract").on(table.partnerContractId),
-]);
-
 // SME Invite Tokens - Tokens for SME client onboarding
 export const smeInviteTokens = pgTable("sme_invite_tokens", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -4668,7 +3780,6 @@ export const smeClientsRelations = relations(smeClients, ({ one, many }) => ({
     references: [tenants.id],
   }),
   contacts: many(smeContacts),
-  contracts: many(partnerContracts),
   inviteTokens: many(smeInviteTokens),
 }));
 
@@ -4676,21 +3787,6 @@ export const smeContactsRelations = relations(smeContacts, ({ one }) => ({
   smeClient: one(smeClients, {
     fields: [smeContacts.smeClientId],
     references: [smeClients.id],
-  }),
-}));
-
-export const partnerContractsRelations = relations(partnerContracts, ({ one, many }) => ({
-  smeClient: one(smeClients, {
-    fields: [partnerContracts.smeClientId],
-    references: [smeClients.id],
-  }),
-  files: many(partnerContractFiles),
-}));
-
-export const partnerContractFilesRelations = relations(partnerContractFiles, ({ one }) => ({
-  contract: one(partnerContracts, {
-    fields: [partnerContractFiles.partnerContractId],
-    references: [partnerContracts.id],
   }),
 }));
 
@@ -4907,17 +4003,6 @@ export const insertImportJobSchema = createInsertSchema(importJobs).omit({
   createdAt: true,
 });
 
-export const insertPartnerContractSchema = createInsertSchema(partnerContracts).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertPartnerContractFileSchema = createInsertSchema(partnerContractFiles).omit({
-  id: true,
-  uploadedAt: true,
-});
-
 export const insertSmeInviteTokenSchema = createInsertSchema(smeInviteTokens).omit({
   id: true,
   createdAt: true,
@@ -4937,12 +4022,6 @@ export type InsertSmeContact = z.infer<typeof insertSmeContactSchema>;
 
 export type ImportJob = typeof importJobs.$inferSelect;
 export type InsertImportJob = z.infer<typeof insertImportJobSchema>;
-
-export type PartnerContract = typeof partnerContracts.$inferSelect;
-export type InsertPartnerContract = z.infer<typeof insertPartnerContractSchema>;
-
-export type PartnerContractFile = typeof partnerContractFiles.$inferSelect;
-export type InsertPartnerContractFile = z.infer<typeof insertPartnerContractFileSchema>;
 
 export type SmeInviteToken = typeof smeInviteTokens.$inferSelect;
 export type InsertSmeInviteToken = z.infer<typeof insertSmeInviteTokenSchema>;
@@ -5013,89 +4092,6 @@ export const ardHistory = pgTable("ard_history", {
   index("ard_history_tenant_date_idx").on(table.tenantId, table.calculationDate),
 ]);
 
-// Pattern Library - Stores detected recurring payment/expense patterns
-export const patternLibrary = pgTable("pattern_library", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
-  entityType: varchar("entity_type").notNull(), // 'customer', 'supplier'
-  entityId: varchar("entity_id"), // contactId reference (optional)
-  entityName: varchar("entity_name").notNull(),
-  
-  // Pattern characteristics
-  patternType: varchar("pattern_type").notNull(), // 'inflow', 'outflow'
-  avgIntervalDays: decimal("avg_interval_days", { precision: 6, scale: 2 }).notNull(),
-  varianceDays: decimal("variance_days", { precision: 6, scale: 2 }).notNull(),
-  robustAmount: decimal("robust_amount", { precision: 12, scale: 2 }).notNull(),
-  
-  // Volatility classification
-  volatilityClass: varchar("volatility_class").notNull(), // 'STABLE', 'VARIABLE', 'VOLATILE'
-  confidence: decimal("confidence", { precision: 3, scale: 2 }).notNull(), // 0-1
-  
-  // Detection metadata
-  occurrenceCount: integer("occurrence_count").notNull(),
-  firstOccurrence: timestamp("first_occurrence").notNull(),
-  lastOccurrence: timestamp("last_occurrence").notNull(),
-  
-  isActive: boolean("is_active").default(true),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => [
-  index("pattern_library_tenant_idx").on(table.tenantId),
-  index("pattern_library_entity_idx").on(table.entityType, table.entityId),
-]);
-
-// Forecast Snapshots - Stores complete forecast at point in time
-export const forecastSnapshots = pgTable("forecast_snapshots", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
-  snapshotDate: timestamp("snapshot_date").notNull(),
-  forecastHorizonWeeks: integer("forecast_horizon_weeks").default(13),
-  
-  // Forecast mode
-  forecastMode: varchar("forecast_mode").notNull(), // 'inflow_only', 'total_cashflow'
-  scenarioType: varchar("scenario_type").notNull(), // 'conservative', 'base', 'optimistic'
-  
-  // Complete forecast data (JSON)
-  forecastData: jsonb("forecast_data").notNull(), // Full ForecastOutput from engine
-  
-  // Snapshot metadata
-  ardAtSnapshot: decimal("ard_at_snapshot", { precision: 6, scale: 2 }),
-  irregularBufferBeta: decimal("irregular_buffer_beta", { precision: 3, scale: 2 }).default("0.5"),
-  
-  createdAt: timestamp("created_at").defaultNow(),
-}, (table) => [
-  index("forecast_snapshots_tenant_date_idx").on(table.tenantId, table.snapshotDate),
-]);
-
-// Forecast Variance Tracking - Compare forecast vs actuals for learning
-export const forecastVarianceTracking = pgTable("forecast_variance_tracking", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
-  snapshotId: varchar("snapshot_id").references(() => forecastSnapshots.id),
-  comparisonDate: timestamp("comparison_date").notNull(),
-  
-  // Forecast vs Actual comparison
-  forecastedAmount: decimal("forecasted_amount", { precision: 12, scale: 2 }).notNull(),
-  actualAmount: decimal("actual_amount", { precision: 12, scale: 2 }).notNull(),
-  variance: decimal("variance", { precision: 12, scale: 2 }).notNull(),
-  variancePercentage: decimal("variance_percentage", { precision: 6, scale: 2 }),
-  
-  // Category breakdown
-  category: varchar("category").notNull(), // 'ar_collection', 'ap_payment', 'budget_income', 'budget_expense', 'irregular'
-  
-  // Accuracy metrics
-  mae: decimal("mae", { precision: 12, scale: 2 }), // Mean Absolute Error
-  rmse: decimal("rmse", { precision: 12, scale: 2 }), // Root Mean Squared Error
-  
-  // Learning adjustments made
-  adjustmentsMade: jsonb("adjustments_made"), // { ardAdjustment: X, confidenceAdjustment: Y, betaAdjustment: Z }
-  
-  createdAt: timestamp("created_at").defaultNow(),
-}, (table) => [
-  index("forecast_variance_tenant_date_idx").on(table.tenantId, table.comparisonDate),
-  index("forecast_variance_snapshot_idx").on(table.snapshotId),
-]);
-
 // Relations
 export const salesForecastsRelations = relations(salesForecasts, ({ one }) => ({
   tenant: one(tenants, {
@@ -5115,32 +4111,6 @@ export const ardHistoryRelations = relations(ardHistory, ({ one }) => ({
   }),
 }));
 
-export const patternLibraryRelations = relations(patternLibrary, ({ one }) => ({
-  tenant: one(tenants, {
-    fields: [patternLibrary.tenantId],
-    references: [tenants.id],
-  }),
-}));
-
-export const forecastSnapshotsRelations = relations(forecastSnapshots, ({ one, many }) => ({
-  tenant: one(tenants, {
-    fields: [forecastSnapshots.tenantId],
-    references: [tenants.id],
-  }),
-  variances: many(forecastVarianceTracking),
-}));
-
-export const forecastVarianceTrackingRelations = relations(forecastVarianceTracking, ({ one }) => ({
-  tenant: one(tenants, {
-    fields: [forecastVarianceTracking.tenantId],
-    references: [tenants.id],
-  }),
-  snapshot: one(forecastSnapshots, {
-    fields: [forecastVarianceTracking.snapshotId],
-    references: [forecastSnapshots.id],
-  }),
-}));
-
 // Debtor Portal Relations
 export const interestLedgerRelations = relations(interestLedger, ({ one }) => ({
   invoice: one(invoices, {
@@ -5153,7 +4123,7 @@ export const interestLedgerRelations = relations(interestLedger, ({ one }) => ({
   }),
 }));
 
-export const disputesRelations = relations(disputes, ({ one, many }) => ({
+export const disputesRelations = relations(disputes, ({ one }) => ({
   invoice: one(invoices, {
     fields: [disputes.invoiceId],
     references: [invoices.id],
@@ -5168,22 +4138,6 @@ export const disputesRelations = relations(disputes, ({ one, many }) => ({
   }),
   respondedByUser: one(users, {
     fields: [disputes.respondedByUserId],
-    references: [users.id],
-  }),
-  evidence: many(disputeEvidence),
-}));
-
-export const disputeEvidenceRelations = relations(disputeEvidence, ({ one }) => ({
-  dispute: one(disputes, {
-    fields: [disputeEvidence.disputeId],
-    references: [disputes.id],
-  }),
-  tenant: one(tenants, {
-    fields: [disputeEvidence.tenantId],
-    references: [tenants.id],
-  }),
-  uploadedByUser: one(users, {
-    fields: [disputeEvidence.uploadedByUserId],
     references: [users.id],
   }),
 }));
@@ -5241,37 +4195,12 @@ export const insertArdHistorySchema = createInsertSchema(ardHistory).omit({
   createdAt: true,
 });
 
-export const insertPatternLibrarySchema = createInsertSchema(patternLibrary).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertForecastSnapshotSchema = createInsertSchema(forecastSnapshots).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertForecastVarianceTrackingSchema = createInsertSchema(forecastVarianceTracking).omit({
-  id: true,
-  createdAt: true,
-});
-
 // Type exports
 export type SalesForecast = typeof salesForecasts.$inferSelect;
 export type InsertSalesForecast = z.infer<typeof insertSalesForecastSchema>;
 
 export type ArdHistory = typeof ardHistory.$inferSelect;
 export type InsertArdHistory = z.infer<typeof insertArdHistorySchema>;
-
-export type PatternLibrary = typeof patternLibrary.$inferSelect;
-export type InsertPatternLibrary = z.infer<typeof insertPatternLibrarySchema>;
-
-export type ForecastSnapshot = typeof forecastSnapshots.$inferSelect;
-export type InsertForecastSnapshot = z.infer<typeof insertForecastSnapshotSchema>;
-
-export type ForecastVarianceTracking = typeof forecastVarianceTracking.$inferSelect;
-export type InsertForecastVarianceTracking = z.infer<typeof insertForecastVarianceTrackingSchema>;
 
 // Investor Leads table - for investor demo VSL page
 export const investorLeads = pgTable("investor_leads", {
@@ -5336,11 +4265,6 @@ export const insertDisputeSchema = createInsertSchema(disputes).omit({
   updatedAt: true,
 });
 
-export const insertDisputeEvidenceSchema = createInsertSchema(disputeEvidence).omit({
-  id: true,
-  createdAt: true,
-});
-
 export const insertPromiseToPaySchema = createInsertSchema(promisesToPay).omit({
   id: true,
   createdAt: true,
@@ -5364,9 +4288,6 @@ export type InsertInterestLedger = z.infer<typeof insertInterestLedgerSchema>;
 
 export type Dispute = typeof disputes.$inferSelect;
 export type InsertDispute = z.infer<typeof insertDisputeSchema>;
-
-export type DisputeEvidence = typeof disputeEvidence.$inferSelect;
-export type InsertDisputeEvidence = z.infer<typeof insertDisputeEvidenceSchema>;
 
 export type PromiseToPay = typeof promisesToPay.$inferSelect;
 export type InsertPromiseToPay = z.infer<typeof insertPromiseToPaySchema>;
@@ -5668,103 +4589,6 @@ export const insertAttentionItemSchema = createInsertSchema(attentionItems).omit
 export type InsertAttentionItem = z.infer<typeof insertAttentionItemSchema>;
 export type AttentionItem = typeof attentionItems.$inferSelect;
 
-// Ledger connections table - tracks connections to accounting software
-export const ledgerConnectionStatusEnum = ['CONNECTED', 'DISCONNECTED', 'ERROR', 'PENDING'] as const;
-export type LedgerConnectionStatus = typeof ledgerConnectionStatusEnum[number];
-
-export const ledgerConnections = pgTable("ledger_connections", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
-  provider: varchar("provider").notNull(), // xero, quickbooks, sage
-  externalTenantId: varchar("external_tenant_id"), // xeroTenantId, qbRealmId, etc.
-  organisationName: varchar("organisation_name"),
-  status: varchar("status").notNull().default("PENDING"), // CONNECTED, DISCONNECTED, ERROR, PENDING
-  scopes: text("scopes").array(), // OAuth scopes granted
-  
-  // Token storage (encrypted in production)
-  accessToken: text("access_token"),
-  refreshToken: text("refresh_token"),
-  tokenExpiresAt: timestamp("token_expires_at"),
-  
-  // Sync tracking
-  lastSyncAt: timestamp("last_sync_at"),
-  lastSyncResult: varchar("last_sync_result"), // SUCCESS, PARTIAL, FAILED
-  lastSyncError: text("last_sync_error"),
-  syncIntervalMinutes: integer("sync_interval_minutes").default(240), // 4 hours default
-  autoSyncEnabled: boolean("auto_sync_enabled").default(true),
-  
-  // Health monitoring
-  lastHealthCheckAt: timestamp("last_health_check_at"),
-  healthCheckError: text("health_check_error"),
-  consecutiveFailures: integer("consecutive_failures").default(0),
-  
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => [
-  index("idx_ledger_connections_tenant").on(table.tenantId),
-  index("idx_ledger_connections_provider").on(table.provider),
-  index("idx_ledger_connections_status").on(table.status),
-  unique("uq_ledger_connections_tenant_provider").on(table.tenantId, table.provider),
-]);
-
-export const insertLedgerConnectionSchema = createInsertSchema(ledgerConnections).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-export type InsertLedgerConnection = z.infer<typeof insertLedgerConnectionSchema>;
-export type LedgerConnection = typeof ledgerConnections.$inferSelect;
-
-// Ledger sync runs table - tracks individual sync operations
-export const ledgerSyncRunStatusEnum = ['RUNNING', 'SUCCESS', 'PARTIAL', 'FAILED', 'CANCELLED'] as const;
-export type LedgerSyncRunStatus = typeof ledgerSyncRunStatusEnum[number];
-
-export const ledgerSyncRuns = pgTable("ledger_sync_runs", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  connectionId: varchar("connection_id").notNull().references(() => ledgerConnections.id),
-  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
-  
-  // Sync metadata
-  triggerType: varchar("trigger_type").notNull().default("SCHEDULED"), // SCHEDULED, MANUAL, WEBHOOK, INITIAL
-  status: varchar("status").notNull().default("RUNNING"), // RUNNING, SUCCESS, PARTIAL, FAILED, CANCELLED
-  
-  // Timing
-  startedAt: timestamp("started_at").defaultNow(),
-  finishedAt: timestamp("finished_at"),
-  durationMs: integer("duration_ms"),
-  
-  // Counts (stored as JSON for flexibility)
-  countsJson: jsonb("counts_json").default({
-    contactsCreated: 0,
-    contactsUpdated: 0,
-    invoicesCreated: 0,
-    invoicesUpdated: 0,
-    paymentsCreated: 0,
-    paymentsUpdated: 0,
-    creditNotesCreated: 0,
-    creditNotesUpdated: 0,
-    errors: 0,
-  }),
-  
-  // Error tracking
-  errorSummary: text("error_summary"),
-  errorDetails: jsonb("error_details"), // Array of individual errors
-  
-  createdAt: timestamp("created_at").defaultNow(),
-}, (table) => [
-  index("idx_ledger_sync_runs_connection").on(table.connectionId),
-  index("idx_ledger_sync_runs_tenant").on(table.tenantId),
-  index("idx_ledger_sync_runs_status").on(table.status),
-  index("idx_ledger_sync_runs_started").on(table.startedAt),
-]);
-
-export const insertLedgerSyncRunSchema = createInsertSchema(ledgerSyncRuns).omit({
-  id: true,
-  createdAt: true,
-});
-export type InsertLedgerSyncRun = z.infer<typeof insertLedgerSyncRunSchema>;
-export type LedgerSyncRun = typeof ledgerSyncRuns.$inferSelect;
-
 // Forecast points table - persisted cash-in forecasts with confidence bands
 export const forecastPoints = pgTable("forecast_points", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -5832,25 +4656,6 @@ export const attentionItemsRelations = relations(attentionItems, ({ one }) => ({
   resolvedBy: one(users, {
     fields: [attentionItems.resolvedByUserId],
     references: [users.id],
-  }),
-}));
-
-export const ledgerConnectionsRelations = relations(ledgerConnections, ({ one, many }) => ({
-  tenant: one(tenants, {
-    fields: [ledgerConnections.tenantId],
-    references: [tenants.id],
-  }),
-  syncRuns: many(ledgerSyncRuns),
-}));
-
-export const ledgerSyncRunsRelations = relations(ledgerSyncRuns, ({ one }) => ({
-  connection: one(ledgerConnections, {
-    fields: [ledgerSyncRuns.connectionId],
-    references: [ledgerConnections.id],
-  }),
-  tenant: one(tenants, {
-    fields: [ledgerSyncRuns.tenantId],
-    references: [tenants.id],
   }),
 }));
 

@@ -7,7 +7,6 @@ import {
   bankAccounts, 
   bankTransactions, 
   budgets, 
-  budgetLines,
   exchangeRates
 } from "@shared/schema";
 import { eq, and, or } from "drizzle-orm";

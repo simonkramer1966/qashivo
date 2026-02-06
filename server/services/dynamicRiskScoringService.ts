@@ -2,7 +2,6 @@ import { db } from '../db';
 import { eq, and, desc, sql, count, avg, gte, lte } from 'drizzle-orm';
 import {
   riskScores,
-  paymentPredictions,
   invoices,
   contacts,
   customerLearningProfiles,

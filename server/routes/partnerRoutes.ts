@@ -5,7 +5,6 @@ import {
   partners, 
   smeClients, 
   smeContacts,
-  partnerContracts,
   smeInviteTokens,
   users,
   invoices,
@@ -261,11 +260,7 @@ export function registerPartnerRoutes(app: Express) {
           .from(smeContacts)
           .where(eq(smeContacts.smeClientId, smeClientId));
 
-        const [contract] = await db
-          .select()
-          .from(partnerContracts)
-          .where(eq(partnerContracts.smeClientId, smeClientId))
-          .limit(1);
+        let contract = null;
 
         let tenant = null;
         if (client.tenantId) {

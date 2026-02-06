@@ -2,7 +2,6 @@ import { db } from '../db';
 import { eq, and, desc, sql, count, avg, inArray, gte, lte } from 'drizzle-orm';
 import {
   actionItems,
-  paymentPredictions,
   riskScores,
   customerLearningProfiles,
   actionEffectiveness,
@@ -11,7 +10,6 @@ import {
   type ActionItem,
   type Invoice,
   type Contact,
-  type PaymentPrediction,
   type RiskScore,
   type CustomerLearningProfile,
 } from '@shared/schema';
@@ -23,6 +21,17 @@ import { categorizeOverdueStatus, calculateDaysOverdue, type OverdueCategory } f
 /**
  * Priority Score Interface
  */
+interface PaymentPrediction {
+  id: string;
+  invoiceId: string;
+  contactId: string;
+  tenantId: string;
+  predictedPaymentDate: Date | null;
+  paymentProbability: string | null;
+  confidenceScore: string | null;
+  riskLevel: string | null;
+}
+
 export interface PriorityScore {
   actionItemId: string;
   priorityScore: number; // 0-100, higher = more urgent
@@ -642,18 +651,7 @@ export class ActionPrioritizationService {
    * Helper methods for ML data retrieval
    */
   private async getPaymentPredictions(invoiceIds: string[]): Promise<PaymentPrediction[]> {
-    if (invoiceIds.length === 0) return [];
-    
-    try {
-      return await db
-        .select()
-        .from(paymentPredictions)
-        .where(inArray(paymentPredictions.invoiceId, invoiceIds))
-        .orderBy(desc(paymentPredictions.createdAt));
-    } catch (error) {
-      console.error('Error fetching payment predictions:', error);
-      return [];
-    }
+    return [];
   }
 
   private async getRiskScores(contactIds: string[], tenantId: string): Promise<RiskScore[]> {

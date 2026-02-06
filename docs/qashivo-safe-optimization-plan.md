@@ -2,7 +2,7 @@
 ## v2.1 — CTO Approved with Minor Refinements
 
 **Last Updated:** February 2026
-**Status:** APPROVED — Ready to Execute (98% confidence per CTO review)
+**Status:** IN PROGRESS — Phase 0 + Phase 1 COMPLETE (120 → 90 tables)
 
 ---
 
@@ -492,12 +492,12 @@ ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
 | Phase | Base Effort | Verification | Total | Risk | Gate |
 |-------|-------------|-------------|-------|------|------|
 | ~~0: Pre-flight (baseline + Tier 2B)~~ | ~~45 min~~ | — | DONE | None | Baseline captured, Tier 2B verified (both KEEP) |
-| **0D: Backup verification** | 15 min | — | 15 min | None | Must complete before Phase 1 — only remaining Phase 0 item |
-| 1A: Drop 12 safe tables | 2 hours | 15 min smoke test | 2.25 hours | None | Phase 0 complete |
+| ~~0D: Backup verification~~ | ~~15 min~~ | — | DONE | None | Replit checkpoints confirmed working |
+| ~~1A: Drop 12 safe tables~~ | ~~2 hours~~ | ~~15 min~~ | DONE | None | 120 → 108 tables. Schema + types removed, app verified running. |
 | 4: Add indexes (with benchmarks) | 30 min | 15 min benchmark | 45 min | None | Phase 0 found most indexes already exist; only 1 composite index candidate remains |
 | 2A: Delete orphan service | 15 min | 5 min test | 20 min | None | — |
 | ~~Tier 2B verification~~ | ~~1 hour~~ | — | DONE | None | Completed Phase 0: both tables reclassified to KEEP |
-| 1B: Drop 18 confirmed tables | 6 hours | 30 min smoke test | 6.5 hours | Low | Verify references cleaned |
+| ~~1B: Drop 18 confirmed tables~~ | ~~6 hours~~ | ~~30 min~~ | DONE | None | 108 → 90 tables. Cleaned storage.ts, routes.ts, 4 service files, schema.ts. App verified running. |
 | **Specify transaction boundaries** | 30 min | — | 30 min | None | Document decisions before Phase 3 |
 | 3: Fix N+1 queries | 6 hours | 1 hour testing | 7 hours | Low | Test with 100+ records; inject failures |
 | 2B: Consolidate Playbook (sub-phase A) | 2 hours | 30 min test | 2.5 hours | Medium | Test decision outputs |

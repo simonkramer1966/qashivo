@@ -9,30 +9,20 @@ import {
   workflows,
   communicationTemplates,
   escalationRules,
-  aiAgentConfigs,
   channelAnalytics,
   workflowTemplates,
-  retellConfigurations,
   voiceCalls,
   smsMessages,
-  voiceWorkflows,
-  voiceWorkflowStates,
-  voiceStateTransitions,
-  voiceMessageTemplates,
-  leads,
   aiFacts,
   emailSenders,
   collectionSchedules,
   customerScheduleAssignments,
-  templatePerformance,
   invoiceHealthScores,
-  healthAnalyticsSnapshots,
   bills,
   billPayments,
   bankAccounts,
   bankTransactions,
   budgets,
-  budgetLines,
   exchangeRates,
   paymentPlans,
   paymentPlanInvoices,
@@ -60,28 +50,14 @@ import {
   type InsertCommunicationTemplate,
   type EscalationRule,
   type InsertEscalationRule,
-  type AiAgentConfig,
-  type InsertAiAgentConfig,
   type ChannelAnalytics,
   type InsertChannelAnalytics,
   type WorkflowTemplate,
   type InsertWorkflowTemplate,
-  type RetellConfiguration,
-  type InsertRetellConfiguration,
   type VoiceCall,
   type InsertVoiceCall,
   type SmsMessage,
   type InsertSmsMessage,
-  type VoiceWorkflow,
-  type InsertVoiceWorkflow,
-  type VoiceWorkflowState,
-  type InsertVoiceWorkflowState,
-  type VoiceStateTransition,
-  type InsertVoiceStateTransition,
-  type VoiceMessageTemplate,
-  type InsertVoiceMessageTemplate,
-  type Lead,
-  type InsertLead,
   type AiFact,
   type InsertAiFact,
   type EmailSender,
@@ -90,12 +66,8 @@ import {
   type InsertCollectionSchedule,
   type CustomerScheduleAssignment,
   type InsertCustomerScheduleAssignment,
-  type TemplatePerformance,
-  type InsertTemplatePerformance,
   type InvoiceHealthScore,
   type InsertInvoiceHealthScore,
-  type HealthAnalyticsSnapshot,
-  type InsertHealthAnalyticsSnapshot,
   type Bill,
   type InsertBill,
   type BillPayment,
@@ -106,8 +78,6 @@ import {
   type InsertBankTransaction,
   type Budget,
   type InsertBudget,
-  type BudgetLine,
-  type InsertBudgetLine,
   type ExchangeRate,
   type InsertExchangeRate,
   type OutstandingInvoiceSummary,
@@ -293,10 +263,6 @@ export interface IStorage {
   createTenantTemplate(template: InsertTenantTemplate): Promise<TenantTemplate>;
   updateTenantTemplate(id: string, tenantId: string, updates: Partial<InsertTenantTemplate>): Promise<TenantTemplate>;
   
-  getAiAgentConfigs(tenantId: string, filters?: { type?: string }): Promise<AiAgentConfig[]>;
-  createAiAgentConfig(config: InsertAiAgentConfig): Promise<AiAgentConfig>;
-  updateAiAgentConfig(id: string, tenantId: string, updates: Partial<InsertAiAgentConfig>): Promise<AiAgentConfig>;
-  
   getEscalationRules(tenantId: string): Promise<EscalationRule[]>;
   createEscalationRule(rule: InsertEscalationRule): Promise<EscalationRule>;
   updateEscalationRule(id: string, tenantId: string, updates: Partial<InsertEscalationRule>): Promise<EscalationRule>;
@@ -314,11 +280,6 @@ export interface IStorage {
   getWorkflowTemplates(filters?: { category?: string; industry?: string }): Promise<WorkflowTemplate[]>;
   cloneWorkflowTemplate(templateId: string, tenantId: string, name: string): Promise<Workflow>;
 
-  // Retell AI operations
-  getRetellConfiguration(tenantId: string): Promise<RetellConfiguration | undefined>;
-  createRetellConfiguration(config: InsertRetellConfiguration): Promise<RetellConfiguration>;
-  updateRetellConfiguration(tenantId: string, updates: Partial<InsertRetellConfiguration>): Promise<RetellConfiguration>;
-  
   getVoiceCalls(tenantId: string, filters?: { contactId?: string; status?: string; limit?: number }): Promise<(VoiceCall & { contact: Contact; invoice?: Invoice })[]>;
   getVoiceCall(id: string, tenantId: string): Promise<(VoiceCall & { contact: Contact; invoice?: Invoice }) | undefined>;
   createVoiceCall(voiceCall: InsertVoiceCall): Promise<VoiceCall>;
@@ -330,39 +291,6 @@ export interface IStorage {
   createSmsMessage(smsMessage: InsertSmsMessage): Promise<SmsMessage>;
   updateSmsMessage(id: string, tenantId: string, updates: Partial<InsertSmsMessage>): Promise<SmsMessage>;
 
-  // Voice Workflow operations
-  getVoiceWorkflows(tenantId: string, filters?: { category?: string; isActive?: boolean }): Promise<(VoiceWorkflow & { states: VoiceWorkflowState[]; transitions: VoiceStateTransition[] })[]>;
-  getVoiceWorkflow(id: string, tenantId: string): Promise<(VoiceWorkflow & { states: VoiceWorkflowState[]; transitions: VoiceStateTransition[] }) | undefined>;
-  createVoiceWorkflow(workflow: InsertVoiceWorkflow): Promise<VoiceWorkflow>;
-  updateVoiceWorkflow(id: string, tenantId: string, updates: Partial<InsertVoiceWorkflow>): Promise<VoiceWorkflow>;
-  deleteVoiceWorkflow(id: string, tenantId: string): Promise<void>;
-
-  // Voice Workflow State operations
-  getVoiceWorkflowStates(voiceWorkflowId: string): Promise<VoiceWorkflowState[]>;
-  createVoiceWorkflowState(state: InsertVoiceWorkflowState): Promise<VoiceWorkflowState>;
-  updateVoiceWorkflowState(id: string, updates: Partial<InsertVoiceWorkflowState>): Promise<VoiceWorkflowState>;
-  deleteVoiceWorkflowState(id: string): Promise<void>;
-
-  // Voice State Transition operations
-  getVoiceStateTransitions(voiceWorkflowId: string): Promise<VoiceStateTransition[]>;
-  createVoiceStateTransition(transition: InsertVoiceStateTransition): Promise<VoiceStateTransition>;
-  updateVoiceStateTransition(id: string, updates: Partial<InsertVoiceStateTransition>): Promise<VoiceStateTransition>;
-  deleteVoiceStateTransition(id: string): Promise<void>;
-
-  // Voice Message Template operations
-  getVoiceMessageTemplates(tenantId: string, filters?: { category?: string; isActive?: boolean }): Promise<VoiceMessageTemplate[]>;
-  getVoiceMessageTemplate(id: string, tenantId: string): Promise<VoiceMessageTemplate | undefined>;
-  createVoiceMessageTemplate(template: InsertVoiceMessageTemplate): Promise<VoiceMessageTemplate>;
-  updateVoiceMessageTemplate(id: string, tenantId: string, updates: Partial<InsertVoiceMessageTemplate>): Promise<VoiceMessageTemplate>;
-  deleteVoiceMessageTemplate(id: string, tenantId: string): Promise<void>;
-  
-  // Lead operations
-  getLeads(): Promise<Lead[]>;
-  getLead(id: string): Promise<Lead | undefined>;
-  createLead(lead: InsertLead): Promise<Lead>;
-  updateLead(id: string, updates: Partial<InsertLead>): Promise<Lead>;
-  deleteLead(id: string): Promise<void>;
-  
   // AI Facts operations - Knowledge base for AI CFO
   getAiFacts(tenantId: string, category?: string): Promise<AiFact[]>;
   getAiFactsByTags(tenantId: string, tags: string[]): Promise<AiFact[]>;
@@ -400,17 +328,11 @@ export interface IStorage {
   deleteBankTransaction(id: string, tenantId: string): Promise<void>;
   
   // Budget operations
-  getBudgets(tenantId: string, filters?: { year?: number; status?: string }): Promise<(Budget & { budgetLines: BudgetLine[]; createdByUser?: User; approvedByUser?: User })[]>;
-  getBudget(id: string, tenantId: string): Promise<(Budget & { budgetLines: BudgetLine[]; createdByUser?: User; approvedByUser?: User }) | undefined>;
+  getBudgets(tenantId: string, filters?: { year?: number; status?: string }): Promise<(Budget & { createdByUser?: User; approvedByUser?: User })[]>;
+  getBudget(id: string, tenantId: string): Promise<(Budget & { createdByUser?: User; approvedByUser?: User }) | undefined>;
   createBudget(budget: InsertBudget): Promise<Budget>;
   updateBudget(id: string, tenantId: string, updates: Partial<InsertBudget>): Promise<Budget>;
   deleteBudget(id: string, tenantId: string): Promise<void>;
-  
-  // Budget Line operations
-  getBudgetLines(budgetId: string): Promise<BudgetLine[]>;
-  createBudgetLine(budgetLine: InsertBudgetLine): Promise<BudgetLine>;
-  updateBudgetLine(id: string, updates: Partial<InsertBudgetLine>): Promise<BudgetLine>;
-  deleteBudgetLine(id: string): Promise<void>;
   
   // Exchange Rate operations
   getExchangeRates(baseCurrency?: string, targetCurrency?: string, date?: string): Promise<ExchangeRate[]>;
@@ -424,9 +346,6 @@ export interface IStorage {
   getInvoiceHealthScores(tenantId: string): Promise<InvoiceHealthScore[]>;
   createInvoiceHealthScore(healthScore: InsertInvoiceHealthScore): Promise<InvoiceHealthScore>;
   updateInvoiceHealthScore(id: string, tenantId: string, updates: Partial<InsertInvoiceHealthScore>): Promise<InvoiceHealthScore>;
-  getHealthAnalyticsSnapshot(tenantId: string, snapshotType?: string): Promise<HealthAnalyticsSnapshot | undefined>;
-  createHealthAnalyticsSnapshot(snapshot: InsertHealthAnalyticsSnapshot): Promise<HealthAnalyticsSnapshot>;
-  
   // Action Centre operations
   getActionItems(tenantId: string, filters?: { status?: string; assignedToUserId?: string; type?: string; priority?: string; page?: number; limit?: number }): Promise<{ actionItems: (ActionItem & { contact: Contact; invoice?: Invoice; assignedToUser?: User; createdByUser: User })[]; total: number }>;
   getActionItem(id: string, tenantId: string): Promise<(ActionItem & { contact: Contact; invoice?: Invoice; assignedToUser?: User; createdByUser: User }) | undefined>;
@@ -2262,36 +2181,6 @@ export class DatabaseStorage implements IStorage {
       .limit(limit);
   }
 
-  // Template Performance Analytics
-  async recordTemplatePerformance(performanceData: InsertTemplatePerformance): Promise<TemplatePerformance> {
-    const [performance] = await db.insert(templatePerformance).values(performanceData).returning();
-    return performance;
-  }
-
-  async getTemplateAnalytics(
-    tenantId: string,
-    templateId: string,
-    dateRange?: { start: Date; end: Date }
-  ): Promise<TemplatePerformance[]> {
-    const conditions = [
-      eq(templatePerformance.tenantId, tenantId),
-      eq(templatePerformance.templateId, templateId)
-    ];
-
-    if (dateRange) {
-      conditions.push(
-        gte(templatePerformance.date, dateRange.start),
-        lte(templatePerformance.date, dateRange.end)
-      );
-    }
-
-    return await db
-      .select()
-      .from(templatePerformance)
-      .where(and(...conditions))
-      .orderBy(desc(templatePerformance.date));
-  }
-
   async deleteCommunicationTemplate(id: string, tenantId: string): Promise<void> {
     await db
       .delete(communicationTemplates)
@@ -2349,41 +2238,6 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(tenantTemplates.id, id), eq(tenantTemplates.tenantId, tenantId)))
       .returning();
     return template;
-  }
-
-  async getAiAgentConfigs(
-    tenantId: string,
-    filters?: { type?: string }
-  ): Promise<AiAgentConfig[]> {
-    const conditions = [eq(aiAgentConfigs.tenantId, tenantId)];
-
-    if (filters?.type) {
-      conditions.push(eq(aiAgentConfigs.type, filters.type));
-    }
-
-    return await db
-      .select()
-      .from(aiAgentConfigs)
-      .where(and(...conditions))
-      .orderBy(desc(aiAgentConfigs.createdAt));
-  }
-
-  async createAiAgentConfig(configData: InsertAiAgentConfig): Promise<AiAgentConfig> {
-    const [config] = await db.insert(aiAgentConfigs).values(configData).returning();
-    return config;
-  }
-
-  async updateAiAgentConfig(
-    id: string,
-    tenantId: string,
-    updates: Partial<InsertAiAgentConfig>
-  ): Promise<AiAgentConfig> {
-    const [config] = await db
-      .update(aiAgentConfigs)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(and(eq(aiAgentConfigs.id, id), eq(aiAgentConfigs.tenantId, tenantId)))
-      .returning();
-    return config;
   }
 
   async getEscalationRules(tenantId: string): Promise<EscalationRule[]> {
@@ -2544,35 +2398,6 @@ export class DatabaseStorage implements IStorage {
       .where(eq(workflowTemplates.id, templateId));
 
     return workflow;
-  }
-
-  // Retell AI operations
-  async getRetellConfiguration(tenantId: string): Promise<RetellConfiguration | undefined> {
-    const [config] = await db
-      .select()
-      .from(retellConfigurations)
-      .where(eq(retellConfigurations.tenantId, tenantId));
-    return config;
-  }
-
-  async createRetellConfiguration(config: InsertRetellConfiguration): Promise<RetellConfiguration> {
-    const [retellConfig] = await db
-      .insert(retellConfigurations)
-      .values(config)
-      .returning();
-    return retellConfig;
-  }
-
-  async updateRetellConfiguration(tenantId: string, updates: Partial<InsertRetellConfiguration>): Promise<RetellConfiguration> {
-    const [retellConfig] = await db
-      .update(retellConfigurations)
-      .set({
-        ...updates,
-        updatedAt: new Date(),
-      })
-      .where(eq(retellConfigurations.tenantId, tenantId))
-      .returning();
-    return retellConfig;
   }
 
   async getVoiceCalls(tenantId: string, filters?: { contactId?: string; status?: string; limit?: number }): Promise<(VoiceCall & { contact: Contact; invoice?: Invoice })[]> {
@@ -2954,222 +2779,7 @@ export class DatabaseStorage implements IStorage {
     return message;
   }
 
-  // Voice Workflow operations
-  async getVoiceWorkflows(tenantId: string, filters?: { category?: string; isActive?: boolean }): Promise<(VoiceWorkflow & { states: VoiceWorkflowState[]; transitions: VoiceStateTransition[] })[]> {
-    let query = db.select().from(voiceWorkflows);
-    
-    const conditions = [eq(voiceWorkflows.tenantId, tenantId)];
-    
-    if (filters?.category) {
-      conditions.push(eq(voiceWorkflows.category, filters.category));
-    }
-    
-    if (filters?.isActive !== undefined) {
-      conditions.push(eq(voiceWorkflows.isActive, filters.isActive));
-    }
-    
-    const workflows = await query.where(and(...conditions));
-    
-    // Get states and transitions for each workflow
-    const workflowsWithDetails = await Promise.all(
-      workflows.map(async (workflow) => {
-        const states = await this.getVoiceWorkflowStates(workflow.id);
-        const transitions = await this.getVoiceStateTransitions(workflow.id);
-        return { ...workflow, states, transitions };
-      })
-    );
-    
-    return workflowsWithDetails;
-  }
 
-  async getVoiceWorkflow(id: string, tenantId: string): Promise<(VoiceWorkflow & { states: VoiceWorkflowState[]; transitions: VoiceStateTransition[] }) | undefined> {
-    const [workflow] = await db
-      .select()
-      .from(voiceWorkflows)
-      .where(and(eq(voiceWorkflows.id, id), eq(voiceWorkflows.tenantId, tenantId)));
-    
-    if (!workflow) return undefined;
-    
-    const states = await this.getVoiceWorkflowStates(workflow.id);
-    const transitions = await this.getVoiceStateTransitions(workflow.id);
-    
-    return { ...workflow, states, transitions };
-  }
-
-  async createVoiceWorkflow(workflow: InsertVoiceWorkflow): Promise<VoiceWorkflow> {
-    const [newWorkflow] = await db
-      .insert(voiceWorkflows)
-      .values(workflow)
-      .returning();
-    return newWorkflow;
-  }
-
-  async updateVoiceWorkflow(id: string, tenantId: string, updates: Partial<InsertVoiceWorkflow>): Promise<VoiceWorkflow> {
-    const [workflow] = await db
-      .update(voiceWorkflows)
-      .set({
-        ...updates,
-        updatedAt: new Date(),
-      })
-      .where(and(eq(voiceWorkflows.id, id), eq(voiceWorkflows.tenantId, tenantId)))
-      .returning();
-    return workflow;
-  }
-
-  async deleteVoiceWorkflow(id: string, tenantId: string): Promise<void> {
-    await db
-      .delete(voiceWorkflows)
-      .where(and(eq(voiceWorkflows.id, id), eq(voiceWorkflows.tenantId, tenantId)));
-  }
-
-  // Voice Workflow State operations
-  async getVoiceWorkflowStates(voiceWorkflowId: string): Promise<VoiceWorkflowState[]> {
-    return await db
-      .select()
-      .from(voiceWorkflowStates)
-      .where(eq(voiceWorkflowStates.voiceWorkflowId, voiceWorkflowId));
-  }
-
-  async createVoiceWorkflowState(state: InsertVoiceWorkflowState): Promise<VoiceWorkflowState> {
-    const [newState] = await db
-      .insert(voiceWorkflowStates)
-      .values(state)
-      .returning();
-    return newState;
-  }
-
-  async updateVoiceWorkflowState(id: string, updates: Partial<InsertVoiceWorkflowState>): Promise<VoiceWorkflowState> {
-    const [state] = await db
-      .update(voiceWorkflowStates)
-      .set(updates)
-      .where(eq(voiceWorkflowStates.id, id))
-      .returning();
-    return state;
-  }
-
-  async deleteVoiceWorkflowState(id: string): Promise<void> {
-    await db
-      .delete(voiceWorkflowStates)
-      .where(eq(voiceWorkflowStates.id, id));
-  }
-
-  // Voice State Transition operations
-  async getVoiceStateTransitions(voiceWorkflowId: string): Promise<VoiceStateTransition[]> {
-    return await db
-      .select()
-      .from(voiceStateTransitions)
-      .where(eq(voiceStateTransitions.voiceWorkflowId, voiceWorkflowId));
-  }
-
-  async createVoiceStateTransition(transition: InsertVoiceStateTransition): Promise<VoiceStateTransition> {
-    const [newTransition] = await db
-      .insert(voiceStateTransitions)
-      .values(transition)
-      .returning();
-    return newTransition;
-  }
-
-  async updateVoiceStateTransition(id: string, updates: Partial<InsertVoiceStateTransition>): Promise<VoiceStateTransition> {
-    const [transition] = await db
-      .update(voiceStateTransitions)
-      .set(updates)
-      .where(eq(voiceStateTransitions.id, id))
-      .returning();
-    return transition;
-  }
-
-  async deleteVoiceStateTransition(id: string): Promise<void> {
-    await db
-      .delete(voiceStateTransitions)
-      .where(eq(voiceStateTransitions.id, id));
-  }
-
-  // Voice Message Template operations
-  async getVoiceMessageTemplates(tenantId: string, filters?: { category?: string; isActive?: boolean }): Promise<VoiceMessageTemplate[]> {
-    let query = db.select().from(voiceMessageTemplates);
-    
-    const conditions = [eq(voiceMessageTemplates.tenantId, tenantId)];
-    
-    if (filters?.category) {
-      conditions.push(eq(voiceMessageTemplates.category, filters.category));
-    }
-    
-    if (filters?.isActive !== undefined) {
-      conditions.push(eq(voiceMessageTemplates.isActive, filters.isActive));
-    }
-    
-    return await query.where(and(...conditions));
-  }
-
-  async getVoiceMessageTemplate(id: string, tenantId: string): Promise<VoiceMessageTemplate | undefined> {
-    const [template] = await db
-      .select()
-      .from(voiceMessageTemplates)
-      .where(and(eq(voiceMessageTemplates.id, id), eq(voiceMessageTemplates.tenantId, tenantId)));
-    return template;
-  }
-
-  async createVoiceMessageTemplate(template: InsertVoiceMessageTemplate): Promise<VoiceMessageTemplate> {
-    const [newTemplate] = await db
-      .insert(voiceMessageTemplates)
-      .values(template)
-      .returning();
-    return newTemplate;
-  }
-
-  async updateVoiceMessageTemplate(id: string, tenantId: string, updates: Partial<InsertVoiceMessageTemplate>): Promise<VoiceMessageTemplate> {
-    const [template] = await db
-      .update(voiceMessageTemplates)
-      .set({
-        ...updates,
-        updatedAt: new Date(),
-      })
-      .where(and(eq(voiceMessageTemplates.id, id), eq(voiceMessageTemplates.tenantId, tenantId)))
-      .returning();
-    return template;
-  }
-
-  async deleteVoiceMessageTemplate(id: string, tenantId: string): Promise<void> {
-    await db
-      .delete(voiceMessageTemplates)
-      .where(and(eq(voiceMessageTemplates.id, id), eq(voiceMessageTemplates.tenantId, tenantId)));
-  }
-
-  // Lead operations
-  async getLeads(): Promise<Lead[]> {
-    return await db
-      .select()
-      .from(leads)
-      .orderBy(desc(leads.createdAt));
-  }
-
-  async getLead(id: string): Promise<Lead | undefined> {
-    const [lead] = await db
-      .select()
-      .from(leads)
-      .where(eq(leads.id, id));
-    return lead;
-  }
-
-  async createLead(leadData: InsertLead): Promise<Lead> {
-    const [lead] = await db.insert(leads).values(leadData).returning();
-    return lead;
-  }
-
-  async updateLead(id: string, updates: Partial<InsertLead>): Promise<Lead> {
-    const [lead] = await db
-      .update(leads)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(leads.id, id))
-      .returning();
-    return lead;
-  }
-
-  async deleteLead(id: string): Promise<void> {
-    await db
-      .delete(leads)
-      .where(eq(leads.id, id));
-  }
 
   // AI Facts operations - Knowledge base for AI CFO
   async getAiFacts(tenantId: string, category?: string): Promise<AiFact[]> {
@@ -3341,34 +2951,6 @@ export class DatabaseStorage implements IStorage {
       .update(invoiceHealthScores)
       .set({ ...updates, updatedAt: new Date() })
       .where(and(eq(invoiceHealthScores.id, id), eq(invoiceHealthScores.tenantId, tenantId)))
-      .returning();
-    
-    return result[0];
-  }
-
-  async getHealthAnalyticsSnapshot(tenantId: string, snapshotType?: string): Promise<HealthAnalyticsSnapshot | undefined> {
-    const conditions = [eq(healthAnalyticsSnapshots.tenantId, tenantId)];
-    
-    if (snapshotType) {
-      conditions.push(eq(healthAnalyticsSnapshots.snapshotType, snapshotType));
-    }
-
-    const query = db
-      .select()
-      .from(healthAnalyticsSnapshots)
-      .where(and(...conditions));
-
-    const result = await query
-      .orderBy(desc(healthAnalyticsSnapshots.snapshotDate))
-      .limit(1);
-    
-    return result[0];
-  }
-
-  async createHealthAnalyticsSnapshot(snapshot: InsertHealthAnalyticsSnapshot): Promise<HealthAnalyticsSnapshot> {
-    const result = await db
-      .insert(healthAnalyticsSnapshots)
-      .values(snapshot)
       .returning();
     
     return result[0];
@@ -3624,16 +3206,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Budget operations
-  async getBudgets(tenantId: string, filters?: { year?: number; status?: string }): Promise<(Budget & { budgetLines: BudgetLine[]; createdByUser?: User; approvedByUser?: User })[]> {
-    // Build conditions array
+  async getBudgets(tenantId: string, filters?: { year?: number; status?: string }): Promise<(Budget & { createdByUser?: User; approvedByUser?: User })[]> {
     const conditions = [eq(budgets.tenantId, tenantId)];
     
     if (filters?.status) {
       conditions.push(eq(budgets.status, filters.status));
     }
-    
-    // Note: No year filter since budgets table doesn't have a year column
-    // Budget period is defined by startDate and endDate
 
     const budgetResults = await db
       .select()
@@ -3642,23 +3220,14 @@ export class DatabaseStorage implements IStorage {
       .where(and(...conditions))
       .orderBy(desc(budgets.startDate), desc(budgets.createdAt));
     
-    // Get budget lines for each budget and map results
-    const budgetsWithLines = await Promise.all(
-      budgetResults.map(async (row) => {
-        const budgetLines = await this.getBudgetLines(row.budgets.id);
-        return {
-          ...row.budgets,
-          budgetLines,
-          createdByUser: row.users || undefined,
-          approvedByUser: undefined, // Would need separate join for approvedBy
-        };
-      })
-    );
-
-    return budgetsWithLines;
+    return budgetResults.map((row) => ({
+      ...row.budgets,
+      createdByUser: row.users || undefined,
+      approvedByUser: undefined,
+    }));
   }
 
-  async getBudget(id: string, tenantId: string): Promise<(Budget & { budgetLines: BudgetLine[]; createdByUser?: User; approvedByUser?: User }) | undefined> {
+  async getBudget(id: string, tenantId: string): Promise<(Budget & { createdByUser?: User; approvedByUser?: User }) | undefined> {
     const [result] = await db
       .select()
       .from(budgets)
@@ -3667,12 +3236,10 @@ export class DatabaseStorage implements IStorage {
 
     if (!result) return undefined;
 
-    const budgetLines = await this.getBudgetLines(id);
     return {
       ...result.budgets,
-      budgetLines,
       createdByUser: result.users || undefined,
-      approvedByUser: undefined, // Would need separate join for approvedBy
+      approvedByUser: undefined,
     };
   }
 
@@ -3691,44 +3258,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteBudget(id: string, tenantId: string): Promise<void> {
-    // Delete budget lines first
-    await db
-      .delete(budgetLines)
-      .where(eq(budgetLines.budgetId, id));
-    
-    // Delete budget
     await db
       .delete(budgets)
       .where(and(eq(budgets.id, id), eq(budgets.tenantId, tenantId)));
-  }
-
-  // Budget Line operations
-  async getBudgetLines(budgetId: string): Promise<BudgetLine[]> {
-    return await db
-      .select()
-      .from(budgetLines)
-      .where(eq(budgetLines.budgetId, budgetId))
-      .orderBy(budgetLines.category, budgetLines.subcategory);
-  }
-
-  async createBudgetLine(budgetLineData: InsertBudgetLine): Promise<BudgetLine> {
-    const [budgetLine] = await db.insert(budgetLines).values(budgetLineData).returning();
-    return budgetLine;
-  }
-
-  async updateBudgetLine(id: string, updates: Partial<InsertBudgetLine>): Promise<BudgetLine> {
-    const [budgetLine] = await db
-      .update(budgetLines)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(budgetLines.id, id))
-      .returning();
-    return budgetLine;
-  }
-
-  async deleteBudgetLine(id: string): Promise<void> {
-    await db
-      .delete(budgetLines)
-      .where(eq(budgetLines.id, id));
   }
 
   // Exchange Rate operations

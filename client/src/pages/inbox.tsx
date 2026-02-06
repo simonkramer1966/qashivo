@@ -94,6 +94,7 @@ export default function InboxPage() {
 
   const { data: inboxItems, isLoading } = useQuery<InboxItem[]>({
     queryKey: ["/api/inbox"],
+    retry: false,
   });
 
   const confirmMutation = useMutation({
