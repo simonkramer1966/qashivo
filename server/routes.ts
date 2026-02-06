@@ -24877,28 +24877,40 @@ ${tenant.name}
           })
           .returning();
 
-        // Create 8-10 varied invoices
+        // Create 8 invoices with random amounts and unique invoice numbers
         const now = new Date();
-        const invoiceData = [
-          // 2 current (not yet due)
-          { daysFromDue: 15, amount: 2500.00, status: "outstanding" },
-          { daysFromDue: 7, amount: 4750.50, status: "outstanding" },
-          // 2 recently overdue (1-30 days)
-          { daysFromDue: -5, amount: 1250.00, status: "overdue" },
-          { daysFromDue: -12, amount: 3890.75, status: "overdue" },
-          // 2 significantly overdue (31-60 days)
-          { daysFromDue: -35, amount: 8500.00, status: "overdue" },
-          { daysFromDue: -48, amount: 5200.25, status: "overdue" },
-          // 2 severely overdue (61-90 days)
-          { daysFromDue: -72, amount: 12450.00, status: "overdue" },
-          { daysFromDue: -85, amount: 6325.50, status: "overdue" },
-        ];
+        const randomAmount = () => {
+          const min = 1500;
+          const max = 25000;
+          return (Math.random() * (max - min) + min);
+        };
+        const existingInvNums = await tx
+          .select({ invoiceNumber: invoices.invoiceNumber })
+          .from(invoices)
+          .where(eq(invoices.tenantId, tenantId));
+        const usedInvNums = new Set<string>(existingInvNums.map(r => r.invoiceNumber));
+
+        const generateUniqueInvNum = () => {
+          let invNum: string;
+          do {
+            const num = Math.floor(Math.random() * 900000) + 100000;
+            invNum = `INV-${num}`;
+          } while (usedInvNums.has(invNum));
+          usedInvNums.add(invNum);
+          return invNum;
+        };
+        const daysFromDueOptions = [15, 7, -5, -12, -35, -48, -72, -85];
+        const serviceTypes = ['Consulting', 'Development', 'Analysis', 'Strategy', 'Implementation', 'Training', 'Support', 'Advisory'];
 
         const createdInvoices = [];
-        for (let i = 0; i < invoiceData.length; i++) {
-          const inv = invoiceData[i];
+        for (let i = 0; i < 8; i++) {
+          const daysFromDue = daysFromDueOptions[i];
+          const amount = randomAmount();
+          const invNum = generateUniqueInvNum();
+
+          const status = daysFromDue < 0 ? "overdue" : "outstanding";
           const dueDate = new Date(now);
-          dueDate.setDate(dueDate.getDate() + inv.daysFromDue);
+          dueDate.setDate(dueDate.getDate() + daysFromDue);
           const issueDate = new Date(dueDate);
           issueDate.setDate(issueDate.getDate() - 30);
 
@@ -24907,16 +24919,16 @@ ${tenant.name}
             .values({
               tenantId,
               contactId: contact.id,
-              invoiceNumber: `INV-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}-${String(i + 1).padStart(4, '0')}`,
-              amount: inv.amount.toFixed(2),
+              invoiceNumber: invNum,
+              amount: amount.toFixed(2),
               amountPaid: "0",
-              status: inv.status,
+              status,
               issueDate,
               dueDate,
               currency: "GBP",
-              description: `Professional services - ${['Consulting', 'Development', 'Analysis', 'Strategy', 'Implementation', 'Training', 'Support', 'Advisory'][i]}`,
-              workflowState: inv.status === "overdue" ? "late" : "pre_due",
-              reminderCount: inv.daysFromDue < -30 ? 2 : inv.daysFromDue < 0 ? 1 : 0,
+              description: `Professional services - ${serviceTypes[i]}`,
+              workflowState: status === "overdue" ? "late" : "pre_due",
+              reminderCount: daysFromDue < -30 ? 2 : daysFromDue < 0 ? 1 : 0,
             })
             .returning();
 
