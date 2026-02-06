@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { db } from "../db";
-import { inboundMessages, actions, contacts, invoices, paymentPlans, paymentPlanInvoices, users, outcomes, emailClarifications, tenants, emailMessages } from "@shared/schema";
+import { inboundMessages, actions, contacts, invoices, paymentPlans, paymentPlanInvoices, users, outcomes, emailClarifications, tenants, emailMessages, customerContactPersons } from "@shared/schema";
 import { eq, and, desc, inArray, asc, sql } from "drizzle-orm";
 import { getPromiseReliabilityService } from "./promiseReliabilityService.js";
 import { emailClarificationService } from "./emailClarificationService.js";
@@ -490,8 +490,21 @@ CRITICAL EXCEPTIONS - do NOT flag ambiguity when:
 
     if (!tenant) return;
 
-    const contactEmail = (contact as any).primaryCreditContact?.email || contact.email || message.from;
+    const primaryEmail = (contact as any).primaryCreditContact?.email || contact.email;
+    const senderEmail = message.from?.toLowerCase().trim();
+    const senderDiffersFromPrimary = senderEmail && primaryEmail && senderEmail !== primaryEmail.toLowerCase().trim();
+    const contactEmail = senderDiffersFromPrimary
+      ? senderEmail
+      : (primaryEmail || senderEmail);
     if (!contactEmail) return;
+
+    if (senderDiffersFromPrimary) {
+      console.log(`📧 Debtor replied from different email: ${senderEmail} (primary: ${primaryEmail}) — replying to sender`);
+    }
+
+    if (senderEmail) {
+      await this.autoDiscoverContactPerson(message.tenantId, message.contactId, senderEmail, message.from);
+    }
 
     const result = await emailClarificationService.handleActiveConversationReply({
       tenantId: message.tenantId,
@@ -510,6 +523,51 @@ CRITICAL EXCEPTIONS - do NOT flag ambiguity when:
       console.log(`✅ Active conversation AI reply sent`);
     } else {
       console.log(`⏸️ Active conversation reply skipped: ${result.reason || result.error}`);
+    }
+  }
+
+  /**
+   * Auto-discover a new contact person when a debtor replies from an unknown email address.
+   * Adds the email to customerContactPersons if not already present.
+   */
+  private async autoDiscoverContactPerson(
+    tenantId: string,
+    contactId: string,
+    email: string,
+    rawFrom: string | null
+  ): Promise<void> {
+    try {
+      const normalizedEmail = email.toLowerCase().trim();
+      const existing = await db
+        .select({ id: customerContactPersons.id })
+        .from(customerContactPersons)
+        .where(and(
+          eq(customerContactPersons.tenantId, tenantId),
+          eq(customerContactPersons.contactId, contactId),
+          sql`lower(${customerContactPersons.email}) = ${normalizedEmail}`
+        ))
+        .limit(1);
+
+      if (existing.length > 0) return;
+
+      const namePart = rawFrom?.match(/^(.+?)\s*</)
+        ? rawFrom.match(/^(.+?)\s*</)?.[1]?.trim()
+        : null;
+
+      await db.insert(customerContactPersons).values({
+        tenantId,
+        contactId,
+        name: namePart || normalizedEmail.split('@')[0],
+        email: normalizedEmail,
+        notes: `Auto-discovered from inbound email reply on ${new Date().toISOString().split('T')[0]}`,
+        isPrimaryCreditControl: false,
+        isEscalation: false,
+        isFromXero: false,
+      });
+
+      console.log(`👤 Auto-discovered contact person: ${email} for contact ${contactId}`);
+    } catch (err) {
+      console.error(`❌ Failed to auto-discover contact person ${email}:`, err);
     }
   }
 
