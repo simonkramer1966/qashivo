@@ -1,5 +1,5 @@
 import { db } from "../db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, gte, sql } from "drizzle-orm";
 import { 
   emailClarifications, 
   emailMessages,
@@ -8,11 +8,14 @@ import {
   invoices, 
   tenants,
   conversations,
-  timelineEvents
+  timelineEvents,
+  outcomes,
+  actions
 } from "@shared/schema";
 import { sendEmail } from "./sendgrid";
 import { generateReplyToEmail, findOrCreateConversation, updateConversationStats } from "./emailCommunications";
 import { v4 as uuidv4 } from "uuid";
+import OpenAI from "openai";
 
 const EMAIL_REPLY_DOMAIN = process.env.EMAIL_REPLY_DOMAIN || "in.qashivo.com";
 const SENDGRID_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || "cc@qashivo.com";
@@ -63,6 +66,25 @@ interface ConfirmationContext {
     installments: Array<{ date: string; amount: number }>;
   };
   sourceChannel?: string;
+}
+
+type VoiceCallDisposition = 'completed' | 'no_answer' | 'busy' | 'voicemail' | 'failed';
+
+interface VoiceFollowUpContext {
+  tenantId: string;
+  contactId: string;
+  contactEmail: string;
+  contactName: string;
+  tenantName: string;
+  callId: string;
+  voiceStatus: VoiceCallDisposition;
+  outcomeType?: string;
+  callSummary?: string;
+  transcript?: string;
+  extracted?: Record<string, any>;
+  linkedInvoiceIds?: string[];
+  durationSeconds?: number;
+  actionId?: string;
 }
 
 class EmailClarificationService {
@@ -553,6 +575,398 @@ This email was sent on behalf of ${tenantName} via Qashivo credit control.`;
     return { subject, htmlContent, textContent };
   }
   
+  /**
+   * Check if email cadence rules allow sending an email to this contact.
+   * Returns true if we can send, false if within cooldown period.
+   */
+  async checkEmailCadence(tenantId: string, contactId: string): Promise<{ canSend: boolean; reason?: string; lastEmailAt?: Date }> {
+    try {
+      const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+      const cooldowns = (tenant?.channelCooldowns as { email?: number; sms?: number; voice?: number }) || { email: 3, sms: 5, voice: 7 };
+      const emailCooldownDays = cooldowns.email || 3;
+
+      const cooldownDate = new Date();
+      cooldownDate.setDate(cooldownDate.getDate() - emailCooldownDays);
+
+      const [lastEmail] = await db.select({ sentAt: emailMessages.sentAt, createdAt: emailMessages.createdAt })
+        .from(emailMessages)
+        .where(and(
+          eq(emailMessages.tenantId, tenantId),
+          eq(emailMessages.contactId, contactId),
+          eq(emailMessages.direction, 'OUTBOUND'),
+          sql`COALESCE(${emailMessages.sentAt}, ${emailMessages.createdAt}) >= ${cooldownDate}`
+        ))
+        .orderBy(desc(sql`COALESCE(${emailMessages.sentAt}, ${emailMessages.createdAt})`))
+        .limit(1);
+
+      if (lastEmail) {
+        const lastSentAt = lastEmail.sentAt || lastEmail.createdAt;
+        return {
+          canSend: false,
+          reason: `Email cooldown active: last email sent ${lastSentAt ? new Date(lastSentAt).toLocaleDateString('en-GB') : 'recently'}. Cooldown: ${emailCooldownDays} days.`,
+          lastEmailAt: lastSentAt ? new Date(lastSentAt) : undefined,
+        };
+      }
+
+      const maxTouches = tenant?.maxTouchesPerWindow || 3;
+      const windowDays = tenant?.contactWindowDays || 14;
+      const windowDate = new Date();
+      windowDate.setDate(windowDate.getDate() - windowDays);
+
+      const touchCount = await db.select({ count: sql<number>`count(*)::int` })
+        .from(emailMessages)
+        .where(and(
+          eq(emailMessages.tenantId, tenantId),
+          eq(emailMessages.contactId, contactId),
+          eq(emailMessages.direction, 'OUTBOUND'),
+          sql`COALESCE(${emailMessages.sentAt}, ${emailMessages.createdAt}) >= ${windowDate}`
+        ));
+
+      const totalTouches = touchCount[0]?.count || 0;
+      if (totalTouches >= maxTouches) {
+        return {
+          canSend: false,
+          reason: `Max touches exceeded: ${totalTouches}/${maxTouches} in the last ${windowDays} days.`,
+        };
+      }
+
+      return { canSend: true };
+    } catch (error: any) {
+      console.error('Error checking email cadence:', error);
+      return { canSend: true };
+    }
+  }
+
+  /**
+   * Gather debtor context for OpenAI email generation.
+   * Pulls outstanding invoices, recent outcomes, communication history, and behaviour patterns.
+   */
+  private async gatherDebtorContext(tenantId: string, contactId: string, linkedInvoiceIds?: string[]): Promise<string> {
+    const contextParts: string[] = [];
+
+    try {
+      const outstandingInvoices = await db.select({
+        invoiceNumber: invoices.invoiceNumber,
+        amount: invoices.amount,
+        amountPaid: invoices.amountPaid,
+        dueDate: invoices.dueDate,
+        status: invoices.status,
+        outcomeOverride: invoices.outcomeOverride,
+      })
+        .from(invoices)
+        .where(and(
+          eq(invoices.tenantId, tenantId),
+          eq(invoices.contactId, contactId),
+          eq(invoices.status, 'OPEN')
+        ))
+        .orderBy(invoices.dueDate);
+
+      if (outstandingInvoices.length > 0) {
+        const invoiceList = outstandingInvoices.map(inv => {
+          const outstanding = Number(inv.amount || 0) - Number(inv.amountPaid || 0);
+          const daysOverdue = inv.dueDate
+            ? Math.floor((Date.now() - new Date(inv.dueDate).getTime()) / (1000 * 60 * 60 * 24))
+            : 0;
+          return `  - ${inv.invoiceNumber}: £${outstanding.toFixed(2)} (${daysOverdue > 0 ? `${daysOverdue} days overdue` : `due ${new Date(inv.dueDate!).toLocaleDateString('en-GB')}`})${inv.outcomeOverride ? ` [${inv.outcomeOverride}]` : ''}`;
+        }).join('\n');
+        const totalOutstanding = outstandingInvoices.reduce((sum, inv) => sum + (Number(inv.amount || 0) - Number(inv.amountPaid || 0)), 0);
+        contextParts.push(`OUTSTANDING INVOICES (${outstandingInvoices.length} total, £${totalOutstanding.toFixed(2)}):\n${invoiceList}`);
+      } else {
+        contextParts.push('OUTSTANDING INVOICES: None currently outstanding.');
+      }
+    } catch (e) { /* non-critical */ }
+
+    try {
+      const recentOutcomes = await db.select({
+        type: outcomes.type,
+        extracted: outcomes.extracted,
+        sourceChannel: outcomes.sourceChannel,
+        createdAt: outcomes.createdAt,
+      })
+        .from(outcomes)
+        .where(and(
+          eq(outcomes.tenantId, tenantId),
+          eq(outcomes.debtorId, contactId),
+        ))
+        .orderBy(desc(outcomes.createdAt))
+        .limit(5);
+
+      if (recentOutcomes.length > 0) {
+        const outcomeList = recentOutcomes.map(o => {
+          const date = o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-GB') : 'unknown';
+          const ext = o.extracted as Record<string, any> || {};
+          let detail = `${o.type} via ${o.sourceChannel || 'unknown'} on ${date}`;
+          if (ext.promiseToPayDate) detail += ` (promised: ${ext.promiseToPayDate})`;
+          if (ext.promiseToPayAmount) detail += ` (£${ext.promiseToPayAmount})`;
+          if (ext.freeTextNotes) detail += ` — "${ext.freeTextNotes.substring(0, 80)}"`;
+          return `  - ${detail}`;
+        }).join('\n');
+        contextParts.push(`RECENT OUTCOME HISTORY:\n${outcomeList}`);
+      }
+    } catch (e) { /* non-critical */ }
+
+    try {
+      const recentEmails = await db.select({
+        direction: emailMessages.direction,
+        subject: emailMessages.subject,
+        sentAt: emailMessages.sentAt,
+        createdAt: emailMessages.createdAt,
+      })
+        .from(emailMessages)
+        .where(and(
+          eq(emailMessages.tenantId, tenantId),
+          eq(emailMessages.contactId, contactId),
+        ))
+        .orderBy(desc(emailMessages.sentAt))
+        .limit(5);
+
+      if (recentEmails.length > 0) {
+        const emailList = recentEmails.map(e => {
+          const date = (e.sentAt || e.createdAt) ? new Date((e.sentAt || e.createdAt)!).toLocaleDateString('en-GB') : 'unknown';
+          return `  - ${e.direction} on ${date}: "${e.subject || 'no subject'}"`;
+        }).join('\n');
+        contextParts.push(`RECENT EMAIL HISTORY:\n${emailList}`);
+      }
+    } catch (e) { /* non-critical */ }
+
+    if (linkedInvoiceIds && linkedInvoiceIds.length > 0) {
+      contextParts.push(`THIS CALL WAS ABOUT INVOICE(S): ${linkedInvoiceIds.join(', ')}`);
+    }
+
+    return contextParts.join('\n\n');
+  }
+
+  /**
+   * Use OpenAI to generate a personalised voice call follow-up email based on
+   * the call disposition, transcript, debtor context, and next steps.
+   */
+  private async generateFollowUpWithAI(context: VoiceFollowUpContext, debtorContext: string): Promise<{ subject: string; htmlContent: string; textContent: string }> {
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const currentDate = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+    let dispositionDescription: string;
+    switch (context.voiceStatus) {
+      case 'no_answer':
+        dispositionDescription = 'The call was not answered. Nobody picked up.';
+        break;
+      case 'voicemail':
+        dispositionDescription = 'The call went to voicemail. A message may have been left.';
+        break;
+      case 'busy':
+        dispositionDescription = 'The line was busy/engaged when we called.';
+        break;
+      case 'failed':
+        dispositionDescription = 'The call could not be connected (possible wrong number or technical issue).';
+        break;
+      case 'completed':
+      default:
+        dispositionDescription = `The call was answered and lasted ${context.durationSeconds ? `${Math.floor(context.durationSeconds / 60)} minutes ${context.durationSeconds % 60} seconds` : 'a short while'}.`;
+        break;
+    }
+
+    const outcomeSection = context.outcomeType
+      ? `\nCALL OUTCOME TYPE: ${context.outcomeType}`
+      : '';
+
+    const extractedSection = context.extracted && Object.keys(context.extracted).length > 0
+      ? `\nEXTRACTED DATA: ${JSON.stringify(context.extracted)}`
+      : '';
+
+    const transcriptSection = context.callSummary
+      ? `\nCALL SUMMARY: ${context.callSummary}`
+      : (context.transcript
+        ? `\nTRANSCRIPT EXCERPT: ${context.transcript.substring(0, 800)}`
+        : '');
+
+    const prompt = `You are a professional credit control assistant writing a follow-up email after a phone call attempt to a debtor.
+
+TODAY'S DATE: ${currentDate}
+TENANT (creditor) NAME: ${context.tenantName}
+DEBTOR NAME: ${context.contactName}
+CALL DISPOSITION: ${context.voiceStatus}
+${dispositionDescription}
+${outcomeSection}
+${extractedSection}
+${transcriptSection}
+
+${debtorContext}
+
+RULES — YOU MUST FOLLOW THESE:
+1. NEVER use placeholder text like "the agreed date", "the agreed amount", "your outstanding balance", or "[amount]". If you have a concrete date or amount from the extracted data, use it exactly. If you don't have it, don't reference it at all.
+2. Write in a warm but professional tone. You represent the creditor's accounts team.
+3. The email should be concise — no more than 150 words in the body.
+4. If the call was completed and has a clear outcome (PTP, dispute, docs requested, etc.), confirm what was discussed and any next steps.
+5. If the call was not answered / busy / voicemail, write a brief polite email explaining we tried to reach them about their account, mention what the call was about (e.g. outstanding invoices), and suggest how they can get in touch.
+6. If there is ambiguity in the outcome (e.g. debtor said they'd pay "soon" without a date), ask for clarification on the specific missing details.
+7. If the outcome is CONTACT_ISSUE or wrong number, write an email to any known email explaining we had difficulty reaching them by phone and asking them to confirm the best contact number.
+8. Include specific invoice numbers and amounts when available from the debtor context.
+9. Sign off as "${context.tenantName} Accounts Team".
+10. Do NOT include any Qashivo branding in the body — only in the footer.
+
+Return a JSON object with exactly these fields:
+- "subject": A concise email subject line
+- "body_text": The plain text email body (include greeting and sign-off)
+- "body_html": The same email wrapped in clean, minimal HTML (use inline styles, no external CSS)
+- "email_type": One of: "confirmation", "clarification", "missed_call", "voicemail_followup", "busy_followup", "wrong_number", "general_summary"
+- "timeline_summary": A one-line summary for the activity timeline (e.g. "Post-call confirmation sent — PTP £5,000 by 28 Feb 2026")`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: prompt },
+        { role: "user", content: "Generate the follow-up email based on the context provided." }
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.4,
+    });
+
+    const result = JSON.parse(completion.choices[0].message.content || '{}');
+
+    const subject = result.subject || `Following up on our call — ${context.tenantName}`;
+    const textContent = result.body_text || '';
+    const htmlBody = result.body_html || `<p>${textContent.replace(/\n/g, '<br>')}</p>`;
+
+    const htmlContent = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+${htmlBody}
+<div style="margin-top: 30px; font-size: 12px; color: #666; border-top: 1px solid #eee; padding-top: 10px;">
+  <p>This email was sent on behalf of ${context.tenantName} via Qashivo credit control.</p>
+</div>
+</body>
+</html>`;
+
+    return {
+      subject,
+      htmlContent,
+      textContent: textContent + `\n\n---\nThis email was sent on behalf of ${context.tenantName} via Qashivo credit control.`,
+    };
+  }
+
+  /**
+   * Send a personalised AI-generated follow-up email after any voice call,
+   * regardless of outcome. Respects cadence rules.
+   */
+  async sendVoiceFollowUpEmail(context: VoiceFollowUpContext): Promise<{ success: boolean; skipped?: boolean; reason?: string; error?: string }> {
+    try {
+      console.log(`📧 Voice follow-up: ${context.voiceStatus} / ${context.outcomeType || 'N/A'} → ${context.contactEmail}`);
+
+      const cadenceResult = await this.checkEmailCadence(context.tenantId, context.contactId);
+      if (!cadenceResult.canSend) {
+        console.log(`⏸️ Voice follow-up skipped (cadence): ${cadenceResult.reason}`);
+        return { success: true, skipped: true, reason: cadenceResult.reason };
+      }
+
+      const debtorContext = await this.gatherDebtorContext(context.tenantId, context.contactId, context.linkedInvoiceIds);
+
+      const { subject, htmlContent, textContent } = await this.generateFollowUpWithAI(context, debtorContext);
+
+      const conversationId = await findOrCreateConversation(
+        context.tenantId,
+        context.contactId,
+        `Voice call follow-up — ${context.voiceStatus}`
+      );
+
+      const emailId = uuidv4();
+      const replyTo = generateReplyToEmail(context.tenantId, conversationId, emailId);
+
+      const result = await sendEmail({
+        to: context.contactEmail,
+        from: `${context.tenantName} via Qashivo <${SENDGRID_FROM_EMAIL}>`,
+        replyTo,
+        subject,
+        html: htmlContent,
+        text: textContent,
+      });
+
+      if (!result.success) {
+        console.error(`❌ Failed to send voice follow-up email: ${result.error}`);
+        return { success: false, error: result.error };
+      }
+
+      await db.insert(emailMessages).values({
+        id: emailId,
+        tenantId: context.tenantId,
+        direction: 'OUTBOUND',
+        channel: 'EMAIL',
+        contactId: context.contactId,
+        invoiceId: context.linkedInvoiceIds?.[0] || null,
+        conversationId,
+        toEmail: context.contactEmail,
+        toName: context.contactName,
+        fromEmail: SENDGRID_FROM_EMAIL,
+        fromName: `${context.tenantName} via Qashivo`,
+        subject,
+        textBody: textContent,
+        htmlBody: htmlContent,
+        replyToken: replyTo.split('@')[0],
+        status: 'SENT',
+        sentAt: new Date(),
+      });
+
+      let timelineSummary: string;
+      if (context.voiceStatus === 'completed') {
+        const ext = context.extracted || {};
+        if (context.outcomeType === 'PROMISE_TO_PAY' && ext.promiseToPayDate) {
+          const fmtDate = new Date(ext.promiseToPayDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+          const fmtAmt = ext.promiseToPayAmount ? `£${Number(ext.promiseToPayAmount).toFixed(2)}` : null;
+          timelineSummary = `Post-call confirmation sent — PTP${fmtAmt ? ` ${fmtAmt}` : ''} by ${fmtDate}`;
+        } else if (context.outcomeType === 'DISPUTE') {
+          timelineSummary = `Post-call email sent — dispute acknowledged`;
+        } else if (context.outcomeType === 'DOCS_REQUESTED') {
+          timelineSummary = `Post-call email sent — document request confirmed`;
+        } else {
+          timelineSummary = `Post-call summary email sent — ${context.outcomeType || 'call completed'}`;
+        }
+      } else if (context.voiceStatus === 'no_answer') {
+        timelineSummary = 'Missed call follow-up email sent — call not answered';
+      } else if (context.voiceStatus === 'voicemail') {
+        timelineSummary = 'Voicemail follow-up email sent';
+      } else if (context.voiceStatus === 'busy') {
+        timelineSummary = 'Follow-up email sent — line was busy';
+      } else {
+        timelineSummary = `Voice follow-up email sent — ${context.voiceStatus}`;
+      }
+
+      await db.insert(timelineEvents).values({
+        tenantId: context.tenantId,
+        customerId: context.contactId,
+        invoiceId: context.linkedInvoiceIds?.[0] || null,
+        occurredAt: new Date(),
+        direction: 'outbound',
+        channel: 'email',
+        summary: timelineSummary,
+        preview: textContent.substring(0, 240),
+        subject,
+        body: textContent,
+        status: 'sent',
+        provider: 'sendgrid',
+        providerMessageId: emailId,
+        createdByType: 'system',
+        createdByName: 'Qashivo AI',
+        outcomeType: context.outcomeType ? context.outcomeType.toLowerCase() : 'voice_followup',
+        outcomeExtracted: {
+          callId: context.callId,
+          voiceStatus: context.voiceStatus,
+          outcomeType: context.outcomeType || null,
+          sourceChannel: 'voice',
+          ...(context.extracted || {}),
+        },
+      });
+
+      await updateConversationStats(conversationId, "outbound");
+
+      console.log(`✅ Voice follow-up email sent and stored: ${timelineSummary}`);
+
+      return { success: true };
+
+    } catch (error: any) {
+      console.error(`❌ Error sending voice follow-up email:`, error);
+      return { success: false, error: error.message };
+    }
+  }
+
   /**
    * Generate default clarification questions based on ambiguity type
    */

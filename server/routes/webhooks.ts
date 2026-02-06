@@ -1066,6 +1066,30 @@ export function registerWebhookRoutes(app: Express) {
 
         console.log(`🎙️  [WEBHOOK] ${voiceStatus} → COOLDOWN for ${cooldownDays} days`);
 
+        // Send follow-up email for non-connected calls (no answer / busy / voicemail)
+        try {
+          const { emailClarificationService } = await import("../services/emailClarificationService");
+          const ncContact = await storage.getContact(contactId, tenantId);
+          const [ncTenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+          const ncEmail = (ncContact as any)?.primaryCreditContact?.email || ncContact?.email;
+          if (ncEmail && ncTenant) {
+            await emailClarificationService.sendVoiceFollowUpEmail({
+              tenantId,
+              contactId,
+              contactEmail: ncEmail,
+              contactName: (ncContact as any)?.primaryCreditContact?.name || ncContact?.name || ncContact?.companyName || 'Customer',
+              tenantName: ncTenant.name || 'Our company',
+              callId: call_id,
+              voiceStatus: voiceStatus as any,
+              linkedInvoiceIds,
+              durationSeconds,
+              actionId,
+            });
+          }
+        } catch (followUpErr) {
+          console.error('Failed to send voice follow-up email (non-connected):', followUpErr);
+        }
+
         await completeWebhook({
           idempotencyKey: voiceIdempotencyKey,
           source: "retell",
@@ -1136,6 +1160,30 @@ export function registerWebhookRoutes(app: Express) {
         });
 
         console.log(`🎙️  [WEBHOOK] failed → ATTENTION (DELIVERY_FAILED)`);
+
+        // Send follow-up email for failed calls (possible wrong number)
+        try {
+          const { emailClarificationService } = await import("../services/emailClarificationService");
+          const failContact = await storage.getContact(contactId, tenantId);
+          const [failTenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+          const failEmail = (failContact as any)?.primaryCreditContact?.email || failContact?.email;
+          if (failEmail && failTenant) {
+            await emailClarificationService.sendVoiceFollowUpEmail({
+              tenantId,
+              contactId,
+              contactEmail: failEmail,
+              contactName: (failContact as any)?.primaryCreditContact?.name || failContact?.name || failContact?.companyName || 'Customer',
+              tenantName: failTenant.name || 'Our company',
+              callId: call_id,
+              voiceStatus: 'failed',
+              linkedInvoiceIds,
+              durationSeconds,
+              actionId,
+            });
+          }
+        } catch (followUpErr) {
+          console.error('Failed to send voice follow-up email (failed call):', followUpErr);
+        }
 
         await completeWebhook({
           idempotencyKey: voiceIdempotencyKey,
@@ -1588,38 +1636,35 @@ Return JSON with:
             // Process outcome through Loop routing
             await workStateService.processOutcome(newOutcome);
             
-            // Send confirmation email for PTP outcomes from voice calls
-            if (outcomeType === 'PROMISE_TO_PAY' && contactId) {
+            // Send AI-generated follow-up email for ALL completed call outcomes
+            if (contactId) {
               try {
                 const { emailClarificationService } = await import("../services/emailClarificationService");
                 const voiceContact = await storage.getContact(contactId, tenantId);
                 const [voiceTenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
-                
-                if (voiceContact?.email && voiceTenant) {
-                  const ptpDate = extracted.promiseToPayDate || null;
-                  const ptpAmount = extracted.promiseToPayAmount || null;
-                  
-                  // Only send confirmation if we have a concrete date
-                  if (ptpDate) {
-                    await emailClarificationService.sendConfirmationEmail({
-                      tenantId,
-                      contactId,
-                      contactEmail: voiceContact.email,
-                      contactName: voiceContact.name || voiceContact.companyName || 'Customer',
-                      tenantName: voiceTenant.name || 'Our company',
-                      intentType: 'promise_to_pay',
-                      ptpDate,
-                      ptpAmount: ptpAmount || undefined,
-                      invoiceId: linkedInvoiceIds[0] || undefined,
-                      sourceChannel: 'voice',
-                    });
-                    console.log(`✅ Confirmation email sent for voice PTP: ${ptpAmount ? `£${ptpAmount}` : 'amount pending'} by ${ptpDate}`);
-                  } else {
-                    console.log(`⚠️ Voice PTP captured but no concrete date - skipping confirmation email`);
-                  }
+                const voiceEmail = (voiceContact as any)?.primaryCreditContact?.email || voiceContact?.email;
+
+                if (voiceEmail && voiceTenant) {
+                  const callSummaryText = call_analysis?.call_summary || '';
+                  await emailClarificationService.sendVoiceFollowUpEmail({
+                    tenantId,
+                    contactId,
+                    contactEmail: voiceEmail,
+                    contactName: (voiceContact as any)?.primaryCreditContact?.name || voiceContact?.name || voiceContact?.companyName || 'Customer',
+                    tenantName: voiceTenant.name || 'Our company',
+                    callId: call_id,
+                    voiceStatus: 'completed',
+                    outcomeType,
+                    callSummary: callSummaryText,
+                    transcript: transcriptText?.substring(0, 1000) || undefined,
+                    extracted,
+                    linkedInvoiceIds,
+                    durationSeconds,
+                    actionId,
+                  });
                 }
               } catch (confirmErr) {
-                console.error('Failed to send voice PTP confirmation email:', confirmErr);
+                console.error('Failed to send voice follow-up email (completed):', confirmErr);
               }
             }
           }

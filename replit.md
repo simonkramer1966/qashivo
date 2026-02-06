@@ -144,3 +144,24 @@ All inbound communications (email, SMS, voice) flow through a single unified pip
 - Cash inflow chart: `server/services/dashboardCashInflowService.ts`
 - Work state: `server/services/workStateService.ts`
 - Email clarification: `server/services/emailClarificationService.ts`
+
+## Universal Voice Call Follow-Up Emails (Feb 2026)
+
+Every voice call — regardless of outcome — triggers an AI-generated personalised follow-up email.
+
+### How It Works
+1. **Cadence check**: Before sending, `checkEmailCadence()` validates the tenant's `channelCooldowns.email` (default 3 days) and `maxTouchesPerWindow` (default 3 per 14 days). If cooldown is active or touch limit exceeded, the follow-up is skipped gracefully.
+2. **Debtor context gathering**: `gatherDebtorContext()` pulls outstanding invoices, recent outcomes, and communication history for the contact.
+3. **AI email generation**: `generateFollowUpWithAI()` prompts OpenAI (gpt-4o-mini) with call disposition, transcript/summary, debtor context, and strict guardrails (concrete dates/amounts only, no placeholder text, professional tone, <150 words).
+4. **Storage**: Email saved to `email_messages` (visible in Customer Drawer) and `timeline_events` (visible in Activity tab).
+
+### Call Dispositions Handled
+- **Completed** (any outcome: PTP, dispute, docs requested, callback, etc.) — confirms what was discussed + next steps
+- **No answer** — polite "we tried to call" with reason for the call
+- **Voicemail** — follow-up noting voicemail left
+- **Busy** — similar to no answer, softer tone
+- **Failed** — possible wrong number, asks to confirm contact details
+
+### Key Files
+- Follow-up logic: `server/services/emailClarificationService.ts` (`sendVoiceFollowUpEmail`, `checkEmailCadence`, `gatherDebtorContext`, `generateFollowUpWithAI`)
+- Webhook wiring: `server/routes/webhooks.ts` (three exit points in call-ended handler: non-connected, failed, completed)
