@@ -76,15 +76,15 @@ export default function Invoices() {
     setPage(1);
   };
   
-  const getAgeingOverdueParam = (bucket: string): string => {
+  const getAgeingOverdueParam = (bucket: string): string | undefined => {
     switch (bucket) {
       case 'due': return 'due';
-      case 'overdue': return 'overdue';
+      case 'overdue': return 'all';
       case '1-30': return 'overdue';
       case '31-60': return 'serious';
       case '61-90': return '61-90';
       case '90+': return '90+';
-      default: return 'all';
+      default: return undefined;
     }
   };
 
@@ -136,7 +136,7 @@ export default function Invoices() {
     };
     pagination: { total: number; page: number; limit: number; totalPages: number };
   }>({
-    queryKey: ['/api/invoices', { status: 'open', search, overdue: getAgeingOverdueParam(ageingFilter), sortBy: sortField, sortDir: sortDirection, page, limit }],
+    queryKey: ['/api/invoices', { status: 'open', search, ...(getAgeingOverdueParam(ageingFilter) ? { overdue: getAgeingOverdueParam(ageingFilter) } : {}), sortBy: sortField, sortDir: sortDirection, page, limit }],
   });
 
   const { data: aggregatesData } = useQuery<{
