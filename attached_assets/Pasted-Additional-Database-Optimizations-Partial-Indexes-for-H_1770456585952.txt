@@ -1,0 +1,73 @@
+Additional Database Optimizations
+Partial Indexes for High-Volume Tables
+sql-- For soft-deleted records (if you use soft deletes)
+CREATE INDEX idx_invoices_active ON invoices(tenant_id, status) 
+WHERE deleted_at IS NULL;
+
+-- For recent data queries
+CREATE INDEX idx_actions_recent ON actions(tenant_id, created_at) 
+WHERE created_at > NOW() - INTERVAL '90 days';
+Analyze Table Statistics
+After Phase 1 cleanup, run ANALYZE on affected tables so the query planner has accurate statistics.
+Backend Performance Wins
+Connection Pool Tuning
+Review your database connection pool settings. Common issues:
+
+Pool size too small → connection exhaustion
+Pool size too large → memory waste
+Missing idleTimeoutMillis → zombie connections
+
+Response Compression
+Enable gzip/brotli compression in your Express middleware if not already done (typically 60-80% size reduction).
+Drizzle Query Optimization
+
+Review .select() calls - only fetch needed columns
+Check for accidental .toArray() calls that load entire result sets
+Consider .prepare() for frequently-run queries
+
+Code Quality Improvements
+TypeScript Strict Mode Gaps
+Your tsconfig.json likely has some strict checks disabled. Consider enabling:
+
+noUncheckedIndexedAccess - prevents array[0] undefined bugs
+noPropertyAccessFromIndexSignature - catches typos in object access
+
+Remove Dead Code
+Run a dead code detector:
+bashnpx ts-prune | grep -v "(used in module)"
+This finds exported functions/types that nothing imports.
+Monitoring Additions
+Query Performance Baseline
+Before Phase 3, capture execution plans for your top 10 most-frequent queries:
+sqlEXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) 
+SELECT ...
+Store these as baseline comparisons.
+Database Size Trending
+Add monitoring for:
+
+Table bloat (UPDATE/DELETE heavy tables accumulate dead rows)
+Index bloat (needs periodic REINDEX)
+WAL file accumulation (indicates backup/replication issues)
+
+Risk Mitigation
+Your Phase 1B has 18 tables - consider splitting it further:
+
+1B-Part1: 9 tables (3 hours)
+1B-Part2: remaining 9 tables (3 hours)
+
+This limits blast radius if something goes wrong.
+Add canary queries to your smoke tests:
+sql-- Verify FK relationships still valid
+SELECT COUNT(*) FROM actions WHERE invoice_id NOT IN (SELECT id FROM invoices);
+-- Should always return 0
+Not Recommended (But You Might See Elsewhere)
+❌ Database sharding - Overkill for 90 tables
+❌ Microservices split - Adds complexity without clear benefit
+❌ GraphQL migration - Not needed for your use case
+❌ Switching ORMs - Drizzle is already lightweight
+Quick Wins You Could Add
+
+Remove console.log statements in production code (use proper logger)
+Enable ESLint caching (--cache flag) - faster lints
+Review error handling - ensure all async functions have try/catch
+Check for synchronous crypto operations - replace with async versions
