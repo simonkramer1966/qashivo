@@ -3,6 +3,9 @@ import { db } from "../db";
 import { tenants } from "@shared/schema";
 import { actionPlanner } from "./actionPlanner";
 import { actionExecutor } from "./actionExecutor";
+import { createLogger } from "../lib/logger";
+
+const log = createLogger('collections-scheduler');
 
 interface SchedulerConfig {
   plannerIntervalMinutes: number; // How often to plan actions (e.g., 60 min)
@@ -43,18 +46,16 @@ class CollectionsScheduler {
    */
   start(): void {
     if (this.plannerIntervalId || this.executorIntervalId) {
-      console.log("Collections scheduler already running");
+      log.debug("Collections scheduler already running");
       return;
     }
 
     if (!this.config.enabled) {
-      console.log("Collections scheduler disabled by configuration");
+      log.info("Collections scheduler disabled by configuration");
       return;
     }
 
-    console.log(`🚀 Starting two-phase collections scheduler`);
-    console.log(`   📋 Planner: every ${this.config.plannerIntervalMinutes} minutes`);
-    console.log(`   ⚡ Executor: every ${this.config.executorIntervalMinutes} minutes`);
+    log.info(`Starting two-phase collections scheduler (planner: ${this.config.plannerIntervalMinutes}min, executor: ${this.config.executorIntervalMinutes}min)`);
 
     // Run immediately on startup if configured
     if (this.config.runOnStartup) {
@@ -76,7 +77,7 @@ class CollectionsScheduler {
       this.config.executorIntervalMinutes * 60 * 1000
     );
 
-    console.log("✅ Collections scheduler started successfully");
+    log.info("Collections scheduler started successfully");
   }
 
   /**
@@ -91,7 +92,7 @@ class CollectionsScheduler {
       clearInterval(this.executorIntervalId);
       this.executorIntervalId = null;
     }
-    console.log("🛑 Collections scheduler stopped");
+    log.info("Collections scheduler stopped");
   }
 
   /**
@@ -99,11 +100,11 @@ class CollectionsScheduler {
    */
   private async runPlanner(): Promise<void> {
     try {
-      console.log("📋 Action Planner: Starting planning phase...");
+      log.debug("Action Planner: Starting planning phase...");
       await actionPlanner.planActionsForAllTenants();
-      console.log("✅ Action Planner: Planning phase completed");
+      log.debug("Action Planner: Planning phase completed");
     } catch (error: any) {
-      console.error("❌ Action Planner error:", error.message);
+      log.error(`Action Planner error: ${error.message}`);
     }
   }
 
@@ -114,7 +115,7 @@ class CollectionsScheduler {
     try {
       await actionExecutor.executeScheduledActions();
     } catch (error: any) {
-      console.error("❌ Action Executor error:", error.message);
+      log.error(`Action Executor error: ${error.message}`);
     }
   }
 }

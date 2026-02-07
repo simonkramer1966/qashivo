@@ -2,6 +2,9 @@ import { eq, and, lt, ne, isNotNull, inArray, sql } from "drizzle-orm";
 import { db } from "../db";
 import { tenants, promisesToPay, invoices, actions, paymentPlans, paymentPlanInvoices, activityLogs } from "@shared/schema";
 import { pauseManager } from "../lib/pause-manager";
+import { createLogger } from "../lib/logger";
+
+const log = createLogger('ptp-breach');
 
 interface BreachDetectorConfig {
   checkIntervalMinutes: number; // How often to check for breaches (e.g., 60 min)
@@ -39,16 +42,16 @@ class PTPBreachDetector {
    */
   start(): void {
     if (this.intervalId) {
-      console.log("PTP breach detector already running");
+      log.debug("PTP breach detector already running");
       return;
     }
 
     if (!this.config.enabled) {
-      console.log("PTP breach detector disabled by configuration");
+      log.info("PTP breach detector disabled by configuration");
       return;
     }
 
-    console.log(`🚀 Starting PTP breach detector (checking every ${this.config.checkIntervalMinutes} minutes)`);
+    log.info(`Starting PTP breach detector (checking every ${this.config.checkIntervalMinutes} minutes)`);
 
     // Run immediately on startup if configured
     if (this.config.runOnStartup) {
@@ -63,7 +66,7 @@ class PTPBreachDetector {
       this.config.checkIntervalMinutes * 60 * 1000
     );
 
-    console.log("✅ PTP breach detector started successfully");
+    log.info("PTP breach detector started successfully");
   }
 
   /**
@@ -74,7 +77,7 @@ class PTPBreachDetector {
       clearInterval(this.intervalId);
       this.intervalId = null;
     }
-    console.log("🛑 PTP breach detector stopped");
+    log.info("PTP breach detector stopped");
   }
 
   /**
@@ -82,7 +85,7 @@ class PTPBreachDetector {
    */
   private async checkForBreaches(): Promise<void> {
     try {
-      console.log("🔍 Checking for breached promises to pay and payment plans...");
+      log.debug("Checking for breached promises to pay and payment plans...");
       
       const now = new Date();
       const allTenants = await db.select().from(tenants);
@@ -97,21 +100,21 @@ class PTPBreachDetector {
           totalPTPBreaches += ptpBreachCount;
           totalPlanBreaches += planBreachCount;
         } catch (error: any) {
-          console.error(`❌ Error checking breaches for tenant ${tenant.id}:`, error.message);
+          log.error(`Error checking breaches for tenant ${tenant.id}: ${error.message}`);
         }
       }
 
       if (totalPTPBreaches > 0) {
-        console.log(`⚠️  Found ${totalPTPBreaches} breached promise(s) to pay`);
+        log.warn(`Found ${totalPTPBreaches} breached promise(s) to pay`);
       }
       if (totalPlanBreaches > 0) {
-        console.log(`⚠️  Found ${totalPlanBreaches} payment plan(s) with no payment activity`);
+        log.warn(`Found ${totalPlanBreaches} payment plan(s) with no payment activity`);
       }
       if (totalPTPBreaches === 0 && totalPlanBreaches === 0) {
-        console.log("✅ No breaches found");
+        log.debug("No breaches found");
       }
     } catch (error: any) {
-      console.error("❌ PTP breach detector error:", error.message);
+      log.error(`PTP breach detector error: ${error.message}`);
     }
   }
 
@@ -151,7 +154,7 @@ class PTPBreachDetector {
               updatedAt: now
             })
             .where(eq(paymentPlans.id, plan.id));
-          console.log(`⚠️  Payment plan ${plan.id} cancelled - no linked invoices`);
+          log.warn(`Payment plan ${plan.id} cancelled - no linked invoices`);
           continue;
         }
 
@@ -182,11 +185,11 @@ class PTPBreachDetector {
               updatedAt: now
             })
             .where(eq(paymentPlans.id, plan.id));
-          console.log(`✅ Payment plan ${plan.id} completed - all invoices paid`);
+          log.info(`Payment plan ${plan.id} completed - all invoices paid`);
           
         } else if (lastChecked !== null && currentOutstanding >= lastChecked) {
           // No payment received - breach detected
-          console.log(`⚠️  Payment plan ${plan.id} breached - no payment activity (outstanding: ${currentOutstanding}, last checked: ${lastChecked})`);
+          log.warn(`Payment plan ${plan.id} breached - no payment activity (outstanding: ${currentOutstanding}, last checked: ${lastChecked})`);
           
           // Mark plan as defaulted and stop checking
           await db
@@ -242,7 +245,7 @@ class PTPBreachDetector {
               }
             });
           } catch (e) {
-            console.log('Failed to log payment plan breach activity:', e);
+            log.error('Failed to log payment plan breach activity:', e);
           }
 
           // Clear outcomeOverride on linked invoices so they return to collections
@@ -255,7 +258,7 @@ class PTPBreachDetector {
           
         } else {
           // Payment received - outstanding decreased, schedule next check
-          console.log(`✅ Payment received on plan ${plan.id} (outstanding decreased from ${lastChecked} to ${currentOutstanding})`);
+          log.info(`Payment received on plan ${plan.id} (outstanding decreased from ${lastChecked} to ${currentOutstanding})`);
           
           // Calculate next check date based on frequency
           const nextCheckDate = new Date(now);
@@ -283,7 +286,7 @@ class PTPBreachDetector {
         }
 
       } catch (error: any) {
-        console.error(`❌ Error checking payment plan ${plan.id}:`, error.message);
+        log.error(`Error checking payment plan ${plan.id}: ${error.message}`);
       }
     }
 
@@ -326,9 +329,9 @@ class PTPBreachDetector {
         // Resume invoice from PTP pause (if it was paused)
         try {
           await pauseManager.resumeFromPTPBreach(invoice.id, tenantId);
-          console.log(`▶️  Resumed invoice ${invoice.invoiceNumber} from PTP pause after breach`);
+          log.info(`Resumed invoice ${invoice.invoiceNumber} from PTP pause after breach`);
         } catch (error: any) {
-          console.error(`⚠️  Failed to resume invoice from PTP pause:`, error.message);
+          log.error(`Failed to resume invoice from PTP pause: ${error.message}`);
         }
 
         // Create a follow-up action for the collector
@@ -374,10 +377,10 @@ class PTPBreachDetector {
             }
           });
         } catch (e) {
-          console.log('Failed to log PTP breach activity:', e);
+          log.error('Failed to log PTP breach activity:', e);
         }
 
-        console.log(`⚠️  Promise breached: ${promise.id} (Invoice ${invoice.invoiceNumber}, ${promise.amount} due ${promise.promisedDate.toISOString().split('T')[0]})`);
+        log.warn(`Promise breached: ${promise.id} (Invoice ${invoice.invoiceNumber}, ${promise.amount} due ${promise.promisedDate.toISOString().split('T')[0]})`);
         breachCount++;
       }
     }

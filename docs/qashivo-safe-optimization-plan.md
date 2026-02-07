@@ -2,7 +2,7 @@
 ## v2.1 — CTO Approved with Minor Refinements
 
 **Last Updated:** February 2026
-**Status:** ALL PHASES COMPLETE (0–5) — 120 → 90 tables, 72 → 65 services, 4 N+1 fixes, 1 composite index, lazy loading verified, faker removed
+**Status:** ALL PHASES COMPLETE (0–6) — 120 → 90 tables, 72 → 65 services, 4 N+1 fixes, 1 composite index, lazy loading verified, faker removed, compression added, 1,643 LOC dead code removed, structured logger created
 
 ---
 
@@ -444,6 +444,50 @@ All 76+ pages were already using `React.lazy()` with dynamic `import()` in `App.
 |-----------|------|--------|--------|
 | `@faker-js/faker` | ~4MB | Removed entirely (zero imports found anywhere in codebase) | **DONE** |
 | `puppeteer` | ~300MB | Flagged for future review — actively used in `server/services/invoicePDF.ts` for PDF generation | **DEFERRED** |
+
+---
+
+## PHASE 6: Additional Quick Wins ✅ COMPLETE (Feb 2026)
+
+### 6A — Response compression
+
+Added `compression` middleware to Express (gzip/brotli). Responses >1KB are automatically compressed, typically 60-80% size reduction on JSON API responses.
+
+- File: `server/index.ts` — added `compression()` middleware after `express.json()`
+- Threshold: 1024 bytes (responses smaller than 1KB are not compressed)
+- Supports `x-no-compression` header opt-out for debugging
+
+### 6B — Dead code removal
+
+Ran `ts-prune` to detect exported functions/types with zero imports. Removed 7 entirely dead files (~1,533 lines) and 2 unused exports from shared files (~110 lines):
+
+**Deleted files:**
+| File | Lines | Reason |
+|------|-------|--------|
+| `shared/forecast-test.ts` | 567 | Zero imports anywhere |
+| `server/email-mcp-client.ts` | 157 | Zero imports anywhere |
+| `server/retell-mcp-client.ts` | 123 | Zero imports anywhere |
+| `server/middleware/test-initialization.ts` | 73 | Zero imports anywhere |
+| `server/middleware/test-providers.ts` | 269 | Zero imports anywhere |
+| `server/lib/ab-testing.ts` | 86 | Zero imports anywhere |
+| `client/src/components/ClientJourney.tsx` | 258 | Zero imports anywhere |
+
+**Removed unused exports (from files with other used exports):**
+- `DebtorTimelineCompact` from `client/src/components/DebtorTimeline.tsx`
+- `getCommonShortcuts` from `client/src/hooks/useKeyboardShortcuts.ts`
+
+### 6C — Structured logging
+
+Created `server/lib/logger.ts` — environment-aware structured logger with levels (debug/info/warn/error):
+- **Development:** All levels shown
+- **Production:** Only warn and error (silences noisy debug/info output)
+- Output format: `[ISO timestamp] [LEVEL] [context] message`
+
+Converted 2 service files as pattern examples:
+- `server/services/ptpBreachDetector.ts` (17 console.log → structured logger)
+- `server/services/collectionsScheduler.ts` (9 console.log → structured logger)
+
+**Remaining ~920 console.log calls:** Documented for gradual adoption. Usage pattern: `import { createLogger } from '../lib/logger'; const log = createLogger('service-name');`
 
 ---
 
