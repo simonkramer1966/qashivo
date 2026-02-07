@@ -4579,6 +4579,7 @@ export const attentionItems = pgTable("attention_items", {
   index("idx_attention_items_severity").on(table.severity),
   index("idx_attention_items_invoice").on(table.invoiceId),
   index("idx_attention_items_contact").on(table.contactId),
+  index("idx_attention_items_tenant_status").on(table.tenantId, table.status),
 ]);
 
 export const insertAttentionItemSchema = createInsertSchema(attentionItems).omit({

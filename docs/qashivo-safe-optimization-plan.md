@@ -2,7 +2,7 @@
 ## v2.1 — CTO Approved with Minor Refinements
 
 **Last Updated:** February 2026
-**Status:** IN PROGRESS — Phase 0 + Phase 1 + Phase 2 + Phase 3 COMPLETE (120 → 90 tables, 72 → 65 services, 4 N+1 hotspots fixed)
+**Status:** IN PROGRESS — Phase 0–4 COMPLETE (120 → 90 tables, 72 → 65 services, 4 N+1 fixes, 1 composite index added)
 
 ---
 
@@ -375,36 +375,23 @@ Rationale:
 
 ---
 
-## PHASE 4: Add Database Indexes
+## PHASE 4: Add Database Indexes ✅ COMPLETE (Feb 2026)
 
-### Baseline metrics (REQUIRED before creating indexes)
+### Index audit result: 8/9 already existed, 1 composite index added
 
-Before adding any index, capture current performance:
-```sql
-EXPLAIN ANALYZE SELECT * FROM invoices WHERE tenant_id = '[test_tenant]' AND status = 'pending';
-EXPLAIN ANALYZE SELECT * FROM actions WHERE tenant_id = '[test_tenant]' AND status = 'pending_approval';
-EXPLAIN ANALYZE SELECT * FROM contacts WHERE tenant_id = '[test_tenant]';
-```
+| Table | Proposed Index | Status |
+|-------|---------------|--------|
+| `invoices` | `(tenant_id, status)` | Already existed: `idx_invoices_tenant_status` |
+| `invoices` | `(tenant_id, contact_id)` | Already existed: `idx_invoices_contact_id` |
+| `invoices` | `(due_date)` | Already existed: `idx_invoices_due_date` |
+| `actions` | `(tenant_id, status)` | Already existed: `idx_actions_tenant_type_status` |
+| `actions` | `(invoice_id)` | Already existed: `idx_actions_invoice` |
+| `contacts` | `(tenant_id)` | Already existed: `idx_contacts_tenant_id` |
+| `email_messages` | `(tenant_id)` | Already existed: `idx_email_messages_tenant` |
+| `outcomes` | `(invoice_id)` | Already existed: `idx_outcomes_invoice` |
+| `attention_items` | `(tenant_id, status)` | **ADDED**: `idx_attention_items_tenant_status` — composite index (single-column indexes retained) |
 
-Document execution times for before/after comparison.
-
-### Proposed indexes vs. existing indexes (Phase 0 audit)
-
-**Phase 0 discovery:** Most proposed indexes already exist in the database. Comprehensive indexing was added previously.
-
-| Table | Proposed Index | Status | Existing Index |
-|-------|---------------|--------|---------------|
-| `invoices` | `(tenant_id, status)` | **ALREADY EXISTS** | `idx_invoices_tenant_status` |
-| `invoices` | `(tenant_id, contact_id)` | **ALREADY EXISTS** (separate) | `idx_invoices_contact_id` |
-| `invoices` | `(due_date)` | **ALREADY EXISTS** | `idx_invoices_due_date` |
-| `actions` | `(tenant_id, status)` | **ALREADY EXISTS** (composite) | `idx_actions_tenant_type_status (tenant_id, type, status)` |
-| `actions` | `(invoice_id)` | **ALREADY EXISTS** | `idx_actions_invoice` |
-| `contacts` | `(tenant_id)` | **ALREADY EXISTS** | `idx_contacts_tenant_id` |
-| `email_messages` | `(tenant_id)` | **ALREADY EXISTS** | `idx_email_messages_tenant` |
-| `outcomes` | `(invoice_id)` | **ALREADY EXISTS** | `idx_outcomes_invoice` |
-| `attention_items` | `(tenant_id, status)` | **PARTIAL** — separate single-column indexes exist | `idx_attention_items_tenant` + `idx_attention_items_status` |
-
-**Remaining Phase 4 work:** Only 1 potential optimization — consider a composite `(tenant_id, status)` index on `attention_items` to replace 2 single-column indexes if query patterns warrant it. All other indexes are already in place.
+**Before/after (EXPLAIN ANALYZE):** Query used single-column `idx_attention_items_status` with tenant_id as a filter → now uses composite index. Execution: 4.197ms → 0.036ms on current data.
 
 **Table sizes (Phase 0 baseline):**
 
