@@ -2209,16 +2209,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`📊 Dashboard metrics - tenantId: ${user.tenantId}`);
       
-      const [metrics, debtRecoveryMetrics] = await Promise.all([
+      const [metrics, debtRecoveryMetrics, ptpStats] = await Promise.all([
         storage.getInvoiceMetrics(user.tenantId),
-        storage.getDebtRecoveryMetrics(user.tenantId)
+        storage.getDebtRecoveryMetrics(user.tenantId),
+        storage.getPromisesKeptRate(user.tenantId)
       ]);
       
       console.log(`📊 Dashboard metrics result - collectedThisMonth: ${metrics.collectedThisMonth}, collectedThisWeek: ${metrics.collectedThisWeek}`);
       
       res.json({
         ...metrics,
-        ...debtRecoveryMetrics
+        ...debtRecoveryMetrics,
+        promisesKeptRate: ptpStats.rate
       });
     } catch (error) {
       console.error("Error fetching dashboard metrics:", error);

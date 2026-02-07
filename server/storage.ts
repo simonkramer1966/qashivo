@@ -241,6 +241,7 @@ export interface IStorage {
     escalatedCount: number;
     escalatedValue: number;
   }>;
+  getPromisesKeptRate(tenantId: string): Promise<{ rate: number; kept: number; total: number }>;
   
   // Action operations
   getActions(tenantId: string, limit?: number): Promise<Action[]>;
@@ -1812,6 +1813,24 @@ export class DatabaseStorage implements IStorage {
       debtRecoveryValue: Number(debtRecoveryValue),
       legalCount,
       legalValue: Number(legalValue),
+    };
+  }
+
+  async getPromisesKeptRate(tenantId: string): Promise<{ rate: number; kept: number; total: number }> {
+    const result = await db.execute(sql`
+      SELECT
+        COUNT(*) FILTER (WHERE status IN ('fulfilled', 'kept')) as kept,
+        COUNT(*) FILTER (WHERE status IN ('fulfilled', 'kept', 'breached')) as total
+      FROM promises_to_pay
+      WHERE tenant_id = ${tenantId}
+    `);
+    const row = (result as any).rows?.[0] || result[0];
+    const kept = Number(row?.kept || 0);
+    const total = Number(row?.total || 0);
+    return {
+      rate: total > 0 ? Math.round((kept / total) * 100) : 0,
+      kept,
+      total
     };
   }
 

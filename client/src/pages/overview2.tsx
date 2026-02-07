@@ -47,6 +47,7 @@ interface CashMetrics {
   collectedThisMonth: number;
   collectedThisWeek: number;
   onTimePaymentRate: number;
+  promisesKeptRate: number;
 }
 
 
@@ -342,7 +343,7 @@ export default function Overview2() {
                     <div className="h-6 w-16 bg-gray-200 animate-pulse rounded mt-1"></div>
                   ) : (
                     <p className="text-lg font-semibold text-gray-900 tabular-nums mt-1">
-                      45 days
+                      {avgDaysToPay.toFixed(0)} days
                     </p>
                   )}
                 </div>
@@ -351,12 +352,16 @@ export default function Overview2() {
                   {metricsLoading ? (
                     <div className="h-6 w-16 bg-gray-200 animate-pulse rounded mt-1"></div>
                   ) : (
-                    <p className="text-lg font-semibold text-[#4FAD80] tabular-nums mt-1">32%</p>
+                    <p className="text-lg font-semibold text-[#4FAD80] tabular-nums mt-1">{(metrics?.onTimePaymentRate || 0).toFixed(0)}%</p>
                   )}
                 </div>
                 <div className="bg-gray-50 rounded-xl p-4 col-span-2">
                   <span className="text-sm text-gray-500">Promises Kept</span>
-                  <p className="text-lg font-semibold text-[#4FAD80] tabular-nums mt-1">78%</p>
+                  {metricsLoading ? (
+                    <div className="h-6 w-16 bg-gray-200 animate-pulse rounded mt-1"></div>
+                  ) : (
+                    <p className="text-lg font-semibold text-[#4FAD80] tabular-nums mt-1">{(metrics?.promisesKeptRate ?? 0).toFixed(0)}%</p>
+                  )}
                 </div>
               </div>
             )}
@@ -560,7 +565,7 @@ export default function Overview2() {
                     <div className="h-7 w-20 bg-gray-100 animate-pulse rounded mt-1 mx-auto"></div>
                   ) : (
                     <p className="text-lg font-semibold text-gray-900 tabular-nums mt-1">
-                      45 <span className="text-sm font-normal text-gray-400">days</span>
+                      {avgDaysToPay.toFixed(0)} <span className="text-sm font-normal text-gray-400">days</span>
                     </p>
                   )}
                 </div>
@@ -569,12 +574,16 @@ export default function Overview2() {
                   {metricsLoading ? (
                     <div className="h-7 w-16 bg-gray-100 animate-pulse rounded mt-1 mx-auto"></div>
                   ) : (
-                    <p className="text-lg font-semibold text-[#4FAD80] tabular-nums mt-1">32%</p>
+                    <p className="text-lg font-semibold text-[#4FAD80] tabular-nums mt-1">{(metrics?.onTimePaymentRate || 0).toFixed(0)}%</p>
                   )}
                 </div>
                 <div className="text-center">
                   <span className="text-xs text-gray-500 uppercase tracking-wider">Promises Kept</span>
-                  <p className="text-lg font-semibold text-[#4FAD80] tabular-nums mt-1">78%</p>
+                  {metricsLoading ? (
+                    <div className="h-7 w-16 bg-gray-100 animate-pulse rounded mt-1 mx-auto"></div>
+                  ) : (
+                    <p className="text-lg font-semibold text-[#4FAD80] tabular-nums mt-1">{(metrics?.promisesKeptRate ?? 0).toFixed(0)}%</p>
+                  )}
                 </div>
               </div>
             </div>
