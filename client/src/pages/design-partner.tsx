@@ -265,7 +265,7 @@ export default function DesignPartner() {
                 <li className="flex items-start gap-2"><Check className="w-3.5 h-3.5 text-[#22C55E] mt-0.5 flex-shrink-0" /> Plan, approve, send (email first)</li>
                 <li className="flex items-start gap-2"><Check className="w-3.5 h-3.5 text-[#22C55E] mt-0.5 flex-shrink-0" /> Reply capture + outcomes</li>
                 <li className="flex items-start gap-2"><Check className="w-3.5 h-3.5 text-[#22C55E] mt-0.5 flex-shrink-0" /> Action timeline</li>
-                <li className="flex items-start gap-2"><Check className="w-3.5 h-3.5 text-[#22C55E] mt-0.5 flex-shrink-0" /> Cash expectations updated</li>
+                <li className="flex items-start gap-2"><Check className="w-3.5 h-3.5 text-[#22C55E] mt-0.5 flex-shrink-0" /> Live cashflow updates</li>
               </ul>
             </div>
 
