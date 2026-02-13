@@ -48,11 +48,7 @@ export default function DesignPartner() {
 
       if (!response.ok) throw new Error('Failed to submit');
 
-      toast({
-        title: "Application received",
-        description: "We'll respond within 24 hours.",
-      });
-      reset();
+      setLocation('/design-partner/thank-you');
     } catch (error) {
       toast({
         title: "Something went wrong",

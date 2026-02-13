@@ -53,6 +53,7 @@ SENDGRID_FROM_NAME = "Qashivo Credit Control"
 INBOUND_WEBHOOK_TOKEN = "kramerS123*AL&&t_UiKLLK-1678%_"
 REPLY_TOKEN_SECRET = "qashivo-reply-token-v1-secure-secret-2026"
 QASHIVO_WEBHOOK_SECRET = "qashivo-internal-webhook-hmac-secret-2026"
+VITE_BOOKING_URL = "https://calendar.app.google/oCeGUngKBaiYnvgn8"
 
 [userenv.development]
 EMAIL_REPLY_DOMAIN = "in.dev.qashivo.com"

@@ -1,0 +1,248 @@
+import { Button } from "@/components/ui/button";
+import { useLocation } from "wouter";
+import { Menu, X, Check, Shield, FileCheck, Users, Cloud, ArrowLeft, Calendar, Mail, ClipboardList } from "lucide-react";
+import { useState } from "react";
+import logo from "@assets/Main_Nexus_Logo_copy_1768893717341.png";
+
+const BOOKING_URL = import.meta.env.VITE_BOOKING_URL;
+
+export default function DesignPartnerThankYou() {
+  const [, setLocation] = useLocation();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  return (
+    <div className="min-h-screen bg-white">
+      <nav className="sticky top-0 z-50 bg-white border-b border-[#E6E8EC]">
+        <div className="max-w-[1200px] mx-auto px-6">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center gap-10">
+              <a href="/home" className="flex items-center gap-2">
+                <img src={logo} alt="Qashivo" className="h-8 w-8" />
+                <span className="text-[22px] font-semibold text-[#0B0F17] tracking-tight">Qashivo</span>
+              </a>
+              <div className="hidden md:flex items-center gap-8">
+                <a href="/home" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">Home</a>
+                <a href="/product" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">Product</a>
+                <a href="/partners" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">Partners</a>
+                <a href="/pricing" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">Pricing</a>
+                <a href="/contact" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">Contact</a>
+              </div>
+            </div>
+            <div className="hidden md:flex items-center gap-4">
+              <a href="/login" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">Sign in</a>
+              <Button
+                onClick={() => setLocation("/contact")}
+                className="bg-[#12B8C4] hover:bg-[#0fa3ae] text-white h-11 px-5 rounded-full text-[15px] font-medium"
+              >
+                Book a demo
+              </Button>
+            </div>
+            <button className="md:hidden p-2" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
+        </div>
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-[#E6E8EC] bg-white px-6 py-4">
+            <div className="flex flex-col gap-4">
+              <a href="/home" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Home</a>
+              <a href="/product" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Product</a>
+              <a href="/partners" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Partners</a>
+              <a href="/pricing" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Pricing</a>
+              <a href="/contact" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Contact</a>
+              <div className="border-t border-[#E6E8EC] pt-4 mt-2 flex flex-col gap-3">
+                <a href="/login" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Sign in</a>
+                <Button
+                  onClick={() => setLocation("/contact")}
+                  className="bg-[#12B8C4] hover:bg-[#0fa3ae] text-white h-11 rounded-xl text-[15px] font-medium w-full"
+                >
+                  Book a demo
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </nav>
+
+      {/* Hero */}
+      <section className="py-16 md:py-24 border-b border-[#E6E8EC]">
+        <div className="max-w-[700px] mx-auto px-6 text-center">
+          <span className="inline-block text-[12px] font-semibold text-[#22C55E] uppercase tracking-wider bg-[#F0FDF4] px-3 py-1.5 rounded-full mb-5">Application Received</span>
+          <h1 className="text-[32px] md:text-[42px] font-semibold text-[#0B0F17] leading-[1.15] tracking-tight mb-6">
+            Thanks — we've received your Design Partner application
+          </h1>
+          <p className="text-[16px] md:text-[17px] text-[#556070] leading-relaxed mb-4">
+            We'll review it and respond within 24 hours. If it's a fit, we'll invite you to a short 15-minute call.
+          </p>
+          <p className="text-[13px] text-[#9CA3AF] italic">
+            Nothing is ever sent without approval.
+          </p>
+        </div>
+      </section>
+
+      {/* What happens next */}
+      <section className="py-16 border-b border-[#E6E8EC]">
+        <div className="max-w-[700px] mx-auto px-6">
+          <h2 className="text-[28px] font-semibold text-[#0B0F17] mb-10 text-center">What Happens Next</h2>
+
+          <div className="space-y-0">
+            <StepItem number={1} title="Review (today)" description="We review your application and client fit." />
+            <StepItem number={2} title="15-minute fit call" description="Confirm goals, clients, and how you run credit control today." />
+            <StepItem number={3} title="NDA" description="We share detailed workflow documentation and onboarding plan." />
+            <StepItem number={4} title="Onboard" description="White-glove setup for your first 1-3 clients." isLast />
+          </div>
+        </div>
+      </section>
+
+      {/* Two CTA cards */}
+      <section className="py-16 bg-[#F8FAFB] border-b border-[#E6E8EC]">
+        <div className="max-w-[800px] mx-auto px-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {BOOKING_URL && (
+              <div className="bg-white p-6 rounded-xl border border-[#E6E8EC]">
+                <div className="w-10 h-10 bg-[#E0F7FA] rounded-lg flex items-center justify-center text-[#12B8C4] mb-4">
+                  <Calendar className="w-5 h-5" />
+                </div>
+                <h3 className="text-[17px] font-semibold text-[#0B0F17] mb-2">Book your 15-minute fit call</h3>
+                <p className="text-[14px] text-[#556070] leading-relaxed mb-4">
+                  Want to speed things up? Choose a time that suits you.
+                </p>
+                <a
+                  href={BOOKING_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Button className="w-full bg-[#12B8C4] hover:bg-[#0fa3ae] text-white h-11 rounded-lg text-[14px] font-medium mb-3">
+                    Book a 15-minute call
+                  </Button>
+                </a>
+                <p className="text-[12px] text-[#9CA3AF] text-center">
+                  You'll receive a calendar invite and Google Meet link automatically.
+                </p>
+              </div>
+            )}
+
+            <div className="bg-white p-6 rounded-xl border border-[#E6E8EC]">
+              <div className="w-10 h-10 bg-[#E0F7FA] rounded-lg flex items-center justify-center text-[#12B8C4] mb-4">
+                <Mail className="w-5 h-5" />
+              </div>
+              <h3 className="text-[17px] font-semibold text-[#0B0F17] mb-2">Prefer email?</h3>
+              <p className="text-[14px] text-[#556070] leading-relaxed mb-4">
+                Email us and we'll propose times.
+              </p>
+              <a
+                href="mailto:partners@qashivo.com?subject=Design%20Partner%20fit%20call&body=Hi%20Simon%2C%0A%0AI've%20applied%20to%20the%20Design%20Partner%20program.%20Here%20are%202%E2%80%933%20times%20that%20work%20for%20me%3A%0A%0A"
+              >
+                <Button variant="outline" className="w-full h-11 rounded-lg text-[14px] font-medium border-[#E6E8EC] text-[#0B0F17] hover:bg-[#F8FAFB]">
+                  Email partners@qashivo.com
+                </Button>
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Checklist */}
+      <section className="py-16 border-b border-[#E6E8EC]">
+        <div className="max-w-[600px] mx-auto px-6">
+          <div className="bg-[#F8FAFB] p-6 rounded-xl border border-[#E6E8EC]">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-9 h-9 bg-[#E0F7FA] rounded-lg flex items-center justify-center text-[#12B8C4]">
+                <ClipboardList className="w-5 h-5" />
+              </div>
+              <h3 className="text-[17px] font-semibold text-[#0B0F17]">To make the call useful</h3>
+            </div>
+            <ul className="space-y-3">
+              <ChecklistItem text="1-3 example clients with overdue invoices (anonymised is fine)" />
+              <ChecklistItem text="Your current approach/tools (manual, Xero statements, Chaser, etc.)" />
+              <ChecklistItem text="What you'd most like to improve (time saved, DSO movement, response rates, visibility)" />
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      {/* Trust strip */}
+      <section className="py-16 bg-[#F8FAFB] border-b border-[#E6E8EC]">
+        <div className="max-w-[700px] mx-auto px-6 text-center">
+          <h2 className="text-[20px] font-semibold text-[#0B0F17] mb-6">Trust-First by Design</h2>
+          <div className="flex flex-wrap justify-center gap-x-8 gap-y-3">
+            <TrustItem icon={<Shield className="w-4 h-4" />} text="Human approval required" />
+            <TrustItem icon={<FileCheck className="w-4 h-4" />} text="Full audit trail" />
+            <TrustItem icon={<Users className="w-4 h-4" />} text="Role-based access" />
+            <TrustItem icon={<Cloud className="w-4 h-4" />} text="Secure cloud hosting (Google Cloud)" />
+          </div>
+        </div>
+      </section>
+
+      {/* Footer links */}
+      <section className="py-12">
+        <div className="max-w-[700px] mx-auto px-6 text-center space-y-4">
+          <a
+            href="/design-partner"
+            className="inline-flex items-center gap-2 text-[15px] text-[#12B8C4] hover:text-[#0fa3ae] font-medium transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Design Partner page
+          </a>
+          <p className="text-[14px] text-[#556070]">
+            Questions? Email <a href="mailto:partners@qashivo.com" className="font-medium text-[#12B8C4] hover:underline">partners@qashivo.com</a>
+          </p>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-[#E6E8EC] py-12">
+        <div className="max-w-[1200px] mx-auto px-6">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+            <div className="flex items-center gap-2">
+              <img src={logo} alt="Qashivo" className="h-6 w-6" />
+              <span className="text-[15px] font-medium text-[#0B0F17]">Qashivo</span>
+            </div>
+            <div className="flex items-center gap-8 text-[14px] text-[#556070]">
+              <a href="/privacy" className="hover:text-[#0B0F17] transition-colors">Privacy</a>
+              <a href="/terms" className="hover:text-[#0B0F17] transition-colors">Terms</a>
+              <span>&copy; 2026 Nexus KPI Limited. All rights reserved.</span>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+function StepItem({ number, title, description, isLast = false }: { number: number; title: string; description: string; isLast?: boolean }) {
+  return (
+    <div className="flex items-start gap-4">
+      <div className="flex flex-col items-center">
+        <div className="w-8 h-8 bg-[#12B8C4] rounded-full flex items-center justify-center text-white text-[14px] font-semibold flex-shrink-0">
+          {number}
+        </div>
+        {!isLast && <div className="w-px h-8 bg-[#E6E8EC]" />}
+      </div>
+      <div className={isLast ? "pb-0" : "pb-4"}>
+        <h4 className="text-[15px] font-semibold text-[#0B0F17]">{title}</h4>
+        <p className="text-[14px] text-[#556070]">{description}</p>
+      </div>
+    </div>
+  );
+}
+
+function ChecklistItem({ text }: { text: string }) {
+  return (
+    <li className="flex items-start gap-3">
+      <div className="w-5 h-5 bg-[#E0F7FA] rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+        <Check className="w-3 h-3 text-[#12B8C4]" />
+      </div>
+      <span className="text-[14px] text-[#556070] leading-relaxed">{text}</span>
+    </li>
+  );
+}
+
+function TrustItem({ icon, text }: { icon: React.ReactNode; text: string }) {
+  return (
+    <div className="flex items-center gap-2 text-[14px] text-[#556070]">
+      <span className="text-[#22C55E]">{icon}</span>
+      {text}
+    </div>
+  );
+}
