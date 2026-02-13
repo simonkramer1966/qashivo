@@ -1,0 +1,40 @@
+You are a senior product designer + frontend engineer. 
+Update the existing Qashivo landing page route currently at /pilot-partner to become a “Design Partner” screening page.
+
+Goals:
+- This page should screen accounting firms BEFORE NDA.
+- Reduce competitive disclosure: remove detailed v2/v3 technical roadmap and any mentions of Bayesian/LSTM/ensemble/unprecedented accuracy.
+- Keep the Qashivo visual style and components consistent with the current site.
+- Keep the right-side application form, but update copy + fields for screening.
+
+Required changes:
+1) Rename page title and all references from “Pilot Partner” to “Design Partner”.
+2) Replace hero section with:
+   - Badge: “DESIGN PARTNER PROGRAM (Limited places)”
+   - H1: “Become a Founding Design Partner for Supervised Credit Control”
+   - Subhead: “Qashivo helps SMEs get paid faster by turning debtor replies into outcomes (promise to pay, more time, dispute) — updating cash expectations immediately. Nothing is sent without approval.”
+   - Bullets: Daily chase plan, Human approval, Outcome capture, Full audit trail, Cash expectations updated from intent
+   - Add a small line: “We’ll share detailed roadmap and workflow documentation after an NDA.”
+3) Replace the current long “Our Product Roadmap” (v1/v2/v3 cards) with a simple Now / Next / Later section:
+   - Now: CSV import, plan→approve→send (email first), reply capture + outcomes, action timeline, cash expectations updated
+   - Next: SMS templates, read-only accounting sync (where available), payment plans/disputes, confidence indicators
+   - Later: portfolio insights + scenarios, working capital recommendations
+4) Add sections in this order:
+   - “What you’ll help us design” (4 cards: Daily plan, Approval + audit, Outcome capture, Cashflow confidence)
+   - “Why become a Founding Design Partner?” (4 cards: Influence, White-glove onboarding, Preferential terms, Optional case study)
+   - “What we ask from Design Partners” (1–3 SME clients, 60-min kickoff, 30 mins/week for 6 weeks, outcomes metrics; include “no outbound without approval”)
+   - “Who we’re looking for” (fit bullets + optional not-a-fit bullets)
+   - “Trust-first by design” (human approval required, audit trail, role-based access, secure cloud hosting on Google Cloud; note detailed security docs after NDA)
+   - “What happens next” (5 steps: Apply → 15-min fit call → NDA → onboard → weekly check-ins)
+5) Update the application form:
+   - Title: “Apply to become a Design Partner”
+   - Subtitle: “We’ll respond within 24 hours.”
+   - Fields: name, firm name, email, phone, role/title, approx number of SME clients, typical client size/industry, current tools/approach, nominate 1–3 clients (yes/no), what you want to improve most.
+   - Button: “Submit application”
+   - Footer line: “Prefer email? partners@qashivo.com”
+6) Keep navigation/header unchanged. Ensure the page remains responsive and visually consistent.
+7) Ensure copy uses “credit control” (not “collections”), and avoids overclaiming.
+
+Deliverable:
+- Commit the updated page and any component updates needed.
+- Ensure the route works and the form still submits as it currently does.
