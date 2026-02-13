@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Check, Shield, FileCheck, Users, Cloud, ArrowLeft, ClipboardList } from "lucide-react";
+import { Check, Shield, FileCheck, Users, Cloud, ArrowLeft } from "lucide-react";
 import logo from "@assets/Main_Nexus_Logo_copy_1768893717341.png";
 
 
@@ -50,24 +50,6 @@ export default function DesignPartnerThankYou() {
       </section>
 
 
-      {/* Checklist */}
-      <section className="py-16 border-b border-[#E6E8EC]">
-        <div className="max-w-[600px] mx-auto px-6">
-          <div className="bg-[#F8FAFB] p-6 rounded-xl border border-[#E6E8EC]">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-9 h-9 bg-[#E0F7FA] rounded-lg flex items-center justify-center text-[#12B8C4]">
-                <ClipboardList className="w-5 h-5" />
-              </div>
-              <h3 className="text-[17px] font-semibold text-[#0B0F17]">To make the call useful</h3>
-            </div>
-            <ul className="space-y-3">
-              <ChecklistItem text="1-3 example clients with overdue invoices (anonymised is fine)" />
-              <ChecklistItem text="Your current approach/tools (manual, Xero statements, Chaser, etc.)" />
-              <ChecklistItem text="What you'd most like to improve (time saved, DSO movement, response rates, visibility)" />
-            </ul>
-          </div>
-        </div>
-      </section>
 
       {/* Trust strip */}
       <section className="py-16 bg-[#F8FAFB] border-b border-[#E6E8EC]">
@@ -135,16 +117,6 @@ function StepItem({ number, title, description, isLast = false }: { number: numb
   );
 }
 
-function ChecklistItem({ text }: { text: string }) {
-  return (
-    <li className="flex items-start gap-3">
-      <div className="w-5 h-5 bg-[#E0F7FA] rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-        <Check className="w-3 h-3 text-[#12B8C4]" />
-      </div>
-      <span className="text-[14px] text-[#556070] leading-relaxed">{text}</span>
-    </li>
-  );
-}
 
 function TrustItem({ icon, text }: { icon: React.ReactNode; text: string }) {
   return (
