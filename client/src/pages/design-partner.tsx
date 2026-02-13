@@ -272,10 +272,10 @@ export default function DesignPartner() {
             <div className="border-l-4 border-[#F59E0B] pl-5 py-1">
               <span className="inline-block text-[11px] font-semibold text-white bg-[#F59E0B] px-2.5 py-1 rounded-full mb-3">NEXT</span>
               <ul className="space-y-2 text-[14px] text-[#556070]">
-                <li className="flex items-start gap-2"><ArrowRight className="w-3.5 h-3.5 text-[#F59E0B] mt-0.5 flex-shrink-0" /> SMS templates</li>
-                <li className="flex items-start gap-2"><ArrowRight className="w-3.5 h-3.5 text-[#F59E0B] mt-0.5 flex-shrink-0" /> Read-only accounting sync</li>
-                <li className="flex items-start gap-2"><ArrowRight className="w-3.5 h-3.5 text-[#F59E0B] mt-0.5 flex-shrink-0" /> Payment plans & disputes</li>
-                <li className="flex items-start gap-2"><ArrowRight className="w-3.5 h-3.5 text-[#F59E0B] mt-0.5 flex-shrink-0" /> Confidence indicators</li>
+                <li className="flex items-start gap-2"><ArrowRight className="w-3.5 h-3.5 text-[#F59E0B] mt-0.5 flex-shrink-0" /> Voice agents</li>
+                <li className="flex items-start gap-2"><ArrowRight className="w-3.5 h-3.5 text-[#F59E0B] mt-0.5 flex-shrink-0" /> QB & Sage integration</li>
+                <li className="flex items-start gap-2"><ArrowRight className="w-3.5 h-3.5 text-[#F59E0B] mt-0.5 flex-shrink-0" /> Payment plan negotiation</li>
+                <li className="flex items-start gap-2"><ArrowRight className="w-3.5 h-3.5 text-[#F59E0B] mt-0.5 flex-shrink-0" /> Dispute resolution</li>
               </ul>
             </div>
 
