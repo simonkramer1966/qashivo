@@ -1,8 +1,8 @@
 import { Button } from "@/components/ui/button";
-import { Check, Shield, FileCheck, Users, Cloud, ArrowLeft, Calendar, Mail, ClipboardList } from "lucide-react";
+import { Check, Shield, FileCheck, Users, Cloud, ArrowLeft, ClipboardList } from "lucide-react";
 import logo from "@assets/Main_Nexus_Logo_copy_1768893717341.png";
 
-const BOOKING_URL = import.meta.env.VITE_BOOKING_URL;
+
 
 export default function DesignPartnerThankYou() {
 
@@ -49,53 +49,6 @@ export default function DesignPartnerThankYou() {
         </div>
       </section>
 
-      {/* Two CTA cards */}
-      <section className="py-16 bg-[#F8FAFB] border-b border-[#E6E8EC]">
-        <div className="max-w-[800px] mx-auto px-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {BOOKING_URL && (
-              <div className="bg-white p-6 rounded-xl border border-[#E6E8EC]">
-                <div className="w-10 h-10 bg-[#E0F7FA] rounded-lg flex items-center justify-center text-[#12B8C4] mb-4">
-                  <Calendar className="w-5 h-5" />
-                </div>
-                <h3 className="text-[17px] font-semibold text-[#0B0F17] mb-2">Book your 15-minute fit call</h3>
-                <p className="text-[14px] text-[#556070] leading-relaxed mb-4">
-                  Want to speed things up? Choose a time that suits you.
-                </p>
-                <a
-                  href={BOOKING_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Button className="w-full bg-[#12B8C4] hover:bg-[#0fa3ae] text-white h-11 rounded-lg text-[14px] font-medium mb-3">
-                    Book a 15-minute call
-                  </Button>
-                </a>
-                <p className="text-[12px] text-[#9CA3AF] text-center">
-                  You'll receive a calendar invite and Google Meet link automatically.
-                </p>
-              </div>
-            )}
-
-            <div className="bg-white p-6 rounded-xl border border-[#E6E8EC]">
-              <div className="w-10 h-10 bg-[#E0F7FA] rounded-lg flex items-center justify-center text-[#12B8C4] mb-4">
-                <Mail className="w-5 h-5" />
-              </div>
-              <h3 className="text-[17px] font-semibold text-[#0B0F17] mb-2">Prefer email?</h3>
-              <p className="text-[14px] text-[#556070] leading-relaxed mb-4">
-                Email us and we'll propose times.
-              </p>
-              <a
-                href="mailto:partners@qashivo.com?subject=Design%20Partner%20fit%20call&body=Hi%20Simon%2C%0A%0AI've%20applied%20to%20the%20Design%20Partner%20program.%20Here%20are%202%E2%80%933%20times%20that%20work%20for%20me%3A%0A%0A"
-              >
-                <Button variant="outline" className="w-full h-11 rounded-lg text-[14px] font-medium border-[#E6E8EC] text-[#0B0F17] hover:bg-[#F8FAFB]">
-                  Email partners@qashivo.com
-                </Button>
-              </a>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* Checklist */}
       <section className="py-16 border-b border-[#E6E8EC]">
