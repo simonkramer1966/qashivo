@@ -42,9 +42,10 @@ export default function DesignPartnerThankYou() {
 
           <div className="space-y-0">
             <StepItem number={1} title="Review (today)" description="We review your application and client fit." />
-            <StepItem number={2} title="15-minute fit call" description="Confirm goals, clients, and how you run credit control today." />
-            <StepItem number={3} title="NDA" description="We share detailed workflow documentation and onboarding plan." />
-            <StepItem number={4} title="Onboard" description="White-glove setup for your first 1-3 clients." isLast />
+            <StepItem number={2} title="Book a call time that works for you" description="We'll email you a link — pick a slot that fits your schedule." />
+            <StepItem number={3} title="15-minute fit call" description="Confirm goals, clients, and how you run credit control today." />
+            <StepItem number={4} title="NDA" description="We share detailed workflow documentation and onboarding plan." />
+            <StepItem number={5} title="Onboard" description="White-glove setup for your first 1-3 clients." isLast />
           </div>
         </div>
       </section>
