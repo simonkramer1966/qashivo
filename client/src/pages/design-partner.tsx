@@ -80,7 +80,7 @@ export default function DesignPartner() {
             <div className="text-left">
               <span className="inline-block text-[12px] font-semibold text-[#12B8C4] uppercase tracking-wider bg-[#E0F7FA] px-3 py-1.5 rounded-full mb-5">Design Partner Program (Limited places)</span>
               <h1 className="text-[32px] md:text-[42px] font-semibold text-[#0B0F17] leading-[1.15] tracking-tight mb-6">
-                Become a Founding Design Partner for Supervised Credit Control
+                Become a Founding Design Partner for Supervised AI Credit Control
               </h1>
               <p className="text-[16px] md:text-[17px] text-[#556070] leading-relaxed mb-6">
                 Qashivo helps SMEs get paid faster by turning debtor replies into outcomes (promise to pay, more time, dispute) — updating cash expectations immediately. Nothing is sent without approval.
