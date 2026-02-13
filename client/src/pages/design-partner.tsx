@@ -385,7 +385,7 @@ export default function DesignPartner() {
             <BenefitCard
               icon={<Handshake className="w-5 h-5" />}
               title="Preferential Terms"
-              description="Founding partners receive preferential pricing that reflects the value of your early commitment and feedback."
+              description="Founding partners will receive 10 free licences and further preferential pricing for life that reflects the value of your early commitment and feedback."
             />
             <BenefitCard
               icon={<FileCheck className="w-5 h-5" />}
