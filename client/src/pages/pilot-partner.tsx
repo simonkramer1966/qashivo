@@ -361,7 +361,7 @@ export default function PilotPartner() {
           
           <div className="mt-8 p-4 bg-[#F8FAFB] rounded-lg border border-[#E6E8EC]">
             <p className="text-[14px] text-[#556070]">
-              <span className="font-medium text-[#0B0F17]">Technical Note:</span> Qashivo is built on Replit and integrates seamlessly with major accounting 
+              <span className="font-medium text-[#0B0F17]">Technical Note:</span> Qashivo is hosted on Google Cloud and integrates seamlessly with major accounting 
               platforms. No technical expertise required from your team—we handle all the complexity.
             </p>
           </div>
