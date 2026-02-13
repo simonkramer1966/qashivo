@@ -366,8 +366,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         </head>
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="text-align: center; margin-bottom: 30px;">
-            <h1 style="color: #12B8C4; margin: 0; font-size: 28px;">Qashivo</h1>
-            <p style="color: #666; margin: 5px 0 0 0; font-size: 14px;">AI-powered credit control</p>
+            <table align="center" cellpadding="0" cellspacing="0" style="margin: 0 auto;">
+              <tr>
+                <td style="vertical-align: middle; padding-right: 10px;">
+                  <img src="https://www.qashivo.com/images/qashivo-logo.png" alt="Qashivo" width="36" height="36" style="display: block; border: 0;">
+                </td>
+                <td style="vertical-align: middle;">
+                  <span style="color: #0B0F17; font-size: 24px; font-weight: 700; letter-spacing: -0.5px;">Qashivo</span>
+                </td>
+              </tr>
+            </table>
+            <p style="color: #666; margin: 8px 0 0 0; font-size: 14px;">Human supervised AI-driven credit control</p>
           </div>
           
           <h2 style="color: #0B0F17; margin-bottom: 20px;">Thank you for getting in touch, ${data.name.split(' ')[0]}!</h2>
