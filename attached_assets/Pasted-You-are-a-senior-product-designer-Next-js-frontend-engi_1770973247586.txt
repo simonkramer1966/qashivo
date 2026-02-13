@@ -1,0 +1,94 @@
+You are a senior product designer + Next.js frontend engineer working on the Qashivo website.
+
+Task:
+Create a high-converting “Thank You” page for the Design Partner application flow, and wire the form to redirect to it after a successful submission.
+
+Context:
+- The Design Partner application page is at /design-partner.
+- After the user submits the form successfully, we want to send them to a confirmation page.
+- The thank-you page should match the existing Qashivo site styling (layout, typography, spacing, cards, buttons).
+- Do NOT reveal detailed roadmap or technical implementation.
+
+Routing (Next.js):
+1) Create a new route:
+   - /design-partner/thank-you
+   Implement it using the project’s routing system:
+   - If using App Router: create `app/design-partner/thank-you/page.tsx`
+   - If using Pages Router: create `pages/design-partner/thank-you.tsx`
+
+2) Update the /design-partner form submission UX:
+   - Keep the existing backend/API submission logic exactly as-is.
+   - After a successful submit (HTTP 200/201 or existing success condition), redirect the user to `/design-partner/thank-you`.
+   - If the current form already shows a success state, replace or augment it with `router.push('/design-partner/thank-you')`.
+
+Booking link (Google Calendar):
+- Use the dedicated booking link below for the primary CTA:
+  https://calendar.app.google/oCeGUngKBaiYnvgn8
+- Store it in an environment variable:
+  `NEXT_PUBLIC_BOOKING_URL`
+- The “Book a 15-minute call” button must open this link in a new tab with `target="_blank"` and `rel="noopener noreferrer"`.
+- Add a safe fallback: if `process.env.NEXT_PUBLIC_BOOKING_URL` is missing, hide the booking button and show only the email booking option.
+
+ENV:
+- Add to `.env.local` (or equivalent):
+  NEXT_PUBLIC_BOOKING_URL=https://calendar.app.google/oCeGUngKBaiYnvgn8
+
+Thank You Page Content + Structure:
+
+A) HERO (above the fold)
+- Badge pill: “APPLICATION RECEIVED”
+- H1: “Thanks — we’ve received your Design Partner application”
+- Subhead: “We’ll review it and respond within 24 hours. If it’s a fit, we’ll invite you to a short 15-minute call.”
+- Add a small reassurance line: “Nothing is ever sent without approval.”
+
+B) “What happens next” (timeline / numbered list)
+Show 4 steps with concise copy:
+1. Review (today): “We review your application and client fit.”
+2. 15-minute fit call: “Confirm goals, clients, and how you run credit control today.”
+3. NDA: “We share detailed workflow documentation and onboarding plan.”
+4. Onboard: “White-glove setup for your first 1–3 clients.”
+
+C) TWO CTA CARDS (side-by-side on desktop, stacked on mobile)
+Card 1: “Book your 15-minute fit call”
+- Copy: “Want to speed things up? Choose a time that suits you.”
+- Primary button: “Book a 15-minute call” -> opens BOOKING_URL in new tab
+- Small note: “You’ll receive a calendar invite and Google Meet link automatically.”
+- Only render this button if NEXT_PUBLIC_BOOKING_URL exists.
+
+Card 2: “Prefer email?”
+- Copy: “Email us and we’ll propose times.”
+- Button: “Email partners@qashivo.com”
+- Link: mailto:partners@qashivo.com
+  - Subject: “Design Partner fit call”
+  - Body: “Hi Simon, I’ve applied to the Design Partner program. Here are 2–3 times that work for me: …”
+
+D) “To make the call useful” checklist (small card)
+Title: “To make the call useful”
+Bullets:
+- “1–3 example clients with overdue invoices (anonymised is fine)”
+- “Your current approach/tools (manual, Xero statements, Chaser, etc.)”
+- “What you’d most like to improve (time saved, DSO movement, response rates, visibility)”
+
+E) TRUST STRIP (simple, trust-forward)
+Title: “Trust-first by design”
+Bullets (short):
+- “Human approval required”
+- “Full audit trail”
+- “Role-based access”
+- “Secure cloud hosting (Google Cloud)”
+
+F) FOOTER LINKS
+- Text link: “Back to Design Partner page” -> /design-partner
+- Small line: “Questions? Email partners@qashivo.com”
+
+Design requirements:
+- Use existing site components where available (container, cards, badges, buttons, icons).
+- Ensure spacing and typography matches /design-partner.
+- Responsive layout: no horizontal overflow; cards stack on mobile.
+- Add appropriate `<title>` and meta description for the thank-you page.
+
+Deliverables:
+- New thank-you route created and styled.
+- /design-partner form redirects to the thank-you page on successful submit.
+- NEXT_PUBLIC_BOOKING_URL wired in with fallback behavior.
+- All changes compile and run without errors.
