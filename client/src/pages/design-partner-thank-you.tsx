@@ -1,67 +1,22 @@
 import { Button } from "@/components/ui/button";
-import { useLocation } from "wouter";
-import { Menu, X, Check, Shield, FileCheck, Users, Cloud, ArrowLeft, Calendar, Mail, ClipboardList } from "lucide-react";
-import { useState } from "react";
+import { Check, Shield, FileCheck, Users, Cloud, ArrowLeft, Calendar, Mail, ClipboardList } from "lucide-react";
 import logo from "@assets/Main_Nexus_Logo_copy_1768893717341.png";
 
 const BOOKING_URL = import.meta.env.VITE_BOOKING_URL;
 
 export default function DesignPartnerThankYou() {
-  const [, setLocation] = useLocation();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-white">
       <nav className="sticky top-0 z-50 bg-white border-b border-[#E6E8EC]">
         <div className="max-w-[1200px] mx-auto px-6">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-10">
-              <a href="/home" className="flex items-center gap-2">
-                <img src={logo} alt="Qashivo" className="h-8 w-8" />
-                <span className="text-[22px] font-semibold text-[#0B0F17] tracking-tight">Qashivo</span>
-              </a>
-              <div className="hidden md:flex items-center gap-8">
-                <a href="/home" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">Home</a>
-                <a href="/product" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">Product</a>
-                <a href="/partners" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">Partners</a>
-                <a href="/pricing" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">Pricing</a>
-                <a href="/contact" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">Contact</a>
-              </div>
-            </div>
-            <div className="hidden md:flex items-center gap-4">
-              <a href="/login" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">Sign in</a>
-              <Button
-                onClick={() => setLocation("/contact")}
-                className="bg-[#12B8C4] hover:bg-[#0fa3ae] text-white h-11 px-5 rounded-full text-[15px] font-medium"
-              >
-                Book a demo
-              </Button>
-            </div>
-            <button className="md:hidden p-2" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
+            <a href="/home" className="flex items-center gap-2">
+              <img src={logo} alt="Qashivo" className="h-8 w-8" />
+              <span className="text-[22px] font-semibold text-[#0B0F17] tracking-tight">Qashivo</span>
+            </a>
           </div>
         </div>
-        {mobileMenuOpen && (
-          <div className="md:hidden border-t border-[#E6E8EC] bg-white px-6 py-4">
-            <div className="flex flex-col gap-4">
-              <a href="/home" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Home</a>
-              <a href="/product" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Product</a>
-              <a href="/partners" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Partners</a>
-              <a href="/pricing" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Pricing</a>
-              <a href="/contact" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Contact</a>
-              <div className="border-t border-[#E6E8EC] pt-4 mt-2 flex flex-col gap-3">
-                <a href="/login" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Sign in</a>
-                <Button
-                  onClick={() => setLocation("/contact")}
-                  className="bg-[#12B8C4] hover:bg-[#0fa3ae] text-white h-11 rounded-xl text-[15px] font-medium w-full"
-                >
-                  Book a demo
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
       </nav>
 
       {/* Hero */}
