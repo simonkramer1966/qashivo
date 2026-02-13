@@ -298,7 +298,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     company: z.string().optional(),
     phone: z.string().optional(),
     message: z.string().min(10, "Please provide more details about your enquiry"),
-    enquiryType: z.enum(['demo', 'pricing', 'partnership', 'general', 'investment']).default('general')
+    enquiryType: z.enum(['demo', 'pricing', 'partnership', 'general', 'investment', 'design-partnership']).default('general')
   });
 
   app.post('/api/public/sales-enquiry', async (req, res) => {
@@ -317,7 +317,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         pricing: 'Pricing Enquiry',
         partnership: 'Partnership Enquiry',
         general: 'General Enquiry',
-        investment: 'Investment Enquiry'
+        investment: 'Investment Enquiry',
+        'design-partnership': 'Design Partnership Application'
       }[data.enquiryType];
       
       // Email to Qashivo team
