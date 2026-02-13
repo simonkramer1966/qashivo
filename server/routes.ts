@@ -424,7 +424,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         from: qashivoEmail,
         subject: `Thanks for contacting Qashivo - We'll be in touch soon`,
         html: confirmationEmailHtml,
-        text: `Thank you for getting in touch, ${data.name.split(' ')[0]}!\n\nWe've received your ${enquiryTypeLabel.toLowerCase()} and a member of our team will be in touch shortly.\n\nYour message:\n${data.message}\n\nIn the meantime, why not explore what Qashivo can do for your business at ${baseUrl}/demo\n\n---\nNexus KPI Limited. Built in London. Backed by innovation.\n${baseUrl}`
+        text: `Thank you for getting in touch, ${data.name.split(' ')[0]}!\n\nWe've received your ${enquiryTypeLabel.toLowerCase()} and a member of our team will be in touch shortly.\n\nYour message:\n${data.message}\n\nIn the meantime, why not explore what Qashivo can do for your business at https://www.qashivo.com/demo\n\n---\nNexus KPI Limited. Built in London. Backed by innovation.\nhttps://www.qashivo.com`,
+        trackClicks: false
       });
       
       if (!confirmationResult.success) {

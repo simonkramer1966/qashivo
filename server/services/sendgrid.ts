@@ -30,6 +30,7 @@ export async function sendEmail(params: {
   headers?: Record<string, string>;
   invoiceId?: string;
   customerId?: string;
+  trackClicks?: boolean;
 }): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
     // Check if demo mode is enabled - SHORT-CIRCUIT and return mock success
@@ -63,6 +64,7 @@ export async function sendEmail(params: {
       textContent: params.text,
       replyTo: params.replyTo ? { email: params.replyTo } : undefined,
       customHeaders: params.headers,
+      trackClicks: params.trackClicks,
     };
 
     const result = await emailService.sendEmail(message);
