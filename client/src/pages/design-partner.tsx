@@ -307,7 +307,7 @@ export default function DesignPartner() {
             <div className="border-l-4 border-[#22C55E] pl-5 py-1">
               <span className="inline-block text-[11px] font-semibold text-white bg-[#22C55E] px-2.5 py-1 rounded-full mb-3">NOW</span>
               <ul className="space-y-2 text-[14px] text-[#556070]">
-                <li className="flex items-start gap-2"><Check className="w-3.5 h-3.5 text-[#22C55E] mt-0.5 flex-shrink-0" /> CSV import</li>
+                <li className="flex items-start gap-2"><Check className="w-3.5 h-3.5 text-[#22C55E] mt-0.5 flex-shrink-0" /> Xero integration or CSV import</li>
                 <li className="flex items-start gap-2"><Check className="w-3.5 h-3.5 text-[#22C55E] mt-0.5 flex-shrink-0" /> Plan, approve, send (email first)</li>
                 <li className="flex items-start gap-2"><Check className="w-3.5 h-3.5 text-[#22C55E] mt-0.5 flex-shrink-0" /> Reply capture + outcomes</li>
                 <li className="flex items-start gap-2"><Check className="w-3.5 h-3.5 text-[#22C55E] mt-0.5 flex-shrink-0" /> Action timeline</li>
