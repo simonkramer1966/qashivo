@@ -386,14 +386,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           </p>
           
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${baseUrl}/demo" style="display: inline-block; background: #12B8C4; color: white; text-decoration: none; padding: 12px 30px; border-radius: 25px; font-weight: 500;">Try our interactive demo</a>
+            <a href="https://www.qashivo.com/demo" style="display: inline-block; background: #12B8C4; color: white; text-decoration: none; padding: 12px 30px; border-radius: 25px; font-weight: 500;">Try our interactive demo</a>
           </div>
           
           <hr style="border: none; border-top: 1px solid #E6E8EC; margin: 30px 0;">
           
           <p style="color: #999; font-size: 12px; text-align: center;">
             Nexus KPI Limited. Built in London. Backed by innovation.<br>
-            <a href="${baseUrl}" style="color: #12B8C4;">www.qashivo.com</a>
+            <a href="https://www.qashivo.com" style="color: #12B8C4;">www.qashivo.com</a>
           </p>
         </body>
         </html>
