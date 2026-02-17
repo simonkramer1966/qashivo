@@ -172,8 +172,8 @@ export default function Customers2() {
       <main className="flex-1 flex flex-col min-h-0 main-with-bottom-nav">
         {/* Compact Header - v2.0 */}
         <div className="max-w-7xl mx-auto w-full px-6 py-5 border-b border-gray-100">
-          <h1 className="text-2xl font-bold text-gray-900 font-heading">Customers</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight">Customers</h2>
+          <p className="text-[13px] text-slate-400 mt-0.5">
             Qashivo manages collections automatically. Review only when flagged.
           </p>
         </div>

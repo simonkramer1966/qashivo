@@ -203,15 +203,15 @@ export default function Overview2() {
       <main className="flex-1 flex flex-col min-h-0 main-with-bottom-nav">
         {/* Desktop Header - Cardless v2.0 */}
         <div className="hidden lg:block max-w-7xl mx-auto w-full px-6 py-5 border-b border-gray-100">
-          <h1 className="text-2xl font-bold text-gray-900 font-heading">Overview</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight">Overview</h2>
+          <p className="text-[13px] text-slate-400 mt-0.5">
             Qashivo manages collections automatically. Review only when flagged.
           </p>
         </div>
 
         {/* Mobile Header - Cardless v3.0: Compact, no subtitle */}
         <div className="lg:hidden px-4 py-4 border-b border-gray-100">
-          <h1 className="text-xl font-bold text-gray-900 font-heading">Overview</h1>
+          <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight">Overview</h2>
         </div>
         
         <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
