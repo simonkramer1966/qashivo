@@ -30,6 +30,7 @@ import {
   Calculator,
   BookOpen,
   Inbox,
+  Mail,
   Minimize2
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -63,6 +64,7 @@ const navigationSections = [
       { name: "Overview", href: "/overview2", icon: Gauge },
       { name: "Loop", href: "/loop", icon: Target },
       { name: "Action Centre", href: "/action-centre2", icon: Inbox },
+      { name: "Inbox", href: "/inbox", icon: Mail },
       { name: "Cash Flow", href: "/cash-flow", icon: TrendingUp },
     ]
   },
