@@ -120,6 +120,15 @@ export const tenants = pgTable("tenants", {
   businessHoursStart: varchar("business_hours_start").default("08:00"), // Earliest time for voice calls
   businessHoursEnd: varchar("business_hours_end").default("18:00"), // Latest time for voice calls
   
+  emailProvider: varchar("email_provider"),
+  emailConnectedAddress: varchar("email_connected_address"),
+  emailAccessToken: text("email_access_token"),
+  emailRefreshToken: text("email_refresh_token"),
+  emailTokenExpiresAt: timestamp("email_token_expires_at"),
+  emailConnectionStatus: varchar("email_connection_status").default("disconnected"),
+  emailLastSyncAt: timestamp("email_last_sync_at"),
+  emailSyncEnabled: boolean("email_sync_enabled").default(false),
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -1808,6 +1817,33 @@ export const emailSenders = pgTable("email_senders", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const emailDomainMappings = pgTable("email_domain_mappings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  domain: varchar("domain").notNull(),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id),
+  createdByUserId: varchar("created_by_user_id").references(() => users.id),
+  isAutoMatched: boolean("is_auto_matched").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  unique("unique_tenant_domain").on(table.tenantId, table.domain),
+  index("idx_email_domain_mappings_tenant_id").on(table.tenantId),
+  index("idx_email_domain_mappings_domain").on(table.domain),
+]);
+
+export const emailSenderMappings = pgTable("email_sender_mappings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  senderEmail: varchar("sender_email").notNull(),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id),
+  createdByUserId: varchar("created_by_user_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  unique("unique_tenant_sender_email").on(table.tenantId, table.senderEmail),
+  index("idx_email_sender_mappings_tenant_id").on(table.tenantId),
+  index("idx_email_sender_mappings_sender_email").on(table.senderEmail),
+]);
+
 // Collection schedules that can be assigned to customers (like Chaser's schedules)
 export const collectionSchedules = pgTable("collection_schedules", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1848,6 +1884,36 @@ export const emailSendersRelations = relations(emailSenders, ({ one }) => ({
   tenant: one(tenants, {
     fields: [emailSenders.tenantId],
     references: [tenants.id],
+  }),
+}));
+
+export const emailDomainMappingsRelations = relations(emailDomainMappings, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [emailDomainMappings.tenantId],
+    references: [tenants.id],
+  }),
+  contact: one(contacts, {
+    fields: [emailDomainMappings.contactId],
+    references: [contacts.id],
+  }),
+  createdByUser: one(users, {
+    fields: [emailDomainMappings.createdByUserId],
+    references: [users.id],
+  }),
+}));
+
+export const emailSenderMappingsRelations = relations(emailSenderMappings, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [emailSenderMappings.tenantId],
+    references: [tenants.id],
+  }),
+  contact: one(contacts, {
+    fields: [emailSenderMappings.contactId],
+    references: [contacts.id],
+  }),
+  createdByUser: one(users, {
+    fields: [emailSenderMappings.createdByUserId],
+    references: [users.id],
   }),
 }));
 
@@ -2519,6 +2585,18 @@ export type InsertAiFact = z.infer<typeof insertAiFactSchema>;
 export type AiFact = typeof aiFacts.$inferSelect;
 export type InsertEmailSender = z.infer<typeof insertEmailSenderSchema>;
 export type EmailSender = typeof emailSenders.$inferSelect;
+export const insertEmailDomainMappingSchema = createInsertSchema(emailDomainMappings).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertEmailDomainMapping = z.infer<typeof insertEmailDomainMappingSchema>;
+export type EmailDomainMapping = typeof emailDomainMappings.$inferSelect;
+export const insertEmailSenderMappingSchema = createInsertSchema(emailSenderMappings).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertEmailSenderMapping = z.infer<typeof insertEmailSenderMappingSchema>;
+export type EmailSenderMapping = typeof emailSenderMappings.$inferSelect;
 export type InsertCollectionSchedule = z.infer<typeof insertCollectionScheduleSchema>;
 export type CollectionSchedule = typeof collectionSchedules.$inferSelect;
 export type InsertCustomerScheduleAssignment = z.infer<typeof insertCustomerScheduleAssignmentSchema>;

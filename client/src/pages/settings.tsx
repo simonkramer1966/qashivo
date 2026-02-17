@@ -54,7 +54,7 @@ import {
   CreditCard,
   RotateCcw
 } from "lucide-react";
-import { SiXero, SiSage, SiQuickbooks } from "react-icons/si";
+import { SiXero, SiSage, SiQuickbooks, SiGoogle, SiMicrosoft } from "react-icons/si";
 import { CURRENCIES, DEFAULT_CURRENCY } from "@shared/currencies";
 import { usePermissions } from "@/hooks/usePermissions";
 import ProtectedComponent from "@/components/rbac/ProtectedComponent";
@@ -1841,6 +1841,16 @@ export default function Settings() {
     queryKey: ['/api/sync/settings'],
   });
 
+  const { data: emailConnectionStatus, isLoading: isEmailConnectionLoading } = useQuery<{
+    provider: string | null;
+    email: string | null;
+    status: string;
+    lastSyncAt: string | null;
+    syncEnabled: boolean;
+  }>({
+    queryKey: ['/api/email-connection/status'],
+  });
+
   const { data: tenant } = useQuery<TenantData>({
     queryKey: ['/api/tenant'],
     enabled: !!user,
@@ -1922,6 +1932,32 @@ export default function Settings() {
         description: 'Failed to trigger synchronization',
         variant: 'destructive',
       });
+    },
+  });
+
+  const disconnectEmailMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/email-connection/disconnect');
+      if (!response.ok) throw new Error('Failed to disconnect');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/email-connection/status'] });
+      toast({ title: "Email Disconnected", description: "Your email account has been disconnected." });
+    },
+  });
+
+  const testEmailMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/email-connection/test');
+      if (!response.ok) throw new Error('Connection test failed');
+      return response.json();
+    },
+    onSuccess: (data: any) => {
+      toast({ title: "Connection OK", description: data.message || "Email connection is working." });
+    },
+    onError: () => {
+      toast({ title: "Connection Failed", description: "Could not verify email connection.", variant: "destructive" });
     },
   });
 
@@ -2390,6 +2426,113 @@ export default function Settings() {
                         >
                           {updateSyncSettingsMutation.isPending ? "Saving..." : "Save Sync Settings"}
                         </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="py-6 border-b border-gray-100">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center">
+                      <Mail className="h-5 w-5 text-[#17B6C3] mr-2" />
+                      <h2 className="text-lg font-semibold text-gray-900">Email Connection</h2>
+                    </div>
+                    <Badge 
+                      className={emailConnectionStatus?.status === 'connected'
+                        ? "bg-[#4FAD80]/10 text-[#4FAD80] border-[#4FAD80]/20" 
+                        : "bg-[#C75C5C]/10 text-[#C75C5C] border-[#C75C5C]/20"
+                      }
+                    >
+                      {emailConnectionStatus?.status === 'connected' ? "Connected" : "Not Connected"}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-gray-500 mb-6">
+                    Connect your email account to send collection emails from your own address
+                  </p>
+
+                  {emailConnectionStatus?.status !== 'connected' ? (
+                    <div className="space-y-4">
+                      <h4 className="text-[13px] font-medium text-gray-900">Choose Your Email Provider</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-100">
+                          <div className="flex items-center space-x-4">
+                            <div className="p-3 bg-red-100 rounded-lg">
+                              <SiGoogle className="h-6 w-6 text-red-500" />
+                            </div>
+                            <div>
+                              <p className="text-[13px] font-semibold text-gray-900">Gmail / Google Workspace</p>
+                              <p className="text-sm text-gray-500">Send emails from your Google account</p>
+                            </div>
+                          </div>
+                          <Button 
+                            onClick={() => { window.location.href = '/api/email-connection/google/connect'; }}
+                            className="h-9 rounded-lg bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                          >
+                            Connect
+                          </Button>
+                        </div>
+                        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-100">
+                          <div className="flex items-center space-x-4">
+                            <div className="p-3 bg-blue-100 rounded-lg">
+                              <SiMicrosoft className="h-6 w-6 text-blue-600" />
+                            </div>
+                            <div>
+                              <p className="text-[13px] font-semibold text-gray-900">Outlook / Microsoft 365</p>
+                              <p className="text-sm text-gray-500">Send emails from your Microsoft account</p>
+                            </div>
+                          </div>
+                          <Button 
+                            onClick={() => { window.location.href = '/api/email-connection/microsoft/connect'; }}
+                            className="h-9 rounded-lg bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                          >
+                            Connect
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-100">
+                        <div className="flex items-center space-x-4">
+                          <div className={`p-3 rounded-lg ${emailConnectionStatus.provider === 'google' ? 'bg-red-100' : 'bg-blue-100'}`}>
+                            {emailConnectionStatus.provider === 'google' 
+                              ? <SiGoogle className="h-6 w-6 text-red-500" />
+                              : <SiMicrosoft className="h-6 w-6 text-blue-600" />
+                            }
+                          </div>
+                          <div>
+                            <p className="text-[13px] font-semibold text-gray-900">
+                              Connected to {emailConnectionStatus.provider === 'google' ? 'Gmail / Google Workspace' : 'Outlook / Microsoft 365'}
+                            </p>
+                            {emailConnectionStatus.email && (
+                              <p className="text-sm text-gray-500">
+                                {emailConnectionStatus.email}
+                              </p>
+                            )}
+                            {emailConnectionStatus.lastSyncAt && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                Last sync: {new Date(emailConnectionStatus.lastSyncAt).toLocaleString()}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            onClick={() => testEmailMutation.mutate()}
+                            disabled={testEmailMutation.isPending}
+                            className="h-9 rounded-lg bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                          >
+                            {testEmailMutation.isPending ? "Testing..." : "Test Connection"}
+                          </Button>
+                          <Button 
+                            onClick={() => disconnectEmailMutation.mutate()}
+                            disabled={disconnectEmailMutation.isPending}
+                            variant="outline"
+                            className="h-9 rounded-lg border-[#C75C5C]/30 text-[#C75C5C] hover:bg-[#C75C5C]/5"
+                          >
+                            {disconnectEmailMutation.isPending ? "Disconnecting..." : "Disconnect"}
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   )}

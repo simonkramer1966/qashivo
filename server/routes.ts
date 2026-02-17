@@ -263,6 +263,7 @@ import documentationRoutes from "./routes/documentationRoutes";
 import adminRoutes from "./routes/adminRoutes";
 import prospectScorecardRoutes from "./routes/prospectScorecardRoutes";
 import workflowProfileRoutes from "./routes/workflowProfileRoutes";
+import emailConnectionRouter from './routes/emailConnectionRoutes';
 import { webhookHandler } from "./services/webhookHandler";
 import { ForecastEngine, type ForecastConfig, type ForecastScenario } from "../shared/forecast";
 import { subscriptionService } from "./services/subscriptionService";
@@ -23412,6 +23413,10 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
   });
 
   // ==================== END DOCUMENTATION DOWNLOAD API ====================
+
+  // ==================== EMAIL CONNECTION ROUTES ====================
+  app.use(emailConnectionRouter);
+  // ==================== END EMAIL CONNECTION ROUTES ====================
 
   const httpServer = createServer(app);
   
