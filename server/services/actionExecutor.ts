@@ -389,6 +389,7 @@ export class ActionExecutor {
         subject: emailContent.subject,
         html: emailContent.body,
         text: textBody,
+        tenantId: action.tenantId
       });
 
       if (usedPreGenerated) {

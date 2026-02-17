@@ -294,6 +294,7 @@ export async function sendActionEmail(actionId: string): Promise<SendActionEmail
         html: htmlBody,
         text: textBody,
         headers: customHeaders,
+        tenantId: action.tenantId,
       });
 
       if (sendResult) {
@@ -447,6 +448,7 @@ export async function sendPaymentThankYouEmail(
         "X-Qashivo-Invoice-Id": invoice.id,
         "X-Qashivo-Thread-Key": threadKey,
       },
+      tenantId,
     });
 
     if (sendResult?.success) {

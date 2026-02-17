@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Mail, Check, X, AlertCircle, Calendar, DollarSign, MessageSquare, Clock } from "lucide-react";
+import { Mail, Check, X, AlertCircle, Calendar, DollarSign, MessageSquare, Clock, UserPlus, RefreshCw, Search, Link2 } from "lucide-react";
 import NewSidebar from "@/components/layout/new-sidebar";
 import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/header";
@@ -13,6 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
@@ -62,6 +64,14 @@ interface InboxItem {
   contact: Contact | null;
 }
 
+interface UnmatchedEmail {
+  id: string;
+  from: string;
+  subject: string | null;
+  contentPreview: string;
+  createdAt: string;
+}
+
 const OUTCOME_LABELS: Record<string, string> = {
   PROMISE_TO_PAY: "Promise to Pay",
   DISPUTE: "Dispute",
@@ -91,9 +101,22 @@ export default function InboxPage() {
     amount: "",
     notes: "",
   });
+  const [activeTab, setActiveTab] = useState("outcomes");
+  const [assigningEmailId, setAssigningEmailId] = useState<string | null>(null);
+  const [contactSearch, setContactSearch] = useState("");
 
   const { data: inboxItems, isLoading } = useQuery<InboxItem[]>({
     queryKey: ["/api/inbox"],
+    retry: false,
+  });
+
+  const { data: unmatchedEmails, isLoading: unmatchedLoading } = useQuery<UnmatchedEmail[]>({
+    queryKey: ["/api/email-inbox/unmatched"],
+    retry: false,
+  });
+
+  const { data: contactsList } = useQuery<Contact[]>({
+    queryKey: ["/api/contacts"],
     retry: false,
   });
 
@@ -107,8 +130,6 @@ export default function InboxPage() {
         description: "The outcome has been reviewed and saved.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/inbox"] });
-      // Refresh dashboard charts (forecast updates with PTPs)
-      // Use predicate to match all queries starting with these prefixes (handles parameterized keys)
       queryClient.invalidateQueries({ 
         predicate: (query) => {
           const key = query.queryKey[0];
@@ -123,6 +144,48 @@ export default function InboxPage() {
       toast({
         title: "Error",
         description: "Failed to confirm outcome. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const pollMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/email-inbox/poll");
+    },
+    onSuccess: () => {
+      toast({
+        title: "Emails synced",
+        description: "Checked for new emails from your connected account.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/email-inbox/unmatched"] });
+    },
+    onError: () => {
+      toast({
+        title: "Sync failed",
+        description: "Failed to check for new emails. Make sure your email account is connected.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const assignMutation = useMutation({
+    mutationFn: async ({ inboundMessageId, contactId }: { inboundMessageId: string; contactId: string }) => {
+      return apiRequest("POST", "/api/email-inbox/assign", { inboundMessageId, contactId });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Email assigned",
+        description: "The email has been linked to the selected contact.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/email-inbox/unmatched"] });
+      setAssigningEmailId(null);
+      setContactSearch("");
+    },
+    onError: () => {
+      toast({
+        title: "Assignment failed",
+        description: "Failed to assign email. Please try again.",
         variant: "destructive",
       });
     },
@@ -167,254 +230,413 @@ export default function InboxPage() {
         <Header title="Inbox" subtitle="Review detected outcomes from customer replies" />
 
         <div className="px-4 pt-6 pb-8 max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left Panel: List of items needing review */}
-            <div className="lg:col-span-1">
-              <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                    <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
-                      <Mail className="h-4 w-4 text-[#17B6C3]" />
-                    </div>
-                    Needs Review
-                    {inboxItems && inboxItems.length > 0 && (
-                      <Badge variant="secondary" className="ml-auto">
-                        {inboxItems.length}
-                      </Badge>
-                    )}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <ScrollArea className="h-[600px]">
-                    {isLoading ? (
-                      <div className="space-y-3 p-4">
-                        {[1, 2, 3].map((i) => (
-                          <Skeleton key={i} className="h-20 w-full" />
-                        ))}
-                      </div>
-                    ) : inboxItems && inboxItems.length > 0 ? (
-                      <div className="divide-y divide-slate-100">
-                        {inboxItems.map((item) => {
-                          const conf = getConfidenceLabel(item.outcome.confidence);
-                          const isSelected = selectedItem?.outcome.id === item.outcome.id;
-                          
-                          return (
-                            <button
-                              key={item.outcome.id}
-                              onClick={() => handleSelectItem(item)}
-                              className={`w-full text-left p-4 hover:bg-slate-50 transition-colors ${
-                                isSelected ? "bg-[#17B6C3]/5 border-l-2 border-[#17B6C3]" : ""
-                              }`}
-                            >
-                              <div className="flex items-start justify-between gap-2 mb-2">
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-slate-900 truncate">
-                                    {item.contact?.name || item.contact?.companyName || "Unknown Contact"}
-                                  </p>
-                                  <p className="text-xs text-slate-500 truncate">
-                                    {item.email?.inboundFromEmail || "No email"}
-                                  </p>
-                                </div>
-                                <Badge className={`shrink-0 ${OUTCOME_COLORS[item.outcome.outcomeType] || "bg-slate-100"}`}>
-                                  {OUTCOME_LABELS[item.outcome.outcomeType] || item.outcome.outcomeType}
-                                </Badge>
-                              </div>
-                              
-                              <p className="text-xs text-slate-600 line-clamp-2 mb-2">
-                                {item.outcome.extractedText || item.email?.inboundSubject || "No content"}
-                              </p>
-                              
-                              <div className="flex items-center justify-between text-xs">
-                                <span className={`flex items-center gap-1 ${conf.color}`}>
-                                  <AlertCircle className="h-3 w-3" />
-                                  {Math.round(item.outcome.confidence * 100)}% {conf.label}
-                                </span>
-                                <span className="text-slate-400 flex items-center gap-1">
-                                  <Clock className="h-3 w-3" />
-                                  {format(new Date(item.outcome.createdAt), "MMM d, HH:mm")}
-                                </span>
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="p-8 text-center">
-                        <div className="p-3 bg-slate-100 rounded-full inline-flex mb-3">
-                          <Check className="h-6 w-6 text-slate-400" />
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="mb-6">
+              <TabsTrigger value="outcomes" className="gap-2">
+                <Mail className="h-4 w-4" />
+                Outcomes
+                {inboxItems && inboxItems.length > 0 && (
+                  <Badge variant="secondary" className="ml-1">{inboxItems.length}</Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="unmatched" className="gap-2">
+                <UserPlus className="h-4 w-4" />
+                Unmatched Emails
+                {unmatchedEmails && unmatchedEmails.length > 0 && (
+                  <Badge variant="destructive" className="ml-1">{unmatchedEmails.length}</Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="outcomes">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-1">
+                  <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                        <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
+                          <Mail className="h-4 w-4 text-[#17B6C3]" />
                         </div>
-                        <p className="text-sm text-slate-500">All caught up</p>
-                        <p className="text-xs text-slate-400 mt-1">
-                          No outcomes need review
-                        </p>
-                      </div>
-                    )}
-                  </ScrollArea>
-                </CardContent>
-              </Card>
-            </div>
+                        Needs Review
+                        {inboxItems && inboxItems.length > 0 && (
+                          <Badge variant="secondary" className="ml-auto">
+                            {inboxItems.length}
+                          </Badge>
+                        )}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <ScrollArea className="h-[600px]">
+                        {isLoading ? (
+                          <div className="space-y-3 p-4">
+                            {[1, 2, 3].map((i) => (
+                              <Skeleton key={i} className="h-20 w-full" />
+                            ))}
+                          </div>
+                        ) : inboxItems && inboxItems.length > 0 ? (
+                          <div className="divide-y divide-slate-100">
+                            {inboxItems.map((item) => {
+                              const conf = getConfidenceLabel(item.outcome.confidence);
+                              const isSelected = selectedItem?.outcome.id === item.outcome.id;
+                              
+                              return (
+                                <button
+                                  key={item.outcome.id}
+                                  onClick={() => handleSelectItem(item)}
+                                  className={`w-full text-left p-4 hover:bg-slate-50 transition-colors ${
+                                    isSelected ? "bg-[#17B6C3]/5 border-l-2 border-[#17B6C3]" : ""
+                                  }`}
+                                >
+                                  <div className="flex items-start justify-between gap-2 mb-2">
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-medium text-slate-900 truncate">
+                                        {item.contact?.name || item.contact?.companyName || "Unknown Contact"}
+                                      </p>
+                                      <p className="text-xs text-slate-500 truncate">
+                                        {item.email?.inboundFromEmail || "No email"}
+                                      </p>
+                                    </div>
+                                    <Badge className={`shrink-0 ${OUTCOME_COLORS[item.outcome.outcomeType] || "bg-slate-100"}`}>
+                                      {OUTCOME_LABELS[item.outcome.outcomeType] || item.outcome.outcomeType}
+                                    </Badge>
+                                  </div>
+                                  
+                                  <p className="text-xs text-slate-600 line-clamp-2 mb-2">
+                                    {item.outcome.extractedText || item.email?.inboundSubject || "No content"}
+                                  </p>
+                                  
+                                  <div className="flex items-center justify-between text-xs">
+                                    <span className={`flex items-center gap-1 ${conf.color}`}>
+                                      <AlertCircle className="h-3 w-3" />
+                                      {Math.round(item.outcome.confidence * 100)}% {conf.label}
+                                    </span>
+                                    <span className="text-slate-400 flex items-center gap-1">
+                                      <Clock className="h-3 w-3" />
+                                      {format(new Date(item.outcome.createdAt), "MMM d, HH:mm")}
+                                    </span>
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="p-8 text-center">
+                            <div className="p-3 bg-slate-100 rounded-full inline-flex mb-3">
+                              <Check className="h-6 w-6 text-slate-400" />
+                            </div>
+                            <p className="text-sm text-slate-500">All caught up</p>
+                            <p className="text-xs text-slate-400 mt-1">
+                              No outcomes need review
+                            </p>
+                          </div>
+                        )}
+                      </ScrollArea>
+                    </CardContent>
+                  </Card>
+                </div>
 
-            {/* Right Panel: Detail view and edit form */}
-            <div className="lg:col-span-2">
-              {selectedItem ? (
-                <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
-                  <CardHeader className="pb-4">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="text-xl font-bold">
-                          {selectedItem.contact?.name || selectedItem.contact?.companyName || "Unknown Contact"}
-                        </CardTitle>
-                        <p className="text-sm text-slate-500 mt-1">
-                          {selectedItem.email?.inboundFromEmail}
-                        </p>
-                      </div>
-                      <Badge className={`${OUTCOME_COLORS[selectedItem.outcome.outcomeType] || "bg-slate-100"}`}>
-                        {OUTCOME_LABELS[selectedItem.outcome.outcomeType] || selectedItem.outcome.outcomeType}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    {/* Original email content */}
-                    <div className="bg-slate-50 rounded-lg p-4">
-                      <p className="text-xs text-slate-400 uppercase tracking-wider mb-2">
-                        Original Message
-                      </p>
-                      {selectedItem.email?.inboundSubject && (
-                        <p className="text-sm font-medium text-slate-700 mb-2">
-                          Subject: {selectedItem.email.inboundSubject}
-                        </p>
-                      )}
-                      <p className="text-sm text-slate-600 whitespace-pre-wrap">
-                        {selectedItem.email?.inboundText || "No message content available"}
-                      </p>
-                    </div>
-
-                    {/* Detected outcome details */}
-                    {selectedItem.outcome.extractedText && (
-                      <div className="bg-[#17B6C3]/5 rounded-lg p-4 border border-[#17B6C3]/20">
-                        <p className="text-xs text-[#17B6C3] uppercase tracking-wider mb-2">
-                          Detected Intent
-                        </p>
-                        <p className="text-sm text-slate-700">
-                          {selectedItem.outcome.extractedText}
-                        </p>
-                        {selectedItem.outcome.rawPatternMatch && (
-                          <p className="text-xs text-slate-500 mt-2 italic">
-                            Pattern: "{selectedItem.outcome.rawPatternMatch}"
+                <div className="lg:col-span-2">
+                  {selectedItem ? (
+                    <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+                      <CardHeader className="pb-4">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <CardTitle className="text-xl font-bold">
+                              {selectedItem.contact?.name || selectedItem.contact?.companyName || "Unknown Contact"}
+                            </CardTitle>
+                            <p className="text-sm text-slate-500 mt-1">
+                              {selectedItem.email?.inboundFromEmail}
+                            </p>
+                          </div>
+                          <Badge className={`${OUTCOME_COLORS[selectedItem.outcome.outcomeType] || "bg-slate-100"}`}>
+                            {OUTCOME_LABELS[selectedItem.outcome.outcomeType] || selectedItem.outcome.outcomeType}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        <div className="bg-slate-50 rounded-lg p-4">
+                          <p className="text-xs text-slate-400 uppercase tracking-wider mb-2">
+                            Original Message
                           </p>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Edit form */}
-                    <div className="space-y-4 pt-4 border-t border-slate-100">
-                      <p className="text-sm font-medium text-slate-700">
-                        Confirm or Edit Outcome
-                      </p>
-                      
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="outcomeType">Outcome Type</Label>
-                          <Select
-                            value={editForm.outcomeType}
-                            onValueChange={(value) => setEditForm((prev) => ({ ...prev, outcomeType: value }))}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {Object.entries(OUTCOME_LABELS).map(([key, label]) => (
-                                <SelectItem key={key} value={key}>
-                                  {label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          {selectedItem.email?.inboundSubject && (
+                            <p className="text-sm font-medium text-slate-700 mb-2">
+                              Subject: {selectedItem.email.inboundSubject}
+                            </p>
+                          )}
+                          <p className="text-sm text-slate-600 whitespace-pre-wrap">
+                            {selectedItem.email?.inboundText || "No message content available"}
+                          </p>
                         </div>
-                        
-                        {(editForm.outcomeType === "PROMISE_TO_PAY" || selectedItem.outcome.outcomeType === "PROMISE_TO_PAY") && (
-                          <div className="space-y-2">
-                            <Label htmlFor="promiseDate">Promise Date</Label>
-                            <div className="relative">
-                              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                              <Input
-                                id="promiseDate"
-                                type="date"
-                                value={editForm.promiseDate}
-                                onChange={(e) => setEditForm((prev) => ({ ...prev, promiseDate: e.target.value }))}
-                                className="pl-10"
-                              />
-                            </div>
-                          </div>
-                        )}
-                        
-                        {(editForm.outcomeType === "PROMISE_TO_PAY" || selectedItem.outcome.outcomeType === "PROMISE_TO_PAY") && (
-                          <div className="space-y-2">
-                            <Label htmlFor="amount">Amount</Label>
-                            <div className="relative">
-                              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                              <Input
-                                id="amount"
-                                type="text"
-                                value={editForm.amount}
-                                onChange={(e) => setEditForm((prev) => ({ ...prev, amount: e.target.value }))}
-                                placeholder="0.00"
-                                className="pl-10"
-                              />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="notes">Notes</Label>
-                        <Textarea
-                          id="notes"
-                          value={editForm.notes}
-                          onChange={(e) => setEditForm((prev) => ({ ...prev, notes: e.target.value }))}
-                          placeholder="Add any relevant notes..."
-                          rows={3}
-                        />
-                      </div>
 
-                      <div className="flex gap-3 pt-2">
-                        <Button
-                          onClick={handleConfirm}
-                          disabled={confirmMutation.isPending}
-                          className="bg-[#17B6C3] hover:bg-[#1396A1] text-white flex-1"
-                        >
-                          <Check className="h-4 w-4 mr-2" />
-                          {confirmMutation.isPending ? "Saving..." : "Confirm Outcome"}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => setSelectedItem(null)}
-                          disabled={confirmMutation.isPending}
-                        >
-                          <X className="h-4 w-4 mr-2" />
-                          Cancel
-                        </Button>
+                        {selectedItem.outcome.extractedText && (
+                          <div className="bg-[#17B6C3]/5 rounded-lg p-4 border border-[#17B6C3]/20">
+                            <p className="text-xs text-[#17B6C3] uppercase tracking-wider mb-2">
+                              Detected Intent
+                            </p>
+                            <p className="text-sm text-slate-700">
+                              {selectedItem.outcome.extractedText}
+                            </p>
+                            {selectedItem.outcome.rawPatternMatch && (
+                              <p className="text-xs text-slate-500 mt-2 italic">
+                                Pattern: "{selectedItem.outcome.rawPatternMatch}"
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        <div className="space-y-4 pt-4 border-t border-slate-100">
+                          <p className="text-sm font-medium text-slate-700">
+                            Confirm or Edit Outcome
+                          </p>
+                          
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="outcomeType">Outcome Type</Label>
+                              <Select
+                                value={editForm.outcomeType}
+                                onValueChange={(value) => setEditForm((prev) => ({ ...prev, outcomeType: value }))}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {Object.entries(OUTCOME_LABELS).map(([key, label]) => (
+                                    <SelectItem key={key} value={key}>
+                                      {label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            
+                            {(editForm.outcomeType === "PROMISE_TO_PAY" || selectedItem.outcome.outcomeType === "PROMISE_TO_PAY") && (
+                              <div className="space-y-2">
+                                <Label htmlFor="promiseDate">Promise Date</Label>
+                                <div className="relative">
+                                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                  <Input
+                                    id="promiseDate"
+                                    type="date"
+                                    value={editForm.promiseDate}
+                                    onChange={(e) => setEditForm((prev) => ({ ...prev, promiseDate: e.target.value }))}
+                                    className="pl-10"
+                                  />
+                                </div>
+                              </div>
+                            )}
+                            
+                            {(editForm.outcomeType === "PROMISE_TO_PAY" || selectedItem.outcome.outcomeType === "PROMISE_TO_PAY") && (
+                              <div className="space-y-2">
+                                <Label htmlFor="amount">Amount</Label>
+                                <div className="relative">
+                                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                  <Input
+                                    id="amount"
+                                    type="text"
+                                    value={editForm.amount}
+                                    onChange={(e) => setEditForm((prev) => ({ ...prev, amount: e.target.value }))}
+                                    placeholder="0.00"
+                                    className="pl-10"
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label htmlFor="notes">Notes</Label>
+                            <Textarea
+                              id="notes"
+                              value={editForm.notes}
+                              onChange={(e) => setEditForm((prev) => ({ ...prev, notes: e.target.value }))}
+                              placeholder="Add any relevant notes..."
+                              rows={3}
+                            />
+                          </div>
+
+                          <div className="flex gap-3 pt-2">
+                            <Button
+                              onClick={handleConfirm}
+                              disabled={confirmMutation.isPending}
+                              className="bg-[#17B6C3] hover:bg-[#1396A1] text-white flex-1"
+                            >
+                              <Check className="h-4 w-4 mr-2" />
+                              {confirmMutation.isPending ? "Saving..." : "Confirm Outcome"}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={() => setSelectedItem(null)}
+                              disabled={confirmMutation.isPending}
+                            >
+                              <X className="h-4 w-4 mr-2" />
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg h-[600px] flex items-center justify-center">
+                      <div className="text-center">
+                        <div className="p-4 bg-slate-100 rounded-full inline-flex mb-4">
+                          <MessageSquare className="h-8 w-8 text-slate-400" />
+                        </div>
+                        <p className="text-lg font-medium text-slate-700">
+                          Select an item to review
+                        </p>
+                        <p className="text-sm text-slate-500 mt-1">
+                          Click on an outcome from the list to view details
+                        </p>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg h-[600px] flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="p-4 bg-slate-100 rounded-full inline-flex mb-4">
-                      <MessageSquare className="h-8 w-8 text-slate-400" />
-                    </div>
-                    <p className="text-lg font-medium text-slate-700">
-                      Select an item to review
-                    </p>
-                    <p className="text-sm text-slate-500 mt-1">
-                      Click on an outcome from the list to view details
-                    </p>
+                    </Card>
+                  )}
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="unmatched">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-slate-600">
+                    These emails couldn't be automatically matched to a debtor. Assign them to link future emails from the same sender.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => pollMutation.mutate()}
+                    disabled={pollMutation.isPending}
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${pollMutation.isPending ? 'animate-spin' : ''}`} />
+                    {pollMutation.isPending ? "Syncing..." : "Sync Now"}
+                  </Button>
+                </div>
+
+                {unmatchedLoading ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map((i) => (
+                      <Skeleton key={i} className="h-20 w-full" />
+                    ))}
                   </div>
-                </Card>
-              )}
-            </div>
-          </div>
+                ) : unmatchedEmails && unmatchedEmails.length > 0 ? (
+                  <div className="space-y-3">
+                    {unmatchedEmails.map((email) => (
+                      <Card key={email.id} className="bg-white/80 backdrop-blur-sm border-white/50 shadow-sm">
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Mail className="h-4 w-4 text-slate-400 shrink-0" />
+                                <p className="text-sm font-medium text-slate-900 truncate">{email.from}</p>
+                              </div>
+                              {email.subject && (
+                                <p className="text-sm text-slate-700 truncate mb-1">{email.subject}</p>
+                              )}
+                              <p className="text-xs text-slate-500 line-clamp-2">{email.contentPreview}</p>
+                              <p className="text-xs text-slate-400 mt-2">
+                                {format(new Date(email.createdAt), "MMM d, yyyy HH:mm")}
+                              </p>
+                            </div>
+                            <Dialog open={assigningEmailId === email.id} onOpenChange={(open) => {
+                              if (open) {
+                                setAssigningEmailId(email.id);
+                                setContactSearch("");
+                              } else {
+                                setAssigningEmailId(null);
+                              }
+                            }}>
+                              <DialogTrigger asChild>
+                                <Button size="sm" className="bg-[#17B6C3] hover:bg-[#1396A1] text-white shrink-0">
+                                  <Link2 className="h-4 w-4 mr-1" />
+                                  Assign
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Assign Email to Contact</DialogTitle>
+                                </DialogHeader>
+                                <div className="space-y-4">
+                                  <div className="bg-slate-50 rounded-lg p-3">
+                                    <p className="text-xs text-slate-500">From</p>
+                                    <p className="text-sm font-medium">{email.from}</p>
+                                    {email.subject && (
+                                      <>
+                                        <p className="text-xs text-slate-500 mt-2">Subject</p>
+                                        <p className="text-sm">{email.subject}</p>
+                                      </>
+                                    )}
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>Search Contacts</Label>
+                                    <div className="relative">
+                                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                      <Input
+                                        value={contactSearch}
+                                        onChange={(e) => setContactSearch(e.target.value)}
+                                        placeholder="Type to search contacts..."
+                                        className="pl-10"
+                                      />
+                                    </div>
+                                  </div>
+                                  <ScrollArea className="h-[300px]">
+                                    <div className="space-y-1">
+                                      {contactsList
+                                        ?.filter((c) => {
+                                          if (!contactSearch) return true;
+                                          const search = contactSearch.toLowerCase();
+                                          return (
+                                            c.name?.toLowerCase().includes(search) ||
+                                            c.email?.toLowerCase().includes(search) ||
+                                            c.companyName?.toLowerCase().includes(search)
+                                          );
+                                        })
+                                        .slice(0, 50)
+                                        .map((contact) => (
+                                          <button
+                                            key={contact.id}
+                                            onClick={() => assignMutation.mutate({ inboundMessageId: email.id, contactId: contact.id })}
+                                            disabled={assignMutation.isPending}
+                                            className="w-full text-left p-3 rounded-lg hover:bg-[#17B6C3]/5 transition-colors border border-transparent hover:border-[#17B6C3]/20"
+                                          >
+                                            <p className="text-sm font-medium text-slate-900">{contact.name}</p>
+                                            <div className="flex items-center gap-2 mt-1">
+                                              {contact.companyName && (
+                                                <span className="text-xs text-slate-500">{contact.companyName}</span>
+                                              )}
+                                              {contact.email && (
+                                                <span className="text-xs text-slate-400">{contact.email}</span>
+                                              )}
+                                            </div>
+                                          </button>
+                                        ))}
+                                      {contactsList?.length === 0 && (
+                                        <p className="text-sm text-slate-500 text-center py-8">No contacts found</p>
+                                      )}
+                                    </div>
+                                  </ScrollArea>
+                                </div>
+                              </DialogContent>
+                            </Dialog>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+                    <CardContent className="p-8 text-center">
+                      <div className="p-3 bg-green-100 rounded-full inline-flex mb-3">
+                        <Check className="h-6 w-6 text-green-600" />
+                      </div>
+                      <p className="text-sm text-slate-700 font-medium">All emails matched</p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        No unmatched emails in your inbox
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
 

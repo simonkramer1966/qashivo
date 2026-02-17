@@ -1,6 +1,32 @@
 import { db } from '../db';
 import { tenants } from '@shared/schema';
 import { eq } from 'drizzle-orm';
+import crypto from 'crypto';
+
+const OAUTH_STATE_SECRET = process.env.SESSION_SECRET || process.env.REPL_ID || 'fallback-oauth-state-secret';
+
+export function generateOAuthState(tenantId: string): string {
+  const nonce = crypto.randomBytes(16).toString('hex');
+  const payload = `${tenantId}:${nonce}`;
+  const hmac = crypto.createHmac('sha256', OAUTH_STATE_SECRET).update(payload).digest('hex');
+  return Buffer.from(`${payload}:${hmac}`).toString('base64url');
+}
+
+export function verifyOAuthState(state: string): string {
+  const decoded = Buffer.from(state, 'base64url').toString();
+  const parts = decoded.split(':');
+  if (parts.length < 3) {
+    throw new Error('Invalid OAuth state format');
+  }
+  const hmac = parts.pop()!;
+  const payload = parts.join(':');
+  const tenantId = parts[0];
+  const expectedHmac = crypto.createHmac('sha256', OAUTH_STATE_SECRET).update(payload).digest('hex');
+  if (!crypto.timingSafeEqual(Buffer.from(hmac), Buffer.from(expectedHmac))) {
+    throw new Error('Invalid OAuth state signature');
+  }
+  return tenantId;
+}
 
 const GOOGLE_SCOPES = [
   'https://www.googleapis.com/auth/gmail.readonly',
@@ -28,7 +54,7 @@ export function getGoogleAuthUrl(tenantId: string): string {
   }
 
   const redirectUri = `${getBaseUrl()}/api/email-connection/google/callback`;
-  const state = encodeURIComponent(tenantId);
+  const state = generateOAuthState(tenantId);
 
   const params = new URLSearchParams({
     client_id: clientId,
@@ -108,7 +134,7 @@ export function getMicrosoftAuthUrl(tenantId: string): string {
   }
 
   const redirectUri = `${getBaseUrl()}/api/email-connection/microsoft/callback`;
-  const state = encodeURIComponent(tenantId);
+  const state = generateOAuthState(tenantId);
 
   const params = new URLSearchParams({
     client_id: clientId,

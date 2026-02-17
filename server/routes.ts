@@ -23418,6 +23418,11 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
   app.use(emailConnectionRouter);
   // ==================== END EMAIL CONNECTION ROUTES ====================
 
+  // ==================== EMAIL POLLING SERVICE ====================
+  const { startPollingLoop } = await import('./services/emailPollingService');
+  startPollingLoop();
+  // ==================== END EMAIL POLLING SERVICE ====================
+
   const httpServer = createServer(app);
   
   // Initialize dashboard WebSocket service for real-time updates

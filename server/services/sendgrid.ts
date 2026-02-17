@@ -19,7 +19,6 @@ const emailService = new SendGridEmailService(config);
 export const DEFAULT_FROM = process.env.SENDGRID_FROM_NAME || 'Qashivo Credit Control';
 export const DEFAULT_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'cc@qashivo.com';
 
-// Simple send email function for backwards compatibility
 export async function sendEmail(params: {
   to: string;
   from: string;
@@ -31,14 +30,13 @@ export async function sendEmail(params: {
   invoiceId?: string;
   customerId?: string;
   trackClicks?: boolean;
+  tenantId?: string;
 }): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
-    // Check if demo mode is enabled - SHORT-CIRCUIT and return mock success
     const { demoModeService } = await import('./demoModeService.js');
     if (demoModeService.isEnabled()) {
       console.log('🎭 Demo mode: Skipping real email send, returning mock success');
       
-      // Schedule mock inbound response if context available
       if (params.invoiceId && params.customerId) {
         const { mockResponderService } = await import('./mockResponderService.js');
         mockResponderService.simulateEmailResponse({
@@ -49,11 +47,30 @@ export async function sendEmail(params: {
         });
       }
       
-      // Return mock success immediately - DO NOT send real email
       return { success: true, messageId: 'demo-mock-email-' + Date.now() };
     }
 
-    // Debug: log replyTo being passed to SendGrid
+    if (params.tenantId) {
+      const { isEmailConnected, sendViaConnectedAccount } = await import('./email/ConnectedEmailService.js');
+      const connected = await isEmailConnected(params.tenantId);
+      if (connected) {
+        console.log(`📧 Sending via connected email account for tenant ${params.tenantId}`);
+        const connectedResult = await sendViaConnectedAccount({
+          tenantId: params.tenantId,
+          to: params.to,
+          subject: params.subject,
+          htmlBody: params.html,
+          textBody: params.text,
+          replyTo: params.replyTo,
+          headers: params.headers,
+        });
+        if (connectedResult.success) {
+          return connectedResult;
+        }
+        console.warn(`⚠️ Connected email send failed, falling back to SendGrid: ${connectedResult.error}`);
+      }
+    }
+
     console.log(`📧 sendEmail called with replyTo: ${params.replyTo || '(none)'}`);
     
     const message: EmailMessage = {

@@ -279,6 +279,7 @@ class CommunicationsOrchestrator {
         from: `${fromName} <${fromEmail}>`,
         invoiceId: request.invoiceIds?.[0],
         customerId: request.contactId,
+        tenantId: request.tenantId
       });
       
       if (!result.success) {

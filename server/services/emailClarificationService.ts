@@ -138,7 +138,8 @@ class EmailClarificationService {
         replyTo,
         subject,
         html: htmlContent,
-        text: textContent
+        text: textContent,
+        tenantId: context.tenantId
       });
       
       if (!result.success) {
@@ -232,7 +233,8 @@ class EmailClarificationService {
         replyTo,
         subject,
         html: htmlContent,
-        text: textContent
+        text: textContent,
+        tenantId: context.tenantId
       });
       
       if (!result.success) {
@@ -1121,6 +1123,7 @@ ${htmlBody}
         subject,
         html: htmlContent,
         text: textContent,
+        tenantId: context.tenantId
       });
 
       if (!result.success) {
@@ -1477,6 +1480,7 @@ ${htmlBody}
         subject,
         html: htmlContent,
         text: textContent,
+        tenantId: context.tenantId
       });
 
       if (!result.success) {
