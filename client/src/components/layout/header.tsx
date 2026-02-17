@@ -304,16 +304,7 @@ export default function Header({ title, subtitle, systemMessage, action, noBorde
           )}
         </div>
         <div className="flex items-center gap-2">
-          {/* Onboarding Resume Button - Only show if onboarding is not complete */}
-          {onboardingStatus && !onboardingStatus.completed && (
-            <button
-              onClick={() => setLocation("/onboarding")}
-              className="h-8 px-3 text-[13px] font-medium text-amber-600 hover:bg-amber-50 rounded transition-colors"
-              data-testid="button-resume-onboarding"
-            >
-              Complete Setup
-            </button>
-          )}
+
           {action}
         </div>
       </div>
