@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Mail, Check, X, AlertCircle, Calendar, DollarSign, MessageSquare, Clock, UserPlus, RefreshCw, Search, Link2 } from "lucide-react";
 import NewSidebar from "@/components/layout/new-sidebar";
 import BottomNav from "@/components/layout/bottom-nav";
-import Header from "@/components/layout/header";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -223,13 +223,21 @@ export default function InboxPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800">
-      <NewSidebar />
+    <div className="flex h-screen bg-white">
+      <div className="hidden lg:block">
+        <NewSidebar />
+      </div>
 
-      <main className="lg:pl-64 pb-20 lg:pb-4">
-        <Header title="Inbox" subtitle="Review detected outcomes from customer replies" />
+      <main className="flex-1 flex flex-col min-h-0 main-with-bottom-nav">
+        <div className="hidden lg:block max-w-7xl mx-auto w-full px-6 py-5 border-b border-gray-100">
+          <h1 className="text-2xl font-bold text-gray-900 font-heading">Inbox</h1>
+          <p className="text-sm text-gray-500 mt-1">Review detected outcomes from customer replies</p>
+        </div>
+        <div className="lg:hidden px-4 py-4 border-b border-gray-100">
+          <h1 className="text-xl font-bold text-gray-900 font-heading">Inbox</h1>
+        </div>
 
-        <div className="px-4 pt-6 pb-8 max-w-7xl mx-auto">
+        <div className="flex-1 overflow-y-auto px-4 lg:px-6 pt-6 pb-8 max-w-7xl mx-auto w-full">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="mb-6">
               <TabsTrigger value="outcomes" className="gap-2">
