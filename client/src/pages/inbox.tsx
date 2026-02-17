@@ -229,12 +229,18 @@ export default function InboxPage() {
       </div>
 
       <main className="flex-1 flex flex-col min-h-0 main-with-bottom-nav">
-        <div className="hidden lg:block max-w-7xl mx-auto w-full px-6 py-5 border-b border-gray-100">
-          <h1 className="text-2xl font-bold text-gray-900 font-heading">Inbox</h1>
-          <p className="text-sm text-gray-500 mt-1">Review detected outcomes from customer replies</p>
-        </div>
-        <div className="lg:hidden px-4 py-4 border-b border-gray-100">
-          <h1 className="text-xl font-bold text-gray-900 font-heading">Inbox</h1>
+        <div className="sticky top-0 z-40 bg-white">
+          <div className="px-6 lg:px-8 py-5 border-b border-slate-100">
+            <div className="hidden lg:flex items-center justify-between">
+              <div>
+                <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight">Inbox</h2>
+                <p className="text-[13px] text-slate-400 mt-0.5">Review detected outcomes from customer replies</p>
+              </div>
+            </div>
+            <div className="lg:hidden">
+              <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight">Inbox</h2>
+            </div>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 lg:px-6 pt-6 pb-8 max-w-7xl mx-auto w-full">
