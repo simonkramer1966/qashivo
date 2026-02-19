@@ -2170,7 +2170,7 @@ export default function Settings() {
                     <h2 className="text-lg font-semibold text-gray-900">Profile Information</h2>
                   </div>
                   <p className="text-sm text-gray-500 mb-6">
-                    Update your personal information and preferences
+                    Update your subscriber information and preferences
                   </p>
                   
                   <div className="space-y-4">
