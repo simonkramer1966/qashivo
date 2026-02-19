@@ -2102,6 +2102,15 @@ export default function Settings() {
                   >
                     General
                   </TabsTrigger>
+                  <ProtectedComponent permission="admin:users" hideOnDeny>
+                    <TabsTrigger 
+                      value="users" 
+                      className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
+                      data-testid="tab-users"
+                    >
+                      Users
+                    </TabsTrigger>
+                  </ProtectedComponent>
                   <TabsTrigger 
                     value="integrations" 
                     className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
@@ -2130,15 +2139,6 @@ export default function Settings() {
                   >
                     Branding
                   </TabsTrigger>
-                  <ProtectedComponent permission="admin:users" hideOnDeny>
-                    <TabsTrigger 
-                      value="users" 
-                      className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
-                      data-testid="tab-users"
-                    >
-                      Users
-                    </TabsTrigger>
-                  </ProtectedComponent>
                   <TabsTrigger 
                     value="playbook" 
                     className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
