@@ -2570,60 +2570,6 @@ export default function Settings() {
                   </div>
                 </div>
 
-                <div className="py-6">
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center">
-                      <Database className="h-5 w-5 text-[#17B6C3] mr-2" />
-                      <h2 className="text-lg font-semibold text-gray-900">Developer Tools</h2>
-                    </div>
-                    <Badge className="bg-[#E8A23B]/10 text-[#E8A23B] border-[#E8A23B]/20" data-testid="badge-dev-tools-status">
-                      Demo Mode
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-gray-500 mb-6">
-                    Generate sample data for testing and demonstrations
-                  </p>
-
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-100">
-                      <div>
-                        <p className="text-[13px] font-medium text-gray-900 flex items-center">
-                          <Zap className="h-4 w-4 mr-2 text-[#17B6C3]" />
-                          Generate Mock AR Data
-                        </p>
-                        <p className="text-sm text-gray-500 mt-1">
-                          Creates 80 agency clients with 1,800 invoices over 6 months
-                        </p>
-                      </div>
-                      <Button 
-                        onClick={handleGenerateMockData}
-                        disabled={isGeneratingMockData}
-                        className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
-                        data-testid="button-generate-mock-data"
-                      >
-                        {isGeneratingMockData ? "Generating..." : "Generate Data"}
-                      </Button>
-                    </div>
-
-                    <div className="flex items-center justify-between p-4 bg-orange-50 rounded-lg border border-orange-200">
-                      <div>
-                        <p className="font-medium text-gray-900">Clean Up Contacts</p>
-                        <p className="text-sm text-gray-500 mt-1">
-                          Remove old Xero contacts and keep only 80 mock clients
-                        </p>
-                      </div>
-                      <Button 
-                        onClick={handleCleanupContacts}
-                        disabled={isCleaningContacts}
-                        variant="outline"
-                        className="border-orange-300 text-orange-600 hover:bg-orange-100"
-                        data-testid="button-cleanup-contacts"
-                      >
-                        {isCleaningContacts ? "Cleaning..." : "Clean Up"}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
               </TabsContent>
 
               <TabsContent value="notifications" className="mt-0">
