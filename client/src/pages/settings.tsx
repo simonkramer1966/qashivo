@@ -2494,15 +2494,15 @@ export default function Settings() {
                     <div className="space-y-6">
                       <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-100">
                         <div className="flex items-center space-x-4">
-                          <div className={`p-3 rounded-lg ${emailConnectionStatus.provider === 'google' ? 'bg-red-100' : 'bg-blue-100'}`}>
-                            {emailConnectionStatus.provider === 'google' 
+                          <div className={`p-3 rounded-lg ${emailConnectionStatus.provider === 'gmail' ? 'bg-red-100' : 'bg-blue-100'}`}>
+                            {emailConnectionStatus.provider === 'gmail' 
                               ? <SiGoogle className="h-6 w-6 text-red-500" />
                               : <Mail className="h-6 w-6 text-blue-600" />
                             }
                           </div>
                           <div>
                             <p className="text-[13px] font-semibold text-gray-900">
-                              Connected to {emailConnectionStatus.provider === 'google' ? 'Gmail / Google Workspace' : 'Outlook / Microsoft 365'}
+                              Connected to {emailConnectionStatus.provider === 'gmail' ? 'Gmail / Google Workspace' : 'Outlook / Microsoft 365'}
                             </p>
                             {emailConnectionStatus.email && (
                               <p className="text-sm text-gray-500">
