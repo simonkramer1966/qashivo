@@ -29,6 +29,8 @@ export function verifyOAuthState(state: string): string {
 }
 
 const GOOGLE_SCOPES = [
+  'openid',
+  'email',
   'https://www.googleapis.com/auth/gmail.readonly',
   'https://www.googleapis.com/auth/gmail.send',
   'https://www.googleapis.com/auth/gmail.modify',
@@ -106,24 +108,46 @@ export async function handleGoogleCallback(code: string, tenantId: string, reque
     access_token: string;
     refresh_token?: string;
     expires_in: number;
+    id_token?: string;
   };
 
-  const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-    headers: { Authorization: `Bearer ${tokenData.access_token}` },
-  });
+  let email: string | null = null;
 
-  if (!userInfoResponse.ok) {
-    throw new Error('Failed to fetch Google user info');
+  if (tokenData.id_token) {
+    try {
+      const payload = JSON.parse(Buffer.from(tokenData.id_token.split('.')[1], 'base64').toString());
+      email = payload.email || null;
+      console.log(`[EmailConnection] Got email from id_token: ${email}`);
+    } catch (e) {
+      console.error('[EmailConnection] Failed to decode id_token:', e);
+    }
   }
 
-  const userInfo = await userInfoResponse.json() as { email: string };
+  if (!email) {
+    const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` },
+    });
+
+    if (!userInfoResponse.ok) {
+      const userInfoError = await userInfoResponse.text();
+      console.error(`[EmailConnection] Google userinfo error (${userInfoResponse.status}):`, userInfoError);
+      throw new Error(`Failed to fetch Google user info: ${userInfoResponse.status} ${userInfoError}`);
+    }
+
+    const userInfo = await userInfoResponse.json() as { email: string };
+    email = userInfo.email;
+  }
+
+  if (!email) {
+    throw new Error('Could not determine email address from Google account');
+  }
 
   const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000);
 
   await db.update(tenants)
     .set({
       emailProvider: 'gmail',
-      emailConnectedAddress: userInfo.email,
+      emailConnectedAddress: email,
       emailAccessToken: tokenData.access_token,
       emailRefreshToken: tokenData.refresh_token || null,
       emailTokenExpiresAt: expiresAt,
