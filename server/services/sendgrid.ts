@@ -51,24 +51,34 @@ export async function sendEmail(params: {
     }
 
     if (params.tenantId) {
-      const { isEmailConnected, sendViaConnectedAccount } = await import('./email/ConnectedEmailService.js');
-      const connected = await isEmailConnected(params.tenantId);
-      if (connected) {
-        console.log(`📧 Sending via connected email account for tenant ${params.tenantId}`);
-        const connectedResult = await sendViaConnectedAccount({
-          tenantId: params.tenantId,
-          to: params.to,
-          subject: params.subject,
-          htmlBody: params.html,
-          textBody: params.text,
-          replyTo: params.replyTo,
-          headers: params.headers,
-        });
-        if (connectedResult.success) {
-          return connectedResult;
+      try {
+        const { isEmailConnected, sendViaConnectedAccount } = await import('./email/ConnectedEmailService.js');
+        const connected = await isEmailConnected(params.tenantId);
+        console.log(`📧 [EmailRouting] tenantId=${params.tenantId}, connected=${connected}`);
+        if (connected) {
+          console.log(`📧 [EmailRouting] Sending via connected email account for tenant ${params.tenantId}`);
+          const connectedResult = await sendViaConnectedAccount({
+            tenantId: params.tenantId,
+            to: params.to,
+            subject: params.subject,
+            htmlBody: params.html,
+            textBody: params.text,
+            replyTo: params.replyTo,
+            headers: params.headers,
+          });
+          if (connectedResult.success) {
+            console.log(`✅ [EmailRouting] Email sent via connected account, messageId: ${connectedResult.messageId}`);
+            return connectedResult;
+          }
+          console.warn(`⚠️ [EmailRouting] Connected email send failed, falling back to SendGrid: ${connectedResult.error}`);
+        } else {
+          console.log(`📧 [EmailRouting] No connected email for tenant ${params.tenantId}, using SendGrid`);
         }
-        console.warn(`⚠️ Connected email send failed, falling back to SendGrid: ${connectedResult.error}`);
+      } catch (routingErr: any) {
+        console.error(`❌ [EmailRouting] Error checking connected email, falling back to SendGrid:`, routingErr.message);
       }
+    } else {
+      console.log(`📧 [EmailRouting] No tenantId provided, using SendGrid directly`);
     }
 
     console.log(`📧 sendEmail called with replyTo: ${params.replyTo || '(none)'}`);
