@@ -43,21 +43,24 @@ const MICROSOFT_SCOPES = [
   'https://graph.microsoft.com/Mail.Send',
 ];
 
-function getBaseUrl(requestHost?: string): string {
-  if (requestHost) {
-    const protocol = requestHost.includes('localhost') ? 'http' : 'https';
-    return `${protocol}://${requestHost}`;
+function getBaseUrl(requestHost?: string, forwardedHost?: string, forwardedProto?: string): string {
+  const host = forwardedHost || requestHost;
+  if (host) {
+    const cleanHost = host.split(',')[0].trim();
+    const protocol = forwardedProto?.split(',')[0]?.trim() || (cleanHost.includes('localhost') ? 'http' : 'https');
+    console.log(`[EmailConnection] getBaseUrl: requestHost=${requestHost}, forwardedHost=${forwardedHost}, proto=${protocol}, using=${cleanHost}`);
+    return `${protocol}://${cleanHost}`;
   }
   return process.env.APP_URL || 'https://qashivo.replit.app';
 }
 
-export function getGoogleAuthUrl(tenantId: string, requestHost?: string): string {
+export function getGoogleAuthUrl(tenantId: string, requestHost?: string, forwardedHost?: string, forwardedProto?: string): string {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   if (!clientId) {
     throw new Error('GOOGLE_CLIENT_ID is not configured');
   }
 
-  const redirectUri = `${getBaseUrl(requestHost)}/api/email-connection/google/callback`;
+  const redirectUri = `${getBaseUrl(requestHost, forwardedHost, forwardedProto)}/api/email-connection/google/callback`;
   const state = generateOAuthState(tenantId);
 
   const params = new URLSearchParams({
@@ -73,14 +76,14 @@ export function getGoogleAuthUrl(tenantId: string, requestHost?: string): string
   return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 }
 
-export async function handleGoogleCallback(code: string, tenantId: string, requestHost?: string): Promise<void> {
+export async function handleGoogleCallback(code: string, tenantId: string, requestHost?: string, forwardedHost?: string, forwardedProto?: string): Promise<void> {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
   if (!clientId || !clientSecret) {
     throw new Error('Google OAuth credentials are not configured');
   }
 
-  const redirectUri = `${getBaseUrl(requestHost)}/api/email-connection/google/callback`;
+  const redirectUri = `${getBaseUrl(requestHost, forwardedHost, forwardedProto)}/api/email-connection/google/callback`;
 
   const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
@@ -131,13 +134,13 @@ export async function handleGoogleCallback(code: string, tenantId: string, reque
     .where(eq(tenants.id, tenantId));
 }
 
-export function getMicrosoftAuthUrl(tenantId: string, requestHost?: string): string {
+export function getMicrosoftAuthUrl(tenantId: string, requestHost?: string, forwardedHost?: string, forwardedProto?: string): string {
   const clientId = process.env.MICROSOFT_CLIENT_ID;
   if (!clientId) {
     throw new Error('MICROSOFT_CLIENT_ID is not configured');
   }
 
-  const redirectUri = `${getBaseUrl(requestHost)}/api/email-connection/microsoft/callback`;
+  const redirectUri = `${getBaseUrl(requestHost, forwardedHost, forwardedProto)}/api/email-connection/microsoft/callback`;
   const state = generateOAuthState(tenantId);
 
   const params = new URLSearchParams({
@@ -151,14 +154,14 @@ export function getMicrosoftAuthUrl(tenantId: string, requestHost?: string): str
   return `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?${params.toString()}`;
 }
 
-export async function handleMicrosoftCallback(code: string, tenantId: string, requestHost?: string): Promise<void> {
+export async function handleMicrosoftCallback(code: string, tenantId: string, requestHost?: string, forwardedHost?: string, forwardedProto?: string): Promise<void> {
   const clientId = process.env.MICROSOFT_CLIENT_ID;
   const clientSecret = process.env.MICROSOFT_CLIENT_SECRET;
   if (!clientId || !clientSecret) {
     throw new Error('Microsoft OAuth credentials are not configured');
   }
 
-  const redirectUri = `${getBaseUrl(requestHost)}/api/email-connection/microsoft/callback`;
+  const redirectUri = `${getBaseUrl(requestHost, forwardedHost, forwardedProto)}/api/email-connection/microsoft/callback`;
 
   const tokenResponse = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
     method: 'POST',

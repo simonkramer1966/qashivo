@@ -40,7 +40,7 @@ router.get('/api/email-connection/google/connect', isAuthenticated, async (req, 
       return res.status(400).json({ message: 'No tenant associated with user' });
     }
 
-    const authUrl = getGoogleAuthUrl(tenantId, req.get('host'));
+    const authUrl = getGoogleAuthUrl(tenantId, req.get('host'), req.get('x-forwarded-host'), req.get('x-forwarded-proto'));
     res.redirect(authUrl);
   } catch (error) {
     console.error('Google connect error:', error);
@@ -56,7 +56,7 @@ router.get('/api/email-connection/google/callback', async (req, res) => {
     }
 
     const tenantId = verifyOAuthState(state as string);
-    await handleGoogleCallback(code as string, tenantId, req.get('host'));
+    await handleGoogleCallback(code as string, tenantId, req.get('host'), req.get('x-forwarded-host'), req.get('x-forwarded-proto'));
     res.redirect('/settings?tab=integrations&email_connected=true');
   } catch (error) {
     console.error('Google callback error:', error);
@@ -71,7 +71,7 @@ router.get('/api/email-connection/microsoft/connect', isAuthenticated, async (re
       return res.status(400).json({ message: 'No tenant associated with user' });
     }
 
-    const authUrl = getMicrosoftAuthUrl(tenantId, req.get('host'));
+    const authUrl = getMicrosoftAuthUrl(tenantId, req.get('host'), req.get('x-forwarded-host'), req.get('x-forwarded-proto'));
     res.redirect(authUrl);
   } catch (error) {
     console.error('Microsoft connect error:', error);
@@ -87,7 +87,7 @@ router.get('/api/email-connection/microsoft/callback', async (req, res) => {
     }
 
     const tenantId = verifyOAuthState(state as string);
-    await handleMicrosoftCallback(code as string, tenantId, req.get('host'));
+    await handleMicrosoftCallback(code as string, tenantId, req.get('host'), req.get('x-forwarded-host'), req.get('x-forwarded-proto'));
     res.redirect('/settings?tab=integrations&email_connected=true');
   } catch (error) {
     console.error('Microsoft callback error:', error);
