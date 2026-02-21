@@ -556,12 +556,12 @@ export async function sendUserInvitationEmail(params: {
   const acceptUrl = `${process.env.APP_URL || 'http://localhost:5000'}/accept-user-invite?token=${inviteToken}`;
   
   const roleLabelMap: Record<string, string> = {
-    admin: 'Administrator',
     owner: 'Owner',
-    collector: 'Credit Controller',
-    accountant: 'Accountant',
-    user: 'Team Member',
+    admin: 'Admin',
+    accountant: 'Accountant / Partner',
     manager: 'Manager',
+    credit_controller: 'Credit Controller',
+    readonly: 'Read Only',
   };
   const roleLabel = roleLabelMap[role] || role;
   const inviterLine = inviterName ? ` by ${inviterName}` : '';
