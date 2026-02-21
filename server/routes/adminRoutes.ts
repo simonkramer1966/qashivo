@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { db } from "../db";
-import { partners, smeClients, users, importJobs, partnerAuditLog, tenants } from "@shared/schema";
+import { partners, smeClients, users, importJobs, activityLogs, tenants } from "@shared/schema";
 import { eq, desc, sql, and, or, ilike, ne } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
@@ -88,11 +88,16 @@ async function logAuditEvent(
   scopePartnerId?: string,
   scopeSmeId?: string
 ) {
-  await db.insert(partnerAuditLog).values({
-    actorUserId,
-    eventType,
-    targetType,
-    targetId,
+  await db.insert(activityLogs).values({
+    activityType: eventType,
+    category: 'partner',
+    action: eventType,
+    description: `Partner event: ${eventType} on ${targetType} ${targetId}`,
+    result: 'success',
+    entityType: targetType,
+    entityId: targetId,
+    userId: actorUserId,
+    actor: 'USER',
     metadata: metadata || {},
     createdAt: new Date(),
   });
@@ -775,18 +780,19 @@ router.get("/audit", requireAdminAuth, async (req, res) => {
 
     let query = db
       .select({
-        id: partnerAuditLog.id,
-        actorUserId: partnerAuditLog.actorUserId,
-        eventType: partnerAuditLog.eventType,
-        targetType: partnerAuditLog.targetType,
-        targetId: partnerAuditLog.targetId,
-        metadata: partnerAuditLog.metadata,
-        createdAt: partnerAuditLog.createdAt,
+        id: activityLogs.id,
+        actorUserId: activityLogs.userId,
+        eventType: activityLogs.activityType,
+        targetType: activityLogs.entityType,
+        targetId: activityLogs.entityId,
+        metadata: activityLogs.metadata,
+        createdAt: activityLogs.createdAt,
         actorEmail: users.email,
       })
-      .from(partnerAuditLog)
-      .leftJoin(users, eq(partnerAuditLog.actorUserId, users.id))
-      .orderBy(desc(partnerAuditLog.createdAt))
+      .from(activityLogs)
+      .leftJoin(users, eq(activityLogs.userId, users.id))
+      .where(eq(activityLogs.category, 'partner'))
+      .orderBy(desc(activityLogs.createdAt))
       .limit(Number(limit));
 
     const result = await query;

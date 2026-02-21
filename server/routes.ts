@@ -61,7 +61,7 @@ import {
   timelineEvents,
   attentionItems,
   outcomes,
-  auditEvents,
+  activityLogs,
   collectionPolicies,
   paymentPlans,
   emailMessages,
@@ -13620,16 +13620,15 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
       const { debtorId, invoiceId, type, actor, limit = 100 } = req.query;
 
-      // Build conditions array to ensure tenant filter is always applied
-      const conditions = [eq(auditEvents.tenantId, user.tenantId)];
-      if (debtorId) conditions.push(eq(auditEvents.debtorId, debtorId as string));
-      if (invoiceId) conditions.push(eq(auditEvents.invoiceId, invoiceId as string));
-      if (type) conditions.push(eq(auditEvents.type, type as string));
-      if (actor) conditions.push(eq(auditEvents.actor, actor as string));
+      const conditions = [eq(activityLogs.tenantId, user.tenantId), eq(activityLogs.category, 'audit')];
+      if (debtorId) conditions.push(eq(activityLogs.debtorId, debtorId as string));
+      if (invoiceId) conditions.push(eq(activityLogs.invoiceId, invoiceId as string));
+      if (type) conditions.push(eq(activityLogs.activityType, type as string));
+      if (actor) conditions.push(eq(activityLogs.actor, actor as string));
 
-      const result = await db.select().from(auditEvents)
+      const result = await db.select().from(activityLogs)
         .where(and(...conditions))
-        .orderBy(desc(auditEvents.createdAt))
+        .orderBy(desc(activityLogs.createdAt))
         .limit(parseInt(limit as string));
 
       res.json(result);
@@ -22330,12 +22329,12 @@ ${tenant.name}
         userContactAssignments, walletTransactions
       } = await import('@shared/schema.js');
       
-      const { auditEvents, outcomes } = await import('@shared/schema.js');
+      const { outcomes } = await import('@shared/schema.js');
 
       // Delete in order respecting foreign key constraints (child tables first)
       const result = await db.transaction(async (tx) => {
-        // Audit events must be deleted first (FK references to outcomes and actions)
-        const deletedAuditEvents = await tx.delete(auditEvents).where(eq(auditEvents.tenantId, tenantId)).returning();
+        // Activity logs (audit entries) must be deleted first (FK references to outcomes and actions)
+        const deletedActivityLogs = await tx.delete(activityLogs).where(eq(activityLogs.tenantId, tenantId)).returning();
 
         // Timeline and messaging
         const deletedTimeline = await tx.delete(timelineEvents).where(eq(timelineEvents.tenantId, tenantId)).returning();
@@ -22365,7 +22364,7 @@ ${tenant.name}
         }
         const deletedPlans = await tx.delete(paymentPlans).where(eq(paymentPlans.tenantId, tenantId)).returning();
         
-        // Actions (after audit_events which references them)
+        // Actions (after activity_logs which references them)
         const deletedActions = await tx.delete(actions).where(eq(actions.tenantId, tenantId)).returning();
         
         // Invoices (before contacts due to foreign key)
@@ -22397,7 +22396,7 @@ ${tenant.name}
         const deletedContacts = await tx.delete(contacts).where(eq(contacts.tenantId, tenantId)).returning();
         
         return {
-          auditEvents: deletedAuditEvents.length,
+          activityLogs: deletedActivityLogs.length,
           timeline: deletedTimeline.length,
           voiceCalls: deletedVoiceCalls.length,
           emails: deletedEmails.length,
@@ -22447,10 +22446,8 @@ ${tenant.name}
         paymentPromises, disputes, workflowTimers, policyDecisions
       } = await import('@shared/schema.js');
 
-      const { auditEvents } = await import('@shared/schema.js');
-
       const result = await db.transaction(async (tx) => {
-        const deletedAuditEvents = await tx.delete(auditEvents).where(eq(auditEvents.tenantId, tenantId)).returning();
+        const deletedActivityLogs = await tx.delete(activityLogs).where(eq(activityLogs.tenantId, tenantId)).returning();
 
         const deletedTimeline = await tx.delete(timelineEvents).where(eq(timelineEvents.tenantId, tenantId)).returning();
         const deletedContactOutcomes = await tx.delete(contactOutcomes).where(eq(contactOutcomes.tenantId, tenantId)).returning();
@@ -22484,7 +22481,7 @@ ${tenant.name}
           .where(eq(invoices.tenantId, tenantId));
 
         return {
-          auditEvents: deletedAuditEvents.length,
+          activityLogs: deletedActivityLogs.length,
           timeline: deletedTimeline.length,
           emails: deletedEmails.length,
           sms: deletedSms.length,

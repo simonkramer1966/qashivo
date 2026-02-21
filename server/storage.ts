@@ -29,7 +29,7 @@ import {
   promisesToPay,
   globalTemplates,
   tenantTemplates,
-  partnerAuditLog,
+  activityLogs,
   type User,
   type UpsertUser,
   type Tenant,
@@ -5450,15 +5450,18 @@ export class DatabaseStorage implements IStorage {
     resourceId: string;
     metadata?: Record<string, any>;
   }): Promise<void> {
-    await db.insert(partnerAuditLog).values({
-      actorUserId: params.userId,
-      eventType: params.action,
-      targetId: params.resourceId,
-      targetType: params.resourceType,
-      metadata: {
-        tenantId: params.tenantId,
-        ...params.metadata,
-      },
+    await db.insert(activityLogs).values({
+      tenantId: params.tenantId,
+      activityType: params.action,
+      category: 'partner',
+      action: params.action,
+      description: `${params.action} on ${params.resourceType}/${params.resourceId}`,
+      result: 'success',
+      entityType: params.resourceType,
+      entityId: params.resourceId,
+      userId: params.userId,
+      actor: 'USER',
+      metadata: params.metadata || {},
     });
     console.log(`📝 Audit: ${params.action} by user ${params.userId} on ${params.resourceType}/${params.resourceId}`);
   }

@@ -8,7 +8,7 @@ import {
   customerContactPersons,
   inboundMessages,
   contactOutcomes,
-  auditEvents
+  activityLogs
 } from "@shared/schema";
 import { eq, and, desc, asc, lt, or, sql, ne, inArray } from "drizzle-orm";
 import type { 
@@ -127,20 +127,21 @@ export class CustomerTimelineService {
 
       // Fetch VOICE audit events (limited to 30 for preview)
       db.select({
-        id: auditEvents.id,
-        createdAt: auditEvents.createdAt,
-        type: auditEvents.type,
-        summary: auditEvents.summary,
-        payload: auditEvents.payload,
-        invoiceId: auditEvents.invoiceId,
-        actor: auditEvents.actor
+        id: activityLogs.id,
+        createdAt: activityLogs.createdAt,
+        type: activityLogs.activityType,
+        summary: activityLogs.description,
+        payload: activityLogs.metadata,
+        invoiceId: activityLogs.invoiceId,
+        actor: activityLogs.actor
       })
-      .from(auditEvents)
+      .from(activityLogs)
       .where(and(
-        eq(auditEvents.debtorId, customerId),
-        eq(auditEvents.tenantId, tenantId)
+        eq(activityLogs.debtorId, customerId),
+        eq(activityLogs.tenantId, tenantId),
+        eq(activityLogs.category, 'audit')
       ))
-      .orderBy(desc(auditEvents.createdAt))
+      .orderBy(desc(activityLogs.createdAt))
       .limit(30)
     ]);
 
@@ -438,21 +439,22 @@ export class CustomerTimelineService {
     // Fetch VOICE audit events only for this debtor
     const allAuditItems = await db
       .select({
-        id: auditEvents.id,
-        createdAt: auditEvents.createdAt,
-        type: auditEvents.type,
-        summary: auditEvents.summary,
-        payload: auditEvents.payload,
-        invoiceId: auditEvents.invoiceId,
-        actor: auditEvents.actor,
-        outcomeId: auditEvents.outcomeId
+        id: activityLogs.id,
+        createdAt: activityLogs.createdAt,
+        type: activityLogs.activityType,
+        summary: activityLogs.description,
+        payload: activityLogs.metadata,
+        invoiceId: activityLogs.invoiceId,
+        actor: activityLogs.actor,
+        outcomeId: activityLogs.outcomeId
       })
-      .from(auditEvents)
+      .from(activityLogs)
       .where(and(
-        eq(auditEvents.debtorId, customerId),
-        eq(auditEvents.tenantId, tenantId)
+        eq(activityLogs.debtorId, customerId),
+        eq(activityLogs.tenantId, tenantId),
+        eq(activityLogs.category, 'audit')
       ))
-      .orderBy(desc(auditEvents.createdAt));
+      .orderBy(desc(activityLogs.createdAt));
     
     // Filter to only VOICE channel events
     const auditItems = allAuditItems.filter(item => {

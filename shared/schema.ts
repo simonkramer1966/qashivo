@@ -3483,26 +3483,32 @@ export const tenantMetadata = pgTable("tenant_metadata", {
   index("idx_tenant_metadata_status").on(table.subscriptionStatus),
 ]);
 
-// Activity Logs table - Comprehensive audit trail for all system activities
+// Activity Logs table - Unified audit trail for all system activities, business events, partner events, and security events
 export const activityLogs = pgTable("activity_logs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  tenantId: varchar("tenant_id").references(() => tenants.id),
   
   // Activity classification
-  activityType: varchar("activity_type").notNull(), // email, sms, whatsapp, voice, ai_learning, ml_prediction, automation, workflow
-  category: varchar("category").notNull(), // communication, learning, automation, system
+  activityType: varchar("activity_type").notNull(), // email, sms, whatsapp, voice, ai_learning, ml_prediction, automation, workflow, login, logout, role_change, etc.
+  category: varchar("category").notNull(), // communication, learning, automation, system, audit, partner, security
   
-  // Entity references
-  entityType: varchar("entity_type"), // invoice, contact, action, workflow
-  entityId: varchar("entity_id"), // ID of the related entity
+  // Generic entity references
+  entityType: varchar("entity_type"), // invoice, contact, action, workflow, user, tenant
+  entityId: varchar("entity_id"),
+  
+  // Typed FK references (for audit events that link to specific records)
+  debtorId: varchar("debtor_id").references(() => contacts.id),
+  invoiceId: varchar("invoice_id").references(() => invoices.id),
+  actionId: varchar("action_id").references(() => actions.id),
+  outcomeId: varchar("outcome_id").references(() => outcomes.id),
   
   // Activity details
-  action: varchar("action").notNull(), // sent, received, analyzed, predicted, optimized, executed
-  description: text("description").notNull(), // User-friendly description
+  action: varchar("action").notNull(), // sent, received, analyzed, predicted, optimized, executed, login, logout, etc.
+  description: text("description").notNull(),
   result: varchar("result").notNull(), // success, failure, pending, skipped
   
   // Rich metadata (JSON)
-  metadata: jsonb("metadata").default("{}"), // Additional context (recipients, scores, reasoning, etc.)
+  metadata: jsonb("metadata").default("{}"),
   
   // Error tracking
   errorMessage: text("error_message"),
@@ -3511,18 +3517,26 @@ export const activityLogs = pgTable("activity_logs", {
   // Performance tracking
   duration: integer("duration"), // milliseconds
   
-  // User context (if applicable)
+  // Actor tracking
   userId: varchar("user_id").references(() => users.id),
+  actor: varchar("actor").default("USER"), // USER, SYSTEM
+  
+  // Security context (populated for security events)
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
   
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
-  // Performance indexes for filtering and search
   index("idx_activity_logs_tenant").on(table.tenantId),
   index("idx_activity_logs_type").on(table.activityType),
   index("idx_activity_logs_category").on(table.category),
   index("idx_activity_logs_entity").on(table.entityType, table.entityId),
   index("idx_activity_logs_result").on(table.result),
   index("idx_activity_logs_created_at").on(table.createdAt),
+  index("idx_activity_logs_debtor").on(table.debtorId),
+  index("idx_activity_logs_invoice").on(table.invoiceId),
+  index("idx_activity_logs_actor").on(table.actor),
+  index("idx_activity_logs_user").on(table.userId),
 ]);
 
 // Partners table - Accounting firms that manage multiple client tenants
@@ -3693,29 +3707,9 @@ export const smeInviteTokens = pgTable("sme_invite_tokens", {
   index("idx_sme_invite_tokens_status").on(table.status),
 ]);
 
-// Partner Audit Log - Tracks partner-related events
-export const partnerAuditLog = pgTable("partner_audit_log", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  
-  actorUserId: varchar("actor_user_id").references(() => users.id),
-  
-  // Event type: INVITE_SENT | INVITE_ACCEPTED | ACCOUNTING_CONNECTED | ASSIGNMENT_CHANGED | STATUS_CHANGED
-  eventType: varchar("event_type").notNull(),
-  
-  // Target entity
-  targetId: varchar("target_id").notNull(),
-  targetType: varchar("target_type").notNull(), // SME_CLIENT | SME_CONTACT | PARTNER_CONTRACT
-  
-  // Event metadata
-  metadata: jsonb("metadata").default("{}"),
-  
-  createdAt: timestamp("created_at").defaultNow(),
-}, (table) => [
-  index("idx_partner_audit_log_actor").on(table.actorUserId),
-  index("idx_partner_audit_log_target").on(table.targetType, table.targetId),
-  index("idx_partner_audit_log_event").on(table.eventType),
-  index("idx_partner_audit_log_created").on(table.createdAt),
-]);
+// Partner Audit Log - DEPRECATED: Now consolidated into activityLogs with category='partner'
+// Kept as type aliases for backward compatibility during migration
+// export const partnerAuditLog = ... (removed)
 
 // Partner Prospects - Leads from the scorecard landing page
 export const partnerProspects = pgTable("partner_prospects", {
@@ -3879,12 +3873,7 @@ export const smeInviteTokensRelations = relations(smeInviteTokens, ({ one }) => 
   }),
 }));
 
-export const partnerAuditLogRelations = relations(partnerAuditLog, ({ one }) => ({
-  actor: one(users, {
-    fields: [partnerAuditLog.actorUserId],
-    references: [users.id],
-  }),
-}));
+// partnerAuditLogRelations - REMOVED: consolidated into activityLogs
 
 export const partnerProspectsRelations = relations(partnerProspects, ({ one, many }) => ({
   convertedToPartner: one(partners, {
@@ -4086,10 +4075,7 @@ export const insertSmeInviteTokenSchema = createInsertSchema(smeInviteTokens).om
   createdAt: true,
 });
 
-export const insertPartnerAuditLogSchema = createInsertSchema(partnerAuditLog).omit({
-  id: true,
-  createdAt: true,
-});
+// insertPartnerAuditLogSchema - REMOVED: consolidated into activityLogs
 
 // Type exports for SME/Partner Operating Layer
 export type SmeClient = typeof smeClients.$inferSelect;
@@ -4104,8 +4090,7 @@ export type InsertImportJob = z.infer<typeof insertImportJobSchema>;
 export type SmeInviteToken = typeof smeInviteTokens.$inferSelect;
 export type InsertSmeInviteToken = z.infer<typeof insertSmeInviteTokenSchema>;
 
-export type PartnerAuditLog = typeof partnerAuditLog.$inferSelect;
-export type InsertPartnerAuditLog = z.infer<typeof insertPartnerAuditLogSchema>;
+// PartnerAuditLog types - REMOVED: consolidated into activityLogs
 
 // Activity Logs schema and types
 export const insertActivityLogSchema = createInsertSchema(activityLogs).omit({
@@ -5124,41 +5109,8 @@ export type InsertOutcome = z.infer<typeof insertOutcomeSchema>;
 export type Outcome = typeof outcomes.$inferSelect;
 
 // ============================================================
-// AUDIT EVENTS TABLE - Immutable activity log
-// ============================================================
-export const auditEvents = pgTable("audit_events", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
-  debtorId: varchar("debtor_id").references(() => contacts.id),
-  invoiceId: varchar("invoice_id").references(() => invoices.id),
-  actionId: varchar("action_id").references(() => actions.id),
-  outcomeId: varchar("outcome_id").references(() => outcomes.id),
-  
-  // Event classification
-  type: varchar("type").notNull(), // EventType enum
-  summary: varchar("summary").notNull(), // Human-readable description
-  payload: jsonb("payload").$type<Record<string, any>>(), // Minimal structured payload
-  
-  // Actor tracking
-  actor: varchar("actor").notNull().default("SYSTEM"), // SYSTEM or USER
-  actorUserId: varchar("actor_user_id").references(() => users.id),
-  
-  createdAt: timestamp("created_at").defaultNow(),
-}, (table) => [
-  index("idx_audit_events_tenant").on(table.tenantId),
-  index("idx_audit_events_debtor").on(table.debtorId),
-  index("idx_audit_events_invoice").on(table.invoiceId),
-  index("idx_audit_events_type").on(table.type),
-  index("idx_audit_events_created").on(table.createdAt),
-  index("idx_audit_events_actor").on(table.actor),
-]);
-
-export const insertAuditEventSchema = createInsertSchema(auditEvents).omit({
-  id: true,
-  createdAt: true,
-});
-export type InsertAuditEvent = z.infer<typeof insertAuditEventSchema>;
-export type AuditEvent = typeof auditEvents.$inferSelect;
+// AUDIT EVENTS TABLE - REMOVED: consolidated into activityLogs with category='audit'
+// All audit event writes now go through activityLogs table
 
 // ============================================================
 // WEBHOOK EVENTS TABLE - Idempotency tracking for webhooks
@@ -5239,32 +5191,7 @@ export const outcomesRelations = relations(outcomes, ({ one }) => ({
   }),
 }));
 
-export const auditEventsRelations = relations(auditEvents, ({ one }) => ({
-  tenant: one(tenants, {
-    fields: [auditEvents.tenantId],
-    references: [tenants.id],
-  }),
-  debtor: one(contacts, {
-    fields: [auditEvents.debtorId],
-    references: [contacts.id],
-  }),
-  invoice: one(invoices, {
-    fields: [auditEvents.invoiceId],
-    references: [invoices.id],
-  }),
-  action: one(actions, {
-    fields: [auditEvents.actionId],
-    references: [actions.id],
-  }),
-  outcome: one(outcomes, {
-    fields: [auditEvents.outcomeId],
-    references: [outcomes.id],
-  }),
-  actorUser: one(users, {
-    fields: [auditEvents.actorUserId],
-    references: [users.id],
-  }),
-}));
+// auditEventsRelations - REMOVED: consolidated into activityLogs
 
 export const collectionPoliciesRelations = relations(collectionPolicies, ({ one }) => ({
   tenant: one(tenants, {

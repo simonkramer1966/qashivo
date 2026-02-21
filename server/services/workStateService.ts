@@ -1,7 +1,7 @@
 import { db } from "../db";
 import { 
   actions, 
-  auditEvents, 
+  activityLogs, 
   attentionItems,
   outcomes,
   collectionPolicies,
@@ -639,17 +639,20 @@ export class WorkStateService {
     actor: 'SYSTEM' | 'USER';
     actorUserId?: string;
   }): Promise<void> {
-    await db.insert(auditEvents).values({
+    await db.insert(activityLogs).values({
       tenantId: params.tenantId,
       debtorId: params.debtorId,
       invoiceId: params.invoiceId,
       actionId: params.actionId,
       outcomeId: params.outcomeId,
-      type: params.type,
-      summary: params.summary,
-      payload: params.payload,
+      activityType: params.type,
+      category: 'audit',
+      action: params.type,
+      description: params.summary,
+      result: 'success',
+      metadata: params.payload || {},
       actor: params.actor,
-      actorUserId: params.actorUserId,
+      userId: params.actorUserId,
     });
   }
 
