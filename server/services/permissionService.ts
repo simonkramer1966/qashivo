@@ -24,6 +24,13 @@ export const PERMISSIONS = {
   'finance:budget': 'View and manage budgets',
   'finance:bank_accounts': 'Access bank account information',
   'finance:bills': 'Manage bills and accounts payable',
+  'finance:invoice_financing': 'Access invoice financing features',
+  
+  // Collections permissions (credit controller focused)
+  'collections:email': 'Send and read collection emails',
+  'collections:sms': 'Send SMS messages to debtors',
+  'collections:voice': 'Initiate AI voice calls',
+  'collections:manage': 'Manage collection workflows and actions',
   
   // AI and automation permissions
   'ai:chat': 'Access AI assistant and recommendations',
@@ -46,7 +53,11 @@ export const PERMISSIONS = {
   'admin:audit_logs': 'View audit and activity logs',
   'admin:data_export': 'Export tenant data',
   
-  // System permissions (super admin only)
+  // Account/subscription permissions (owner only)
+  'account:delete': 'Delete the account permanently',
+  'account:subscription': 'Manage subscription and billing',
+  
+  // System permissions (platform admin only)
   'system:tenants': 'Manage all tenants',
   'system:billing': 'Manage billing and subscriptions',
   'system:support': 'Access support tools',
@@ -54,53 +65,67 @@ export const PERMISSIONS = {
 
 export type Permission = keyof typeof PERMISSIONS;
 
+// Role display labels for UI
+export const ROLE_LABELS: Record<string, string> = {
+  owner: 'Owner',
+  admin: 'Admin',
+  accountant: 'Accountant',
+  manager: 'Manager',
+  credit_controller: 'Credit Controller',
+  readonly: 'Read Only',
+};
+
 // Define role hierarchies and their default permissions
 export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
   owner: [
-    // Owners have all permissions
+    // Owner: subscription creator, full control including account deletion and subscription management
     ...Object.keys(PERMISSIONS) as Permission[]
   ],
   
   admin: [
-    // Admin has operational permissions but not system-level
-    'invoices:read', 'invoices:create', 'invoices:edit', 'invoices:send_reminders', 'invoices:manage_collections',
-    'customers:read', 'customers:create', 'customers:edit', 'customers:manage_contacts',
-    'finance:read', 'finance:cashflow', 'finance:budget', 'finance:bank_accounts', 'finance:bills',
+    // Admin: full system access but cannot delete account or manage subscription
+    'invoices:read', 'invoices:create', 'invoices:edit', 'invoices:delete', 'invoices:send_reminders', 'invoices:manage_collections',
+    'customers:read', 'customers:create', 'customers:edit', 'customers:delete', 'customers:manage_contacts',
+    'finance:read', 'finance:cashflow', 'finance:budget', 'finance:bank_accounts', 'finance:bills', 'finance:invoice_financing',
+    'collections:email', 'collections:sms', 'collections:voice', 'collections:manage',
     'ai:chat', 'ai:configuration', 'ai:analytics', 'ai:voice_calls', 'ai:templates',
     'reports:read', 'reports:export', 'reports:advanced', 'reports:custom',
-    'admin:users', 'admin:settings', 'admin:integrations', 'admin:audit_logs',
+    'admin:users', 'admin:settings', 'admin:integrations', 'admin:api_keys', 'admin:audit_logs', 'admin:data_export',
   ],
   
   accountant: [
-    // Accountant focuses on financial data and reporting
-    'invoices:read', 'invoices:create', 'invoices:edit', 'invoices:send_reminders',
-    'customers:read', 'customers:create', 'customers:edit',
-    'finance:read', 'finance:cashflow', 'finance:budget', 'finance:bank_accounts', 'finance:bills',
-    'ai:chat', 'ai:analytics',
-    'reports:read', 'reports:export', 'reports:advanced',
+    // Accountant (Partner): same as admin, accesses multiple tenants via partner portal
+    'invoices:read', 'invoices:create', 'invoices:edit', 'invoices:delete', 'invoices:send_reminders', 'invoices:manage_collections',
+    'customers:read', 'customers:create', 'customers:edit', 'customers:delete', 'customers:manage_contacts',
+    'finance:read', 'finance:cashflow', 'finance:budget', 'finance:bank_accounts', 'finance:bills', 'finance:invoice_financing',
+    'collections:email', 'collections:sms', 'collections:voice', 'collections:manage',
+    'ai:chat', 'ai:configuration', 'ai:analytics', 'ai:voice_calls', 'ai:templates',
+    'reports:read', 'reports:export', 'reports:advanced', 'reports:custom',
+    'admin:users', 'admin:settings', 'admin:integrations', 'admin:api_keys', 'admin:audit_logs', 'admin:data_export',
   ],
   
   manager: [
-    // Manager has oversight permissions but limited admin access
+    // Manager: oversees credit controllers. Can see cashflow and invoice financing but NOT settings
     'invoices:read', 'invoices:create', 'invoices:edit', 'invoices:send_reminders', 'invoices:manage_collections',
     'customers:read', 'customers:create', 'customers:edit', 'customers:manage_contacts',
-    'finance:read', 'finance:cashflow', 'finance:budget',
+    'finance:read', 'finance:cashflow', 'finance:budget', 'finance:bank_accounts', 'finance:bills', 'finance:invoice_financing',
+    'collections:email', 'collections:sms', 'collections:voice', 'collections:manage',
     'ai:chat', 'ai:analytics', 'ai:voice_calls', 'ai:templates',
     'reports:read', 'reports:export', 'reports:advanced', 'reports:custom',
-    'admin:users', // Can manage team members
   ],
   
-  user: [
-    // Basic user has read access and can perform daily tasks
-    'invoices:read', 'invoices:send_reminders',
-    'customers:read', 'customers:create', 'customers:edit',
-    'finance:read', 'finance:cashflow',
-    'ai:chat', 'ai:analytics',
+  credit_controller: [
+    // Credit Controller: hands-on collections work. No settings, no cashflow, no invoice financing
+    'invoices:read', 'invoices:send_reminders', 'invoices:manage_collections',
+    'customers:read', 'customers:create', 'customers:edit', 'customers:manage_contacts',
+    'finance:read',
+    'collections:email', 'collections:sms', 'collections:voice', 'collections:manage',
+    'ai:chat', 'ai:analytics', 'ai:voice_calls',
     'reports:read', 'reports:export',
   ],
   
-  viewer: [
-    // Viewer has read-only access
+  readonly: [
+    // Read Only: view-only access. No settings, no cashflow, no invoice financing
     'invoices:read',
     'customers:read',
     'finance:read',
@@ -120,7 +145,11 @@ export const PERMISSION_CATEGORIES = {
     'customers:manage_contacts'
   ],
   'Financial Management': [
-    'finance:read', 'finance:cashflow', 'finance:budget', 'finance:bank_accounts', 'finance:bills'
+    'finance:read', 'finance:cashflow', 'finance:budget', 'finance:bank_accounts', 'finance:bills',
+    'finance:invoice_financing'
+  ],
+  'Collections': [
+    'collections:email', 'collections:sms', 'collections:voice', 'collections:manage'
   ],
   'AI & Automation': [
     'ai:chat', 'ai:configuration', 'ai:analytics', 'ai:voice_calls', 'ai:templates'
@@ -131,6 +160,9 @@ export const PERMISSION_CATEGORIES = {
   'Administration': [
     'admin:users', 'admin:settings', 'admin:integrations', 'admin:api_keys', 
     'admin:audit_logs', 'admin:data_export'
+  ],
+  'Account Management': [
+    'account:delete', 'account:subscription'
   ],
   'System Management': [
     'system:tenants', 'system:billing', 'system:support'
@@ -238,7 +270,7 @@ export class PermissionService {
    */
   static getPermissionCategory(permission: Permission): string {
     for (const [category, perms] of Object.entries(PERMISSION_CATEGORIES)) {
-      if (perms.includes(permission)) {
+      if ((perms as readonly string[]).includes(permission)) {
         return category;
       }
     }
@@ -279,13 +311,14 @@ export class PermissionService {
     }));
   }
 
+  static readonly ROLE_HIERARCHY = ['readonly', 'credit_controller', 'manager', 'accountant', 'admin', 'owner'];
+
   /**
    * Check if role A has more privileges than role B
    */
   static isRoleHigherThan(roleA: string, roleB: string): boolean {
-    const hierarchy = ['viewer', 'user', 'accountant', 'manager', 'admin', 'owner'];
-    const indexA = hierarchy.indexOf(roleA);
-    const indexB = hierarchy.indexOf(roleB);
+    const indexA = this.ROLE_HIERARCHY.indexOf(roleA);
+    const indexB = this.ROLE_HIERARCHY.indexOf(roleB);
     return indexA > indexB;
   }
 
@@ -293,18 +326,17 @@ export class PermissionService {
    * Get the maximum role a user can assign based on their own role
    */
   static getMaxAssignableRole(userRole: string): string[] {
-    const hierarchy = ['viewer', 'user', 'accountant', 'manager', 'admin', 'owner'];
-    const userIndex = hierarchy.indexOf(userRole);
+    const userIndex = this.ROLE_HIERARCHY.indexOf(userRole);
     
     if (userIndex === -1) return [];
     
     // Users can assign roles up to their own level (exclusive)
     // Owners can assign any role except owner
     if (userRole === 'owner') {
-      return hierarchy.slice(0, -1); // All except owner
+      return this.ROLE_HIERARCHY.slice(0, -1); // All except owner
     }
     
-    return hierarchy.slice(0, userIndex);
+    return this.ROLE_HIERARCHY.slice(0, userIndex);
   }
 
   /**

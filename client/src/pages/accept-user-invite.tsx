@@ -138,14 +138,14 @@ export default function AcceptUserInvite() {
   }
 
   const roleLabelMap: Record<string, string> = {
-    admin: "Administrator",
     owner: "Owner",
-    collector: "Credit Controller",
+    admin: "Admin",
     accountant: "Accountant",
-    user: "Team Member",
     manager: "Manager",
+    credit_controller: "Credit Controller",
+    readonly: "Read Only",
   };
-  const roleLabel = roleLabelMap[inviteInfo.role || "user"] || inviteInfo.role;
+  const roleLabel = roleLabelMap[inviteInfo.role || "credit_controller"] || inviteInfo.role;
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-4">

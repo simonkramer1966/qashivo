@@ -180,14 +180,26 @@ export default function UserInviteModal({
   // Get role color for badges
   const getRoleColor = (role: string): string => {
     const colors = {
-      viewer: 'bg-gray-100 text-gray-800',
-      user: 'bg-blue-100 text-blue-800',
-      accountant: 'bg-green-100 text-green-800',
+      readonly: 'bg-gray-100 text-gray-800',
+      credit_controller: 'bg-blue-100 text-blue-800',
       manager: 'bg-yellow-100 text-yellow-800',
+      accountant: 'bg-green-100 text-green-800',
       admin: 'bg-orange-100 text-orange-800',
       owner: 'bg-red-100 text-red-800'
     };
     return colors[role as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+  };
+
+  const getRoleLabel = (role: string): string => {
+    const labels: Record<string, string> = {
+      owner: 'Owner',
+      admin: 'Admin',
+      accountant: 'Accountant',
+      manager: 'Manager',
+      credit_controller: 'Credit Controller',
+      readonly: 'Read Only',
+    };
+    return labels[role] || role;
   };
 
   return (
@@ -270,7 +282,7 @@ export default function UserInviteModal({
                             <SelectItem key={roleName} value={roleName}>
                               <div className="flex items-center gap-2">
                                 <Badge className={getRoleColor(roleName)}>
-                                  {roleName}
+                                  {getRoleLabel(roleName)}
                                 </Badge>
                                 <span className="text-sm text-muted-foreground">
                                   ({roleInfo?.permissionCount || 0} permissions)
@@ -341,7 +353,7 @@ export default function UserInviteModal({
                       
                       <div className="flex items-center gap-2">
                         <Badge className={getRoleColor(invitation.role)}>
-                          {invitation.role}
+                          {getRoleLabel(invitation.role)}
                         </Badge>
                         <Button
                           variant="outline"

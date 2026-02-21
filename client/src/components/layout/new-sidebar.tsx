@@ -1,4 +1,5 @@
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -57,6 +58,7 @@ import UserProfileDialog from "./UserProfileDialog";
 
 // Navigation structure with 3 sections: ACTION, REFERENCE, SYSTEM
 // Icons only for ACTION items (Overview + Action Centre)
+// permission: if set, the item is only shown to users with that permission
 const navigationSections = [
   {
     label: "ACTION",
@@ -64,7 +66,7 @@ const navigationSections = [
       { name: "Overview", href: "/overview2", icon: Gauge },
       { name: "Inbox", href: "/inbox", icon: Mail },
       { name: "Action Centre", href: "/action-centre2", icon: Inbox },
-      { name: "Cash Flow", href: "/cash-flow", icon: TrendingUp },
+      { name: "Cash Flow", href: "/cash-flow", icon: TrendingUp, permission: "finance:cashflow" as const },
     ]
   },
   {
@@ -216,6 +218,7 @@ function NavItem({
 
 export default function NewSidebar() {
   const { user } = useAuth();
+  const { hasPermission } = usePermissions();
   const [location, setLocation] = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [orgSearchQuery, setOrgSearchQuery] = useState("");
@@ -224,6 +227,8 @@ export default function NewSidebar() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const queryClient = useQueryClient();
   const { triggerSplash } = useSplash();
+
+  const canAccessSettings = hasPermission('admin:settings');
 
   // Track fullscreen state
   useEffect(() => {
@@ -593,6 +598,7 @@ export default function NewSidebar() {
                   </DropdownMenuSub>
                 )}
                 
+                {canAccessSettings && (
                 <DropdownMenuItem 
                   className="text-sm cursor-pointer"
                   onClick={() => setLocation('/settings')}
@@ -600,6 +606,7 @@ export default function NewSidebar() {
                 >
                   Settings
                 </DropdownMenuItem>
+                )}
                 
                 
                 {(user as any)?.role === "partner" && (
@@ -623,8 +630,12 @@ export default function NewSidebar() {
         <nav className={cn("flex-1 overflow-y-auto", isCollapsed ? "px-2" : "px-3")}>
           <TooltipProvider delayDuration={0}>
             {currentNavigationSections.map((section) => {
-              // Check if section has any items with icons
-              const hasIconItems = section.items.some((item: any) => item.icon);
+              const filteredItems = section.items.filter((item: any) => {
+                if (!item.permission) return true;
+                return hasPermission(item.permission);
+              });
+              if (filteredItems.length === 0) return null;
+              const hasIconItems = filteredItems.some((item: any) => item.icon);
               
               return (
               <NavSection 
@@ -633,7 +644,7 @@ export default function NewSidebar() {
                 isCollapsed={isCollapsed}
                 hideWhenCollapsed={!hasIconItems}
               >
-                {section.items.map((item) => {
+                {filteredItems.map((item) => {
                   const navContent = (
                     <NavItem
                       key={item.name}
@@ -711,10 +722,12 @@ export default function NewSidebar() {
                   <User className="mr-2 h-4 w-4" />
                   Profile
                 </DropdownMenuItem>
+                {canAccessSettings && (
                 <DropdownMenuItem onClick={() => setLocation('/settings')} className="text-sm cursor-pointer" data-testid="menu-item-settings-profile">
                   <Settings className="mr-2 h-4 w-4" />
                   Settings
                 </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="text-sm cursor-pointer" data-testid="menu-item-logout">
                   <LogOut className="mr-2 h-4 w-4" />
@@ -752,10 +765,12 @@ export default function NewSidebar() {
                   <User className="mr-2 h-4 w-4" />
                   Profile
                 </DropdownMenuItem>
+                {canAccessSettings && (
                 <DropdownMenuItem onClick={() => setLocation('/settings')} className="text-sm cursor-pointer" data-testid="menu-item-settings-profile-collapsed">
                   <Settings className="mr-2 h-4 w-4" />
                   Settings
                 </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="text-sm cursor-pointer" data-testid="menu-item-logout">
                   <LogOut className="mr-2 h-4 w-4" />

@@ -113,7 +113,7 @@ export function usePermissions() {
   const hasMinimumRole = (minimumRole: string): boolean => {
     if (!userPermissions) return false;
     
-    const hierarchy = ['viewer', 'user', 'accountant', 'manager', 'admin', 'owner'];
+    const hierarchy = ['readonly', 'credit_controller', 'manager', 'accountant', 'admin', 'owner'];
     const userLevel = hierarchy.indexOf(userPermissions.role);
     const requiredLevel = hierarchy.indexOf(minimumRole);
     

@@ -21020,7 +21020,7 @@ ${tenant.name}
         availableRoles,
         assignableRoles,
         userRole,
-        hierarchy: ['viewer', 'user', 'accountant', 'manager', 'admin', 'owner']
+        hierarchy: ['readonly', 'credit_controller', 'manager', 'accountant', 'admin', 'owner']
       });
     } catch (error) {
       console.error("Error fetching role hierarchy:", error);

@@ -3351,7 +3351,7 @@ export class DatabaseStorage implements IStorage {
 
   async assignUserRole(userId: string, role: string, assignedBy: string): Promise<User> {
     // Validate role is valid
-    const validRoles = ['owner', 'admin', 'accountant', 'manager', 'user', 'viewer'];
+    const validRoles = ['owner', 'admin', 'accountant', 'manager', 'credit_controller', 'readonly'];
     if (!validRoles.includes(role)) {
       throw new Error(`Invalid role: ${role}. Valid roles are: ${validRoles.join(', ')}`);
     }
@@ -3385,7 +3385,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   canUserManageRole(actorRole: string, targetRole: string): boolean {
-    const roleHierarchy = ['viewer', 'user', 'accountant', 'manager', 'admin', 'owner'];
+    const roleHierarchy = ['readonly', 'credit_controller', 'manager', 'accountant', 'admin', 'owner'];
     const actorLevel = roleHierarchy.indexOf(actorRole);
     const targetLevel = roleHierarchy.indexOf(targetRole);
     
@@ -3403,7 +3403,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   getAssignableRoles(userRole: string): string[] {
-    const roleHierarchy = ['viewer', 'user', 'accountant', 'manager', 'admin', 'owner'];
+    const roleHierarchy = ['readonly', 'credit_controller', 'manager', 'accountant', 'admin', 'owner'];
     const userLevel = roleHierarchy.indexOf(userRole);
     
     if (userLevel === -1) return [];
@@ -4953,8 +4953,8 @@ export class DatabaseStorage implements IStorage {
     
     if (!user) return false;
     
-    // Admins and partner users have access to all contacts
-    if (user.tenantRole === 'admin' || user.role === 'partner' || user.role === 'owner') {
+    // Owners, admins, accountants, partners, and managers have access to all contacts
+    if (['owner', 'admin', 'accountant', 'partner', 'manager'].includes(user.role) || user.tenantRole === 'admin') {
       return true;
     }
     

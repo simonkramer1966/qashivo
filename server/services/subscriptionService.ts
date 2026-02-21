@@ -146,7 +146,7 @@ export class SubscriptionService {
       // For simplicity, let's get the first user of the tenant as the partner user
       // In a real implementation, you might want to track the primary partner user differently
       const users = await storage.getUsersInTenant(tenantId);
-      const partnerUser = users.find(u => u.role === 'owner' || u.role === 'partner');
+      const partnerUser = users.find(u => u.role === 'owner' || u.role === 'partner' || u.role === 'accountant');
       
       if (!partnerUser) {
         throw new Error('Partner user not found');

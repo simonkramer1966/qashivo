@@ -393,12 +393,12 @@ export const enforceContactAccess: RequestHandler = async (req, res, next) => {
       return next();
     }
 
-    // Admins, partners, and owners have access to all contacts
-    if (userRole === 'partner' || userRole === 'owner' || tenantRole === 'admin') {
+    // Owners, admins, accountants, partners, and managers have access to all contacts
+    if (['owner', 'admin', 'accountant', 'partner', 'manager'].includes(userRole) || tenantRole === 'admin') {
       return next();
     }
 
-    // For collectors, check if contact is assigned
+    // Credit controllers and readonly only see assigned contacts
     const hasAccess = await storage.hasContactAccess(userId, contactId, tenantId);
     
     if (!hasAccess) {
@@ -426,11 +426,11 @@ export const getContactFilter: RequestHandler = async (req, res, next) => {
 
     const { userId, tenantId, userRole, tenantRole } = req.rbac;
 
-    // Admins, partners, and owners can see all contacts in the tenant
-    if (userRole === 'partner' || userRole === 'owner' || tenantRole === 'admin') {
+    // Owners, admins, accountants, partners, and managers can see all contacts in the tenant
+    if (['owner', 'admin', 'accountant', 'partner', 'manager'].includes(userRole) || tenantRole === 'admin') {
       (req as any).contactFilter = { tenantId };
     } else {
-      // Collectors only see assigned contacts
+      // Credit controllers and readonly only see assigned contacts
       const assignedContacts = await storage.getAssignedContacts(userId, tenantId);
       const contactIds = assignedContacts.map(c => c.id);
       (req as any).contactFilter = { tenantId, contactIds };
@@ -453,8 +453,8 @@ export const requireTenantAdmin: RequestHandler = async (req, res, next) => {
 
   const { userRole, tenantRole } = req.rbac;
 
-  // Partners and owners always have admin access
-  if (userRole === 'partner' || userRole === 'owner') {
+  // Owners, admins, accountants, and partners always have admin access
+  if (['owner', 'admin', 'accountant', 'partner'].includes(userRole)) {
     return next();
   }
 

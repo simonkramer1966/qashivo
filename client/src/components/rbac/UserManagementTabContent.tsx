@@ -136,14 +136,26 @@ export default function UserManagementTabContent() {
   // Get role color for badges
   const getRoleColor = (role: string): string => {
     const colors = {
-      viewer: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
-      user: 'bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200',
-      accountant: 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200',
+      readonly: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
+      credit_controller: 'bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200',
       manager: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-200',
+      accountant: 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200',
       admin: 'bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-200',
       owner: 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-200'
     };
-    return colors[role as keyof typeof colors] || colors.viewer;
+    return colors[role as keyof typeof colors] || colors.readonly;
+  };
+
+  const getRoleLabel = (role: string): string => {
+    const labels: Record<string, string> = {
+      owner: 'Owner',
+      admin: 'Admin',
+      accountant: 'Accountant',
+      manager: 'Manager',
+      credit_controller: 'Credit Controller',
+      readonly: 'Read Only',
+    };
+    return labels[role] || role;
   };
 
   // Loading state
@@ -300,16 +312,16 @@ export default function UserManagementTabContent() {
                             onValueChange={(newRole) => handleRoleChange(user.id, newRole)}
                             disabled={changeRoleMutation.isPending || user.id === userPermissions?.userId}
                           >
-                            <SelectTrigger className="h-8 w-28 rounded-lg border-gray-200">
+                            <SelectTrigger className="h-8 w-32 rounded-lg border-gray-200">
                               <Badge className={getRoleColor(user.role)}>
-                                {user.role}
+                                {getRoleLabel(user.role)}
                               </Badge>
                             </SelectTrigger>
                             <SelectContent>
                               {roleHierarchy?.assignableRoles?.map((role: string) => (
                                 <SelectItem key={role} value={role}>
                                   <Badge className={getRoleColor(role)}>
-                                    {role}
+                                    {getRoleLabel(role)}
                                   </Badge>
                                 </SelectItem>
                               ))}

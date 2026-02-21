@@ -1,10 +1,11 @@
 import { Switch, Route, useLocation } from "wouter";
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { SplashProvider, useSplash } from "@/contexts/SplashContext";
 import SplashScreen from "@/components/SplashScreen";
 import { useInactivityTimer } from "@/hooks/useInactivityTimer";
@@ -78,6 +79,23 @@ const InvestorsHowItWorks = lazy(() => import("@/pages/investors/how-it-works"))
 const InvestorsDemoPage = lazy(() => import("@/pages/investors/demo"));
 const InvestorsBusinessModel = lazy(() => import("@/pages/investors/business-model"));
 const InvestorsInvest = lazy(() => import("@/pages/investors/invest"));
+
+function PermissionGuard({ permission, children }: { permission: string; children: React.ReactNode }) {
+  const { hasPermission, isLoadingPermissions } = usePermissions();
+  const [, setLocation] = useLocation();
+  const allowed = !isLoadingPermissions && hasPermission(permission);
+  const checked = !isLoadingPermissions;
+
+  useEffect(() => {
+    if (checked && !allowed) {
+      setLocation("/overview2");
+    }
+  }, [checked, allowed, setLocation]);
+
+  if (isLoadingPermissions) return <PageLoader />;
+  if (!allowed) return <PageLoader />;
+  return <>{children}</>;
+}
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -197,14 +215,14 @@ function Router() {
           <Route path="/activity-log" component={ActivityLog} />
           <Route path="/documentation" component={Documentation} />
           <Route path="/documentation-review" component={DocumentationReview} />
-          <Route path="/settings" component={Settings} />
+          <Route path="/settings">{() => <PermissionGuard permission="admin:settings"><Settings /></PermissionGuard>}</Route>
           <Route path="/account" component={Account} />
-          <Route path="/cash-flow" component={CashFlow} />
-          <Route path="/financing" component={Financing} />
+          <Route path="/cash-flow">{() => <PermissionGuard permission="finance:cashflow"><CashFlow /></PermissionGuard>}</Route>
+          <Route path="/financing">{() => <PermissionGuard permission="finance:invoice_financing"><Financing /></PermissionGuard>}</Route>
           <Route path="/automation" component={Automation} />
           <Route path="/workflows" component={Workflows} />
           <Route path="/workflow-settings" component={WorkflowProfile} />
-          <Route path="/cashboard-experimental" component={CashboardExperimental} />
+          <Route path="/cashboard-experimental">{() => <PermissionGuard permission="finance:cashflow"><CashboardExperimental /></PermissionGuard>}</Route>
           <Route path="/p/:partnerSlug/practice" component={PartnerPractice} />
           <Route path="/p/:partnerSlug/clients/:smeClientId" component={PartnerClientDetail} />
           <Route path="/p/:partnerSlug/clients" component={PartnerClients} />
