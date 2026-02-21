@@ -411,7 +411,7 @@ export interface IStorage {
   canUserManageRole(actorRole: string, targetRole: string): boolean;
   getAssignableRoles(userRole: string): string[];
   createUserInvitation(invitation: { email: string; role: string; tenantId: string; invitedBy: string }): Promise<{ id: string; inviteToken: string }>;
-  acceptUserInvitation(inviteToken: string, userData: { firstName?: string; lastName?: string }): Promise<User>;
+  acceptUserInvitation(inviteToken: string, userData: { firstName?: string; lastName?: string; password?: string }): Promise<User>;
   revokeUserInvitation(invitationId: string): Promise<void>;
   getPendingInvitations(tenantId: string): Promise<{ id: string; email: string; role: string; invitedBy: string; createdAt: Date }[]>;
 
@@ -3465,7 +3465,8 @@ export class DatabaseStorage implements IStorage {
 
   async acceptUserInvitation(inviteToken: string, userData: { 
     firstName?: string; 
-    lastName?: string; 
+    lastName?: string;
+    password?: string; 
   }): Promise<User> {
     // Find invitation across all tenants
     const allTenants = await this.getAllTenants();
@@ -3488,12 +3489,13 @@ export class DatabaseStorage implements IStorage {
       throw new Error('Invalid or expired invitation token');
     }
 
-    // Create user with invitation details
+    // Create user with invitation details including password
     const newUser = await this.upsertUser({
       id: crypto.randomUUID(),
       email: foundInvitation.email,
       firstName: userData.firstName || '',
       lastName: userData.lastName || '',
+      password: userData.password || '',
       tenantId,
       role: foundInvitation.role,
     });

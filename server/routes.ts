@@ -20782,11 +20782,27 @@ ${tenant.name}
         invitedBy
       });
 
+      // Send invitation email via SendGrid
+      try {
+        const tenant = await storage.getTenant(tenantId);
+        const inviter = await storage.getUser(invitedBy);
+        const { sendUserInvitationEmail } = await import("./services/email/SendGridEmailService");
+        await sendUserInvitationEmail({
+          email,
+          inviteToken: invitation.inviteToken,
+          role,
+          tenantName: tenant?.name || 'your organisation',
+          inviterName: inviter ? `${inviter.firstName || ''} ${inviter.lastName || ''}`.trim() || inviter.email : undefined,
+        });
+        console.log(`📧 Invitation email sent to ${email} for tenant ${tenantId}`);
+      } catch (emailErr: any) {
+        console.error(`⚠️ Invitation created but email failed to send:`, emailErr.message);
+      }
+
       res.status(201).json({
         success: true,
         invitationId: invitation.id,
         message: `Invitation sent to ${email} for role ${role}`,
-        // Don't return the token for security
       });
     } catch (error) {
       console.error("Error creating user invitation:", error);
@@ -20822,30 +20838,91 @@ ${tenant.name}
     }
   });
 
+  // Verify user invitation token (public endpoint)
+  app.get("/api/rbac/invitations/verify", async (req, res) => {
+    try {
+      const { token } = req.query;
+      if (!token || typeof token !== 'string') {
+        return res.status(400).json({ valid: false, message: "Token is required" });
+      }
+
+      const allTenants = await storage.getAllTenants();
+      for (const tenant of allTenants) {
+        const settings = tenant.settings as any || {};
+        const invitations = settings.invitations || [];
+        const invitation = invitations.find((inv: any) => inv.inviteToken === token && inv.status === 'pending');
+        if (invitation) {
+          return res.json({
+            valid: true,
+            email: invitation.email,
+            role: invitation.role,
+            tenantName: tenant.name,
+          });
+        }
+      }
+
+      return res.json({ valid: false, message: "Invalid or expired invitation" });
+    } catch (error) {
+      console.error("Error verifying invitation:", error);
+      res.status(500).json({ valid: false, message: "Failed to verify invitation" });
+    }
+  });
+
   // Accept user invitation (public endpoint - no auth required)
   app.post("/api/rbac/invitations/accept", async (req, res) => {
     try {
-      const { inviteToken, firstName, lastName } = req.body;
+      const { inviteToken, firstName, lastName, password } = req.body;
       
       if (!inviteToken) {
         return res.status(400).json({ message: "Invite token is required" });
       }
 
+      if (!password || password.length < 8) {
+        return res.status(400).json({ message: "Password must be at least 8 characters" });
+      }
+
+      if (!firstName) {
+        return res.status(400).json({ message: "First name is required" });
+      }
+
+      const bcrypt = await import("bcryptjs");
+      const hashedPassword = await bcrypt.hash(password, 10);
+
       const user = await storage.acceptUserInvitation(inviteToken, {
         firstName,
-        lastName
+        lastName,
+        password: hashedPassword,
       });
 
-      res.json({
-        success: true,
-        user: {
-          id: user.id,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          role: user.role
-        },
-        message: "Invitation accepted successfully"
+      req.login(user as any, (err) => {
+        if (err) {
+          console.error("Auto-login after invite accept failed:", err);
+          return res.json({
+            success: true,
+            user: {
+              id: user.id,
+              email: user.email,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              role: user.role
+            },
+            message: "Account created successfully. Please sign in.",
+            redirect: "/login"
+          });
+        }
+
+        return res.json({
+          success: true,
+          user: {
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            role: user.role
+          },
+          message: "Welcome! Your account is ready.",
+          redirect: "/"
+        });
       });
     } catch (error) {
       console.error("Error accepting invitation:", error);

@@ -545,6 +545,75 @@ export class SendGridEmailService extends EmailService {
   }
 }
 
+export async function sendUserInvitationEmail(params: {
+  email: string;
+  inviteToken: string;
+  role: string;
+  tenantName: string;
+  inviterName?: string;
+}): Promise<void> {
+  const { email, inviteToken, role, tenantName, inviterName } = params;
+  const acceptUrl = `${process.env.APP_URL || 'http://localhost:5000'}/accept-user-invite?token=${inviteToken}`;
+  
+  const roleLabelMap: Record<string, string> = {
+    admin: 'Administrator',
+    owner: 'Owner',
+    collector: 'Credit Controller',
+    accountant: 'Accountant',
+    user: 'Team Member',
+    manager: 'Manager',
+  };
+  const roleLabel = roleLabelMap[role] || role;
+  const inviterLine = inviterName ? ` by ${inviterName}` : '';
+  
+  const config: EmailServiceConfig = {
+    provider: 'sendgrid',
+    apiKey: process.env.SENDGRID_API_KEY || 'default_key',
+    defaultFrom: {
+      email: process.env.SENDGRID_FROM_EMAIL || 'cc@qashivo.com',
+      name: process.env.SENDGRID_FROM_NAME || 'Qashivo'
+    },
+    maxRetries: 3,
+    retryDelay: 1000
+  };
+  
+  const emailService = new SendGridEmailService(config);
+  
+  await emailService.sendEmail({
+    to: [{ email }],
+    subject: `You've been invited to join ${tenantName} on Qashivo`,
+    html: `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 0; color: #0B0F17;">
+        <div style="padding: 32px 0 24px 0; border-bottom: 1px solid #E6E8EC;">
+          <h1 style="font-size: 20px; font-weight: 600; margin: 0 0 4px 0; color: #0B0F17;">Qashivo</h1>
+          <p style="font-size: 13px; color: #556070; margin: 0;">Intelligent Credit Control</p>
+        </div>
+        <div style="padding: 32px 0;">
+          <h2 style="font-size: 18px; font-weight: 600; margin: 0 0 12px 0; color: #0B0F17;">You're invited to join ${tenantName}</h2>
+          <p style="font-size: 14px; line-height: 1.6; color: #556070; margin: 0 0 8px 0;">
+            You've been invited${inviterLine} to join <strong>${tenantName}</strong> as a <strong>${roleLabel}</strong>.
+          </p>
+          <p style="font-size: 14px; line-height: 1.6; color: #556070; margin: 0 0 24px 0;">
+            Click below to set up your account and get started.
+          </p>
+          <a href="${acceptUrl}" style="display: inline-block; background: #17B6C3; color: #fff; text-decoration: none; padding: 10px 28px; border-radius: 4px; font-size: 14px; font-weight: 500;">
+            Accept Invitation
+          </a>
+          <p style="font-size: 12px; color: #8C95A3; margin: 20px 0 0 0; line-height: 1.5;">
+            Or copy this link: <a href="${acceptUrl}" style="color: #17B6C3; word-break: break-all;">${acceptUrl}</a>
+          </p>
+        </div>
+        <div style="padding: 20px 0 0 0; border-top: 1px solid #E6E8EC;">
+          <p style="font-size: 12px; color: #8C95A3; margin: 0;">
+            This invitation expires in 7 days. If you didn't expect this, you can safely ignore it.
+          </p>
+        </div>
+      </div>
+    `,
+    text: `You're invited to join ${tenantName} on Qashivo\n\nYou've been invited${inviterLine} to join ${tenantName} as a ${roleLabel}.\n\nClick the link below to set up your account:\n\n${acceptUrl}\n\nThis invitation expires in 7 days. If you didn't expect this, you can safely ignore it.`
+  });
+}
+
 export async function sendPasswordResetEmail(email: string, resetToken: string): Promise<void> {
   const resetUrl = `${process.env.APP_URL || 'http://localhost:5000'}/reset-password?token=${resetToken}`;
   

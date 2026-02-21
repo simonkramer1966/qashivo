@@ -65,6 +65,7 @@ const PartnerPractice = lazy(() => import("@/pages/partner-practice"));
 const PartnerClients = lazy(() => import("@/pages/partner-clients"));
 const PartnerClientDetail = lazy(() => import("@/pages/partner-client-detail"));
 const AcceptInvite = lazy(() => import("@/pages/accept-invite"));
+const AcceptUserInvite = lazy(() => import("@/pages/accept-user-invite"));
 const SmeOnboarding = lazy(() => import("@/pages/sme-onboarding"));
 const Inbox = lazy(() => import("@/pages/inbox"));
 const Loop = lazy(() => import("@/pages/loop"));
@@ -138,6 +139,7 @@ function Router() {
           <Route path="/admin" component={AdminShell} />
           <Route path="/admin/:rest*" component={AdminShell} />
           <Route path="/accept-invite" component={AcceptInvite} />
+          <Route path="/accept-user-invite" component={AcceptUserInvite} />
           <Route path="/sme-onboarding" component={SmeOnboarding} />
           <Route path="/investor-interest" component={InvestorInterest} />
           <Route path="/investors" component={InvestorsHome} />
