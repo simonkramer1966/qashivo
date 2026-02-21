@@ -51,6 +51,11 @@ A secure, internal interface for Qashivo employees to manage and monitor the pla
 
 ### Security Architecture
 Includes robust authentication (OAuth 2.0 with Replit OIDC + password auth), granular Role-Based Access Control (RBAC), strict multi-tenant isolation, comprehensive input validation (Zod, Drizzle ORM), and webhook security (HMAC verification).
+-   **Password Strength**: 10+ chars, mixed case, number, special character. Enforced on signup, password reset, invite acceptance.
+-   **Session Security**: 24-hour absolute TTL, 30-minute idle timeout, session regeneration on login, rolling sessions, PostgreSQL-backed session store.
+-   **Unified Audit Logging**: All audit, partner, and security events consolidated into single `activity_logs` table with `category` filtering (`audit`, `partner`, `security`, `communication`, `system`, etc.). Removed separate `audit_events` and `partner_audit_log` tables (Feb 2026). Extended with `ipAddress`, `userAgent`, typed FK columns (`debtorId`, `invoiceId`, `actionId`, `outcomeId`).
+-   **Security Audit Service**: `server/services/securityAuditService.ts` logs security events (login, logout, signup, password reset, session expiry, role change, tenant switch, invite acceptance) with IP/user-agent capture. API endpoint: `GET /api/security-audit-log` (admin:settings permission).
+-   **Rate Limiting**: Login (5/15min), signup (3/hr), password reset (3/hr).
 
 ### RBAC System (6-Tier)
 Six roles with hierarchical permissions: **Owner** (subscription creator, full control), **Admin** (full system except subscription), **Accountant/Partner** (admin-level across multiple tenants), **Manager** (oversees credit controllers, sees cashflow/financing but not Settings), **Credit Controller** (collections work only, no Settings/cashflow/financing), **Read Only** (view only, no Settings).
