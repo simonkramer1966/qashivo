@@ -62,6 +62,7 @@ import PermissionMatrix from "@/components/rbac/PermissionMatrix";
 import UserInviteModal from "@/components/rbac/UserInviteModal";
 import UserManagementTabContent from "@/components/rbac/UserManagementTabContent";
 import EmailSenderManagement from "@/components/collections/EmailSenderManagement";
+import ReportSchedulesTab from "@/components/settings/ReportSchedulesTab";
 import { BookOpen, Volume2, Timer, Gauge } from "lucide-react";
 
 interface PlaybookSettings {
@@ -2154,6 +2155,13 @@ export default function Settings() {
                     Test
                   </TabsTrigger>
                   <TabsTrigger 
+                    value="reports" 
+                    className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
+                    data-testid="tab-reports"
+                  >
+                    Reports
+                  </TabsTrigger>
+                  <TabsTrigger 
                     value="demo-data" 
                     className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
                     data-testid="tab-demo-data"
@@ -2749,6 +2757,10 @@ export default function Settings() {
 
               <TabsContent value="test" className="mt-0">
                 <TestTabContent />
+              </TabsContent>
+
+              <TabsContent value="reports" className="mt-0">
+                <ReportSchedulesTab />
               </TabsContent>
 
               <TabsContent value="demo-data" className="mt-0">

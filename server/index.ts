@@ -346,6 +346,18 @@ app.use((req, res, next) => {
     }
   }
 
+  // Initialize Report Scheduler
+  if (process.env.NODE_ENV !== 'test') {
+    try {
+      console.log("📊 Initializing report scheduler...");
+      const { startReportScheduler } = await import("./services/reportScheduler");
+      startReportScheduler();
+      console.log("✅ Report scheduler started");
+    } catch (error) {
+      console.error("❌ Failed to initialize report scheduler:", error);
+    }
+  }
+
   // Initialize Workflow Timer Processor
   if (process.env.NODE_ENV !== 'test') {
     try {

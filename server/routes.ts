@@ -67,8 +67,12 @@ import {
   collectionPolicies,
   paymentPlans,
   emailMessages,
-  customerContactPersons
+  customerContactPersons,
+  insertScheduledReportSchema,
+  scheduledReports,
 } from "@shared/schema";
+import { computeNextRunAt } from "./services/reportScheduler";
+import { REPORT_TYPE_LABELS, type ReportType } from "./services/reportGenerator";
 import { getOverdueCategoryFromDueDate } from "@shared/utils/overdueUtils";
 import { calculateLatePaymentInterest } from "./utils/interestCalculator";
 import { eq, and, desc, asc, sql, count, avg, gte, lte, lt, inArray, or, isNull, isNotNull, gt, not } from 'drizzle-orm';
@@ -13678,6 +13682,130 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     } catch (error: any) {
       console.error("Error fetching security audit log:", error);
       res.status(500).json({ message: `Failed to fetch security audit log: ${error.message}` });
+    }
+  });
+
+  // ============================================================
+  // SCHEDULED REPORTS API
+  // ============================================================
+
+  const reportTypeEnum = z.enum(['aged_debtors', 'cashflow_forecast', 'collection_performance', 'dso_summary']);
+  const frequencyEnum = z.enum(['daily', 'weekly', 'monthly']);
+
+  const createScheduledReportSchema = z.object({
+    name: z.string().min(1).max(100),
+    reportType: reportTypeEnum,
+    frequency: frequencyEnum,
+    dayOfWeek: z.number().min(0).max(6).optional(),
+    dayOfMonth: z.number().min(1).max(28).optional(),
+    sendTime: z.string().regex(/^\d{2}:\d{2}$/).default('08:00'),
+    timezone: z.string().default('Europe/London'),
+    recipients: z.array(z.string().email()).min(1).max(20),
+    enabled: z.boolean().default(true),
+  });
+
+  app.get("/api/scheduled-reports", ...withPermission('admin:settings'), async (req: any, res) => {
+    try {
+      const reports = await storage.getScheduledReports(req.rbac.tenantId);
+      res.json(reports);
+    } catch (error: any) {
+      console.error("Error fetching scheduled reports:", error);
+      res.status(500).json({ message: "Failed to fetch scheduled reports" });
+    }
+  });
+
+  app.get("/api/scheduled-reports/types", isAuthenticated, async (_req: any, res) => {
+    res.json(REPORT_TYPE_LABELS);
+  });
+
+  app.post("/api/scheduled-reports", ...withPermission('admin:settings'), async (req: any, res) => {
+    try {
+      const parsed = createScheduledReportSchema.parse(req.body);
+      const tenantId = req.rbac.tenantId;
+      const userId = req.user.id;
+
+      const nextRunAt = computeNextRunAt({
+        frequency: parsed.frequency,
+        sendTime: parsed.sendTime,
+        dayOfWeek: parsed.dayOfWeek ?? null,
+        dayOfMonth: parsed.dayOfMonth ?? null,
+        timezone: parsed.timezone,
+      });
+
+      const report = await storage.createScheduledReport({
+        ...parsed,
+        tenantId,
+        createdBy: userId,
+        dayOfWeek: parsed.dayOfWeek ?? null,
+        dayOfMonth: parsed.dayOfMonth ?? null,
+        nextRunAt,
+      } as any);
+
+      res.status(201).json(report);
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid input", errors: error.errors });
+      }
+      console.error("Error creating scheduled report:", error);
+      res.status(500).json({ message: "Failed to create scheduled report" });
+    }
+  });
+
+  app.patch("/api/scheduled-reports/:id", ...withPermission('admin:settings'), async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const tenantId = req.rbac.tenantId;
+      const existing = await storage.getScheduledReport(id, tenantId);
+      if (!existing) {
+        return res.status(404).json({ message: "Report schedule not found" });
+      }
+
+      const updateSchema = createScheduledReportSchema.partial();
+      const parsed = updateSchema.parse(req.body);
+
+      const mergedFrequency = parsed.frequency || existing.frequency;
+      const mergedSendTime = parsed.sendTime || existing.sendTime;
+      const mergedTimezone = parsed.timezone || existing.timezone;
+      const mergedDayOfWeek = parsed.dayOfWeek ?? existing.dayOfWeek;
+      const mergedDayOfMonth = parsed.dayOfMonth ?? existing.dayOfMonth;
+
+      const nextRunAt = computeNextRunAt({
+        frequency: mergedFrequency,
+        sendTime: mergedSendTime,
+        dayOfWeek: mergedDayOfWeek,
+        dayOfMonth: mergedDayOfMonth,
+        timezone: mergedTimezone,
+      });
+
+      const updated = await storage.updateScheduledReport(id, {
+        ...parsed,
+        nextRunAt,
+      } as any);
+
+      res.json(updated);
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid input", errors: error.errors });
+      }
+      console.error("Error updating scheduled report:", error);
+      res.status(500).json({ message: "Failed to update scheduled report" });
+    }
+  });
+
+  app.delete("/api/scheduled-reports/:id", ...withPermission('admin:settings'), async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const tenantId = req.rbac.tenantId;
+      const existing = await storage.getScheduledReport(id, tenantId);
+      if (!existing) {
+        return res.status(404).json({ message: "Report schedule not found" });
+      }
+
+      await storage.deleteScheduledReport(id);
+      res.json({ message: "Report schedule deleted" });
+    } catch (error: any) {
+      console.error("Error deleting scheduled report:", error);
+      res.status(500).json({ message: "Failed to delete scheduled report" });
     }
   });
 

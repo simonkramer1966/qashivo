@@ -5201,6 +5201,39 @@ export const collectionPoliciesRelations = relations(collectionPolicies, ({ one 
 }));
 
 // ============================================================
+// SCHEDULED REPORTS
+// ============================================================
+
+export const scheduledReports = pgTable("scheduled_reports", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  reportType: varchar("report_type").notNull(),
+  name: varchar("name").notNull(),
+  frequency: varchar("frequency").notNull(),
+  dayOfWeek: integer("day_of_week"),
+  dayOfMonth: integer("day_of_month"),
+  sendTime: varchar("send_time").notNull().default("08:00"),
+  timezone: varchar("timezone").notNull().default("Europe/London"),
+  recipients: text("recipients").array().notNull(),
+  enabled: boolean("enabled").notNull().default(true),
+  lastSentAt: timestamp("last_sent_at"),
+  nextRunAt: timestamp("next_run_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertScheduledReportSchema = createInsertSchema(scheduledReports).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastSentAt: true,
+  nextRunAt: true,
+});
+export type InsertScheduledReport = z.infer<typeof insertScheduledReportSchema>;
+export type ScheduledReport = typeof scheduledReports.$inferSelect;
+
+// ============================================================
 // DEBTOR PACK ROW - UI PROJECTION FOR LOOP LEFT PANE
 // ============================================================
 

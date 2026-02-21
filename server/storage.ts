@@ -148,6 +148,9 @@ import {
   type InsertWorkflowProfile,
   type WorkflowMessageVariant,
   type InsertWorkflowMessageVariant,
+  scheduledReports,
+  type ScheduledReport,
+  type InsertScheduledReport,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc, sql, count, sum, ne, isNotNull, isNull, gte, lte, lt, or, ilike, inArray } from "drizzle-orm";
@@ -580,6 +583,14 @@ export interface IStorage {
   getWorkflowMessageVariantByKeyChannel(workflowProfileId: string, key: string, channel: string): Promise<WorkflowMessageVariant | undefined>;
   createWorkflowMessageVariant(variant: InsertWorkflowMessageVariant): Promise<WorkflowMessageVariant>;
   updateWorkflowMessageVariant(id: string, updates: Partial<InsertWorkflowMessageVariant>): Promise<WorkflowMessageVariant | undefined>;
+
+  // Scheduled Report operations
+  getScheduledReports(tenantId: string): Promise<ScheduledReport[]>;
+  getScheduledReport(id: string, tenantId?: string): Promise<ScheduledReport | undefined>;
+  getDueScheduledReports(): Promise<ScheduledReport[]>;
+  createScheduledReport(report: InsertScheduledReport): Promise<ScheduledReport>;
+  updateScheduledReport(id: string, updates: Partial<InsertScheduledReport>): Promise<ScheduledReport | undefined>;
+  deleteScheduledReport(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -5464,6 +5475,45 @@ export class DatabaseStorage implements IStorage {
       metadata: params.metadata || {},
     });
     console.log(`📝 Audit: ${params.action} by user ${params.userId} on ${params.resourceType}/${params.resourceId}`);
+  }
+
+  async getScheduledReports(tenantId: string): Promise<ScheduledReport[]> {
+    return await db.select().from(scheduledReports)
+      .where(eq(scheduledReports.tenantId, tenantId))
+      .orderBy(desc(scheduledReports.createdAt));
+  }
+
+  async getScheduledReport(id: string, tenantId?: string): Promise<ScheduledReport | undefined> {
+    const conditions = [eq(scheduledReports.id, id)];
+    if (tenantId) conditions.push(eq(scheduledReports.tenantId, tenantId));
+    const [report] = await db.select().from(scheduledReports)
+      .where(and(...conditions));
+    return report;
+  }
+
+  async getDueScheduledReports(): Promise<ScheduledReport[]> {
+    return await db.select().from(scheduledReports)
+      .where(and(
+        eq(scheduledReports.enabled, true),
+        lte(scheduledReports.nextRunAt, new Date())
+      ));
+  }
+
+  async createScheduledReport(report: InsertScheduledReport): Promise<ScheduledReport> {
+    const [created] = await db.insert(scheduledReports).values(report).returning();
+    return created;
+  }
+
+  async updateScheduledReport(id: string, updates: Partial<InsertScheduledReport>): Promise<ScheduledReport | undefined> {
+    const [updated] = await db.update(scheduledReports)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(scheduledReports.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteScheduledReport(id: string): Promise<void> {
+    await db.delete(scheduledReports).where(eq(scheduledReports.id, id));
   }
 }
 
