@@ -10,6 +10,7 @@ import {
 } from "./services/dynamicRiskScoringService";
 import { setupAuth, isAuthenticated, isOwner, regenerateSessionOnLogin } from "./auth";
 import { logSecurityEvent, extractClientInfo } from "./services/securityAuditService";
+import { sanitizeObject, stripSensitiveUserFields, stripSensitiveTenantFields, stripSensitiveFields } from "./utils/sanitize";
 import { withPermission, withRole, withMinimumRole, canManageUser } from "./middleware/rbac";
 import { 
   insertContactSchema,
@@ -473,6 +474,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
 
+  app.use((req, _res, next) => {
+    if (req.body && typeof req.body === 'object' && ['POST', 'PUT', 'PATCH'].includes(req.method)) {
+      req.body = sanitizeObject(req.body);
+    }
+    next();
+  });
+
   // Partner and Context Management Routes
   // Get current auth context (user info, role, active tenant)
   app.get('/api/auth/context', isAuthenticated, async (req, res) => {
@@ -782,7 +790,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const users = await storage.getTenantUsers(req.params.tenantId);
-      res.json({ users });
+      res.json({ users: users.map(u => stripSensitiveUserFields(u)) });
     } catch (error) {
       console.error('Failed to get tenant users:', error);
       res.status(500).json({ message: 'Failed to retrieve tenant users' });
@@ -2034,7 +2042,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('🔍 Looking up authenticated user with ID:', userId);
       const user = await storage.getUser(userId);
       console.log('🔍 Found user:', !!user);
-      res.json(user);
+      res.json(user ? stripSensitiveUserFields(user) : null);
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
@@ -16415,7 +16423,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         return res.status(404).json({ message: "Tenant not found" });
       }
 
-      res.json(tenant);
+      res.json(stripSensitiveTenantFields(tenant));
     } catch (error) {
       console.error("Error fetching tenant:", error);
       res.status(500).json({ message: "Failed to fetch tenant settings" });
@@ -16609,7 +16617,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       if (settings) updates.settings = settings;
 
       const tenant = await storage.updateTenant(user.tenantId!, updates);
-      res.json(tenant);
+      res.json(stripSensitiveTenantFields(tenant));
     } catch (error) {
       console.error("Error updating tenant settings:", error);
       res.status(500).json({ message: "Failed to update tenant settings" });
@@ -16701,7 +16709,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       }
 
       const tenant = await storage.updateTenant(user.tenantId!, updates);
-      res.json(tenant);
+      res.json(stripSensitiveTenantFields(tenant));
     } catch (error) {
       console.error("Error updating tenant automation settings:", error);
       res.status(500).json({ message: "Failed to update tenant settings" });
@@ -20888,7 +20896,7 @@ ${tenant.name}
       logSecurityEvent({ eventType: 'role_change', userId: actorId, tenantId: req.rbac.tenantId, ipAddress, userAgent, metadata: { targetUserId: userId, oldRole: req.targetUser.role, newRole: role } });
 
       res.json({
-        user: updatedUser,
+        user: updatedUser ? stripSensitiveUserFields(updatedUser) : updatedUser,
         message: `User role updated to ${role}`
       });
     } catch (error) {
@@ -22915,7 +22923,7 @@ ${tenant.name}
       const { role } = req.query;
       const filters = role ? { role: role as string } : undefined;
       const users = await storage.getAllPlatformUsers(filters);
-      res.json(users);
+      res.json(users.map(u => stripSensitiveUserFields(u)));
     } catch (error) {
       console.error("Error fetching platform users:", error);
       res.status(500).json({ message: "Failed to fetch platform users" });
@@ -22926,7 +22934,7 @@ ${tenant.name}
   app.get("/api/platform-admin/tenants", ...withPlatformAdmin(), async (req, res) => {
     try {
       const tenants = await storage.getAllPlatformTenants();
-      res.json(tenants);
+      res.json(tenants.map(t => stripSensitiveTenantFields(t)));
     } catch (error) {
       console.error("Error fetching platform tenants:", error);
       res.status(500).json({ message: "Failed to fetch platform tenants" });
