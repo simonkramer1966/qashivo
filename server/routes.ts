@@ -3960,6 +3960,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
       const { contactId } = req.params;
+      if (!await hasContactAccess(user, contactId)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
       
       const { insertCustomerContactPersonSchema } = await import("@shared/schema");
       const createSchema = insertCustomerContactPersonSchema.pick({
@@ -3996,7 +3999,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
-      const { personId } = req.params;
+      const { contactId, personId } = req.params;
+      if (!await hasContactAccess(user, contactId)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
       
       const { insertCustomerContactPersonSchema } = await import("@shared/schema");
       const updateSchema = insertCustomerContactPersonSchema.pick({
@@ -4029,7 +4035,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
-      const { personId } = req.params;
+      const { contactId, personId } = req.params;
+      if (!await hasContactAccess(user, contactId)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
       await storage.deleteCustomerContactPerson(personId, user.tenantId);
       res.json({ success: true });
     } catch (error) {
@@ -4190,6 +4199,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { contactId } = req.params;
+      if (!await hasContactAccess(user, contactId)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
       const { creditAssessment, riskScore, riskBand, creditLimit, paymentTerms } = req.body;
 
       // Verify contact exists
@@ -4351,6 +4363,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { contactId } = req.params;
+      if (!await hasContactAccess(user, contactId)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
       
       // Get contact
       const contact = await storage.getContact(contactId, user.tenantId);
@@ -4384,6 +4399,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { contactId } = req.params;
+      if (!await hasContactAccess(user, contactId)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
       
       // Verify contact exists and user has access to it
       const contact = await storage.getContact(contactId, user.tenantId);
@@ -4407,6 +4425,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { contactId } = req.params;
+      if (!await hasContactAccess(user, contactId)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
       
       // Verify contact exists and user has access to it
       const contact = await storage.getContact(contactId, user.tenantId);
@@ -4509,6 +4530,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { contactId } = req.params;
+      if (!await hasContactAccess(user, contactId)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
       
       // Verify contact exists and user has access to it
       const contact = await storage.getContact(contactId, user.tenantId);
@@ -4871,6 +4895,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { contactId, callId } = req.params;
+      if (!await hasContactAccess(user, contactId)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
       const { actionId } = req.query;
       const tenantId = user.tenantId;
 
@@ -5397,6 +5424,9 @@ Return JSON with:
       }
 
       const { contactId } = req.params;
+      if (!await hasContactAccess(user, contactId)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
       const { templateType, tone, includeStatutoryInterest = true, recipientName, recipientEmail } = req.body;
 
       // Verify contact exists and user has access
@@ -5571,6 +5601,9 @@ Return JSON with:
       }
 
       const { contactId } = req.params;
+      if (!await hasContactAccess(user, contactId)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
       const { subject, body, templateType, recipientEmail: providedRecipient } = req.body;
 
       // Verify contact exists
@@ -5714,6 +5747,9 @@ Return JSON with:
       }
 
       const { contactId } = req.params;
+      if (!await hasContactAccess(user, contactId)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
       const { templateType, tone, recipientName } = req.body;
 
       // Verify contact exists and user has access
@@ -5790,6 +5826,9 @@ Return JSON with:
       }
 
       const { contactId } = req.params;
+      if (!await hasContactAccess(user, contactId)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
       const { body, templateType, recipientPhone: providedPhone } = req.body;
 
       // Verify contact exists
@@ -5967,6 +6006,9 @@ Return JSON with:
       }
 
       const { contactId } = req.params;
+      if (!await hasContactAccess(user, contactId)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
       const { customerTimelineService } = await import("./services/customerTimelineService");
       
       const preview = await customerTimelineService.getCustomerPreview(user.tenantId, contactId);
@@ -5990,6 +6032,9 @@ Return JSON with:
       }
 
       const { contactId } = req.params;
+      if (!await hasContactAccess(user, contactId)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
       const { offset, limit } = req.query;
       
       const contact = await storage.getContact(contactId, user.tenantId);
@@ -6022,6 +6067,9 @@ Return JSON with:
       }
 
       const { contactId } = req.params;
+      if (!await hasContactAccess(user, contactId)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
       const { offset, limit } = req.query;
       
       const contact = await storage.getContact(contactId, user.tenantId);
@@ -6054,6 +6102,9 @@ Return JSON with:
       }
 
       const { contactId } = req.params;
+      if (!await hasContactAccess(user, contactId)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
       const { offset, limit } = req.query;
       
       const contact = await storage.getContact(contactId, user.tenantId);
@@ -6086,6 +6137,9 @@ Return JSON with:
       }
 
       const { contactId } = req.params;
+      if (!await hasContactAccess(user, contactId)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
       const { cursor, limit, channel, direction, outcomesOnly, needsReviewOnly, invoiceId } = req.query;
       
       // Verify contact exists
@@ -6124,6 +6178,9 @@ Return JSON with:
       }
 
       const { contactId } = req.params;
+      if (!await hasContactAccess(user, contactId)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
       const { body, invoiceId } = req.body;
       
       if (!body || typeof body !== "string" || body.trim().length === 0) {
@@ -6164,6 +6221,9 @@ Return JSON with:
       }
 
       const { contactId } = req.params;
+      if (!await hasContactAccess(user, contactId)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
       const { invoiceIds, paymentDate, paymentType, amount, confirmedBy, notes } = req.body;
 
       // Validate required fields
@@ -6280,6 +6340,9 @@ Return JSON with:
       }
 
       const { contactId } = req.params;
+      if (!await hasContactAccess(user, contactId)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
       
       // Verify contact exists
       const contact = await storage.getContact(contactId, user.tenantId);
@@ -6306,6 +6369,9 @@ Return JSON with:
       }
 
       const { contactId } = req.params;
+      if (!await hasContactAccess(user, contactId)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
       const updates = req.body;
       
       // Verify contact exists
@@ -6333,6 +6399,9 @@ Return JSON with:
       }
 
       const { contactId } = req.params;
+      if (!await hasContactAccess(user, contactId)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
       
       // Get contact
       const contact = await storage.getContact(contactId, user.tenantId);
@@ -6490,6 +6559,9 @@ Return JSON with:
       }
 
       const { contactId } = req.params;
+      if (!await hasContactAccess(user, contactId)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
       const limit = parseInt(req.query.limit as string) || 50;
       
       // Verify contact exists
@@ -6658,6 +6730,9 @@ Return JSON with:
       }
 
       const { contactId } = req.params;
+      if (!await hasContactAccess(user, contactId)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
       
       // Verify contact exists
       const contact = await storage.getContact(contactId, user.tenantId);
@@ -6706,6 +6781,9 @@ Return JSON with:
       }
 
       const { contactId } = req.params;
+      if (!await hasContactAccess(user, contactId)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
       
       // Verify contact exists
       const contact = await storage.getContact(contactId, user.tenantId);
@@ -6783,6 +6861,9 @@ Return JSON with:
       }
 
       const { contactId } = req.params;
+      if (!await hasContactAccess(user, contactId)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
       
       // Verify contact exists
       const contact = await storage.getContact(contactId, user.tenantId);
@@ -6817,6 +6898,9 @@ Return JSON with:
       }
 
       const { contactId } = req.params;
+      if (!await hasContactAccess(user, contactId)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
       
       // Verify contact exists
       const contact = await storage.getContact(contactId, user.tenantId);
@@ -14562,6 +14646,9 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       }
 
       const { contactId } = req.params;
+      if (!await hasContactAccess(user, contactId)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
       
       // Get contact details
       const contact = await storage.getContact(contactId, user.tenantId);

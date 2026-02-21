@@ -1,7 +1,7 @@
 import { RequestHandler } from 'express';
 import { PermissionService, Permission } from '../services/permissionService';
 import { storage } from '../storage';
-import { isAuthenticated } from '../replitAuth';
+import { isAuthenticated } from '../auth';
 
 // Extend Express Request interface to include RBAC context
 declare global {
