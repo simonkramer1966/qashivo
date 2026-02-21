@@ -41,7 +41,7 @@ Qashivo uses two design systems:
 -   **Frontend**: React with TypeScript (Vite), Shadcn/ui (Radix UI), Tailwind CSS, Wouter for routing, TanStack Query, React Hook Form with Zod.
 -   **Backend**: Node.js with Express.js (TypeScript ES modules), RESTful API, Express sessions.
 -   **Database**: PostgreSQL (Neon serverless) with Drizzle ORM and Drizzle Kit, supporting multi-tenancy. 90 tables (reduced from 120 in Phase 1 optimization, Feb 2026).
--   **Authentication**: Replit Auth (OpenID Connect) via Passport.js.
+-   **Authentication**: Replit Auth (OpenID Connect) + password-based auth via Passport.js.
 
 ### Partner Architecture (B2B2B Model)
 A three-tier hierarchy enabling accounting firms to manage multiple client businesses with role-based access control, session-based tenant switching, and enforced data isolation.
@@ -50,7 +50,13 @@ A three-tier hierarchy enabling accounting firms to manage multiple client busin
 A secure, internal interface for Qashivo employees to manage and monitor the platform, protected by a `platformAdmin` flag and dedicated middleware.
 
 ### Security Architecture
-Includes robust authentication (OAuth 2.0 with Replit OIDC), granular Role-Based Access Control (RBAC), strict multi-tenant isolation, comprehensive input validation (Zod, Drizzle ORM), and webhook security (HMAC verification).
+Includes robust authentication (OAuth 2.0 with Replit OIDC + password auth), granular Role-Based Access Control (RBAC), strict multi-tenant isolation, comprehensive input validation (Zod, Drizzle ORM), and webhook security (HMAC verification).
+
+### RBAC System (6-Tier)
+Six roles with hierarchical permissions: **Owner** (subscription creator, full control), **Admin** (full system except subscription), **Accountant/Partner** (admin-level across multiple tenants), **Manager** (oversees credit controllers, sees cashflow/financing but not Settings), **Credit Controller** (collections work only, no Settings/cashflow/financing), **Read Only** (view only, no Settings).
+-   **Permission-based route protection**: `withPermission()` middleware from `server/middleware/rbac.ts` applied to 29+ write/action routes. Permissions: `invoices:edit`, `customers:edit`, `collections:sms`, `collections:voice`, `admin:users`, `admin:settings`.
+-   **Contact-level access enforcement**: Credit controllers and read-only users only see contacts/invoices assigned to them. Helpers `getAssignedContactIds()` and `hasContactAccess()` in `server/routes.ts` check assignment; managers+ have full access. Applied to 30+ `/api/contacts/:contactId/...` routes and list routes (GET /api/contacts, GET /api/invoices).
+-   **Key files**: `server/middleware/rbac.ts`, `server/services/permissionService.ts`, `client/src/hooks/usePermissions.ts`, `client/src/components/rbac/PermissionMatrix.tsx`.
 
 ### Feature Specifications
 -   **Intent Analyst System**: AI for analyzing inbound communications (email, SMS, voice) using OpenAI for intent detection, sentiment analysis, and automated action generation.
