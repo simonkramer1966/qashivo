@@ -6,6 +6,31 @@ import connectPg from "connect-pg-simple";
 import bcrypt from "bcryptjs";
 import { storage } from "./storage";
 import crypto from "crypto";
+import rateLimit from "express-rate-limit";
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many login attempts. Please try again in 15 minutes." },
+});
+
+const signupLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many signup attempts. Please try again later." },
+});
+
+const passwordResetLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many password reset requests. Please try again later." },
+});
 
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
@@ -86,7 +111,7 @@ export async function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/signup", async (req, res) => {
+  app.post("/api/signup", signupLimiter, async (req, res) => {
     try {
       const { email, password, firstName, lastName, companyName } = req.body;
       
@@ -148,7 +173,7 @@ export async function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/login", (req, res, next) => {
+  app.post("/api/login", loginLimiter, (req, res, next) => {
     passport.authenticate("local", (err: any, user: any, info: any) => {
       if (err) {
         return res.status(500).json({ message: "Login failed" });
@@ -220,7 +245,7 @@ export async function setupAuth(app: Express) {
     });
   });
 
-  app.post("/api/password-reset/request", async (req, res) => {
+  app.post("/api/password-reset/request", passwordResetLimiter, async (req, res) => {
     try {
       const { email } = req.body;
       
@@ -249,7 +274,7 @@ export async function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/password-reset/confirm", async (req, res) => {
+  app.post("/api/password-reset/confirm", passwordResetLimiter, async (req, res) => {
     try {
       const { token, newPassword } = req.body;
       
