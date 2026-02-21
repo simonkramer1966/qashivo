@@ -9,6 +9,7 @@ import {
   type TradingProfile,
 } from "./services/dynamicRiskScoringService";
 import { setupAuth, isAuthenticated, isOwner, regenerateSessionOnLogin } from "./auth";
+import { logSecurityEvent, extractClientInfo } from "./services/securityAuditService";
 import { withPermission, withRole, withMinimumRole, canManageUser } from "./middleware/rbac";
 import { 
   insertContactSchema,
@@ -13638,6 +13639,40 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
+  app.get("/api/security-audit-log", ...withPermission('admin:settings'), async (req: any, res) => {
+    try {
+      const tenantId = req.rbac.tenantId;
+      const { eventType, limit = 200, before, after } = req.query;
+
+      const conditions = [
+        eq(activityLogs.tenantId, tenantId),
+        eq(activityLogs.category, 'security'),
+      ];
+      
+      if (eventType) conditions.push(eq(activityLogs.activityType, eventType as string));
+
+      const result = await db.select({
+        id: activityLogs.id,
+        eventType: activityLogs.activityType,
+        description: activityLogs.description,
+        result: activityLogs.result,
+        userId: activityLogs.userId,
+        ipAddress: activityLogs.ipAddress,
+        userAgent: activityLogs.userAgent,
+        metadata: activityLogs.metadata,
+        createdAt: activityLogs.createdAt,
+      }).from(activityLogs)
+        .where(and(...conditions))
+        .orderBy(desc(activityLogs.createdAt))
+        .limit(parseInt(limit as string));
+
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error fetching security audit log:", error);
+      res.status(500).json({ message: `Failed to fetch security audit log: ${error.message}` });
+    }
+  });
+
   // ============================================================
   // COLLECTION POLICIES API - Loop Spec V0.5
   // ============================================================
@@ -16542,7 +16577,9 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       
       console.log(`✅ ENHANCED SECURITY: User ${user.id} (role: ${user.role}) successfully switched from ${user.tenantId} to ${tenantId} (${targetTenant.name}) via ${accessType} access`);
       
-      // Return enhanced response with access type information
+      const { ipAddress, userAgent } = extractClientInfo(req);
+      logSecurityEvent({ eventType: 'tenant_switch', userId: user.id, tenantId, ipAddress, userAgent, metadata: { fromTenantId: user.tenantId, toTenantId: tenantId, tenantName: targetTenant.name, accessType } });
+      
       res.json({
         message: "Organization switched successfully",
         tenant: targetTenant,
@@ -20839,7 +20876,6 @@ ${tenant.name}
       // Assign the role
       const updatedUser = await storage.assignUserRole(userId, role, actorId);
       
-      // Log the role change
       await PermissionService.logPermissionChange(
         actorId, 
         userId, 
@@ -20847,6 +20883,9 @@ ${tenant.name}
         'role_change',
         `Role changed from ${req.targetUser.role} to ${role}`
       );
+
+      const { ipAddress, userAgent } = extractClientInfo(req);
+      logSecurityEvent({ eventType: 'role_change', userId: actorId, tenantId: req.rbac.tenantId, ipAddress, userAgent, metadata: { targetUserId: userId, oldRole: req.targetUser.role, newRole: role } });
 
       res.json({
         user: updatedUser,
@@ -21058,6 +21097,9 @@ ${tenant.name}
         lastName,
         password: hashedPassword,
       });
+
+      const { ipAddress, userAgent } = extractClientInfo(req);
+      logSecurityEvent({ eventType: 'invite_accepted', userId: user.id, tenantId: user.tenantId, ipAddress, userAgent, metadata: { email: user.email, role: user.role } });
 
       regenerateSessionOnLogin(req, user as any, (err) => {
         if (err) {

@@ -7,6 +7,7 @@ import bcrypt from "bcryptjs";
 import { storage } from "./storage";
 import crypto from "crypto";
 import rateLimit from "express-rate-limit";
+import { logSecurityEvent, extractClientInfo } from "./services/securityAuditService";
 
 function validatePasswordStrength(password: string): string | null {
   if (password.length < 10) return "Password must be at least 10 characters";
@@ -81,6 +82,9 @@ export function sessionIdleTimeout(): RequestHandler {
     if (req.session.lastActivity) {
       const idleTime = now - req.session.lastActivity;
       if (idleTime > SESSION_IDLE_TIMEOUT) {
+        const user = req.user as any;
+        const { ipAddress, userAgent } = extractClientInfo(req);
+        logSecurityEvent({ eventType: 'session_expired_idle', userId: user?.id, tenantId: user?.tenantId, ipAddress, userAgent });
         return req.session.destroy((err: any) => {
           if (err) console.error("Session idle destroy error:", err);
           res.clearCookie('connect.sid');
@@ -94,6 +98,9 @@ export function sessionIdleTimeout(): RequestHandler {
     } else {
       const sessionAge = now - req.session.createdAt;
       if (sessionAge > SESSION_ABSOLUTE_TTL) {
+        const user = req.user as any;
+        const { ipAddress, userAgent } = extractClientInfo(req);
+        logSecurityEvent({ eventType: 'session_expired_absolute', userId: user?.id, tenantId: user?.tenantId, ipAddress, userAgent });
         return req.session.destroy((err: any) => {
           if (err) console.error("Session absolute expiry error:", err);
           res.clearCookie('connect.sid');
@@ -215,6 +222,9 @@ export async function setupAuth(app: Express) {
         platformAdmin: isFirstUser,
       } as any);
       
+      const { ipAddress, userAgent } = extractClientInfo(req);
+      logSecurityEvent({ eventType: 'signup', userId: user.id, tenantId: tenant.id, ipAddress, userAgent, metadata: { email } });
+      
       regenerateSessionOnLogin(req, user, (err) => {
         if (err) {
           return res.status(500).json({ message: "Signup successful but login failed" });
@@ -240,12 +250,14 @@ export async function setupAuth(app: Express) {
   });
 
   app.post("/api/login", loginLimiter, (req, res, next) => {
+    const { ipAddress, userAgent } = extractClientInfo(req);
     passport.authenticate("local", (err: any, user: any, info: any) => {
       if (err) {
         return res.status(500).json({ message: "Login failed" });
       }
       
       if (!user) {
+        logSecurityEvent({ eventType: 'login_failed', ipAddress, userAgent, result: 'failure', metadata: { email: req.body?.email } });
         return res.status(401).json({ message: info?.message || "Invalid credentials" });
       }
       
@@ -253,6 +265,8 @@ export async function setupAuth(app: Express) {
         if (loginErr) {
           return res.status(500).json({ message: "Login failed" });
         }
+        
+        logSecurityEvent({ eventType: 'login_success', userId: user.id, tenantId: user.tenantId, ipAddress, userAgent });
         
         return res.json({
           user: {
@@ -272,18 +286,21 @@ export async function setupAuth(app: Express) {
   });
 
   app.post("/api/logout", (req, res) => {
+    const user = req.user as any;
+    const { ipAddress, userAgent } = extractClientInfo(req);
+    if (user?.id) {
+      logSecurityEvent({ eventType: 'logout', userId: user.id, tenantId: user.tenantId, ipAddress, userAgent });
+    }
     req.logout((err) => {
       if (err) {
         return res.status(500).json({ message: "Logout failed" });
       }
       
-      // Destroy the session completely
       req.session.destroy((destroyErr) => {
         if (destroyErr) {
           console.error('Session destruction error:', destroyErr);
         }
         
-        // Clear the session cookie
         res.clearCookie('connect.sid');
         res.json({ message: "Logged out successfully" });
       });
@@ -314,6 +331,7 @@ export async function setupAuth(app: Express) {
   app.post("/api/password-reset/request", passwordResetLimiter, async (req, res) => {
     try {
       const { email } = req.body;
+      const { ipAddress, userAgent } = extractClientInfo(req);
       
       if (!email) {
         return res.status(400).json({ message: "Email is required" });
@@ -322,16 +340,19 @@ export async function setupAuth(app: Express) {
       const user = await storage.getUserByEmail(email);
       
       if (!user) {
+        logSecurityEvent({ eventType: 'password_reset_request', ipAddress, userAgent, result: 'failure', metadata: { email, reason: 'user_not_found' } });
         return res.json({ message: "If an account exists, a reset link has been sent" });
       }
       
       const resetToken = crypto.randomBytes(32).toString('hex');
-      const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour
+      const resetTokenExpiry = new Date(Date.now() + 3600000);
       
       await storage.updateUserResetToken(user.id, resetToken, resetTokenExpiry);
       
       const { sendPasswordResetEmail } = await import("./services/email/SendGridEmailService");
       await sendPasswordResetEmail(email, resetToken);
+      
+      logSecurityEvent({ eventType: 'password_reset_request', userId: user.id, tenantId: user.tenantId, ipAddress, userAgent });
       
       return res.json({ message: "If an account exists, a reset link has been sent" });
     } catch (error) {
@@ -343,6 +364,7 @@ export async function setupAuth(app: Express) {
   app.post("/api/password-reset/confirm", passwordResetLimiter, async (req, res) => {
     try {
       const { token, newPassword } = req.body;
+      const { ipAddress, userAgent } = extractClientInfo(req);
       
       if (!token || !newPassword) {
         return res.status(400).json({ message: "Token and new password are required" });
@@ -361,6 +383,8 @@ export async function setupAuth(app: Express) {
       
       const hashedPassword = await bcrypt.hash(newPassword, 10);
       await storage.updateUserPassword(user.id, hashedPassword);
+      
+      logSecurityEvent({ eventType: 'password_reset_confirm', userId: user.id, tenantId: user.tenantId, ipAddress, userAgent });
       
       return res.json({ message: "Password reset successfully" });
     } catch (error) {
