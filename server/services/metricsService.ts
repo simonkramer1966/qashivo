@@ -301,7 +301,7 @@ async function calculateCureRates(tenantId: string): Promise<CureRateMetrics> {
 }
 
 /**
- * Calculate collector workload
+ * Calculate credit controller workload
  */
 async function calculateCollectorLoad(tenantId: string, windowDays: number = 7): Promise<CollectorLoadMetrics> {
   const windowStart = subDays(new Date(), windowDays);
@@ -317,7 +317,7 @@ async function calculateCollectorLoad(tenantId: string, windowDays: number = 7):
       )
     );
 
-  // Count active collectors (users with collector or admin role)
+  // Count active credit controllers (users with assigned actions)
   const activeCollectors = await db
     .select({ count: sql<number>`count(distinct assigned_to)` })
     .from(actions)

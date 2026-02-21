@@ -298,7 +298,7 @@ export default function DashboardExperimental() {
             {/* Collector Load Card - Clean */}
             <Card className="bg-white border-slate-200 p-5" data-testid="card-collector-load-exp">
               <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">
-                Collector Load
+                Controller Load
               </p>
               <div className="flex items-baseline gap-2 mb-4">
                 <span className="text-3xl font-bold text-slate-900">{metrics.collectorLoad.actionsPerDay}</span>
@@ -307,7 +307,7 @@ export default function DashboardExperimental() {
 
               <div className="space-y-3">
                 <div className="flex justify-between items-baseline">
-                  <span className="text-xs text-slate-500">Active collectors</span>
+                  <span className="text-xs text-slate-500">Active controllers</span>
                   <span className="text-lg font-semibold text-slate-900">{metrics.collectorLoad.totalCollectors}</span>
                 </div>
 
@@ -318,7 +318,7 @@ export default function DashboardExperimental() {
               </div>
 
               <div className="text-xs text-slate-400 pt-3 mt-3 border-t border-slate-100">
-                Per collector workload
+                Per controller workload
               </div>
             </Card>
           </div>

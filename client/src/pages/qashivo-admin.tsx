@@ -296,8 +296,8 @@ export default function QashivoAdminDashboard() {
                         <span className="font-medium">{users.filter(u => u.tenantRole === 'admin').length}</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span>Collectors:</span>
-                        <span className="font-medium">{users.filter(u => u.tenantRole === 'collector').length}</span>
+                        <span>Credit Controllers:</span>
+                        <span className="font-medium">{users.filter(u => u.tenantRole === 'credit_controller').length}</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span>Platform Admins:</span>

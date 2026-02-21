@@ -58,7 +58,7 @@ export default function PermissionMatrix({
     if (!availableRoles) return [];
     
     if (restrictToUserLevel && userPermissions) {
-      const hierarchy = ['viewer', 'user', 'accountant', 'manager', 'admin', 'owner'];
+      const hierarchy = ['readonly', 'credit_controller', 'manager', 'accountant', 'admin', 'owner'];
       const userLevel = hierarchy.indexOf(userPermissions.role);
       
       return availableRoles.filter(role => {

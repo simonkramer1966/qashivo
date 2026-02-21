@@ -380,7 +380,7 @@ export function registerPartnerRoutes(app: Express) {
         const partner = req.partner!;
         const user = req.user as any;
 
-        if (user.role !== "credit_controller" && user.tenantRole !== "collector") {
+        if (user.role !== "credit_controller" && user.tenantRole !== "credit_controller") {
           return res.status(403).json({
             message: "This endpoint is for credit controllers only",
           });

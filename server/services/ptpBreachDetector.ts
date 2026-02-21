@@ -23,7 +23,7 @@ interface BreachDetectorConfig {
  * When a breach is detected:
  * 1. Updates promise status to 'breached'
  * 2. Sets breachedAt timestamp
- * 3. Creates a follow-up action for the collector
+ * 3. Creates a follow-up action for the credit controller
  */
 class PTPBreachDetector {
   private intervalId: NodeJS.Timeout | null = null;
@@ -334,7 +334,7 @@ class PTPBreachDetector {
           log.error(`Failed to resume invoice from PTP pause: ${error.message}`);
         }
 
-        // Create a follow-up action for the collector
+        // Create a follow-up action for the credit controller
         await db.insert(actions).values({
           tenantId: tenantId,
           invoiceId: promise.invoiceId,

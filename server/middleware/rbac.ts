@@ -105,7 +105,7 @@ export const withRBACContext: RequestHandler = async (req, res, next) => {
       userId,
       tenantId: activeTenantId, // The active tenant context
       userRole: user.role, // Global role (owner, partner, user)
-      tenantRole: user.tenantRole || undefined, // Role within tenant (admin, collector, viewer)
+      tenantRole: user.tenantRole || undefined, // Role within tenant (admin, credit_controller, readonly)
       permissions,
       isPartner,
       partnerId: user.partnerId || undefined,
@@ -376,8 +376,8 @@ export function canManageUser(targetUserIdParam: string = 'userId'): RequestHand
 }
 
 /**
- * Middleware to enforce contact-level access control for collectors
- * Admins and partners see all contacts, collectors only see assigned
+ * Middleware to enforce contact-level access control for credit controllers
+ * Admins and partners see all contacts, credit controllers only see assigned
  */
 export const enforceContactAccess: RequestHandler = async (req, res, next) => {
   try {

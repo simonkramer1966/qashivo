@@ -83,7 +83,7 @@ The Partner Hierarchy System implements a **B2B2B (Business-to-Business-to-Busin
 **Types**:
 - **Platform Admin**: Qashivo employees (`platformAdmin: true`)
 - **Partner Users**: Accounting firm staff (`role: "partner"`, has `partnerId`)
-- **Tenant Users**: Client business staff (`role: "user"`, has `tenantId`)
+- **Tenant Users**: Client business staff (has `tenantId`, `tenantRole` determines access level)
 
 ---
 
@@ -206,7 +206,7 @@ established (invitation/direct) → active → suspended → terminated
 
 ### User Contact Assignments Table
 
-Assigns specific collectors to customer contacts within a tenant.
+Assigns specific credit controllers to customer contacts within a tenant.
 
 ```typescript
 export const userContactAssignments = pgTable("user_contact_assignments", {
@@ -237,7 +237,7 @@ export const userContactAssignments = pgTable("user_contact_assignments", {
 ]);
 ```
 
-**Purpose**: Enables granular access control so collectors only see contacts assigned to them.
+**Purpose**: Enables granular access control so credit controllers only see contacts assigned to them.
 
 ### Users Table Extensions
 
@@ -259,7 +259,7 @@ Standard user records extended with partner and tenant relationships.
   
   // Tenant relationship
   tenantId: varchar("tenant_id").references(() => tenants.id),
-  tenantRole: varchar("tenant_role"),  // admin, collector, viewer
+  tenantRole: varchar("tenant_role"),  // owner, admin, accountant, manager, credit_controller, readonly
   
   // Platform access
   platformAdmin: boolean("platform_admin").default(false),
@@ -288,7 +288,7 @@ interface RBACContext {
   userId: string;
   tenantId: string;              // Active tenant context
   userRole: 'owner' | 'partner' | 'user';
-  tenantRole?: 'admin' | 'collector' | 'viewer';
+  tenantRole?: 'owner' | 'admin' | 'accountant' | 'manager' | 'credit_controller' | 'readonly';
   permissions: string[];         // Computed permissions for active tenant
   isPartner: boolean;            // True if role=partner and partnerId exists
   partnerId?: string;            // Partner organization ID
@@ -418,7 +418,7 @@ export const requireTenantAdmin: RequestHandler = async (req, res, next) => {
 
 #### `enforceContactAccess`
 
-Restricts collectors to assigned contacts only.
+Restricts credit controllers to assigned contacts only.
 
 ```typescript
 export const enforceContactAccess: RequestHandler = async (req, res, next) => {
@@ -1101,7 +1101,7 @@ if (!hasAccess) {
 ```
 1. Tenant admin navigates to Users page
    ↓
-2. Selects collector user
+2. Selects credit controller user
    ↓
 3. Clicks "Manage Assignments"
    ↓
@@ -1117,22 +1117,22 @@ if (!hasAccess) {
    - Creates userContactAssignment record
    - Sets assignedBy = current user
    ↓
-7. Collector now sees contact in their contact list
+7. Credit controller now sees contact in their contact list
    ↓
-8. All invoices/actions for that contact visible to collector
+8. All invoices/actions for that contact visible to credit controller
 ```
 
-### Data Access Flow (Collector)
+### Data Access Flow (Credit Controller)
 
 ```
-1. Collector logs in
+1. Credit controller logs in
    ↓
 2. Dashboard loads:
    GET /api/invoices?tenantId={tenantId}
    ↓
 3. Backend middleware:
    - withRBACContext sets req.rbac
-   - Detects tenantRole='collector'
+   - Detects tenantRole='credit_controller'
    ↓
 4. Storage layer:
    - getAssignedContacts(userId, tenantId)
@@ -1300,9 +1300,9 @@ export function ContactAssignmentManager({ userId }: { userId: string }) {
 **2. Contact Assignment**:
 - Create tenant admin user
 - Create 5 contacts in tenant
-- Create collector user
-- Assign 2 contacts to collector
-- Login as collector
+- Create credit controller user
+- Assign 2 contacts to credit controller
+- Login as credit controller
 - Verify only 2 contacts visible
 
 **3. Data Isolation**:
@@ -1313,7 +1313,7 @@ export function ContactAssignmentManager({ userId }: { userId: string }) {
 - Verify 403 Forbidden response
 
 **4. Permission Enforcement**:
-- Create collector user (not admin)
+- Create credit controller user (not admin)
 - Attempt to create new user
 - Verify 403 Forbidden response
 - Attempt to assign contacts
@@ -1329,7 +1329,7 @@ The Partner Hierarchy System enables:
 - **Strict data isolation** through tenant-scoped queries and middleware enforcement
 - **Flexible access control** via RBAC with partner, tenant, and user-level permissions
 - **Session-based tenant switching** for partner users accessing multiple clients
-- **Granular contact assignments** allowing collectors to only see their assigned accounts
+- **Granular contact assignments** allowing credit controllers to only see their assigned accounts
 - **Audit trails** and access logging for compliance and security
 
 The three-tier architecture (Platform → Partners → Tenants → Users) provides scalability, security, and flexibility for B2B2B SaaS operations while maintaining clear boundaries between accounting firms and their respective client bases.

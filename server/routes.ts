@@ -8475,7 +8475,7 @@ Guidelines:
           type: 'note',
           status: 'completed',
           subject: `Dispute ${status}`,
-          content: `Dispute ${status} by collector. Response: ${responseNotes}`,
+          content: `Dispute ${status} by credit controller. Response: ${responseNotes}`,
           metadata: {
             disputeId: dispute.id,
             disputeStatus: status
@@ -8907,7 +8907,7 @@ Guidelines:
     }
   });
 
-  // Approve action - move from pending to scheduled (collector approves AI recommendation)
+  // Approve action - move from pending to scheduled (credit controller approves AI recommendation)
   app.post("/api/actions/:id/approve", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -8953,7 +8953,7 @@ Guidelines:
     }
   });
 
-  // Edit action - collector overrides AI recommendation
+  // Edit action - credit controller overrides AI recommendation
   app.patch("/api/actions/:id/edit", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -9126,7 +9126,7 @@ Guidelines:
     }
   });
 
-  // Assign action - assign to a specific collector
+  // Assign action - assign to a specific credit controller
   app.patch("/api/actions/:id/assign", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);

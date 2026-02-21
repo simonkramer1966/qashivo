@@ -328,7 +328,7 @@ export default function Dashboard() {
           <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-xl p-6" data-testid="card-collector-load">
             <div className="flex items-start justify-between mb-4">
               <div>
-                <p className="text-sm font-medium text-slate-600">Collector Load</p>
+                <p className="text-sm font-medium text-slate-600">Controller Load</p>
                 <div className="flex items-baseline gap-2 mt-1">
                   <span className="text-3xl font-bold text-slate-900">{metrics.collectorLoad.actionsPerDay}</span>
                   <span className="text-sm text-slate-500">/day</span>
@@ -341,7 +341,7 @@ export default function Dashboard() {
 
             <div className="space-y-3 pt-2">
               <div className="flex justify-between items-center">
-                <span className="text-xs text-slate-600">Active collectors</span>
+                <span className="text-xs text-slate-600">Active controllers</span>
                 <span className="text-lg font-semibold text-blue-600">{metrics.collectorLoad.totalCollectors}</span>
               </div>
 
@@ -353,7 +353,7 @@ export default function Dashboard() {
               <div className="pt-3 border-t border-slate-200">
                 <div className="flex items-center gap-2 text-xs text-slate-500">
                   <Clock className="h-3.5 w-3.5" />
-                  <span>Per collector workload</span>
+                  <span>Per controller workload</span>
                 </div>
               </div>
             </div>

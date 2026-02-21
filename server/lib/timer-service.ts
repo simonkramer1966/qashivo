@@ -2,7 +2,7 @@
  * Timer Service
  * 
  * Manages workflow timers for exception-based surfacing.
- * Creates timer-based alerts that notify collectors of time-sensitive events.
+ * Creates timer-based alerts that notify credit controllers of time-sensitive events.
  * 
  * Timer Types:
  * - dispute_window_closing: T0+25 days (UK 30-day dispute window)

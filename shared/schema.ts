@@ -36,8 +36,8 @@ export const users = pgTable("users", {
   profileImageUrl: varchar("profile_image_url"),
   tenantId: varchar("tenant_id").references(() => tenants.id),
   partnerId: varchar("partner_id").references(() => partners.id), // Links user to a partner organization
-  role: varchar("role").notNull().default("user"), // owner, admin, user, partner, client_owner, client_user
-  tenantRole: varchar("tenant_role").default("user"), // admin, collector, manager, user (role within a specific tenant)
+  role: varchar("role").notNull().default("user"), // Global role: owner, partner, user
+  tenantRole: varchar("tenant_role"), // Tenant role: owner, admin, accountant, manager, credit_controller, readonly
   platformAdmin: boolean("platform_admin").default(false), // Qashivo platform admin access
   stripeCustomerId: varchar("stripe_customer_id"),
   stripeSubscriptionId: varchar("stripe_subscription_id"),
@@ -1188,7 +1188,7 @@ export const permissions = pgTable("permissions", {
 // Role permissions table - maps default permissions to roles
 export const rolePermissions = pgTable("role_permissions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  role: varchar("role").notNull(), // "owner", "admin", "accountant", "viewer", "user"
+  role: varchar("role").notNull(), // "owner", "admin", "accountant", "manager", "credit_controller", "readonly"
   permissionId: varchar("permission_id").notNull().references(() => permissions.id, { onDelete: "cascade" }),
   isDefault: boolean("is_default").default(true), // Whether this is a default permission for the role
   createdAt: timestamp("created_at").defaultNow(),

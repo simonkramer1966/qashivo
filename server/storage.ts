@@ -520,7 +520,7 @@ export interface IStorage {
   // Check if user has access to a specific contact
   hasContactAccess(userId: string, contactId: string, tenantId: string): Promise<boolean>;
   
-  // Get contacts assigned to a user (for collectors)
+  // Get contacts assigned to a user (for credit controllers)
   getAssignedContacts(userId: string, tenantId: string): Promise<Contact[]>;
   
   // Platform Admin operations - for Qashivo internal use only
@@ -4972,7 +4972,7 @@ export class DatabaseStorage implements IStorage {
     return !!assignment;
   }
 
-  // Get contacts assigned to a user (for collectors)
+  // Get contacts assigned to a user (for credit controllers)
   async getAssignedContacts(userId: string, tenantId: string): Promise<Contact[]> {
     const results = await db
       .select({

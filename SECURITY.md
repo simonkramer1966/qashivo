@@ -286,7 +286,7 @@ export const users = pgTable("users", {
   tenantId: varchar("tenant_id").references(() => tenants.id),
   role: varchar("role").default("user"), // owner, partner, user
   partnerId: varchar("partner_id").references(() => partners.id),
-  tenantRole: varchar("tenant_role"), // admin, collector, viewer
+  tenantRole: varchar("tenant_role"), // owner, admin, accountant, manager, credit_controller, readonly
   // ...
 });
 
@@ -339,7 +339,7 @@ Users can only access assigned contacts:
 **Location:** `server/middleware/rbac.ts`
 
 ```typescript
-// Contact access filter for collectors
+// Contact access filter for credit controllers
 export function getContactFilter(): RequestHandler {
   return async (req, res, next) => {
     if (!req.rbac) {
