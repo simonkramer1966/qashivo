@@ -8,7 +8,7 @@ import {
   type CreditSignals,
   type TradingProfile,
 } from "./services/dynamicRiskScoringService";
-import { setupAuth, isAuthenticated, isOwner } from "./auth";
+import { setupAuth, isAuthenticated, isOwner, regenerateSessionOnLogin } from "./auth";
 import { withPermission, withRole, withMinimumRole, canManageUser } from "./middleware/rbac";
 import { 
   insertContactSchema,
@@ -21060,7 +21060,7 @@ ${tenant.name}
         password: hashedPassword,
       });
 
-      req.login(user as any, (err) => {
+      regenerateSessionOnLogin(req, user as any, (err) => {
         if (err) {
           console.error("Auto-login after invite accept failed:", err);
           return res.json({

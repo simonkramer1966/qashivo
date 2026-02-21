@@ -41,30 +41,85 @@ const passwordResetLimiter = rateLimit({
   message: { message: "Too many password reset requests. Please try again later." },
 });
 
+const SESSION_ABSOLUTE_TTL = 24 * 60 * 60 * 1000; // 24 hours absolute max
+const SESSION_IDLE_TIMEOUT = 30 * 60 * 1000; // 30 minutes idle timeout
+
 export function getSession() {
-  const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
-  
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
     conString: process.env.DATABASE_URL,
     createTableIfMissing: true,
-    ttl: sessionTtl,
+    ttl: Math.floor(SESSION_ABSOLUTE_TTL / 1000),
     tableName: "sessions",
   });
   
-  console.log("✅ Using PostgreSQL session store for persistent sessions");
+  console.log("✅ Using PostgreSQL session store with 24h absolute / 30min idle timeout");
   
   return session({
     secret: process.env.SESSION_SECRET || "qashivo-secret-key-change-in-production",
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
+    rolling: true,
     cookie: {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: sessionTtl,
+      maxAge: SESSION_ABSOLUTE_TTL,
     },
+  });
+}
+
+export function sessionIdleTimeout(): RequestHandler {
+  return (req: any, res, next) => {
+    if (!req.session || !req.isAuthenticated || !req.isAuthenticated()) {
+      return next();
+    }
+
+    const now = Date.now();
+
+    if (req.session.lastActivity) {
+      const idleTime = now - req.session.lastActivity;
+      if (idleTime > SESSION_IDLE_TIMEOUT) {
+        return req.session.destroy((err: any) => {
+          if (err) console.error("Session idle destroy error:", err);
+          res.clearCookie('connect.sid');
+          return res.status(401).json({ message: "Session expired due to inactivity" });
+        });
+      }
+    }
+
+    if (!req.session.createdAt) {
+      req.session.createdAt = now;
+    } else {
+      const sessionAge = now - req.session.createdAt;
+      if (sessionAge > SESSION_ABSOLUTE_TTL) {
+        return req.session.destroy((err: any) => {
+          if (err) console.error("Session absolute expiry error:", err);
+          res.clearCookie('connect.sid');
+          return res.status(401).json({ message: "Session expired. Please log in again." });
+        });
+      }
+    }
+
+    req.session.lastActivity = now;
+    next();
+  };
+}
+
+export function regenerateSessionOnLogin(req: any, user: any, callback: (err: any) => void) {
+  const oldSession = req.session;
+  req.session.regenerate((err: any) => {
+    if (err) return callback(err);
+    
+    if (oldSession.activeTenantId) {
+      req.session.activeTenantId = oldSession.activeTenantId;
+    }
+    
+    req.session.createdAt = Date.now();
+    req.session.lastActivity = Date.now();
+    
+    req.login(user, callback);
   });
 }
 
@@ -73,6 +128,7 @@ export async function setupAuth(app: Express) {
   app.use(getSession());
   app.use(passport.initialize());
   app.use(passport.session());
+  app.use(sessionIdleTimeout());
 
   passport.use(new LocalStrategy(
     {
@@ -159,7 +215,7 @@ export async function setupAuth(app: Express) {
         platformAdmin: isFirstUser,
       } as any);
       
-      req.login(user, (err) => {
+      regenerateSessionOnLogin(req, user, (err) => {
         if (err) {
           return res.status(500).json({ message: "Signup successful but login failed" });
         }
@@ -193,7 +249,7 @@ export async function setupAuth(app: Express) {
         return res.status(401).json({ message: info?.message || "Invalid credentials" });
       }
       
-      req.login(user, (loginErr) => {
+      regenerateSessionOnLogin(req, user, (loginErr) => {
         if (loginErr) {
           return res.status(500).json({ message: "Login failed" });
         }
