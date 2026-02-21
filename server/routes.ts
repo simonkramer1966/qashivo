@@ -273,6 +273,26 @@ import { clientPartnerService } from "./services/clientPartnerService";
 import { signalCollector } from "./lib/signal-collector";
 import { getDashboardMetrics } from "./services/metricsService";
 import { computeCashInflow } from "./services/dashboardCashInflowService";
+import { PermissionService } from "./services/permissionService";
+
+async function getAssignedContactIds(user: any): Promise<string[] | null> {
+  if (!user?.tenantId) return null;
+  const role = user.tenantRole || user.role;
+  if (['owner', 'admin', 'accountant', 'partner', 'manager'].includes(role)) {
+    return null;
+  }
+  const assigned = await storage.getAssignedContacts(user.id, user.tenantId);
+  return assigned.map(c => c.id);
+}
+
+async function hasContactAccess(user: any, contactId: string): Promise<boolean> {
+  if (!user?.tenantId) return false;
+  const role = user.tenantRole || user.role;
+  if (['owner', 'admin', 'accountant', 'partner', 'manager'].includes(role)) {
+    return true;
+  }
+  return storage.hasContactAccess(user.id, contactId, user.tenantId);
+}
 
 // Initialize Stripe (lazy initialization - only fails when actually used)
 let stripe: Stripe | null = null;
@@ -683,7 +703,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/templates/tenant', isAuthenticated, async (req, res) => {
+  app.post('/api/templates/tenant', ...withPermission('ai:templates'), async (req, res) => {
     try {
       const user = await storage.getUser((req as any).user.id);
       if (!user) {
@@ -711,7 +731,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/templates/tenant/:id', isAuthenticated, async (req, res) => {
+  app.patch('/api/templates/tenant/:id', ...withPermission('ai:templates'), async (req, res) => {
     try {
       const user = await storage.getUser((req as any).user.id);
       if (!user) {
@@ -1688,7 +1708,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Initialize onboarding for a tenant
-  app.post('/api/onboarding/start', isAuthenticated, async (req: any, res) => {
+  app.post('/api/onboarding/start', ...withPermission('admin:settings'), async (req: any, res) => {
     try {
       // Apply RBAC context manually
       await new Promise<void>((resolve, reject) => {
@@ -1743,7 +1763,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update phase progress
-  app.put('/api/onboarding/progress', isAuthenticated, async (req: any, res) => {
+  app.put('/api/onboarding/progress', ...withPermission('admin:settings'), async (req: any, res) => {
     try {
       // Validate request body first
       const validationResult = updateProgressSchema.safeParse(req.body);
@@ -1778,7 +1798,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Complete a phase
-  app.post('/api/onboarding/complete-phase', isAuthenticated, async (req: any, res) => {
+  app.post('/api/onboarding/complete-phase', ...withPermission('admin:settings'), async (req: any, res) => {
     try {
       // Validate request body first
       const validationResult = completePhaseSchema.safeParse(req.body);
@@ -1823,7 +1843,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Complete entire onboarding
-  app.post('/api/onboarding/complete', isAuthenticated, async (req: any, res) => {
+  app.post('/api/onboarding/complete', ...withPermission('admin:settings'), async (req: any, res) => {
     try {
       // Apply RBAC context manually
       
@@ -1867,7 +1887,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Xero automated data import for onboarding
-  app.post('/api/onboarding/xero-import', isAuthenticated, async (req: any, res) => {
+  app.post('/api/onboarding/xero-import', ...withPermission('admin:settings'), async (req: any, res) => {
     try {
       // Apply RBAC context manually
       
@@ -2521,7 +2541,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedQuery = invoicesQuerySchema.parse(req.query);
       const { status, search, overdue, contactId, sortBy, sortDir, page, limit } = validatedQuery;
 
-      console.log(`📊 Optimized Invoices API - Tenant: ${user.tenantId}, Filters: status=${status}, search="${search}", overdue=${overdue}, sortBy=${sortBy}, sortDir=${sortDir}, page=${page}, limit=${limit}`);
+      const allowedContactIds = await getAssignedContactIds(user);
+
+      console.log(`📊 Optimized Invoices API - Tenant: ${user.tenantId}, Filters: status=${status}, search="${search}", overdue=${overdue}, sortBy=${sortBy}, sortDir=${sortDir}, page=${page}, limit=${limit}${allowedContactIds ? `, restricted to ${allowedContactIds.length} assigned contacts` : ''}`);
       
       // Call optimized storage method with server-side filtering
       const result = await storage.getInvoicesFiltered(user.tenantId, {
@@ -2535,8 +2557,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         limit
       });
 
+      if (allowedContactIds) {
+        result.invoices = result.invoices.filter((inv: any) => inv.contactId && allowedContactIds.includes(inv.contactId));
+        result.total = result.invoices.length;
+      }
+
       // Get total system count (all invoices regardless of filters)
-      const systemTotal = await storage.getInvoicesCount(user.tenantId);
+      const systemTotal = allowedContactIds
+        ? result.total
+        : await storage.getInvoicesCount(user.tenantId);
       
       // Fetch EPD-related data for all invoices in the result
       const invoiceIds = result.invoices.map((inv: any) => inv.id);
@@ -2856,6 +2885,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!invoice) {
         return res.status(404).json({ message: "Invoice not found" });
       }
+
+      if (invoice.contactId && !await hasContactAccess(user, invoice.contactId)) {
+        return res.status(403).json({ message: "You do not have access to this invoice" });
+      }
+
       res.json(invoice);
     } catch (error) {
       console.error("Error fetching invoice:", error);
@@ -2864,7 +2898,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Hold invoice endpoint
-  app.put("/api/invoices/:id/hold", isAuthenticated, async (req: any, res) => {
+  app.put("/api/invoices/:id/hold", ...withPermission('invoices:edit'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
@@ -2883,7 +2917,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Unhold invoice endpoint
-  app.put("/api/invoices/:id/unhold", isAuthenticated, async (req: any, res) => {
+  app.put("/api/invoices/:id/unhold", ...withPermission('invoices:edit'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
@@ -2902,7 +2936,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Mark invoice as paid and send thank you SMS
-  app.post("/api/invoices/:id/mark-paid", isAuthenticated, async (req: any, res) => {
+  app.post("/api/invoices/:id/mark-paid", ...withPermission('invoices:edit'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
@@ -2993,7 +3027,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Pause invoice (dispute, PTP, payment plan)
-  app.post("/api/invoices/:id/pause", isAuthenticated, async (req: any, res) => {
+  app.post("/api/invoices/:id/pause", ...withPermission('invoices:edit'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
@@ -3037,7 +3071,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Resume invoice (clear pause state)
-  app.post("/api/invoices/:id/resume", isAuthenticated, async (req: any, res) => {
+  app.post("/api/invoices/:id/resume", ...withPermission('invoices:edit'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
@@ -3101,7 +3135,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Send SMS for invoice with template selection
-  app.post("/api/invoices/:id/send-sms", isAuthenticated, async (req: any, res) => {
+  app.post("/api/invoices/:id/send-sms", ...withPermission('collections:sms'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
@@ -3226,7 +3260,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Initiate AI voice call for invoice
-  app.post("/api/invoices/:id/initiate-voice-call", isAuthenticated, async (req: any, res) => {
+  app.post("/api/invoices/:id/initiate-voice-call", ...withPermission('collections:voice'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
@@ -3381,6 +3415,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { contactId } = req.params;
+
+      if (!await hasContactAccess(user, contactId)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
       
       // Get outstanding invoices for the specific contact
       const outstandingInvoices = await storage.getOutstandingInvoicesByContact(user.tenantId, contactId);
@@ -3392,7 +3430,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/invoices", isAuthenticated, async (req: any, res) => {
+  app.post("/api/invoices", ...withPermission('invoices:edit'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
@@ -3416,7 +3454,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Apply for invoice finance advance
-  app.post("/api/invoices/:invoiceId/apply-advance", isAuthenticated, async (req: any, res) => {
+  app.post("/api/invoices/:invoiceId/apply-advance", ...withPermission('invoices:edit'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
@@ -3490,7 +3528,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Accept insurance coverage for an invoice
-  app.post("/api/invoices/:invoiceId/accept-insurance", isAuthenticated, async (req: any, res) => {
+  app.post("/api/invoices/:invoiceId/accept-insurance", ...withPermission('invoices:edit'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
@@ -3551,16 +3589,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedQuery = contactsQuerySchema.parse(req.query);
       const { search, sortBy, sortDir, page, limit } = validatedQuery;
 
-      console.log(`📊 Paginated Contacts API - Tenant: ${user.tenantId}, Filters: search="${search}", sortBy=${sortBy}, sortDir=${sortDir}, page=${page}, limit=${limit}`);
+      const allowedContactIds = await getAssignedContactIds(user);
+
+      console.log(`📊 Paginated Contacts API - Tenant: ${user.tenantId}, Filters: search="${search}", sortBy=${sortBy}, sortDir=${sortDir}, page=${page}, limit=${limit}${allowedContactIds ? `, restricted to ${allowedContactIds.length} assigned contacts` : ''}`);
       
       // Use fallback pagination with invoice data
       {
         // Get all contacts, invoices, and actions in parallel for performance
-        const [allContacts, allInvoices, allActions] = await Promise.all([
+        const [rawContacts, allInvoices, allActions] = await Promise.all([
           storage.getContacts(user.tenantId),
           storage.getInvoices(user.tenantId, 10000),
           storage.getActions(user.tenantId)
         ]);
+
+        const allContacts = allowedContactIds
+          ? rawContacts.filter(c => allowedContactIds.includes(c.id))
+          : rawContacts;
         
         // Calculate outstanding amounts and invoice counts for each contact
         const contactsWithData = allContacts.map(contact => {
@@ -3785,6 +3829,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { id } = req.params;
+
+      if (!await hasContactAccess(user, id)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
+
       const contacts = await storage.getContacts(user.tenantId);
       const contact = contacts.find(c => c.id === id);
       
@@ -3805,6 +3854,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      if (!await hasContactAccess(user, req.params.id)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
       }
 
       const { id } = req.params;
@@ -3842,6 +3895,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      if (!await hasContactAccess(user, req.params.id)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
       }
 
       const { id } = req.params;
@@ -3884,6 +3941,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
       const { contactId } = req.params;
+
+      if (!await hasContactAccess(user, contactId)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
       const persons = await storage.getCustomerContactPersons(user.tenantId, contactId);
       res.json(persons);
     } catch (error) {
@@ -3892,7 +3953,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/contacts/:contactId/persons", isAuthenticated, async (req: any, res) => {
+  app.post("/api/contacts/:contactId/persons", ...withPermission('customers:edit'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
@@ -3929,7 +3990,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/contacts/:contactId/persons/:personId", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/contacts/:contactId/persons/:personId", ...withPermission('customers:edit'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
@@ -3962,7 +4023,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/contacts/:contactId/persons/:personId", isAuthenticated, async (req: any, res) => {
+  app.delete("/api/contacts/:contactId/persons/:personId", ...withPermission('customers:edit'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
@@ -3978,7 +4039,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update AR contact details (collections-specific overlay)
-  app.patch("/api/contacts/:id/ar-details", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/contacts/:id/ar-details", ...withPermission('customers:edit'), async (req: any, res) => {
     try {
       console.log("📝 AR contact update request:", {
         params: req.params,
@@ -4069,7 +4130,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/contacts", isAuthenticated, async (req: any, res) => {
+  app.post("/api/contacts", ...withPermission('customers:edit'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
@@ -4095,7 +4156,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Credit Assessment Routes
   
   // Calculate credit score and recommendation
-  app.post("/api/contacts/credit-check", isAuthenticated, async (req: any, res) => {
+  app.post("/api/contacts/credit-check", ...withPermission('customers:edit'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
@@ -4121,7 +4182,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Approve and save credit decision
-  app.post("/api/contacts/:contactId/approve-credit", isAuthenticated, async (req: any, res) => {
+  app.post("/api/contacts/:contactId/approve-credit", ...withPermission('customers:edit'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
@@ -4165,6 +4226,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { contactId } = req.params;
+
+      if (!await hasContactAccess(user, contactId)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
       
       // Import Promise Reliability Service
       const { getPromiseReliabilityService } = await import('./services/promiseReliabilityService.js');
@@ -4208,6 +4273,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { contactId } = req.params;
+
+      if (!await hasContactAccess(user, contactId)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
       
       const { getPromiseReliabilityService } = await import('./services/promiseReliabilityService.js');
       const promiseService = getPromiseReliabilityService();
@@ -21123,7 +21192,7 @@ ${tenant.name}
   // ==================== TENANT INVITATION SYSTEM ====================
 
   // Create tenant invitation (client invites partner)
-  app.post("/api/invitations/create", isAuthenticated, async (req: any, res) => {
+  app.post("/api/invitations/create", ...withPermission('admin:users'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
@@ -21177,7 +21246,7 @@ ${tenant.name}
   });
 
   // Get tenant invitations for current tenant
-  app.get("/api/invitations/outgoing", isAuthenticated, async (req: any, res) => {
+  app.get("/api/invitations/outgoing", ...withPermission('admin:users'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
@@ -21193,7 +21262,7 @@ ${tenant.name}
   });
 
   // Get incoming invitations for partner (by email)
-  app.get("/api/invitations/incoming", isAuthenticated, async (req: any, res) => {
+  app.get("/api/invitations/incoming", ...withPermission('admin:users'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.email) {
@@ -21209,7 +21278,7 @@ ${tenant.name}
   });
 
   // Accept tenant invitation
-  app.post("/api/invitations/:invitationId/accept", isAuthenticated, async (req: any, res) => {
+  app.post("/api/invitations/:invitationId/accept", ...withPermission('admin:users'), async (req: any, res) => {
     try {
       const { invitationId } = req.params;
       const { responseMessage } = req.body;
@@ -21254,7 +21323,7 @@ ${tenant.name}
   });
 
   // Decline tenant invitation
-  app.post("/api/invitations/:invitationId/decline", isAuthenticated, async (req: any, res) => {
+  app.post("/api/invitations/:invitationId/decline", ...withPermission('admin:users'), async (req: any, res) => {
     try {
       const { invitationId } = req.params;
       const { responseMessage } = req.body;

@@ -120,6 +120,7 @@ export async function setupAuth(app: Express) {
         lastName: lastName || null,
         tenantId: tenant.id,
         role: "owner",
+        tenantRole: "owner",
         platformAdmin: isFirstUser,
       } as any);
       
@@ -135,6 +136,8 @@ export async function setupAuth(app: Express) {
             firstName: user.firstName,
             lastName: user.lastName,
             role: user.role,
+            tenantRole: user.tenantRole,
+            tenantId: user.tenantId,
             platformAdmin: user.platformAdmin,
           }
         });
@@ -167,6 +170,8 @@ export async function setupAuth(app: Express) {
             firstName: user.firstName,
             lastName: user.lastName,
             role: user.role,
+            tenantRole: user.tenantRole,
+            tenantId: user.tenantId,
             platformAdmin: user.platformAdmin,
             partnerId: user.partnerId,
           }
@@ -207,8 +212,10 @@ export async function setupAuth(app: Express) {
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
-        platformAdmin: user.platformAdmin,
+        tenantRole: user.tenantRole,
         tenantId: user.tenantId,
+        platformAdmin: user.platformAdmin,
+        partnerId: user.partnerId,
       }
     });
   });
