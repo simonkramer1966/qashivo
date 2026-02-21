@@ -9,6 +9,7 @@ import {
   type TradingProfile,
 } from "./services/dynamicRiskScoringService";
 import { setupAuth, isAuthenticated, isOwner } from "./auth";
+import { withPermission, withRole, withMinimumRole, canManageUser } from "./middleware/rbac";
 import { 
   insertContactSchema,
   insertContactNoteSchema, 
@@ -16402,7 +16403,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
-  app.put('/api/tenant/settings', isAuthenticated, async (req: any, res) => {
+  app.put('/api/tenant/settings', ...withPermission('admin:settings'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
@@ -16423,7 +16424,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
-  app.get('/api/tenant/settings', isAuthenticated, async (req: any, res) => {
+  app.get('/api/tenant/settings', ...withPermission('admin:settings'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
@@ -16464,7 +16465,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
-  app.patch('/api/tenant/settings', isAuthenticated, async (req: any, res) => {
+  app.patch('/api/tenant/settings', ...withPermission('admin:settings'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
@@ -16516,7 +16517,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
   });
 
   // Playbook settings endpoints - AI-Driven Collections Configuration
-  app.get('/api/settings/playbook', isAuthenticated, async (req: any, res) => {
+  app.get('/api/settings/playbook', ...withPermission('admin:settings'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
@@ -16562,7 +16563,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     businessHoursEnd: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/).optional(),
   });
 
-  app.patch('/api/settings/playbook', isAuthenticated, async (req: any, res) => {
+  app.patch('/api/settings/playbook', ...withPermission('admin:settings'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
@@ -19994,7 +19995,7 @@ ${tenant.name}
    * GET /api/cashflow/forecast
    * Generate 13-week cashflow forecast with scenario support
    */
-  app.get('/api/cashflow/forecast', isAuthenticated, async (req, res) => {
+  app.get('/api/cashflow/forecast', ...withPermission('finance:cashflow'), async (req: any, res) => {
     try {
       const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
@@ -20109,7 +20110,7 @@ ${tenant.name}
    * POST /api/cashflow/scenarios
    * Run custom scenario analysis and comparison
    */
-  app.post('/api/cashflow/scenarios', isAuthenticated, async (req, res) => {
+  app.post('/api/cashflow/scenarios', ...withPermission('finance:cashflow'), async (req: any, res) => {
     try {
       const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
@@ -20193,7 +20194,7 @@ ${tenant.name}
    * GET /api/cashflow/metrics
    * Get key financial metrics (DSO, DPO, cash runway)
    */
-  app.get('/api/cashflow/metrics', isAuthenticated, async (req, res) => {
+  app.get('/api/cashflow/metrics', ...withPermission('finance:cashflow'), async (req: any, res) => {
     try {
       const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
@@ -20293,7 +20294,7 @@ ${tenant.name}
    * POST /api/cashflow/optimize
    * Get cash optimization recommendations
    */
-  app.post('/api/cashflow/optimize', isAuthenticated, async (req, res) => {
+  app.post('/api/cashflow/optimize', ...withPermission('finance:cashflow'), async (req: any, res) => {
     try {
       const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
@@ -20634,8 +20635,7 @@ ${tenant.name}
 
   // ==================== RBAC MANAGEMENT API ====================
 
-  // Import RBAC middleware and permission service
-  const { withPermission, withRole, withMinimumRole, canManageUser } = await import("./middleware/rbac");
+  // RBAC middleware imported at top of file; import PermissionService for role management
   const { PermissionService } = await import("./services/permissionService");
 
   // Get all users in tenant with their roles and permissions

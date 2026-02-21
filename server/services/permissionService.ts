@@ -104,6 +104,17 @@ export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     'admin:users', 'admin:settings', 'admin:integrations', 'admin:api_keys', 'admin:audit_logs', 'admin:data_export',
   ],
   
+  partner: [
+    // Partner: legacy B2B2B portal role, same permissions as accountant
+    'invoices:read', 'invoices:create', 'invoices:edit', 'invoices:delete', 'invoices:send_reminders', 'invoices:manage_collections',
+    'customers:read', 'customers:create', 'customers:edit', 'customers:delete', 'customers:manage_contacts',
+    'finance:read', 'finance:cashflow', 'finance:budget', 'finance:bank_accounts', 'finance:bills', 'finance:invoice_financing',
+    'collections:email', 'collections:sms', 'collections:voice', 'collections:manage',
+    'ai:chat', 'ai:configuration', 'ai:analytics', 'ai:voice_calls', 'ai:templates',
+    'reports:read', 'reports:export', 'reports:advanced', 'reports:custom',
+    'admin:users', 'admin:settings', 'admin:integrations', 'admin:api_keys', 'admin:audit_logs', 'admin:data_export',
+  ],
+  
   manager: [
     // Manager: oversees credit controllers. Can see cashflow and invoice financing but NOT settings
     'invoices:read', 'invoices:create', 'invoices:edit', 'invoices:send_reminders', 'invoices:manage_collections',
