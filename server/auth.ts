@@ -8,6 +8,15 @@ import { storage } from "./storage";
 import crypto from "crypto";
 import rateLimit from "express-rate-limit";
 
+function validatePasswordStrength(password: string): string | null {
+  if (password.length < 10) return "Password must be at least 10 characters";
+  if (!/[A-Z]/.test(password)) return "Password must include at least one uppercase letter";
+  if (!/[a-z]/.test(password)) return "Password must include at least one lowercase letter";
+  if (!/[0-9]/.test(password)) return "Password must include at least one number";
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(password)) return "Password must include at least one special character";
+  return null;
+}
+
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
@@ -119,8 +128,9 @@ export async function setupAuth(app: Express) {
         return res.status(400).json({ message: "Email and password are required" });
       }
       
-      if (password.length < 8) {
-        return res.status(400).json({ message: "Password must be at least 8 characters" });
+      const passwordError = validatePasswordStrength(password);
+      if (passwordError) {
+        return res.status(400).json({ message: passwordError });
       }
       
       const existingUser = await storage.getUserByEmail(email);
@@ -282,8 +292,9 @@ export async function setupAuth(app: Express) {
         return res.status(400).json({ message: "Token and new password are required" });
       }
       
-      if (newPassword.length < 8) {
-        return res.status(400).json({ message: "Password must be at least 8 characters" });
+      const passwordError = validatePasswordStrength(newPassword);
+      if (passwordError) {
+        return res.status(400).json({ message: passwordError });
       }
       
       const user = await storage.getUserByResetToken(token);

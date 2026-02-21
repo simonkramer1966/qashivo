@@ -21,7 +21,12 @@ import { Eye, EyeOff, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 const acceptSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().optional(),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  password: z.string()
+    .min(10, "Password must be at least 10 characters")
+    .regex(/[A-Z]/, "Must include at least one uppercase letter")
+    .regex(/[a-z]/, "Must include at least one lowercase letter")
+    .regex(/[0-9]/, "Must include at least one number")
+    .regex(/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/, "Must include at least one special character"),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
@@ -217,7 +222,7 @@ export default function AcceptUserInvite() {
                       <Input
                         {...field}
                         type={showPassword ? "text" : "password"}
-                        placeholder="At least 8 characters"
+                        placeholder="At least 10 characters"
                         className="bg-white border-[#E6E8EC] text-[#0B0F17] placeholder:text-[#8C95A3] focus:border-[#17B6C3] focus:ring-[#17B6C3]/20 h-10 text-sm pr-10"
                       />
                       <button

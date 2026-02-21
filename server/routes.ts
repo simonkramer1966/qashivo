@@ -21033,8 +21033,18 @@ ${tenant.name}
         return res.status(400).json({ message: "Invite token is required" });
       }
 
-      if (!password || password.length < 8) {
-        return res.status(400).json({ message: "Password must be at least 8 characters" });
+      if (!password) {
+        return res.status(400).json({ message: "Password is required" });
+      }
+
+      const strengthErrors = [];
+      if (password.length < 10) strengthErrors.push("at least 10 characters");
+      if (!/[A-Z]/.test(password)) strengthErrors.push("one uppercase letter");
+      if (!/[a-z]/.test(password)) strengthErrors.push("one lowercase letter");
+      if (!/[0-9]/.test(password)) strengthErrors.push("one number");
+      if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(password)) strengthErrors.push("one special character");
+      if (strengthErrors.length > 0) {
+        return res.status(400).json({ message: `Password must include ${strengthErrors.join(", ")}` });
       }
 
       if (!firstName) {
