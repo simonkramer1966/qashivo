@@ -598,16 +598,6 @@ export default function NewSidebar() {
                   </DropdownMenuSub>
                 )}
                 
-                {canAccessSettings && (
-                <DropdownMenuItem 
-                  className="text-sm cursor-pointer"
-                  onClick={() => setLocation('/settings')}
-                  data-testid="menu-item-settings"
-                >
-                  Settings
-                </DropdownMenuItem>
-                )}
-                
                 
                 {(user as any)?.role === "partner" && (
                   <>
