@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useSplash } from "@/contexts/SplashContext";
 import { 
   LogOut,
@@ -34,19 +35,148 @@ import {
   Mail,
   Minimize2
 } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-} from "@/components/ui/dropdown-menu";
+function SimpleAvatar({ src, fallback, className, "data-testid": dataTestId }: { src?: string; fallback: string; className?: string; "data-testid"?: string }) {
+  const [imgError, setImgError] = useState(false);
+  const showImg = src && !imgError;
+  return (
+    <span className={cn("relative flex shrink-0 overflow-hidden rounded-full", className)} data-testid={dataTestId}>
+      {showImg ? (
+        <img src={src} alt="" className="aspect-square h-full w-full object-cover" onError={() => setImgError(true)} />
+      ) : (
+        <span className="flex h-full w-full items-center justify-center rounded-full bg-gray-100 text-gray-600 text-xs font-medium">
+          {fallback}
+        </span>
+      )}
+    </span>
+  );
+}
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+
+function SimpleDropdown({ 
+  trigger, 
+  children, 
+  align = "start",
+  side = "bottom",
+  className = "",
+}: { 
+  trigger: React.ReactNode;
+  children: React.ReactNode;
+  align?: "start" | "end";
+  side?: "bottom" | "top" | "right";
+  className?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number; bottom?: number }>({ top: 0, left: 0 });
+
+  const updatePosition = useCallback(() => {
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    let top = 0, left = 0, bottom: number | undefined;
+    if (side === "bottom") {
+      top = rect.bottom + 4;
+      left = align === "end" ? rect.right : rect.left;
+    } else if (side === "top") {
+      bottom = window.innerHeight - rect.top + 4;
+      left = align === "end" ? rect.right : rect.left;
+    } else if (side === "right") {
+      top = rect.top;
+      left = rect.right + 4;
+    }
+    setPos({ top, left, bottom });
+  }, [align, side]);
+
+  useEffect(() => {
+    if (!open) return;
+    updatePosition();
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        triggerRef.current && !triggerRef.current.contains(e.target as Node) &&
+        contentRef.current && !contentRef.current.contains(e.target as Node)
+      ) {
+        setOpen(false);
+      }
+    };
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    const handleScroll = () => updatePosition();
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    window.addEventListener("scroll", handleScroll, true);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+      window.removeEventListener("scroll", handleScroll, true);
+    };
+  }, [open, updatePosition]);
+
+  return (
+    <>
+      <div ref={triggerRef} onClick={() => { updatePosition(); setOpen(o => !o); }}>
+        {trigger}
+      </div>
+      {open && createPortal(
+        <div
+          ref={contentRef}
+          className={cn(
+            "fixed z-50 min-w-[8rem] rounded-md border bg-white p-1 shadow-md",
+            className
+          )}
+          style={{
+            top: pos.bottom !== undefined ? undefined : pos.top,
+            bottom: pos.bottom,
+            left: align === "end" ? undefined : pos.left,
+            right: align === "end" ? (window.innerWidth - pos.left) : undefined,
+          }}
+        >
+          <SimpleDropdownCtx.Provider value={{ close: () => setOpen(false) }}>
+            {children}
+          </SimpleDropdownCtx.Provider>
+        </div>,
+        document.body
+      )}
+    </>
+  );
+}
+
+import { createContext, useContext } from "react";
+const SimpleDropdownCtx = createContext<{ close: () => void }>({ close: () => {} });
+
+function SimpleDropdownItem({ 
+  onClick, 
+  children, 
+  className = "",
+  "data-testid": dataTestId,
+}: { 
+  onClick?: () => void; 
+  children: React.ReactNode; 
+  className?: string;
+  "data-testid"?: string;
+}) {
+  const { close } = useContext(SimpleDropdownCtx);
+  return (
+    <button
+      className={cn(
+        "relative flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-gray-50 focus:bg-gray-50",
+        className
+      )}
+      onClick={() => {
+        onClick?.();
+        close();
+      }}
+      data-testid={dataTestId}
+    >
+      {children}
+    </button>
+  );
+}
+
+function SimpleDropdownSeparator() {
+  return <div className="-mx-1 my-1 h-px bg-gray-100" />;
+}
 import {
   Tooltip,
   TooltipContent,
@@ -488,8 +618,11 @@ export default function NewSidebar() {
         {/* Organization Dropdown - Simplified styling */}
         {!isCollapsed && location !== '/business-dashboard' && (
           <div className="px-3 pb-4">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+            <SimpleDropdown
+              align="start"
+              side="bottom"
+              className="w-56 border-gray-100"
+              trigger={
                 <button
                   className="w-full flex items-center justify-between px-3 py-2 text-left text-[13px] text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
                   disabled={switchTenantMutation.isPending}
@@ -507,112 +640,97 @@ export default function NewSidebar() {
                     <ChevronDown className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
                   )}
                 </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56 bg-white border-gray-100" align="start" side="bottom">
-                {/* Change Organisation - Submenu (only for partners) */}
-                {canSwitchOrganizations && (
-                  <DropdownMenuSub>
-                    <DropdownMenuSubTrigger className="text-[#17B6C3] text-sm" data-testid="menu-item-change-organization">
-                      Change organisation
-                    </DropdownMenuSubTrigger>
-                    <DropdownMenuSubContent className="w-64 bg-white border-gray-100">
-                      {/* Search Bar */}
-                      <div className="relative p-2">
-                        <Search className="absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                        <Input
-                          placeholder="Search organisations"
-                          value={orgSearchQuery}
-                          onChange={(e) => setOrgSearchQuery(e.target.value)}
-                          className="pl-10 pr-10 h-8 text-sm bg-white border-gray-200 rounded-lg focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
-                          data-testid="input-organization-search"
-                        />
-                        {orgSearchQuery && (
-                          <button
-                            onClick={() => setOrgSearchQuery("")}
-                            className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                            data-testid="button-clear-search"
+              }
+            >
+              {canSwitchOrganizations && (
+                <>
+                  <div className="px-2 py-1.5 text-[#17B6C3] text-sm font-medium">Change organisation</div>
+                  <div className="relative p-2">
+                    <Search className="absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                    <Input
+                      placeholder="Search organisations"
+                      value={orgSearchQuery}
+                      onChange={(e) => { e.stopPropagation(); setOrgSearchQuery(e.target.value); }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="pl-10 pr-10 h-8 text-sm bg-white border-gray-200 rounded-lg focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                      data-testid="input-organization-search"
+                    />
+                    {orgSearchQuery && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setOrgSearchQuery(""); }}
+                        className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        data-testid="button-clear-search"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="max-h-64 overflow-y-auto">
+                    {organizationsToShow.length > 0 ? (
+                      organizationsToShow.map((org) => {
+                        const companyName = org.settings?.companyName || org.name;
+                        const initials = getCompanyInitials(companyName);
+                        const isCurrentOrg = org.id === tenant?.id;
+                        return (
+                          <SimpleDropdownItem
+                            key={org.id}
+                            className={cn(
+                              "px-3 py-2.5",
+                              switchTenantMutation.isPending && "opacity-50 cursor-not-allowed"
+                            )}
+                            onClick={() => !switchTenantMutation.isPending && handleOrganizationSelect(org.id)}
+                            data-testid={`dropdown-organization-${org.id}`}
                           >
-                            <X className="h-4 w-4" />
-                          </button>
-                        )}
-                      </div>
-                      
-                      {/* Organization List */}
-                      <div className="max-h-64 overflow-y-auto">
-                        {organizationsToShow.length > 0 ? (
-                          organizationsToShow.map((org) => {
-                            const companyName = org.settings?.companyName || org.name;
-                            const initials = getCompanyInitials(companyName);
-                            const isCurrentOrg = org.id === tenant?.id;
-                            
-                            return (
-                              <DropdownMenuItem
-                                key={org.id}
-                                className={cn(
-                                  "px-3 py-2.5",
-                                  switchTenantMutation.isPending 
-                                    ? "opacity-50 cursor-not-allowed" 
-                                    : "cursor-pointer hover:bg-gray-50"
-                                )}
-                                onClick={() => !switchTenantMutation.isPending && handleOrganizationSelect(org.id)}
-                                data-testid={`dropdown-organization-${org.id}`}
-                              >
-                                <div className="flex items-center space-x-3 w-full">
-                                  <div className="w-7 h-7 rounded bg-[#17B6C3] flex items-center justify-center text-white font-medium text-xs">
-                                    {initials}
-                                  </div>
-                                  <span className="flex-1 text-sm text-gray-700 truncate">{companyName}</span>
-                                  {isCurrentOrg && (
-                                    <Check className="h-4 w-4 text-[#17B6C3]" />
-                                  )}
-                                </div>
-                              </DropdownMenuItem>
-                            );
-                          })
-                        ) : (
-                          <div className="px-3 py-3 text-sm text-gray-500 text-center">
-                            {orgSearchQuery ? "No organizations found" : "No organizations available"}
-                          </div>
-                        )}
-                      </div>
-                      
-                      {/* Add new organisation (partners only) */}
-                      {(user as any)?.role === "partner" && (
-                        <>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem 
-                            className="px-3 py-2.5 cursor-pointer"
-                            onClick={() => setOrgSearchQuery("")}
-                            data-testid="dropdown-add-organization"
-                          >
-                            <div className="flex items-center space-x-3 w-full text-[#17B6C3]">
-                              <div className="w-7 h-7 rounded border border-dashed border-[#17B6C3] flex items-center justify-center">
-                                <Plus className="h-3.5 w-3.5" />
+                            <div className="flex items-center space-x-3 w-full">
+                              <div className="w-7 h-7 rounded bg-[#17B6C3] flex items-center justify-center text-white font-medium text-xs">
+                                {initials}
                               </div>
-                              <span className="text-sm font-medium">Add organisation</span>
+                              <span className="flex-1 text-sm text-gray-700 truncate">{companyName}</span>
+                              {isCurrentOrg && (
+                                <Check className="h-4 w-4 text-[#17B6C3]" />
+                              )}
                             </div>
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                    </DropdownMenuSubContent>
-                  </DropdownMenuSub>
-                )}
-                
-                
-                {(user as any)?.role === "partner" && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem 
-                      className="text-sm cursor-pointer"
-                      onClick={() => setLocation('/partner')}
-                      data-testid="menu-item-my-qashivo"
-                    >
-                      My Qashivo
-                    </DropdownMenuItem>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                          </SimpleDropdownItem>
+                        );
+                      })
+                    ) : (
+                      <div className="px-3 py-3 text-sm text-gray-500 text-center">
+                        {orgSearchQuery ? "No organizations found" : "No organizations available"}
+                      </div>
+                    )}
+                  </div>
+                  {(user as any)?.role === "partner" && (
+                    <>
+                      <SimpleDropdownSeparator />
+                      <SimpleDropdownItem
+                        className="px-3 py-2.5"
+                        onClick={() => setOrgSearchQuery("")}
+                        data-testid="dropdown-add-organization"
+                      >
+                        <div className="flex items-center space-x-3 w-full text-[#17B6C3]">
+                          <div className="w-7 h-7 rounded border border-dashed border-[#17B6C3] flex items-center justify-center">
+                            <Plus className="h-3.5 w-3.5" />
+                          </div>
+                          <span className="text-sm font-medium">Add organisation</span>
+                        </div>
+                      </SimpleDropdownItem>
+                    </>
+                  )}
+                </>
+              )}
+              {(user as any)?.role === "partner" && (
+                <>
+                  <SimpleDropdownSeparator />
+                  <SimpleDropdownItem
+                    className="text-sm"
+                    onClick={() => setLocation('/partner')}
+                    data-testid="menu-item-my-qashivo"
+                  >
+                    My Qashivo
+                  </SimpleDropdownItem>
+                </>
+              )}
+            </SimpleDropdown>
           </div>
         )}
         
@@ -672,102 +790,102 @@ export default function NewSidebar() {
         {!isCollapsed && (
           <div className="mt-auto p-3 space-y-2">
             {/* User Profile - Minimal */}
-            <DropdownMenu>
-              <DropdownMenuTrigger className="w-full flex items-center space-x-2.5 hover:bg-gray-50 rounded-lg px-2 py-2 transition-colors" data-testid="button-user-menu">
-                <Avatar className="h-7 w-7" data-testid="avatar-user">
-                  <AvatarImage src={(user as any)?.profileImageUrl || ""} />
-                  <AvatarFallback className="bg-gray-100 text-gray-600 text-xs font-medium">
-                    {(() => {
+            <SimpleDropdown
+              align="end"
+              side="top"
+              className="w-48 border-gray-100"
+              trigger={
+                <button className="w-full flex items-center space-x-2.5 hover:bg-gray-50 rounded-lg px-2 py-2 transition-colors" data-testid="button-user-menu">
+                  <SimpleAvatar
+                    className="h-7 w-7"
+                    data-testid="avatar-user"
+                    src={(user as any)?.profileImageUrl || ""}
+                    fallback={(() => {
                       const firstName = (user as any)?.firstName || "";
                       const lastName = (user as any)?.lastName || "";
-                      if (firstName && lastName) {
-                        return `${firstName.charAt(0)}${lastName.charAt(0)}`;
-                      }
-                      if ((user as any)?.email) {
-                        return (user as any).email.charAt(0).toUpperCase();
-                      }
+                      if (firstName && lastName) return `${firstName.charAt(0)}${lastName.charAt(0)}`;
+                      if ((user as any)?.email) return (user as any).email.charAt(0).toUpperCase();
                       return "U";
                     })()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 text-left min-w-0">
-                  <p className="text-[13px] text-gray-700 truncate" data-testid="text-user-name">
-                    {(() => {
-                      const firstName = (user as any)?.firstName;
-                      const lastName = (user as any)?.lastName;
-                      if (firstName && lastName) {
-                        return `${firstName} ${lastName}`;
-                      }
-                      if ((user as any)?.email) {
-                        return (user as any).email;
-                      }
-                      return "User";
-                    })()}
-                  </p>
-                </div>
-                <ChevronDown className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 bg-white border-gray-100">
-                <DropdownMenuItem onClick={() => setIsProfileDialogOpen(true)} className="text-sm cursor-pointer" data-testid="menu-item-profile">
-                  <User className="mr-2 h-4 w-4" />
-                  Profile
-                </DropdownMenuItem>
-                {canAccessSettings && (
-                <DropdownMenuItem onClick={() => setLocation('/settings')} className="text-sm cursor-pointer" data-testid="menu-item-settings-profile">
-                  <Settings className="mr-2 h-4 w-4" />
-                  Settings
-                </DropdownMenuItem>
-                )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className="text-sm cursor-pointer" data-testid="menu-item-logout">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Log out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  />
+                  <div className="flex-1 text-left min-w-0">
+                    <p className="text-[13px] text-gray-700 truncate" data-testid="text-user-name">
+                      {(() => {
+                        const firstName = (user as any)?.firstName;
+                        const lastName = (user as any)?.lastName;
+                        if (firstName && lastName) {
+                          return `${firstName} ${lastName}`;
+                        }
+                        if ((user as any)?.email) {
+                          return (user as any).email;
+                        }
+                        return "User";
+                      })()}
+                    </p>
+                  </div>
+                  <ChevronDown className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                </button>
+              }
+            >
+              <SimpleDropdownItem onClick={() => setIsProfileDialogOpen(true)} className="text-sm" data-testid="menu-item-profile">
+                <User className="mr-2 h-4 w-4" />
+                Profile
+              </SimpleDropdownItem>
+              {canAccessSettings && (
+              <SimpleDropdownItem onClick={() => setLocation('/settings')} className="text-sm" data-testid="menu-item-settings-profile">
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </SimpleDropdownItem>
+              )}
+              <SimpleDropdownSeparator />
+              <SimpleDropdownItem onClick={handleLogout} className="text-sm" data-testid="menu-item-logout">
+                <LogOut className="mr-2 h-4 w-4" />
+                Log out
+              </SimpleDropdownItem>
+            </SimpleDropdown>
           </div>
         )}
 
         {/* Collapsed State Footer */}
         {isCollapsed && (
           <div className="mt-auto p-2 space-y-1">
-            <DropdownMenu>
-              <DropdownMenuTrigger className="w-full flex items-center justify-center hover:bg-gray-50 rounded-lg p-2 transition-colors" data-testid="button-user-menu-collapsed">
-                <Avatar className="h-7 w-7" data-testid="avatar-user-collapsed">
-                  <AvatarImage src={(user as any)?.profileImageUrl || ""} />
-                  <AvatarFallback className="bg-gray-100 text-gray-600 text-xs font-medium">
-                    {(() => {
+            <SimpleDropdown
+              align="start"
+              side="right"
+              className="w-48 border-gray-100"
+              trigger={
+                <button className="w-full flex items-center justify-center hover:bg-gray-50 rounded-lg p-2 transition-colors" data-testid="button-user-menu-collapsed">
+                  <SimpleAvatar
+                    className="h-7 w-7"
+                    data-testid="avatar-user-collapsed"
+                    src={(user as any)?.profileImageUrl || ""}
+                    fallback={(() => {
                       const firstName = (user as any)?.firstName || "";
                       const lastName = (user as any)?.lastName || "";
-                      if (firstName && lastName) {
-                        return `${firstName.charAt(0)}${lastName.charAt(0)}`;
-                      }
-                      if ((user as any)?.email) {
-                        return (user as any).email.charAt(0).toUpperCase();
-                      }
+                      if (firstName && lastName) return `${firstName.charAt(0)}${lastName.charAt(0)}`;
+                      if ((user as any)?.email) return (user as any).email.charAt(0).toUpperCase();
                       return "U";
                     })()}
-                  </AvatarFallback>
-                </Avatar>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 bg-white border-gray-100">
-                <DropdownMenuItem onClick={() => setIsProfileDialogOpen(true)} className="text-sm cursor-pointer" data-testid="menu-item-profile">
-                  <User className="mr-2 h-4 w-4" />
-                  Profile
-                </DropdownMenuItem>
-                {canAccessSettings && (
-                <DropdownMenuItem onClick={() => setLocation('/settings')} className="text-sm cursor-pointer" data-testid="menu-item-settings-profile-collapsed">
-                  <Settings className="mr-2 h-4 w-4" />
-                  Settings
-                </DropdownMenuItem>
-                )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className="text-sm cursor-pointer" data-testid="menu-item-logout">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Log out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  />
+                </button>
+              }
+            >
+              <SimpleDropdownItem onClick={() => setIsProfileDialogOpen(true)} className="text-sm" data-testid="menu-item-profile">
+                <User className="mr-2 h-4 w-4" />
+                Profile
+              </SimpleDropdownItem>
+              {canAccessSettings && (
+              <SimpleDropdownItem onClick={() => setLocation('/settings')} className="text-sm" data-testid="menu-item-settings-profile-collapsed">
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </SimpleDropdownItem>
+              )}
+              <SimpleDropdownSeparator />
+              <SimpleDropdownItem onClick={handleLogout} className="text-sm" data-testid="menu-item-logout">
+                <LogOut className="mr-2 h-4 w-4" />
+                Log out
+              </SimpleDropdownItem>
+            </SimpleDropdown>
           </div>
         )}
       </aside>
