@@ -63,7 +63,212 @@ import UserInviteModal from "@/components/rbac/UserInviteModal";
 import UserManagementTabContent from "@/components/rbac/UserManagementTabContent";
 import EmailSenderManagement from "@/components/collections/EmailSenderManagement";
 import ReportSchedulesTab from "@/components/settings/ReportSchedulesTab";
-import { BookOpen, Volume2, Timer, Gauge } from "lucide-react";
+import { BookOpen, Volume2, Timer, Gauge, ArrowRight, RotateCw } from "lucide-react";
+import { useLocation } from "wouter";
+import type { OnboardingStatus } from "@/components/OnboardingWizard";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
+const STEP_LABELS: Record<string, string> = {
+  step1Status: "Company Details",
+  step2Status: "Connect Xero",
+  step3Status: "Connect Email",
+  step4Status: "Connect Bank",
+  step5Status: "Debtor Scoring",
+  step6Status: "Contact Data",
+};
+
+function getStatusBadge(status: string) {
+  switch (status) {
+    case "COMPLETED":
+      return <span className="inline-block px-1.5 py-0.5 text-[11px] font-medium rounded bg-green-50 text-green-700">Completed</span>;
+    case "SKIPPED":
+      return <span className="inline-block px-1.5 py-0.5 text-[11px] font-medium rounded bg-amber-50 text-amber-700">Skipped</span>;
+    case "RUNNING":
+      return <span className="inline-block px-1.5 py-0.5 text-[11px] font-medium rounded bg-blue-50 text-blue-700">Running</span>;
+    default:
+      return <span className="inline-block px-1.5 py-0.5 text-[11px] font-medium rounded bg-gray-50 text-gray-500">Not Started</span>;
+  }
+}
+
+function isOnboardingComplete(status: OnboardingStatus | undefined): boolean {
+  if (!status) return false;
+  if (status.step1Status !== "COMPLETED") return false;
+  for (const key of ["step2Status", "step3Status", "step4Status", "step5Status", "step6Status"] as const) {
+    const s = status[key as keyof OnboardingStatus] as string;
+    if (s !== "COMPLETED" && s !== "SKIPPED" && s !== "RUNNING") return false;
+  }
+  return true;
+}
+
+function getFirstIncompleteStep(status: OnboardingStatus | undefined): number {
+  if (!status) return 1;
+  const keys = ["step1Status", "step2Status", "step3Status", "step4Status", "step5Status", "step6Status"] as const;
+  for (let i = 0; i < keys.length; i++) {
+    const s = status[keys[i] as keyof OnboardingStatus] as string;
+    if (s !== "COMPLETED" && s !== "SKIPPED" && s !== "RUNNING") return i + 1;
+  }
+  return 1;
+}
+
+function OnboardingSettingsSection() {
+  const { toast } = useToast();
+  const [, setLocation] = useLocation();
+
+  const { data: onboardingStatus, isLoading } = useQuery<OnboardingStatus>({
+    queryKey: ["/api/onboarding/status"],
+  });
+
+  const restartMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/onboarding/restart");
+      if (!response.ok) throw new Error("Failed to restart onboarding");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/onboarding/status"] });
+      toast({ title: "Onboarding Reset", description: "Onboarding has been restarted." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to restart onboarding.", variant: "destructive" });
+    },
+  });
+
+  const rerunAnalysisMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/onboarding/run-analysis");
+      if (!response.ok) throw new Error("Failed to re-run analysis");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/onboarding/status"] });
+      toast({ title: "Analysis Started", description: "Aged debtors and contact analysis re-running." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to re-run analysis.", variant: "destructive" });
+    },
+  });
+
+  const rerunScoringMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/settings/recompute-debtor-scores");
+      if (!response.ok) throw new Error("Failed to re-run scoring");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/onboarding/status"] });
+      toast({ title: "Scoring Started", description: "Debtor scoring job has been queued." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to re-run debtor scoring.", variant: "destructive" });
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <div className="py-6">
+        <div className="animate-pulse space-y-3">
+          <div className="h-4 bg-gray-100 rounded w-1/3"></div>
+          <div className="h-4 bg-gray-100 rounded w-1/2"></div>
+        </div>
+      </div>
+    );
+  }
+
+  const completed = isOnboardingComplete(onboardingStatus);
+  const firstIncomplete = getFirstIncompleteStep(onboardingStatus);
+
+  return (
+    <div className="space-y-0">
+      <div className="py-6 border-b border-gray-100">
+        <div className="flex items-center mb-1">
+          <SettingsIcon className="h-5 w-5 text-[#17B6C3] mr-2" />
+          <h2 className="text-lg font-semibold text-gray-900">Onboarding Status</h2>
+        </div>
+        <p className="text-sm text-gray-500 mb-4">
+          View and manage your onboarding progress
+        </p>
+
+        <div className="space-y-2 mb-6">
+          {(["step1Status", "step2Status", "step3Status", "step4Status", "step5Status", "step6Status"] as const).map((key, idx) => (
+            <div key={key} className="flex items-center justify-between py-1.5">
+              <span className="text-[13px] text-gray-700">{idx + 1}. {STEP_LABELS[key]}</span>
+              {getStatusBadge((onboardingStatus?.[key as keyof OnboardingStatus] as string) || "NOT_STARTED")}
+            </div>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {!completed && (
+            <Button
+              onClick={() => setLocation("/onboarding")}
+              className="h-9 rounded-full bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+            >
+              <ArrowRight className="h-4 w-4 mr-2" />
+              Continue Onboarding
+            </Button>
+          )}
+
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                className="h-9 rounded-full border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700"
+              >
+                <RotateCw className="h-4 w-4 mr-2" />
+                Restart Onboarding
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Restart Onboarding?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will reset all onboarding steps to NOT_STARTED (except company details if already filled). Analysis caches will be cleared. Integrations will not be disconnected.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => restartMutation.mutate()}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  {restartMutation.isPending ? "Restarting..." : "Restart"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          <Button
+            variant="outline"
+            onClick={() => rerunAnalysisMutation.mutate()}
+            disabled={rerunAnalysisMutation.isPending}
+            className="h-9 rounded-full"
+          >
+            {rerunAnalysisMutation.isPending ? "Running..." : "Re-run Analyses"}
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={() => rerunScoringMutation.mutate()}
+            disabled={rerunScoringMutation.isPending}
+            className="h-9 rounded-full"
+          >
+            {rerunScoringMutation.isPending ? "Running..." : "Re-run Debtor Scoring"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface PlaybookSettings {
   tenantStyle: string;
@@ -1796,6 +2001,30 @@ function AutomationTabContent() {
   );
 }
 
+function FinishOnboardingBanner() {
+  const [, setLocation] = useLocation();
+  const { data: onboardingStatus } = useQuery<OnboardingStatus>({
+    queryKey: ["/api/onboarding/status"],
+  });
+
+  const completed = isOnboardingComplete(onboardingStatus);
+  if (completed || !onboardingStatus) return null;
+
+  return (
+    <div className="border-l-4 border-amber-400 bg-amber-50/50 px-4 py-3 mb-6">
+      <div className="flex items-center justify-between">
+        <p className="text-[13px] text-gray-800">You haven't finished setting up your account</p>
+        <Button
+          onClick={() => setLocation("/onboarding")}
+          className="h-8 rounded-full bg-amber-500 hover:bg-amber-600 text-white text-[13px] px-4"
+        >
+          Finish Onboarding
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export default function Settings() {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -2168,10 +2397,18 @@ export default function Settings() {
                   >
                     Demo Data
                   </TabsTrigger>
+                  <TabsTrigger 
+                    value="onboarding" 
+                    className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
+                    data-testid="tab-onboarding"
+                  >
+                    Onboarding
+                  </TabsTrigger>
                 </TabsList>
               </div>
 
               <TabsContent value="general" className="mt-0">
+                <FinishOnboardingBanner />
                 <div className="py-6 border-b border-gray-100">
                   <div className="flex items-center mb-1">
                     <User className="h-5 w-5 text-[#17B6C3] mr-2" />
@@ -2765,6 +3002,10 @@ export default function Settings() {
 
               <TabsContent value="demo-data" className="mt-0">
                 <DemoDataTabContent />
+              </TabsContent>
+
+              <TabsContent value="onboarding" className="mt-0">
+                <OnboardingSettingsSection />
               </TabsContent>
             </Tabs>
         </div>

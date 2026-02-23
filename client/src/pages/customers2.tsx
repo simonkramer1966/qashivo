@@ -14,6 +14,14 @@ import { useCurrency } from "@/hooks/useCurrency";
 import { CardlessCustomerDrawer } from "@/components/customers/CardlessCustomerDrawer";
 import { getBehaviourLabel } from "@/lib/behaviourLabels";
 import { getCustomerDisplayName, getCustomerCompanyName, PrimaryCreditContact } from "@/lib/utils";
+import type { OnboardingStatus } from "@/components/OnboardingWizard";
+
+interface DebtorProfile {
+  score0To100: number | null;
+  scoreBand: string | null;
+  strategyJson: any;
+  strategyReason: string | null;
+}
 
 interface Contact {
   id: string;
@@ -33,6 +41,7 @@ interface Contact {
   creditLimit?: number | null;
   workflowId?: string | null;
   primaryCreditContact?: PrimaryCreditContact | null;
+  debtorProfile?: DebtorProfile | null;
 }
 
 type SortKey = 'customer' | 'outstanding' | 'overdue' | 'adpd' | 'lastPaid';
@@ -47,6 +56,13 @@ export default function Customers2() {
   const [showPreviewDrawer, setShowPreviewDrawer] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>('outstanding');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+
+  const { data: onboardingStatus } = useQuery<OnboardingStatus>({
+    queryKey: ["/api/onboarding/full-status"],
+    staleTime: 30000,
+  });
+
+  const isScoringRunning = onboardingStatus?.step5Status === "RUNNING";
 
   const formatDateShort = (dateStr: string | null) => {
     if (!dateStr) return '-';
@@ -144,21 +160,37 @@ export default function Customers2() {
       : <ChevronDown className="h-3 w-3 inline-block ml-0.5" />;
   };
 
-  const getBehaviourDot = (riskBand?: string | null, riskScore?: number | null) => {
-    const { label } = getBehaviourLabel(riskBand, riskScore);
-    let dotColor = 'bg-slate-300';
-    
-    if (label === 'Pays on time') {
-      dotColor = 'bg-[#4FAD80]';
-    } else if (label === 'Pays late but reliable') {
-      dotColor = 'bg-[#E8A23B]';
-    } else if (label === 'Inconsistent') {
-      dotColor = 'bg-[#C75C5C]';
+  const getScoreBadge = (contact: Contact) => {
+    const profile = contact.debtorProfile;
+    if (!profile || profile.score0To100 === null || profile.score0To100 === undefined) {
+      const { label } = getBehaviourLabel(contact.riskBand, contact.riskScore);
+      let dotColor = 'bg-slate-300';
+      if (label === 'Pays on time') dotColor = 'bg-[#4FAD80]';
+      else if (label === 'Pays late but reliable') dotColor = 'bg-[#E8A23B]';
+      else if (label === 'Inconsistent') dotColor = 'bg-[#C75C5C]';
+      return (
+        <div className="flex items-center justify-end">
+          <span className={`inline-block w-2.5 h-2.5 rounded-full ${dotColor}`} title={label} />
+        </div>
+      );
     }
-    
+
+    const score = profile.score0To100;
+    const band = profile.scoreBand;
+    let dotColor = 'bg-gray-400';
+    if (band === 'EXCELLENT' || band === 'GOOD') dotColor = 'bg-[#22c55e]';
+    else if (band === 'OK') dotColor = 'bg-[#f59e0b]';
+    else if (band === 'RISKY') dotColor = 'bg-[#ef4444]';
+    else if (band === 'UNKNOWN') dotColor = 'bg-gray-400';
+
     return (
-      <div className="flex items-center justify-end">
-        <span className={`inline-block w-2.5 h-2.5 rounded-full ${dotColor}`} title={label} />
+      <div className="flex items-center justify-end gap-1.5">
+        <span className={`inline-block w-2 h-2 rounded-full ${dotColor}`} />
+        {band === 'UNKNOWN' ? (
+          <span className="text-[11px] text-gray-400">insufficient history</span>
+        ) : (
+          <span className="text-[12px] text-gray-600 tabular-nums font-medium">{score}</span>
+        )}
       </div>
     );
   };
@@ -332,7 +364,7 @@ export default function Customers2() {
                         >
                           Last Paid<SortIndicator columnKey="lastPaid" />
                         </th>
-                        <th className="text-right py-2 text-[11px] font-medium text-gray-400 uppercase tracking-wider pr-1"></th>
+                        <th className="text-right py-2 text-[11px] font-medium text-gray-400 uppercase tracking-wider pr-1">Score</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -389,7 +421,13 @@ export default function Customers2() {
                           </td>
 
                           <td className="py-2 text-right pr-1">
-                            {getBehaviourDot(contact.riskBand, contact.riskScore)}
+                            {isScoringRunning ? (
+                              <div className="flex items-center justify-end">
+                                <span className="inline-block w-2.5 h-2.5 rounded-full bg-gray-200 animate-pulse" />
+                              </div>
+                            ) : (
+                              getScoreBadge(contact)
+                            )}
                           </td>
                         </tr>
                       ))}

@@ -1,370 +1,299 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
-import { 
-  CheckCircle, 
-  Circle, 
-  Clock, 
-  ArrowRight, 
-  ArrowLeft, 
-  Zap, 
-  Building2, 
-  Palette, 
-  Brain,
-  Loader2
-} from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
+import Step1CompanyDetails from "./onboarding/Step1CompanyDetails";
+import Step2ConnectXero from "./onboarding/Step2ConnectXero";
+import Step3ConnectEmail from "./onboarding/Step3ConnectEmail";
+import Step4ConnectBank from "./onboarding/Step4ConnectBank";
+import Step5DebtorScoring from "./onboarding/Step5DebtorScoring";
+import Step6ContactAnalysis from "./onboarding/Step6ContactAnalysis";
 
-// Phase Components (simplified for now, will be expanded)
-import { TechnicalConnectionPhase } from "./onboarding/TechnicalConnectionPhase";
-import BusinessSetupPhase from "./onboarding/BusinessSetupPhase";
-import BrandCustomizationPhase from "./onboarding/BrandCustomizationPhase";
-import AIReviewLaunchPhase from "./onboarding/AIReviewLaunchPhase";
+type StepStatus = "NOT_STARTED" | "COMPLETED" | "SKIPPED" | "RUNNING";
 
-export type OnboardingPhase = 'technical_connection' | 'business_setup' | 'brand_customization' | 'ai_review_launch';
-
-interface OnboardingStats {
-  currentPhase: OnboardingPhase;
-  completedPhases: string[];
-  totalPhases: number;
-  progressPercentage: number;
-  estimatedTimeRemaining: number;
+export interface OnboardingStatus {
+  step1Status: StepStatus;
+  step2Status: StepStatus;
+  step3Status: StepStatus;
+  step4Status: StepStatus;
+  step5Status: StepStatus;
+  step6Status: StepStatus;
+  companyDetails: {
+    subscriberFirstName: string;
+    subscriberLastName: string;
+    companyName: string;
+    companyAddress: {
+      line1: string;
+      line2?: string;
+      city: string;
+      region?: string;
+      postcode: string;
+      country: string;
+    };
+  } | null;
+  smsMobileOptIn: boolean;
+  agedDebtorsSummary: any;
+  contactDataSummary: any;
+  lastAnalysisAt: string | null;
+  onboardingCompleted: boolean;
+  xeroConnected: boolean;
+  emailConnected: boolean;
+  emailConnectedAddress: string | null;
 }
 
-interface OnboardingProgress {
-  id: string;
-  tenantId: string;
-  currentPhase: OnboardingPhase;
-  completedPhases: string[];
-  phaseData: Record<string, any>;
-  completedAt?: Date;
-  createdAt: Date;
-  updatedAt: Date;
+const STEPS = [
+  { number: 1, label: "Company Details", required: true },
+  { number: 2, label: "Connect Xero", required: false },
+  { number: 3, label: "Connect Email", required: false },
+  { number: 4, label: "Connect Bank", required: false },
+  { number: 5, label: "Debtor Scoring", required: false },
+  { number: 6, label: "Contact Data", required: false },
+];
+
+function getStepStatus(status: OnboardingStatus | undefined, step: number): StepStatus {
+  if (!status) return "NOT_STARTED";
+  const key = `step${step}Status` as keyof OnboardingStatus;
+  return (status[key] as StepStatus) || "NOT_STARTED";
 }
 
-interface OnboardingData {
-  progress: OnboardingProgress;
-  stats: OnboardingStats;
-}
+function StepIndicator({
+  step,
+  label,
+  status,
+  isActive,
+  onClick,
+}: {
+  step: number;
+  label: string;
+  status: StepStatus;
+  isActive: boolean;
+  onClick: () => void;
+}) {
+  const isCompleted = status === "COMPLETED";
+  const isSkipped = status === "SKIPPED";
+  const isRunning = status === "RUNNING";
+  const isDone = isCompleted || isSkipped;
 
-const PHASE_CONFIG = {
-  technical_connection: {
-    title: "Technical Connection",
-    description: "Connect your accounting system and import data",
-    icon: Zap,
-    estimatedTime: 1,
-    color: "bg-blue-500"
-  },
-  business_setup: {
-    title: "Business Setup", 
-    description: "Configure your collections strategy and team",
-    icon: Building2,
-    estimatedTime: 20,
-    color: "bg-green-500"
-  },
-  brand_customization: {
-    title: "Brand Customization",
-    description: "Personalize your customer experience",
-    icon: Palette,
-    estimatedTime: 5,
-    color: "bg-purple-500"
-  },
-  ai_review_launch: {
-    title: "AI Review & Launch",
-    description: "Review AI recommendations and activate automation",
-    icon: Brain,
-    estimatedTime: 8,
-    color: "bg-orange-500"
-  }
-} as const;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex items-center gap-2 text-left group"
+    >
+      <div
+        className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium border transition-colors ${
+          isActive
+            ? "border-[#14b8a6] bg-[#14b8a6] text-white"
+            : isDone
+            ? "border-[#22c55e] bg-[#22c55e] text-white"
+            : isRunning
+            ? "border-[#f59e0b] bg-[#f59e0b] text-white"
+            : "border-[#e5e7eb] bg-white text-gray-400"
+        }`}
+      >
+        {isDone ? <Check className="w-3.5 h-3.5" /> : isRunning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : step}
+      </div>
+      <span
+        className={`text-[13px] hidden md:inline ${
+          isActive
+            ? "text-gray-900 font-medium"
+            : isDone
+            ? "text-gray-500"
+            : "text-gray-400"
+        }`}
+      >
+        {label}
+      </span>
+    </button>
+  );
+}
 
 export function OnboardingWizard() {
-  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [activeStep, setActiveStep] = useState(1);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
-  // Fetch onboarding progress
-  const { data: onboardingData, isLoading } = useQuery<OnboardingData>({
-    queryKey: ['/api/onboarding/progress'],
-    retry: 1
+  const { data: status, isLoading } = useQuery<OnboardingStatus>({
+    queryKey: ["/api/onboarding/full-status"],
+    refetchInterval: 10000,
   });
 
-  // Complete phase mutation
-  const completePhase = useMutation({
-    mutationFn: async (phase: OnboardingPhase) => {
-      const res = await fetch('/api/onboarding/complete-phase', { 
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phase })
-      });
-      if (!res.ok) {
-        throw new Error('Failed to complete phase');
+  const completeAllMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/onboarding/complete-all");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/onboarding/full-status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/onboarding/status"] });
+      if (data.completed) {
+        toast({ title: "Onboarding complete", description: "Welcome to Qashivo." });
+        setLocation("/overview2");
       }
+    },
+  });
+
+  const stepMutation = useMutation({
+    mutationFn: async ({ step, stepStatus }: { step: number; stepStatus: "COMPLETED" | "SKIPPED" }) => {
+      const res = await apiRequest("POST", "/api/onboarding/step", { step, status: stepStatus });
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/onboarding/progress'] });
-      toast({
-        title: "Phase Completed",
-        description: "Great progress! Moving to the next phase."
-      });
-    }
-  });
-
-  // Update phase progress mutation
-  const updateProgress = useMutation({
-    mutationFn: async ({ phase, data }: { phase: OnboardingPhase; data: any }) => {
-      const res = await fetch('/api/onboarding/progress', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phase, data })
-      });
-      if (!res.ok) {
-        throw new Error('Failed to update progress');
-      }
-      return res.json();
+      queryClient.invalidateQueries({ queryKey: ["/api/onboarding/full-status"] });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/onboarding/progress'] });
-    }
   });
 
-  const phases = Object.keys(PHASE_CONFIG) as OnboardingPhase[];
-  const currentPhase = phases[currentStepIndex];
-  const progress = onboardingData?.progress;
-  const stats = onboardingData?.stats;
-
-  // Update current step based on progress
   useEffect(() => {
-    if (stats && phases.indexOf(stats.currentPhase) !== currentStepIndex) {
-      setCurrentStepIndex(phases.indexOf(stats.currentPhase));
+    if (!status) return;
+    if (status.onboardingCompleted) {
+      setLocation("/overview2");
+      return;
     }
-  }, [stats, phases, currentStepIndex]);
-
-  const handlePhaseComplete = async () => {
-    if (!currentPhase) return;
-    
-    try {
-      await completePhase.mutateAsync(currentPhase);
-      
-      // Check if this is the last phase
-      const isLastPhase = currentStepIndex === phases.length - 1;
-      
-      if (isLastPhase) {
-        // Complete entire onboarding and redirect to Cashboard
-        const response = await fetch('/api/onboarding/complete', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' }
-        });
-        
-        if (response.ok) {
-          // Invalidate onboarding status cache so header button disappears
-          queryClient.invalidateQueries({ queryKey: ['/api/onboarding/status'] });
-          
-          toast({
-            title: "🎉 Onboarding Complete!",
-            description: "Welcome to Qashivo! Your AI collections system is now live."
-          });
-          
-          // Redirect to Cashboard after server confirms completion
-          setLocation('/');
-        } else {
-          throw new Error('Failed to complete onboarding');
-        }
-      } else {
-        // Move to next phase
-        setCurrentStepIndex(currentStepIndex + 1);
+    for (let i = 1; i <= 6; i++) {
+      const s = getStepStatus(status, i);
+      if (s === "NOT_STARTED" || s === "RUNNING") {
+        setActiveStep(i);
+        return;
       }
-    } catch (error) {
-      toast({
-        title: "Phase Completion Failed",
-        description: "Please ensure all requirements are met.",
-        variant: "destructive"
-      });
+    }
+    setActiveStep(6);
+  }, [status?.step1Status, status?.step2Status, status?.step3Status, status?.step4Status, status?.step5Status, status?.step6Status, status?.onboardingCompleted]);
+
+  const handleNext = () => {
+    if (activeStep < 6) {
+      setActiveStep(activeStep + 1);
+    } else {
+      completeAllMutation.mutate();
     }
   };
 
-  const handleUpdatePhaseData = (data: any) => {
-    if (!currentPhase) return;
-    updateProgress.mutate({ phase: currentPhase, data });
+  const handleSkip = async () => {
+    if (activeStep === 1) return;
+    await stepMutation.mutateAsync({ step: activeStep, stepStatus: "SKIPPED" });
+    handleNext();
   };
 
-  const renderPhaseComponent = () => {
-    const commonProps = {
-      onComplete: handlePhaseComplete,
-      onUpdate: handleUpdatePhaseData,
-      isCompleting: completePhase.isPending,
-      phaseData: progress?.phaseData || {}
-    };
-
-    switch (currentPhase) {
-      case 'technical_connection':
-        return <TechnicalConnectionPhase {...commonProps} />;
-      case 'business_setup':
-        return <BusinessSetupPhase {...commonProps} />;
-      case 'brand_customization':
-        return <BrandCustomizationPhase {...commonProps} />;
-      case 'ai_review_launch':
-        return <AIReviewLaunchPhase {...commonProps} />;
-      default:
-        return null;
-    }
+  const handleBack = () => {
+    if (activeStep > 1) setActiveStep(activeStep - 1);
   };
+
+  const handleStepComplete = () => {
+    queryClient.invalidateQueries({ queryKey: ["/api/onboarding/full-status"] });
+    handleNext();
+  };
+
+  const allDone = status
+    ? [1, 2, 3, 4, 5, 6].every((i) => {
+        const s = getStepStatus(status, i);
+        return s === "COMPLETED" || s === "SKIPPED" || s === "RUNNING";
+      })
+    : false;
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 flex items-center justify-center">
-        <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg p-8">
-          <div className="flex items-center gap-4">
-            <Loader2 className="w-8 h-8 animate-spin text-[#17B6C3]" />
-            <div>
-              <h2 className="text-xl font-bold">Loading Onboarding</h2>
-              <p className="text-gray-600">Preparing your setup experience...</p>
-            </div>
-          </div>
-        </Card>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 p-8">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome to Qashivo
-          </h1>
-          <p className="text-lg text-gray-600 mb-4">
-            Connect your accounting system in 60 seconds
-          </p>
-        </div>
-
-        {/* Progress Overview */}
-        <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg mb-8">
-          <CardContent className="p-8">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-xl font-bold">Setup Progress</h2>
-                <p className="text-gray-600">
-                  {stats?.estimatedTimeRemaining || 0} minutes remaining
-                </p>
-              </div>
-              <div className="text-right">
-                <div className="text-2xl font-bold text-[#17B6C3]">
-                  {stats?.progressPercentage || 0}%
-                </div>
-                <p className="text-sm text-gray-600">Complete</p>
-              </div>
-            </div>
-            
-            <Progress 
-              value={stats?.progressPercentage || 0} 
-              className="mb-6 h-3" 
-            />
-
-            {/* Phase Timeline */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {phases.map((phase, index) => {
-                const config = PHASE_CONFIG[phase];
-                const Icon = config.icon;
-                const isCompleted = stats?.completedPhases?.includes(phase);
-                const isCurrent = phase === stats?.currentPhase;
-                const isAccessible = index <= currentStepIndex;
-
-                return (
-                  <div
-                    key={phase}
-                    className={`relative p-4 rounded-lg border transition-all duration-300 ${
-                      isCurrent 
-                        ? 'bg-[#17B6C3]/10 border-[#17B6C3] shadow-md' 
-                        : isCompleted
-                        ? 'bg-green-50 border-green-200'
-                        : 'bg-gray-50 border-gray-200'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className={`p-2 rounded-lg ${config.color} text-white`}>
-                        <Icon className="w-4 h-4" />
-                      </div>
-                      <div className="flex-1">
-                        {isCompleted ? (
-                          <CheckCircle className="w-5 h-5 text-green-500" />
-                        ) : isCurrent ? (
-                          <Clock className="w-5 h-5 text-[#17B6C3]" />
-                        ) : (
-                          <Circle className="w-5 h-5 text-gray-400" />
-                        )}
-                      </div>
-                    </div>
-                    <h3 className="font-semibold text-sm mb-1">{config.title}</h3>
-                    <p className="text-xs text-gray-600">{config.description}</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      ~{config.estimatedTime} min
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Current Phase Content */}
-        <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
-          <CardHeader className="border-b border-gray-100">
-            <div className="flex items-center gap-4">
-              <div className={`p-3 rounded-lg ${PHASE_CONFIG[currentPhase]?.color} text-white`}>
-                {PHASE_CONFIG[currentPhase]?.icon && 
-                  (() => {
-                    const Icon = PHASE_CONFIG[currentPhase].icon;
-                    return <Icon className="w-6 h-6" />;
-                  })()
-                }
-              </div>
-              <div>
-                <CardTitle className="text-xl">
-                  {PHASE_CONFIG[currentPhase]?.title}
-                </CardTitle>
-                <CardDescription>
-                  {PHASE_CONFIG[currentPhase]?.description}
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          
-          <CardContent className="p-8">
-            {renderPhaseComponent()}
-          </CardContent>
-        </Card>
-
-        {/* Navigation */}
-        <div className="flex justify-between mt-8">
-          <Button
-            variant="outline"
-            onClick={() => setCurrentStepIndex(Math.max(0, currentStepIndex - 1))}
-            disabled={currentStepIndex === 0}
-            className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Previous
-          </Button>
-
-          <Button
-            onClick={() => setCurrentStepIndex(Math.min(phases.length - 1, currentStepIndex + 1))}
-            disabled={currentStepIndex === phases.length - 1}
-            className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
-          >
-            Next
-            <ArrowRight className="w-4 h-4 ml-2" />
-          </Button>
-        </div>
+    <div className="max-w-3xl mx-auto py-8 px-4">
+      <div className="mb-8">
+        <h1 className="text-lg font-semibold text-gray-900">Set up your account</h1>
+        <p className="text-[13px] text-gray-500 mt-1">
+          Complete the steps below to get started with Qashivo.
+        </p>
       </div>
+
+      <div className="flex items-center gap-1 mb-8 overflow-x-auto pb-2">
+        {STEPS.map((step, idx) => (
+          <div key={step.number} className="flex items-center">
+            <StepIndicator
+              step={step.number}
+              label={step.label}
+              status={getStepStatus(status, step.number)}
+              isActive={activeStep === step.number}
+              onClick={() => setActiveStep(step.number)}
+            />
+            {idx < STEPS.length - 1 && (
+              <div
+                className={`w-6 md:w-10 h-px mx-1 ${
+                  getStepStatus(status, step.number) === "COMPLETED" ||
+                  getStepStatus(status, step.number) === "SKIPPED"
+                    ? "bg-[#22c55e]"
+                    : "bg-[#e5e7eb]"
+                }`}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div className="min-h-[400px]">
+        {activeStep === 1 && (
+          <Step1CompanyDetails
+            status={status}
+            onComplete={handleStepComplete}
+          />
+        )}
+        {activeStep === 2 && (
+          <Step2ConnectXero
+            status={status}
+            onComplete={handleStepComplete}
+            onSkip={handleSkip}
+            onBack={handleBack}
+          />
+        )}
+        {activeStep === 3 && (
+          <Step3ConnectEmail
+            status={status}
+            onComplete={handleStepComplete}
+            onSkip={handleSkip}
+            onBack={handleBack}
+          />
+        )}
+        {activeStep === 4 && (
+          <Step4ConnectBank
+            status={status}
+            onComplete={handleStepComplete}
+            onSkip={handleSkip}
+            onBack={handleBack}
+          />
+        )}
+        {activeStep === 5 && (
+          <Step5DebtorScoring
+            status={status}
+            onComplete={handleStepComplete}
+            onSkip={handleSkip}
+            onBack={handleBack}
+          />
+        )}
+        {activeStep === 6 && (
+          <Step6ContactAnalysis
+            status={status}
+            onComplete={handleStepComplete}
+            onSkip={handleSkip}
+            onBack={handleBack}
+          />
+        )}
+      </div>
+
+      {allDone && activeStep === 6 && (
+        <div className="mt-8 pt-6 border-t border-[#e5e7eb]">
+          <button
+            onClick={() => completeAllMutation.mutate()}
+            disabled={completeAllMutation.isPending}
+            className="w-full py-2.5 rounded-lg bg-[#14b8a6] text-white text-[13px] font-medium hover:bg-[#0d9488] disabled:opacity-50 transition-colors"
+          >
+            {completeAllMutation.isPending ? "Finishing..." : "Finish setup & go to dashboard"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
+
+export default OnboardingWizard;

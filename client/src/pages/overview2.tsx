@@ -6,6 +6,7 @@ import { useCurrency } from "@/hooks/useCurrency";
 import { ComposedChart, Bar, Line, XAxis, YAxis, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 import { ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import type { OnboardingStatus } from "@/components/OnboardingWizard";
 
 interface CashInflowPoint {
   date: string;
@@ -91,6 +92,13 @@ export default function Overview2() {
   const [forecastBucket, setForecastBucket] = useState<"day" | "week">("week");
   const [showAllMetrics, setShowAllMetrics] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const { data: onboardingStatus } = useQuery<OnboardingStatus>({
+    queryKey: ["/api/onboarding/full-status"],
+    staleTime: 30000,
+  });
+
+  const isScoringRunning = onboardingStatus?.step5Status === "RUNNING";
 
   const { data: metrics, isLoading: metricsLoading } = useQuery<CashMetrics>({
     queryKey: ["/api/dashboard/metrics"],
@@ -213,6 +221,16 @@ export default function Overview2() {
         <div className="lg:hidden px-4 py-4 border-b border-gray-100">
           <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight">Overview</h2>
         </div>
+
+        {isScoringRunning && (
+          <div className="max-w-7xl mx-auto w-full px-6">
+            <div className="my-3 py-2.5 px-4 border-l-2 border-[#f59e0b] bg-[#f59e0b]/10 rounded-r">
+              <p className="text-[13px] text-gray-700">
+                Debtor scoring in progress — scores and strategies will appear shortly
+              </p>
+            </div>
+          </div>
+        )}
         
         <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
           {/* Desktop Top Metrics - 4 column grid above chart */}

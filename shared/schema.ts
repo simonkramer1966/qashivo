@@ -2080,15 +2080,72 @@ export const collectionABTests = pgTable("collection_ab_tests", {
 export const onboardingProgress = pgTable("onboarding_progress", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
-  currentPhase: varchar("current_phase").notNull().default("technical_connection"), // technical_connection, business_setup, brand_customization, ai_review_launch
-  completedPhases: jsonb("completed_phases").default("[]"), // Array of completed phases
-  phaseData: jsonb("phase_data").default("{}"), // Data collected in each phase
+  currentPhase: varchar("current_phase").notNull().default("technical_connection"),
+  completedPhases: jsonb("completed_phases").default("[]"),
+  phaseData: jsonb("phase_data").default("{}"),
+
+  step1Status: varchar("step1_status").notNull().default("NOT_STARTED"),
+  step2Status: varchar("step2_status").notNull().default("NOT_STARTED"),
+  step3Status: varchar("step3_status").notNull().default("NOT_STARTED"),
+  step4Status: varchar("step4_status").notNull().default("NOT_STARTED"),
+  step5Status: varchar("step5_status").notNull().default("NOT_STARTED"),
+  step6Status: varchar("step6_status").notNull().default("NOT_STARTED"),
+
+  companyDetails: jsonb("company_details"),
+  smsMobileOptIn: boolean("sms_mobile_opt_in").default(false),
+  agedDebtorsSummary: jsonb("aged_debtors_summary"),
+  contactDataSummary: jsonb("contact_data_summary"),
+  lastAnalysisAt: timestamp("last_analysis_at"),
+
   startedAt: timestamp("started_at").defaultNow(),
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
   unique("onboarding_progress_tenant").on(table.tenantId)
+]);
+
+export const analysisJobs = pgTable("analysis_jobs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  type: varchar("type").notNull(),
+  status: varchar("status").notNull().default("QUEUED"),
+  progressCurrent: integer("progress_current").default(0),
+  progressTotal: integer("progress_total").default(0),
+  startedAt: timestamp("started_at"),
+  finishedAt: timestamp("finished_at"),
+  errorMessage: text("error_message"),
+  triggeredBy: varchar("triggered_by").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("analysis_jobs_tenant_idx").on(table.tenantId),
+  index("analysis_jobs_status_idx").on(table.status),
+]);
+
+export const debtorProfiles = pgTable("debtor_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id, { onDelete: "cascade" }),
+  score0To100: integer("score_0_to_100"),
+  scoreBand: varchar("score_band"),
+  dataCoverageDays: integer("data_coverage_days"),
+  paidInvoiceMonthsCovered: integer("paid_invoice_months_covered"),
+  paidInvoiceCount: integer("paid_invoice_count"),
+  avgDaysLate: decimal("avg_days_late", { precision: 8, scale: 2 }),
+  onTimeRate: decimal("on_time_rate", { precision: 5, scale: 4 }),
+  late30PlusRate: decimal("late_30_plus_rate", { precision: 5, scale: 4 }),
+  volatility: decimal("volatility", { precision: 8, scale: 4 }),
+  lastComputedAt: timestamp("last_computed_at"),
+  scoreFactorsJson: jsonb("score_factors_json"),
+  strategyJson: jsonb("strategy_json"),
+  strategyReason: text("strategy_reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  unique("debtor_profiles_tenant_contact").on(table.tenantId, table.contactId),
+  index("debtor_profiles_tenant_idx").on(table.tenantId),
+  index("debtor_profiles_score_idx").on(table.score0To100),
 ]);
 
 // Wallet transactions table - unified financial hub for Qashivo
@@ -2215,6 +2272,24 @@ export const onboardingProgressRelations = relations(onboardingProgress, ({ one 
   tenant: one(tenants, {
     fields: [onboardingProgress.tenantId],
     references: [tenants.id],
+  }),
+}));
+
+export const analysisJobsRelations = relations(analysisJobs, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [analysisJobs.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
+export const debtorProfilesRelations = relations(debtorProfiles, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [debtorProfiles.tenantId],
+    references: [tenants.id],
+  }),
+  contact: one(contacts, {
+    fields: [debtorProfiles.contactId],
+    references: [contacts.id],
   }),
 }));
 
@@ -2532,6 +2607,18 @@ export const insertOnboardingProgressSchema = createInsertSchema(onboardingProgr
   startedAt: true,
 });
 
+export const insertAnalysisJobSchema = createInsertSchema(analysisJobs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDebtorProfileSchema = createInsertSchema(debtorProfiles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -2612,6 +2699,10 @@ export type CollectionABTest = typeof collectionABTests.$inferSelect;
 // Onboarding types
 export type InsertOnboardingProgress = z.infer<typeof insertOnboardingProgressSchema>;
 export type OnboardingProgress = typeof onboardingProgress.$inferSelect;
+export type InsertAnalysisJob = z.infer<typeof insertAnalysisJobSchema>;
+export type AnalysisJob = typeof analysisJobs.$inferSelect;
+export type InsertDebtorProfile = z.infer<typeof insertDebtorProfileSchema>;
+export type DebtorProfile = typeof debtorProfiles.$inferSelect;
 
 // Node Configuration Types
 export interface TriggerNodeConfig {

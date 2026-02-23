@@ -69,6 +69,136 @@ const TIME_OPTIONS = [
   "20:00", "21:00", "22:00", "23:00"
 ];
 
+interface DebtorSnapshot {
+  score0To100: number | null;
+  scoreBand: string | null;
+  avgDaysLate: string | null;
+  onTimeRate: string | null;
+  late30PlusRate: string | null;
+  volatility: string | null;
+  paidInvoiceCount: number | null;
+  dataCoverageDays: number | null;
+  strategyJson: { strategy?: string; cadence?: string } | null;
+  strategyReason: string | null;
+  lastComputedAt: string | null;
+}
+
+function getScoreBandColor(band: string | null) {
+  if (band === 'EXCELLENT' || band === 'GOOD') return 'text-[#22c55e]';
+  if (band === 'OK') return 'text-[#f59e0b]';
+  if (band === 'RISKY') return 'text-[#ef4444]';
+  return 'text-gray-400';
+}
+
+function getScoreDotColor(band: string | null) {
+  if (band === 'EXCELLENT' || band === 'GOOD') return 'bg-[#22c55e]';
+  if (band === 'OK') return 'bg-[#f59e0b]';
+  if (band === 'RISKY') return 'bg-[#ef4444]';
+  return 'bg-gray-400';
+}
+
+function DebtorScoreSection({ customerId }: { customerId: string | undefined }) {
+  const { data: snapshot, isLoading } = useQuery<DebtorSnapshot>({
+    queryKey: ['/api/contacts', customerId, 'debtor-snapshot'],
+    queryFn: async () => {
+      const res = await fetch(`/api/contacts/${customerId}/debtor-snapshot`, { credentials: 'include' });
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: !!customerId,
+  });
+
+  if (isLoading) {
+    return (
+      <>
+        <Separator className="bg-slate-100" />
+        <section>
+          <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-3">Debtor Score</p>
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-4 w-48" />
+          </div>
+        </section>
+      </>
+    );
+  }
+
+  if (!snapshot || snapshot.score0To100 === null || snapshot.score0To100 === undefined) {
+    return null;
+  }
+
+  return (
+    <>
+      <Separator className="bg-slate-100" />
+      <section>
+        <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-3">Debtor Score & Strategy</p>
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <span className={`inline-block w-2.5 h-2.5 rounded-full ${getScoreDotColor(snapshot.scoreBand)}`} />
+            {snapshot.scoreBand === 'UNKNOWN' ? (
+              <span className="text-sm text-gray-400">Insufficient history</span>
+            ) : (
+              <>
+                <span className={`text-2xl font-semibold tabular-nums ${getScoreBandColor(snapshot.scoreBand)}`}>
+                  {snapshot.score0To100}
+                </span>
+                <span className="text-sm text-gray-500">{snapshot.scoreBand}</span>
+              </>
+            )}
+          </div>
+
+          <table className="text-sm w-full max-w-sm">
+            <tbody>
+              {snapshot.strategyJson?.strategy && (
+                <tr className="border-b border-slate-50">
+                  <td className="py-1.5 text-slate-400 pr-6">Strategy</td>
+                  <td className="py-1.5 text-slate-700 font-medium">{snapshot.strategyJson.strategy}</td>
+                </tr>
+              )}
+              {snapshot.strategyJson?.cadence && (
+                <tr className="border-b border-slate-50">
+                  <td className="py-1.5 text-slate-400 pr-6">Cadence</td>
+                  <td className="py-1.5 text-slate-700">{snapshot.strategyJson.cadence}</td>
+                </tr>
+              )}
+              {snapshot.onTimeRate !== null && (
+                <tr className="border-b border-slate-50">
+                  <td className="py-1.5 text-slate-400 pr-6">On-time rate</td>
+                  <td className="py-1.5 text-slate-700 tabular-nums">{(parseFloat(snapshot.onTimeRate || '0') * 100).toFixed(0)}%</td>
+                </tr>
+              )}
+              {snapshot.avgDaysLate !== null && (
+                <tr className="border-b border-slate-50">
+                  <td className="py-1.5 text-slate-400 pr-6">Avg days late</td>
+                  <td className="py-1.5 text-slate-700 tabular-nums">{parseFloat(snapshot.avgDaysLate || '0').toFixed(1)}d</td>
+                </tr>
+              )}
+              {snapshot.paidInvoiceCount !== null && (
+                <tr className="border-b border-slate-50">
+                  <td className="py-1.5 text-slate-400 pr-6">Paid invoices</td>
+                  <td className="py-1.5 text-slate-700 tabular-nums">{snapshot.paidInvoiceCount}</td>
+                </tr>
+              )}
+              {snapshot.strategyReason && (
+                <tr>
+                  <td className="py-1.5 text-slate-400 pr-6">Reason</td>
+                  <td className="py-1.5 text-slate-500 text-xs">{snapshot.strategyReason}</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+
+          {snapshot.lastComputedAt && (
+            <p className="text-[11px] text-slate-300">
+              Last scored {new Date(snapshot.lastComputedAt).toLocaleDateString()}
+            </p>
+          )}
+        </div>
+      </section>
+    </>
+  );
+}
+
 export default function CustomerDetailPage() {
   const [match, params] = useRoute("/customers/:customerId");
   const customerId = params?.customerId;
@@ -572,6 +702,8 @@ export default function CustomerDetailPage() {
                 <p className="text-sm text-slate-400">Customer not found</p>
               )}
             </section>
+
+            <DebtorScoreSection customerId={customerId} />
 
             <Separator className="bg-slate-100" />
 

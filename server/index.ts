@@ -370,6 +370,18 @@ app.use((req, res, next) => {
     }
   }
 
+  // Initialize Debtor Scoring Worker
+  if (process.env.NODE_ENV !== 'test') {
+    try {
+      console.log("📊 Initializing debtor scoring worker...");
+      const { startDebtorScoringWorker } = await import("./jobs/debtorScoringJob");
+      startDebtorScoringWorker();
+      console.log("✅ Debtor scoring worker started");
+    } catch (error) {
+      console.error("❌ Failed to initialize debtor scoring worker:", error);
+    }
+  }
+
   // Initialize Portfolio Controller (DSO-driven urgency adjustment)
   if (process.env.NODE_ENV !== 'test') {
     try {

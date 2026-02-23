@@ -1,7 +1,7 @@
 import { Switch, Route, useLocation } from "wouter";
 import { Suspense, lazy, useEffect } from "react";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
@@ -11,6 +11,7 @@ import SplashScreen from "@/components/SplashScreen";
 import { useInactivityTimer } from "@/hooks/useInactivityTimer";
 import PageLoader from "@/components/PageLoader";
 import AdminShell from "@/components/AdminShell";
+import type { OnboardingStatus } from "@/components/OnboardingWizard";
 
 // Lazy-loaded pages for code splitting
 const NotFound = lazy(() => import("@/pages/not-found"));
@@ -97,6 +98,37 @@ function PermissionGuard({ permission, children }: { permission: string; childre
   return <>{children}</>;
 }
 
+function isOnboardingComplete(status: OnboardingStatus | undefined): boolean {
+  if (!status) return false;
+  if (status.step1Status !== "COMPLETED") return false;
+  const otherSteps = [status.step2Status, status.step3Status, status.step4Status, status.step5Status, status.step6Status];
+  return otherSteps.every(s => s === "COMPLETED" || s === "SKIPPED" || s === "RUNNING");
+}
+
+function useOnboardingStatus() {
+  return useQuery<OnboardingStatus>({
+    queryKey: ["/api/onboarding/full-status"],
+    staleTime: 30000,
+    retry: 1,
+  });
+}
+
+function OnboardingGuard({ children }: { children: React.ReactNode }) {
+  const [location, setLocation] = useLocation();
+  const { data: status, isLoading } = useOnboardingStatus();
+
+  useEffect(() => {
+    if (!isLoading && status && !isOnboardingComplete(status)) {
+      if (location !== "/onboarding" && !location.startsWith("/settings") && !location.startsWith("/account")) {
+        setLocation("/onboarding");
+      }
+    }
+  }, [isLoading, status, location, setLocation]);
+
+  if (isLoading) return <PageLoader />;
+  return <>{children}</>;
+}
+
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
   const { showSplash, setShowSplash } = useSplash();
@@ -172,6 +204,7 @@ function Router() {
         </Switch>
       ) : (
         // Authenticated routes - main application
+        <OnboardingGuard>
         <Switch>
           <Route path="/home" component={Home} />
           <Route path="/contact" component={Contact} />
@@ -240,6 +273,7 @@ function Router() {
           <Route path="/" component={Overview2} />
           <Route path="/:rest*" component={NotFound} />
         </Switch>
+        </OnboardingGuard>
       )}
     </>
   );

@@ -2031,6 +2031,249 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // New 6-step onboarding endpoints
+  app.get('/api/onboarding/full-status', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      const tenantId = user?.tenantId || req.session?.activeTenantId;
+      if (!tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const status = await onboardingService.getFullStatus(tenantId);
+      res.json(status);
+    } catch (error) {
+      console.error("Error fetching onboarding full status:", error);
+      res.status(500).json({ message: "Failed to fetch onboarding status" });
+    }
+  });
+
+  app.post('/api/onboarding/company-details', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      const tenantId = user?.tenantId || req.session?.activeTenantId;
+      if (!tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const { subscriberFirstName, subscriberLastName, companyName, companyAddress } = req.body;
+      if (!subscriberFirstName || !subscriberLastName || !companyName || !companyAddress?.line1 || !companyAddress?.city || !companyAddress?.postcode || !companyAddress?.country) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      await onboardingService.saveCompanyDetails(tenantId, { subscriberFirstName, subscriberLastName, companyName, companyAddress });
+
+      if (user) {
+        await storage.updateUser(user.id, { firstName: subscriberFirstName, lastName: subscriberLastName });
+      }
+
+      await storage.createActivityLog({
+        tenantId,
+        userId: user?.id,
+        activityType: "onboarding_step_completed",
+        category: "audit",
+        description: "Onboarding step 1 (Company Details) completed",
+        metadata: { step: 1, companyName },
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error saving company details:", error);
+      res.status(500).json({ message: "Failed to save company details" });
+    }
+  });
+
+  app.post('/api/onboarding/step', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      const tenantId = user?.tenantId || req.session?.activeTenantId;
+      if (!tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const { step, status } = req.body;
+      if (!step || step < 2 || step > 6 || !["COMPLETED", "SKIPPED"].includes(status)) {
+        return res.status(400).json({ message: "Invalid step or status" });
+      }
+
+      await onboardingService.updateStepStatus(tenantId, step, status);
+
+      await storage.createActivityLog({
+        tenantId,
+        userId: user?.id,
+        activityType: status === "SKIPPED" ? "onboarding_step_skipped" : "onboarding_step_completed",
+        category: "audit",
+        description: `Onboarding step ${step} ${status.toLowerCase()}`,
+        metadata: { step, status },
+      });
+
+      const fullStatus = await onboardingService.getFullStatus(tenantId);
+      if (onboardingService.isAllStepsFinished(fullStatus)) {
+        await onboardingService.tryCompleteOnboarding(tenantId);
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error updating onboarding step:", error);
+      res.status(500).json({ message: "Failed to update step" });
+    }
+  });
+
+  app.post('/api/onboarding/restart', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      const tenantId = user?.tenantId || req.session?.activeTenantId;
+      if (!tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      await onboardingService.restartOnboarding(tenantId);
+
+      await storage.createActivityLog({
+        tenantId,
+        userId: user?.id,
+        activityType: "onboarding_restarted",
+        category: "audit",
+        description: "Onboarding progress restarted (integrations preserved)",
+        metadata: {},
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error restarting onboarding:", error);
+      res.status(500).json({ message: "Failed to restart onboarding" });
+    }
+  });
+
+  app.post('/api/onboarding/run-analysis', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      const tenantId = user?.tenantId || req.session?.activeTenantId;
+      if (!tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const result = await onboardingService.runAnalysis(tenantId);
+
+      await storage.createActivityLog({
+        tenantId,
+        userId: user?.id,
+        activityType: "onboarding_analysis_run",
+        category: "audit",
+        description: "Aged debtors and contact data analysis completed",
+        metadata: { overdueCount: result.agedDebtors.totalOverdueCount, contactCount: result.contactData.totalContacts },
+      });
+
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error running analysis:", error);
+      res.status(400).json({ message: error.message || "Failed to run analysis" });
+    }
+  });
+
+  app.post('/api/onboarding/sms-mobile-opt-in', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      const tenantId = user?.tenantId || req.session?.activeTenantId;
+      if (!tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const { enabled } = req.body;
+      if (typeof enabled !== 'boolean') return res.status(400).json({ message: "enabled must be a boolean" });
+
+      await onboardingService.setSmsMobileOptIn(tenantId, enabled);
+
+      await storage.createActivityLog({
+        tenantId,
+        userId: user?.id,
+        activityType: "sms_mobile_opt_in_toggled",
+        category: "audit",
+        description: `SMS mobile opt-in ${enabled ? 'enabled' : 'disabled'}`,
+        metadata: { enabled },
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error toggling SMS opt-in:", error);
+      res.status(500).json({ message: "Failed to update SMS opt-in" });
+    }
+  });
+
+  app.post('/api/onboarding/start-debtor-scoring', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      const tenantId = user?.tenantId || req.session?.activeTenantId;
+      if (!tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const job = await onboardingService.enqueueDebtorScoring(tenantId, "ONBOARDING");
+
+      await storage.createActivityLog({
+        tenantId,
+        userId: user?.id,
+        activityType: "debtor_scoring_queued",
+        category: "audit",
+        description: "Debtor scoring job queued from onboarding",
+        metadata: { jobId: job.id, triggeredBy: "ONBOARDING" },
+      });
+
+      res.json(job);
+    } catch (error) {
+      console.error("Error starting debtor scoring:", error);
+      res.status(500).json({ message: "Failed to start debtor scoring" });
+    }
+  });
+
+  app.get('/api/onboarding/debtor-scoring-status', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      const tenantId = user?.tenantId || req.session?.activeTenantId;
+      if (!tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const job = await onboardingService.getLatestScoringJob(tenantId);
+      res.json(job || { status: "NONE" });
+    } catch (error) {
+      console.error("Error fetching scoring status:", error);
+      res.status(500).json({ message: "Failed to fetch scoring status" });
+    }
+  });
+
+  app.post('/api/settings/recompute-debtor-scores', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      const tenantId = user?.tenantId || req.session?.activeTenantId;
+      if (!tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const job = await onboardingService.enqueueDebtorScoring(tenantId, "SETTINGS");
+
+      await storage.createActivityLog({
+        tenantId,
+        userId: user?.id,
+        activityType: "debtor_scoring_queued",
+        category: "audit",
+        description: "Debtor scoring job queued from settings",
+        metadata: { jobId: job.id, triggeredBy: "SETTINGS" },
+      });
+
+      res.json(job);
+    } catch (error) {
+      console.error("Error recomputing debtor scores:", error);
+      res.status(500).json({ message: "Failed to recompute debtor scores" });
+    }
+  });
+
+  app.post('/api/onboarding/complete-all', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      const tenantId = user?.tenantId || req.session?.activeTenantId;
+      if (!tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const completed = await onboardingService.tryCompleteOnboarding(tenantId);
+      if (completed) {
+        await storage.createActivityLog({
+          tenantId,
+          userId: user?.id,
+          activityType: "onboarding_completed",
+          category: "audit",
+          description: "Onboarding wizard completed",
+          metadata: {},
+        });
+      }
+      res.json({ success: true, completed });
+    } catch (error) {
+      console.error("Error completing onboarding:", error);
+      res.status(500).json({ message: "Failed to complete onboarding" });
+    }
+  });
+
   // Auth routes - Check authentication status WITHOUT demo bypass for signup flows
   app.get('/api/auth/user', async (req: any, res) => {
     console.log('🔍 /api/auth/user endpoint hit');
@@ -16008,80 +16251,55 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         return res.redirect(`/connection-error?provider=xero&error=${errorMsg}`);
       }
 
-      // Check if onboarding is already completed to determine redirect destination
+      // Determine redirect: settings (if reconnecting) vs onboarding (if first time)
       let isOnboardingComplete = false;
-      let redirectUrl = '/onboarding?step=ai_review_launch&autoStartAnalysis=true';
+      let redirectUrl = '/onboarding';
       
       try {
         isOnboardingComplete = await onboardingService.isOnboardingCompleted(appTenantId);
         
+        // Clean up returnTo from session
+        const rawReturnTo = req.session?.xeroReturnTo;
+        if (req.session?.xeroReturnTo) {
+          delete req.session.xeroReturnTo;
+        }
+        
         if (isOnboardingComplete) {
-          // User is reconnecting - redirect to their original page or dashboard
-          // Security: re-validate returnTo using strict whitelist approach
-          const rawReturnTo = req.session?.xeroReturnTo;
-          
-          // Always clean up returnTo from session first (prevents reuse of stale values)
-          if (req.session?.xeroReturnTo) {
-            delete req.session.xeroReturnTo;
-          }
-          
-          // Exact whitelist of allowed internal routes (must match auth endpoint)
           const allowedRoutes = new Set([
-            '/dashboard',
-            '/settings',
-            '/settings/integrations',
-            '/settings/team',
-            '/settings/billing',
-            '/action-centre',
-            '/contacts',
-            '/invoices',
-            '/workflows',
-            '/analytics',
-            '/profile',
-            '/admin',
+            '/dashboard', '/settings', '/settings/integrations', '/settings/team',
+            '/settings/billing', '/action-centre', '/contacts', '/invoices',
+            '/workflows', '/analytics', '/profile', '/admin',
           ]);
           
-          // Only accept the stored returnTo if it exactly matches a whitelisted route
-          // The auth endpoint already validated and normalized this value
           if (rawReturnTo && typeof rawReturnTo === 'string' && allowedRoutes.has(rawReturnTo)) {
             redirectUrl = rawReturnTo;
-            console.log(`📍 Onboarding complete - redirecting to returnTo: ${redirectUrl}`);
           } else {
             redirectUrl = '/dashboard';
-            console.log(`📍 Onboarding complete - redirecting to dashboard${rawReturnTo ? ' (invalid returnTo)' : ' (no returnTo)'}`);
           }
+          console.log(`📍 Onboarding complete - redirecting to: ${redirectUrl}`);
         } else {
-          // First-time connection - advance onboarding and redirect there
-          const currentProgress = await onboardingService.getOnboardingProgress(appTenantId);
-          if (currentProgress) {
-            // Merge existing completed phases with the phases we're completing
-            const existingCompleted = (currentProgress.completedPhases as string[]) || [];
-            const phasesToComplete = ['technical_connection', 'business_setup', 'brand_customization'];
-            const mergedCompleted = Array.from(new Set([...existingCompleted, ...phasesToComplete]));
-            
-            // Skip to AI Review phase to show instant analysis
-            await db.update(onboardingProgress).set({
-              currentPhase: 'ai_review_launch',
-              completedPhases: mergedCompleted,
-              updatedAt: new Date()
-            }).where(eq(onboardingProgress.tenantId, appTenantId));
-            console.log(`✅ Advanced to AI Review phase for instant analysis: ${appTenantId}`);
-          } else {
-            console.warn(`⚠️ No onboarding progress found for tenant ${appTenantId} - user will start from beginning`);
-          }
+          // Mark step 2 (Connect Xero) as COMPLETED without touching other steps
+          await onboardingService.updateStepStatus(appTenantId, 2, "COMPLETED");
+          redirectUrl = '/onboarding';
+          console.log(`📍 Onboarding incomplete - marked step 2 complete, redirecting to: ${redirectUrl}`);
         }
       } catch (error) {
         console.error(`⚠️ Failed to check onboarding status:`, error);
-        // Default to onboarding if we can't determine status
       }
 
       // Trigger automatic comprehensive sync after successful connection
       console.log(`🚀 Triggering automatic initial Xero sync for tenant: ${appTenantId}`);
       const syncService = new XeroSyncService();
       syncService.syncAllDataForTenant(appTenantId)
-        .then(result => {
+        .then(async (result) => {
           if (result.success) {
             console.log(`✅ Initial Xero sync completed successfully:`, result);
+            try {
+              const { enqueueDebtorScoringAfterSync } = await import("./jobs/debtorScoringJob");
+              await enqueueDebtorScoringAfterSync(appTenantId);
+            } catch (err) {
+              console.error("Failed to enqueue debtor scoring after sync:", err);
+            }
           } else {
             console.error(`❌ Initial Xero sync failed:`, result.error);
           }
