@@ -196,7 +196,7 @@ export function OnboardingWizard() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto py-8 px-4">
+    <div className="max-w-5xl mx-auto py-8 px-4">
       <div className="mb-8">
         <h1 className="text-lg font-semibold text-gray-900">Set up your account</h1>
         <p className="text-[13px] text-gray-500 mt-1">
