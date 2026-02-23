@@ -1,0 +1,180 @@
+You are a senior full-stack TypeScript engineer working inside this existing Qashivo codebase.
+
+NEW REQUIREMENT (STEP 5 UPGRADE)
+Step 5 is NOT a blocking wizard step anymore. It becomes a background analysis job that:
+- Scores EACH debtor (contact) from 0–100 based on historic payment performance
+- Assigns a unique credit control strategy per debtor based on their historic performance
+- Runs in the background so the user can continue onboarding while it processes
+- Falls back to a standard strategy when data is insufficient (< 3 months of paid invoice history)
+- Automatically updates scores/strategies over time as more payment history is collected (same mechanism used later to flex strategies for all customers based on latest performance)
+
+KEY PRINCIPLES
+- Multi-tenant safe (tenantId scoped)
+- Explainable scoring: store score factors + strategy reasons
+- Deterministic scoring from Xero invoices/payments (not LLM-dependent)
+- Optional LLM for short natural-language summary of strategy reasons IF configured
+- Respect data boundary: imported accounting data is operational context; do not use it for “learning” pipelines (only store derived patterns needed for workflow decisions, auditability, and repeatability)
+
+ONBOARDING UX CHANGE
+- Step 5 screen should show:
+  - "Debtor scoring is running in the background" + progress indicator
+  - Primary CTA: "Continue onboarding" (does not wait)
+  - Secondary CTA: "View progress" / "Refresh status"
+- Onboarding completion should be allowed even if Step 5 is still RUNNING, as long as step 1 is completed and other steps are completed/skipped.
+- The dashboard should show a banner if Step 5 still running: "Debtor scoring in progress — scores and strategies will appear shortly."
+
+DATA MODEL CHANGES (ADD)
+1) analysis_jobs table (or reuse existing background job pattern if present)
+   Fields:
+   - id, tenant_id
+   - type: "DEBTOR_SCORING"
+   - status: QUEUED | RUNNING | SUCCEEDED | FAILED
+   - progress_current, progress_total (ints)
+   - started_at, finished_at
+   - error_message (nullable)
+   - triggered_by: "ONBOARDING" | "SETTINGS" | "SCHEDULE" | "SYNC"
+   - created_at, updated_at
+
+2) debtor_profiles table (or extend existing contacts/debtors table if it exists)
+   Per tenant + contact (only contacts that appear on at least one invoice):
+   - tenant_id
+   - contact_id (links to your internal contact/customer model)
+   - score_0_100 (int)
+   - score_band (enum: EXCELLENT | GOOD | OK | RISKY | UNKNOWN)
+   - data_coverage_days (int)
+   - paid_invoice_months_covered (int)
+   - paid_invoice_count (int)
+   - avg_days_late (float)
+   - on_time_rate (float 0..1)
+   - late_30_plus_rate (float 0..1)
+   - volatility (float)
+   - last_computed_at (timestamp)
+   - score_factors_json (json)  // explainability: weights + raw metrics + normalized values
+   - strategy_json (json)       // the assigned strategy object
+   - strategy_reason (text)     // deterministic explanation; optional AI summary
+
+SCORING INPUTS (DETERMINISTIC)
+For each debtor/contact, compute from invoice+payment history:
+- Use invoices with a due_date and fully paid status (or fully settled amount_due = 0 with payment date).
+- "days_late" = payment_date - due_date (negative or zero means on-time/early).
+Metrics to compute (trailing window: prefer last 12 months; if less, use what exists):
+- on_time_rate = % paid invoices with days_late <= 0
+- avg_days_late = average max(0, days_late)
+- p90_days_late = 90th percentile of max(0, days_late)
+- late_30_plus_rate = % paid invoices with days_late > 30
+- volatility = std dev of max(0, days_late)
+- payment_recency = days since last payment
+- (optional) dispute_flag_rate if you have disputes in Qashivo outcomes (Qashivo-originated), not from Xero
+
+SCORE OUTPUT (0–100)
+Implement a transparent weighted scoring model:
+- Start at 100, subtract penalties based on lateness + volatility + recency.
+Example (tuneable constants in one file):
+- penalty_avg = clamp(avg_days_late / 60, 0..1) * 35
+- penalty_p90 = clamp(p90_days_late / 90, 0..1) * 25
+- penalty_late30 = late_30_plus_rate * 25
+- penalty_vol = clamp(volatility / 30, 0..1) * 10
+- penalty_recency = clamp(payment_recency / 120, 0..1) * 5
+score = round(clamp(100 - sum(penalties), 0, 100))
+Store the factors and computed metrics for explainability.
+
+INSUFFICIENT DATA RULE
+If paid_invoice_months_covered < 3 (i.e., time between earliest and latest paid invoice dates < ~90 days)
+OR paid_invoice_count < N (pick N=3 for MVP),
+then:
+- score_band = UNKNOWN
+- score_0_100 = 50 (neutral default) OR leave score null and show "insufficient history" (choose approach consistent with UI)
+- assign STANDARD strategy (see below)
+- mark profile as "needs more data" and recompute automatically when more payments arrive.
+
+STRATEGY OUTPUT (PER DEBTOR)
+Define a small set of strategy templates, then customize per debtor:
+Strategy object schema (store in strategy_json):
+{
+  "strategyId": "STANDARD" | "GENTLE" | "FIRM" | "HIGH_TOUCH",
+  "channels": ["EMAIL","SMS","VOICE?"],
+  "cadence": [
+     {"dayOffset": 0, "action": "EMAIL_REMINDER"},
+     {"dayOffset": 3, "action": "EMAIL_FOLLOWUP"},
+     {"dayOffset": 7, "action": "SMS_NUDGE"},
+     {"dayOffset": 14, "action": "ESCALATE_REVIEW"}
+  ],
+  "cooldownDaysAfterReply": 7,
+  "maxTouchesPerInvoice": 6,
+  "tone": "POLITE" | "DIRECT",
+  "requiresApproval": true
+}
+
+Strategy assignment rules (simple for MVP):
+- EXCELLENT (score >= 85): GENTLE (fewer touches, longer cooldown, email-first)
+- GOOD (70–84): STANDARD (normal cadence)
+- OK (50–69): STANDARD+ (slightly tighter cadence; SMS allowed if opted-in)
+- RISKY (< 50): FIRM (tighter cadence; earlier review/escalation; consider voice under supervision if enabled)
+- UNKNOWN (insufficient data): STANDARD
+
+Also store a short deterministic reason string like:
+"Score 42: high late_30_plus_rate (0.55) and p90 lateness (78d) → FIRM cadence + early review."
+
+BACKGROUND EXECUTION DESIGN
+- When Xero connect + sync completes, enqueue analysis job type DEBTOR_SCORING.
+- Job should:
+  1) Determine eligible contacts: ONLY those that appear on at least one invoice (historic or current).
+  2) Compute metrics, score, band, strategy for each contact.
+  3) Update progress_current/progress_total for UI.
+- Must be safe to run multiple times (idempotent upsert per debtor_profile).
+- Allow manual trigger from Settings: "Re-run Debtor Scoring".
+
+KEEP ONBOARDING MOVING
+Onboarding step status model: add RUNNING for step 5.
+- Step 5 becomes RUNNING when job queued/started.
+- Step 5 becomes COMPLETED when job SUCCEEDED.
+- Onboarding flow should allow user to continue even while RUNNING.
+
+API ENDPOINTS (ADD/EXTEND)
+- POST /api/onboarding/start-debtor-scoring
+   -> enqueues job (if not already RUNNING), sets onboarding step 5 to RUNNING
+- GET /api/onboarding/debtor-scoring-status
+   -> returns latest job status + progress + started/finished + error
+- POST /api/settings/recompute-debtor-scores
+   -> enqueues job triggered_by SETTINGS
+- Hook into Xero sync completion:
+   -> enqueue job triggered_by SYNC (avoid duplicate if already RUNNING)
+
+UI CHANGES
+Onboarding step 5 page:
+- If Xero not connected: show "Connect Xero to generate debtor scores"
+- If Xero connected:
+   - Show job status widget:
+     QUEUED/RUNNING with progress bar
+     SUCCEEDED with "View scores" link to customer list
+     FAILED with retry button + error summary
+- Always allow "Continue onboarding" regardless of status.
+
+Customer list / debtor view:
+- Show score badge (0–100) + band + "insufficient history" label when UNKNOWN
+- Show assigned strategy name and key cadence summary
+
+AUTO-UPDATES OVER TIME
+- On each new Xero sync that includes new payments:
+   - mark affected debtors dirty OR simply re-run job (MVP acceptable if tenant size small)
+- (Optional) nightly cron triggers recompute (SCHEDULE)
+
+AUDIT EVENTS
+Add audit logs for:
+- Debtor scoring job queued/started/succeeded/failed
+- Strategy assigned/changed (store before/after strategyId + score)
+- Onboarding step 5 marked RUNNING/COMPLETED
+
+IMPLEMENTATION PLAN
+1) Repo audit: find existing job/queue patterns (cron, bullmq, setInterval worker, etc.). Use the simplest existing mechanism.
+2) Add tables/migrations.
+3) Implement deterministic scoring module: server/services/scoring/debtorScoring.ts
+4) Implement job runner: server/jobs/debtorScoringJob.ts
+5) Wire into Xero sync completion.
+6) Add status endpoints.
+7) Update onboarding UI to be non-blocking for step 5.
+8) Add score + strategy to customer list and debtor detail.
+9) Add settings actions to re-run job.
+10) QA checklist.
+
+NOW IMPLEMENT. Start by auditing the repo and identifying the quickest background job mechanism already in use.

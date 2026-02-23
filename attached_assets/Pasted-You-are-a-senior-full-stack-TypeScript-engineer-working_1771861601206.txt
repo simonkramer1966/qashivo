@@ -1,0 +1,185 @@
+You are a senior full-stack TypeScript engineer working inside this existing Qashivo codebase.
+
+GOAL
+Implement a skippable, multi-step onboarding wizard + settings refresh controls:
+
+Onboarding steps (in this order):
+1) Company details (required): subscriber first name, last name, company name, company address
+2) Connect Xero (skippable): imports all current + historic invoices and payments
+3) Connect Email (skippable): Gmail or Microsoft 365 / Office 365
+4) Connect Bank Account (skippable): where funds are received (MVP can be manual capture + “connect later” placeholder)
+5) Aged debtors analysis (auto after Xero import; if Xero skipped show “Connect Xero to run analysis”)
+6) Contact data analysis (from Xero contacts used in invoices only; show missing data counts; include checkbox “Allow use of mobile numbers for SMS”)
+
+IMPORTANT BUG FIX
+Currently connecting Xero from Settings restarts onboarding.
+Fix this by decoupling Xero connection from onboarding reset.
+Add a separate “Restart onboarding” button in Settings that intentionally resets onboarding progress.
+
+NON-NEGOTIABLE RULES
+- Multi-tenant safe: everything scoped by tenantId.
+- Nothing should disconnect integrations when restarting onboarding (restart should only reset onboarding progress + analysis cache).
+- Contacts import/analysis rule:
+  - Import/analyse contacts ONLY if they appear on at least one current or historic invoice (i.e., customers created from invoice history).
+  - Do NOT import contacts that have never had invoices.
+- Create audit events for onboarding actions (step completed/skipped, restart pressed, analysis run, sms mobile opt-in toggled).
+
+FIRST: REPO AUDIT (do this before coding)
+1) Identify:
+   - Frontend framework (likely Next.js/React) and routing approach
+   - Backend API (Express/Nest/etc), where tenantId is derived from session/auth
+   - Database layer (Prisma/Drizzle/Knex/raw SQL) and existing tables: tenants, users, invoices, payments, contacts, audit_events
+   - Existing integration endpoints:
+     - Xero connect/callback + sync/import services
+     - Email connect (Gmail + O365) connect/callback routes
+     - Existing Settings page routes/components
+2) Report a short “What I found” summary (files + key functions).
+
+DATA MODEL CHANGES (keep it minimal + clean)
+Add onboarding state per tenant.
+Prefer either:
+A) new table tenant_onboarding, or
+B) new JSONB columns on tenants table.
+Choose whichever matches existing patterns.
+
+Must store:
+- company_details:
+  - subscriberFirstName, subscriberLastName (store on user profile if exists AND copy to onboarding payload)
+  - companyName
+  - companyAddress (line1, line2, city, region, postcode, country)
+- step statuses for steps 1–6:
+  - NOT_STARTED | COMPLETED | SKIPPED
+- sms_mobile_opt_in: boolean (default false)
+- analysis cache + timestamps:
+  - aged_debtors_summary JSON
+  - contact_data_summary JSON
+  - last_analysis_at
+- onboarding_completed_at (nullable)
+
+BACKEND API (add/extend)
+Implement these endpoints (names can adapt to existing conventions; keep REST-ish):
+
+GET  /api/onboarding/status
+  -> returns step statuses + saved company details + sms_mobile_opt_in + analysis summaries presence
+
+POST /api/onboarding/company-details
+  body: { subscriberFirstName, subscriberLastName, companyName, companyAddress{...} }
+  -> validates required fields, saves, marks step 1 COMPLETED, audit event
+
+POST /api/onboarding/step
+  body: { step: 2|3|4|5|6, status: "COMPLETED"|"SKIPPED" }
+  -> updates status and audit event
+  NOTE: steps 5/6 should normally be set via analysis endpoints, but allow explicit “skip analysis” if Xero is skipped.
+
+POST /api/onboarding/restart
+  -> resets step statuses to NOT_STARTED (except company details can either be cleared or kept — default KEEP company details but set step 1 back to COMPLETED if already filled; implement “restart” as progress reset not data wipe)
+  -> clears analysis cache fields + last_analysis_at
+  -> DOES NOT disconnect Xero/email
+  -> audit event
+
+POST /api/onboarding/run-analysis
+  -> runs step 5 and step 6 analysis (only if Xero connected + invoices exist)
+  -> saves aged_debtors_summary + contact_data_summary, marks steps 5/6 COMPLETED
+  -> audit event
+
+POST /api/onboarding/sms-mobile-opt-in
+  body: { enabled: boolean }
+  -> saves sms_mobile_opt_in on tenant onboarding/settings, audit event
+
+XERO IMPORT + ANALYSIS REQUIREMENTS
+When Xero is connected:
+- ensure invoice and payment sync covers current + historic
+- aged debtors analysis:
+  - compute “days overdue” (today - dueDate) where amount_due > 0
+  - buckets: 1–30, 31–60, 61–90, 90+
+  - totals: count + total value per bucket
+  - top 10 debtors by overdue amount
+  - optional short AI summary (if LLM key configured); otherwise deterministic textual summary
+- contact data analysis:
+  - build contact set ONLY from contacts referenced by imported invoices (historic + current)
+  - for those contacts, compute counts missing:
+    - missing name/displayName
+    - missing email
+    - missing phone number
+    - missing mobile number
+  - return list of contacts with missing fields (paginate) + totals
+  - include sms_mobile_opt_in checkbox (tenant-level)
+
+EMAIL CONNECT STEP
+Reuse existing Gmail/O365 connect flows.
+Ensure connect/callback can redirect back to:
+- onboarding wizard when started from onboarding
+- settings page when started from settings
+Do this by adding a safe “returnTo” param stored server-side (e.g., in session) OR a short-lived state token.
+
+CRITICAL BUG FIX
+Remove any logic where Xero connect from Settings resets onboarding progress.
+Onboarding should only restart via the new POST /api/onboarding/restart endpoint and Settings button.
+
+FRONTEND UI
+Create /onboarding wizard:
+- Stepper UI (6 steps) with statuses and progress
+- Each step has:
+  - primary CTA (Continue / Connect / Run Analysis)
+  - secondary CTA “Skip for now” (except step 1 required)
+  - Back button
+- After finishing, route user to main dashboard
+
+Step 1: Company Details Form
+- required fields: subscriber first/last name, company name, address line1, city, postcode, country
+- save -> step 1 COMPLETE
+
+Step 2: Connect Xero (skippable)
+- “Connect Xero” button -> existing OAuth connect flow
+- show connection status + last sync
+- on success, trigger import job then show “Run Analysis” or auto-run analysis
+
+Step 3: Connect Email (skippable)
+- buttons: Connect Gmail / Connect Microsoft 365
+- show connected address if available
+
+Step 4: Connect Bank (skippable; MVP)
+- provide simple form to capture: bank name + sort code + account number OR “account nickname”
+- include note “Direct bank connection coming soon” (placeholder)
+- save -> step 4 COMPLETE (even if “connect later” used)
+
+Step 5: Aged Debtors Analysis
+- if Xero not connected: show “Connect Xero to run analysis”
+- else show bucket totals + top debtors table + AI/deterministic summary
+- mark step 5 COMPLETE when analysis exists
+
+Step 6: Contact Data Analysis
+- show totals missing email/phone/mobile/name
+- table of contacts needing cleanup
+- checkbox: “Allow use of mobile numbers for SMS messaging” (tenant-level)
+- mark step 6 COMPLETE when analysis exists (or SKIPPED if Xero skipped)
+
+SETTINGS PAGE UPDATES
+Add a new “Onboarding” section:
+- show step statuses
+- button: “Continue onboarding” (goes to /onboarding at current step)
+- button: “Restart onboarding” (calls POST /api/onboarding/restart; confirm modal)
+- button: “Re-run analyses” (calls POST /api/onboarding/run-analysis)
+Also ensure company details + sms_mobile_opt_in can be edited/refreshed from Settings.
+
+ROUTING / GUARDS
+- After login, if onboarding not completed, redirect to /onboarding
+- BUT allow user to access Settings without triggering onboarding reset
+- If user skipped integrations, onboarding can still be marked complete once:
+  - step 1 COMPLETED and steps 2–6 are either COMPLETED or SKIPPED
+- Do not block app usage forever; allow finishing later via Settings > Continue onboarding.
+
+QUALITY BAR
+- Type-safe TypeScript
+- Validate inputs server-side
+- Multi-tenant scoping everywhere
+- Add at least basic unit tests for analysis calculations if test framework exists; otherwise add a QA checklist in README.
+
+DELIVERABLES
+1) Working onboarding wizard end-to-end
+2) Settings section with Continue/Restart/Re-run analysis
+3) Bug fixed: connecting Xero in settings does NOT restart onboarding
+4) Clear notes: which files changed, how to test manually
+
+NOW IMPLEMENT.
+Start by auditing the repo, then apply the changes step-by-step with small commits.
