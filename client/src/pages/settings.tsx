@@ -125,7 +125,7 @@ function OnboardingSettingsSection() {
   const [, setLocation] = useLocation();
 
   const { data: onboardingStatus, isLoading } = useQuery<OnboardingStatus>({
-    queryKey: ["/api/onboarding/status"],
+    queryKey: ["/api/onboarding/full-status"],
   });
 
   const restartMutation = useMutation({
@@ -135,7 +135,7 @@ function OnboardingSettingsSection() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/onboarding/status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/onboarding/full-status"] });
       toast({ title: "Onboarding Reset", description: "Onboarding has been restarted." });
     },
     onError: () => {
@@ -150,7 +150,7 @@ function OnboardingSettingsSection() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/onboarding/status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/onboarding/full-status"] });
       toast({ title: "Analysis Started", description: "Aged debtors and contact analysis re-running." });
     },
     onError: () => {
@@ -165,7 +165,7 @@ function OnboardingSettingsSection() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/onboarding/status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/onboarding/full-status"] });
       toast({ title: "Scoring Started", description: "Debtor scoring job has been queued." });
     },
     onError: () => {
@@ -2004,7 +2004,7 @@ function AutomationTabContent() {
 function FinishOnboardingBanner() {
   const [, setLocation] = useLocation();
   const { data: onboardingStatus } = useQuery<OnboardingStatus>({
-    queryKey: ["/api/onboarding/status"],
+    queryKey: ["/api/onboarding/full-status"],
   });
 
   const completed = isOnboardingComplete(onboardingStatus);
