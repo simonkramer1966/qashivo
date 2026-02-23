@@ -41,7 +41,17 @@ export class SendGridEmailService extends EmailService {
     }
   }
 
-  async sendEmail(message: EmailMessage): Promise<EmailSendResult> {
+  async sendEmail(message: EmailMessage & { html?: string; text?: string }): Promise<EmailSendResult> {
+    if (!message.from && this.config.defaultFrom) {
+      message.from = this.config.defaultFrom;
+    }
+    if ((message as any).html && !message.htmlContent) {
+      message.htmlContent = (message as any).html;
+    }
+    if ((message as any).text && !message.textContent) {
+      message.textContent = (message as any).text;
+    }
+
     const validation = this.validateMessage(message);
     if (!validation.isValid) {
       return this.createErrorResult(`Validation failed: ${validation.errors.join(', ')}`, message.messageId);
