@@ -15540,6 +15540,62 @@ Payment required immediately to avoid collection action. Contact us NOW.`
   });
 
   // Xero integration routes
+  app.get("/api/integrations/xero/connect", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      if (!req.session) {
+        return res.status(401).json({ message: "Session required for authentication. Please log in again." });
+      }
+
+      const ALLOWED_HOSTS = new Set([
+        'qashivo.com',
+        'www.qashivo.com',
+        'qashivo.replit.app',
+        ...(process.env.REPLIT_DOMAINS?.split(',').map(d => d.trim()) || []),
+        'localhost:5000',
+      ]);
+
+      const xeroRedirectUri = (() => {
+        const host = req.headers['x-forwarded-host'] as string || req.headers.host || '';
+        const cleanHost = host.split(',')[0].trim();
+        if (!ALLOWED_HOSTS.has(cleanHost)) {
+          console.warn(`[Xero] Rejected unknown host: ${cleanHost}, falling back to REPLIT_DOMAINS`);
+          const fallbackDomain = process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000';
+          const fallbackProto = fallbackDomain.includes('localhost') ? 'http' : 'https';
+          return `${fallbackProto}://${fallbackDomain}/api/xero/callback`;
+        }
+        const proto = (req.headers['x-forwarded-proto'] as string)?.split(',')[0]?.trim() || (cleanHost.includes('localhost') ? 'http' : 'https');
+        return `${proto}://${cleanHost}/api/xero/callback`;
+      })();
+      console.log(`[Xero] /api/integrations/xero/connect - Dynamic redirect URI: ${xeroRedirectUri}`);
+
+      req.session.xeroRedirectUri = xeroRedirectUri;
+      req.session.oauthUserId = user.id;
+
+      const result = await apiMiddleware.connectProvider('xero', req.session, user.tenantId, undefined, xeroRedirectUri);
+
+      if (!result.success || !result.authUrl) {
+        return res.status(400).json({ message: result.error || "Failed to generate Xero authorization URL" });
+      }
+
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err: any) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+
+      res.json({ authUrl: result.authUrl });
+    } catch (error) {
+      console.error("Error in /api/integrations/xero/connect:", error);
+      res.status(500).json({ message: "Failed to initiate Xero connection" });
+    }
+  });
+
   app.get("/api/xero/auth-url", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
