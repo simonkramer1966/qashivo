@@ -100,9 +100,7 @@ function PermissionGuard({ permission, children }: { permission: string; childre
 
 function isOnboardingComplete(status: OnboardingStatus | undefined): boolean {
   if (!status) return false;
-  if (status.step1Status !== "COMPLETED") return false;
-  const otherSteps = [status.step2Status, status.step3Status, status.step4Status, status.step5Status, status.step6Status];
-  return otherSteps.every(s => s === "COMPLETED" || s === "SKIPPED" || s === "RUNNING");
+  return status.step1Status === "COMPLETED";
 }
 
 function useOnboardingStatus() {
