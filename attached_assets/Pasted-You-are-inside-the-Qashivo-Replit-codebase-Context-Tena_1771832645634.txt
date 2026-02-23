@@ -1,0 +1,116 @@
+You are inside the Qashivo Replit codebase.
+
+Context:
+- Tenant = SME
+- Email integration should be “one shared mailbox per tenant”
+- Subscription owner/admin connects the mailbox once
+- All authorised users can send using the tenant mailbox (approval-gated), and all replies are captured back into Qashivo for outcome extraction.
+- Gmail integration exists today; we must ADD Microsoft 365 / Outlook integration today (keep Gmail working).
+
+Your job:
+A) Audit what is already implemented for Gmail (data model, OAuth, send, inbound, approvals, audit).
+B) Implement Microsoft 365 email integration with the SAME tenant-wide mailbox pattern.
+C) Do minimal refactors: introduce a thin provider abstraction only where needed.
+
+------------------------------------------------------------
+PART 1 — CURRENT STATE AUDIT (GMAIL)
+1) Locate Gmail integration code:
+- OAuth connect flow (routes, callback handlers)
+- Token storage + refresh logic
+- Email send function(s)
+- Inbound reply capture (polling/webhook/Gmail watch)
+- Any “conversation/thread” linking logic (Message-Id, threadId, In-Reply-To, References)
+
+2) Confirm tenant-wide model:
+- Prove there is a single connection record tied to tenant_id (not user_id)
+- Prove non-admin users do not connect/overwrite the integration
+- Prove sending uses tenant connection even when initiated by any user
+
+3) Confirm supervised autonomy:
+- Backend enforcement: no email can be sent unless approved
+- Audit log created for request/approve/send (requested_by, approved_by, sent_at)
+
+Deliver “Gmail Current State Report”:
+✅ Implemented
+🟡 Partial
+🔴 Missing
+List exact files + key functions + schema tables/fields.
+
+------------------------------------------------------------
+PART 2 — TARGET DESIGN (SHARED MAILBOX PER TENANT)
+We want one table/model that represents a tenant mailbox connection, supporting multiple providers:
+
+EmailConnection (or similar)
+- id
+- tenant_id (unique, 1 active connection per tenant for MVP)
+- provider ENUM: GOOGLE | MICROSOFT
+- email_address (the shared mailbox address)
+- provider_account_id (gmail userId / microsoft user id)
+- access_token (encrypted at rest)
+- refresh_token (encrypted at rest)
+- expires_at (timestamp)
+- scopes (string)
+- status ENUM: CONNECTED | NEEDS_REAUTH | ERROR
+- last_sync_at (timestamp)
+- created_by_user_id (admin who connected)
+- created_at / updated_at
+
+If a similar table exists already, reuse it and add provider + any missing fields.
+
+Also ensure these exist/are used:
+- Message table to store outbound/inbound messages with:
+  - tenant_id
+  - debtor/contact id (or conversation id)
+  - direction (OUTBOUND/INBOUND)
+  - provider
+  - provider_message_id (gmail message id / graph message id)
+  - provider_thread_id (gmail threadId / graph conversationId if available)
+  - internet_message_id (Message-ID header)
+  - in_reply_to / references (headers)
+  - subject, from, to, body snippet, raw headers (optional)
+  - linked invoice/action ids
+
+- Audit events for:
+  - ACTION_PROPOSED
+  - ACTION_APPROVED / DECLINED
+  - EMAIL_SENT
+  - INBOUND_EMAIL_RECEIVED
+Each audit record includes: tenant_id, actor_user_id, entity_id, payload json, created_at.
+
+------------------------------------------------------------
+PART 3 — IMPLEMENT MICROSOFT 365 INTEGRATION (TODAY)
+We need Microsoft Graph OAuth + Mail.Send + Mail.Read.
+
+3.1 Add Admin Connect UI
+- In Settings → Integrations → Email:
+  - “Connect Gmail” (existing)
+  - “Connect Microsoft 365”
+- Only Admin/Owner can connect/disconnect/re-auth
+- Show integration health: CONNECTED / NEEDS_REAUTH / ERROR
+
+3.2 OAuth flow (Microsoft)
+- Add env vars:
+  - MICROSOFT_CLIENT_ID
+  - MICROSOFT_CLIENT_SECRET
+  - MICROSOFT_REDIRECT_URI
+  - MICROSOFT_TENANT_AUTHORITY (default: common or organizations)
+- Scopes (MVP):
+  - openid profile email offline_access
+  - https://graph.microsoft.com/User.Read
+  - https://graph.microsoft.com/Mail.Send
+  - https://graph.microsoft.com/Mail.Read
+(If you already have an auth library, reuse it; otherwise implement standard OAuth2 + refresh token.)
+
+- Store tokens in EmailConnection with provider=MICROSOFT
+
+3.3 Sending email (Microsoft Graph)
+Implement a provider adapter interface:
+
+EmailProviderAdapter:
+- sendEmail({fromConnection, to, cc?, bcc?, subject, htmlBody, textBody?, replyTo?, headers?, metadata?}) -> returns {provider_message_id, provider_thread_id?, internet_message_id?}
+- refreshTokenIfNeeded(connection) -> updated connection
+
+Microsoft sending approach (for trackable IDs):
+Option A (preferred): create a draft then send:
+- POST /v1.0/me/messages  (returns message id + internetMessageId + conversationId)
+- POST /v1.0/me/

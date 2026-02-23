@@ -1,0 +1,35 @@
+We have Gmail + Microsoft 365 email integration already working with a tenant-wide shared mailbox stored on tenants table fields:
+(emailProvider, emailAccessToken, emailRefreshToken, emailTokenExpiresAt, emailConnectionStatus, emailConnectedAddress, emailSyncEnabled).
+Sending routes via ConnectedEmailService.ts (sendViaGmail, sendViaOutlook). Inbound polling exists.
+
+Your task: harden the integration to match Qashivo “supervised autonomy” trust requirements.
+
+1) RBAC: Only OWNER/ADMIN can connect/disconnect/reauth the email integration.
+- Add server-side enforcement (middleware/guards) to every route that can modify tenant email connection fields.
+- Update UI to hide/disable buttons for non-admin users, but prioritize backend enforcement.
+
+2) Track who connected:
+- Add fields to tenants table: emailConnectedByUserId (FK to users), emailConnectedAt (timestamp).
+- Populate on connect and re-auth flows. Keep existing connected address/provider fields.
+
+3) Approval gate enforcement:
+- Identify all outbound email entry points (including any SendGrid fallback routing).
+- Create a single backend “execution” function that sends emails ONLY if the related action/status is APPROVED.
+- Refactor all callers to use this function. Ensure there is no path that sends without approval.
+- Add tests or at least a clear manual test checklist.
+
+4) Audit logging:
+- Emit audit_events for:
+  EMAIL_CONNECTION_CONNECTED / DISCONNECTED / REAUTHED / ERROR
+  EMAIL_SENT
+  INBOUND_EMAIL_RECEIVED
+Each audit event must include tenant_id, actor_user_id (where applicable), and a payload with provider + emailConnectedAddress + message/thread ids.
+
+5) Deliverables:
+- A short “before/after” list of gaps closed
+- File list of changes
+- Manual test steps: connect as admin, attempt connect as non-admin (must fail), approve action then send, attempt send without approval (must fail), inbound reply creates audit event.
+
+Constraints:
+- Minimal refactor; keep tenant-wide pattern on tenants table.
+- Do not break existing Gmail or Outlook sending.
