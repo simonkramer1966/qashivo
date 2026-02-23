@@ -566,9 +566,15 @@ export async function sendUserInvitationEmail(params: {
   const roleLabel = roleLabelMap[role] || role;
   const inviterLine = inviterName ? ` by ${inviterName}` : '';
   
+  const inviteApiKey = process.env.SENDGRID_API_KEY;
+  if (!inviteApiKey) {
+    console.error('❌ SENDGRID_API_KEY not configured — invitation email cannot be sent');
+    throw new Error('Email service not configured');
+  }
+
   const config: EmailServiceConfig = {
     provider: 'sendgrid',
-    apiKey: process.env.SENDGRID_API_KEY || 'default_key',
+    apiKey: inviteApiKey,
     defaultFrom: {
       email: process.env.SENDGRID_FROM_EMAIL || 'cc@qashivo.com',
       name: process.env.SENDGRID_FROM_NAME || 'Qashivo'
@@ -617,9 +623,15 @@ export async function sendUserInvitationEmail(params: {
 export async function sendPasswordResetEmail(email: string, resetToken: string): Promise<void> {
   const resetUrl = `${process.env.APP_URL || 'http://localhost:5000'}/reset-password?token=${resetToken}`;
   
+  const apiKey = process.env.SENDGRID_API_KEY;
+  if (!apiKey) {
+    console.error('❌ SENDGRID_API_KEY not configured — password reset email cannot be sent');
+    throw new Error('Email service not configured');
+  }
+
   const config: EmailServiceConfig = {
     provider: 'sendgrid',
-    apiKey: process.env.SENDGRID_API_KEY || 'default_key',
+    apiKey,
     defaultFrom: {
       email: process.env.SENDGRID_FROM_EMAIL || 'cc@qashivo.com',
       name: process.env.SENDGRID_FROM_NAME || 'Qashivo'
@@ -630,7 +642,7 @@ export async function sendPasswordResetEmail(email: string, resetToken: string):
   
   const emailService = new SendGridEmailService(config);
   
-  await emailService.sendEmail({
+  const result = await emailService.sendEmail({
     to: [{ email }],
     subject: 'Reset Your Password',
     html: `
@@ -652,4 +664,11 @@ export async function sendPasswordResetEmail(email: string, resetToken: string):
     `,
     text: `Reset Your Password\n\nYou requested to reset your password. Click the link below to create a new password:\n\n${resetUrl}\n\nThis link will expire in 1 hour. If you didn't request this, you can safely ignore this email.`
   });
+
+  if (!result.success) {
+    console.error(`❌ Password reset email failed for ${email}: ${result.error}`);
+    throw new Error(`Failed to send password reset email: ${result.error}`);
+  }
+
+  console.log(`✅ Password reset email sent to ${email}`);
 }
