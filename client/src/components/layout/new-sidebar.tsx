@@ -832,7 +832,7 @@ export default function NewSidebar() {
                 Profile
               </SimpleDropdownItem>
               {canAccessSettings && (
-              <SimpleDropdownItem onClick={() => setLocation('/settings')} className="text-sm" data-testid="menu-item-settings-profile">
+              <SimpleDropdownItem onClick={() => { window.history.pushState(null, "", "/settings"); window.dispatchEvent(new PopStateEvent("popstate")); }} className="text-sm" data-testid="menu-item-settings-profile">
                 <Settings className="mr-2 h-4 w-4" />
                 Settings
               </SimpleDropdownItem>
@@ -875,7 +875,7 @@ export default function NewSidebar() {
                 Profile
               </SimpleDropdownItem>
               {canAccessSettings && (
-              <SimpleDropdownItem onClick={() => setLocation('/settings')} className="text-sm" data-testid="menu-item-settings-profile-collapsed">
+              <SimpleDropdownItem onClick={() => { window.history.pushState(null, "", "/settings"); window.dispatchEvent(new PopStateEvent("popstate")); }} className="text-sm" data-testid="menu-item-settings-profile-collapsed">
                 <Settings className="mr-2 h-4 w-4" />
                 Settings
               </SimpleDropdownItem>
