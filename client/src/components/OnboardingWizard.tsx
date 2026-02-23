@@ -147,10 +147,6 @@ export function OnboardingWizard() {
 
   useEffect(() => {
     if (!status) return;
-    if (status.onboardingCompleted) {
-      setLocation("/overview2");
-      return;
-    }
     for (let i = 1; i <= 6; i++) {
       const s = getStepStatus(status, i);
       if (s === "NOT_STARTED" || s === "RUNNING") {
