@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, AlertCircle } from "lucide-react";
 import qashivoLogo from "@assets/qashivo_image_1771827289906.png";
 
 const loginSchema = z.object({
@@ -30,6 +30,7 @@ export default function Login() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
+  const sessionExpired = new URLSearchParams(window.location.search).get('expired') === 'true';
 
   const form = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -76,6 +77,12 @@ export default function Login() {
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <img src={qashivoLogo} alt="Qashivo" className="h-10 mx-auto mb-6" />
+          {sessionExpired && (
+            <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg px-4 py-3 mb-6 text-sm">
+              <AlertCircle className="h-4 w-4 flex-shrink-0" />
+              <span>Your session has expired. Please log in again.</span>
+            </div>
+          )}
           <h1 className="text-2xl font-semibold text-[#0B0F17] mb-2">Welcome back</h1>
           <p className="text-[#556070] text-sm">Sign in to your account to continue</p>
         </div>

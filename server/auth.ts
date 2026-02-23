@@ -79,6 +79,8 @@ export function sessionIdleTimeout(): RequestHandler {
 
     const now = Date.now();
 
+    const isApiRequest = req.path.startsWith('/api/');
+
     if (req.session.lastActivity) {
       const idleTime = now - req.session.lastActivity;
       if (idleTime > SESSION_IDLE_TIMEOUT) {
@@ -88,7 +90,10 @@ export function sessionIdleTimeout(): RequestHandler {
         return req.session.destroy((err: any) => {
           if (err) console.error("Session idle destroy error:", err);
           res.clearCookie('connect.sid');
-          return res.status(401).json({ message: "Session expired due to inactivity" });
+          if (isApiRequest) {
+            return res.status(401).json({ message: "Session expired due to inactivity" });
+          }
+          return res.redirect('/login?expired=true');
         });
       }
     }
@@ -104,7 +109,10 @@ export function sessionIdleTimeout(): RequestHandler {
         return req.session.destroy((err: any) => {
           if (err) console.error("Session absolute expiry error:", err);
           res.clearCookie('connect.sid');
-          return res.status(401).json({ message: "Session expired. Please log in again." });
+          if (isApiRequest) {
+            return res.status(401).json({ message: "Session expired. Please log in again." });
+          }
+          return res.redirect('/login?expired=true');
         });
       }
     }
