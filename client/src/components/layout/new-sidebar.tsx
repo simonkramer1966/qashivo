@@ -165,7 +165,7 @@ function SimpleDropdownItem({
       )}
       onClick={() => {
         onClick?.();
-        close();
+        requestAnimationFrame(() => close());
       }}
       data-testid={dataTestId}
     >
