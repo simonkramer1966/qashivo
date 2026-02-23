@@ -8,6 +8,50 @@ import { z } from "zod";
 
 const router = Router();
 
+// Ensure the tenant cascade deletion function exists in the database
+db.execute(sql.raw(`
+  CREATE OR REPLACE FUNCTION delete_tenant_cascade(p_tenant_id TEXT) RETURNS void AS $fn$
+  DECLARE
+    tbl RECORD;
+    remaining TEXT[];
+    prev_count INT;
+    cur_count INT;
+  BEGIN
+    DELETE FROM workflow_message_variants WHERE step_id IN (
+      SELECT ws.id FROM workflow_steps ws JOIN workflows w ON ws.workflow_id = w.id WHERE w.tenant_id = p_tenant_id
+    );
+    DELETE FROM workflow_steps WHERE workflow_id IN (
+      SELECT id FROM workflows WHERE tenant_id = p_tenant_id
+    );
+    DELETE FROM payment_plan_invoices WHERE payment_plan_id IN (
+      SELECT id FROM payment_plans WHERE tenant_id = p_tenant_id
+    );
+    SELECT array_agg(table_name) INTO remaining
+    FROM information_schema.columns
+    WHERE column_name = 'tenant_id' AND table_schema = 'public' AND table_name != 'tenants';
+    prev_count := 0;
+    LOOP
+      cur_count := 0;
+      FOR tbl IN SELECT unnest(remaining) AS name LOOP
+        BEGIN
+          EXECUTE format('DELETE FROM %I WHERE tenant_id = $1', tbl.name) USING p_tenant_id;
+        EXCEPTION WHEN foreign_key_violation THEN
+          cur_count := cur_count + 1;
+        END;
+      END LOOP;
+      EXIT WHEN cur_count = 0 OR cur_count = prev_count;
+      prev_count := cur_count;
+    END LOOP;
+    IF cur_count > 0 THEN
+      RAISE EXCEPTION 'Could not delete from % table(s) due to FK constraints', cur_count;
+    END IF;
+    DELETE FROM sessions WHERE sess::jsonb->>'tenantId' = p_tenant_id;
+    UPDATE users SET tenant_id = NULL WHERE tenant_id = p_tenant_id;
+    DELETE FROM tenants WHERE id = p_tenant_id;
+  END;
+  $fn$ LANGUAGE plpgsql;
+`)).catch((e) => console.warn("Could not create delete_tenant_cascade function:", e.message));
+
 // ==================== VALIDATION SCHEMAS ====================
 
 const createPartnerSchema = z.object({
@@ -458,45 +502,22 @@ router.post("/smes/:id/toggle-kill-switch", requireAdminAuth, async (req, res) =
 router.delete("/smes/:id", requireAdminAuth, async (req, res) => {
   try {
     const tenantId = req.params.id;
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenantId)) {
+      return res.status(400).json({ error: "Invalid tenant ID format" });
+    }
     const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
     if (!tenant) {
       return res.status(404).json({ error: "Tenant not found" });
     }
 
-    await db.execute(sql`
-      DO $$
-      DECLARE
-        tid TEXT := ${tenantId};
-        tbl RECORD;
-      BEGIN
-        -- First handle tables with indirect FK dependencies
-        DELETE FROM workflow_message_variants WHERE step_id IN (
-          SELECT ws.id FROM workflow_steps ws JOIN workflows w ON ws.workflow_id = w.id WHERE w.tenant_id = tid
-        );
-        DELETE FROM workflow_steps WHERE workflow_id IN (SELECT id FROM workflows WHERE tenant_id = tid);
-        DELETE FROM payment_plan_invoices WHERE payment_plan_id IN (SELECT id FROM payment_plans WHERE tenant_id = tid);
+    // Ensure the cascade deletion function exists before calling it
+    const fnCheck = await db.execute(sql`SELECT proname FROM pg_proc WHERE proname = 'delete_tenant_cascade'`);
+    if (fnCheck.rows.length === 0) {
+      return res.status(500).json({ error: "Tenant deletion function not available. Please restart the server." });
+    }
 
-        -- Dynamically delete from all tables that have a tenant_id column (except tenants itself)
-        FOR tbl IN
-          SELECT table_name FROM information_schema.columns
-          WHERE column_name = 'tenant_id'
-            AND table_schema = 'public'
-            AND table_name != 'tenants'
-          ORDER BY table_name
-        LOOP
-          EXECUTE format('DELETE FROM %I WHERE tenant_id = $1', tbl.table_name) USING tid;
-        END LOOP;
-
-        -- Clean up sessions referencing this tenant
-        DELETE FROM sessions WHERE sess::jsonb->>'tenantId' = tid;
-
-        -- Detach users from tenant (don't delete users, they may exist independently)
-        UPDATE users SET tenant_id = NULL WHERE tenant_id = tid;
-
-        -- Finally delete the tenant itself
-        DELETE FROM tenants WHERE id = tid;
-      END $$;
-    `);
+    // Call the server-side PL/pgSQL function for atomic tenant deletion
+    await db.execute(sql`SELECT delete_tenant_cascade(${tenantId})`);
 
     await logAuditEvent(
       getUserId(req),
