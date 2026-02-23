@@ -307,7 +307,16 @@ export class OnboardingService {
 
   async tryCompleteOnboarding(tenantId: string): Promise<boolean> {
     const status = await this.getFullStatus(tenantId);
-    if (this.isAllStepsFinished(status) && !status.onboardingCompleted) {
+    if (status.step1Status !== "COMPLETED") return false;
+    const stepKeys = ["step2Status", "step3Status", "step4Status", "step5Status", "step6Status"] as const;
+    for (let i = 0; i < stepKeys.length; i++) {
+      const s = status[stepKeys[i]] as string;
+      if (s === "NOT_STARTED") {
+        await this.updateStepStatus(tenantId, i + 2, "SKIPPED");
+      }
+    }
+    const refreshedStatus = await this.getFullStatus(tenantId);
+    if (this.isAllStepsFinished(refreshedStatus) && !refreshedStatus.onboardingCompleted) {
       await db
         .update(onboardingProgress)
         .set({ completedAt: new Date(), updatedAt: new Date() })
