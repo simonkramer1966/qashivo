@@ -889,11 +889,13 @@ export default function NewSidebar() {
           </div>
         )}
       </aside>
-      {/* User Profile Dialog */}
-      <UserProfileDialog 
-        open={isProfileDialogOpen} 
-        onOpenChange={setIsProfileDialogOpen}
-      />
+      {/* User Profile Dialog - only mount when open to avoid Dialog Presence crash */}
+      {isProfileDialogOpen && (
+        <UserProfileDialog 
+          open={isProfileDialogOpen} 
+          onOpenChange={setIsProfileDialogOpen}
+        />
+      )}
     </>
   );
 }
