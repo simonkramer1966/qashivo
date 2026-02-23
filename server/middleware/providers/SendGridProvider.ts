@@ -52,7 +52,8 @@ export class SendGridProvider implements UniversalProvider {
             from: options.body.from || DEFAULT_FROM,
             subject: options.body.subject,
             text: options.body.text,
-            html: options.body.html
+            html: options.body.html,
+            tenantId: options.body.tenantId,
           });
           break;
 

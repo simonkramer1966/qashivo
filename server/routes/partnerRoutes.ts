@@ -535,6 +535,7 @@ export function registerPartnerRoutes(app: Express) {
             from: `${fromName} <${fromEmail}>`,
             subject: `${partnerDisplayName} invites you to connect`,
             html: emailHtml,
+            tenantId: req.user?.tenantId,
           });
         } catch (emailError) {
           console.error("Failed to send invite email:", emailError);

@@ -5675,6 +5675,7 @@ Return JSON with:
         html: htmlBody,
         text: body,
         customerId: contactId,
+        tenantId: user.tenantId,
       });
 
       if (!result.success) {
@@ -9825,7 +9826,8 @@ Guidelines:
         from: fromEmail,
         subject: processedSubject,
         text: processedContent,
-        html: processedContent.replace(/\n/g, '<br>')
+        html: processedContent.replace(/\n/g, '<br>'),
+        tenantId: user.tenantId,
       });
 
       if (success) {
@@ -14334,7 +14336,8 @@ Payment required immediately to avoid collection action. Contact us NOW.`
           to: invoice.contact.email,
           from: formattedSender,
           subject: emailSubject,
-          html: emailContent.replace(/\n/g, '<br>')
+          html: emailContent.replace(/\n/g, '<br>'),
+          tenantId: user.tenantId,
         });
 
         if (emailSent) {
@@ -14580,7 +14583,8 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         to: invoice.contact.email,
         from: formattedSender,
         subject: processedSubject,
-        html: processedContent.replace(/\n/g, '<br>')
+        html: processedContent.replace(/\n/g, '<br>'),
+        tenantId: user.tenantId,
       });
 
       if (emailSent) {
@@ -14723,7 +14727,8 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         to: invoice.contact.email,
         from: formattedSender,
         subject: processedSubject,
-        html: processedContent
+        html: processedContent,
+        tenantId: user.tenantId,
       });
 
       if (emailSent) {
@@ -14914,7 +14919,8 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         to: contact.email,
         from: formattedSender,
         subject: processedSubject,
-        html: processedContent.replace(/\n/g, '<br>')
+        html: processedContent.replace(/\n/g, '<br>'),
+        tenantId: user.tenantId,
       });
 
       if (emailSent) {
