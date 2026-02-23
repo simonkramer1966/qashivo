@@ -454,6 +454,66 @@ router.post("/smes/:id/toggle-kill-switch", requireAdminAuth, async (req, res) =
   }
 });
 
+// DELETE /api/admin/smes/:id - Delete a tenant and all associated data
+router.delete("/smes/:id", requireAdminAuth, async (req, res) => {
+  try {
+    const tenantId = req.params.id;
+    const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
+    if (!tenant) {
+      return res.status(404).json({ error: "Tenant not found" });
+    }
+
+    await db.execute(sql`
+      DO $$
+      DECLARE
+        tid TEXT := ${tenantId};
+        tbl RECORD;
+      BEGIN
+        -- First handle tables with indirect FK dependencies
+        DELETE FROM workflow_message_variants WHERE step_id IN (
+          SELECT ws.id FROM workflow_steps ws JOIN workflows w ON ws.workflow_id = w.id WHERE w.tenant_id = tid
+        );
+        DELETE FROM workflow_steps WHERE workflow_id IN (SELECT id FROM workflows WHERE tenant_id = tid);
+        DELETE FROM payment_plan_invoices WHERE payment_plan_id IN (SELECT id FROM payment_plans WHERE tenant_id = tid);
+
+        -- Dynamically delete from all tables that have a tenant_id column (except tenants itself)
+        FOR tbl IN
+          SELECT table_name FROM information_schema.columns
+          WHERE column_name = 'tenant_id'
+            AND table_schema = 'public'
+            AND table_name != 'tenants'
+          ORDER BY table_name
+        LOOP
+          EXECUTE format('DELETE FROM %I WHERE tenant_id = $1', tbl.table_name) USING tid;
+        END LOOP;
+
+        -- Clean up sessions referencing this tenant
+        DELETE FROM sessions WHERE sess::jsonb->>'tenantId' = tid;
+
+        -- Detach users from tenant (don't delete users, they may exist independently)
+        UPDATE users SET tenant_id = NULL WHERE tenant_id = tid;
+
+        -- Finally delete the tenant itself
+        DELETE FROM tenants WHERE id = tid;
+      END $$;
+    `);
+
+    await logAuditEvent(
+      getUserId(req),
+      "TENANT_DELETED",
+      "TENANT",
+      tenantId,
+      { tenantName: tenant.name }
+    );
+
+    console.log(`🗑️ Tenant deleted: ${tenant.name} (${tenantId})`);
+    res.json({ success: true, message: `Tenant "${tenant.name}" has been deleted` });
+  } catch (error: any) {
+    console.error("Failed to delete tenant:", error);
+    res.status(500).json({ error: `Failed to delete tenant: ${error.message}` });
+  }
+});
+
 // POST /api/admin/smes/:id/invite-owner - Stub for invite
 router.post("/smes/:id/invite-owner", requireAdminAuth, async (req, res) => {
   try {

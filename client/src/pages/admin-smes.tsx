@@ -1,8 +1,21 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Factory, AlertCircle, CheckCircle2, XCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Factory, AlertCircle, CheckCircle2, XCircle, Trash2 } from "lucide-react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface ClientListItem {
   id: string;
@@ -16,9 +29,41 @@ interface ClientListItem {
 }
 
 export default function AdminSmes() {
+  const { toast } = useToast();
+  const [deleteTarget, setDeleteTarget] = useState<ClientListItem | null>(null);
+  const [deleteStep, setDeleteStep] = useState<1 | 2>(1);
+  const [confirmName, setConfirmName] = useState("");
+
   const { data: clients, isLoading, error } = useQuery<ClientListItem[]>({
     queryKey: ["/api/admin/smes"],
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("DELETE", `/api/admin/smes/${id}`);
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      toast({ title: "Tenant deleted", description: data.message });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/smes"] });
+      closeDeleteDialog();
+    },
+    onError: (error: any) => {
+      toast({ title: "Delete failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const closeDeleteDialog = () => {
+    setDeleteTarget(null);
+    setDeleteStep(1);
+    setConfirmName("");
+  };
+
+  const openDeleteDialog = (client: ClientListItem) => {
+    setDeleteTarget(client);
+    setDeleteStep(1);
+    setConfirmName("");
+  };
 
   const getXeroStatus = (client: ClientListItem) => {
     if (!client.xeroTenantId) {
@@ -102,7 +147,8 @@ export default function AdminSmes() {
                   <th className="text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider py-3 px-4">Last sync</th>
                   <th className="text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider py-3 px-4">Comms</th>
                   <th className="text-center text-[11px] font-medium text-slate-400 uppercase tracking-wider py-3 px-4">Actions</th>
-                  <th className="text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider py-3 pl-4">Created</th>
+                  <th className="text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider py-3 px-4">Created</th>
+                  <th className="text-center text-[11px] font-medium text-slate-400 uppercase tracking-wider py-3 pl-4 w-10"></th>
                 </tr>
               </thead>
               <tbody>
@@ -127,7 +173,16 @@ export default function AdminSmes() {
                         <XCircle className="w-4 h-4 text-slate-300 inline" />
                       )}
                     </td>
-                    <td className="py-3 pl-4 text-[13px] text-slate-400">{formatDate(client.createdAt)}</td>
+                    <td className="py-3 px-4 text-[13px] text-slate-400">{formatDate(client.createdAt)}</td>
+                    <td className="py-3 pl-4 text-center">
+                      <button
+                        onClick={() => openDeleteDialog(client)}
+                        className="p-1.5 rounded hover:bg-red-50 text-slate-300 hover:text-red-500 transition-colors"
+                        title="Delete tenant"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -135,6 +190,54 @@ export default function AdminSmes() {
           </div>
         )}
       </div>
+
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) closeDeleteDialog(); }}>
+        <DialogContent className="sm:max-w-md">
+          {deleteStep === 1 ? (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-red-600">Delete Tenant</DialogTitle>
+                <DialogDescription>
+                  Are you sure you want to delete <strong>{deleteTarget?.name}</strong>? This will permanently remove all data associated with this tenant including contacts, invoices, actions, outcomes, and user assignments.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button variant="outline" onClick={closeDeleteDialog}>Cancel</Button>
+                <Button variant="destructive" onClick={() => setDeleteStep(2)}>
+                  Continue
+                </Button>
+              </DialogFooter>
+            </>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-red-600">Final Confirmation</DialogTitle>
+                <DialogDescription>
+                  This action cannot be undone. Type <strong>{deleteTarget?.name}</strong> below to confirm permanent deletion.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-2">
+                <Input
+                  placeholder="Type tenant name to confirm"
+                  value={confirmName}
+                  onChange={(e) => setConfirmName(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button variant="outline" onClick={() => setDeleteStep(1)}>Back</Button>
+                <Button
+                  variant="destructive"
+                  disabled={confirmName !== deleteTarget?.name || deleteMutation.isPending}
+                  onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+                >
+                  {deleteMutation.isPending ? "Deleting..." : "Delete Permanently"}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }
