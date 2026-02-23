@@ -13,28 +13,45 @@ db.execute(sql.raw(`
   CREATE OR REPLACE FUNCTION delete_tenant_cascade(p_tenant_id TEXT) RETURNS void AS $fn$
   DECLARE
     tbl RECORD;
-    remaining TEXT[];
     prev_count INT;
     cur_count INT;
   BEGIN
-    DELETE FROM workflow_message_variants WHERE step_id IN (
-      SELECT ws.id FROM workflow_steps ws JOIN workflows w ON ws.workflow_id = w.id WHERE w.tenant_id = p_tenant_id
+    -- Step 1: Delete from tables that have NO tenant_id but reference tenant-scoped parents
+    DELETE FROM workflow_message_variants WHERE workflow_profile_id IN (
+      SELECT id FROM workflow_profiles WHERE tenant_id = p_tenant_id
     );
-    DELETE FROM workflow_steps WHERE workflow_id IN (
+    DELETE FROM workflow_connections WHERE workflow_id IN (
+      SELECT id FROM workflows WHERE tenant_id = p_tenant_id
+    );
+    DELETE FROM workflow_nodes WHERE workflow_id IN (
       SELECT id FROM workflows WHERE tenant_id = p_tenant_id
     );
     DELETE FROM payment_plan_invoices WHERE payment_plan_id IN (
       SELECT id FROM payment_plans WHERE tenant_id = p_tenant_id
     );
-    SELECT array_agg(table_name) INTO remaining
-    FROM information_schema.columns
-    WHERE column_name = 'tenant_id' AND table_schema = 'public' AND table_name != 'tenants';
-    prev_count := 0;
+    DELETE FROM sme_contacts WHERE sme_client_id IN (
+      SELECT id FROM sme_clients WHERE tenant_id = p_tenant_id
+    );
+    DELETE FROM sme_invite_tokens WHERE sme_client_id IN (
+      SELECT id FROM sme_clients WHERE tenant_id = p_tenant_id
+    );
+    DELETE FROM import_jobs WHERE sme_client_id IN (
+      SELECT id FROM sme_clients WHERE tenant_id = p_tenant_id
+    );
+    DELETE FROM partner_client_relationships WHERE client_tenant_id = p_tenant_id;
+    DELETE FROM tenant_invitations WHERE client_tenant_id = p_tenant_id;
+
+    -- Step 2: Delete from all tables that have a tenant_id column (retry loop for FK ordering)
+    prev_count := -1;
     LOOP
       cur_count := 0;
-      FOR tbl IN SELECT unnest(remaining) AS name LOOP
+      FOR tbl IN
+        SELECT table_name FROM information_schema.columns
+        WHERE column_name = 'tenant_id' AND table_schema = 'public' AND table_name != 'tenants'
+        ORDER BY table_name
+      LOOP
         BEGIN
-          EXECUTE format('DELETE FROM %I WHERE tenant_id = $1', tbl.name) USING p_tenant_id;
+          EXECUTE format('DELETE FROM %I WHERE tenant_id = $1', tbl.table_name) USING p_tenant_id;
         EXCEPTION WHEN foreign_key_violation THEN
           cur_count := cur_count + 1;
         END;
@@ -42,11 +59,16 @@ db.execute(sql.raw(`
       EXIT WHEN cur_count = 0 OR cur_count = prev_count;
       prev_count := cur_count;
     END LOOP;
+
     IF cur_count > 0 THEN
       RAISE EXCEPTION 'Could not delete from % table(s) due to FK constraints', cur_count;
     END IF;
+
+    -- Step 3: Clean up sessions and detach users
     DELETE FROM sessions WHERE sess::jsonb->>'tenantId' = p_tenant_id;
     UPDATE users SET tenant_id = NULL WHERE tenant_id = p_tenant_id;
+
+    -- Step 4: Delete the tenant record
     DELETE FROM tenants WHERE id = p_tenant_id;
   END;
   $fn$ LANGUAGE plpgsql;
