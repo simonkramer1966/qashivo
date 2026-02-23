@@ -17,6 +17,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Eye, EyeOff } from "lucide-react";
+import qashivoLogo from "@assets/qashivo_image_1771827289906.png";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -74,6 +75,7 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center p-4 bg-white">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
+          <img src={qashivoLogo} alt="Qashivo" className="h-10 mx-auto mb-6" />
           <h1 className="text-2xl font-semibold text-[#0B0F17] mb-2">Welcome back</h1>
           <p className="text-[#556070] text-sm">Sign in to your account to continue</p>
         </div>
