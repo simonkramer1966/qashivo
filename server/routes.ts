@@ -2068,6 +2068,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: user?.id,
         activityType: "onboarding_step_completed",
         category: "audit",
+        action: "completed",
+        result: "success",
         description: "Onboarding step 1 (Company Details) completed",
         metadata: { step: 1, companyName },
       });
