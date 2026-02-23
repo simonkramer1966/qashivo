@@ -15607,8 +15607,31 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         }
       }
 
-      // Use APIMiddleware to initiate connection (stores OAuth state in session)
-      const result = await apiMiddleware.connectProvider('xero', req.session, user.tenantId);
+      const ALLOWED_XERO_HOSTS = new Set([
+        'qashivo.com',
+        'www.qashivo.com',
+        'qashivo.replit.app',
+        ...(process.env.REPLIT_DOMAINS?.split(',').map(d => d.trim()) || []),
+        'localhost:5000',
+      ]);
+
+      const xeroRedirectUri = (() => {
+        const host = req.headers['x-forwarded-host'] as string || req.headers.host || '';
+        const cleanHost = host.split(',')[0].trim();
+        if (!ALLOWED_XERO_HOSTS.has(cleanHost)) {
+          console.warn(`[Xero] Rejected unknown host: ${cleanHost}, falling back to REPLIT_DOMAINS`);
+          const fallbackDomain = process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000';
+          const fallbackProto = fallbackDomain.includes('localhost') ? 'http' : 'https';
+          return `${fallbackProto}://${fallbackDomain}/api/xero/callback`;
+        }
+        const proto = (req.headers['x-forwarded-proto'] as string)?.split(',')[0]?.trim() || (cleanHost.includes('localhost') ? 'http' : 'https');
+        return `${proto}://${cleanHost}/api/xero/callback`;
+      })();
+      console.log(`[Xero] Dynamic redirect URI: ${xeroRedirectUri}`);
+
+      req.session.xeroRedirectUri = xeroRedirectUri;
+
+      const result = await apiMiddleware.connectProvider('xero', req.session, user.tenantId, undefined, xeroRedirectUri);
       
       if (!result.success || !result.authUrl) {
         return res.status(400).json({
@@ -15845,8 +15868,20 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         return res.redirect(`/connection-error?provider=xero&error=${errorMsg}`);
       }
 
-      // Use APIMiddleware to complete the OAuth flow (with session for state validation)
-      const result = await apiMiddleware.completeConnection('xero', code as string, state as string, req.session);
+      const storedRedirectUri = req.session?.xeroRedirectUri;
+      if (!storedRedirectUri) {
+        console.error('[Xero] No stored redirect URI in session — session may have expired');
+        const host = req.headers['x-forwarded-host'] as string || req.headers.host || '';
+        const cleanHost = host.split(',')[0].trim();
+        const proto = (req.headers['x-forwarded-proto'] as string)?.split(',')[0]?.trim() || (cleanHost.includes('localhost') ? 'http' : 'https');
+        const fallbackUri = `${proto}://${cleanHost}/api/xero/callback`;
+        console.log(`[Xero] Callback using fallback redirect URI: ${fallbackUri}`);
+        req.session.xeroRedirectUri = fallbackUri;
+      }
+      const callbackRedirectUri = req.session.xeroRedirectUri;
+      console.log(`[Xero] Callback redirect URI: ${callbackRedirectUri}`);
+
+      const result = await apiMiddleware.completeConnection('xero', code as string, state as string, req.session, callbackRedirectUri);
       
       if (!result.success || !result.tokens || !result.appTenantId) {
         console.error('Xero callback failed:', result.error);

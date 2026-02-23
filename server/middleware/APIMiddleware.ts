@@ -100,7 +100,8 @@ export class APIMiddleware {
     providerName: string,
     session: any,
     tenantId?: string,
-    customState?: string
+    customState?: string,
+    dynamicRedirectUri?: string
   ): Promise<{ success: boolean; authUrl?: string; error?: string }> {
     try {
       const provider = this.getProvider(providerName);
@@ -108,8 +109,12 @@ export class APIMiddleware {
         return { success: false, error: `Provider ${providerName} not found` };
       }
 
+      const effectiveConfig = dynamicRedirectUri 
+        ? { ...provider.config, redirectUri: dynamicRedirectUri }
+        : provider.config;
+
       const { authUrl, state } = this.authManager.generateAuthUrl(
-        provider.config,
+        effectiveConfig,
         session,
         tenantId, 
         customState
@@ -132,7 +137,8 @@ export class APIMiddleware {
     providerName: string,
     code: string,
     state: string,
-    session: any
+    session: any,
+    dynamicRedirectUri?: string
   ): Promise<AuthResult> {
     try {
       const provider = this.getProvider(providerName);
@@ -140,11 +146,15 @@ export class APIMiddleware {
         return { success: false, error: `Provider ${providerName} not found` };
       }
 
+      const effectiveConfig = dynamicRedirectUri 
+        ? { ...provider.config, redirectUri: dynamicRedirectUri }
+        : provider.config;
+
       return await this.authManager.exchangeCodeForTokens(
         providerName,
         code,
         state,
-        provider.config,
+        effectiveConfig,
         session
       );
     } catch (error) {
