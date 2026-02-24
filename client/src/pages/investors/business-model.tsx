@@ -157,11 +157,9 @@ export default function BusinessModel() {
             </Card>
             <Card className="bg-white border-[#E6E8EC] p-8">
               <h3 className="text-[18px] font-semibold text-[#0B0F17] mb-3">Conversion targets</h3>
-              <ul className="text-[15px] text-[#556070] leading-relaxed space-y-2">
-                <li>15&ndash;20% of interested firms activated in first beta cohort</li>
-                <li>1&ndash;3 SMEs per firm in initial rollout</li>
-                <li>Onboarding repeatability validated</li>
-              </ul>
+              <p className="text-[15px] text-[#556070] leading-relaxed">
+                15&ndash;20% of interested firms activated in first beta cohort. 1&ndash;3 SMEs per firm in initial rollout. Onboarding repeatability validated.
+              </p>
             </Card>
           </div>
         </div>
