@@ -20,7 +20,7 @@ export default function InvestorsHome() {
                 <span className="text-[#17B6C3] font-medium text-sm">SEIS Eligible &middot; HMRC Advance Assurance WMBC/I&R/1183827082/VCRT</span>
               </div>
               <h1 className="text-[44px] md:text-[56px] font-semibold text-[#0B0F17] leading-[1.05] tracking-[-0.02em] mb-6">
-                AI-Powered Credit Control for UK&nbsp;SMEs
+                Building the Future of SME Working&nbsp;Capital
               </h1>
               <p className="text-[18px] md:text-[20px] text-[#556070] leading-[1.6] mb-10">
                 Qashivo captures intent from real customer conversations&mdash;including voice&mdash;and turns it into structured, repeatable credit control actions at scale. AI plans the work, a human approves, the system executes.
