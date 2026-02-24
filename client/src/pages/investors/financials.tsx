@@ -476,7 +476,7 @@ export default function FinancialsPage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link href="/investors/roadmap">
               <Button variant="outline" className="h-12 px-7 rounded-lg text-[15px] font-medium border-[#E6E8EC]">
-                View Roadmap & Use of Funds
+                Why SEIS
               </Button>
             </Link>
             <Link href="/investors/contact">

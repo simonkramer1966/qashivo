@@ -18,7 +18,7 @@ export default function InvestorFooter() {
             <div className="flex flex-col gap-2.5">
               <Link href="/investors/how-it-works" className="text-[13px] text-[#556070] hover:text-[#0B0F17]">How It Works</Link>
               <Link href="/investors/voice-demo" className="text-[13px] text-[#556070] hover:text-[#0B0F17]">Voice Demo</Link>
-              <Link href="/investors/roadmap" className="text-[13px] text-[#556070] hover:text-[#0B0F17]">Roadmap</Link>
+              <Link href="/investors/roadmap" className="text-[13px] text-[#556070] hover:text-[#0B0F17]">Why SEIS</Link>
             </div>
           </div>
           <div>

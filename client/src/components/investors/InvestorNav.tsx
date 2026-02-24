@@ -9,7 +9,7 @@ const navLinks = [
   { label: "Business Model", href: "/investors/business-model" },
   { label: "Financials", href: "/investors/financials" },
   { label: "Team", href: "/investors/team" },
-  { label: "Roadmap", href: "/investors/roadmap" },
+  { label: "Why SEIS", href: "/investors/roadmap" },
   { label: "Why Qashivo", href: "/investors/why" },
   { label: "Voice Demo", href: "/investors/voice-demo" },
   { label: "Contact", href: "/investors/contact" },
