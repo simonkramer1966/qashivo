@@ -36,7 +36,7 @@ const leadership = [
     role: "Operations Manager",
     image: angelaImg,
     bio: "Angela manages all investor relationships and key client partnerships, ensuring seamless communication and operational excellence across the business. She oversees day-to-day platform operations including vendor management, process optimisation, compliance coordination, and internal workflows. Her structured approach to SaaS operations keeps Qashivo running efficiently as the team and customer base scale.",
-    highlights: ["Investor & client relationship management", "Operational process design", "Vendor & compliance coordination", "Cross-functional team operations"],
+    highlights: ["Investor & client relationship management", "Operational process design", "Cross-functional team operations"],
   },
   {
     name: "Iola Redhead",
