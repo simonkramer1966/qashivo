@@ -22,7 +22,7 @@ const leadership = [
     role: "Chief Technology Officer",
     image: mikeImg,
     bio: "Michael brings over 30 years of experience in enterprise architecture and large-scale systems delivery, having led multi-million-pound technology transformations across financial services and regulated industries. His expertise in secure, scalable infrastructure underpins Qashivo's platform reliability, AI integration, and long-term technical roadmap. He ensures the system is built for trust, auditability, and production-grade performance from day one.",
-    highlights: ["30+ years in enterprise architecture", "Led multi-million-pound transformations", "Secure, scalable systems expert", "Financial services background"],
+    highlights: ["30+ years in enterprise architecture", "Led multi-million-pound transformations", "Secure, scalable systems expert"],
   },
   {
     name: "Jamie Carter",
