@@ -80,6 +80,12 @@ const InvestorsHowItWorks = lazy(() => import("@/pages/investors/how-it-works"))
 const InvestorsDemoPage = lazy(() => import("@/pages/investors/demo"));
 const InvestorsBusinessModel = lazy(() => import("@/pages/investors/business-model"));
 const InvestorsInvest = lazy(() => import("@/pages/investors/invest"));
+const InvestorsFinancials = lazy(() => import("@/pages/investors/financials"));
+const InvestorsTeam = lazy(() => import("@/pages/investors/team"));
+const InvestorsRoadmap = lazy(() => import("@/pages/investors/roadmap"));
+const InvestorsWhy = lazy(() => import("@/pages/investors/why"));
+const InvestorsVoiceDemo = lazy(() => import("@/pages/investors/voice-demo"));
+const InvestorsContact = lazy(() => import("@/pages/investors/contact"));
 
 function PermissionGuard({ permission, children }: { permission: string; children: React.ReactNode }) {
   const { hasPermission, isLoadingPermissions } = usePermissions();
@@ -195,6 +201,12 @@ function Router() {
           <Route path="/investors/demo" component={InvestorsDemoPage} />
           <Route path="/investors/business-model" component={InvestorsBusinessModel} />
           <Route path="/investors/invest" component={InvestorsInvest} />
+          <Route path="/investors/financials" component={InvestorsFinancials} />
+          <Route path="/investors/team" component={InvestorsTeam} />
+          <Route path="/investors/roadmap" component={InvestorsRoadmap} />
+          <Route path="/investors/why" component={InvestorsWhy} />
+          <Route path="/investors/voice-demo" component={InvestorsVoiceDemo} />
+          <Route path="/investors/contact" component={InvestorsContact} />
           <Route path="/privacy" component={Privacy} />
           <Route path="/terms" component={Terms} />
           <Route path="/" component={Home} />
@@ -266,6 +278,12 @@ function Router() {
           <Route path="/investors/demo" component={InvestorsDemoPage} />
           <Route path="/investors/business-model" component={InvestorsBusinessModel} />
           <Route path="/investors/invest" component={InvestorsInvest} />
+          <Route path="/investors/financials" component={InvestorsFinancials} />
+          <Route path="/investors/team" component={InvestorsTeam} />
+          <Route path="/investors/roadmap" component={InvestorsRoadmap} />
+          <Route path="/investors/why" component={InvestorsWhy} />
+          <Route path="/investors/voice-demo" component={InvestorsVoiceDemo} />
+          <Route path="/investors/contact" component={InvestorsContact} />
           <Route path="/privacy" component={Privacy} />
           <Route path="/terms" component={Terms} />
           <Route path="/" component={Overview2} />
