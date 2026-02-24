@@ -160,6 +160,60 @@ export default function WhySEISPage() {
       <section className="py-20 bg-[#FAFBFC]">
         <div className="max-w-[1200px] mx-auto px-6">
           <h2 className="text-[32px] font-semibold text-[#0B0F17] text-center mb-4">
+            SEIS and asymmetric risk
+          </h2>
+          <div className="max-w-3xl mx-auto space-y-5 mb-10">
+            <p className="text-[16px] text-[#556070] leading-relaxed">
+              Early-stage investing is asymmetric by nature: downside is capped &mdash; you can only lose what you invest &mdash; while upside is uncapped. One breakout company can return the entire portfolio.
+            </p>
+            <p className="text-[16px] text-[#556070] leading-relaxed">
+              The challenge is that seed-stage investing also comes with a high base rate of failure, which is why most investors either avoid it or diversify heavily. SEIS is designed to improve that asymmetry. It doesn&rsquo;t remove risk, but it can reduce the effective downside through tax relief &mdash; while keeping your upside fully intact.
+            </p>
+          </div>
+
+          <div className="max-w-3xl mx-auto mb-10">
+            <div className="border-l-4 border-[#17B6C3] bg-white rounded-r-lg p-6">
+              <p className="text-[16px] text-[#0B0F17] font-medium leading-relaxed">
+                SEIS is built for asymmetric bets: it may reduce your downside while preserving uncapped upside.
+              </p>
+            </div>
+          </div>
+
+          <div className="max-w-3xl mx-auto space-y-5 mb-10">
+            <h3 className="text-[22px] font-semibold text-[#0B0F17]">Why that matters to Qashivo investors</h3>
+            <p className="text-[16px] text-[#556070] leading-relaxed">
+              Qashivo is building a category-defining platform in a huge market &mdash; SME receivables and working capital. If we succeed, the upside can be meaningful, and SEIS is designed so investors keep more of that upside (e.g., tax-free growth after the holding period, subject to rules).
+            </p>
+            <p className="text-[16px] text-[#556070] leading-relaxed">
+              At the same time, if the business doesn&rsquo;t work out, SEIS may allow investors to recover a material portion of the investment via reliefs (subject to eligibility and HMRC conditions), improving the risk profile versus a non-SEIS seed investment. That&rsquo;s the core idea behind SEIS: encourage investors to back innovation early by creating a better risk-adjusted return profile.
+            </p>
+          </div>
+
+          <div className="max-w-3xl mx-auto">
+            <div className="bg-white border border-[#E6E8EC] rounded-lg p-8">
+              <h4 className="text-[18px] font-semibold text-[#0B0F17] mb-5">A simple example of asymmetric outcomes (illustrative)</h4>
+              <p className="text-[15px] text-[#556070] leading-relaxed mb-5">
+                Imagine an investor makes a &pound;10,000 SEIS investment:
+              </p>
+              <ul className="text-[15px] text-[#556070] leading-relaxed space-y-3 mb-5">
+                <li className="flex gap-2"><span className="text-[#17B6C3] shrink-0">&bull;</span>Income tax relief (50%) could reduce the net cost to &pound;5,000</li>
+                <li className="flex gap-2"><span className="text-[#17B6C3] shrink-0">&bull;</span>If the company succeeds, the upside remains uncapped, and gains may be CGT-free after the minimum holding period (subject to rules)</li>
+                <li className="flex gap-2"><span className="text-[#17B6C3] shrink-0">&bull;</span>If the company fails, loss relief may further reduce the net downside (depending on the investor&rsquo;s tax position)</li>
+              </ul>
+              <p className="text-[15px] text-[#0B0F17] font-medium leading-relaxed">
+                So while the investment is still high-risk, SEIS can help ensure that losses are less severe and winners still deliver full upside. That&rsquo;s why many sophisticated investors use SEIS as part of a diversified early-stage strategy.
+              </p>
+            </div>
+            <p className="text-[13px] text-[#556070] italic mt-4">
+              This example is for illustration only. Actual reliefs depend on individual tax circumstances and HMRC rules. Please seek independent financial and tax advice.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-20">
+        <div className="max-w-[1200px] mx-auto px-6">
+          <h2 className="text-[32px] font-semibold text-[#0B0F17] text-center mb-4">
             Why SEIS is relevant for Qashivo investors
           </h2>
           <div className="max-w-3xl mx-auto space-y-5 mb-12">
