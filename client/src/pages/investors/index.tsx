@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Shield, Clock, Eye, TrendingUp, Send, Mic, MessageSquare, CheckCircle } from "lucide-react";
 import { Link } from "wouter";
 import accountantsImg from "@assets/image_1771947465520.png";
-import heroImg from "@assets/investor-hero-dashboard.jpg";
+import heroImg from "@assets/image_1771950971769.png";
 
 export default function InvestorsHome() {
   return (
@@ -39,8 +39,8 @@ export default function InvestorsHome() {
                 </Link>
               </div>
             </div>
-            <div className="rounded-xl overflow-hidden">
-              <img src={heroImg} alt="Business professional reviewing financial analytics" className="w-full h-auto object-cover" />
+            <div className="rounded-xl overflow-hidden shadow-lg border border-[#E6E8EC]">
+              <img src={heroImg} alt="Qashivo dashboard showing cash inflow forecast and collection metrics" className="w-full h-auto object-cover" />
             </div>
           </div>
         </div>
