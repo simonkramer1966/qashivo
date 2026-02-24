@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Award, Users, Brain, Zap, Database, Mic, Shield, BarChart3 } from "lucide-react";
 import { Link } from "wouter";
-import whiteboardImg from "@assets/image_1771947483925.png";
+import whiteboardImg from "@assets/image_1771951592121.png";
 
 export default function WhyQashivoPage() {
   return (
