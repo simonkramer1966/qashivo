@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, Zap, TrendingUp, Building2, Repeat, PoundSterling, ArrowRight, Globe, Target } from "lucide-react";
 import { Link } from "wouter";
-import accountantsImg from "@assets/image_1771947465520.png";
+import accountantsImg from "@assets/image_1771949693978.png";
 
 export default function BusinessModel() {
   return (
