@@ -146,7 +146,7 @@ export default function BusinessModel() {
             <Card className="bg-white border-[#E6E8EC] p-8">
               <h3 className="text-[18px] font-semibold text-[#0B0F17] mb-3">UK accounting firms</h3>
               <p className="text-[15px] text-[#556070] leading-relaxed">
-                Have formally expressed interest in joining the Qashivo beta. Generated through 1:1 walkthroughs and direct inbound from firms that already manage multiple SME clients.
+                128 firms have expressed interest in joining the Qashivo beta. Generated through 1:1 walkthroughs and direct inbound from firms that already manage multiple SME clients.
               </p>
             </Card>
             <Card className="bg-white border-[#E6E8EC] p-8">
