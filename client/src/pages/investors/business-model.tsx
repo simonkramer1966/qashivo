@@ -2,7 +2,7 @@ import InvestorNav from "@/components/investors/InvestorNav";
 import InvestorFooter from "@/components/investors/InvestorFooter";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Zap, TrendingUp, Building2, Repeat, DollarSign, ArrowRight, Globe, Target } from "lucide-react";
+import { Users, Zap, TrendingUp, Building2, Repeat, PoundSterling, ArrowRight, Globe, Target } from "lucide-react";
 import { Link } from "wouter";
 import accountantsImg from "@assets/image_1771947465520.png";
 
@@ -93,7 +93,7 @@ export default function BusinessModel() {
           <div className="grid md:grid-cols-3 gap-8">
             <div>
               <div className="w-14 h-14 bg-[#17B6C3] rounded-2xl flex items-center justify-center mb-6">
-                <DollarSign className="w-7 h-7 text-white" />
+                <PoundSterling className="w-7 h-7 text-white" />
               </div>
               <h3 className="text-[20px] font-semibold text-[#0B0F17] mb-2">Who pays</h3>
               <p className="text-[14px] text-[#17B6C3] font-medium mb-3">SMEs, introduced by their accountant</p>
