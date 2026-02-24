@@ -11,7 +11,6 @@ import { Mic, Play, MessageSquare, Brain, Shield, ArrowRight, Phone, Volume2, Ch
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { Oscilloscope } from "@/components/Oscilloscope";
-import { EmailOutcomeDemo } from "@/components/EmailOutcomeDemo";
 
 const sanitizePhoneNumber = (phone: string, countryCode: string): string => {
   let cleaned = phone.replace(/[\s\-\(\)\.]/g, '');
@@ -491,18 +490,6 @@ export default function VoiceDemoPage() {
 
       <section className="py-20">
         <div className="max-w-[1200px] mx-auto px-6">
-          <div className="max-w-3xl mx-auto text-center mb-14">
-            <h2 className="text-[32px] font-semibold text-[#0B0F17] mb-4">Two-way communication with Email</h2>
-            <p className="text-[18px] text-[#556070]">
-              Experience supervised autonomy in action. Qashivo generates a reminder, you approve it, and watch AI detect intent from customer replies &mdash; responding and updating your forecast automatically.
-            </p>
-          </div>
-          <EmailOutcomeDemo />
-        </div>
-      </section>
-
-      <section className="py-20 bg-[#FAFBFC]">
-        <div className="max-w-[1200px] mx-auto px-6">
           <h2 className="text-[32px] font-semibold text-[#0B0F17] text-center mb-4">
             Why voice matters for credit control
           </h2>
@@ -541,7 +528,7 @@ export default function VoiceDemoPage() {
         </div>
       </section>
 
-      <section className="py-20">
+      <section className="py-20 bg-[#FAFBFC]">
         <div className="max-w-[1200px] mx-auto px-6">
           <h2 className="text-[28px] font-semibold text-[#0B0F17] text-center mb-14">
             What happens during a voice call
@@ -570,7 +557,7 @@ export default function VoiceDemoPage() {
         </div>
       </section>
 
-      <section className="py-20 bg-[#FAFBFC]">
+      <section className="py-20">
         <div className="max-w-[1200px] mx-auto px-6">
           <h2 className="text-[28px] font-semibold text-[#0B0F17] text-center mb-14">
             Voice as a compounding advantage
@@ -616,7 +603,7 @@ export default function VoiceDemoPage() {
         </div>
       </section>
 
-      <section className="py-16">
+      <section className="py-16 bg-[#FAFBFC]">
         <div className="max-w-[1200px] mx-auto px-6 text-center">
           <p className="text-[16px] text-[#556070] mb-8">
             Questions about the voice capability? Our team is available to walk you through any aspect.
