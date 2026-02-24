@@ -142,7 +142,13 @@ export default function BusinessModel() {
           <p className="text-[18px] text-[#556070] text-center max-w-2xl mx-auto mb-14">
             Founder-led partner conversations showing real pre-launch demand. These are qualified expressions of interest&mdash;not contracted customers or recognised revenue.
           </p>
-          <div className="grid md:grid-cols-2 gap-8">
+          <div className="grid md:grid-cols-3 gap-8">
+            <Card className="bg-white border-[#E6E8EC] p-8">
+              <h3 className="text-[18px] font-semibold text-[#0B0F17] mb-3">UK accounting firms</h3>
+              <p className="text-[15px] text-[#556070] leading-relaxed">
+                Have formally expressed interest in joining the Qashivo beta. Generated through 1:1 walkthroughs and direct inbound from firms that already manage multiple SME clients.
+              </p>
+            </Card>
             <Card className="bg-white border-[#E6E8EC] p-8">
               <h3 className="text-[18px] font-semibold text-[#0B0F17] mb-3">Beta participation involves</h3>
               <ul className="text-[15px] text-[#556070] leading-relaxed space-y-2">
