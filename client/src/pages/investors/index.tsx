@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Shield, Clock, Eye, TrendingUp, Send, Mic, MessageSquare, CheckCircle } from "lucide-react";
 import { Link } from "wouter";
 import accountantsImg from "@assets/image_1771947465520.png";
+import heroImg from "@assets/investor-hero-dashboard.jpg";
 
 export default function InvestorsHome() {
   return (
@@ -12,29 +13,34 @@ export default function InvestorsHome() {
 
       <section className="pt-24 pb-20">
         <div className="max-w-[1200px] mx-auto px-6">
-          <div className="max-w-3xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#8B2635]/10 rounded-full mb-8">
-              <Shield className="w-4 h-4 text-[#8B2635]" />
-              <span className="text-[#8B2635] font-medium text-sm">SEIS Eligible &middot; HMRC Advance Assurance WMBC/I&R/1183827082/VCRT</span>
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            <div>
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#8B2635]/10 rounded-full mb-8">
+                <Shield className="w-4 h-4 text-[#8B2635]" />
+                <span className="text-[#8B2635] font-medium text-sm">SEIS Eligible &middot; HMRC Advance Assurance WMBC/I&R/1183827082/VCRT</span>
+              </div>
+              <h1 className="text-[44px] md:text-[56px] font-semibold text-[#0B0F17] leading-[1.05] tracking-[-0.02em] mb-6">
+                AI-Powered Credit Control for UK&nbsp;SMEs
+              </h1>
+              <p className="text-[18px] md:text-[20px] text-[#556070] leading-[1.6] mb-10">
+                Qashivo captures intent from real customer conversations&mdash;including voice&mdash;and turns it into structured, repeatable credit control actions at scale. AI plans the work, a human approves, the system executes.
+              </p>
+              <div className="flex flex-col sm:flex-row items-start gap-4">
+                <Link href="/investors/financials">
+                  <Button className="bg-[#8B2635] hover:bg-[#6f1f2b] text-white h-12 px-7 rounded-lg text-[16px] font-medium">
+                    View Investment Opportunity
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
+                <Link href="/investors/voice-demo">
+                  <Button variant="outline" className="h-12 px-7 rounded-lg text-[16px] font-medium border-[#E6E8EC]">
+                    Hear the AI Voice Demo
+                  </Button>
+                </Link>
+              </div>
             </div>
-            <h1 className="text-[44px] md:text-[56px] font-semibold text-[#0B0F17] leading-[1.05] tracking-[-0.02em] mb-6">
-              AI-Powered Credit Control for UK&nbsp;SMEs
-            </h1>
-            <p className="text-[18px] md:text-[20px] text-[#556070] leading-[1.6] mb-10 max-w-2xl mx-auto">
-              Qashivo captures intent from real customer conversations&mdash;including voice&mdash;and turns it into structured, repeatable credit control actions at scale. AI plans the work, a human approves, the system executes.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link href="/investors/financials">
-                <Button className="bg-[#8B2635] hover:bg-[#6f1f2b] text-white h-12 px-7 rounded-lg text-[16px] font-medium">
-                  View Investment Opportunity
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-              <Link href="/investors/voice-demo">
-                <Button variant="outline" className="h-12 px-7 rounded-lg text-[16px] font-medium border-[#E6E8EC]">
-                  Hear the AI Voice Demo
-                </Button>
-              </Link>
+            <div className="rounded-xl overflow-hidden">
+              <img src={heroImg} alt="Business professional reviewing financial analytics" className="w-full h-auto object-cover" />
             </div>
           </div>
         </div>
