@@ -1,29 +1,33 @@
 import InvestorNav from "@/components/investors/InvestorNav";
+import InvestorFooter from "@/components/investors/InvestorFooter";
 import { Card } from "@/components/ui/card";
-import { ArrowRight, Database, CalendarCheck, CheckCircle, Play, MessageSquare, RefreshCw, Clock, ThumbsUp, AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ArrowRight, Database, CalendarCheck, CheckCircle, Play, MessageSquare, RefreshCw, ThumbsUp, Clock, AlertTriangle, Users, Repeat, TrendingUp } from "lucide-react";
+import { Link } from "wouter";
+import whiteboardImg from "@assets/image_1771947483925.png";
 
 export default function HowItWorks() {
   return (
     <div className="min-h-screen bg-white">
       <InvestorNav />
-      
-      <section className="pt-20 pb-16">
+
+      <section className="pt-24 pb-16">
         <div className="max-w-[1200px] mx-auto px-6">
           <h1 className="text-[44px] font-semibold text-[#0B0F17] text-center mb-4">
             How Qashivo Works
           </h1>
           <p className="text-[18px] text-[#556070] text-center max-w-2xl mx-auto mb-16">
-            A complete supervised autonomy workflow from receivables data to cash collection.
+            A complete supervised autonomy workflow that connects receivables data to real cash collection outcomes&mdash;without scaling headcount.
           </p>
 
-          <div className="grid md:grid-cols-6 gap-4 mb-20">
+          <div className="grid md:grid-cols-6 gap-4 mb-8">
             {[
-              { icon: Database, label: "Receivables Data", desc: "Sync invoices from your accounting system" },
-              { icon: CalendarCheck, label: "Daily Plan", desc: "AI generates prioritized action list" },
-              { icon: CheckCircle, label: "Approve", desc: "One-click approval or adjustments" },
-              { icon: Play, label: "Execute", desc: "Automated emails, SMS, voice calls" },
-              { icon: MessageSquare, label: "Capture Outcomes", desc: "Two-way response capture" },
-              { icon: RefreshCw, label: "Adjust", desc: "Real-time plan optimization" },
+              { icon: Database, label: "Receivables Data", desc: "Live sync from your accounting system" },
+              { icon: CalendarCheck, label: "Daily Plan", desc: "AI-prioritised action list" },
+              { icon: CheckCircle, label: "Approve", desc: "One-click human approval" },
+              { icon: Play, label: "Execute", desc: "Email, SMS, and AI voice" },
+              { icon: MessageSquare, label: "Capture Outcomes", desc: "Two-way response parsing" },
+              { icon: RefreshCw, label: "Adjust", desc: "Real-time plan optimisation" },
             ].map((step, index) => (
               <div key={step.label} className="relative">
                 <Card className="bg-white border-[#E6E8EC] p-5 h-full">
@@ -41,97 +45,149 @@ export default function HowItWorks() {
               </div>
             ))}
           </div>
+          <p className="text-[14px] text-[#556070] text-center italic max-w-2xl mx-auto">
+            Receivables and prioritisation &bull; Human-in-the-loop control &bull; Two-way outcomes &bull; Supervised AI voice execution
+          </p>
         </div>
       </section>
 
       <section className="py-20 bg-[#FAFBFC]">
         <div className="max-w-[1200px] mx-auto px-6">
           <h2 className="text-[32px] font-semibold text-[#0B0F17] text-center mb-4">
-            Two-Way Outcomes
+            Two-way outcomes, not one-way chasing
           </h2>
-          <p className="text-[18px] text-[#556070] text-center max-w-2xl mx-auto mb-12">
-            Every debtor response becomes actionable data that updates your cashflow forecast in real-time.
+          <p className="text-[18px] text-[#556070] text-center max-w-2xl mx-auto mb-14">
+            Qashivo doesn't just send messages&mdash;it understands responses and adjusts what happens next. Each outcome feeds the system, improving future prioritisation and timing.
           </p>
           <div className="grid md:grid-cols-3 gap-6">
             <Card className="bg-white border-[#E6E8EC] p-8">
               <div className="w-12 h-12 bg-[#17B6C3]/10 rounded-lg flex items-center justify-center mb-5">
                 <ThumbsUp className="w-6 h-6 text-[#17B6C3]" />
               </div>
-              <h3 className="text-[20px] font-semibold text-[#0B0F17] mb-3">Promises to Pay</h3>
-              <p className="text-[#556070] leading-relaxed">
-                Debtor commits to payment date. System tracks and follows up if missed. Forecast updates automatically.
+              <h3 className="text-[20px] font-semibold text-[#0B0F17] mb-3">Promises to pay</h3>
+              <p className="text-[15px] text-[#556070] leading-relaxed">
+                Customers reply with a date. Chasing pauses automatically until that date, with follow-up scheduled if the promise is missed. The forecast updates instantly.
               </p>
             </Card>
             <Card className="bg-white border-[#E6E8EC] p-8">
               <div className="w-12 h-12 bg-[#17B6C3]/10 rounded-lg flex items-center justify-center mb-5">
                 <Clock className="w-6 h-6 text-[#17B6C3]" />
               </div>
-              <h3 className="text-[20px] font-semibold text-[#0B0F17] mb-3">Requests for Time</h3>
-              <p className="text-[#556070] leading-relaxed">
-                Debtor needs more time. System captures new expected date and adjusts collection strategy accordingly.
+              <h3 className="text-[20px] font-semibold text-[#0B0F17] mb-3">Requests for time or payment plans</h3>
+              <p className="text-[15px] text-[#556070] leading-relaxed">
+                Customers ask for more time or structure. These are flagged as exceptions for human review&mdash;not automated decisions. The system captures the new expected timeline.
               </p>
             </Card>
             <Card className="bg-white border-[#E6E8EC] p-8">
               <div className="w-12 h-12 bg-[#8B2635]/10 rounded-lg flex items-center justify-center mb-5">
                 <AlertTriangle className="w-6 h-6 text-[#8B2635]" />
               </div>
-              <h3 className="text-[20px] font-semibold text-[#0B0F17] mb-3">Disputes</h3>
-              <p className="text-[#556070] leading-relaxed">
-                Debtor raises an issue. System escalates to human, pauses collection, and tracks resolution.
+              <h3 className="text-[20px] font-semibold text-[#0B0F17] mb-3">Disputes or issues</h3>
+              <p className="text-[15px] text-[#556070] leading-relaxed">
+                Invoices are disputed or questioned. Automation stops immediately, the item is removed from the chase flow, and it escalates to a human for resolution.
               </p>
             </Card>
           </div>
+          <p className="text-[14px] text-[#556070] text-center mt-8 italic">
+            Qashivo captures intent and routes decisions. It does not enforce payment or negotiate terms.
+          </p>
         </div>
       </section>
 
       <section className="py-20">
         <div className="max-w-[1200px] mx-auto px-6">
-          <h2 className="text-[32px] font-semibold text-[#0B0F17] text-center mb-4">
-            Competitive Comparison
-          </h2>
-          <p className="text-[18px] text-[#556070] text-center max-w-2xl mx-auto mb-12">
-            See how Qashivo compares to manual processes and basic reminder automation.
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div>
+              <h2 className="text-[32px] font-semibold text-[#0B0F17] mb-4">
+                Cashflow becomes predictable when outcomes are known
+              </h2>
+              <p className="text-[18px] text-[#556070] leading-relaxed mb-8">
+                When invoices have real responses attached to them, cashflow stops being guesswork. Qashivo's AI understands customer intent&mdash;not just invoice age.
+              </p>
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-[16px] font-semibold text-[#0B0F17] mb-1">From uncertainty to confidence</h3>
+                  <p className="text-[15px] text-[#556070]">Unpaid invoices are tagged with customer intent&mdash;promised, disputed, delayed, or silent&mdash;not just marked "overdue".</p>
+                </div>
+                <div>
+                  <h3 className="text-[16px] font-semibold text-[#0B0F17] mb-1">From chasing activity to cash expectations</h3>
+                  <p className="text-[15px] text-[#556070]">Each outcome updates confidence about when cash is likely to arrive. Forecasts are based on real behaviour, not averages.</p>
+                </div>
+                <div>
+                  <h3 className="text-[16px] font-semibold text-[#0B0F17] mb-1">From static reports to a living view</h3>
+                  <p className="text-[15px] text-[#556070]">As customers respond, the forecast updates automatically. You see what is likely to land, not just what is owed.</p>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-xl overflow-hidden">
+              <img src={whiteboardImg} alt="Team planning session" className="w-full h-auto object-cover" />
+            </div>
+          </div>
+          <p className="text-[14px] text-[#556070] text-center mt-10 italic">
+            This is not perfect prediction&mdash;it is materially better visibility, so forecasts are based on behaviour, not averages.
           </p>
-          
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="border-b-2 border-[#E6E8EC]">
-                  <th className="text-left py-4 px-4 text-[15px] font-semibold text-[#0B0F17]">Capability</th>
-                  <th className="text-center py-4 px-4 text-[15px] font-semibold text-[#556070]">Manual / Spreadsheets</th>
-                  <th className="text-center py-4 px-4 text-[15px] font-semibold text-[#556070]">Reminder Automation</th>
-                  <th className="text-center py-4 px-4 text-[15px] font-semibold text-[#17B6C3]">Qashivo</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  { capability: "Execution", manual: "Staff-dependent", reminder: "Scheduled emails only", qashivo: "Multi-channel (email, SMS, voice)" },
-                  { capability: "Two-way responses", manual: "Lost in email", reminder: "None", qashivo: "Automated capture & parsing" },
-                  { capability: "Customer interaction depth", manual: "Inconsistent", reminder: "One-way broadcast", qashivo: "Conversational, contextual" },
-                  { capability: "Decision intelligence", manual: "Human judgment only", reminder: "Rule-based", qashivo: "AI-optimized priorities" },
-                  { capability: "Cashflow visibility", manual: "Manual tracking", reminder: "Basic reports", qashivo: "Real-time forecast updates" },
-                  { capability: "Scalability", manual: "Linear with headcount", reminder: "Limited by rules", qashivo: "10x volume, same team" },
-                ].map((row) => (
-                  <tr key={row.capability} className="border-b border-[#E6E8EC]">
-                    <td className="py-4 px-4 text-[14px] font-medium text-[#0B0F17]">{row.capability}</td>
-                    <td className="py-4 px-4 text-[14px] text-[#556070] text-center">{row.manual}</td>
-                    <td className="py-4 px-4 text-[14px] text-[#556070] text-center">{row.reminder}</td>
-                    <td className="py-4 px-4 text-[14px] text-[#17B6C3] font-medium text-center">{row.qashivo}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        </div>
+      </section>
+
+      <section className="py-20 bg-[#FAFBFC]">
+        <div className="max-w-[1200px] mx-auto px-6">
+          <h2 className="text-[32px] font-semibold text-[#0B0F17] text-center mb-4">
+            Credit control without the workload
+          </h2>
+          <p className="text-[18px] text-[#556070] text-center max-w-2xl mx-auto mb-14">
+            Qashivo scales outcomes, not effort. Output increases without adding headcount&mdash;that's what makes the model economically attractive.
+          </p>
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="text-center">
+              <div className="w-14 h-14 bg-[#17B6C3]/10 rounded-xl flex items-center justify-center mx-auto mb-5">
+                <Repeat className="w-7 h-7 text-[#17B6C3]" />
+              </div>
+              <h3 className="text-[18px] font-semibold text-[#0B0F17] mb-3">Repeatable patterns</h3>
+              <p className="text-[15px] text-[#556070] leading-relaxed">
+                The majority of invoices follow predictable cadences. The system handles routine follow-ups automatically and learns which patterns lead to payment.
+              </p>
+            </div>
+            <div className="text-center">
+              <div className="w-14 h-14 bg-[#17B6C3]/10 rounded-xl flex items-center justify-center mx-auto mb-5">
+                <AlertTriangle className="w-7 h-7 text-[#17B6C3]" />
+              </div>
+              <h3 className="text-[18px] font-semibold text-[#0B0F17] mb-3">Judgement for the minority</h3>
+              <p className="text-[15px] text-[#556070] leading-relaxed">
+                Disputes, payment plans, and edge cases surface clearly&mdash;not buried in inboxes. One person can supervise hundreds of accounts.
+              </p>
+            </div>
+            <div className="text-center">
+              <div className="w-14 h-14 bg-[#17B6C3]/10 rounded-xl flex items-center justify-center mx-auto mb-5">
+                <Users className="w-7 h-7 text-[#17B6C3]" />
+              </div>
+              <h3 className="text-[18px] font-semibold text-[#0B0F17] mb-3">Scale without headcount</h3>
+              <p className="text-[15px] text-[#556070] leading-relaxed">
+                More invoices chased does not mean more people. Effort stays flat as volume increases. This is not about replacing people&mdash;it's about making their time compound.
+              </p>
+            </div>
           </div>
         </div>
       </section>
 
-      <footer className="border-t border-[#E6E8EC] py-8">
+      <section className="py-16">
         <div className="max-w-[1200px] mx-auto px-6 text-center">
-          <p className="text-sm text-[#556070]">
-            © 2026 Qashivo. SEIS Eligible · Ref: WMBC/I&R/1183827082/VCRT
-          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link href="/investors/business-model">
+              <Button variant="outline" className="h-12 px-7 rounded-lg text-[15px] font-medium border-[#E6E8EC]">
+                See the Business Model
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+            <Link href="/investors/voice-demo">
+              <Button variant="outline" className="h-12 px-7 rounded-lg text-[15px] font-medium border-[#E6E8EC]">
+                Hear the Voice Demo
+              </Button>
+            </Link>
+          </div>
         </div>
-      </footer>
+      </section>
+
+      <InvestorFooter />
     </div>
   );
 }
