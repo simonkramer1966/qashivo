@@ -23,12 +23,12 @@ export default function InvestorNav() {
     <nav className="sticky top-0 z-50 bg-white border-b border-[#E6E8EC]">
       <div className="max-w-[1200px] mx-auto px-6">
         <div className="flex justify-between items-center h-16">
-          <div className="flex items-center gap-8">
+          <div className="flex items-center gap-8 w-full">
             <Link href="/investors" className="flex items-center gap-2 shrink-0">
               <img src={logo} alt="Qashivo" className="h-7 w-7" />
               <span className="font-semibold text-[#0B0F17] tracking-tight text-[20px]">Qashivo</span>
             </Link>
-            <div className="hidden lg:flex items-center gap-4">
+            <div className="hidden lg:flex items-center justify-between flex-1">
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
@@ -43,14 +43,6 @@ export default function InvestorNav() {
                 </Link>
               ))}
             </div>
-          </div>
-          <div className="hidden lg:flex items-center">
-            <Link
-              href="/investors/contact"
-              className="bg-[#8B2635] hover:bg-[#6f1f2b] text-white h-9 px-4 rounded-lg text-[13px] font-medium flex items-center shrink-0"
-            >
-              Get in Touch
-            </Link>
           </div>
           <button
             className="lg:hidden p-2"
@@ -77,15 +69,6 @@ export default function InvestorNav() {
                 {link.label}
               </Link>
             ))}
-            <div className="border-t border-[#E6E8EC] pt-4 mt-2">
-              <Link
-                href="/investors/contact"
-                className="bg-[#8B2635] hover:bg-[#6f1f2b] text-white h-11 rounded-lg text-[15px] font-medium w-full flex items-center justify-center"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Get in Touch
-              </Link>
-            </div>
           </div>
         </div>
       )}
