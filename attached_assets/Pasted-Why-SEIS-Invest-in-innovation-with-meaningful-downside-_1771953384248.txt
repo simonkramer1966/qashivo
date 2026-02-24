@@ -1,0 +1,183 @@
+Why SEIS
+Invest in innovation — with meaningful downside protection
+
+Backing an early-stage company can be one of the most rewarding things you do — and one of the riskiest.
+
+That’s exactly why the UK government created SEIS (the Seed Enterprise Investment Scheme): to help private investors fund the next generation of British innovation by offering some of the most generous tax incentives available anywhere for seed-stage investing.
+
+SEIS doesn’t remove risk — it changes the risk/return equation.
+It’s designed to make it more rational to invest early, by cushioning the downside and amplifying the upside.
+
+Risk warning (please read)
+
+Early-stage investing is high risk. You could lose all the money you invest, and you are unlikely to be protected if something goes wrong. SEIS reliefs depend on your personal circumstances and the company remaining qualifying. Tax rules can change. Always seek independent financial and tax advice before investing.
+
+What is SEIS?
+
+SEIS is a government-backed scheme that rewards investment into the UK’s youngest, highest-potential companies.
+
+It was introduced in 2012 to stimulate investment into innovative start-ups — the kind of businesses that can create outsized economic value, but carry meaningful execution risk.
+
+SEIS exists because the UK wants more founders building ambitious companies — and more investors willing to back them early.
+
+Why SEIS is powerful for investors
+
+If you’re investing in a seed-stage company like Qashivo, you’re doing something most capital never does: funding the moment before scale.
+
+SEIS recognises that and offers a set of benefits that, combined, can make early-stage investing dramatically more efficient.
+
+The core benefits
+1) 50% income tax relief
+
+You can claim 50% income tax relief on the amount invested, up to £200,000 per tax year.
+That means a £20,000 investment could generate up to £10,000 of income tax relief (subject to your circumstances).
+
+Carry back option: In many cases, you may be able to “carry back” relief to the previous tax year (subject to HMRC rules and limits).
+
+2) 0% Capital Gains Tax on growth
+
+If shares are held for at least three years, any gains on a qualifying SEIS investment can be free from Capital Gains Tax.
+
+If Qashivo becomes a breakout success, SEIS is designed so you keep more of that upside.
+
+3) Loss relief (real downside protection)
+
+If the investment doesn’t work out, you may be able to offset the loss (after income tax relief) against income tax at your marginal rate — materially reducing your net downside.
+
+In plain terms: SEIS can significantly reduce your effective risk on early-stage investments.
+
+4) Inheritance Tax relief
+
+Provided qualifying conditions are met (including holding period rules), SEIS shares may qualify for Business Property Relief — potentially removing them from your estate for inheritance tax purposes.
+
+5) Capital gains reinvestment relief
+
+SEIS can also allow investors to reduce certain capital gains liabilities by reinvesting into SEIS-qualifying shares (subject to HMRC rules).
+
+6) Business Investment Relief (for non-dom investors)
+
+UK residents who are non-UK domiciled may be able to invest via SEIS and bring overseas capital into the UK without a UK tax charge (subject to specialist advice).
+
+Why SEIS is relevant for Qashivo investors
+
+Qashivo is building intent-aware credit control and working capital intelligence for SMEs and accountants.
+
+Most “collections” tools track activity (emails sent, tasks created). Qashivo captures outcomes — the information that actually predicts cash:
+
+Promise-to-pay (with date)
+
+Requests for more time / payment plans
+
+Disputes / issues blocking payment
+
+Those outcomes instantly update a live, confidence-based cashflow forecast and adjust next actions, using a trust-first loop:
+
+Plan → Human approval → Execute → Capture outcomes → Update forecast + strategy
+
+This is how you turn credit control from an admin function into intelligent working capital: not just who owes you money — but what cash you can realistically expect, and when.
+
+So SEIS isn’t just a tax wrapper. It’s a way to back a company attacking a massive, universal SME problem — getting paid on time — with a risk-adjusted structure designed for seed-stage investing.
+
+A brief history (and why it matters)
+
+SEIS was introduced after the financial crisis to encourage capital into the earliest stages of company-building — where traditional funding is scarce and risk is highest, but the upside can be enormous.
+
+The scheme has since channelled billions into UK startups and helped create jobs, new products, and long-term economic growth — a core reason the UK is one of Europe’s most active startup markets.
+
+In 2023, SEIS was upgraded (“SEIS 2.0”) to better match modern seed rounds:
+
+the investor limit increased to £200,000 per year
+
+companies can raise up to £250,000 through SEIS
+
+the qualifying trading window expanded to three years
+
+Eligibility & limits (in plain English)
+Company rules (high level)
+
+SEIS is designed for very early-stage UK companies. In general, a company must be:
+
+UK-based and carrying on a qualifying trade
+
+trading for no more than 3 years
+
+fewer than 25 employees
+
+less than £350,000 in gross assets
+
+unlisted, and meeting HMRC independence requirements
+
+raising within SEIS limits (up to £250,000)
+
+Investor rules (high level)
+
+To keep SEIS reliefs, investors typically must:
+
+have UK tax liability
+
+pay for shares upfront and meet HMRC conditions
+
+hold shares for at least three years
+
+avoid certain “connected” relationships and arrangements
+
+(These are simplified summaries — SEIS is technical and advice is recommended.)
+
+How SEIS works after you invest
+
+SEIS is not automatic. You must claim it.
+
+After your investment, the company (or fund manager) will provide the SEIS documentation you need (typically SEIS3) so you can claim relief through your self-assessment return.
+
+Typical flow:
+
+Invest into the SEIS round
+
+Company files compliance with HMRC and issues SEIS documentation
+
+You claim relief via self-assessment (and/or carry back, where applicable)
+
+You track progress over time (seed investing is a long-term horizon)
+
+Direct investing vs. investing via a fund
+
+There are two common approaches:
+
+Direct investment (hands-on)
+
+You invest directly into a company like Qashivo.
+Best for investors who want direct exposure, conviction-based bets, and a closer relationship with the founders and thesis.
+
+SEIS funds (portfolio approach)
+
+A professional manager builds a diversified portfolio of SEIS companies.
+Best for investors who prefer built-in diversification and manager-led selection.
+
+Both routes can be valid — it depends on your time, access, and risk appetite.
+
+SEIS vs EIS vs VCT (quick comparison)
+
+SEIS: designed for the earliest stage, highest reliefs to reflect higher risk.
+EIS: for more established early-stage businesses, lower reliefs, higher annual limits.
+VCT: listed vehicles with different rules, often used for later-stage tax planning.
+
+(If you want, I can format this as a clean comparison grid for your site.)
+
+The bottom line
+
+SEIS is the UK’s clearest “yes” to early-stage innovation.
+It’s designed to help investors back high-growth companies earlier — with real tax incentives that can reduce downside and improve net returns.
+
+If you believe the biggest value is created before scale, SEIS is the scheme built for that moment.
+
+CTA block (strong, tasteful)
+Interested in Qashivo’s SEIS round?
+
+Request the investor pack, see the product loop, and understand how we’re building intent-aware working capital intelligence for SMEs.
+
+[Request investor pack]
+[Book a call]
+
+Footer disclaimer (site-friendly version)
+
+This page is for information only and does not constitute an offer to sell securities or investment advice. Investing in early-stage companies is high risk and you may lose all the money you invest. Tax reliefs depend on individual circumstances, may change, and depend on the company maintaining qualifying status. You should seek independent financial and tax advice before investing.
