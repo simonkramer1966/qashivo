@@ -31,9 +31,6 @@ const leadership = [
     bio: "Jamie brings over 25 years of experience in digital marketing, demand generation, and growth strategy. He has founded and led agencies focused on measurable revenue outcomes, building deep expertise in marketing automation, conversion optimisation, and partner enablement. His understanding of what drives customer acquisition and retention at scale shapes Qashivo's go-to-market execution and partner activation strategy.",
     highlights: ["25+ years in digital marketing", "Revenue-focused agency founder", "Marketing automation expert", "Partner enablement strategist"],
   },
-];
-
-const team = [
   {
     name: "Angela Putzier",
     role: "Operations Manager",
@@ -50,7 +47,7 @@ const team = [
   },
 ];
 
-function PersonBio({ person }: { person: typeof leadership[0] }) {
+function PersonBio({ person, shaded }: { person: typeof leadership[0]; shaded?: boolean }) {
   return (
     <div>
       <h3 className="text-[24px] font-semibold text-[#0B0F17] mb-1">{person.name}</h3>
@@ -58,7 +55,7 @@ function PersonBio({ person }: { person: typeof leadership[0] }) {
       <p className="text-[15px] text-[#556070] leading-relaxed mb-6">{person.bio}</p>
       <div className="flex flex-wrap gap-2">
         {person.highlights.map((h) => (
-          <span key={h} className="text-[12px] text-[#556070] bg-white border border-[#E6E8EC] rounded-full px-3 py-1">{h}</span>
+          <span key={h} className={`text-[12px] text-[#556070] border border-[#E6E8EC] rounded-full px-3 py-1 ${shaded ? "bg-white" : "bg-[#FAFBFC]"}`}>{h}</span>
         ))}
       </div>
     </div>
@@ -91,73 +88,46 @@ export default function TeamPage() {
         </div>
       </section>
 
-      <section className="py-16 bg-[#FAFBFC]">
-        <div className="max-w-[1200px] mx-auto px-6">
-          <h2 className="text-[28px] font-semibold text-[#0B0F17] text-center mb-14">
-            Leadership
-          </h2>
-          <div className="space-y-16">
-            {leadership.map((person, index) => {
-              const imageOnRight = index % 2 === 1;
-              return (
-                <div
-                  key={person.name}
-                  className={`grid gap-10 items-start ${
-                    imageOnRight
-                      ? "md:grid-cols-[1fr_280px]"
-                      : "md:grid-cols-[280px_1fr]"
-                  }`}
-                >
-                  {imageOnRight ? (
-                    <>
-                      <PersonBio person={person} />
-                      <div className="flex justify-center md:justify-end">
-                        <PersonPhoto person={person} />
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex justify-center md:justify-start">
-                        <PersonPhoto person={person} />
-                      </div>
-                      <PersonBio person={person} />
-                    </>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      <section className="py-16">
-        <div className="max-w-[1200px] mx-auto px-6">
-          <h2 className="text-[28px] font-semibold text-[#0B0F17] text-center mb-14">
-            Operations & Customer Success
-          </h2>
-          <div className="grid md:grid-cols-2 gap-10 max-w-4xl mx-auto">
-            {team.map((person) => (
-              <div key={person.name} className="flex flex-col items-center text-center">
-                <img
-                  src={person.image}
-                  alt={person.name}
-                  className="w-[240px] h-[280px] object-cover object-top rounded-xl grayscale mb-6"
-                />
-                <h3 className="text-[22px] font-semibold text-[#0B0F17] mb-1">{person.name}</h3>
-                <p className="text-[15px] text-[#17B6C3] font-medium mb-4">{person.role}</p>
-                <p className="text-[14px] text-[#556070] leading-relaxed mb-5 max-w-sm">{person.bio}</p>
-                <div className="flex flex-wrap justify-center gap-2">
-                  {person.highlights.map((h) => (
-                    <span key={h} className="text-[12px] text-[#556070] bg-[#FAFBFC] border border-[#E6E8EC] rounded-full px-3 py-1">{h}</span>
-                  ))}
-                </div>
+      {leadership.map((person, index) => {
+        const isShaded = index % 2 === 0;
+        const imageOnRight = index % 2 === 1;
+        return (
+          <section key={person.name} className={`py-16 ${isShaded ? "bg-[#FAFBFC]" : ""}`}>
+            <div className="max-w-[1200px] mx-auto px-6">
+              {index === 0 && (
+                <h2 className="text-[28px] font-semibold text-[#0B0F17] text-center mb-14">
+                  Leadership
+                </h2>
+              )}
+              <div
+                className={`grid gap-10 items-start ${
+                  imageOnRight
+                    ? "md:grid-cols-[1fr_280px]"
+                    : "md:grid-cols-[280px_1fr]"
+                }`}
+              >
+                {imageOnRight ? (
+                  <>
+                    <PersonBio person={person} shaded={isShaded} />
+                    <div className="flex justify-center md:justify-end">
+                      <PersonPhoto person={person} />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex justify-center md:justify-start">
+                      <PersonPhoto person={person} />
+                    </div>
+                    <PersonBio person={person} shaded={isShaded} />
+                  </>
+                )}
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
+            </div>
+          </section>
+        );
+      })}
 
-      <section className="py-16 bg-[#FAFBFC]">
+      <section className={`py-16 ${leadership.length % 2 === 0 ? "bg-[#FAFBFC]" : ""}`}>
         <div className="max-w-[1200px] mx-auto px-6 text-center">
           <p className="text-[18px] text-[#556070] mb-8 italic">
             "A team optimised for trust, execution, and long-term adoption&mdash;not demos."
