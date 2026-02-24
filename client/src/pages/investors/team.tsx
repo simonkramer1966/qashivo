@@ -6,15 +6,8 @@ import { Link } from "wouter";
 import simonImg from "@assets/Simon_Pic_v1_1771947378518.jpg";
 import mikeImg from "@assets/Mike_Pic_1771947269210.jpg";
 import jamieImg from "@assets/Jamie_Pic_1771947389478.jpg";
+import angelaImg from "@assets/image_1771948650513.png";
 import iolaImg from "@assets/image_1771947104481.png";
-
-function InitialAvatar({ initials, className }: { initials: string; className?: string }) {
-  return (
-    <div className={`bg-[#17B6C3] flex items-center justify-center text-white font-semibold ${className}`}>
-      <span className="text-[48px]">{initials}</span>
-    </div>
-  );
-}
 
 const leadership = [
   {
@@ -44,8 +37,7 @@ const team = [
   {
     name: "Angela Putzier",
     role: "Operations Manager",
-    image: null,
-    initials: "AP",
+    image: angelaImg,
     bio: "Angela manages all investor relationships and key client partnerships, ensuring seamless communication and operational excellence across the business. She oversees day-to-day platform operations including vendor management, process optimisation, compliance coordination, and internal workflows. Her structured approach to SaaS operations keeps Qashivo running efficiently as the team and customer base scale.",
     highlights: ["Investor & client relationship management", "Operational process design", "Vendor & compliance coordination", "Cross-functional team operations"],
   },
@@ -53,11 +45,35 @@ const team = [
     name: "Iola Redhead",
     role: "Customer Success Manager",
     image: iolaImg,
-    initials: "IR",
     bio: "Iola is responsible for ensuring every partner and customer has a world-class onboarding experience and continues to get maximum value from the platform. She works closely with accounting firms during initial setup, monitors adoption and engagement metrics, identifies expansion opportunities, and acts as the voice of the customer internally. Her focus on proactive success management drives retention, satisfaction, and partner advocacy.",
     highlights: ["Partner & customer onboarding", "Adoption & engagement tracking", "Proactive success management", "Voice of the customer"],
   },
 ];
+
+function PersonBio({ person }: { person: typeof leadership[0] }) {
+  return (
+    <div>
+      <h3 className="text-[24px] font-semibold text-[#0B0F17] mb-1">{person.name}</h3>
+      <p className="text-[16px] text-[#17B6C3] font-medium mb-4">{person.role}</p>
+      <p className="text-[15px] text-[#556070] leading-relaxed mb-6">{person.bio}</p>
+      <div className="flex flex-wrap gap-2">
+        {person.highlights.map((h) => (
+          <span key={h} className="text-[12px] text-[#556070] bg-white border border-[#E6E8EC] rounded-full px-3 py-1">{h}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PersonPhoto({ person }: { person: typeof leadership[0]; }) {
+  return (
+    <img
+      src={person.image}
+      alt={person.name}
+      className="w-[280px] h-[340px] object-cover object-top rounded-xl grayscale"
+    />
+  );
+}
 
 export default function TeamPage() {
   return (
@@ -81,55 +97,35 @@ export default function TeamPage() {
             Leadership
           </h2>
           <div className="space-y-16">
-            {leadership.map((person, index) => (
-              <div key={person.name} className={`grid md:grid-cols-[280px_1fr] gap-10 items-start ${index % 2 === 1 ? "md:grid-cols-[1fr_280px]" : ""}`}>
-                {index % 2 === 1 && (
-                  <div className="hidden md:block">
-                    <div>
-                      <h3 className="text-[24px] font-semibold text-[#0B0F17] mb-1">{person.name}</h3>
-                      <p className="text-[16px] text-[#17B6C3] font-medium mb-4">{person.role}</p>
-                      <p className="text-[15px] text-[#556070] leading-relaxed mb-6">{person.bio}</p>
-                      <div className="flex flex-wrap gap-2">
-                        {person.highlights.map((h) => (
-                          <span key={h} className="text-[12px] text-[#556070] bg-white border border-[#E6E8EC] rounded-full px-3 py-1">{h}</span>
-                        ))}
+            {leadership.map((person, index) => {
+              const imageOnRight = index % 2 === 1;
+              return (
+                <div
+                  key={person.name}
+                  className={`grid gap-10 items-start ${
+                    imageOnRight
+                      ? "md:grid-cols-[1fr_280px]"
+                      : "md:grid-cols-[280px_1fr]"
+                  }`}
+                >
+                  {imageOnRight ? (
+                    <>
+                      <PersonBio person={person} />
+                      <div className="flex justify-center md:justify-end">
+                        <PersonPhoto person={person} />
                       </div>
-                    </div>
-                  </div>
-                )}
-                <div className="mx-auto md:mx-0">
-                  <img
-                    src={person.image}
-                    alt={person.name}
-                    className="w-[280px] h-[320px] object-cover object-top rounded-xl grayscale"
-                  />
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex justify-center md:justify-start">
+                        <PersonPhoto person={person} />
+                      </div>
+                      <PersonBio person={person} />
+                    </>
+                  )}
                 </div>
-                {index % 2 === 0 && (
-                  <div>
-                    <h3 className="text-[24px] font-semibold text-[#0B0F17] mb-1">{person.name}</h3>
-                    <p className="text-[16px] text-[#17B6C3] font-medium mb-4">{person.role}</p>
-                    <p className="text-[15px] text-[#556070] leading-relaxed mb-6">{person.bio}</p>
-                    <div className="flex flex-wrap gap-2">
-                      {person.highlights.map((h) => (
-                        <span key={h} className="text-[12px] text-[#556070] bg-white border border-[#E6E8EC] rounded-full px-3 py-1">{h}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {index % 2 === 1 && (
-                  <div className="md:hidden">
-                    <h3 className="text-[24px] font-semibold text-[#0B0F17] mb-1">{person.name}</h3>
-                    <p className="text-[16px] text-[#17B6C3] font-medium mb-4">{person.role}</p>
-                    <p className="text-[15px] text-[#556070] leading-relaxed mb-6">{person.bio}</p>
-                    <div className="flex flex-wrap gap-2">
-                      {person.highlights.map((h) => (
-                        <span key={h} className="text-[12px] text-[#556070] bg-white border border-[#E6E8EC] rounded-full px-3 py-1">{h}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
@@ -142,15 +138,11 @@ export default function TeamPage() {
           <div className="grid md:grid-cols-2 gap-10 max-w-4xl mx-auto">
             {team.map((person) => (
               <div key={person.name} className="flex flex-col items-center text-center">
-                {person.image ? (
-                  <img
-                    src={person.image}
-                    alt={person.name}
-                    className="w-[200px] h-[200px] object-cover object-top rounded-xl grayscale mb-6"
-                  />
-                ) : (
-                  <InitialAvatar initials={person.initials} className="w-[200px] h-[200px] rounded-xl mb-6" />
-                )}
+                <img
+                  src={person.image}
+                  alt={person.name}
+                  className="w-[240px] h-[280px] object-cover object-top rounded-xl grayscale mb-6"
+                />
                 <h3 className="text-[22px] font-semibold text-[#0B0F17] mb-1">{person.name}</h3>
                 <p className="text-[15px] text-[#17B6C3] font-medium mb-4">{person.role}</p>
                 <p className="text-[14px] text-[#556070] leading-relaxed mb-5 max-w-sm">{person.bio}</p>
