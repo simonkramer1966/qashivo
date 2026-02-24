@@ -169,7 +169,7 @@ export default function TeamPage() {
               </Button>
             </Link>
             <Link href="/investors/contact">
-              <Button className="bg-[#8B2635] hover:bg-[#6f1f2b] text-white h-12 px-7 rounded-lg text-[15px] font-medium">
+              <Button className="bg-[#17B6C3] hover:bg-[#139CA8] text-white h-12 px-7 rounded-lg text-[15px] font-medium">
                 Get in Touch
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>

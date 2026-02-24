@@ -15,9 +15,9 @@ export default function InvestorsHome() {
         <div className="max-w-[1200px] mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             <div>
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#8B2635]/10 rounded-full mb-8">
-                <Shield className="w-4 h-4 text-[#8B2635]" />
-                <span className="text-[#8B2635] font-medium text-sm">SEIS Eligible &middot; HMRC Advance Assurance WMBC/I&R/1183827082/VCRT</span>
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#17B6C3]/10 rounded-full mb-8">
+                <Shield className="w-4 h-4 text-[#17B6C3]" />
+                <span className="text-[#17B6C3] font-medium text-sm">SEIS Eligible &middot; HMRC Advance Assurance WMBC/I&R/1183827082/VCRT</span>
               </div>
               <h1 className="text-[44px] md:text-[56px] font-semibold text-[#0B0F17] leading-[1.05] tracking-[-0.02em] mb-6">
                 AI-Powered Credit Control for UK&nbsp;SMEs
@@ -27,7 +27,7 @@ export default function InvestorsHome() {
               </p>
               <div className="flex flex-col sm:flex-row items-start gap-4">
                 <Link href="/investors/financials">
-                  <Button className="bg-[#8B2635] hover:bg-[#6f1f2b] text-white h-12 px-7 rounded-lg text-[16px] font-medium">
+                  <Button className="bg-[#17B6C3] hover:bg-[#139CA8] text-white h-12 px-7 rounded-lg text-[16px] font-medium">
                     View Investment Opportunity
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
@@ -191,7 +191,7 @@ export default function InvestorsHome() {
               </Button>
             </Link>
             <Link href="/investors/contact">
-              <Button className="bg-[#8B2635] hover:bg-[#6f1f2b] text-white h-12 px-7 rounded-lg text-[15px] font-medium">
+              <Button className="bg-[#17B6C3] hover:bg-[#139CA8] text-white h-12 px-7 rounded-lg text-[15px] font-medium">
                 Get in Touch
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>

@@ -217,7 +217,7 @@ export default function BusinessModel() {
         <div className="max-w-[1200px] mx-auto px-6 text-center">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link href="/investors/financials">
-              <Button className="bg-[#8B2635] hover:bg-[#6f1f2b] text-white h-12 px-7 rounded-lg text-[15px] font-medium">
+              <Button className="bg-[#17B6C3] hover:bg-[#139CA8] text-white h-12 px-7 rounded-lg text-[15px] font-medium">
                 View Financials & Calculator
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>

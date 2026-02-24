@@ -88,10 +88,10 @@ export default function RoadmapPage() {
           </p>
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             <Card className="bg-white border-[#E6E8EC] p-8 relative">
-              <div className="absolute top-0 left-0 right-0 h-1 bg-[#8B2635] rounded-t-lg"></div>
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#8B2635]/10 rounded-full mb-5">
-                <Shield className="w-3.5 h-3.5 text-[#8B2635]" />
-                <span className="text-[#8B2635] font-medium text-[12px]">SEIS Eligible</span>
+              <div className="absolute top-0 left-0 right-0 h-1 bg-[#17B6C3] rounded-t-lg"></div>
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#17B6C3]/10 rounded-full mb-5">
+                <Shield className="w-3.5 h-3.5 text-[#17B6C3]" />
+                <span className="text-[#17B6C3] font-medium text-[12px]">SEIS Eligible</span>
               </div>
               <h3 className="text-[22px] font-semibold text-[#0B0F17] mb-2">First Close &mdash; £250k</h3>
               <p className="text-[14px] text-[#17B6C3] font-medium mb-5">Ship MVP + prove partner-led pilots</p>
@@ -174,7 +174,7 @@ export default function RoadmapPage() {
           <div className="max-w-2xl mx-auto text-center space-y-10">
             <div>
               <p className="text-[14px] text-[#556070] mb-2">First close (SEIS eligible, priced now)</p>
-              <p className="text-[56px] font-bold text-[#8B2635]">£250k</p>
+              <p className="text-[56px] font-bold text-[#17B6C3]">£250k</p>
               <p className="text-[16px] text-[#556070]">Ship MVP and launch pilots with accounting partner firms</p>
             </div>
             <div className="w-16 h-px bg-[#E6E8EC] mx-auto"></div>
@@ -203,7 +203,7 @@ export default function RoadmapPage() {
               </Button>
             </Link>
             <Link href="/investors/contact">
-              <Button className="bg-[#8B2635] hover:bg-[#6f1f2b] text-white h-12 px-7 rounded-lg text-[15px] font-medium">
+              <Button className="bg-[#17B6C3] hover:bg-[#139CA8] text-white h-12 px-7 rounded-lg text-[15px] font-medium">
                 Get in Touch
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>

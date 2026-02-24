@@ -80,8 +80,8 @@ export default function HowItWorks() {
               </p>
             </Card>
             <Card className="bg-white border-[#E6E8EC] p-8">
-              <div className="w-12 h-12 bg-[#8B2635]/10 rounded-lg flex items-center justify-center mb-5">
-                <AlertTriangle className="w-6 h-6 text-[#8B2635]" />
+              <div className="w-12 h-12 bg-[#17B6C3]/10 rounded-lg flex items-center justify-center mb-5">
+                <AlertTriangle className="w-6 h-6 text-[#17B6C3]" />
               </div>
               <h3 className="text-[20px] font-semibold text-[#0B0F17] mb-3">Disputes or issues</h3>
               <p className="text-[15px] text-[#556070] leading-relaxed">

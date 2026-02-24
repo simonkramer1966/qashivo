@@ -44,9 +44,9 @@ export default function FinancialsPage() {
       <section className="pt-24 pb-16">
         <div className="max-w-[1200px] mx-auto px-6">
           <div className="max-w-3xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#8B2635]/10 rounded-full mb-8">
-              <Shield className="w-4 h-4 text-[#8B2635]" />
-              <span className="text-[#8B2635] font-medium text-sm">SEIS Eligible &middot; HMRC Advance Assurance</span>
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#17B6C3]/10 rounded-full mb-8">
+              <Shield className="w-4 h-4 text-[#17B6C3]" />
+              <span className="text-[#17B6C3] font-medium text-sm">SEIS Eligible &middot; HMRC Advance Assurance</span>
             </div>
             <h1 className="text-[44px] font-semibold text-[#0B0F17] mb-4">
               Financials & Investment
@@ -161,7 +161,7 @@ export default function FinancialsPage() {
                     <td className="py-3 font-medium text-[#0B0F17]">Year 1</td>
                     <td className="py-3 px-2 text-center text-[#556070]">300 &ndash; 500</td>
                     <td className="py-3 px-2 text-center text-[#556070]">£0.5 &ndash; £0.8m</td>
-                    <td className="py-3 px-2 text-center text-[#8B2635]">-36%</td>
+                    <td className="py-3 px-2 text-center text-[#17B6C3]">-36%</td>
                   </tr>
                   <tr className="border-b border-[#E6E8EC]">
                     <td className="py-3 font-medium text-[#0B0F17]">Year 2</td>
@@ -246,8 +246,8 @@ export default function FinancialsPage() {
                   <p className="text-[14px] text-[#17B6C3] font-medium">£100k = 1.4% post-money</p>
                 </div>
               </div>
-              <div className="mt-6 p-4 bg-[#8B2635]/10 rounded-lg">
-                <h4 className="text-[14px] font-semibold text-[#8B2635] mb-2">Tax relief</h4>
+              <div className="mt-6 p-4 bg-[#17B6C3]/10 rounded-lg">
+                <h4 className="text-[14px] font-semibold text-[#17B6C3] mb-2">Tax relief</h4>
                 <p className="text-[14px] text-[#556070]">SEIS: 50% income tax relief &rarr; £100k costs ~£50k net</p>
                 <p className="text-[14px] text-[#556070]">EIS: 30% income tax relief &rarr; £100k costs ~£70k net</p>
               </div>
@@ -385,12 +385,12 @@ export default function FinancialsPage() {
                 </div>
               </div>
 
-              <div className="mt-6 p-4 bg-[#8B2635]/10 rounded-lg">
-                <h4 className="text-[14px] font-semibold text-[#8B2635] mb-3">SEIS tax relief impact</h4>
+              <div className="mt-6 p-4 bg-[#17B6C3]/10 rounded-lg">
+                <h4 className="text-[14px] font-semibold text-[#17B6C3] mb-3">SEIS tax relief impact</h4>
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span className="text-[13px] text-[#556070]">50% income tax relief</span>
-                    <span className="text-[13px] font-semibold text-[#8B2635]">{formatCurrency(seisRelief)}</span>
+                    <span className="text-[13px] font-semibold text-[#17B6C3]">{formatCurrency(seisRelief)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-[13px] text-[#556070]">Effective investment (net cash at risk)</span>
@@ -398,7 +398,7 @@ export default function FinancialsPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-[13px] text-[#556070]">ROI on net cash at risk</span>
-                    <span className="text-[13px] font-semibold text-[#8B2635]">{formatPercent(roiOnNetCashSEIS)}</span>
+                    <span className="text-[13px] font-semibold text-[#17B6C3]">{formatPercent(roiOnNetCashSEIS)}</span>
                   </div>
                 </div>
               </div>
@@ -480,7 +480,7 @@ export default function FinancialsPage() {
               </Button>
             </Link>
             <Link href="/investors/contact">
-              <Button className="bg-[#8B2635] hover:bg-[#6f1f2b] text-white h-12 px-7 rounded-lg text-[15px] font-medium">
+              <Button className="bg-[#17B6C3] hover:bg-[#139CA8] text-white h-12 px-7 rounded-lg text-[15px] font-medium">
                 Get in Touch
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>

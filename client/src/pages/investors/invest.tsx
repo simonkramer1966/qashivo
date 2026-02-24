@@ -37,9 +37,9 @@ export default function InvestPage() {
       <section className="pt-20 pb-16">
         <div className="max-w-[1200px] mx-auto px-6">
           <div className="max-w-3xl mx-auto text-center mb-12">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#8B2635]/10 rounded-full mb-6">
-              <Shield className="w-4 h-4 text-[#8B2635]" />
-              <span className="text-[#8B2635] font-medium text-sm">SEIS Eligible Investment</span>
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#17B6C3]/10 rounded-full mb-6">
+              <Shield className="w-4 h-4 text-[#17B6C3]" />
+              <span className="text-[#17B6C3] font-medium text-sm">SEIS Eligible Investment</span>
             </div>
             <h1 className="text-[44px] font-semibold text-[#0B0F17] mb-4">
               Investment Opportunity
@@ -61,19 +61,19 @@ export default function InvestPage() {
           </p>
           <div className="grid md:grid-cols-4 gap-6 max-w-4xl mx-auto">
             <Card className="bg-white border-[#E6E8EC] p-6 text-center">
-              <p className="text-[36px] font-bold text-[#8B2635] mb-2">50%</p>
+              <p className="text-[36px] font-bold text-[#17B6C3] mb-2">50%</p>
               <p className="text-[14px] text-[#556070]">Income Tax Relief</p>
             </Card>
             <Card className="bg-white border-[#E6E8EC] p-6 text-center">
-              <p className="text-[36px] font-bold text-[#8B2635] mb-2">0%</p>
+              <p className="text-[36px] font-bold text-[#17B6C3] mb-2">0%</p>
               <p className="text-[14px] text-[#556070]">Capital Gains Tax on Profits</p>
             </Card>
             <Card className="bg-white border-[#E6E8EC] p-6 text-center">
-              <p className="text-[36px] font-bold text-[#8B2635] mb-2">50%</p>
+              <p className="text-[36px] font-bold text-[#17B6C3] mb-2">50%</p>
               <p className="text-[14px] text-[#556070]">CGT Reinvestment Relief</p>
             </Card>
             <Card className="bg-white border-[#E6E8EC] p-6 text-center">
-              <p className="text-[36px] font-bold text-[#8B2635] mb-2">100%</p>
+              <p className="text-[36px] font-bold text-[#17B6C3] mb-2">100%</p>
               <p className="text-[14px] text-[#556070]">Loss Relief</p>
             </Card>
           </div>
@@ -190,12 +190,12 @@ export default function InvestPage() {
                 </div>
               </div>
 
-              <div className="mt-6 p-4 bg-[#8B2635]/10 rounded-lg">
-                <h4 className="text-[14px] font-semibold text-[#8B2635] mb-3">SEIS Tax Relief</h4>
+              <div className="mt-6 p-4 bg-[#17B6C3]/10 rounded-lg">
+                <h4 className="text-[14px] font-semibold text-[#17B6C3] mb-3">SEIS Tax Relief</h4>
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span className="text-[13px] text-[#556070]">50% Income Tax Relief</span>
-                    <span className="text-[13px] font-semibold text-[#8B2635]">{formatCurrency(seisRelief)}</span>
+                    <span className="text-[13px] font-semibold text-[#17B6C3]">{formatCurrency(seisRelief)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-[13px] text-[#556070]">Effective Investment</span>
@@ -223,7 +223,7 @@ export default function InvestPage() {
               Contact us to discuss the investment opportunity, receive detailed documentation, and arrange a call with the founders.
             </p>
             <a href="mailto:hello@qashivo.com">
-              <Button className="bg-[#8B2635] hover:bg-[#6f1f2b] text-white h-12 px-8 rounded-lg text-[16px] font-medium">
+              <Button className="bg-[#17B6C3] hover:bg-[#139CA8] text-white h-12 px-8 rounded-lg text-[16px] font-medium">
                 Contact: hello@qashivo.com
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
