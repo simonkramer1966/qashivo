@@ -137,7 +137,7 @@ export default function BusinessModel() {
       <section className="py-20 bg-[#FAFBFC]">
         <div className="max-w-[1200px] mx-auto px-6">
           <h2 className="text-[32px] font-semibold text-[#0B0F17] text-center mb-4">
-            Early partner demand &mdash; pre-launch
+            Accounting firms as partners
           </h2>
           <p className="text-[18px] text-[#556070] text-center max-w-2xl mx-auto mb-14">
             Founder-led partner conversations showing real pre-launch demand. These are qualified expressions of interest&mdash;not contracted customers or recognised revenue.
