@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Database, CalendarCheck, CheckCircle, Play, MessageSquare, RefreshCw, ThumbsUp, Clock, AlertTriangle, Users, Repeat, TrendingUp } from "lucide-react";
 import { Link } from "wouter";
 import whiteboardImg from "@assets/image_1771947483925.png";
+import creditControlTeamImg from "@assets/image_1771949362478.png";
 
 export default function HowItWorks() {
   return (
@@ -131,12 +132,19 @@ export default function HowItWorks() {
 
       <section className="py-20 bg-[#FAFBFC]">
         <div className="max-w-[1200px] mx-auto px-6">
-          <h2 className="text-[32px] font-semibold text-[#0B0F17] text-center mb-4">
-            Credit control without the workload
-          </h2>
-          <p className="text-[18px] text-[#556070] text-center max-w-2xl mx-auto mb-14">
-            Qashivo scales outcomes, not effort. Output increases without adding headcount&mdash;that's what makes the model economically attractive.
-          </p>
+          <div className="grid md:grid-cols-2 gap-12 items-center mb-14">
+            <div>
+              <h2 className="text-[32px] font-semibold text-[#0B0F17] mb-4">
+                Credit control without the workload
+              </h2>
+              <p className="text-[18px] text-[#556070] leading-relaxed">
+                Qashivo scales outcomes, not effort. Output increases without adding headcount&mdash;that's what makes the model economically attractive.
+              </p>
+            </div>
+            <div className="rounded-xl overflow-hidden">
+              <img src={creditControlTeamImg} alt="Credit control team at work" className="w-full h-auto object-cover" />
+            </div>
+          </div>
           <div className="grid md:grid-cols-3 gap-8">
             <div className="text-center">
               <div className="w-14 h-14 bg-[#17B6C3]/10 rounded-xl flex items-center justify-center mx-auto mb-5">

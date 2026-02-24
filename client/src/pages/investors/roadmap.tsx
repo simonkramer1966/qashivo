@@ -9,7 +9,6 @@ export default function RoadmapPage() {
   return (
     <div className="min-h-screen bg-white">
       <InvestorNav />
-
       <section className="pt-24 pb-16">
         <div className="max-w-[1200px] mx-auto px-6">
           <h1 className="text-[44px] font-semibold text-[#0B0F17] text-center mb-4">
@@ -20,7 +19,6 @@ export default function RoadmapPage() {
           </p>
         </div>
       </section>
-
       <section className="py-20 bg-[#FAFBFC]">
         <div className="max-w-[1200px] mx-auto px-6">
           <div className="grid md:grid-cols-3 gap-8">
@@ -29,7 +27,7 @@ export default function RoadmapPage() {
               <div className="w-12 h-12 bg-[#17B6C3]/10 rounded-lg flex items-center justify-center mb-5">
                 <Target className="w-6 h-6 text-[#17B6C3]" />
               </div>
-              <p className="text-[13px] text-[#17B6C3] font-medium mb-2">Now &rarr; Accountex</p>
+              <p className="text-[13px] text-[#17B6C3] font-medium mb-2">Now →</p>
               <h3 className="text-[22px] font-semibold text-[#0B0F17] mb-3">Phase 1: Core Credit Control</h3>
               <p className="text-[14px] text-[#556070] mb-5">Prove trust, reliability, and value</p>
               <ul className="text-[14px] text-[#556070] leading-relaxed space-y-3">
@@ -80,7 +78,6 @@ export default function RoadmapPage() {
           </p>
         </div>
       </section>
-
       <section className="py-20">
         <div className="max-w-[1200px] mx-auto px-6">
           <h2 className="text-[32px] font-semibold text-[#0B0F17] text-center mb-4">
@@ -166,7 +163,6 @@ export default function RoadmapPage() {
           </div>
         </div>
       </section>
-
       <section className="py-20 bg-[#FAFBFC]">
         <div className="max-w-[1200px] mx-auto px-6">
           <h2 className="text-[32px] font-semibold text-[#0B0F17] text-center mb-4">
@@ -198,7 +194,6 @@ export default function RoadmapPage() {
           </div>
         </div>
       </section>
-
       <section className="py-16">
         <div className="max-w-[1200px] mx-auto px-6 text-center">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -216,7 +211,6 @@ export default function RoadmapPage() {
           </div>
         </div>
       </section>
-
       <InvestorFooter />
     </div>
   );
