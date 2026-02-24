@@ -2,7 +2,7 @@ import InvestorNav from "@/components/investors/InvestorNav";
 import InvestorFooter from "@/components/investors/InvestorFooter";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Shield, TrendingUp, ShieldOff, Landmark, RefreshCw, Globe, Users, BarChart3, AlertTriangle } from "lucide-react";
+import { ArrowRight, Shield, TrendingUp, ShieldOff, Landmark, RefreshCw, Globe, Users, BarChart3 } from "lucide-react";
 import { Link } from "wouter";
 
 export default function WhySEISPage() {
@@ -28,22 +28,6 @@ export default function WhySEISPage() {
             <p className="text-[16px] text-[#0B0F17] font-medium leading-relaxed">
               SEIS doesn&rsquo;t remove risk &mdash; it changes the risk/return equation. It&rsquo;s designed to make it more rational to invest early, by cushioning the downside and amplifying the upside.
             </p>
-          </div>
-        </div>
-      </section>
-
-      <section className="py-10">
-        <div className="max-w-3xl mx-auto px-6">
-          <div className="border border-amber-200 bg-amber-50 rounded-lg p-6">
-            <div className="flex gap-3">
-              <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-              <div>
-                <p className="text-[14px] font-semibold text-amber-800 mb-2">Risk warning (please read)</p>
-                <p className="text-[14px] text-amber-700 leading-relaxed">
-                  Early-stage investing is high risk. You could lose all the money you invest, and you are unlikely to be protected if something goes wrong. SEIS reliefs depend on your personal circumstances and the company remaining qualifying. Tax rules can change. Always seek independent financial and tax advice before investing.
-                </p>
-              </div>
-            </div>
           </div>
         </div>
       </section>
