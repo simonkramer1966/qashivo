@@ -23,7 +23,7 @@ export default function InvestorsHome() {
                 Building the Future of SME Working&nbsp;Capital
               </h1>
               <p className="text-[18px] md:text-[20px] text-[#556070] leading-[1.6] mb-10">
-                Qashivo captures intent from real customer conversations&mdash;including voice&mdash;and turns it into structured, repeatable credit control actions at scale. AI plans the work, a human approves, the system executes.
+                Intent-driven collections + live forecasting for accountants and their clients.
               </p>
               <div className="flex flex-col sm:flex-row items-start gap-4">
                 <Link href="/investors/financials">
