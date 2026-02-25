@@ -68,9 +68,9 @@ export default function Step2ConnectXero({ status, onComplete, onSkip, onBack }:
             </div>
             <button
               onClick={handleConnect}
-              className="inline-flex items-center gap-1.5 text-[12px] text-gray-400 hover:text-gray-600 transition-colors"
+              className="inline-flex items-center gap-1.5 text-[13px] text-gray-500 hover:text-gray-700 transition-colors"
             >
-              <RefreshCw className="w-3 h-3" />
+              <RefreshCw className="w-3.5 h-3.5" />
               Reconnect Xero
             </button>
           </div>
