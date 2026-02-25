@@ -4,17 +4,17 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Shield, Clock, Eye, TrendingUp, Send, Mic, MessageSquare, CheckCircle } from "lucide-react";
 import { Link } from "wouter";
 import accountantsImg from "@assets/image_1771947465520.png";
-import heroImg from "@assets/image_1771950971769.png";
+import investorHeroAnimation from "@assets/Hero-Animation-Feb-25-10-10-55_1772015706312.mp4";
 
 export default function InvestorsHome() {
   return (
     <div className="min-h-screen bg-white">
       <InvestorNav />
 
-      <section className="pt-24 pb-20">
-        <div className="max-w-[1200px] mx-auto px-6">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            <div>
+      <section className="pt-24 pb-20 overflow-hidden">
+        <div className="max-w-[1200px] mx-auto">
+          <div className="grid lg:grid-cols-2 gap-0 items-center">
+            <div className="px-6 pr-8 lg:pr-12">
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#17B6C3]/10 rounded-full mb-8">
                 <Shield className="w-4 h-4 text-[#17B6C3]" />
                 <span className="text-[#17B6C3] font-medium text-sm">SEIS Eligible &middot; HMRC Advance Assurance WMBC/I&R/1183827082/VCRT</span>
@@ -39,8 +39,15 @@ export default function InvestorsHome() {
                 </Link>
               </div>
             </div>
-            <div className="rounded-xl overflow-hidden shadow-lg border border-[#E6E8EC]">
-              <img src={heroImg} alt="Qashivo dashboard showing cash inflow forecast and collection metrics" className="w-full h-auto object-cover" />
+            <div className="aspect-square overflow-hidden">
+              <video
+                src={investorHeroAnimation}
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="w-full h-full object-cover"
+              />
             </div>
           </div>
         </div>
