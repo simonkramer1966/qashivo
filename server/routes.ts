@@ -15889,6 +15889,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       
       // Exact whitelist of allowed internal routes (no prefix matching for maximum safety)
       const allowedRoutes = new Set([
+        '/onboarding',
         '/dashboard',
         '/settings',
         '/settings/integrations',
@@ -16296,7 +16297,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         
         if (isOnboardingComplete) {
           const allowedRoutes = new Set([
-            '/dashboard', '/settings', '/settings/integrations', '/settings/team',
+            '/onboarding', '/dashboard', '/settings', '/settings/integrations', '/settings/team',
             '/settings/billing', '/action-centre', '/contacts', '/invoices',
             '/workflows', '/analytics', '/profile', '/admin',
           ]);

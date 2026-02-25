@@ -64,6 +64,8 @@ export interface OnboardingStatusResponse {
   lastAnalysisAt: Date | null;
   onboardingCompleted: boolean;
   xeroConnected: boolean;
+  xeroOrganisationName: string | null;
+  xeroConnectionHealthy: boolean;
   emailConnected: boolean;
   emailConnectedAddress: string | null;
 }
@@ -112,6 +114,8 @@ export class OnboardingService {
     const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
 
     const xeroConnected = !!(tenant?.xeroAccessToken && tenant?.xeroTenantId);
+    const xeroConnectionHealthy = tenant?.xeroConnectionStatus === 'connected';
+    const xeroOrganisationName = tenant?.xeroOrganisationName || null;
     const emailConnected = !!(tenant?.emailConnectionStatus === 'connected');
 
     if (!progress) {
@@ -129,6 +133,8 @@ export class OnboardingService {
         lastAnalysisAt: null,
         onboardingCompleted: false,
         xeroConnected,
+        xeroOrganisationName,
+        xeroConnectionHealthy,
         emailConnected,
         emailConnectedAddress: tenant?.emailConnectedAddress || null,
       };
@@ -148,6 +154,8 @@ export class OnboardingService {
       lastAnalysisAt: progress.lastAnalysisAt,
       onboardingCompleted: tenant?.onboardingCompleted || false,
       xeroConnected,
+      xeroOrganisationName,
+      xeroConnectionHealthy,
       emailConnected,
       emailConnectedAddress: tenant?.emailConnectedAddress || null,
     };

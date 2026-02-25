@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Check, ExternalLink, Loader2 } from "lucide-react";
+import { AlertTriangle, Check, ExternalLink, Loader2, RefreshCw } from "lucide-react";
 import type { OnboardingStatus } from "../OnboardingWizard";
 
 interface Props {
@@ -14,6 +14,8 @@ interface Props {
 export default function Step2ConnectXero({ status, onComplete, onSkip, onBack }: Props) {
   const { toast } = useToast();
   const isConnected = status?.xeroConnected || false;
+  const isHealthy = status?.xeroConnectionHealthy ?? isConnected;
+  const orgName = status?.xeroOrganisationName || null;
   const stepDone = status?.step2Status === "COMPLETED" || status?.step2Status === "SKIPPED";
 
   const markCompleteMutation = useMutation({
@@ -41,6 +43,8 @@ export default function Step2ConnectXero({ status, onComplete, onSkip, onBack }:
     }
   };
 
+  const needsReauth = isConnected && !isHealthy;
+
   return (
     <div>
       <h2 className="text-[15px] font-semibold text-gray-900 mb-1">Connect Xero</h2>
@@ -49,15 +53,45 @@ export default function Step2ConnectXero({ status, onComplete, onSkip, onBack }:
       </p>
 
       <div className="border border-[#e5e7eb] rounded-lg p-5">
-        {isConnected ? (
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-[#22c55e]/10 flex items-center justify-center">
-              <Check className="w-4 h-4 text-[#22c55e]" />
+        {isConnected && !needsReauth ? (
+          <div>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-8 h-8 rounded-full bg-[#22c55e]/10 flex items-center justify-center flex-shrink-0">
+                <Check className="w-4 h-4 text-[#22c55e]" />
+              </div>
+              <div>
+                <p className="text-[13px] font-medium text-gray-900">
+                  {orgName ? `Connected to ${orgName}` : "Xero connected"}
+                </p>
+                <p className="text-[13px] text-gray-500">Your accounting data is syncing.</p>
+              </div>
             </div>
-            <div>
-              <p className="text-[13px] font-medium text-gray-900">Xero connected</p>
-              <p className="text-[13px] text-gray-500">Your accounting data is syncing.</p>
+            <button
+              onClick={handleConnect}
+              className="inline-flex items-center gap-1.5 text-[12px] text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <RefreshCw className="w-3 h-3" />
+              Reconnect Xero
+            </button>
+          </div>
+        ) : needsReauth ? (
+          <div>
+            <div className="flex items-start gap-3 mb-4 p-3 rounded-lg bg-amber-50 border border-amber-100">
+              <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-[13px] font-medium text-amber-800">Re-authorisation needed</p>
+                <p className="text-[13px] text-amber-700 mt-0.5">
+                  Your Xero connection has expired. Please reconnect to continue syncing data.
+                </p>
+              </div>
             </div>
+            <button
+              onClick={handleConnect}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#14b8a6] text-white text-[13px] font-medium hover:bg-[#0d9488] transition-colors"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Reconnect to Xero
+            </button>
           </div>
         ) : (
           <div>
@@ -83,7 +117,7 @@ export default function Step2ConnectXero({ status, onComplete, onSkip, onBack }:
           Back
         </button>
         <div className="flex items-center gap-3">
-          {!isConnected && (
+          {(!isConnected || needsReauth) && (
             <button
               onClick={onSkip}
               className="text-[13px] text-gray-500 hover:text-gray-700 transition-colors"
@@ -91,7 +125,7 @@ export default function Step2ConnectXero({ status, onComplete, onSkip, onBack }:
               Skip for now
             </button>
           )}
-          {isConnected && (
+          {isConnected && !needsReauth && (
             <button
               onClick={() => markCompleteMutation.mutate()}
               disabled={markCompleteMutation.isPending}

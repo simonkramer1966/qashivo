@@ -39,6 +39,8 @@ export interface OnboardingStatus {
   lastAnalysisAt: string | null;
   onboardingCompleted: boolean;
   xeroConnected: boolean;
+  xeroOrganisationName: string | null;
+  xeroConnectionHealthy: boolean;
   emailConnected: boolean;
   emailConnectedAddress: string | null;
 }
