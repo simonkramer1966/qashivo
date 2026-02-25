@@ -1,5 +1,6 @@
 import InvestorNav from "@/components/investors/InvestorNav";
 import InvestorFooter from "@/components/investors/InvestorFooter";
+import { FloatingInvestWidget } from "@/components/investors/FloatingInvestWidget";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Shield, Clock, Eye, TrendingUp, Send, Mic, MessageSquare, CheckCircle } from "lucide-react";
 import { Link } from "wouter";
@@ -207,6 +208,7 @@ export default function InvestorsHome() {
         </div>
       </section>
 
+      <FloatingInvestWidget />
       <InvestorFooter />
     </div>
   );

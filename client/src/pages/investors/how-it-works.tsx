@@ -1,5 +1,6 @@
 import InvestorNav from "@/components/investors/InvestorNav";
 import InvestorFooter from "@/components/investors/InvestorFooter";
+import { FloatingInvestWidget } from "@/components/investors/FloatingInvestWidget";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Database, CalendarCheck, CheckCircle, Play, MessageSquare, RefreshCw, ThumbsUp, Clock, AlertTriangle, Users, Repeat, TrendingUp } from "lucide-react";
@@ -195,6 +196,7 @@ export default function HowItWorks() {
         </div>
       </section>
 
+      <FloatingInvestWidget />
       <InvestorFooter />
     </div>
   );

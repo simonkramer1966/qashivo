@@ -1,5 +1,6 @@
 import InvestorNav from "@/components/investors/InvestorNav";
 import InvestorFooter from "@/components/investors/InvestorFooter";
+import { FloatingInvestWidget } from "@/components/investors/FloatingInvestWidget";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, Zap, TrendingUp, Building2, Repeat, PoundSterling, ArrowRight, Globe, Target } from "lucide-react";
@@ -226,6 +227,7 @@ export default function BusinessModel() {
         </div>
       </section>
 
+      <FloatingInvestWidget />
       <InvestorFooter />
     </div>
   );

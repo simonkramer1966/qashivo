@@ -1,5 +1,6 @@
 import InvestorNav from "@/components/investors/InvestorNav";
 import InvestorFooter from "@/components/investors/InvestorFooter";
+import { FloatingInvestWidget } from "@/components/investors/FloatingInvestWidget";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { Link } from "wouter";
@@ -148,6 +149,7 @@ export default function TeamPage() {
         </div>
       </section>
 
+      <FloatingInvestWidget />
       <InvestorFooter />
     </div>
   );

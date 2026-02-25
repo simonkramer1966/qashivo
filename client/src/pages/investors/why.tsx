@@ -1,5 +1,6 @@
 import InvestorNav from "@/components/investors/InvestorNav";
 import InvestorFooter from "@/components/investors/InvestorFooter";
+import { FloatingInvestWidget } from "@/components/investors/FloatingInvestWidget";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Award, Users, Brain, Zap, Database, Mic, Shield, BarChart3 } from "lucide-react";
@@ -151,6 +152,7 @@ export default function WhyQashivoPage() {
         </div>
       </section>
 
+      <FloatingInvestWidget />
       <InvestorFooter />
     </div>
   );
