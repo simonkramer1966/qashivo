@@ -37,8 +37,8 @@ async function processQueuedJobs(): Promise<void> {
         .update(analysisJobs)
         .set({
           status: "SUCCEEDED",
-          progressCurrent: result.totalScored,
-          progressTotal: result.totalScored,
+          progressCurrent: result.length,
+          progressTotal: result.length,
           finishedAt: new Date(),
           updatedAt: new Date(),
         })
@@ -46,7 +46,7 @@ async function processQueuedJobs(): Promise<void> {
 
       await onboardingService.updateStepStatus(job.tenantId, 5, "COMPLETED");
 
-      console.log(`[DebtorScoring] Job ${job.id} succeeded: ${result.totalScored} contacts scored`);
+      console.log(`[DebtorScoring] Job ${job.id} succeeded: ${result.length} contacts scored`);
     } catch (error: any) {
       console.error(`[DebtorScoring] Job ${job.id} failed:`, error);
       await db
