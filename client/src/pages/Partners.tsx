@@ -4,6 +4,7 @@ import { ArrowRight, Check, ChevronDown, Menu, X } from "lucide-react";
 import { useState } from "react";
 import logo from "@assets/Main_Nexus_Logo_copy_1768893717341.png";
 import partnersImg from "@assets/image_1772016499194.png";
+import partnersImg2 from "@assets/image_1772016539053.png";
 
 const partnerFaqs = [
   {
@@ -212,36 +213,41 @@ export default function Partners() {
       {/* Partner Benefits */}
       <section className="py-20 md:py-28">
         <div className="max-w-[1200px] mx-auto px-6">
-          <div className="max-w-[700px] mx-auto">
-            <h2 className="text-[32px] md:text-[40px] font-semibold text-[#0B0F17] leading-[1.15] mb-8">
-              Why partners choose Qashivo.
-            </h2>
-            <ul className="space-y-4">
-              <li className="flex items-start gap-3">
-                <Check className="w-5 h-5 text-[#12B8C4] mt-0.5 flex-shrink-0" />
-                <span className="text-[16px] text-[#556070]">Faster time to value for clients (simple setup and clear workflow)</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <Check className="w-5 h-5 text-[#12B8C4] mt-0.5 flex-shrink-0" />
-                <span className="text-[16px] text-[#556070]">Repeatable process you can standardize across accounts</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <Check className="w-5 h-5 text-[#12B8C4] mt-0.5 flex-shrink-0" />
-                <span className="text-[16px] text-[#556070]">Visibility you can review in client meetings (forecast + Attention)</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <Check className="w-5 h-5 text-[#12B8C4] mt-0.5 flex-shrink-0" />
-                <span className="text-[16px] text-[#556070]">Partner support for onboarding and best practices</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <Check className="w-5 h-5 text-[#12B8C4] mt-0.5 flex-shrink-0" />
-                <span className="text-[16px] text-[#556070]">Co-marketing opportunities</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <Check className="w-5 h-5 text-[#12B8C4] mt-0.5 flex-shrink-0" />
-                <span className="text-[16px] text-[#556070]">Referral incentives or revenue share</span>
-              </li>
-            </ul>
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            <div className="rounded-2xl overflow-hidden">
+              <img src={partnersImg2} alt="Partners reviewing work" className="w-full h-auto object-cover" />
+            </div>
+            <div>
+              <h2 className="text-[32px] md:text-[40px] font-semibold text-[#0B0F17] leading-[1.15] mb-8">
+                Why partners choose Qashivo.
+              </h2>
+              <ul className="space-y-4">
+                <li className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-[#12B8C4] mt-0.5 flex-shrink-0" />
+                  <span className="text-[16px] text-[#556070]">Faster time to value for clients (simple setup and clear workflow)</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-[#12B8C4] mt-0.5 flex-shrink-0" />
+                  <span className="text-[16px] text-[#556070]">Repeatable process you can standardize across accounts</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-[#12B8C4] mt-0.5 flex-shrink-0" />
+                  <span className="text-[16px] text-[#556070]">Visibility you can review in client meetings (forecast + Attention)</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-[#12B8C4] mt-0.5 flex-shrink-0" />
+                  <span className="text-[16px] text-[#556070]">Partner support for onboarding and best practices</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-[#12B8C4] mt-0.5 flex-shrink-0" />
+                  <span className="text-[16px] text-[#556070]">Co-marketing opportunities</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-[#12B8C4] mt-0.5 flex-shrink-0" />
+                  <span className="text-[16px] text-[#556070]">Referral incentives or revenue share</span>
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
       </section>
