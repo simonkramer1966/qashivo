@@ -2128,6 +2128,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: user?.id,
         activityType: "onboarding_restarted",
         category: "audit",
+        action: "updated",
+        result: "success",
         description: "Onboarding progress restarted (integrations preserved)",
         metadata: {},
       });
@@ -2152,6 +2154,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: user?.id,
         activityType: "onboarding_full_reset",
         category: "audit",
+        action: "updated",
+        result: "success",
         description: "Onboarding fully reset to Step 1 for testing (company data preserved)",
         metadata: {},
       });

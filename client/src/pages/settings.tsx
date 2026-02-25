@@ -2090,6 +2090,11 @@ export default function Settings() {
     logoUrl?: string;
   }
 
+  const { data: onboardingStatus } = useQuery<OnboardingStatus>({
+    queryKey: ["/api/onboarding/full-status"],
+  });
+  const onboardingDone = !import.meta.env.DEV && isOnboardingComplete(onboardingStatus);
+
   const { data: accountingStatus } = useQuery<AccountingStatus>({
     queryKey: ['/api/integrations/accounting/status'],
   });
@@ -2349,9 +2354,18 @@ export default function Settings() {
         </div>
         
         <div className="max-w-7xl mx-auto w-full px-6 pb-6">
-            <Tabs defaultValue="general" className="space-y-6">
+            <Tabs defaultValue={!onboardingDone ? "onboarding" : "general"} className="space-y-6">
               <div className="border-b border-gray-100 overflow-x-auto">
                 <TabsList className="bg-transparent h-auto p-0 gap-0">
+                  {!onboardingDone && (
+                    <TabsTrigger
+                      value="onboarding"
+                      className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
+                      data-testid="tab-onboarding"
+                    >
+                      Onboarding
+                    </TabsTrigger>
+                  )}
                   <TabsTrigger 
                     value="general" 
                     className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
@@ -2423,13 +2437,6 @@ export default function Settings() {
                     data-testid="tab-demo-data"
                   >
                     Demo Data
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="onboarding" 
-                    className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
-                    data-testid="tab-onboarding"
-                  >
-                    Onboarding
                   </TabsTrigger>
                 </TabsList>
               </div>
