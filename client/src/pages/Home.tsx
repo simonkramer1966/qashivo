@@ -5,7 +5,7 @@ import { ArrowRight, Check, ChevronDown, Menu, X } from "lucide-react";
 import { useState } from "react";
 import logo from "@assets/Main_Nexus_Logo_copy_1768893717341.png";
 import overviewScreenshot from "@assets/Screenshot_2026-01-20_at_16.41.29_1768927459381.png";
-import heroAnimation from "@assets/Hero-Animation-Feb-24-23-34-38_1771976236255.mp4";
+import heroAnimation from "@assets/Hero-Animation-Feb-25-Light_1080p_60fps_1772009865915.mp4";
 import customersScreenshot from "@assets/Screenshot_2026-01-20_at_15.50.46_1768941354398.png";
 import cashFlowScreenshot from "@assets/Screenshot_2026-01-15_at_16.57.28_1768920824623.png";
 import Screenshot_2026_01_20_at_17_48_14 from "@assets/Screenshot 2026-01-20 at 17.48.14.png";
@@ -136,14 +136,14 @@ export default function Home() {
             </div>
 
             {/* Right - Hero Animation */}
-            <div className="bg-[#F0F2F5] rounded-2xl p-3">
+            <div className="rounded-2xl overflow-hidden">
               <video
                 src={heroAnimation}
                 autoPlay
                 loop
                 muted
                 playsInline
-                className="w-full rounded-xl border border-[#E6E8EC]"
+                className="w-full h-full object-cover"
               />
             </div>
           </div>
