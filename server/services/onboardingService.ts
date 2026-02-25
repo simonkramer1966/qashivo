@@ -232,6 +232,36 @@ export class OnboardingService {
       .where(eq(tenants.id, tenantId));
   }
 
+  async fullResetOnboarding(tenantId: string): Promise<void> {
+    await this.ensureProgress(tenantId);
+
+    await db
+      .update(onboardingProgress)
+      .set({
+        step1Status: "NOT_STARTED",
+        step2Status: "NOT_STARTED",
+        step3Status: "NOT_STARTED",
+        step4Status: "NOT_STARTED",
+        step5Status: "NOT_STARTED",
+        step6Status: "NOT_STARTED",
+        agedDebtorsSummary: null,
+        contactDataSummary: null,
+        lastAnalysisAt: null,
+        completedAt: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(onboardingProgress.tenantId, tenantId));
+
+    await db
+      .update(tenants)
+      .set({
+        onboardingCompleted: false,
+        onboardingCompletedAt: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(tenants.id, tenantId));
+  }
+
   async setSmsMobileOptIn(tenantId: string, enabled: boolean): Promise<void> {
     await this.ensureProgress(tenantId);
 

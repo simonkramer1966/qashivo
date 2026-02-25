@@ -2139,6 +2139,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/onboarding/full-reset', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      const tenantId = user?.tenantId || req.session?.activeTenantId;
+      if (!tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      await onboardingService.fullResetOnboarding(tenantId);
+
+      await storage.createActivityLog({
+        tenantId,
+        userId: user?.id,
+        activityType: "onboarding_full_reset",
+        category: "audit",
+        description: "Onboarding fully reset to Step 1 for testing (company data preserved)",
+        metadata: {},
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error performing full onboarding reset:", error);
+      res.status(500).json({ message: "Failed to reset onboarding" });
+    }
+  });
+
   app.post('/api/onboarding/run-analysis', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);

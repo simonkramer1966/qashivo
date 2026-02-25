@@ -143,6 +143,22 @@ function OnboardingSettingsSection() {
     },
   });
 
+  const fullResetMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/onboarding/full-reset");
+      if (!response.ok) throw new Error("Failed to reset onboarding");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/onboarding/full-status"] });
+      toast({ title: "Onboarding Reset", description: "All steps reset. Starting from Step 1." });
+      setLocation("/onboarding");
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to reset onboarding.", variant: "destructive" });
+    },
+  });
+
   const rerunAnalysisMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", "/api/onboarding/run-analysis");
@@ -246,6 +262,17 @@ function OnboardingSettingsSection() {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+
+          <Button
+            variant="outline"
+            onClick={() => fullResetMutation.mutate()}
+            disabled={fullResetMutation.isPending}
+            className="h-9 rounded-full border-amber-300 text-amber-700 hover:bg-amber-50 hover:text-amber-800"
+            title="Resets all steps including Step 1 so you can walk through the full flow. Your company data is preserved and will pre-fill."
+          >
+            <RotateCw className="h-4 w-4 mr-2" />
+            {fullResetMutation.isPending ? "Resetting..." : "Test from Step 1"}
+          </Button>
 
           <Button
             variant="outline"
