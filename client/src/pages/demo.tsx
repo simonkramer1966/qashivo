@@ -929,18 +929,6 @@ export default function InvestorDemo() {
           </div>
         </div>
       </section>
-      {/* Email Demo: Two-way Outcomes */}
-      <section className="py-10 md:py-16">
-        <div className="max-w-[1200px] mx-auto px-6">
-          <div className="max-w-[700px] mx-auto text-center mb-12">
-            <h2 className="text-[40px] md:text-[48px] font-semibold text-[#0B0F17] leading-[1.1] tracking-[-0.02em] mb-6">Two-way communication with Email</h2>
-            <p className="text-[18px] md:text-[20px] text-[#556070] leading-[1.55]">
-              Experience supervised autonomy in action. Qashivo generates a reminder, you approve it, and watch AI detect intent from customer replies — responding and updating your forecast automatically.
-            </p>
-          </div>
-          <EmailOutcomeDemo />
-        </div>
-      </section>
       {/* Footer */}
       <footer className="py-16 border-t border-[#E6E8EC]">
         <div className="max-w-[1200px] mx-auto px-6">
