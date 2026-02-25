@@ -136,14 +136,14 @@ export default function Home() {
             </div>
 
             {/* Right - Hero Animation */}
-            <div className="rounded-2xl overflow-hidden">
+            <div>
               <video
                 src={heroAnimation}
                 autoPlay
                 loop
                 muted
                 playsInline
-                className="w-full h-full object-cover"
+                className="w-full"
               />
             </div>
           </div>
