@@ -5,7 +5,7 @@ import { ArrowRight, Check, ChevronDown, Menu, X } from "lucide-react";
 import { useState } from "react";
 import logo from "@assets/Main_Nexus_Logo_copy_1768893717341.png";
 import overviewScreenshot from "@assets/Screenshot_2026-01-20_at_16.41.29_1768927459381.png";
-import heroAnimation from "@assets/Hero-Animation-Feb-25-09-36-29_1772012365958.mp4";
+import heroAnimation from "@assets/Hero-Animation-Feb-25-10-10-55_1772014479086.mp4";
 import customersScreenshot from "@assets/Screenshot_2026-01-20_at_15.50.46_1768941354398.png";
 import cashFlowScreenshot from "@assets/Screenshot_2026-01-15_at_16.57.28_1768920824623.png";
 import Screenshot_2026_01_20_at_17_48_14 from "@assets/Screenshot 2026-01-20 at 17.48.14.png";
@@ -96,11 +96,11 @@ export default function Home() {
         )}
       </nav>
       {/* Hero Section */}
-      <section className="pt-20 pb-24 md:pt-28 md:pb-32">
-        <div className="max-w-[1200px] mx-auto px-6">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+      <section className="pt-20 pb-24 md:pt-28 md:pb-32 overflow-hidden">
+        <div className="max-w-[1200px] mx-auto">
+          <div className="grid lg:grid-cols-2 gap-0 items-center">
             {/* Left - Text Content */}
-            <div>
+            <div className="px-6 pr-8 lg:pr-12">
               <h1 className="text-[40px] md:text-[52px] font-semibold text-[#0B0F17] leading-[1.05] tracking-[-0.02em] mb-6">
                 Get paid faster with less effort. Forecast with confidence.
               </h1>
@@ -136,14 +136,14 @@ export default function Home() {
             </div>
 
             {/* Right - Hero Animation */}
-            <div>
+            <div className="aspect-square overflow-hidden">
               <video
                 src={heroAnimation}
                 autoPlay
                 loop
                 muted
                 playsInline
-                className="w-full"
+                className="w-full h-full object-cover"
               />
             </div>
           </div>
