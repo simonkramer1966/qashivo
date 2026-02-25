@@ -40,7 +40,7 @@ export function FloatingInvestWidget() {
         <p className="text-[15px] font-semibold leading-tight pr-5">
           Invest in Qashivo
         </p>
-        <p className="text-[12px] text-white/80 mt-0.5 mb-3">
+        <p className="text-[12px] text-white/80 mt-0.5 mb-3 font-black">
           SEIS eligible · from £10,000
         </p>
 
