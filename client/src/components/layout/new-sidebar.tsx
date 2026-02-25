@@ -519,6 +519,8 @@ export default function NewSidebar() {
     (user as any)?.role === "partner" && 
     accessibleTenants.length > 0
   );
+
+  const hasMultipleTenants = canSwitchOrganizations && accessibleTenants.length > 1;
   
   // Separate tenants by type
   const tenantsByType = useMemo(() => {
@@ -624,8 +626,11 @@ export default function NewSidebar() {
               className="w-56 border-gray-100"
               trigger={
                 <button
-                  className="w-full flex items-center justify-between px-3 py-2 text-left text-[13px] text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-                  disabled={switchTenantMutation.isPending}
+                  className={cn(
+                    "w-full flex items-center justify-between px-3 py-2 text-left text-[13px] text-gray-600 rounded-lg transition-colors",
+                    hasMultipleTenants ? "hover:bg-gray-50 cursor-pointer" : "cursor-default"
+                  )}
+                  disabled={!hasMultipleTenants || switchTenantMutation.isPending}
                   data-testid="button-organization-dropdown"
                 >
                   <span className="font-medium truncate">
@@ -634,10 +639,12 @@ export default function NewSidebar() {
                       : (tenant?.settings?.companyName || tenant?.name || "Loading...")
                     }
                   </span>
-                  {switchTenantMutation.isPending ? (
-                    <RefreshCw className="h-3.5 w-3.5 text-gray-400 animate-spin flex-shrink-0" />
-                  ) : (
-                    <ChevronDown className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                  {hasMultipleTenants && (
+                    switchTenantMutation.isPending ? (
+                      <RefreshCw className="h-3.5 w-3.5 text-gray-400 animate-spin flex-shrink-0" />
+                    ) : (
+                      <ChevronDown className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                    )
                   )}
                 </button>
               }
