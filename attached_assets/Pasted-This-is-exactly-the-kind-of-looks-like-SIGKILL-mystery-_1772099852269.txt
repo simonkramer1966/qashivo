@@ -1,0 +1,135 @@
+This is exactly the kind of “looks like SIGKILL” mystery that turns out to be your own process.exit(0) slipping through.
+
+If you truly found server/mcp/index.ts calling process.exit(0) and it runs on import (i.e., main() invoked at module top-level), that is a perfect explanation for:
+
+no exit / beforeExit logs (because your override may bypass your logging path, or stdout flush timing is weird)
+
+dying on a consistent-ish timer (whatever triggers that module path)
+
+not memory-related (RSS 400–560MB is fine)
+
+Decision: fix this before any more Replit tinkering
+
+You don’t need Replit to “fix” anything if you’ve got a clean-exit landmine.
+
+What to change (minimal + correct)
+1) Make server/mcp/index.ts “CLI-only” (never auto-runs when imported)
+
+Rule: modules must not run main() at top level if they can be imported by the app.
+
+Before (bad pattern):
+
+main();
+process.exit(0);
+
+After (safe pattern):
+
+export async function main() {
+  // ... existing logic
+}
+
+if (require.main === module) {
+  main()
+    .then(() => process.exit(0))
+    .catch((err) => {
+      console.error(err);
+      process.exit(1);
+    });
+}
+
+This ensures main() only runs when the file is executed directly (node server/mcp/index.js), not when it’s imported.
+
+If you’re using ESM ("type": "module"), require.main won’t work. In that case use:
+
+import { fileURLToPath } from "url";
+import path from "path";
+
+const isMain =
+  process.argv[1] &&
+  path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url));
+
+if (isMain) { /* run main */ }
+2) Stop letting process.exit(0) through in the server runtime
+
+Your “process.exit override” allowing exit code 0 is dangerous in a long-running server.
+
+In a server process, any process.exit() is basically a crash (even code 0).
+
+Change your override policy to:
+
+In RUN_MODE=api / all: block all process.exit(), log stack
+
+Only allow exit in actual CLI tools (or when RUN_MODE=cli)
+
+Example:
+
+const originalExit = process.exit.bind(process);
+
+process.exit = ((code?: number) => {
+  const runMode = process.env.RUN_MODE ?? "all";
+  const allowExit = runMode === "cli" || process.env.ALLOW_PROCESS_EXIT === "true";
+
+  if (!allowExit) {
+    console.error(`[BLOCKED process.exit(${code})]`, new Error().stack);
+    return undefined as never;
+  }
+
+  return originalExit(code);
+}) as any;
+3) Find why server/mcp/index.ts is imported
+
+If main() was executing “on import”, it must be getting imported by something in your server path.
+
+Do a fast grep:
+
+import ... from "./mcp"
+
+import "./mcp" (side-effect import)
+
+require("./mcp")
+
+Then fix the import so:
+
+server only imports MCP types/helpers, not the CLI entry
+
+if you need shared code, move shared logic into server/mcp/lib.ts and keep server/mcp/index.ts as the CLI wrapper only.
+
+Recommended structure:
+
+server/mcp/lib.ts → exports functions
+
+server/mcp/index.ts → CLI entrypoint, calls main() only when executed directly
+
+Why your “SIGKILL” conclusion can still happen even with exit(0)
+
+A clean process.exit(0) can look like “killed externally” because:
+
+stdout buffering can drop final lines
+
+Replit’s runner detects death later
+
+your own override may bypass normal teardown/logging
+
+So: treat “no exit event” as suggestive, not definitive.
+
+The fastest validation test
+
+After applying the CLI-guard + blocking exit in server:
+
+Run the app
+
+If it tries to exit, you should now see:
+
+BLOCKED process.exit(0) plus a stack trace pointing to the caller
+
+That gives you an exact callsite.
+
+What I would do next in your shoes (order)
+
+Patch server/mcp/index.ts to not execute on import
+
+Block all process.exit in server runtime
+
+Run again and confirm heartbeats continue past the 8-minute window
+
+Only then do the startup cleanup (orchestrator, idempotent services)

@@ -14,6 +14,14 @@ process.on('unhandledRejection', (reason) => {
   console.error('[process] Unhandled rejection (server kept alive):', reason);
 });
 
+process.on('beforeExit', (code) => {
+  console.error('[forensics] beforeExit — code:', code, '— event loop is empty');
+});
+
+process.on('exit', (code) => {
+  console.error('[forensics] exit — code:', code);
+});
+
 // Vite's custom logger calls process.exit(1) on WebSocket/HMR errors in dev.
 // Override at the top level (before any imports run) so it never kills the server.
 if (process.env.NODE_ENV !== 'production') {
@@ -710,6 +718,16 @@ app.use((req, res, next) => {
       reusePort: true,
     }, () => {
       log(`serving on port ${port}`);
+      console.log('[forensics] server.address():', JSON.stringify(server.address()));
+      // Log memory immediately at startup
+      const startMem = process.memoryUsage();
+      console.log('[forensics] startup memory (MB): rss=' + Math.round(startMem.rss/1e6) + ' heap=' + Math.round(startMem.heapUsed/1e6) + '/' + Math.round(startMem.heapTotal/1e6));
+      // 10-second heartbeat (referenced) — keep the event loop alive and report memory
+      // so we can catch what's happening in the first 60 seconds before any crash
+      const _heartbeat = setInterval(() => {
+        const m = process.memoryUsage();
+        console.log('[forensics] heartbeat — rss=' + Math.round(m.rss/1e6) + 'MB heap=' + Math.round(m.heapUsed/1e6) + '/' + Math.round(m.heapTotal/1e6) + 'MB');
+      }, 10_000);
     });
   };
 
