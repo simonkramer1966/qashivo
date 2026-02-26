@@ -143,22 +143,6 @@ function OnboardingSettingsSection() {
     },
   });
 
-  const fullResetMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/onboarding/full-reset");
-      if (!response.ok) throw new Error("Failed to reset onboarding");
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/onboarding/full-status"] });
-      toast({ title: "Onboarding Reset", description: "All steps reset. Starting from Step 1." });
-      setLocation("/onboarding");
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to reset onboarding.", variant: "destructive" });
-    },
-  });
-
   const rerunAnalysisMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", "/api/onboarding/run-analysis");
@@ -262,17 +246,6 @@ function OnboardingSettingsSection() {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-
-          <Button
-            variant="outline"
-            onClick={() => fullResetMutation.mutate()}
-            disabled={fullResetMutation.isPending}
-            className="h-9 rounded-full border-amber-300 text-amber-700 hover:bg-amber-50 hover:text-amber-800"
-            title="Resets all steps including Step 1 so you can walk through the full flow. Your company data is preserved and will pre-fill."
-          >
-            <RotateCw className="h-4 w-4 mr-2" />
-            {fullResetMutation.isPending ? "Resetting..." : "Test from Step 1"}
-          </Button>
 
           <Button
             variant="outline"
@@ -2090,11 +2063,6 @@ export default function Settings() {
     logoUrl?: string;
   }
 
-  const { data: onboardingStatus } = useQuery<OnboardingStatus>({
-    queryKey: ["/api/onboarding/full-status"],
-  });
-  const onboardingDone = !import.meta.env.DEV && isOnboardingComplete(onboardingStatus);
-
   const { data: accountingStatus } = useQuery<AccountingStatus>({
     queryKey: ['/api/integrations/accounting/status'],
   });
@@ -2354,18 +2322,9 @@ export default function Settings() {
         </div>
         
         <div className="max-w-7xl mx-auto w-full px-6 pb-6">
-            <Tabs defaultValue={!onboardingDone ? "onboarding" : "general"} className="space-y-6">
+            <Tabs defaultValue="general" className="space-y-6">
               <div className="border-b border-gray-100 overflow-x-auto">
                 <TabsList className="bg-transparent h-auto p-0 gap-0">
-                  {!onboardingDone && (
-                    <TabsTrigger
-                      value="onboarding"
-                      className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
-                      data-testid="tab-onboarding"
-                    >
-                      Onboarding
-                    </TabsTrigger>
-                  )}
                   <TabsTrigger 
                     value="general" 
                     className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
@@ -2437,6 +2396,13 @@ export default function Settings() {
                     data-testid="tab-demo-data"
                   >
                     Demo Data
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="onboarding" 
+                    className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
+                    data-testid="tab-onboarding"
+                  >
+                    Onboarding
                   </TabsTrigger>
                 </TabsList>
               </div>

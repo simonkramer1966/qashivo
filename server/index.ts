@@ -7,33 +7,6 @@ import debtorRoutes from "./debtor-routes";
 import { registerPartnerRoutes } from "./routes/partnerRoutes";
 import { startAll } from "./startup/orchestrator";
 
-process.on('uncaughtException', (err) => {
-  console.error('[process] Uncaught exception (server kept alive):', err);
-});
-
-process.on('unhandledRejection', (reason) => {
-  console.error('[process] Unhandled rejection (server kept alive):', reason);
-});
-
-process.on('SIGTERM', () => {
-  console.warn('[process] SIGTERM received — ignoring (server must keep running)');
-});
-
-// SIGHUP is sent by Replit's runner when it detaches the controlling PTY after startup.
-// Without this handler Node.js would terminate silently. We catch it and stay alive.
-process.on('SIGHUP', () => {
-  console.warn('[process] SIGHUP received — ignoring (PTY detach from runner, expected)');
-});
-
-// Block all process.exit() calls — a server must never exit voluntarily.
-// This catches Vite HMR errors, stray CLI guards, seed scripts, and anything else.
-// The stack trace in the log will identify the exact callsite if one fires.
-const _realExit = process.exit.bind(process);
-(process as any).exit = (code?: number) => {
-  const stack = new Error('process.exit() called').stack;
-  console.error(`[BLOCKED] process.exit(${code}) prevented in server runtime.\n${stack}`);
-};
-
 const app = express();
 
 // Stripe webhook needs raw body for signature verification
@@ -221,7 +194,7 @@ app.use((req, res, next) => {
     const message = err.message || "Internal Server Error";
 
     res.status(status).json({ message });
-    console.error('[express] Error handler:', message, err);
+    throw err;
   });
 
   // Serve static assets from attached_assets folder and object storage
@@ -389,35 +362,11 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
-
-  const startListening = () => {
-    server.listen({
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    }, () => {
-      log(`serving on port ${port}`);
-      // Keep-alive interval: prevents the event loop from becoming empty and ensures
-      // the process survives Replit's PTY detach (SIGHUP) without terminating.
-      setInterval(() => {}, 60_000);
-    });
-  };
-
-  server.on("error", (err: NodeJS.ErrnoException) => {
-    if (err.code === "EADDRINUSE") {
-      console.warn(`⚠️  Port ${port} in use — killing zombie process and retrying...`);
-      try {
-        const { execSync } = require("child_process");
-        execSync(`lsof -ti:${port} | xargs -r kill -9`, { stdio: "ignore" });
-      } catch {
-        // ignore if lsof/kill fails
-      }
-      server.close();
-      setTimeout(startListening, 1000);
-    } else {
-      throw err;
-    }
+  server.listen({
+    port,
+    host: "0.0.0.0",
+    reusePort: true,
+  }, () => {
+    log(`serving on port ${port}`);
   });
-
-  startListening();
 })();

@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AlertCircle, RefreshCw } from "lucide-react";
+import { Loader2, AlertCircle, Check } from "lucide-react";
 import type { OnboardingStatus } from "../OnboardingWizard";
 
 interface Props {
@@ -17,21 +17,6 @@ export default function Step6ContactAnalysis({ status, onComplete, onSkip, onBac
   const summary = status?.contactDataSummary;
   const agedSummary = status?.agedDebtorsSummary;
   const smsMobileOptIn = status?.smsMobileOptIn || false;
-
-  const syncFromXeroMutation = useMutation({
-    mutationFn: async () => {
-      const syncRes = await apiRequest("POST", "/api/xero/sync", {});
-      if (!syncRes.ok) throw new Error("Sync failed");
-      await apiRequest("POST", "/api/onboarding/run-analysis");
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/onboarding/full-status"] });
-      toast({ title: "Xero data synced" });
-    },
-    onError: (err: any) => {
-      toast({ title: "Sync failed", description: err.message, variant: "destructive" });
-    },
-  });
 
   const runAnalysisMutation = useMutation({
     mutationFn: async () => {
@@ -107,19 +92,7 @@ export default function Step6ContactAnalysis({ status, onComplete, onSkip, onBac
 
           {agedSummary && (
             <div className="mb-6">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-[13px] font-medium text-gray-900">Aged Debtors Summary</h3>
-                {xeroConnected && (
-                  <button
-                    onClick={() => syncFromXeroMutation.mutate()}
-                    disabled={syncFromXeroMutation.isPending}
-                    className="inline-flex items-center gap-1.5 text-[12px] text-gray-500 hover:text-gray-700 disabled:opacity-50 transition-colors"
-                  >
-                    <RefreshCw className={`w-3 h-3 ${syncFromXeroMutation.isPending ? "animate-spin" : ""}`} />
-                    {syncFromXeroMutation.isPending ? "Syncing..." : "Sync from Xero"}
-                  </button>
-                )}
-              </div>
+              <h3 className="text-[13px] font-medium text-gray-900 mb-3">Aged Debtors Summary</h3>
               <div className="border border-[#e5e7eb] rounded-lg overflow-hidden">
                 <table className="w-full text-[13px]">
                   <thead>

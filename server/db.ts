@@ -16,7 +16,7 @@ export const pool = new Pool({
   max: parseInt(process.env.DB_POOL_MAX || '10'), // Maximum connections, configurable via env
   idleTimeoutMillis: 30000, // Close idle connections after 30 seconds
   connectionTimeoutMillis: 10000, // Timeout when connecting to database
-  allowExitOnIdle: false, // Keep the process alive even when all DB connections are idle
+  allowExitOnIdle: true, // Allow pool to close when all connections are idle
   maxUses: 7500 // Maximum number of times a connection can be used before being closed
 });
 

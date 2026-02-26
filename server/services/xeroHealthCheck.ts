@@ -5,24 +5,19 @@ import { eq, isNotNull, and } from 'drizzle-orm';
 
 export class XeroHealthCheckService {
   private isRunning = false;
-  private task: ReturnType<typeof cron.schedule> | null = null;
 
   async start(): Promise<void> {
+    console.log('🏥 Starting Xero health check service (every 20 minutes)...');
+    
     // Run immediately on startup
     await this.runHealthChecks();
-
-    if (!this.task) {
-      this.task = cron.schedule('*/20 * * * *', async () => {
-        await this.runHealthChecks();
-      });
-    }
-  }
-
-  stop(): void {
-    if (this.task) {
-      this.task.stop();
-      this.task = null;
-    }
+    
+    // Schedule to run every 20 minutes
+    cron.schedule('*/20 * * * *', async () => {
+      await this.runHealthChecks();
+    });
+    
+    console.log('✅ Xero health check service started');
   }
 
   async runHealthChecks(): Promise<void> {
@@ -44,7 +39,6 @@ export class XeroHealthCheckService {
           xeroRefreshToken: tenants.xeroRefreshToken,
           xeroTenantId: tenants.xeroTenantId,
           xeroExpiresAt: tenants.xeroExpiresAt,
-          xeroConnectionStatus: tenants.xeroConnectionStatus,
         })
         .from(tenants)
         .where(isNotNull(tenants.xeroRefreshToken));
@@ -70,7 +64,6 @@ export class XeroHealthCheckService {
     xeroRefreshToken: string | null;
     xeroTenantId: string | null;
     xeroExpiresAt: Date | null;
-    xeroConnectionStatus?: string | null;
   }): Promise<void> {
     console.log(`🏥 Checking Xero connection for tenant: ${tenant.name}`);
 
@@ -100,8 +93,6 @@ export class XeroHealthCheckService {
       const orgInfo = await this.getOrganisationInfo(refreshedTokens.accessToken, refreshedTokens.tenantId);
       
       if (orgInfo.isConnected) {
-        const wasDisconnected = tenant.xeroConnectionStatus !== 'connected';
-
         // Update health check status and organisation name if available
         await db
           .update(tenants)
@@ -115,28 +106,6 @@ export class XeroHealthCheckService {
           .where(eq(tenants.id, tenant.id));
 
         console.log(`✅ Xero connection HEALTHY for tenant: ${tenant.name}${orgInfo.organisationName ? ` (${orgInfo.organisationName})` : ''}`);
-
-        // If this is a recovery (was disconnected → now connected), trigger a background sync
-        if (wasDisconnected) {
-          console.log(`🔄 Triggering recovery sync for tenant: ${tenant.name} (was disconnected)`);
-          const { XeroSyncService } = await import('./xeroSync');
-          const syncService = new XeroSyncService();
-          syncService.syncAllDataForTenant(tenant.id)
-            .then(async (result) => {
-              if (result.success) {
-                console.log(`✅ Recovery sync completed for ${tenant.name}`);
-                try {
-                  const { enqueueDebtorScoringAfterSync } = await import('../jobs/debtorScoringJob');
-                  await enqueueDebtorScoringAfterSync(tenant.id);
-                } catch (err) {
-                  console.error(`[HealthCheck] Failed to enqueue scoring after recovery sync:`, err);
-                }
-              } else {
-                console.error(`❌ Recovery sync failed for ${tenant.name}:`, result.error);
-              }
-            })
-            .catch(err => console.error(`❌ Recovery sync error for ${tenant.name}:`, err));
-        }
       } else {
         await this.updateConnectionStatus(tenant.id, 'error', 'API verification failed');
         console.log(`⚠️ Xero connection ERROR for tenant: ${tenant.name} (API call failed)`);

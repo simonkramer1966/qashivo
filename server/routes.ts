@@ -2128,8 +2128,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: user?.id,
         activityType: "onboarding_restarted",
         category: "audit",
-        action: "updated",
-        result: "success",
         description: "Onboarding progress restarted (integrations preserved)",
         metadata: {},
       });
@@ -2138,32 +2136,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error restarting onboarding:", error);
       res.status(500).json({ message: "Failed to restart onboarding" });
-    }
-  });
-
-  app.post('/api/onboarding/full-reset', isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      const tenantId = user?.tenantId || req.session?.activeTenantId;
-      if (!tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
-
-      await onboardingService.fullResetOnboarding(tenantId);
-
-      await storage.createActivityLog({
-        tenantId,
-        userId: user?.id,
-        activityType: "onboarding_full_reset",
-        category: "audit",
-        action: "updated",
-        result: "success",
-        description: "Onboarding fully reset to Step 1 for testing (company data preserved)",
-        metadata: {},
-      });
-
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error performing full onboarding reset:", error);
-      res.status(500).json({ message: "Failed to reset onboarding" });
     }
   });
 
@@ -2230,8 +2202,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         tenantId,
         userId: user?.id,
         activityType: "debtor_scoring_queued",
-        action: "debtor_scoring_queued",
-        result: "success",
         category: "audit",
         description: "Debtor scoring job queued from onboarding",
         metadata: { jobId: job.id, triggeredBy: "ONBOARDING" },
@@ -2270,8 +2240,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         tenantId,
         userId: user?.id,
         activityType: "debtor_scoring_queued",
-        action: "debtor_scoring_queued",
-        result: "success",
         category: "audit",
         description: "Debtor scoring job queued from settings",
         metadata: { jobId: job.id, triggeredBy: "SETTINGS" },
@@ -15893,7 +15861,6 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       
       // Exact whitelist of allowed internal routes (no prefix matching for maximum safety)
       const allowedRoutes = new Set([
-        '/onboarding',
         '/dashboard',
         '/settings',
         '/settings/integrations',
@@ -16301,7 +16268,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         
         if (isOnboardingComplete) {
           const allowedRoutes = new Set([
-            '/onboarding', '/dashboard', '/settings', '/settings/integrations', '/settings/team',
+            '/dashboard', '/settings', '/settings/integrations', '/settings/team',
             '/settings/billing', '/action-centre', '/contacts', '/invoices',
             '/workflows', '/analytics', '/profile', '/admin',
           ]);

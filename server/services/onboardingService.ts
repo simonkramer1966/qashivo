@@ -64,8 +64,6 @@ export interface OnboardingStatusResponse {
   lastAnalysisAt: Date | null;
   onboardingCompleted: boolean;
   xeroConnected: boolean;
-  xeroOrganisationName: string | null;
-  xeroConnectionHealthy: boolean;
   emailConnected: boolean;
   emailConnectedAddress: string | null;
 }
@@ -114,8 +112,6 @@ export class OnboardingService {
     const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
 
     const xeroConnected = !!(tenant?.xeroAccessToken && tenant?.xeroTenantId);
-    const xeroConnectionHealthy = tenant?.xeroConnectionStatus === 'connected';
-    const xeroOrganisationName = tenant?.xeroOrganisationName || null;
     const emailConnected = !!(tenant?.emailConnectionStatus === 'connected');
 
     if (!progress) {
@@ -133,8 +129,6 @@ export class OnboardingService {
         lastAnalysisAt: null,
         onboardingCompleted: false,
         xeroConnected,
-        xeroOrganisationName,
-        xeroConnectionHealthy,
         emailConnected,
         emailConnectedAddress: tenant?.emailConnectedAddress || null,
       };
@@ -154,8 +148,6 @@ export class OnboardingService {
       lastAnalysisAt: progress.lastAnalysisAt,
       onboardingCompleted: tenant?.onboardingCompleted || false,
       xeroConnected,
-      xeroOrganisationName,
-      xeroConnectionHealthy,
       emailConnected,
       emailConnectedAddress: tenant?.emailConnectedAddress || null,
     };
@@ -217,36 +209,6 @@ export class OnboardingService {
       .update(onboardingProgress)
       .set({
         step1Status: hasCompanyDetails ? "COMPLETED" : "NOT_STARTED",
-        step2Status: "NOT_STARTED",
-        step3Status: "NOT_STARTED",
-        step4Status: "NOT_STARTED",
-        step5Status: "NOT_STARTED",
-        step6Status: "NOT_STARTED",
-        agedDebtorsSummary: null,
-        contactDataSummary: null,
-        lastAnalysisAt: null,
-        completedAt: null,
-        updatedAt: new Date(),
-      })
-      .where(eq(onboardingProgress.tenantId, tenantId));
-
-    await db
-      .update(tenants)
-      .set({
-        onboardingCompleted: false,
-        onboardingCompletedAt: null,
-        updatedAt: new Date(),
-      })
-      .where(eq(tenants.id, tenantId));
-  }
-
-  async fullResetOnboarding(tenantId: string): Promise<void> {
-    await this.ensureProgress(tenantId);
-
-    await db
-      .update(onboardingProgress)
-      .set({
-        step1Status: "NOT_STARTED",
         step2Status: "NOT_STARTED",
         step3Status: "NOT_STARTED",
         step4Status: "NOT_STARTED",
