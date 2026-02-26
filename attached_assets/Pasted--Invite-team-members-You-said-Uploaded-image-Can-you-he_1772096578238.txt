@@ -1,0 +1,176 @@
+
+
+
+
+
+Invite team members
+You said:
+Uploaded image
+Can you help with the bug fixing?
+
+ChatGPT said:
+
+Thought for 1m 5s
+Yep — from your screenshot the real issue showing up in logs is the Xero refresh failing with HTTP 400:
+
+Failed to refresh Xero token: Error: Token refresh failed: 400
+
+stack points to:
+
+server/services/xero.ts:356
+
+server/services/xeroHealthCheck.ts:83
+
+server/index.ts:348
+
+That kind of failure is usually invalid/expired refresh token (e.g. revoked consent, rotated token not stored correctly, tenant disconnected in Xero, wrong client creds, etc.). Even if the app keeps running, this can also create a repeated failure loop (scheduler/health check) that sometimes causes Replit to kill/restart the process.
+
+Here’s what I’d do (fast, trust-safe, and prevents silent crashes):
+
+1) Stop token-refresh failures from ever taking the server down
+Goal: token problems should mark the tenant disconnected + disable sync, not throw in a way that can bubble up.
+
+Patch: refreshAccessToken() in server/services/xero.ts (around line ~356)
+Change behavior on 400 from “throw” → “gracefully disable & require reconnect”.
+
+What to implement:
+
+If refresh returns 400, treat as invalid_grant / revoked / expired
+
+Set in DB:
+
+emailConnectionStatus equivalent for Xero: xeroConnectionStatus = 'DISCONNECTED'
+
+xeroAutoSyncEnabled = false
+
+clear tokens (xeroAccessToken, xeroRefreshToken, xeroTokenExpiresAt)
+
+Return null (or a typed failure result) instead of throwing
+
+Pseudo-code shape:
+
+try {
+  const res = await axios.post(...refresh...);
+
+  // save new tokens (including rotated refresh token!)
+  await db.tenants.update({
+    xeroAccessToken: res.data.access_token,
+    xeroRefreshToken: res.data.refresh_token, // IMPORTANT: rotated
+    xeroTokenExpiresAt: new Date(Date.now() + res.data.expires_in * 1000),
+    xeroConnectionStatus: "CONNECTED",
+  });
+
+  return res.data.access_token;
+} catch (err: any) {
+  const status = err?.response?.status;
+
+  if (status === 400) {
+    await db.tenants.update({
+      xeroConnectionStatus: "DISCONNECTED",
+      xeroAutoSyncEnabled: false,
+      xeroAccessToken: null,
+      xeroRefreshToken: null,
+      xeroTokenExpiresAt: null,
+    });
+
+    logger.warn({ tenantId, status }, "Xero refresh failed (400). Marked disconnected; requires reconnect.");
+    return null;
+  }
+
+  logger.error({ tenantId, status, err }, "Xero refresh failed (non-400).");
+  throw err; // keep throwing for truly unexpected cases
+}
+Why this matters: it prevents a bad token from creating a repeating “crash loop” and gives you a clean “Reconnect Xero” state in UI.
+
+2) Make the Xero health check non-fatal
+Your stack shows the health check is the one calling refresh and then erroring.
+
+Patch: server/services/xeroHealthCheck.ts (around lines ~83 / ~13)
+Ensure the scheduler can never kill the process:
+
+wrap the whole cycle in try/catch
+
+use Promise.allSettled() so one tenant can’t break the run
+
+if refresh returns null → log + continue
+
+Pattern:
+
+export async function runHealthChecks() {
+  try {
+    const tenants = await getTenantsWithXero();
+
+    const results = await Promise.allSettled(
+      tenants.map(t => checkTenantConnection(t))
+    );
+
+    const failed = results.filter(r => r.status === "rejected");
+    if (failed.length) logger.warn({ failed: failed.length }, "Some Xero health checks failed.");
+  } catch (e) {
+    logger.error(e, "Xero health check run failed (non-fatal).");
+  }
+}
+
+async function checkTenantConnection(t) {
+  const token = await refreshAccessToken(t.id);
+  if (!token) return; // disconnected already handled
+  // proceed
+}
+3) Add “catch-all” logging for silent exits
+Because you’re seeing “silent crash”, add these at the top of your server entry (likely server/index.ts):
+
+process.on("unhandledRejection", (reason) => {
+  console.error("UNHANDLED REJECTION:", reason);
+});
+
+process.on("uncaughtException", (err) => {
+  console.error("UNCAUGHT EXCEPTION:", err);
+});
+Also, if you have any process.exit() calls (you mentioned earlier Vite startup + overrides), make sure they’re not being triggered by a background job failure.
+
+4) Confirm you’re storing the rotated refresh token
+Xero refresh tokens rotate. If you refresh successfully but fail to persist the new refresh token (refresh_token), the next refresh attempt often becomes a 400.
+
+So double-check you are saving:
+
+access_token
+
+refresh_token (new one every refresh)
+
+expires_in
+
+If you only save access_token, you’ll get exactly what you’re seeing.
+
+5) Quick operational fix (to unblock right now)
+While you patch, you can stop the repeated loop:
+
+In DB: set xeroAutoSyncEnabled = false for Nexus KPI Limited
+
+Or temporarily disable the Xero scheduler / health check job
+
+Then reconnect Xero in the UI once the “disconnect on 400” logic is in place
+
+Notes on other log lines
+/api/user 401 {"message":"Not authenticated"} is normal if you’re hitting an endpoint without a session.
+
+browserslist is 16 months old won’t crash the server.
+
+If you paste the code from:
+
+server/services/xero.ts around refreshAccessToken (line ~330–380)
+
+server/services/xeroHealthCheck.ts (top + around line ~70–100)
+
+…I’ll rewrite the exact patches against your current codebase (no guessing), including the DB updates + status fields you already use.
+
+(Also: for product intent—this is a good example of “trust-first supervised autonomy”: external integrations should degrade gracefully and never take the core workflow down. 
+Qashivo Deck
+
+)
+
+
+Sources
+
+
+
+

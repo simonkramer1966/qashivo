@@ -14,6 +14,16 @@ process.on('unhandledRejection', (reason) => {
   console.error('[process] Unhandled rejection (server kept alive):', reason);
 });
 
+// Vite's custom logger calls process.exit(1) on WebSocket/HMR errors in dev.
+// Override at the top level (before any imports run) so it never kills the server.
+if (process.env.NODE_ENV !== 'production') {
+  const _realExit = process.exit.bind(process);
+  (process as any).exit = (code?: number) => {
+    if (code === 0 || code === undefined) return _realExit(code as any);
+    console.error(`[dev] process.exit(${code}) suppressed — likely a non-fatal Vite HMR/WebSocket error. Server keeps running.`);
+  };
+}
+
 const app = express();
 
 // Stripe webhook needs raw body for signature verification
