@@ -684,11 +684,32 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
+
+  const startListening = () => {
+    server.listen({
+      port,
+      host: "0.0.0.0",
+      reusePort: true,
+    }, () => {
+      log(`serving on port ${port}`);
+    });
+  };
+
+  server.on("error", (err: NodeJS.ErrnoException) => {
+    if (err.code === "EADDRINUSE") {
+      console.warn(`⚠️  Port ${port} in use — killing zombie process and retrying...`);
+      try {
+        const { execSync } = require("child_process");
+        execSync(`lsof -ti:${port} | xargs -r kill -9`, { stdio: "ignore" });
+      } catch {
+        // ignore if lsof/kill fails
+      }
+      server.close();
+      setTimeout(startListening, 1000);
+    } else {
+      throw err;
+    }
   });
+
+  startListening();
 })();
