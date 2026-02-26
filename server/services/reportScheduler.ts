@@ -9,6 +9,7 @@ const CHECK_INTERVAL_MS = 5 * 60 * 1000;
 let intervalHandle: ReturnType<typeof setInterval> | null = null;
 
 export function startReportScheduler() {
+  if (intervalHandle) { return; }
   console.log('📊 Starting report scheduler (checking every 5 minutes)');
 
   runDueReports().catch(err => console.error('[ReportScheduler] Initial run error:', err));

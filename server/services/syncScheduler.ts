@@ -152,8 +152,3 @@ class SyncScheduler {
 
 // Export singleton instance
 export const syncScheduler = new SyncScheduler();
-
-// Auto-start scheduler in production
-if (process.env.NODE_ENV === 'production') {
-  syncScheduler.start();
-}

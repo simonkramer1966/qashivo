@@ -5,19 +5,24 @@ import { eq, isNotNull, and } from 'drizzle-orm';
 
 export class XeroHealthCheckService {
   private isRunning = false;
+  private task: ReturnType<typeof cron.schedule> | null = null;
 
   async start(): Promise<void> {
-    console.log('🏥 Starting Xero health check service (every 20 minutes)...');
-    
     // Run immediately on startup
     await this.runHealthChecks();
-    
-    // Schedule to run every 20 minutes
-    cron.schedule('*/20 * * * *', async () => {
-      await this.runHealthChecks();
-    });
-    
-    console.log('✅ Xero health check service started');
+
+    if (!this.task) {
+      this.task = cron.schedule('*/20 * * * *', async () => {
+        await this.runHealthChecks();
+      });
+    }
+  }
+
+  stop(): void {
+    if (this.task) {
+      this.task.stop();
+      this.task = null;
+    }
   }
 
   async runHealthChecks(): Promise<void> {
