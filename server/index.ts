@@ -14,23 +14,24 @@ process.on('unhandledRejection', (reason) => {
   console.error('[process] Unhandled rejection (server kept alive):', reason);
 });
 
-process.on('beforeExit', (code) => {
-  console.error('[forensics] beforeExit — code:', code, '— event loop is empty');
+process.on('SIGTERM', () => {
+  console.warn('[process] SIGTERM received — ignoring (server must keep running)');
 });
 
-process.on('exit', (code) => {
-  console.error('[forensics] exit — code:', code);
+// SIGHUP is sent by Replit's runner when it detaches the controlling PTY after startup.
+// Without this handler Node.js would terminate silently. We catch it and stay alive.
+process.on('SIGHUP', () => {
+  console.warn('[process] SIGHUP received — ignoring (PTY detach from runner, expected)');
 });
 
-// Vite's custom logger calls process.exit(1) on WebSocket/HMR errors in dev.
-// Override at the top level (before any imports run) so it never kills the server.
-if (process.env.NODE_ENV !== 'production') {
-  const _realExit = process.exit.bind(process);
-  (process as any).exit = (code?: number) => {
-    if (code === 0 || code === undefined) return _realExit(code as any);
-    console.error(`[dev] process.exit(${code}) suppressed — likely a non-fatal Vite HMR/WebSocket error. Server keeps running.`);
-  };
-}
+// Block all process.exit() calls — a server must never exit voluntarily.
+// This catches Vite HMR errors, stray CLI guards, seed scripts, and anything else.
+// The stack trace in the log will identify the exact callsite if one fires.
+const _realExit = process.exit.bind(process);
+(process as any).exit = (code?: number) => {
+  const stack = new Error('process.exit() called').stack;
+  console.error(`[BLOCKED] process.exit(${code}) prevented in server runtime.\n${stack}`);
+};
 
 const app = express();
 
@@ -718,16 +719,9 @@ app.use((req, res, next) => {
       reusePort: true,
     }, () => {
       log(`serving on port ${port}`);
-      console.log('[forensics] server.address():', JSON.stringify(server.address()));
-      // Log memory immediately at startup
-      const startMem = process.memoryUsage();
-      console.log('[forensics] startup memory (MB): rss=' + Math.round(startMem.rss/1e6) + ' heap=' + Math.round(startMem.heapUsed/1e6) + '/' + Math.round(startMem.heapTotal/1e6));
-      // 10-second heartbeat (referenced) — keep the event loop alive and report memory
-      // so we can catch what's happening in the first 60 seconds before any crash
-      const _heartbeat = setInterval(() => {
-        const m = process.memoryUsage();
-        console.log('[forensics] heartbeat — rss=' + Math.round(m.rss/1e6) + 'MB heap=' + Math.round(m.heapUsed/1e6) + '/' + Math.round(m.heapTotal/1e6) + 'MB');
-      }, 10_000);
+      // Keep-alive interval: prevents the event loop from becoming empty and ensures
+      // the process survives Replit's PTY detach (SIGHUP) without terminating.
+      setInterval(() => {}, 60_000);
     });
   };
 

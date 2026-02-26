@@ -7,6 +7,9 @@ import { registerEmailTools } from "./tools/email.js";
 import { registerCallOutcomeTools } from "./tools/callOutcomes.js";
 import { createRetellClient } from "./client.js";
 
+import { fileURLToPath } from "url";
+import path from "path";
+
 function createMcpServer() {
   const retellApiKey = process.env.RETELL_API_KEY;
   if (!retellApiKey) {
@@ -28,25 +31,31 @@ function createMcpServer() {
   return mcpServer;
 }
 
-async function main() {
-  try {
-    const mcpServer = createMcpServer();
-    const transport = new StdioServerTransport();
-    await mcpServer.connect(transport);
+export async function main() {
+  const mcpServer = createMcpServer();
+  const transport = new StdioServerTransport();
+  await mcpServer.connect(transport);
 
-    process.on("SIGINT", async () => {
-      try {
-        await mcpServer.close();
-        process.exit(0);
-      } catch (err) {
-        console.error("Error shutting down MCP server:", err);
-        process.exit(1);
-      }
-    });
-  } catch (err) {
-    console.error("Error starting MCP server:", err);
-    process.exit(1);
-  }
+  process.on("SIGINT", async () => {
+    try {
+      await mcpServer.close();
+    } catch (err) {
+      console.error("Error shutting down MCP server:", err);
+    }
+  });
 }
 
-main();
+const isMain =
+  process.argv[1] !== undefined &&
+  path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url));
+
+if (isMain) {
+  main()
+    .then(() => {
+      process.exit(0);
+    })
+    .catch((err) => {
+      console.error("Error starting MCP server:", err);
+      process.exit(1);
+    });
+}

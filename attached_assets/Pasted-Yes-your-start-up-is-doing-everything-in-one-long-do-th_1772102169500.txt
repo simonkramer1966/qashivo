@@ -1,0 +1,173 @@
+Yes — your start-up is doing everything in one long “do-this-do-that” chain, with duplicated init, duplicated “service started” logs, and background jobs firing before you’ve even got a stable “app is healthy” state.
+
+Here’s a clean, fast way to make it sane (and way easier to debug on Replit).
+
+The target shape: 3 phases + one orchestrator
+Phase 0 — Config + wiring (no side effects)
+
+Load env + validate required config
+
+Create logger
+
+Create DB pool once
+
+Create provider registry (Xero/SendGrid/Retell/Vonage) without starting schedulers
+
+✅ Output: a context object (ctx) that everything shares.
+
+Phase 1 — HTTP app up (minimal side effects)
+
+Build Express app + middleware + routes
+
+Start server listening
+
+Only after listen() succeeds, mark “API ready”
+
+✅ Output: you can hit /health immediately.
+
+Phase 2 — Background services (side effects, scheduled loops)
+
+Email polling
+
+Xero schedulers
+
+Health checks
+
+PTP breach detector
+
+Reports scheduler
+
+Workflow timer processor
+
+Debtor scoring worker
+
+Portfolio controller cron
+
+✅ Each service has: start(ctx) + stop() and is idempotent (calling start twice doesn’t create two loops).
+
+What your logs are telling me to fix
+1) Duplicate DB connections
+
+You have “New database connection established” twice. That usually means:
+
+the DB module is being imported twice with side-effects, or
+
+you’re calling connect() in two separate init paths (e.g. master admin check + session store).
+
+Fix: Create a single db/pool in one place and pass it everywhere. No module should auto-connect on import.
+
+2) Duplicate service starts
+
+You have:
+
+✅ Xero health check service started twice
+
+✅ Workflow timer processor started twice
+
+provider “registered” and “✅ provider registered” duplicates
+
+This is classic “called init twice” or “start() called from both constructor and index.ts”.
+
+Fix: enforce a single orchestrator that starts services once, and make each service idempotent.
+
+3) Background jobs should not block startup or spam errors
+
+Your Xero refresh 400 is expected in real life (revoked token). It shouldn’t show up as a scary stack trace on every boot.
+
+Fix: treat token refresh 400 as “DISCONNECTED → needs reconnect”, not an exception cascade.
+
+Concrete refactor plan (minimal, 1–2 hours)
+A) Create server/bootstrap.ts
+
+Exports a single function:
+
+createContext() (config, logger, db, provider registry)
+
+createHttpApp(ctx) (express app)
+
+startBackgroundServices(ctx) (all schedulers)
+
+Then server/index.ts becomes ~30 lines.
+
+B) Service interface (super simple)
+
+Every background thing follows:
+
+start(ctx): Promise<void>
+
+stop(): Promise<void>
+
+internal guard: if (this.running) return;
+
+C) One registry for services
+
+So you can start them in order and stop gracefully on SIGTERM.
+
+Also makes it easy to run “API only” mode (useful on Replit / debugging):
+
+RUN_MODE=api → no schedulers
+
+RUN_MODE=worker → no HTTP, only background jobs
+
+RUN_MODE=all → both
+
+This alone will stop a lot of silent “Replit killed my process” weirdness.
+
+Make startup output readable (and useful)
+
+Right now it’s noisy and partially redundant. I’d change it to a “startup summary” at the end:
+
+During startup: only major milestones
+
+✅ Config validated
+
+✅ DB connected
+
+✅ Providers registered: xero, sendgrid, retell, vonage
+
+✅ API listening on :5000
+
+✅ Background services started: emailPolling, xeroSync, ptpBreach, reports, workflowTimers, scoringWorker, portfolioCron
+
+Then print a single table-like summary
+
+Example:
+
+Xero: CONNECTED (1 tenant), AUTO-SYNC (1), DISCONNECTED (0)
+
+Email polling: enabled (1 tenant)
+
+WebSocket: disabled (flag)
+
+Schedulers: running (7)
+
+This gives you “am I good?” in 3 seconds.
+
+Fix the “Xero refresh 400” spam as part of clean boot
+
+On boot, you probably don’t need to run a Xero health check immediately. Do one of:
+
+delay health checks by 60–120s after start
+
+or run them only on a schedule, not at boot
+
+and if refresh fails with 400: mark disconnected + stop retrying until reconnect
+
+Quick wins you can do immediately (no big refactor)
+
+Add “start-once” guards to:
+
+XeroHealthCheckService.start()
+
+WorkflowTimerProcessor.start()
+
+Any polling loops
+
+Remove “start” calls from constructors
+Constructors should only set up state, never kick off timers/intervals.
+
+Delay background services until after server listens
+So startup errors are attributed correctly, and your API is reachable even if integrations fail.
+
+Config validation up front
+Fail fast with a clear error only for truly required stuff. Everything else should degrade gracefully.
