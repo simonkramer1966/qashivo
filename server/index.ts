@@ -6,6 +6,14 @@ import { setupVite, serveStatic, log } from "./vite";
 import debtorRoutes from "./debtor-routes";
 import { registerPartnerRoutes } from "./routes/partnerRoutes";
 
+process.on('uncaughtException', (err) => {
+  console.error('[process] Uncaught exception (server kept alive):', err);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[process] Unhandled rejection (server kept alive):', reason);
+});
+
 const app = express();
 
 // Stripe webhook needs raw body for signature verification
@@ -516,7 +524,7 @@ app.use((req, res, next) => {
     const message = err.message || "Internal Server Error";
 
     res.status(status).json({ message });
-    throw err;
+    console.error('[express] Error handler:', message, err);
   });
 
   // Serve static assets from attached_assets folder and object storage
