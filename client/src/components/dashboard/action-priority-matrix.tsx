@@ -415,8 +415,8 @@ const PriorityScatterTooltip = ({ active, payload }: PriorityScatterTooltipProps
     <div className="glass-card p-4 shadow-lg min-w-[360px] max-w-[400px]">
       <div className="flex items-center justify-between mb-3">
         <div>
-          <p className="font-semibold text-slate-900 text-sm">{item.customerName}</p>
-          <p className="text-xs text-slate-600">{item.companyName}</p>
+          <p className="font-semibold text-foreground text-sm">{item.customerName}</p>
+          <p className="text-xs text-muted-foreground">{item.companyName}</p>
         </div>
         <Badge className={`${config.bgColor} ${config.textColor} text-xs`}>
           {config.label}
@@ -426,14 +426,14 @@ const PriorityScatterTooltip = ({ active, payload }: PriorityScatterTooltipProps
       <div className="space-y-2 text-sm">
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <span className="text-slate-600">Amount:</span>
+            <span className="text-muted-foreground">Amount:</span>
             <span className="font-medium text-[#17B6C3] ml-2">
               ${item.amount.toLocaleString()}
             </span>
           </div>
           <div>
-            <span className="text-slate-600">Overdue:</span>
-            <span className="font-medium text-slate-900 ml-2">
+            <span className="text-muted-foreground">Overdue:</span>
+            <span className="font-medium text-foreground ml-2">
               {item.daysOverdue} days
             </span>
           </div>
@@ -441,14 +441,14 @@ const PriorityScatterTooltip = ({ active, payload }: PriorityScatterTooltipProps
         
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <span className="text-slate-600">Urgency:</span>
-            <span className="font-medium text-slate-900 ml-2">
+            <span className="text-muted-foreground">Urgency:</span>
+            <span className="font-medium text-foreground ml-2">
               {item.urgencyScore}/100
             </span>
           </div>
           <div>
-            <span className="text-slate-600">Impact:</span>
-            <span className="font-medium text-slate-900 ml-2">
+            <span className="text-muted-foreground">Impact:</span>
+            <span className="font-medium text-foreground ml-2">
               {item.impactScore}/100
             </span>
           </div>
@@ -456,23 +456,23 @@ const PriorityScatterTooltip = ({ active, payload }: PriorityScatterTooltipProps
         
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <span className="text-slate-600">Recovery:</span>
+            <span className="text-muted-foreground">Recovery:</span>
             <span className={`font-medium ml-2 ${item.estimatedRecoveryProbability >= 70 ? 'text-green-600' : item.estimatedRecoveryProbability >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>
               {item.estimatedRecoveryProbability}%
             </span>
           </div>
           <div>
-            <span className="text-slate-600">Attempts:</span>
-            <span className="font-medium text-slate-900 ml-2">
+            <span className="text-muted-foreground">Attempts:</span>
+            <span className="font-medium text-foreground ml-2">
               {item.contactAttempts}
             </span>
           </div>
         </div>
         
-        <div className="pt-2 border-t border-slate-200">
-          <p className="text-slate-600 text-xs mb-1">Next Best Action:</p>
+        <div className="pt-2 border-t border-border">
+          <p className="text-muted-foreground text-xs mb-1">Next Best Action:</p>
           <div className="flex items-center justify-between">
-            <span className="font-medium text-slate-900 text-xs">
+            <span className="font-medium text-foreground text-xs">
               {item.nextBestAction.description}
             </span>
             <span className="font-medium text-[#17B6C3] text-xs">
@@ -481,9 +481,9 @@ const PriorityScatterTooltip = ({ active, payload }: PriorityScatterTooltipProps
           </div>
         </div>
         
-        <div className="pt-2 border-t border-slate-200">
-          <p className="text-slate-600 text-xs mb-1">Est. Resolution:</p>
-          <p className="font-medium text-slate-900 text-xs">
+        <div className="pt-2 border-t border-border">
+          <p className="text-muted-foreground text-xs mb-1">Est. Resolution:</p>
+          <p className="font-medium text-foreground text-xs">
             {item.timeToResolve} days · ${(item.amount * item.estimatedRecoveryProbability / 100).toLocaleString()} expected
           </p>
         </div>
@@ -876,7 +876,7 @@ export default function ActionPriorityMatrix() {
             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <AlertTriangle className="h-8 w-8 text-red-600" />
             </div>
-            <p className="text-lg font-semibold text-slate-900 mb-2">Unable to load priority matrix</p>
+            <p className="text-lg font-semibold text-foreground mb-2">Unable to load priority matrix</p>
             <p className="text-sm text-muted-foreground">Please try again later</p>
           </div>
         </CardContent>
@@ -900,7 +900,7 @@ export default function ActionPriorityMatrix() {
             <div className="w-16 h-16 bg-[#17B6C3]/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle className="h-8 w-8 text-[#17B6C3]" />
             </div>
-            <p className="text-lg font-semibold text-slate-900 mb-2">All accounts current</p>
+            <p className="text-lg font-semibold text-foreground mb-2">All accounts current</p>
             <p className="text-sm text-muted-foreground">No overdue accounts requiring action</p>
           </div>
         </CardContent>
@@ -997,7 +997,7 @@ export default function ActionPriorityMatrix() {
                     </div>
                     <div className={`text-xs ${
                       metric.changeType === 'increase' ? 'text-red-600' : 
-                      metric.changeType === 'decrease' ? 'text-green-600' : 'text-slate-600'
+                      metric.changeType === 'decrease' ? 'text-green-600' : 'text-muted-foreground'
                     }`}>
                       {metric.changeType === 'increase' && <ArrowUp className="h-3 w-3 inline mr-1" />}
                       {metric.changeType === 'decrease' && <ArrowRight className="h-3 w-3 inline mr-1 rotate-180" />}
@@ -1005,8 +1005,8 @@ export default function ActionPriorityMatrix() {
                     </div>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-600 mb-1">{metric.title}</p>
-                    <p className="text-xl font-bold text-gray-900" data-testid={`${metric.testId}-value`}>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">{metric.title}</p>
+                    <p className="text-xl font-bold text-foreground" data-testid={`${metric.testId}-value`}>
                       {metric.value}
                     </p>
                   </div>
@@ -1016,11 +1016,11 @@ export default function ActionPriorityMatrix() {
           </div>
 
           {/* Filters and Controls */}
-          <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-slate-50/50 rounded-lg border border-slate-200/50">
+          <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-muted/50 rounded-lg border border-border/50">
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
-                <Filter className="h-4 w-4 text-slate-500" />
-                <span className="text-sm font-medium text-slate-700">Filters:</span>
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium text-foreground">Filters:</span>
               </div>
               
               <Select
@@ -1051,7 +1051,7 @@ export default function ActionPriorityMatrix() {
                   }))}
                   data-testid="checkbox-actionable-only"
                 />
-                <label htmlFor="actionable-only" className="text-sm text-slate-700">
+                <label htmlFor="actionable-only" className="text-sm text-foreground">
                   Actionable only
                 </label>
               </div>
@@ -1059,7 +1059,7 @@ export default function ActionPriorityMatrix() {
 
             {selectedItems.size > 0 && (
               <div className="flex items-center space-x-2">
-                <span className="text-sm text-slate-600">Bulk actions:</span>
+                <span className="text-sm text-muted-foreground">Bulk actions:</span>
                 <Button
                   size="sm"
                   variant="outline"
@@ -1187,23 +1187,23 @@ export default function ActionPriorityMatrix() {
                         onCheckedChange={handleSelectAll}
                         data-testid="checkbox-select-all"
                       />
-                      <span className="text-sm text-slate-600">Select All</span>
+                      <span className="text-sm text-muted-foreground">Select All</span>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
                     <table className="w-full" data-testid="table-action-queue">
-                      <thead className="bg-slate-50/50 border-b border-slate-200/50">
+                      <thead className="bg-muted/50 border-b border-border/50">
                         <tr>
-                          <th className="text-left p-4 text-sm font-medium text-slate-700">Select</th>
-                          <th className="text-left p-4 text-sm font-medium text-slate-700">Priority</th>
-                          <th className="text-left p-4 text-sm font-medium text-slate-700">Customer</th>
-                          <th className="text-left p-4 text-sm font-medium text-slate-700">Amount</th>
-                          <th className="text-left p-4 text-sm font-medium text-slate-700">Days</th>
-                          <th className="text-left p-4 text-sm font-medium text-slate-700">Recovery</th>
-                          <th className="text-left p-4 text-sm font-medium text-slate-700">Next Action</th>
-                          <th className="text-left p-4 text-sm font-medium text-slate-700">Actions</th>
+                          <th className="text-left p-4 text-sm font-medium text-foreground">Select</th>
+                          <th className="text-left p-4 text-sm font-medium text-foreground">Priority</th>
+                          <th className="text-left p-4 text-sm font-medium text-foreground">Customer</th>
+                          <th className="text-left p-4 text-sm font-medium text-foreground">Amount</th>
+                          <th className="text-left p-4 text-sm font-medium text-foreground">Days</th>
+                          <th className="text-left p-4 text-sm font-medium text-foreground">Recovery</th>
+                          <th className="text-left p-4 text-sm font-medium text-foreground">Next Action</th>
+                          <th className="text-left p-4 text-sm font-medium text-foreground">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200/50">
@@ -1212,7 +1212,7 @@ export default function ActionPriorityMatrix() {
                           return (
                             <tr 
                               key={item.id} 
-                              className={`hover:bg-slate-50/50 ${selectedItems.has(item.id) ? 'bg-[#17B6C3]/5 border-l-4 border-l-[#17B6C3]' : ''}`}
+                              className={`hover:bg-muted/50 ${selectedItems.has(item.id) ? 'bg-[#17B6C3]/5 border-l-4 border-l-[#17B6C3]' : ''}`}
                               data-testid={`row-action-item-${item.id}`}
                             >
                               <td className="p-4">
@@ -1230,13 +1230,13 @@ export default function ActionPriorityMatrix() {
                               </td>
                               <td className="p-4">
                                 <div>
-                                  <p className="font-medium text-slate-900 text-sm" data-testid={`text-customer-${item.id}`}>
+                                  <p className="font-medium text-foreground text-sm" data-testid={`text-customer-${item.id}`}>
                                     {item.customerName}
                                   </p>
-                                  <p className="text-xs text-slate-600">
+                                  <p className="text-xs text-muted-foreground">
                                     {item.companyName}
                                   </p>
-                                  <p className="text-xs text-slate-600">
+                                  <p className="text-xs text-muted-foreground">
                                     #{item.invoiceNumber}
                                   </p>
                                 </div>
@@ -1247,7 +1247,7 @@ export default function ActionPriorityMatrix() {
                                 </p>
                               </td>
                               <td className="p-4">
-                                <p className={`font-medium ${item.daysOverdue > 30 ? 'text-red-600' : item.daysOverdue > 14 ? 'text-orange-600' : 'text-slate-900'}`}>
+                                <p className={`font-medium ${item.daysOverdue > 30 ? 'text-red-600' : item.daysOverdue > 14 ? 'text-orange-600' : 'text-foreground'}`}>
                                   {item.daysOverdue}
                                 </p>
                               </td>
@@ -1259,17 +1259,17 @@ export default function ActionPriorityMatrix() {
                                       style={{ width: `${item.estimatedRecoveryProbability}%` }}
                                     />
                                   </div>
-                                  <span className="text-xs text-slate-600">
+                                  <span className="text-xs text-muted-foreground">
                                     {item.estimatedRecoveryProbability}%
                                   </span>
                                 </div>
                               </td>
                               <td className="p-4">
                                 <div className="max-w-32">
-                                  <p className="text-sm font-medium text-slate-900 truncate">
+                                  <p className="text-sm font-medium text-foreground truncate">
                                     {item.nextBestAction.description || 'No action defined'}
                                   </p>
-                                  <p className="text-xs text-slate-600">
+                                  <p className="text-xs text-muted-foreground">
                                     {item.nextBestAction.estimatedEffectiveness}% effective
                                   </p>
                                 </div>
@@ -1317,8 +1317,8 @@ export default function ActionPriorityMatrix() {
                   </div>
                   
                   {filteredItems.length > 20 && (
-                    <div className="p-4 border-t border-slate-200/50 text-center">
-                      <p className="text-sm text-slate-600">
+                    <div className="p-4 border-t border-border/50 text-center">
+                      <p className="text-sm text-muted-foreground">
                         Showing top 20 of {filteredItems.length} actionable accounts
                       </p>
                       <Button variant="outline" size="sm" className="mt-2" data-testid="button-view-all-queue">
@@ -1342,20 +1342,20 @@ export default function ActionPriorityMatrix() {
                   <CardContent className="p-6">
                     <div className="space-y-4">
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-slate-600">Weekly Recovery Rate</span>
-                        <span className="font-medium text-slate-900">{Math.round(trends.weeklyRecoveryRate)}%</span>
+                        <span className="text-sm text-muted-foreground">Weekly Recovery Rate</span>
+                        <span className="font-medium text-foreground">{Math.round(trends.weeklyRecoveryRate)}%</span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-slate-600">Monthly Recovery Rate</span>
-                        <span className="font-medium text-slate-900">{Math.round(trends.monthlyRecoveryRate)}%</span>
+                        <span className="text-sm text-muted-foreground">Monthly Recovery Rate</span>
+                        <span className="font-medium text-foreground">{Math.round(trends.monthlyRecoveryRate)}%</span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-slate-600">Action Success Rate</span>
-                        <span className="font-medium text-slate-900">{Math.round(trends.actionSuccessRate)}%</span>
+                        <span className="text-sm text-muted-foreground">Action Success Rate</span>
+                        <span className="font-medium text-foreground">{Math.round(trends.actionSuccessRate)}%</span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-slate-600">Avg Resolution Time</span>
-                        <span className="font-medium text-slate-900">{Math.round(trends.averageResolutionTime)} days</span>
+                        <span className="text-sm text-muted-foreground">Avg Resolution Time</span>
+                        <span className="font-medium text-foreground">{Math.round(trends.averageResolutionTime)} days</span>
                       </div>
                     </div>
                   </CardContent>
@@ -1372,9 +1372,9 @@ export default function ActionPriorityMatrix() {
                       <div className="p-3 bg-[#17B6C3]/5 rounded-lg border border-[#17B6C3]/20">
                         <div className="flex items-center mb-2">
                           <Zap className="h-4 w-4 text-[#17B6C3] mr-2" />
-                          <span className="font-medium text-slate-900 text-sm">High Impact Actions</span>
+                          <span className="font-medium text-foreground text-sm">High Impact Actions</span>
                         </div>
-                        <p className="text-xs text-slate-600">
+                        <p className="text-xs text-muted-foreground">
                           Focus on {summary.criticalCount} critical accounts first. Est. recovery: ${Math.round(summary.estimatedRecoveryValue * 0.3).toLocaleString()}
                         </p>
                       </div>
@@ -1382,9 +1382,9 @@ export default function ActionPriorityMatrix() {
                       <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
                         <div className="flex items-center mb-2">
                           <Clock className="h-4 w-4 text-yellow-600 mr-2" />
-                          <span className="font-medium text-slate-900 text-sm">Time Optimization</span>
+                          <span className="font-medium text-foreground text-sm">Time Optimization</span>
                         </div>
-                        <p className="text-xs text-slate-600">
+                        <p className="text-xs text-muted-foreground">
                           Batch email {selectedItems.size > 0 ? selectedItems.size : Math.min(10, filteredItems.length)} accounts to save 2 hours today
                         </p>
                       </div>
@@ -1392,9 +1392,9 @@ export default function ActionPriorityMatrix() {
                       <div className="p-3 bg-green-50 rounded-lg border border-green-200">
                         <div className="flex items-center mb-2">
                           <TrendingUp className="h-4 w-4 text-green-600 mr-2" />
-                          <span className="font-medium text-slate-900 text-sm">Success Pattern</span>
+                          <span className="font-medium text-foreground text-sm">Success Pattern</span>
                         </div>
-                        <p className="text-xs text-slate-600">
+                        <p className="text-xs text-muted-foreground">
                           Phone calls have {Math.round(trends.actionSuccessRate + 15)}% higher success rate than emails
                         </p>
                       </div>

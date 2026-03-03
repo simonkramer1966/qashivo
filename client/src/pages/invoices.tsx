@@ -249,13 +249,13 @@ export default function Invoices() {
           subtitle="Qashivo manages collections automatically. Review is only needed when something is flagged."
           action={
             <div className="relative w-[280px]">
-              <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-slate-300" />
+              <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <input
                 type="text"
                 placeholder="Find an invoice…"
                 value={search}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                className="w-full pl-8 pr-3 h-8 text-[12px] text-muted-foreground placeholder:text-slate-300 bg-transparent border border-border/60 rounded focus:outline-none focus:border-slate-300 transition-colors"
+                className="w-full pl-8 pr-3 h-8 text-[12px] text-muted-foreground placeholder:text-muted-foreground bg-transparent border border-border/60 rounded focus:outline-none focus:border-border transition-colors"
                 data-testid="input-search-invoices"
               />
             </div>
@@ -273,7 +273,7 @@ export default function Invoices() {
                   onClick={() => setAgeingFilter('all')}
                 >
                   <p className="text-[12px] text-muted-foreground mb-1 flex items-center gap-2">
-                    <span className="inline-block w-2.5 h-2.5 rounded-full border border-slate-300 bg-background" />
+                    <span className="inline-block w-2.5 h-2.5 rounded-full border border-border bg-background" />
                     Total
                   </p>
                   <p className="text-[20px] font-semibold text-foreground tabular-nums">
@@ -373,7 +373,7 @@ export default function Invoices() {
                 ))
               ) : invoices.length === 0 ? (
                 <div className="py-12 text-center">
-                  <FileText className="h-10 w-10 mx-auto mb-3 text-slate-300" />
+                  <FileText className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
                   <p className="text-[13px] text-muted-foreground">No invoices found</p>
                 </div>
               ) : (
@@ -415,7 +415,7 @@ export default function Invoices() {
                             )}
                           </div>
                         </div>
-                        <ChevronRight className="h-4 w-4 text-slate-300 flex-shrink-0" />
+                        <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                       </div>
                     </div>
                   );
@@ -434,7 +434,7 @@ export default function Invoices() {
                 </div>
               ) : invoices.length === 0 ? (
                 <div className="py-16 text-center border-t border-border">
-                  <FileText className="h-10 w-10 mx-auto mb-3 text-slate-300" />
+                  <FileText className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
                   <p className="text-[13px] text-muted-foreground">No invoices found</p>
                 </div>
               ) : (

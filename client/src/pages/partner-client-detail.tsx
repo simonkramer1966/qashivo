@@ -152,7 +152,7 @@ export default function PartnerClientDetail() {
     return (
       <div className="flex h-screen bg-white">
         <main className="flex-1 overflow-y-auto">
-          <div className="sticky top-0 z-40 bg-white border-b border-slate-100">
+          <div className="sticky top-0 z-40 bg-white border-b border-border/50">
             <div className="px-6 lg:px-8 py-5">
               <Skeleton className="h-5 w-48" />
               <Skeleton className="h-4 w-32 mt-1" />
@@ -171,18 +171,18 @@ export default function PartnerClientDetail() {
     return (
       <div className="flex h-screen bg-white">
         <main className="flex-1 overflow-y-auto">
-          <div className="sticky top-0 z-40 bg-white border-b border-slate-100">
+          <div className="sticky top-0 z-40 bg-white border-b border-border/50">
             <div className="px-6 lg:px-8 py-5">
-              <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight">Client Details</h2>
+              <h2 className="text-[17px] font-semibold text-foreground tracking-tight">Client Details</h2>
             </div>
           </div>
           <div className="p-6 lg:p-8">
             <div className="py-16 text-center">
-              <AlertCircle className="w-10 h-10 text-slate-300 mx-auto mb-4" />
-              <p className="text-[15px] font-medium text-slate-900 mb-1">Client not found</p>
-              <p className="text-[13px] text-slate-400 mb-6">The client you're looking for doesn't exist or you don't have access.</p>
+              <AlertCircle className="w-10 h-10 text-muted-foreground mx-auto mb-4" />
+              <p className="text-[15px] font-medium text-foreground mb-1">Client not found</p>
+              <p className="text-[13px] text-muted-foreground mb-6">The client you're looking for doesn't exist or you don't have access.</p>
               <Link href={`/p/${partnerSlug}/clients`}>
-                <button className="h-9 px-4 text-[13px] font-medium text-slate-600 hover:text-slate-900 border border-slate-200 hover:border-slate-300 rounded transition-colors">
+                <button className="h-9 px-4 text-[13px] font-medium text-muted-foreground hover:text-foreground border border-border hover:border-border rounded transition-colors">
                   Back to Clients
                 </button>
               </Link>
@@ -200,18 +200,18 @@ export default function PartnerClientDetail() {
     <div className="flex h-screen bg-white">
       <main className="flex-1 overflow-y-auto">
         {/* Sticky header */}
-        <div className="sticky top-0 z-40 bg-white border-b border-slate-100">
+        <div className="sticky top-0 z-40 bg-white border-b border-border/50">
           <div className="px-6 lg:px-8 py-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Link href={`/p/${partnerSlug}/clients`}>
-                  <button className="p-1.5 -ml-1.5 hover:bg-slate-100 rounded transition-colors">
-                    <ArrowLeft className="w-4 h-4 text-slate-400" />
+                  <button className="p-1.5 -ml-1.5 hover:bg-muted rounded transition-colors">
+                    <ArrowLeft className="w-4 h-4 text-muted-foreground" />
                   </button>
                 </Link>
                 <div>
-                  <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight">{client.name}</h2>
-                  <p className="text-[13px] text-slate-400 mt-0.5">
+                  <h2 className="text-[17px] font-semibold text-foreground tracking-tight">{client.name}</h2>
+                  <p className="text-[13px] text-muted-foreground mt-0.5">
                     {getStatusText(client.status)} · Added {new Date(client.createdAt).toLocaleDateString("en-GB", {
                       day: "numeric",
                       month: "short",
@@ -223,7 +223,7 @@ export default function PartnerClientDetail() {
               {client.status === "DRAFT" && (
                 <button
                   onClick={() => setIsInviteDialogOpen(true)}
-                  className="h-8 px-4 text-[13px] font-medium bg-slate-900 hover:bg-slate-800 text-white rounded transition-colors"
+                  className="h-8 px-4 text-[13px] font-medium bg-foreground text-background hover:bg-foreground/90 rounded transition-colors"
                 >
                   <Send className="w-3.5 h-3.5 inline mr-1.5" />
                   Send Invite
@@ -236,53 +236,53 @@ export default function PartnerClientDetail() {
         {/* Content */}
         <div className="p-6 lg:p-8 space-y-6 max-w-3xl">
           {/* Summary section - key totals at top */}
-          <div className="pb-6 border-b border-slate-100">
+          <div className="pb-6 border-b border-border/50">
             <div className="flex flex-wrap gap-x-8 gap-y-4">
               <div>
-                <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">Status</p>
-                <p className="text-[15px] font-medium text-slate-900">{getStatusText(client.status)}</p>
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1">Status</p>
+                <p className="text-[15px] font-medium text-foreground">{getStatusText(client.status)}</p>
               </div>
-              <div className="w-px bg-slate-100 self-stretch hidden sm:block" />
+              <div className="w-px bg-muted self-stretch hidden sm:block" />
               <div>
-                <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">Connected Tenant</p>
-                <p className="text-[15px] font-medium text-slate-900">
-                  {client.tenant?.name || <span className="text-slate-400">Not connected</span>}
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1">Connected Tenant</p>
+                <p className="text-[15px] font-medium text-foreground">
+                  {client.tenant?.name || <span className="text-muted-foreground">Not connected</span>}
                 </p>
               </div>
-              <div className="w-px bg-slate-100 self-stretch hidden sm:block" />
+              <div className="w-px bg-muted self-stretch hidden sm:block" />
               <div>
-                <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">Primary Contact</p>
-                <p className="text-[15px] font-medium text-slate-900">
-                  {primaryContact?.name || <span className="text-slate-400">Not assigned</span>}
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1">Primary Contact</p>
+                <p className="text-[15px] font-medium text-foreground">
+                  {primaryContact?.name || <span className="text-muted-foreground">Not assigned</span>}
                 </p>
               </div>
-              <div className="w-px bg-slate-100 self-stretch hidden sm:block" />
+              <div className="w-px bg-muted self-stretch hidden sm:block" />
               <div>
-                <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">Contacts</p>
-                <p className="text-[15px] font-medium text-slate-900 tabular-nums">{client.contacts.length}</p>
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1">Contacts</p>
+                <p className="text-[15px] font-medium text-foreground tabular-nums">{client.contacts.length}</p>
               </div>
             </div>
           </div>
 
           {/* System status sentence */}
-          <div className="py-4 px-4 bg-slate-50 rounded-lg">
-            <p className="text-[14px] font-medium text-slate-700">{nextAction.text}</p>
-            <p className="text-[13px] text-slate-500 mt-0.5">{nextAction.subtext}</p>
+          <div className="py-4 px-4 bg-muted rounded-lg">
+            <p className="text-[14px] font-medium text-foreground">{nextAction.text}</p>
+            <p className="text-[13px] text-muted-foreground mt-0.5">{nextAction.subtext}</p>
           </div>
 
           {/* Collapsible sections */}
           <div className="space-y-4">
             {/* Contacts section */}
             <Collapsible open={contactsOpen} onOpenChange={setContactsOpen}>
-              <CollapsibleTrigger className="w-full flex items-center justify-between py-3 border-b border-slate-100 hover:bg-slate-50/50 -mx-2 px-2 rounded transition-colors">
-                <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
+              <CollapsibleTrigger className="w-full flex items-center justify-between py-3 border-b border-border/50 hover:bg-muted/50 -mx-2 px-2 rounded transition-colors">
+                <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                   Contacts ({client.contacts.length})
                 </span>
-                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${contactsOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${contactsOpen ? 'rotate-180' : ''}`} />
               </CollapsibleTrigger>
               <CollapsibleContent>
                 {client.contacts.length === 0 ? (
-                  <p className="text-[13px] text-slate-400 py-4">
+                  <p className="text-[13px] text-muted-foreground py-4">
                     No contacts yet. Contacts will be imported when the client connects their accounting system.
                   </p>
                 ) : (
@@ -290,15 +290,15 @@ export default function PartnerClientDetail() {
                     {client.contacts.map((contact) => (
                       <div
                         key={contact.id}
-                        className="flex items-center justify-between py-3 border-b border-slate-50 last:border-0"
+                        className="flex items-center justify-between py-3 border-b border-border/50 last:border-0"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center">
-                            <User className="w-4 h-4 text-slate-400" />
+                          <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
+                            <User className="w-4 h-4 text-muted-foreground" />
                           </div>
                           <div>
-                            <p className="text-[14px] font-medium text-slate-900">{contact.name}</p>
-                            <div className="flex items-center gap-3 text-[12px] text-slate-400">
+                            <p className="text-[14px] font-medium text-foreground">{contact.name}</p>
+                            <div className="flex items-center gap-3 text-[12px] text-muted-foreground">
                               {contact.email && (
                                 <span className="flex items-center gap-1">
                                   <Mail className="w-3 h-3" />
@@ -331,24 +331,24 @@ export default function PartnerClientDetail() {
 
             {/* Contract section */}
             <Collapsible open={contractOpen} onOpenChange={setContractOpen}>
-              <CollapsibleTrigger className="w-full flex items-center justify-between py-3 border-b border-slate-100 hover:bg-slate-50/50 -mx-2 px-2 rounded transition-colors">
-                <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
+              <CollapsibleTrigger className="w-full flex items-center justify-between py-3 border-b border-border/50 hover:bg-muted/50 -mx-2 px-2 rounded transition-colors">
+                <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                   Contract Details
                 </span>
-                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${contractOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${contractOpen ? 'rotate-180' : ''}`} />
               </CollapsibleTrigger>
               <CollapsibleContent>
                 {!client.contract ? (
-                  <p className="text-[13px] text-slate-400 py-4">No contract details recorded yet.</p>
+                  <p className="text-[13px] text-muted-foreground py-4">No contract details recorded yet.</p>
                 ) : (
                   <div className="grid grid-cols-2 gap-4 pt-4">
                     <div>
-                      <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">Pricing Tier</p>
-                      <p className="text-[14px] text-slate-900">{client.contract.pricingTier}</p>
+                      <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1">Pricing Tier</p>
+                      <p className="text-[14px] text-foreground">{client.contract.pricingTier}</p>
                     </div>
                     <div>
-                      <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">Billing Mode</p>
-                      <p className="text-[14px] text-slate-900">
+                      <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1">Billing Mode</p>
+                      <p className="text-[14px] text-foreground">
                         {client.contract.billingMode === "BILLED_TO_PARTNER"
                           ? "Billed to Partner"
                           : "Billed to Client"}
@@ -356,18 +356,18 @@ export default function PartnerClientDetail() {
                     </div>
                     {client.contract.contractStartDate && (
                       <div>
-                        <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">Start Date</p>
-                        <p className="text-[14px] text-slate-900 flex items-center gap-2">
-                          <Calendar className="w-4 h-4 text-slate-300" />
+                        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1">Start Date</p>
+                        <p className="text-[14px] text-foreground flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-muted-foreground" />
                           {new Date(client.contract.contractStartDate).toLocaleDateString("en-GB")}
                         </p>
                       </div>
                     )}
                     {client.contract.contractEndDate && (
                       <div>
-                        <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">End Date</p>
-                        <p className="text-[14px] text-slate-900 flex items-center gap-2">
-                          <Calendar className="w-4 h-4 text-slate-300" />
+                        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1">End Date</p>
+                        <p className="text-[14px] text-foreground flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-muted-foreground" />
                           {new Date(client.contract.contractEndDate).toLocaleDateString("en-GB")}
                         </p>
                       </div>
@@ -379,14 +379,14 @@ export default function PartnerClientDetail() {
 
             {/* Accounts section */}
             <Collapsible open={accountsOpen} onOpenChange={setAccountsOpen}>
-              <CollapsibleTrigger className="w-full flex items-center justify-between py-3 border-b border-slate-100 hover:bg-slate-50/50 -mx-2 px-2 rounded transition-colors">
-                <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
+              <CollapsibleTrigger className="w-full flex items-center justify-between py-3 border-b border-border/50 hover:bg-muted/50 -mx-2 px-2 rounded transition-colors">
+                <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                   Accounts
                 </span>
-                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${accountsOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${accountsOpen ? 'rotate-180' : ''}`} />
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <p className="text-[13px] text-slate-400 py-4">
+                <p className="text-[13px] text-muted-foreground py-4">
                   {client.status === "ACTIVE" || client.status === "CONNECTED"
                     ? "Customer accounts and balances will appear here once synced."
                     : "Connect the client's accounting system to view customer accounts."}
@@ -396,14 +396,14 @@ export default function PartnerClientDetail() {
 
             {/* Invoices section */}
             <Collapsible open={invoicesOpen} onOpenChange={setInvoicesOpen}>
-              <CollapsibleTrigger className="w-full flex items-center justify-between py-3 border-b border-slate-100 hover:bg-slate-50/50 -mx-2 px-2 rounded transition-colors">
-                <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
+              <CollapsibleTrigger className="w-full flex items-center justify-between py-3 border-b border-border/50 hover:bg-muted/50 -mx-2 px-2 rounded transition-colors">
+                <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                   Invoices
                 </span>
-                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${invoicesOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${invoicesOpen ? 'rotate-180' : ''}`} />
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <p className="text-[13px] text-slate-400 py-4">
+                <p className="text-[13px] text-muted-foreground py-4">
                   {client.status === "ACTIVE" || client.status === "CONNECTED"
                     ? "Invoice data will appear here once synced from the accounting system."
                     : "Connect the client's accounting system to view their invoices."}
@@ -413,14 +413,14 @@ export default function PartnerClientDetail() {
 
             {/* Activity section */}
             <Collapsible open={activityOpen} onOpenChange={setActivityOpen}>
-              <CollapsibleTrigger className="w-full flex items-center justify-between py-3 border-b border-slate-100 hover:bg-slate-50/50 -mx-2 px-2 rounded transition-colors">
-                <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
+              <CollapsibleTrigger className="w-full flex items-center justify-between py-3 border-b border-border/50 hover:bg-muted/50 -mx-2 px-2 rounded transition-colors">
+                <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                   Recent Activity
                 </span>
-                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${activityOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${activityOpen ? 'rotate-180' : ''}`} />
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <p className="text-[13px] text-slate-400 py-4">
+                <p className="text-[13px] text-muted-foreground py-4">
                   {client.status === "ACTIVE"
                     ? "Collection activity will appear here as actions are executed."
                     : "No activity yet. Activity will be recorded once collections begin."}
@@ -436,13 +436,13 @@ export default function PartnerClientDetail() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-[17px] font-semibold">Invite {client.name}</DialogTitle>
-            <DialogDescription className="text-[13px] text-slate-400">
+            <DialogDescription className="text-[13px] text-muted-foreground">
               Enter the email address of the person who will connect their accounting system.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
-              <Label htmlFor="inviteEmail" className="text-[13px] font-medium text-slate-700">Email address</Label>
+              <Label htmlFor="inviteEmail" className="text-[13px] font-medium text-foreground">Email address</Label>
               <Input
                 id="inviteEmail"
                 type="email"
@@ -453,7 +453,7 @@ export default function PartnerClientDetail() {
               />
             </div>
             <div>
-              <Label htmlFor="inviteContactName" className="text-[13px] font-medium text-slate-700">Contact name (optional)</Label>
+              <Label htmlFor="inviteContactName" className="text-[13px] font-medium text-foreground">Contact name (optional)</Label>
               <Input
                 id="inviteContactName"
                 value={inviteContactName}
@@ -474,7 +474,7 @@ export default function PartnerClientDetail() {
             <Button
               onClick={() => inviteMutation.mutate({ email: inviteEmail, contactName: inviteContactName })}
               disabled={!inviteEmail.trim() || inviteMutation.isPending}
-              className="bg-slate-900 hover:bg-slate-800 text-white text-[13px]"
+              className="bg-foreground text-background hover:bg-foreground/90 text-[13px]"
             >
               {inviteMutation.isPending ? "Sending..." : "Send Invite"}
             </Button>

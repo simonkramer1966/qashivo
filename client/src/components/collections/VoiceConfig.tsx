@@ -179,8 +179,8 @@ export default function VoiceConfig() {
       {/* Workflow Builder Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-xl font-bold text-gray-900">Voice Workflow Builder</h3>
-          <p className="text-gray-600">Create drag-and-drop conversational AI workflows for debt collection</p>
+          <h3 className="text-xl font-bold text-foreground">Voice Workflow Builder</h3>
+          <p className="text-muted-foreground">Create drag-and-drop conversational AI workflows for debt collection</p>
         </div>
         <Dialog open={isWorkflowDialogOpen} onOpenChange={setIsWorkflowDialogOpen}>
           <DialogTrigger asChild>
@@ -189,7 +189,7 @@ export default function VoiceConfig() {
               Create Workflow
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px] bg-white border border-gray-200">
+          <DialogContent className="sm:max-w-[500px] bg-background border border-border">
             <DialogHeader>
               <DialogTitle>Create Voice Workflow</DialogTitle>
             </DialogHeader>
@@ -235,7 +235,7 @@ export default function VoiceConfig() {
                             <SelectValue placeholder="Select category" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent className="bg-white border-gray-200">
+                        <SelectContent className="bg-background border-border">
                           <SelectItem value="collections">Collections</SelectItem>
                           <SelectItem value="payment_reminders">Payment Reminders</SelectItem>
                           <SelectItem value="follow_up">Follow-up</SelectItem>
@@ -265,7 +265,7 @@ export default function VoiceConfig() {
       {voiceWorkflows && (voiceWorkflows as any[]).length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {(voiceWorkflows as any[]).map((workflow: any) => (
-            <Card key={workflow.id} className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+            <Card key={workflow.id} className="bg-background/80 backdrop-blur-sm border-white/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
@@ -285,15 +285,15 @@ export default function VoiceConfig() {
               <CardContent>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">Category:</span>
+                    <span className="text-muted-foreground">Category:</span>
                     <Badge variant="outline">{workflow.category}</Badge>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">States:</span>
+                    <span className="text-muted-foreground">States:</span>
                     <span className="font-medium">{workflow.states?.length || 0}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">Transitions:</span>
+                    <span className="text-muted-foreground">Transitions:</span>
                     <span className="font-medium">{workflow.transitions?.length || 0}</span>
                   </div>
                   
@@ -320,11 +320,11 @@ export default function VoiceConfig() {
           ))}
         </div>
       ) : (
-        <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+        <Card className="bg-background/80 backdrop-blur-sm border-white/50 shadow-lg">
           <CardContent className="text-center py-12">
-            <Workflow className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-gray-900 mb-2">No Voice Workflows Yet</h3>
-            <p className="text-gray-600 mb-6 max-w-md mx-auto">
+            <Workflow className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-foreground mb-2">No Voice Workflows Yet</h3>
+            <p className="text-muted-foreground mb-6 max-w-md mx-auto">
               Create your first conversational AI workflow with our drag-and-drop builder. Perfect for debt collection and customer communication.
             </p>
             <Button 
@@ -341,7 +341,7 @@ export default function VoiceConfig() {
 
       {/* Workflow Builder */}
       {selectedWorkflow && (
-        <Card className="bg-white border border-gray-200 shadow-sm">
+        <Card className="bg-background border border-border shadow-sm">
           <CardHeader>
             <div className="flex items-center justify-between">
               <h4 className="font-semibold">Workflow Builder</h4>
@@ -363,8 +363,8 @@ export default function VoiceConfig() {
       {/* Templates Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-xl font-bold text-gray-900">Voice Message Templates</h3>
-          <p className="text-gray-600">Pre-recorded voice messages for automated outreach</p>
+          <h3 className="text-xl font-bold text-foreground">Voice Message Templates</h3>
+          <p className="text-muted-foreground">Pre-recorded voice messages for automated outreach</p>
         </div>
         <Dialog open={isTemplateDialogOpen} onOpenChange={setIsTemplateDialogOpen}>
           <DialogTrigger asChild>
@@ -373,7 +373,7 @@ export default function VoiceConfig() {
               Create Template
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px] bg-white border border-gray-200">
+          <DialogContent className="sm:max-w-[600px] bg-background border border-border">
             <DialogHeader>
               <DialogTitle>Create Voice Message Template</DialogTitle>
             </DialogHeader>
@@ -406,7 +406,7 @@ export default function VoiceConfig() {
                               <SelectValue placeholder="Select category" />
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent className="bg-white border-gray-200">
+                          <SelectContent className="bg-background border-border">
                             <SelectItem value="reminder">Payment Reminder</SelectItem>
                             <SelectItem value="follow_up">Follow-up</SelectItem>
                             <SelectItem value="confirmation">Confirmation</SelectItem>
@@ -465,7 +465,7 @@ export default function VoiceConfig() {
                               <SelectValue />
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent className="bg-white border-gray-200">
+                          <SelectContent className="bg-background border-border">
                             <SelectItem value="professional">Professional</SelectItem>
                             <SelectItem value="friendly">Friendly</SelectItem>
                             <SelectItem value="warm">Warm</SelectItem>
@@ -539,7 +539,7 @@ export default function VoiceConfig() {
       {voiceTemplates && (voiceTemplates as any[]).length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {(voiceTemplates as any[]).map((template: any) => (
-            <Card key={template.id} className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg hover:shadow-xl transition-all duration-300">
+            <Card key={template.id} className="bg-background/80 backdrop-blur-sm border-white/50 shadow-lg hover:shadow-xl transition-all duration-300">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
@@ -558,25 +558,25 @@ export default function VoiceConfig() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-sm text-gray-700 line-clamp-3">{template.messageText}</p>
+                  <div className="bg-muted rounded-lg p-3">
+                    <p className="text-sm text-foreground line-clamp-3">{template.messageText}</p>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-600">Category:</span>
+                      <span className="text-muted-foreground">Category:</span>
                       <Badge variant="outline">{template.category}</Badge>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-600">Tone:</span>
+                      <span className="text-muted-foreground">Tone:</span>
                       <span className="font-medium capitalize">{template.voiceSettings?.tone}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-600">Speed:</span>
+                      <span className="text-muted-foreground">Speed:</span>
                       <span className="font-medium">{template.voiceSettings?.speed}x</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-600">Volume:</span>
+                      <span className="text-muted-foreground">Volume:</span>
                       <span className="font-medium">{Math.round((template.voiceSettings?.volume || 0.8) * 100)}%</span>
                     </div>
                   </div>
@@ -599,11 +599,11 @@ export default function VoiceConfig() {
           ))}
         </div>
       ) : (
-        <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+        <Card className="bg-background/80 backdrop-blur-sm border-white/50 shadow-lg">
           <CardContent className="text-center py-12">
-            <MessageSquare className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-gray-900 mb-2">No Voice Templates Yet</h3>
-            <p className="text-gray-600 mb-6 max-w-md mx-auto">
+            <MessageSquare className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-foreground mb-2">No Voice Templates Yet</h3>
+            <p className="text-muted-foreground mb-6 max-w-md mx-auto">
               Create pre-recorded voice message templates for automated outreach and reminders.
             </p>
             <Button 
@@ -747,8 +747,8 @@ export default function VoiceConfig() {
         {/* Agents Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-xl font-bold text-gray-900">Voice Agents</h3>
-            <p className="text-gray-600">Manage AI voice agents and phone numbers for automated collections</p>
+            <h3 className="text-xl font-bold text-foreground">Voice Agents</h3>
+            <p className="text-muted-foreground">Manage AI voice agents and phone numbers for automated collections</p>
           </div>
           <div className="flex space-x-2">
             <Dialog open={isAgentDialogOpen} onOpenChange={setIsAgentDialogOpen}>
@@ -1002,7 +1002,7 @@ export default function VoiceConfig() {
 
         {/* Agent Management Tabs */}
         <Tabs value={activeAgentSection} onValueChange={setActiveAgentSection} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 bg-white border border-gray-200">
+          <TabsList className="grid w-full grid-cols-4 bg-background border border-border">
             <TabsTrigger value="library" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
               <Bot className="mr-2 h-4 w-4" />
               Agent Library
@@ -1026,7 +1026,7 @@ export default function VoiceConfig() {
               {Array.isArray(retellAgents) && retellAgents.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {retellAgents.map((agent: any) => (
-                    <Card key={agent.agent_id} className="bg-white/70 backdrop-blur-md border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
+                    <Card key={agent.agent_id} className="bg-background/70 backdrop-blur-md border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
                       <CardHeader className="pb-3">
                         <div className="flex items-start justify-between">
                           <div className="flex items-center space-x-3">
@@ -1042,22 +1042,22 @@ export default function VoiceConfig() {
                           </div>
                           <div className="flex items-center space-x-1">
                             <div className={`w-2 h-2 rounded-full ${agent.is_active ? 'bg-green-500' : 'bg-gray-400'}`} />
-                            <span className="text-xs text-gray-600">{agent.is_active ? 'Active' : 'Inactive'}</span>
+                            <span className="text-xs text-muted-foreground">{agent.is_active ? 'Active' : 'Inactive'}</span>
                           </div>
                         </div>
                       </CardHeader>
                       <CardContent className="space-y-4">
-                        <p className="text-sm text-gray-600 line-clamp-2">
+                        <p className="text-sm text-muted-foreground line-clamp-2">
                           {agent.agent_description || 'No description provided'}
                         </p>
                         
                         <div className="grid grid-cols-2 gap-4 text-sm">
                           <div>
-                            <span className="text-gray-500">Phone:</span>
+                            <span className="text-muted-foreground">Phone:</span>
                             <p className="font-medium">{agent.assigned_phone_number || 'Not assigned'}</p>
                           </div>
                           <div>
-                            <span className="text-gray-500">Category:</span>
+                            <span className="text-muted-foreground">Category:</span>
                             <p className="font-medium capitalize">{agent.agent_category || 'General'}</p>
                           </div>
                         </div>
@@ -1083,11 +1083,11 @@ export default function VoiceConfig() {
                   ))}
                 </div>
               ) : (
-                <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+                <Card className="bg-background/80 backdrop-blur-sm border-white/50 shadow-lg">
                   <CardContent className="text-center py-12">
-                    <Bot className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">No Voice Agents Yet</h3>
-                    <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                    <Bot className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-xl font-bold text-foreground mb-2">No Voice Agents Yet</h3>
+                    <p className="text-muted-foreground mb-6 max-w-md mx-auto">
                       Create your first AI voice agent to start automated debt collection calls with intelligent conversation flows.
                     </p>
                     <Button 
@@ -1109,7 +1109,7 @@ export default function VoiceConfig() {
               <div className="flex items-center justify-between">
                 <div>
                   <h4 className="text-lg font-semibold">Phone Numbers</h4>
-                  <p className="text-gray-600">Manage phone numbers for your voice agents</p>
+                  <p className="text-muted-foreground">Manage phone numbers for your voice agents</p>
                 </div>
                 <Button className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="button-purchase-number">
                   <Plus className="mr-2 h-4 w-4" />
@@ -1120,7 +1120,7 @@ export default function VoiceConfig() {
               {Array.isArray(phoneNumbers) && phoneNumbers.length > 0 ? (
                 <div className="grid gap-4">
                   {phoneNumbers.map((number: any) => (
-                    <Card key={number.id} className="bg-white/70 backdrop-blur-md border-0 shadow-lg">
+                    <Card key={number.id} className="bg-background/70 backdrop-blur-md border-0 shadow-lg">
                       <CardContent className="p-6">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-4">
@@ -1129,7 +1129,7 @@ export default function VoiceConfig() {
                             </div>
                             <div>
                               <h5 className="font-semibold">{number.phoneNumber}</h5>
-                              <p className="text-sm text-gray-600">
+                              <p className="text-sm text-muted-foreground">
                                 {number.assigned ? `Assigned to ${number.agentName}` : 'Unassigned'}
                               </p>
                             </div>
@@ -1148,11 +1148,11 @@ export default function VoiceConfig() {
                   ))}
                 </div>
               ) : (
-                <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+                <Card className="bg-background/80 backdrop-blur-sm border-white/50 shadow-lg">
                   <CardContent className="text-center py-12">
-                    <Phone className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">No Phone Numbers</h3>
-                    <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                    <Phone className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-xl font-bold text-foreground mb-2">No Phone Numbers</h3>
+                    <p className="text-muted-foreground mb-6 max-w-md mx-auto">
                       Purchase your first phone number to enable voice agents to make outbound calls.
                     </p>
                     <Button 
@@ -1172,12 +1172,12 @@ export default function VoiceConfig() {
             <div className="space-y-6">
               <div>
                 <h4 className="text-lg font-semibold">Agent Templates</h4>
-                <p className="text-gray-600">Pre-configured agent templates for common use cases</p>
+                <p className="text-muted-foreground">Pre-configured agent templates for common use cases</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {Object.entries(AGENT_TEMPLATES).map(([key, template]) => (
-                  <Card key={key} className="bg-white/70 backdrop-blur-md border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
+                  <Card key={key} className="bg-background/70 backdrop-blur-md border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
                     <CardHeader>
                       <div className="flex items-center space-x-3">
                         <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
@@ -1189,15 +1189,15 @@ export default function VoiceConfig() {
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <p className="text-sm text-gray-600">{template.description}</p>
+                      <p className="text-sm text-muted-foreground">{template.description}</p>
                       
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
-                          <span className="text-gray-500">Voice:</span>
+                          <span className="text-muted-foreground">Voice:</span>
                           <span className="font-medium">{template.voiceId}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-500">Temperature:</span>
+                          <span className="text-muted-foreground">Temperature:</span>
                           <span className="font-medium">{template.voiceTemperature}</span>
                         </div>
                       </div>
@@ -1231,16 +1231,16 @@ export default function VoiceConfig() {
           </TabsContent>
 
           <TabsContent value="testing">
-            <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+            <Card className="bg-background/80 backdrop-blur-sm border-white/50 shadow-lg">
               <CardHeader>
                 <CardTitle>Agent Testing</CardTitle>
                 <CardDescription>Test your voice agents with sample calls</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="text-center py-12">
-                  <PlayCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Testing Interface Coming Soon</h3>
-                  <p className="text-gray-600">Test calling interface and recording playback will be available here</p>
+                  <PlayCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-foreground mb-2">Testing Interface Coming Soon</h3>
+                  <p className="text-muted-foreground">Test calling interface and recording playback will be available here</p>
                 </div>
               </CardContent>
             </Card>
@@ -1256,7 +1256,7 @@ export default function VoiceConfig() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Voice Management</h2>
-          <p className="text-gray-600">Manage AI-powered voice workflows</p>
+          <p className="text-muted-foreground">Manage AI-powered voice workflows</p>
         </div>
         <div className="flex items-center space-x-4">
           <Badge 
@@ -1277,7 +1277,7 @@ export default function VoiceConfig() {
 
       {/* Voice System Tabs */}
       <Tabs value={activeVoiceTab} onValueChange={setActiveVoiceTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3 bg-white border border-gray-200">
+        <TabsList className="grid w-full grid-cols-3 bg-background border border-border">
           <TabsTrigger value="agents" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
             <Bot className="mr-2 h-4 w-4" />
             Agents

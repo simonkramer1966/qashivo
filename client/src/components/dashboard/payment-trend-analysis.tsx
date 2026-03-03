@@ -209,41 +209,41 @@ const TrendTooltip = ({ active, payload, label }: TrendTooltipProps) => {
   
   return (
     <div className="glass-card p-4 shadow-lg min-w-[300px]">
-      <p className="font-semibold text-slate-900 mb-2">{label}</p>
+      <p className="font-semibold text-foreground mb-2">{label}</p>
       <div className="space-y-2 text-sm">
         <div className="flex justify-between items-center">
-          <span className="text-slate-600">Avg Days to Payment:</span>
+          <span className="text-muted-foreground">Avg Days to Payment:</span>
           <span className="font-medium text-[#17B6C3]">
             {data.averageDaysToPayment?.toFixed(1)} days
           </span>
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-slate-600">Total Payments:</span>
-          <span className="font-medium text-slate-900">{data.totalPayments}</span>
+          <span className="text-muted-foreground">Total Payments:</span>
+          <span className="font-medium text-foreground">{data.totalPayments}</span>
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-slate-600">Total Amount:</span>
+          <span className="text-muted-foreground">Total Amount:</span>
           <span className="font-medium text-green-600">
             ${data.totalAmount?.toLocaleString()}
           </span>
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-slate-600">Success Rate:</span>
+          <span className="text-muted-foreground">Success Rate:</span>
           <span className={`font-medium ${data.paymentSuccessRate >= 80 ? 'text-green-600' : data.paymentSuccessRate >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
             {data.paymentSuccessRate?.toFixed(1)}%
           </span>
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-slate-600">On-Time Payments:</span>
-          <span className="font-medium text-slate-900">{data.onTimePayments}</span>
+          <span className="text-muted-foreground">On-Time Payments:</span>
+          <span className="font-medium text-foreground">{data.onTimePayments}</span>
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-slate-600">Late Payments:</span>
-          <span className="font-medium text-slate-900">{data.latePayments}</span>
+          <span className="text-muted-foreground">Late Payments:</span>
+          <span className="font-medium text-foreground">{data.latePayments}</span>
         </div>
         {data.averageDelay > 0 && (
-          <div className="flex justify-between items-center pt-2 border-t border-slate-200">
-            <span className="text-slate-600">Avg Delay:</span>
+          <div className="flex justify-between items-center pt-2 border-t border-border">
+            <span className="text-muted-foreground">Avg Delay:</span>
             <span className="font-medium text-red-600">{data.averageDelay?.toFixed(1)} days</span>
           </div>
         )}
@@ -271,27 +271,27 @@ const PatternTooltip = ({ active, payload, label }: PatternTooltipProps) => {
   
   return (
     <div className="glass-card p-4 shadow-lg min-w-[280px]">
-      <p className="font-semibold text-slate-900 mb-2">{label}</p>
+      <p className="font-semibold text-foreground mb-2">{label}</p>
       <div className="space-y-2 text-sm">
         <div className="flex justify-between items-center">
-          <span className="text-slate-600">Payment Count:</span>
-          <span className="font-medium text-slate-900">{data.paymentCount}</span>
+          <span className="text-muted-foreground">Payment Count:</span>
+          <span className="font-medium text-foreground">{data.paymentCount}</span>
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-slate-600">Average Amount:</span>
+          <span className="text-muted-foreground">Average Amount:</span>
           <span className="font-medium text-[#17B6C3]">
             ${data.averageAmount?.toLocaleString()}
           </span>
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-slate-600">Success Rate:</span>
+          <span className="text-muted-foreground">Success Rate:</span>
           <span className={`font-medium ${data.successRate >= 80 ? 'text-green-600' : data.successRate >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
             {data.successRate?.toFixed(1)}%
           </span>
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-slate-600">Percentage of Total:</span>
-          <span className="font-medium text-slate-900">{data.percentage?.toFixed(1)}%</span>
+          <span className="text-muted-foreground">Percentage of Total:</span>
+          <span className="font-medium text-foreground">{data.percentage?.toFixed(1)}%</span>
         </div>
       </div>
     </div>
@@ -730,7 +730,7 @@ export default function PaymentTrendAnalysis() {
             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <AlertTriangle className="h-8 w-8 text-red-600" />
             </div>
-            <p className="text-lg font-semibold text-slate-900 mb-2">Unable to load payment trends</p>
+            <p className="text-lg font-semibold text-foreground mb-2">Unable to load payment trends</p>
             <p className="text-sm text-muted-foreground">Please try again later</p>
           </div>
         </CardContent>
@@ -754,7 +754,7 @@ export default function PaymentTrendAnalysis() {
             <div className="w-16 h-16 bg-[#17B6C3]/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <TrendingUp className="h-8 w-8 text-[#17B6C3]" />
             </div>
-            <p className="text-lg font-semibold text-slate-900 mb-2">No payment data available</p>
+            <p className="text-lg font-semibold text-foreground mb-2">No payment data available</p>
             <p className="text-sm text-muted-foreground">Complete some payments to see trend analysis</p>
           </div>
         </CardContent>
@@ -848,10 +848,10 @@ export default function PaymentTrendAnalysis() {
                 )}
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">
+                <p className="text-sm font-medium text-muted-foreground mb-1">
                   {metric.title}
                 </p>
-                <p className="text-lg font-bold text-gray-900" data-testid={`${metric.testId}-value`}>
+                <p className="text-lg font-bold text-foreground" data-testid={`${metric.testId}-value`}>
                   {metric.value}
                 </p>
                 <p className={`text-xs ${
@@ -879,17 +879,17 @@ export default function PaymentTrendAnalysis() {
             {/* Monthly Payment Trends */}
             <div className="glass-card p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-slate-900" data-testid="text-monthly-trends-title">
+                <h3 className="text-lg font-semibold text-foreground" data-testid="text-monthly-trends-title">
                   Monthly Payment Performance
                 </h3>
                 <div className="flex items-center space-x-4 text-sm">
                   <div className="flex items-center space-x-2">
                     <div className="w-3 h-3 bg-[#17B6C3] rounded-full"></div>
-                    <span className="text-slate-600">Avg Days to Payment</span>
+                    <span className="text-muted-foreground">Avg Days to Payment</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <div className="w-3 h-3 bg-[#10B981] rounded-full"></div>
-                    <span className="text-slate-600">Success Rate</span>
+                    <span className="text-muted-foreground">Success Rate</span>
                   </div>
                 </div>
               </div>
@@ -941,7 +941,7 @@ export default function PaymentTrendAnalysis() {
             {/* Seasonal Patterns */}
             <div className="glass-card p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-slate-900" data-testid="text-seasonal-patterns-title">
+                <h3 className="text-lg font-semibold text-foreground" data-testid="text-seasonal-patterns-title">
                   Seasonal Payment Patterns
                 </h3>
                 <Badge 
@@ -970,22 +970,22 @@ export default function PaymentTrendAnalysis() {
                         const data = payload[0].payload;
                         return (
                           <div className="glass-card p-4 shadow-lg min-w-[250px]">
-                            <p className="font-semibold text-slate-900 mb-2">{label}</p>
+                            <p className="font-semibold text-foreground mb-2">{label}</p>
                             <div className="space-y-1 text-sm">
                               <div className="flex justify-between items-center">
-                                <span className="text-slate-600">Success Rate:</span>
+                                <span className="text-muted-foreground">Success Rate:</span>
                                 <span className="font-medium text-[#17B6C3]">{data.paymentSuccessRate?.toFixed(1)}%</span>
                               </div>
                               <div className="flex justify-between items-center">
-                                <span className="text-slate-600">Payment Volume:</span>
-                                <span className="font-medium text-slate-900">{data.paymentVolume}</span>
+                                <span className="text-muted-foreground">Payment Volume:</span>
+                                <span className="font-medium text-foreground">{data.paymentVolume}</span>
                               </div>
                               <div className="flex justify-between items-center">
-                                <span className="text-slate-600">Avg Days:</span>
-                                <span className="font-medium text-slate-900">{data.averageDaysToPayment?.toFixed(1)}</span>
+                                <span className="text-muted-foreground">Avg Days:</span>
+                                <span className="font-medium text-foreground">{data.averageDaysToPayment?.toFixed(1)}</span>
                               </div>
                               <div className="flex justify-between items-center">
-                                <span className="text-slate-600">Total Amount:</span>
+                                <span className="text-muted-foreground">Total Amount:</span>
                                 <span className="font-medium text-green-600">${data.totalAmount?.toLocaleString()}</span>
                               </div>
                             </div>
@@ -1011,7 +1011,7 @@ export default function PaymentTrendAnalysis() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Day of Week Patterns */}
               <div className="glass-card p-6">
-                <h3 className="text-lg font-semibold text-slate-900 mb-4" data-testid="text-day-patterns-title">
+                <h3 className="text-lg font-semibold text-foreground mb-4" data-testid="text-day-patterns-title">
                   Day of Week Patterns
                 </h3>
                 <div className="h-80" data-testid="chart-day-patterns">
@@ -1039,8 +1039,8 @@ export default function PaymentTrendAnalysis() {
                 <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
                   {trendData.dayOfWeekPatterns.slice(0, 2).map((day) => (
                     <div key={day.dayName} className="bg-[#17B6C3]/5 p-3 rounded-lg">
-                      <div className="font-medium text-slate-900">{day.dayName}</div>
-                      <div className="text-slate-600">{day.paymentCount} payments</div>
+                      <div className="font-medium text-foreground">{day.dayName}</div>
+                      <div className="text-muted-foreground">{day.paymentCount} payments</div>
                       <div className="text-[#17B6C3] font-medium">{day.successRate.toFixed(1)}% success</div>
                     </div>
                   ))}
@@ -1049,7 +1049,7 @@ export default function PaymentTrendAnalysis() {
 
               {/* Time of Month Patterns */}
               <div className="glass-card p-6">
-                <h3 className="text-lg font-semibold text-slate-900 mb-4" data-testid="text-time-patterns-title">
+                <h3 className="text-lg font-semibold text-foreground mb-4" data-testid="text-time-patterns-title">
                   Time of Month Patterns
                 </h3>
                 <div className="h-80" data-testid="chart-time-patterns">
@@ -1075,15 +1075,15 @@ export default function PaymentTrendAnalysis() {
                 </div>
                 <div className="mt-4 space-y-2 text-sm">
                   {trendData.timeOfMonthPatterns.map((period, index) => (
-                    <div key={period.period} className="flex items-center justify-between p-2 bg-slate-50 rounded">
+                    <div key={period.period} className="flex items-center justify-between p-2 bg-muted rounded">
                       <div className="flex items-center space-x-2">
                         <div 
                           className="w-3 h-3 rounded-full" 
                           style={{ backgroundColor: SEASONAL_COLORS[index] }}
                         ></div>
-                        <span className="font-medium text-slate-900">{period.period}</span>
+                        <span className="font-medium text-foreground">{period.period}</span>
                       </div>
-                      <div className="text-slate-600">{period.successRate.toFixed(1)}% success</div>
+                      <div className="text-muted-foreground">{period.successRate.toFixed(1)}% success</div>
                     </div>
                   ))}
                 </div>
@@ -1100,7 +1100,7 @@ export default function PaymentTrendAnalysis() {
                   <div className="p-2 bg-blue-100 rounded-lg mr-3">
                     <Lightbulb className="h-5 w-5 text-blue-600" />
                   </div>
-                  <h3 className="text-lg font-semibold text-slate-900" data-testid="text-insights-title">
+                  <h3 className="text-lg font-semibold text-foreground" data-testid="text-insights-title">
                     Key Insights
                   </h3>
                 </div>
@@ -1109,7 +1109,7 @@ export default function PaymentTrendAnalysis() {
                     trendData.insights.map((insight, index) => (
                       <div 
                         key={index}
-                        className="border border-slate-200 rounded-lg p-4 bg-white/50"
+                        className="border border-border rounded-lg p-4 bg-background/50"
                         data-testid={`insight-${index}`}
                       >
                         <div className="flex items-start justify-between mb-2">
@@ -1124,25 +1124,25 @@ export default function PaymentTrendAnalysis() {
                               {insight.confidence}% confidence
                             </Badge>
                           </div>
-                          {insight.type === 'seasonal' && <Calendar className="h-4 w-4 text-slate-400" />}
-                          {insight.type === 'timing' && <Clock className="h-4 w-4 text-slate-400" />}
-                          {insight.type === 'volume' && <BarChart3 className="h-4 w-4 text-slate-400" />}
-                          {insight.type === 'performance' && <Target className="h-4 w-4 text-slate-400" />}
+                          {insight.type === 'seasonal' && <Calendar className="h-4 w-4 text-muted-foreground" />}
+                          {insight.type === 'timing' && <Clock className="h-4 w-4 text-muted-foreground" />}
+                          {insight.type === 'volume' && <BarChart3 className="h-4 w-4 text-muted-foreground" />}
+                          {insight.type === 'performance' && <Target className="h-4 w-4 text-muted-foreground" />}
                         </div>
                         <div className="mb-2">
-                          <h4 className="font-medium text-slate-900 mb-1">{insight.title}</h4>
-                          <p className="text-sm text-slate-600 mb-2">{insight.description}</p>
+                          <h4 className="font-medium text-foreground mb-1">{insight.title}</h4>
+                          <p className="text-sm text-muted-foreground mb-2">{insight.description}</p>
                         </div>
                         <div className="bg-[#17B6C3]/5 border-l-4 border-[#17B6C3] pl-3 py-2">
                           <p className="text-sm font-medium text-[#17B6C3]">Action Required:</p>
-                          <p className="text-sm text-slate-700">{insight.actionable}</p>
+                          <p className="text-sm text-foreground">{insight.actionable}</p>
                         </div>
                       </div>
                     ))
                   ) : (
                     <div className="text-center py-4">
-                      <Info className="h-8 w-8 text-slate-400 mx-auto mb-2" />
-                      <p className="text-sm text-slate-600">More data needed for detailed insights</p>
+                      <Info className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">More data needed for detailed insights</p>
                     </div>
                   )}
                 </div>
@@ -1154,7 +1154,7 @@ export default function PaymentTrendAnalysis() {
                   <div className="p-2 bg-green-100 rounded-lg mr-3">
                     <Zap className="h-5 w-5 text-green-600" />
                   </div>
-                  <h3 className="text-lg font-semibold text-slate-900" data-testid="text-recommendations-title">
+                  <h3 className="text-lg font-semibold text-foreground" data-testid="text-recommendations-title">
                     Optimization Recommendations
                   </h3>
                 </div>
@@ -1163,38 +1163,38 @@ export default function PaymentTrendAnalysis() {
                     trendData.recommendations.map((rec, index) => (
                       <div 
                         key={index}
-                        className="border border-slate-200 rounded-lg p-4 bg-white/50"
+                        className="border border-border rounded-lg p-4 bg-background/50"
                         data-testid={`recommendation-${index}`}
                       >
                         <div className="flex items-center justify-between mb-3">
-                          <h4 className="font-medium text-slate-900">{rec.action}</h4>
+                          <h4 className="font-medium text-foreground">{rec.action}</h4>
                           <Badge variant="default" className="bg-green-100 text-green-800 text-xs">
                             {rec.expectedImprovement}
                           </Badge>
                         </div>
                         <div className="space-y-2 text-sm">
                           <div className="flex items-center justify-between">
-                            <span className="text-slate-600">Best Day:</span>
-                            <span className="font-medium text-slate-900">{rec.bestDay}</span>
+                            <span className="text-muted-foreground">Best Day:</span>
+                            <span className="font-medium text-foreground">{rec.bestDay}</span>
                           </div>
                           <div className="flex items-center justify-between">
-                            <span className="text-slate-600">Best Time:</span>
-                            <span className="font-medium text-slate-900">{rec.bestTime}</span>
+                            <span className="text-muted-foreground">Best Time:</span>
+                            <span className="font-medium text-foreground">{rec.bestTime}</span>
                           </div>
                           <div className="flex items-center justify-between">
-                            <span className="text-slate-600">Data Points:</span>
-                            <span className="font-medium text-slate-900">{rec.dataPoints}</span>
+                            <span className="text-muted-foreground">Data Points:</span>
+                            <span className="font-medium text-foreground">{rec.dataPoints}</span>
                           </div>
                         </div>
-                        <div className="mt-3 pt-3 border-t border-slate-200">
-                          <p className="text-sm text-slate-600">{rec.reasoning}</p>
+                        <div className="mt-3 pt-3 border-t border-border">
+                          <p className="text-sm text-muted-foreground">{rec.reasoning}</p>
                         </div>
                       </div>
                     ))
                   ) : (
                     <div className="text-center py-4">
-                      <Target className="h-8 w-8 text-slate-400 mx-auto mb-2" />
-                      <p className="text-sm text-slate-600">Recommendations will appear as more data is collected</p>
+                      <Target className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">Recommendations will appear as more data is collected</p>
                     </div>
                   )}
                 </div>
@@ -1204,7 +1204,7 @@ export default function PaymentTrendAnalysis() {
             {/* Action Items */}
             <div className="glass-card p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-slate-900" data-testid="text-action-items-title">
+                <h3 className="text-lg font-semibold text-foreground" data-testid="text-action-items-title">
                   Next Actions
                 </h3>
                 <Badge variant="secondary" className="text-xs" data-testid="badge-total-actions">

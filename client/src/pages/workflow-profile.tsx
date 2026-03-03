@@ -234,7 +234,7 @@ export default function WorkflowProfilePage() {
   if (!tenantId) {
     return (
       <div className="flex h-screen bg-background items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -630,13 +630,13 @@ function OutcomesSection({
       </div>
 
       <div className="bg-muted rounded-lg p-6">
-        <h3 className="text-[15px] font-semibold text-slate-900 mb-4">Request for More Time</h3>
-        <p className="text-[13px] text-slate-500 mb-4">
+        <h3 className="text-[15px] font-semibold text-foreground mb-4">Request for More Time</h3>
+        <p className="text-[13px] text-muted-foreground mb-4">
           When a customer asks for an extension without a specific date
         </p>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label className="text-[13px] text-slate-600">Action</Label>
+            <Label className="text-[13px] text-muted-foreground">Action</Label>
             <Select
               value={moreTime.action || 'flag_for_approval'}
               onValueChange={(v) => onUpdate({
@@ -656,14 +656,14 @@ function OutcomesSection({
         </div>
       </div>
 
-      <div className="bg-slate-50 rounded-lg p-6">
-        <h3 className="text-[15px] font-semibold text-slate-900 mb-4">Dispute</h3>
-        <p className="text-[13px] text-slate-500 mb-4">
+      <div className="bg-muted rounded-lg p-6">
+        <h3 className="text-[15px] font-semibold text-foreground mb-4">Dispute</h3>
+        <p className="text-[13px] text-muted-foreground mb-4">
           When a customer disputes the invoice
         </p>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label className="text-[13px] text-slate-600">Action</Label>
+            <Label className="text-[13px] text-muted-foreground">Action</Label>
             <Select
               value={dispute.action || 'stop_chasing'}
               onValueChange={(v) => onUpdate({
@@ -688,7 +688,7 @@ function OutcomesSection({
                 dispute: { ...dispute, createException: v },
               })}
             />
-            <Label className="text-[13px] text-slate-600">Create exception item for review</Label>
+            <Label className="text-[13px] text-muted-foreground">Create exception item for review</Label>
           </div>
         </div>
       </div>
@@ -718,8 +718,8 @@ function MessagesSection({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-[15px] font-semibold text-slate-900">Message Templates</h3>
-          <p className="text-[13px] text-slate-500 mt-1">
+          <h3 className="text-[15px] font-semibold text-foreground">Message Templates</h3>
+          <p className="text-[13px] text-muted-foreground mt-1">
             Customize the messages sent at each stage of the collection process
           </p>
         </div>
@@ -741,7 +741,7 @@ function MessagesSection({
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-1 space-y-2">
-          <Label className="text-[12px] text-slate-500 uppercase tracking-wide">Stage</Label>
+          <Label className="text-[12px] text-muted-foreground uppercase tracking-wide">Stage</Label>
           <div className="space-y-1">
             {MESSAGE_KEYS.map((mk) => {
               const hasMessage = messages.some(m => m.key === mk.key);
@@ -751,8 +751,8 @@ function MessagesSection({
                   onClick={() => setSelectedKey(mk.key)}
                   className={`w-full text-left px-3 py-2 rounded text-[13px] transition-colors flex items-center justify-between ${
                     selectedKey === mk.key
-                      ? 'bg-slate-900 text-white'
-                      : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
+                      ? 'bg-foreground text-background'
+                      : 'bg-muted text-foreground hover:bg-muted'
                   }`}
                 >
                   {mk.label}
@@ -765,7 +765,7 @@ function MessagesSection({
           </div>
 
           <div className="pt-4">
-            <Label className="text-[12px] text-slate-500 uppercase tracking-wide">Channel</Label>
+            <Label className="text-[12px] text-muted-foreground uppercase tracking-wide">Channel</Label>
             <div className="flex gap-2 mt-2">
               <button
                 onClick={() => setSelectedChannel('EMAIL')}
@@ -773,7 +773,7 @@ function MessagesSection({
                 className={`flex-1 px-3 py-2 rounded text-[13px] transition-colors ${
                   selectedChannel === 'EMAIL'
                     ? 'bg-blue-600 text-white'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    : 'bg-muted text-foreground hover:bg-muted'
                 } disabled:opacity-50`}
               >
                 Email
@@ -784,7 +784,7 @@ function MessagesSection({
                 className={`flex-1 px-3 py-2 rounded text-[13px] transition-colors ${
                   selectedChannel === 'SMS'
                     ? 'bg-green-600 text-white'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    : 'bg-muted text-foreground hover:bg-muted'
                 } disabled:opacity-50`}
               >
                 SMS
@@ -793,9 +793,9 @@ function MessagesSection({
           </div>
         </div>
 
-        <div className="lg:col-span-3 bg-slate-50 rounded-lg p-6">
+        <div className="lg:col-span-3 bg-muted rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
-            <h4 className="text-[14px] font-medium text-slate-900">
+            <h4 className="text-[14px] font-medium text-foreground">
               {MESSAGE_KEYS.find(mk => mk.key === selectedKey)?.label} - {selectedChannel}
             </h4>
             {currentMessage?.isEdited && (
@@ -808,7 +808,7 @@ function MessagesSection({
           <div className="space-y-4">
             {selectedChannel === 'EMAIL' && (
               <div className="space-y-2">
-                <Label className="text-[13px] text-slate-600">Subject</Label>
+                <Label className="text-[13px] text-muted-foreground">Subject</Label>
                 <Input
                   value={currentMessage?.subject || ''}
                   onChange={(e) => onUpdateMessage(selectedKey, selectedChannel, 'subject', e.target.value)}
@@ -819,7 +819,7 @@ function MessagesSection({
             )}
 
             <div className="space-y-2">
-              <Label className="text-[13px] text-slate-600">
+              <Label className="text-[13px] text-muted-foreground">
                 {selectedChannel === 'SMS' ? 'Message' : 'Body'}
               </Label>
               <Textarea
@@ -830,7 +830,7 @@ function MessagesSection({
                 maxLength={selectedChannel === 'SMS' ? 160 : undefined}
               />
               {selectedChannel === 'SMS' && (
-                <p className="text-[11px] text-slate-400">
+                <p className="text-[11px] text-muted-foreground">
                   {(currentMessage?.body || '').length}/160 characters
                 </p>
               )}
@@ -868,45 +868,45 @@ function ApprovalSection({
 
   return (
     <div className="space-y-6">
-      <div className="bg-slate-50 rounded-lg p-6">
-        <h3 className="text-[15px] font-semibold text-slate-900 mb-4">Workflow Summary</h3>
+      <div className="bg-muted rounded-lg p-6">
+        <h3 className="text-[15px] font-semibold text-foreground mb-4">Workflow Summary</h3>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-white rounded-lg p-4 border border-slate-100">
-            <p className="text-[12px] text-slate-500 mb-1">Version</p>
-            <p className="text-[20px] font-semibold text-slate-900">
+          <div className="bg-background rounded-lg p-4 border border-border/50">
+            <p className="text-[12px] text-muted-foreground mb-1">Version</p>
+            <p className="text-[20px] font-semibold text-foreground">
               {draftProfile.version || 1}
             </p>
           </div>
-          <div className="bg-white rounded-lg p-4 border border-slate-100">
-            <p className="text-[12px] text-slate-500 mb-1">Status</p>
+          <div className="bg-background rounded-lg p-4 border border-border/50">
+            <p className="text-[12px] text-muted-foreground mb-1">Status</p>
             <Badge className={isDraft ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}>
               {draftProfile.status || 'DRAFT'}
             </Badge>
           </div>
-          <div className="bg-white rounded-lg p-4 border border-slate-100">
-            <p className="text-[12px] text-slate-500 mb-1">Message Templates</p>
-            <p className="text-[20px] font-semibold text-slate-900">
+          <div className="bg-background rounded-lg p-4 border border-border/50">
+            <p className="text-[12px] text-muted-foreground mb-1">Message Templates</p>
+            <p className="text-[20px] font-semibold text-foreground">
               {messageCount}
             </p>
           </div>
         </div>
 
         <div className="space-y-3">
-          <div className="flex items-center justify-between py-2 border-b border-slate-100">
-            <span className="text-[13px] text-slate-600">Payment terms</span>
-            <span className="text-[13px] text-slate-900 font-medium">
+          <div className="flex items-center justify-between py-2 border-b border-border/50">
+            <span className="text-[13px] text-muted-foreground">Payment terms</span>
+            <span className="text-[13px] text-foreground font-medium">
               {policy.typicalPaymentTerms || 30} days
             </span>
           </div>
-          <div className="flex items-center justify-between py-2 border-b border-slate-100">
-            <span className="text-[13px] text-slate-600">Max touches per week</span>
-            <span className="text-[13px] text-slate-900 font-medium">
+          <div className="flex items-center justify-between py-2 border-b border-border/50">
+            <span className="text-[13px] text-muted-foreground">Max touches per week</span>
+            <span className="text-[13px] text-foreground font-medium">
               {policy.maxTouchesPerWeek || 3}
             </span>
           </div>
-          <div className="flex items-center justify-between py-2 border-b border-slate-100">
-            <span className="text-[13px] text-slate-600">Enabled channels</span>
+          <div className="flex items-center justify-between py-2 border-b border-border/50">
+            <span className="text-[13px] text-muted-foreground">Enabled channels</span>
             <div className="flex items-center gap-2">
               {channels.emailEnabled !== false && (
                 <Badge variant="outline" className="text-[11px]">Email</Badge>
@@ -920,8 +920,8 @@ function ApprovalSection({
             </div>
           </div>
           <div className="flex items-center justify-between py-2">
-            <span className="text-[13px] text-slate-600">Message tone</span>
-            <span className="text-[13px] text-slate-900 font-medium">
+            <span className="text-[13px] text-muted-foreground">Message tone</span>
+            <span className="text-[13px] text-foreground font-medium">
               {TONE_LABELS[(draftProfile.tone || 3) - 1]}
             </span>
           </div>
@@ -945,16 +945,16 @@ function ApprovalSection({
       )}
 
       {isDraft && (
-        <div className="bg-white border border-slate-200 rounded-lg p-6">
+        <div className="bg-background border border-border rounded-lg p-6">
           <div className="flex items-start gap-4">
             <div className="p-2 bg-amber-50 rounded-lg">
               <AlertCircle className="h-5 w-5 text-amber-600" />
             </div>
             <div className="flex-1">
-              <h4 className="text-[14px] font-medium text-slate-900 mb-1">
+              <h4 className="text-[14px] font-medium text-foreground mb-1">
                 Ready to activate this workflow?
               </h4>
-              <p className="text-[13px] text-slate-500 mb-4">
+              <p className="text-[13px] text-muted-foreground mb-4">
                 This will replace your current active workflow and start using the new settings for all future collection actions.
               </p>
               <Button

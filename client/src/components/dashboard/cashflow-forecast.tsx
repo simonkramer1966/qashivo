@@ -97,29 +97,29 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
       case 'medium': return 'text-yellow-600';
       case 'high': return 'text-orange-600';
       case 'critical': return 'text-red-600';
-      default: return 'text-slate-600';
+      default: return 'text-muted-foreground';
     }
   };
 
   return (
     <div className="glass-card p-4 shadow-lg min-w-[320px] border border-white/20">
-      <p className="font-semibold text-slate-900 mb-2">{formattedDate}</p>
+      <p className="font-semibold text-foreground mb-2">{formattedDate}</p>
       <div className="space-y-2 text-sm">
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-1">
-            <div className="text-slate-600 text-xs font-medium uppercase tracking-wide">Cash Position</div>
+            <div className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Cash Position</div>
             <div className="flex justify-between">
-              <span className="text-slate-600">Opening:</span>
+              <span className="text-muted-foreground">Opening:</span>
               <span className="font-medium">${data.openingBalance?.toLocaleString()}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-600">Closing:</span>
+              <span className="text-muted-foreground">Closing:</span>
               <span className={`font-medium ${data.closingBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 ${data.closingBalance?.toLocaleString()}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-600">Net Flow:</span>
+              <span className="text-muted-foreground">Net Flow:</span>
               <span className={`font-medium ${data.netCashFlow >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 ${data.netCashFlow >= 0 ? '+' : ''}${data.netCashFlow?.toLocaleString()}
               </span>
@@ -127,32 +127,32 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
           </div>
           
           <div className="space-y-1">
-            <div className="text-slate-600 text-xs font-medium uppercase tracking-wide">Flows</div>
+            <div className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Flows</div>
             <div className="flex justify-between">
-              <span className="text-slate-600">AR Collections:</span>
+              <span className="text-muted-foreground">AR Collections:</span>
               <span className="font-medium text-[#17B6C3]">
                 ${data.arCollections?.toLocaleString()}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-600">AP Payments:</span>
+              <span className="text-muted-foreground">AP Payments:</span>
               <span className="font-medium text-amber-600">
                 ${data.apPayments?.toLocaleString()}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-600">Budget Items:</span>
-              <span className="font-medium text-slate-900">
+              <span className="text-muted-foreground">Budget Items:</span>
+              <span className="font-medium text-foreground">
                 ${(data.budgetIncome - data.budgetExpenses)?.toLocaleString()}
               </span>
             </div>
           </div>
         </div>
         
-        <Separator className="bg-slate-200" />
+        <Separator className="bg-muted" />
         
         <div className="flex justify-between items-center">
-          <span className="text-slate-600">Status:</span>
+          <span className="text-muted-foreground">Status:</span>
           <span className={`font-medium capitalize ${getRiskColor(data.riskLevel)}`}>
             {data.riskLevel === 'low' ? 'Healthy' : data.riskLevel === 'medium' ? 'Monitor' : 'Attention needed'}
           </span>
@@ -160,16 +160,16 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
         
         {data.daysOfCashRemaining && (
           <div className="flex justify-between items-center">
-            <span className="text-slate-600">Cash Runway:</span>
-            <span className="font-medium text-slate-900">
+            <span className="text-muted-foreground">Cash Runway:</span>
+            <span className="font-medium text-foreground">
               {data.daysOfCashRemaining} days
             </span>
           </div>
         )}
         
         <div className="flex justify-between items-center">
-          <span className="text-slate-600">Confidence:</span>
-          <span className="font-medium text-slate-900">
+          <span className="text-muted-foreground">Confidence:</span>
+          <span className="font-medium text-foreground">
             ${data.confidenceInterval[0]?.toLocaleString()} - ${data.confidenceInterval[1]?.toLocaleString()}
           </span>
         </div>
@@ -251,7 +251,7 @@ export default function CashFlowForecast() {
             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <AlertTriangle className="h-8 w-8 text-red-600" />
             </div>
-            <p className="text-lg font-semibold text-slate-900 mb-2">Unable to load forecast</p>
+            <p className="text-lg font-semibold text-foreground mb-2">Unable to load forecast</p>
             <p className="text-sm text-muted-foreground mb-4">Please try again later</p>
             <Button onClick={() => refetch()} variant="outline" size="sm">
               <RefreshCw className="h-4 w-4 mr-2" />
@@ -319,7 +319,7 @@ export default function CashFlowForecast() {
             <div className="w-16 h-16 bg-[#17B6C3]/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <BarChart3 className="h-8 w-8 text-[#17B6C3]" />
             </div>
-            <p className="text-lg font-semibold text-slate-900 mb-2">No forecast data available</p>
+            <p className="text-lg font-semibold text-foreground mb-2">No forecast data available</p>
             <p className="text-sm text-muted-foreground">Import invoices to generate projections</p>
           </div>
         </CardContent>
@@ -509,10 +509,10 @@ export default function CashFlowForecast() {
                     )}
                   </div>
                   <div>
-                    <p className="text-xs font-medium text-gray-600 mb-1">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">
                       {metric.title}
                     </p>
-                    <p className="text-sm font-bold text-gray-900" data-testid={`${metric.testId}-value`}>
+                    <p className="text-sm font-bold text-foreground" data-testid={`${metric.testId}-value`}>
                       {metric.value}
                     </p>
                     <p className={`text-xs ${
@@ -530,21 +530,21 @@ export default function CashFlowForecast() {
             {/* Cash Flow Chart */}
             <div className="glass-card p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-slate-900" data-testid="text-chart-title">
+                <h3 className="text-lg font-semibold text-foreground" data-testid="text-chart-title">
                   Daily Cash Position & Flow Analysis
                 </h3>
                 <div className="flex items-center space-x-4 text-xs">
                   <div className="flex items-center space-x-2">
                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: scenarioColor }}></div>
-                    <span className="text-slate-600">Cash Balance</span>
+                    <span className="text-muted-foreground">Cash Balance</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <div className="w-3 h-3 bg-green-500/30 border border-green-500 rounded-full"></div>
-                    <span className="text-slate-600">AR Collections</span>
+                    <span className="text-muted-foreground">AR Collections</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <div className="w-3 h-3 bg-amber-500/30 border border-amber-500 rounded-full"></div>
-                    <span className="text-slate-600">AP Payments</span>
+                    <span className="text-muted-foreground">AP Payments</span>
                   </div>
                 </div>
               </div>
@@ -626,10 +626,10 @@ export default function CashFlowForecast() {
               </div>
 
               {/* Chart Legend & Info */}
-              <div className="mt-4 p-3 bg-slate-50/80 rounded-lg">
+              <div className="mt-4 p-3 bg-muted/80 rounded-lg">
                 <div className="flex items-start space-x-2">
                   <Info className="h-4 w-4 text-[#17B6C3] mt-0.5 flex-shrink-0" />
-                  <div className="text-sm text-slate-700">
+                  <div className="text-sm text-foreground">
                     <p className="font-medium mb-1">{scenarioLabel} Forecast Analysis</p>
                     <p>
                       Based on {chartData.length} days of {scenarioLabel.toLowerCase()} scenario projections with {data?.metadata?.dataPoints?.invoices || 0} invoices, {data?.metadata?.dataPoints?.bills || 0} bills, and {data?.metadata?.dataPoints?.budgets || 0} budget items.
@@ -711,15 +711,15 @@ export default function CashFlowForecast() {
                 </h3>
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-600">Days Sales Outstanding (DSO)</span>
+                    <span className="text-muted-foreground">Days Sales Outstanding (DSO)</span>
                     <span className="font-semibold">{Math.round(metrics?.dso || 0)} days</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-600">Days Payable Outstanding (DPO)</span>
+                    <span className="text-muted-foreground">Days Payable Outstanding (DPO)</span>
                     <span className="font-semibold">{Math.round(metrics?.dpo || 0)} days</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-600">Cash Conversion Cycle (CCC)</span>
+                    <span className="text-muted-foreground">Cash Conversion Cycle (CCC)</span>
                     <span className="font-semibold">{Math.round(metrics?.ccc || 0)} days</span>
                   </div>
                 </div>
@@ -733,15 +733,15 @@ export default function CashFlowForecast() {
                 </h3>
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-600">Cash at Risk (VaR)</span>
+                    <span className="text-muted-foreground">Cash at Risk (VaR)</span>
                     <span className="font-semibold text-red-600">{formatCurrency(metrics?.cashAtRisk || 0)}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-600">Stress Test Result</span>
+                    <span className="text-muted-foreground">Stress Test Result</span>
                     <span className="font-semibold text-orange-600">{formatCurrency(metrics?.stressTestResult || 0)}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-600">FX Exposure</span>
+                    <span className="text-muted-foreground">FX Exposure</span>
                     <span className="font-semibold">{formatCurrency(metrics?.fxExposure || 0)}</span>
                   </div>
                 </div>
@@ -752,8 +752,8 @@ export default function CashFlowForecast() {
           <TabsContent value="scenarios" className="space-y-6">
             <div className="text-center py-8">
               <Zap className="h-12 w-12 text-[#17B6C3] mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">Scenario Comparison</h3>
-              <p className="text-sm text-slate-600 mb-4">
+              <h3 className="text-lg font-semibold text-foreground mb-2">Scenario Comparison</h3>
+              <p className="text-sm text-muted-foreground mb-4">
                 Compare different forecast scenarios to understand potential outcomes
               </p>
               <Button variant="outline" size="sm">
@@ -778,9 +778,9 @@ export default function CashFlowForecast() {
                             {rec.priority} priority
                           </Badge>
                         </div>
-                        <h4 className="font-semibold text-slate-900 mb-1">{rec.title}</h4>
-                        <p className="text-sm text-slate-600 mb-2">{rec.description}</p>
-                        <div className="flex items-center space-x-4 text-xs text-slate-500">
+                        <h4 className="font-semibold text-foreground mb-1">{rec.title}</h4>
+                        <p className="text-sm text-muted-foreground mb-2">{rec.description}</p>
+                        <div className="flex items-center space-x-4 text-xs text-muted-foreground">
                           <span>Impact: {formatCurrency(rec.impact)}</span>
                           <span>Effort: {rec.effort}</span>
                           <span>Timeline: {rec.timeline}</span>
@@ -792,9 +792,9 @@ export default function CashFlowForecast() {
               </div>
             ) : (
               <div className="text-center py-8">
-                <Target className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-slate-900 mb-2">No Recommendations</h3>
-                <p className="text-sm text-slate-600">
+                <Target className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-foreground mb-2">No Recommendations</h3>
+                <p className="text-sm text-muted-foreground">
                   Your cash flow forecast looks healthy. No specific recommendations at this time.
                 </p>
               </div>

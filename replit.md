@@ -42,6 +42,16 @@ Qashivo uses two design systems:
 -   **Backend**: Node.js with Express.js (TypeScript ES modules), RESTful API, Express sessions.
 -   **Database**: PostgreSQL (Neon serverless) with Drizzle ORM and Drizzle Kit, supporting multi-tenancy. 92 tables (added `analysis_jobs`, `debtor_profiles` in Feb 2026).
 -   **Authentication**: Replit Auth (OpenID Connect) + password-based auth via Passport.js.
+-   **Routes Architecture (Mar 2026)**: `server/routes.ts` refactored from 24,253 → 7,079 lines (71% reduction). 8 focused route modules extracted:
+    - `server/routes/collectionsRoutes.ts` (84 routes: actions, collections, payment-plans, activity-logs)
+    - `server/routes/invoiceRoutes.ts` (23 routes: invoice CRUD, send-email/SMS, voice-call)
+    - `server/routes/dashboardRoutes.ts` (25 routes: dashboard, analytics, forecast, cashflow)
+    - `server/routes/integrationRoutes.ts` (44 routes: Xero, providers, accounting)
+    - `server/routes/onboardingRoutes.ts` (28 routes: onboarding wizard, demo-data, demo-mode)
+    - `server/routes/contactRoutes.ts` (43 routes: contacts CRUD, notes, timeline, debtor-snapshot)
+    - `server/routes/settingsRoutes.ts` (36 routes: RBAC, invitations, tenant, scheduled-reports)
+    - `server/routes/miscRoutes.ts` (35 routes: automation, subscription, wallet, attention-items, voice)
+    - All modules registered after `setupAuth(app)` in `registerRoutes()` to ensure Passport middleware runs first.
 
 ### Partner Architecture (B2B2B Model)
 A three-tier hierarchy enabling accounting firms to manage multiple client businesses with role-based access control, session-based tenant switching, and enforced data isolation.

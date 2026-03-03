@@ -1,113 +1,89 @@
 import type { Express } from "express";
-  import { storage } from "../storage";
-  import { isAuthenticated } from "../auth";
-  import { withPermission } from "../middleware/rbac";
-  import { z } from "zod";
-  import { 
-    invoices,
-    contacts,
-    actions,
-    disputes,
-    messageDrafts,
-    tenants,
-    paymentPromises,
-    attentionItems,
-    outcomes,
-    activityLogs,
-    customerLearningProfiles,
-    insertActionItemSchema,
-    insertActionLogSchema,
-    insertPaymentPromiseSchema,
-    insertWorkflowSchema,
-    insertCommunicationTemplateSchema,
-    insertVoiceCallSchema,
-    inboundMessages,
-    promisesToPay,
-    smeClients,
-    timelineEvents,
-    workflows
-  } from "@shared/schema";
-  import { db } from "../db";
-  import { eq, and, desc, asc, sql, inArray, or, isNull, isNotNull, gt, not, lt, gte, lte } from "drizzle-orm";
-  import { actionPrioritizationService } from "../services/actionPrioritizationService";
+import { storage } from "../storage";
+import { isAuthenticated, isOwner } from "../auth";
+import { logSecurityEvent, extractClientInfo } from "../services/securityAuditService";
+import { sanitizeObject, stripSensitiveUserFields, stripSensitiveTenantFields, stripSensitiveFields } from "../utils/sanitize";
+import { withPermission, withRole, withMinimumRole, canManageUser, withRBACContext } from "../middleware/rbac";
+import { 
+  insertContactSchema, insertContactNoteSchema, insertInvoiceSchema, 
+  insertActionSchema, insertWorkflowSchema, insertCommunicationTemplateSchema,
+  insertEscalationRuleSchema, insertChannelAnalyticsSchema, insertWorkflowTemplateSchema,
+  insertVoiceCallSchema, insertBillSchema, insertBankAccountSchema,
+  insertBankTransactionSchema, insertBudgetSchema, insertExchangeRateSchema,
+  insertActionItemSchema, insertActionLogSchema, insertPaymentPromiseSchema,
+  insertPartnerSchema, insertUserContactAssignmentSchema, insertScheduledReportSchema,
+  type Invoice, type Contact, type ContactNote, type Bill, type BankAccount,
+  type BankTransaction, type Budget, type ExchangeRate, type ActionItem,
+  type ActionLog, type PaymentPromise,
+  invoices, contacts, actions, disputes, bankTransactions, customerLearningProfiles,
+  inboundMessages, smsMessages, investorLeads, onboardingProgress, messageDrafts,
+  tenants, paymentPromises, promisesToPay, smeClients, contactNotes, timelineEvents,
+  attentionItems, outcomes, activityLogs, collectionPolicies, paymentPlans,
+  emailMessages, customerContactPersons, scheduledReports,
+} from "@shared/schema";
+import { computeNextRunAt } from "../services/reportScheduler";
+import { REPORT_TYPE_LABELS, type ReportType } from "../services/reportGenerator";
+import { getOverdueCategoryFromDueDate } from "@shared/utils/overdueUtils";
+import { calculateLatePaymentInterest } from "../utils/interestCalculator";
+import { eq, and, desc, asc, sql, count, avg, gte, lte, lt, inArray, or, isNull, isNotNull, gt, not } from 'drizzle-orm';
+import { db } from '../db';
+import { z } from "zod";
+import { generateCollectionSuggestions, generateEmailDraft, generateAiCfoResponse } from "../services/openai";
+import { sendReminderEmail, DEFAULT_FROM, DEFAULT_FROM_EMAIL } from "../services/sendgrid";
+import { sendPaymentReminderSMS } from "../services/vonage";
+import { ActionPrioritizationService } from "../services/actionPrioritizationService";
+import { formatDate } from "@shared/utils/dateFormatter";
+import { xeroService } from "../services/xero";
+import { onboardingService } from "../services/onboardingService";
+import { XeroSyncService } from "../services/xeroSync";
+import { generateMockData } from "../mock-data";
+import { retellService } from "../retell-service";
+import { createRetellClient } from "../mcp/client";
+import { normalizeDynamicVariables, logVariableTransformation } from "../utils/retellVariableNormalizer";
+import { Retell } from "retell-sdk";
+import Stripe from "stripe";
+import { cleanEmailContent } from "../services/messagePostProcessor";
+import { subscriptionService } from "../services/subscriptionService";
+import { getDashboardMetrics } from "../services/metricsService";
+import { computeCashInflow } from "../services/dashboardCashInflowService";
+import { PermissionService } from "../services/permissionService";
+import { signalCollector } from "../lib/signal-collector";
+import { getAssignedContactIds, hasContactAccess } from "./routeHelpers";
 
-  // Constants from routes.ts
-  const DEFAULT_FROM_EMAIL = "hello@qashivo.com";
+import { intentAnalyst } from "../services/intentAnalyst";
 
-  // Helper functions from routes.ts (if any needed)
-  function cleanEmailContent(content: string): string {
-    if (!content) return "";
-    return content
-      .split("\n")
-      .map(para => para.trim())
-      .filter(para => para.length > 0)
-      .map(para => `<p>${para}</p>`)
-      .join("");
-  }
-
-  function formatDate(date: Date): string {
-    return date.toLocaleDateString('en-GB', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
-  }
-
-  const actionItemQuerySchema = z.object({
+const actionItemQuerySchema = z.object({
   status: z.enum(['open', 'in_progress', 'completed', 'snoozed', 'canceled']).optional(),
   assignedToUserId: z.string().optional(),
   type: z.enum(['nudge', 'call', 'email', 'sms', 'review', 'dispute', 'ptp_followup']).optional(),
   priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
   page: z.string().optional().default('1').transform(Number),
   limit: z.string().optional().default('50').transform(Number),
-  // New ML prioritization parameters
   useSmartPriority: z.string().optional().default('false').transform(str => str === 'true'),
   queueType: z.enum(['today', 'due', 'overdue', 'serious', 'escalation']).optional().default('today'),
   sortBy: z.enum(['priority', 'dueDate', 'amount', 'risk', 'smart']).optional().default('smart'),
 });
-
-const actionItemCompleteSchema = z.object({
-  outcome: z.string().optional(),
-  notes: z.string().optional()
-});
-
-const actionItemSnoozeSchema = z.object({
-  newDueDate: z.string().transform((str) => new Date(str)),
-  reason: z.string().optional()
-});
-
-const communicationHistoryQuerySchema = z.object({
-  contactId: z.string().optional(),
-  invoiceId: z.string().optional(),
-  limit: z.string().optional().default('50').transform(Number)
-});
-
 const bulkActionSchema = z.object({
   actionItemIds: z.array(z.string()).min(1, 'At least one action item is required'),
   assignedToUserId: z.string().optional(),
   outcome: z.string().optional(),
   priority: z.enum(['low', 'medium', 'high', 'urgent']).optional()
 });
-
 const bulkNudgeSchema = z.object({
   actionItemIds: z.array(z.string()).min(1, 'At least one action item is required'),
   templateId: z.string().optional(),
   customMessage: z.string().optional()
 });
-
-// Action Centre Drawer validation schemas
 const generateResponseSchema = z.object({
   message: z.string().min(1, "Message is required"),
   intent: z.string().optional(),
   sentiment: z.string().optional(),
   channel: z.string().min(1, "Channel is required")
 });
-
 const respondToQuerySchema = z.object({
   response: z.string().min(1, "Response is required"),
   channel: z.string().min(1, "Channel is required")
 });
-
 const generateOutboundSchema = z.object({
   contactId: z.string().min(1, "Contact ID is required"),
   actionType: z.enum(['email', 'sms', 'voice']),
@@ -121,7 +97,6 @@ const generateOutboundSchema = z.object({
     dueDate: z.string()
   })).min(1, "At least one invoice is required")
 });
-
 const sendActionSchema = z.object({
   contactId: z.string().min(1, "Contact ID is required"),
   actionType: z.enum(['email', 'sms', 'voice']),
@@ -133,26 +108,1366 @@ const sendActionSchema = z.object({
     dueDate: z.string().optional()
   })).min(1, "At least one invoice is required")
 });
-
 const escalateCustomerSchema = z.object({
   contactId: z.string().min(1, "Contact ID is required"),
   invoiceIds: z.array(z.string()).min(1, "At least one invoice ID is required"),
   currentStage: z.enum(['overdue', 'debt_recovery', 'enforcement']),
   nextStage: z.enum(['overdue', 'debt_recovery', 'enforcement'])
 });
+const nudgeInvoiceSchema = z.object({
+  invoiceId: z.string().min(1, "Invoice ID is required")
+});
 
-  export function registerCollectionsRoutes(app: Express): void {
-          return res.status(400).json({ message: "Invalid action data", errors: error.errors });
+export function registerCollectionsRoutes(app: Express): void {
+  app.get("/api/actions", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const limit = req.query.limit ? parseInt(req.query.limit) : undefined;
+      const statusFilter = req.query.status as string | undefined;
+      let actionsData = await storage.getActions(user.tenantId, limit);
+      
+      // Filter by status if provided
+      if (statusFilter) {
+        actionsData = actionsData.filter(action => action.status === statusFilter);
+      }
+      
+      // Enrich actions with contact and invoice info
+      const enrichedActions = await Promise.all(
+        actionsData.map(async (action) => {
+          let companyName = null;
+          let contactName = null;
+          let invoiceNumber = null;
+          let invoiceAmount = null;
+          
+          // Check if contact name is stored in metadata first (for historical accuracy)
+          const metadata = action.metadata as Record<string, any> | null;
+          if (metadata?.storedContactName) {
+            contactName = metadata.storedContactName;
+          }
+          
+          // Get contact info
+          if (action.contactId) {
+            try {
+              const contact = await storage.getContact(action.contactId, user.tenantId);
+              if (contact) {
+                companyName = contact.companyName || null;
+                // Only use dynamic contact name if not stored in metadata
+                if (!contactName) {
+                  // Use primary credit contact if available, otherwise fall back to contact.name
+                  contactName = (contact as any).primaryCreditContact?.name || contact.name || null;
+                }
+              }
+            } catch (e) {
+              // Contact not found, skip
+            }
+          }
+          
+          // Get invoice info
+          if (action.invoiceId) {
+            try {
+              const invoice = await storage.getInvoice(action.invoiceId, user.tenantId);
+              if (invoice) {
+                invoiceNumber = invoice.invoiceNumber;
+                invoiceAmount = invoice.amount;
+              }
+            } catch (e) {
+              // Invoice not found, skip
+            }
+          }
+          
+          return {
+            ...action,
+            companyName,
+            contactName,
+            invoiceNumber,
+            invoiceAmount
+          };
+        })
+      );
+      
+      res.json(enrichedActions);
+    } catch (error) {
+      console.error("Error fetching actions:", error);
+      res.status(500).json({ message: "Failed to fetch actions" });
+    }
+  });
+
+  app.get("/api/actions/all", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const {
+        search = '',
+        contactId = '',
+        page = '1',
+        limit = '20'
+      } = req.query;
+
+      const pageNum = parseInt(page);
+      const limitNum = parseInt(limit);
+      const offset = (pageNum - 1) * limitNum;
+
+      // Get all actions
+      const allActions = await storage.getActions(user.tenantId);
+      
+      // Filter by search query (search in subject, content, contact name)
+      let filteredActions = allActions;
+      
+      // Enrich with contact and invoice info first (needed for search)
+      const enrichedActions = await Promise.all(
+        filteredActions.map(async (action) => {
+          let companyName = null;
+          let contactName = null;
+          let invoiceNumber = null;
+          let invoiceAmount = null;
+          
+          if (action.contactId) {
+            try {
+              const contact = await storage.getContact(action.contactId, user.tenantId);
+              if (contact) {
+                companyName = contact.companyName || null;
+                contactName = contact.name || null;
+              }
+            } catch (e) {
+              // Contact not found
+            }
+          }
+          
+          if (action.invoiceId) {
+            try {
+              const invoice = await storage.getInvoice(action.invoiceId, user.tenantId);
+              if (invoice) {
+                invoiceNumber = invoice.invoiceNumber;
+                invoiceAmount = invoice.amount;
+              }
+            } catch (e) {
+              // Invoice not found
+            }
+          }
+          
+          return {
+            ...action,
+            companyName,
+            contactName,
+            invoiceNumber,
+            invoiceAmount
+          };
+        })
+      );
+
+      // Apply customer filter (contactId param may contain either companyName or contactName)
+      let filteredByCustomer = enrichedActions;
+      if (contactId) {
+        filteredByCustomer = enrichedActions.filter(action => 
+          action.companyName === contactId || action.contactName === contactId
+        );
+      }
+
+      // Apply search filter
+      let searchedActions = filteredByCustomer;
+      if (search) {
+        const searchLower = search.toLowerCase();
+        searchedActions = filteredByCustomer.filter(action => 
+          action.subject?.toLowerCase().includes(searchLower) ||
+          action.content?.toLowerCase().includes(searchLower) ||
+          action.companyName?.toLowerCase().includes(searchLower) ||
+          action.contactName?.toLowerCase().includes(searchLower) ||
+          action.invoiceNumber?.toLowerCase().includes(searchLower)
+        );
+      }
+
+      // Sort by date (newest first)
+      const sortedActions = searchedActions.sort((a, b) => 
+        new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+      );
+
+      // Paginate
+      const paginatedActions = sortedActions.slice(offset, offset + limitNum);
+      
+      res.json({
+        actions: paginatedActions,
+        total: sortedActions.length,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(sortedActions.length / limitNum)
+      });
+    } catch (error) {
+      console.error("Error fetching paginated actions:", error);
+      res.status(500).json({ message: "Failed to fetch actions" });
+    }
+  });
+
+  app.post("/api/actions", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const actionData = insertActionSchema.parse({
+        ...req.body,
+        tenantId: user.tenantId,
+        userId: user.id,
+      });
+
+      const action = await storage.createAction(actionData);
+      
+      // Broadcast real-time update
+      const wsService = (req.app as any).websocketService;
+      if (wsService) {
+        wsService.broadcastActionCreated(user.tenantId, action.id);
+      }
+      
+      res.status(201).json(action);
+    } catch (error) {
+      console.error("Error creating action:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid action data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create action" });
+    }
+  });
+
+  app.post("/api/action-centre/generate-outbound", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // Validate request body
+      const validatedData = generateOutboundSchema.parse(req.body);
+      const { contactId, actionType, totalOutstanding, daysOverdue, stage, invoices } = validatedData;
+
+      // Get contact details
+      const contact = await storage.getContact(contactId, user.tenantId);
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      // Use OpenAI to generate outbound content
+      const OpenAI = (await import('openai')).default;
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+      const invoiceList = invoices.map((inv: any) => 
+        `${inv.invoiceNumber} - £${inv.amount} (Due: ${new Date(inv.dueDate).toLocaleDateString()})`
+      ).join('\n');
+
+      let systemPrompt = '';
+      let userPrompt = '';
+
+      if (actionType === 'email') {
+        systemPrompt = `You are a professional accounts receivable specialist drafting collection emails.
+Generate a professional, firm but polite collection email.
+
+Context:
+- Customer: ${contact.companyName || contact.name}
+- Total Outstanding: £${totalOutstanding}
+- Days Overdue: ${daysOverdue}
+- Collection Stage: ${stage.replace('_', ' ')}
+- Invoices:\n${invoiceList}
+
+Guidelines:
+- Be professional and direct
+- Clearly state the outstanding amount and overdue period
+- List all outstanding invoices
+- Include a clear call-to-action (payment deadline, contact request)
+- Tone should escalate based on stage: overdue (polite reminder), debt_recovery (firm), enforcement (final notice)
+- Include professional sign-off
+- DO NOT include subject line or greeting, just the body`;
+
+        userPrompt = `Draft a ${stage.replace('_', ' ')} collection email for this customer.`;
+      } else if (actionType === 'sms') {
+        systemPrompt = `You are drafting a concise SMS collection message.
+Generate a brief, professional SMS (max 160 characters).
+
+Context:
+- Customer: ${contact.companyName || contact.name}
+- Total Outstanding: £${totalOutstanding}
+- Days Overdue: ${daysOverdue}
+- Collection Stage: ${stage.replace('_', ' ')}
+
+Guidelines:
+- Keep it under 160 characters
+- Be direct and clear
+- Include amount and urgency
+- Professional tone matching the stage severity`;
+
+        userPrompt = `Draft a ${stage.replace('_', ' ')} SMS collection message.`;
+      } else if (actionType === 'voice') {
+        systemPrompt = `You are creating a call script for an AI voice agent making collection calls.
+Generate a clear, professional call script.
+
+Context:
+- Customer: ${contact.companyName || contact.name}
+- Total Outstanding: £${totalOutstanding}
+- Days Overdue: ${daysOverdue}
+- Collection Stage: ${stage.replace('_', ' ')}
+- Invoices:\n${invoiceList}
+
+Guidelines:
+- Start with a friendly greeting
+- Clearly identify yourself and purpose
+- State the outstanding balance
+- Ask for payment commitment
+- Handle objections professionally
+- End with clear next steps
+- Tone should match the collection stage`;
+
+        userPrompt = `Create a ${stage.replace('_', ' ')} collection call script.`;
+      }
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ],
+        temperature: 0.7,
+        max_tokens: actionType === 'sms' ? 100 : 500,
+      });
+
+      const draftContent = completion.choices[0].message.content || "";
+
+      res.json({ draftContent });
+    } catch (error) {
+      console.error("Error generating outbound content:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid request data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to generate content" });
+    }
+  });
+
+  app.post("/api/action-centre/send-action", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // Validate request body
+      const validatedData = sendActionSchema.parse(req.body);
+      const { contactId, actionType, content, invoices } = validatedData;
+
+      // Create action record for each invoice (or one bundled action)
+      const action = await storage.createAction({
+        tenantId: user.tenantId,
+        userId: user.id,
+        contactId,
+        invoiceId: invoices[0]?.id || null,
+        type: actionType,
+        status: 'completed',
+        priority: 'high',
+        subject: `Collection ${actionType} - ${invoices.length} invoice(s)`,
+        content,
+        metadata: {
+          direction: 'outbound',
+          invoiceIds: invoices.map((inv: any) => inv.id),
+          bundledCount: invoices.length,
+        }
+      });
+
+      // TODO: Actually send via the appropriate channel (email/SMS/voice)
+      // For now, we just create the action record
+      
+      // Broadcast real-time update
+      const wsService = (req.app as any).websocketService;
+      if (wsService) {
+        wsService.broadcastActionCompleted(user.tenantId, action.id, actionType);
+      }
+
+      res.json({ 
+        success: true, 
+        action,
+        message: "Action sent successfully" 
+      });
+    } catch (error) {
+      console.error("Error sending action:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid request data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to send action" });
+    }
+  });
+
+  app.post("/api/action-centre/escalate", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // Validate request body
+      const validatedData = escalateCustomerSchema.parse(req.body);
+      const { contactId, invoiceIds, currentStage, nextStage } = validatedData;
+
+      // Validate escalation path
+      const validEscalations: Record<string, string> = {
+        'overdue': 'debt_recovery',
+        'debt_recovery': 'enforcement',
+      };
+
+      if (validEscalations[currentStage] !== nextStage) {
+        return res.status(400).json({ 
+          message: `Invalid escalation path: ${currentStage} -> ${nextStage}` 
+        });
+      }
+
+      // Update all invoices to next stage
+      await Promise.all(
+        invoiceIds.map((invoiceId: string) =>
+          storage.updateInvoice(invoiceId, user.tenantId, { stage: nextStage })
+        )
+      );
+
+      // Create escalation action record
+      await storage.createAction({
+        tenantId: user.tenantId,
+        userId: user.id,
+        contactId,
+        invoiceId: invoiceIds[0] || null,
+        type: 'escalation',
+        status: 'completed',
+        priority: 'high',
+        subject: `Escalated to ${nextStage.replace('_', ' ')}`,
+        content: `Customer escalated from ${currentStage} to ${nextStage} stage`,
+        metadata: {
+          escalation: {
+            from: currentStage,
+            to: nextStage,
+            invoiceIds,
+            escalatedAt: new Date().toISOString(),
+          }
+        }
+      });
+
+      res.json({ 
+        success: true, 
+        message: `Customer escalated to ${nextStage}` 
+      });
+    } catch (error) {
+      console.error("Error escalating customer:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid request data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to escalate customer" });
+    }
+  });
+
+  app.get("/api/action-centre/tabs", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const tenantId = user.tenantId;
+      // Normalize today to UTC midnight for timezone-safe comparisons
+      // This ensures invoices due today are in "Due" not "Overdue" regardless of server timezone
+      const today = new Date();
+      today.setUTCHours(0, 0, 0, 0);
+      
+      // Get actions with smart filtering for performance
+      // Load ALL OPEN actions with active intents, plus recent actions (last 90 days)
+      const ninetyDaysAgo = new Date();
+      ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+      
+      const allActions = await db
+        .select()
+        .from(actions)
+        .where(
+          and(
+            eq(actions.tenantId, tenantId),
+            or(
+              // Include ALL OPEN actions with general_query, promise_to_pay, or dispute intent
+              and(
+                eq(actions.status, 'open'),
+                or(
+                  eq(actions.intentType, 'general_query'),
+                  eq(actions.intentType, 'promise_to_pay'),
+                  eq(actions.intentType, 'dispute')
+                )
+              ),
+              // Or recent actions (last 90 days) regardless of intent/status
+              gte(actions.createdAt, ninetyDaysAgo)
+            )
+          )
+        )
+        .orderBy(desc(actions.createdAt));
+        
+      const allInvoices = await db
+        .select()
+        .from(invoices)
+        .where(
+          and(
+            eq(invoices.tenantId, tenantId),
+            or(
+              // Include ALL overdue, unpaid, and outstanding invoices (active work items)
+              eq(invoices.status, 'overdue'),
+              eq(invoices.status, 'unpaid'),
+              eq(invoices.status, 'outstanding'),
+              // Or recently paid invoices (last 90 days)
+              and(
+                eq(invoices.status, 'paid'),
+                gte(invoices.paidDate, ninetyDaysAgo)
+              )
+            )
+          )
+        )
+        .orderBy(desc(invoices.dueDate));
+      
+      // Get pending payment promises for forecast
+      const pendingPromises = await db
+        .select()
+        .from(paymentPromises)
+        .where(
+          and(
+            eq(paymentPromises.tenantId, tenantId),
+            eq(paymentPromises.status, 'pending'),
+            gte(paymentPromises.promisedDate, today)
+          )
+        )
+        .orderBy(paymentPromises.promisedDate);
+      
+      // Build a map of contactId -> array of pending promises with dates and amounts
+      const contactPromisesMap = new Map<string, Array<{ date: Date; amount: number; invoiceId: string }>>();
+      for (const promise of pendingPromises) {
+        if (promise.contactId && promise.promisedDate) {
+          if (!contactPromisesMap.has(promise.contactId)) {
+            contactPromisesMap.set(promise.contactId, []);
+          }
+          contactPromisesMap.get(promise.contactId)!.push({
+            date: new Date(promise.promisedDate),
+            amount: parseFloat(String(promise.promisedAmount || 0)),
+            invoiceId: promise.invoiceId || ''
+          });
+        }
+      }
+      // Also keep the old single-date map for backward compatibility
+      const contactPtpMap = new Map<string, Date>();
+      for (const promise of pendingPromises) {
+        if (promise.contactId && !contactPtpMap.has(promise.contactId)) {
+          contactPtpMap.set(promise.contactId, new Date(promise.promisedDate!));
+        }
+      }
+      
+      // Get formal disputes from debtor portal (needed for filtering)
+      const formalDisputes = await db
+        .select({
+          dispute: disputes,
+          invoice: invoices,
+          contact: contacts
+        })
+        .from(disputes)
+        .leftJoin(invoices, eq(disputes.invoiceId, invoices.id))
+        .leftJoin(contacts, eq(invoices.contactId, contacts.id))
+        .where(eq(disputes.tenantId, tenantId))
+        .orderBy(desc(disputes.createdAt));
+      
+      // Get all invoice IDs that have active disputes from the disputes table
+      const invoiceIdsWithDisputes = formalDisputes
+        .filter(({ dispute }) => dispute.status !== 'resolved')
+        .map(({ dispute }) => dispute.invoiceId);
+      
+      // 0. COMPLETED - actions that AI has executed (completed/sent outbound actions)
+      // Support date range filtering: yesterday, week, month (defaults to week for backward compat)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      const completedActionsRaw = allActions.filter(a => {
+        const isCompleted = a.status === 'completed' || a.status === 'sent';
+        const isOutbound = a.metadata?.direction === 'outbound' || !a.metadata?.direction;
+        const isRecent = a.completedAt ? new Date(a.completedAt) >= thirtyDaysAgo : 
+                         a.createdAt ? new Date(a.createdAt) >= thirtyDaysAgo : false;
+        const isActionable = a.type === 'email' || a.type === 'sms' || a.type === 'call' || a.type === 'voice';
+        return isCompleted && isOutbound && isRecent && isActionable;
+      });
+      
+      // Helper to get date cutoffs
+      const getDateCutoff = (range: 'yesterday' | 'week' | 'month') => {
+        const cutoff = new Date();
+        if (range === 'yesterday') {
+          cutoff.setDate(cutoff.getDate() - 1);
+          cutoff.setHours(0, 0, 0, 0);
+        } else if (range === 'week') {
+          cutoff.setDate(cutoff.getDate() - 7);
+        } else {
+          cutoff.setDate(cutoff.getDate() - 30);
+        }
+        return cutoff;
+      };
+      
+      // Calculate metrics for each date range
+      const calculateCompletedMetrics = (actions: typeof completedActionsRaw) => {
+        const emailActions = actions.filter(a => a.type === 'email');
+        const smsActions = actions.filter(a => a.type === 'sms');
+        const voiceActions = actions.filter(a => a.type === 'call' || a.type === 'voice');
+        
+        // Count PTPs (promise to pay outcomes)
+        const ptpActions = actions.filter(a => 
+          a.intentType === 'promise_to_pay' || 
+          a.metadata?.outcome === 'promise_to_pay' ||
+          a.metadata?.outcome === 'ptp'
+        );
+        
+        // Calculate commitment amounts from PTPs
+        const commitmentAmount = ptpActions.reduce((sum, a) => {
+          const amount = parseFloat(a.metadata?.ptpAmount || a.metadata?.amount || '0');
+          return sum + (isNaN(amount) ? 0 : amount);
+        }, 0);
+        
+        // Unique customers contacted
+        const uniqueCustomers = new Set(actions.map(a => a.contactId).filter(Boolean)).size;
+        
+        // Voice answered rate
+        const voiceAnswered = voiceActions.filter(a => 
+          a.metadata?.outcome === 'answered' || 
+          a.metadata?.callStatus === 'completed' ||
+          a.metadata?.answered === true
+        ).length;
+        
+        // Calculate SMS delivery rate
+        const smsDelivered = smsActions.filter(a => a.status === 'sent' || a.status === 'completed').length;
+        const smsDeliveryRate = smsActions.length > 0 ? Math.round((smsDelivered / smsActions.length) * 100) : 100;
+        
+        return {
+          actions: actions.length,
+          actionsChange: '—', // Will be calculated by comparing periods
+          emailCount: emailActions.length,
+          smsCount: smsActions.length,
+          voiceCount: voiceActions.length,
+          voiceAnswered,
+          ptpCount: ptpActions.length,
+          commitments: Math.round(commitmentAmount),
+          customers: uniqueCustomers,
+          coverage: uniqueCustomers > 0 ? `${Math.min(100, Math.round((uniqueCustomers / Math.max(1, allInvoices.filter(inv => inv.status === 'unpaid' || inv.status === 'overdue').length)) * 100))}%` : '0%',
+          responseRate: actions.length > 0 ? Math.round((ptpActions.length / actions.length) * 100) : 0,
+          responseChange: '—', // Will be calculated by comparing periods
+          emailOpen: emailActions.length > 0 ? `${Math.round(emailActions.filter(a => a.metadata?.opened).length / emailActions.length * 100)}%` : '0%',
+          smsDelivery: `${smsDeliveryRate}%`
+        };
+      };
+      
+      // Get metrics for each period
+      const yesterdayCutoff = getDateCutoff('yesterday');
+      const weekCutoff = getDateCutoff('week');
+      const monthCutoff = getDateCutoff('month');
+      
+      // Calculate end of yesterday (23:59:59.999)
+      const yesterdayEnd = new Date(yesterdayCutoff);
+      yesterdayEnd.setHours(23, 59, 59, 999);
+      
+      const yesterdayActions = completedActionsRaw.filter(a => {
+        const actionDate = a.completedAt ? new Date(a.completedAt) : new Date(a.createdAt);
+        return actionDate >= yesterdayCutoff && actionDate <= yesterdayEnd;
+      });
+      const weekActions = completedActionsRaw.filter(a => {
+        const actionDate = a.completedAt ? new Date(a.completedAt) : new Date(a.createdAt);
+        return actionDate >= weekCutoff;
+      });
+      const monthActions = completedActionsRaw.filter(a => {
+        const actionDate = a.completedAt ? new Date(a.completedAt) : new Date(a.createdAt);
+        return actionDate >= monthCutoff;
+      });
+      
+      const completedMetrics = {
+        yesterday: calculateCompletedMetrics(yesterdayActions),
+        week: calculateCompletedMetrics(weekActions),
+        month: calculateCompletedMetrics(monthActions)
+      };
+      
+      // Enrich completed actions with contact/invoice info and format for frontend
+      const completedActions = await Promise.all(completedActionsRaw.map(async (action) => {
+        let companyName = '';
+        let contactName = '';
+        let invoiceNumber = '';
+        let invoiceAmount = '0';
+        
+        if (action.contactId) {
+          try {
+            const contact = await storage.getContact(action.contactId, tenantId);
+            if (contact) {
+              companyName = contact.companyName || '';
+              contactName = contact.name || '';
+            }
+          } catch (e) {}
+        }
+        
+        if (action.invoiceId) {
+          const invoice = allInvoices.find(inv => inv.id === action.invoiceId);
+          if (invoice) {
+            invoiceNumber = invoice.invoiceNumber || '';
+            invoiceAmount = invoice.amount || '0';
+          }
+        }
+        
+        // Determine outcome label
+        let outcome = 'Delivered';
+        if (action.intentType === 'promise_to_pay' || action.metadata?.outcome === 'promise_to_pay') {
+          outcome = 'Promise to pay';
+        } else if (action.intentType === 'dispute' || action.metadata?.outcome === 'dispute') {
+          outcome = 'Dispute';
+        } else if (action.metadata?.opened) {
+          outcome = 'Opened';
+        }
+        
+        const actionDate = action.completedAt ? new Date(action.completedAt) : new Date(action.createdAt);
+        
+        return {
+          ...action,
+          companyName,
+          contactName,
+          invoiceNumber,
+          invoiceAmount,
+          // Formatted fields for UI
+          formattedDate: actionDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+          formattedTime: actionDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+          outcome,
+          outcomeAmount: outcome === 'Promise to pay' ? parseFloat(invoiceAmount) : null,
+          channel: action.type === 'call' ? 'voice' : action.type
+        };
+      }));
+      
+      // Sort by most recent first
+      completedActions.sort((a, b) => {
+        const dateA = a.completedAt ? new Date(a.completedAt) : new Date(a.createdAt);
+        const dateB = b.completedAt ? new Date(b.completedAt) : new Date(b.createdAt);
+        return dateB.getTime() - dateA.getTime();
+      });
+      
+      // 0.5. EXCEPTIONS - actions flagged for human review
+      const exceptionsRaw = allActions.filter(a => {
+        return a.status === 'exception' || 
+               (a.exceptionReason && a.status !== 'completed' && a.status !== 'sent' && a.status !== 'cancelled');
+      });
+      
+      const exceptions = await Promise.all(exceptionsRaw.map(async (action) => {
+        let companyName = '';
+        let contactName = '';
+        let invoiceNumber = '';
+        let invoiceAmount = '0';
+        
+        if (action.contactId) {
+          try {
+            const contact = await storage.getContact(action.contactId, tenantId);
+            if (contact) {
+              companyName = contact.companyName || '';
+              contactName = contact.name || '';
+            }
+          } catch (e) {}
+        }
+        
+        if (action.invoiceId) {
+          const invoice = allInvoices.find(inv => inv.id === action.invoiceId);
+          if (invoice) {
+            invoiceNumber = invoice.invoiceNumber || '';
+            invoiceAmount = invoice.amount || '0';
+          }
+        }
+        
+        return {
+          ...action,
+          companyName,
+          contactName,
+          invoiceNumber,
+          invoiceAmount
+        };
+      }));
+      
+      // 1. QUERIES - actions with general_query intent
+      const queries = allActions.filter(a => a.intentType === 'general_query');
+      
+      // Helper function to enrich invoice with contact info
+      const enrichInvoice = async (inv: any) => {
+        let companyName = '';
+        let contactName = '';
+        try {
+          const contact = await storage.getContact(inv.contactId, tenantId);
+          if (contact) {
+            companyName = contact.companyName || '';
+            contactName = contact.name || '';
+          }
+        } catch (e) {
+          // Contact not found
+        }
+        return { ...inv, companyName, contactName };
+      };
+      
+      // 2. OVERDUE INVOICES - grouped by customer (stage = 'overdue')
+      // No longer filter out PTPs, disputes, etc. - let frontend exception filters handle that
+      const overdueInvoicesRaw = allInvoices.filter(inv => {
+        const isOverdue = inv.status === 'overdue' && new Date(inv.dueDate) < today;
+        const isOverdueStage = !inv.stage || inv.stage === 'overdue';
+        
+        return isOverdue && isOverdueStage;
+      });
+      
+      // Group overdue invoices by customer
+      const customerGroups = new Map<string, any>();
+      
+      for (const invoice of overdueInvoicesRaw) {
+        const contactId = invoice.contactId;
+        
+        if (!customerGroups.has(contactId)) {
+          // Get contact info
+          let companyName = '';
+          let contactName = '';
+          let contact = null;
+          try {
+            contact = await storage.getContact(contactId, tenantId);
+            if (contact) {
+              companyName = contact.companyName || '';
+              contactName = contact.name || '';
+            }
+          } catch (e) {
+            // Contact not found
+          }
+          
+          // Find last payment date (most recent paid invoice)
+          const contactInvoices = allInvoices.filter(inv => inv.contactId === contactId);
+          const paidInvoices = contactInvoices.filter(inv => inv.status === 'paid' && inv.paidDate);
+          let lastPaymentDate: string | null = null;
+          if (paidInvoices.length > 0) {
+            const sortedPaid = paidInvoices.sort((a, b) => 
+              new Date(b.paidDate!).getTime() - new Date(a.paidDate!).getTime()
+            );
+            lastPaymentDate = sortedPaid[0].paidDate!;
+          }
+          
+          // Find last contact date (most recent outbound action)
+          const contactActions = allActions.filter(action => 
+            action.contactId === contactId && 
+            action.metadata?.direction === 'outbound' &&
+            (action.type === 'email' || action.type === 'sms' || action.type === 'call')
+          );
+          let lastContactDate: string | null = null;
+          if (contactActions.length > 0) {
+            const sortedActions = contactActions.sort((a, b) => 
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            );
+            lastContactDate = sortedActions[0].createdAt;
+          }
+          
+          // Calculate payment trend (last 3 months)
+          const threeMonthsAgo = new Date();
+          threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+          const recentPaidInvoices = paidInvoices.filter(inv => 
+            inv.paidDate && new Date(inv.paidDate) >= threeMonthsAgo
+          );
+          const recentOverdueCount = contactInvoices.filter(inv => 
+            inv.status === 'overdue'
+          ).length;
+          
+          let paymentTrend: 'improving' | 'stable' | 'declining' = 'stable';
+          if (recentPaidInvoices.length >= 2 && recentOverdueCount === 0) {
+            paymentTrend = 'improving';
+          } else if (recentOverdueCount > 2 || (recentPaidInvoices.length === 0 && recentOverdueCount > 0)) {
+            paymentTrend = 'declining';
+          }
+          
+          // Determine next action based on last contact
+          let nextAction = 'Email';
+          const daysSinceLastContact = lastContactDate 
+            ? Math.floor((today.getTime() - new Date(lastContactDate).getTime()) / (1000 * 3600 * 24))
+            : 999;
+          
+          if (daysSinceLastContact > 14) {
+            nextAction = 'Call';
+          } else if (daysSinceLastContact > 7) {
+            nextAction = 'SMS';
+          }
+          
+          // Find assigned user (most recent action creator/assignee for this customer)
+          let assignedToUserId: string | null = null;
+          let assignedToUserName: string | null = null;
+          
+          const recentActions = contactActions.slice(0, 5); // Check last 5 actions
+          for (const action of recentActions) {
+            if (action.userId) {
+              assignedToUserId = action.userId;
+              try {
+                const user = await storage.getUser(assignedToUserId);
+                if (user) {
+                  assignedToUserName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Unknown';
+                }
+              } catch (e) {
+                // User not found
+              }
+              break; // Use the most recent action's user
+            }
+          }
+          
+          customerGroups.set(contactId, {
+            contactId,
+            companyName,
+            contactName,
+            contact, // Include full contact for dialog
+            totalOutstanding: 0,
+            invoiceCount: 0,
+            invoices: [],
+            oldestDueDate: invoice.dueDate,
+            escalationFlag: false,
+            legalFlag: false,
+            lastPaymentDate,
+            lastContactDate,
+            paymentTrend,
+            nextAction,
+            assignedToUserId,
+            assignedToUserName,
+          });
+        }
+        
+        const group = customerGroups.get(contactId);
+        group.totalOutstanding += parseFloat(invoice.amount || '0');
+        group.invoiceCount += 1;
+        group.invoices.push(invoice);
+        
+        // Track oldest due date
+        if (new Date(invoice.dueDate) < new Date(group.oldestDueDate)) {
+          group.oldestDueDate = invoice.dueDate;
+        }
+        
+        // Inherit severity flags
+        if (invoice.escalationFlag) group.escalationFlag = true;
+        if (invoice.legalFlag) group.legalFlag = true;
+      }
+      
+      const overdueCustomers = Array.from(customerGroups.values());
+      
+      // 3. UPCOMING PTP - promise_to_pay with future dates (enriched with invoice & customer data)
+      const upcomingPTPRaw = allActions.filter(a => {
+        if (a.intentType !== 'promise_to_pay') return false;
+        const promisedDate = a.metadata?.analysis?.entities?.dates?.[0];
+        if (!promisedDate) return false;
+        return new Date(promisedDate) >= today;
+      });
+      
+      const upcomingPTP = await Promise.all(upcomingPTPRaw.map(async (action) => {
+        const promisedDate = action.metadata?.analysis?.entities?.dates?.[0];
+        const promisedAmount = action.metadata?.analysis?.entities?.amounts?.[0] || null;
+        
+        // Get invoice details
+        let invoice = null;
+        let companyName = '';
+        let contactName = '';
+        if (action.invoiceId) {
+          invoice = allInvoices.find(inv => inv.id === action.invoiceId);
+          if (invoice?.contactId) {
+            try {
+              const contact = await storage.getContact(invoice.contactId, tenantId);
+              if (contact) {
+                companyName = contact.companyName || '';
+                contactName = contact.name || '';
+              }
+            } catch (e) {
+              // Contact not found
+            }
+          }
+        }
+        
+        // Calculate days until promised date
+        const daysUntil = Math.ceil((new Date(promisedDate).getTime() - today.getTime()) / (1000 * 3600 * 24));
+        
+        // Determine source
+        let source = 'Manual';
+        if (action.metadata?.direction === 'inbound') {
+          if (action.type === 'email') source = 'Inbound Email';
+          else if (action.type === 'sms') source = 'Inbound SMS';
+          else if (action.type === 'call') source = 'Voice Call';
+        }
+        
+        // Get confidence (only for AI-detected PTPs)
+        const confidence = action.intentConfidence || null;
+        
+        return {
+          ...action,
+          companyName,
+          contactName,
+          invoiceNumber: invoice?.invoiceNumber || 'N/A',
+          invoiceAmount: invoice?.amount || '0',
+          promisedDate,
+          promisedAmount,
+          daysUntil,
+          source,
+          confidence
+        };
+      }));
+      
+      // 4. BROKEN PROMISES - PTP with past dates + invoice still unpaid
+      const brokenPromises = allActions.filter(a => {
+        if (a.intentType !== 'promise_to_pay' || !a.invoiceId) return false;
+        const promisedDate = a.metadata?.analysis?.entities?.dates?.[0];
+        if (!promisedDate || new Date(promisedDate) >= today) return false;
+        
+        const invoice = allInvoices.find(inv => inv.id === a.invoiceId);
+        return invoice && invoice.status === 'overdue';
+      });
+      
+      // 5. DISPUTES - both actions with dispute intent AND formal disputes from debtor portal
+      const disputeActions = allActions.filter(a => a.intentType === 'dispute');
+      
+      // Transform formal disputes to match action format for display (formalDisputes already fetched above)
+      const transformedDisputes = formalDisputes.map(({ dispute, invoice, contact }) => ({
+        id: dispute.id,
+        tenantId: dispute.tenantId,
+        invoiceId: dispute.invoiceId,
+        contactId: invoice?.contactId || null,
+        userId: null,
+        type: 'dispute',
+        status: dispute.status,
+        subject: `Dispute: ${dispute.reason}`,
+        content: dispute.description,
+        scheduledFor: null,
+        completedAt: dispute.status === 'resolved' ? dispute.updatedAt : null,
+        metadata: {
+          disputeId: dispute.id,
+          reason: dispute.reason,
+          responseNotes: dispute.responseNotes,
+          respondedAt: dispute.respondedAt,
+          respondedBy: dispute.respondedBy
+        },
+        intentType: 'dispute',
+        intentConfidence: '1.00',
+        sentiment: 'negative',
+        hasResponse: !!dispute.respondedAt,
+        createdAt: dispute.createdAt,
+        updatedAt: dispute.updatedAt,
+        companyName: contact?.companyName || '',
+        contactName: contact?.name || '',
+        invoiceNumber: invoice?.invoiceNumber || 'N/A',
+        invoiceAmount: invoice?.amount || '0'
+      }));
+      
+      // Combine both types of disputes
+      const allDisputes = [...disputeActions, ...transformedDisputes];
+      
+      // 6. ON HOLD - invoices with active PTP, Payment Plan, or Dispute (paused from dunning)
+      const onHoldRaw = allInvoices.filter(inv => {
+        const isOverdueOrUnpaid = inv.status === 'overdue' || inv.status === 'unpaid';
+        const hasPaymentPlan = inv.outcomeOverride === 'Plan';
+        const hasActionDispute = allActions.some(a => a.invoiceId === inv.id && a.intentType === 'dispute' && a.status === 'open');
+        const hasFormalDispute = invoiceIdsWithDisputes.includes(inv.id);
+        const hasDispute = hasActionDispute || hasFormalDispute;
+        const hasPTP = allActions.some(a => a.invoiceId === inv.id && a.intentType === 'promise_to_pay');
+        
+        return isOverdueOrUnpaid && (hasPaymentPlan || hasDispute || hasPTP);
+      });
+      
+      const onHold = await Promise.all(onHoldRaw.map(async (inv) => {
+        const enriched = await enrichInvoice(inv);
+        
+        // Determine why it's on hold
+        const hasPaymentPlan = inv.outcomeOverride === 'Plan';
+        const hasActionDispute = allActions.some(a => a.invoiceId === inv.id && a.intentType === 'dispute' && a.status === 'open');
+        const hasFormalDispute = invoiceIdsWithDisputes.includes(inv.id);
+        const hasDispute = hasActionDispute || hasFormalDispute;
+        const hasPTP = allActions.some(a => a.invoiceId === inv.id && a.intentType === 'promise_to_pay');
+        
+        let holdReason = '';
+        if (hasPaymentPlan) holdReason = 'Payment Plan';
+        else if (hasDispute) holdReason = 'Dispute';
+        else if (hasPTP) holdReason = 'Promise to Pay';
+        
+        return { ...enriched, holdReason };
+      }));
+      
+      // 7. PAYMENT PLANS - invoices with active payment plans
+      const paymentPlansRaw = allInvoices.filter(inv => inv.outcomeOverride === 'Plan');
+      const paymentPlansItems = await Promise.all(paymentPlansRaw.map(enrichInvoice));
+      
+      // 8. DEBT RECOVERY - invoices with stage = 'debt_recovery'
+      const debtRecoveryRaw = allInvoices.filter(inv => inv.stage === 'debt_recovery');
+      const debtRecovery = await Promise.all(debtRecoveryRaw.map(enrichInvoice));
+      
+      // 9. ENFORCEMENT - invoices with stage = 'enforcement'
+      const enforcementRaw = allInvoices.filter(inv => inv.stage === 'enforcement');
+      const enforcement = await Promise.all(enforcementRaw.map(enrichInvoice));
+      
+      // ========== PRECEDENCE-BASED INVOICE CATEGORIZATION ==========
+      // Each invoice appears in exactly ONE tab based on precedence:
+      // Recovery > Disputes > Queries > Broken > Promises > VIP > Overdue > Due
+      
+      // Get all unpaid invoices (includes various unpaid statuses)
+      const unpaidInvoices = allInvoices.filter(inv => 
+        inv.status === 'unpaid' || inv.status === 'overdue' || inv.status === 'outstanding'
+      );
+      
+      // Get invoice IDs for each category (for precedence checks)
+      const recoveryInvoiceIds = new Set(
+        unpaidInvoices.filter(inv => inv.stage === 'debt_recovery' || inv.stage === 'enforcement').map(inv => inv.id)
+      );
+      
+      const disputeInvoiceIds = new Set([
+        ...invoiceIdsWithDisputes,
+        ...allActions.filter(a => a.intentType === 'dispute' && a.status === 'open' && a.invoiceId).map(a => a.invoiceId)
+      ]);
+      
+      const queryInvoiceIds = new Set(
+        allActions.filter(a => a.intentType === 'general_query' && a.status === 'open' && a.invoiceId).map(a => a.invoiceId)
+      );
+      
+      const brokenInvoiceIds = new Set(
+        brokenPromises.filter(a => a.invoiceId).map(a => a.invoiceId)
+      );
+      
+      const promiseInvoiceIds = new Set(
+        upcomingPTP.filter(a => a.invoiceId).map(a => a.invoiceId as string)
+      );
+      
+      // VIP invoices - those with contacts marked as VIP or manually flagged
+      const vipContactIds = new Set(
+        exceptions.filter(e => e.contactId).map(e => e.contactId)
+      );
+      
+      // Pre-compute GLOBAL overdue metrics per contact (across ALL their unpaid invoices)
+      // This ensures consistent overdue data regardless of which bucket a debtor is pulled from
+      const globalOverdueMetrics = new Map<string, { 
+        oldestOverdueDueDate: string | null;
+        totalOverdue: number;
+        oldestDaysOverdue: number;
+      }>();
+      
+      for (const inv of unpaidInvoices) {
+        const contactId = inv.contactId;
+        const invDueDate = new Date(inv.dueDate);
+        invDueDate.setUTCHours(0, 0, 0, 0);
+        
+        if (invDueDate < today) {
+          const invAmount = parseFloat(inv.amount || '0');
+          const metrics = globalOverdueMetrics.get(contactId) || { 
+            oldestOverdueDueDate: null, 
+            totalOverdue: 0, 
+            oldestDaysOverdue: 0 
+          };
+          
+          metrics.totalOverdue += invAmount;
+          
+          if (!metrics.oldestOverdueDueDate || invDueDate < new Date(metrics.oldestOverdueDueDate)) {
+            metrics.oldestOverdueDueDate = inv.dueDate;
+            metrics.oldestDaysOverdue = Math.floor((today.getTime() - invDueDate.getTime()) / (1000 * 60 * 60 * 24));
+          }
+          
+          globalOverdueMetrics.set(contactId, metrics);
+        }
+      }
+      
+      // Categorize each invoice using precedence
+      const categorizedInvoices: Record<string, any[]> = {
+        recovery: [],
+        disputes: [],
+        queries: [],
+        broken: [],
+        promises: [],
+        vip: [],
+        overdue: [],
+        due: []
+      };
+      
+      for (const inv of unpaidInvoices) {
+        if (recoveryInvoiceIds.has(inv.id)) {
+          categorizedInvoices.recovery.push(inv);
+        } else if (disputeInvoiceIds.has(inv.id)) {
+          categorizedInvoices.disputes.push(inv);
+        } else if (queryInvoiceIds.has(inv.id)) {
+          categorizedInvoices.queries.push(inv);
+        } else if (brokenInvoiceIds.has(inv.id)) {
+          categorizedInvoices.broken.push(inv);
+        } else if (promiseInvoiceIds.has(inv.id)) {
+          categorizedInvoices.promises.push(inv);
+        } else if (vipContactIds.has(inv.contactId)) {
+          categorizedInvoices.vip.push(inv);
+        } else {
+          // Normalize invoice due date to UTC midnight for comparison
+          const invDueDate = new Date(inv.dueDate);
+          invDueDate.setUTCHours(0, 0, 0, 0);
+          
+          if (invDueDate < today) {
+            categorizedInvoices.overdue.push(inv);
+          } else {
+            categorizedInvoices.due.push(inv);
+          }
+        }
+      }
+      
+      // Helper to group invoices by debtor
+      const groupByDebtor = async (invoiceList: any[]) => {
+        const debtorMap = new Map<string, any>();
+        
+        for (const inv of invoiceList) {
+          const contactId = inv.contactId;
+          
+          if (!debtorMap.has(contactId)) {
+            let companyName = '';
+            let contactName = '';
+            let contact = null;
+            try {
+              contact = await storage.getContact(contactId, tenantId);
+              if (contact) {
+                companyName = contact.companyName || '';
+                contactName = contact.name || '';
+              }
+            } catch (e) {}
+            
+            // Get ptpDate from payment promises map
+            const ptpDate = contactPtpMap.get(contactId);
+            // Get all payment promises for this contact
+            const promises = contactPromisesMap.get(contactId) || [];
+            
+            // Get GLOBAL overdue metrics for this contact (computed across all their invoices)
+            const globalMetrics = globalOverdueMetrics.get(contactId);
+            
+            debtorMap.set(contactId, {
+              contactId,
+              companyName,
+              contactName,
+              contact,
+              totalOutstanding: 0,
+              // Use GLOBAL overdue metrics to ensure correct classification
+              totalOverdue: globalMetrics?.totalOverdue || 0,
+              oldestDaysOverdue: globalMetrics?.oldestDaysOverdue || 0,
+              invoiceCount: 0,
+              invoices: [],
+              oldestDueDate: inv.dueDate,
+              ptpDate: ptpDate ? ptpDate.toISOString() : null,
+              paymentPromises: promises.map(p => ({
+                date: p.date.toISOString(),
+                amount: p.amount,
+                invoiceId: p.invoiceId
+              })),
+            });
+          }
+          
+          const debtor = debtorMap.get(contactId)!;
+          const invAmount = parseFloat(inv.amount || '0');
+          debtor.totalOutstanding += invAmount;
+          debtor.invoiceCount += 1;
+          debtor.invoices.push(inv);
+          
+          // Track oldest due date
+          if (new Date(inv.dueDate) < new Date(debtor.oldestDueDate)) {
+            debtor.oldestDueDate = inv.dueDate;
+          }
+        }
+        
+        return Array.from(debtorMap.values()).sort((a, b) => 
+          b.totalOutstanding - a.totalOutstanding
+        );
+      };
+      
+      // Group each category by debtor
+      const [
+        recoveryDebtors,
+        disputeDebtors,
+        queryDebtors,
+        brokenDebtors,
+        promiseDebtors,
+        vipDebtors,
+        overdueDebtors,
+        dueDebtors
+      ] = await Promise.all([
+        groupByDebtor(categorizedInvoices.recovery),
+        groupByDebtor(categorizedInvoices.disputes),
+        groupByDebtor(categorizedInvoices.queries),
+        groupByDebtor(categorizedInvoices.broken),
+        groupByDebtor(categorizedInvoices.promises),
+        groupByDebtor(categorizedInvoices.vip),
+        groupByDebtor(categorizedInvoices.overdue),
+        groupByDebtor(categorizedInvoices.due)
+      ]);
+      
+      res.json({
+        vip: { count: vipDebtors.length, invoiceCount: categorizedInvoices.vip.length, items: vipDebtors },
+        due: { count: dueDebtors.length, invoiceCount: categorizedInvoices.due.length, items: dueDebtors },
+        overdue: { count: overdueDebtors.length, invoiceCount: categorizedInvoices.overdue.length, items: overdueDebtors },
+        promises: { count: promiseDebtors.length, invoiceCount: categorizedInvoices.promises.length, items: promiseDebtors },
+        broken: { count: brokenDebtors.length, invoiceCount: categorizedInvoices.broken.length, items: brokenDebtors },
+        queries: { count: queryDebtors.length, invoiceCount: categorizedInvoices.queries.length, items: queryDebtors },
+        disputes: { count: disputeDebtors.length, invoiceCount: categorizedInvoices.disputes.length, items: disputeDebtors },
+        recovery: { count: recoveryDebtors.length, invoiceCount: categorizedInvoices.recovery.length, items: recoveryDebtors }
+      });
+    } catch (error) {
+      console.error("Error fetching action centre tabs:", error);
+      res.status(500).json({ message: "Failed to fetch action centre tabs" });
+    }
+  });
+
+  app.post("/api/actions/schedule", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { 
+        invoiceId, 
+        contactId, 
+        actionType, 
+        scheduledFor, 
+        subject, 
+        content 
+      } = req.body;
+
+      // Validate required fields
+      if (!contactId || !actionType || !scheduledFor) {
+        return res.status(400).json({ 
+          message: "Missing required fields: contactId, actionType, scheduledFor" 
+        });
+      }
+
+      // Parse and validate scheduledFor datetime
+      const scheduledDate = new Date(scheduledFor);
+      if (isNaN(scheduledDate.getTime())) {
+        return res.status(400).json({ message: "Invalid scheduledFor date format" });
+      }
+
+      // Check if scheduled time is in the past
+      if (scheduledDate < new Date()) {
+        return res.status(400).json({ message: "Scheduled time must be in the future" });
+      }
+
+      // Create scheduled action
+      const actionData = {
+        tenantId: user.tenantId,
+        invoiceId: invoiceId || null,
+        contactId,
+        userId: user.id,
+        type: actionType,
+        status: 'scheduled',
+        subject: subject || null,
+        content: content || null,
+        scheduledFor: scheduledDate,
+        source: 'manual',
+        metadata: {
+          createdBy: user.id,
+          createdByName: `${user.firstName} ${user.lastName}`.trim(),
+        }
+      };
+
+      const action = await storage.createAction(actionData);
+      
+      console.log(`✅ Manual action scheduled: ${actionType} to ${contactId} at ${scheduledDate.toISOString()}`);
+      
+      res.status(201).json({
+        ...action,
+        message: `${actionType} scheduled for ${scheduledDate.toLocaleString('en-GB')}`
+      });
+    } catch (error) {
+      console.error("Error scheduling manual action:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid action data", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to schedule action" });
     }
   });
 
-  // ============================================================================
-  // Action Centre Triage Endpoints (Sprint 1)
-  // ============================================================================
-
-  // Get action preview - renders the template with actual debtor data
   app.get("/api/actions/:id/preview", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -211,8 +1526,11 @@ const escalateCustomerSchema = z.object({
         const dueDate = new Date(inv.dueDate);
         const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
         const outstanding = Number(inv.amount) - Number(inv.amountPaid || 0);
-
-            daysOverdue
+        return {
+          invoiceNumber: inv.invoiceNumber,
+          amount: new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(outstanding),
+          dueDate: dueDate.toLocaleDateString('en-GB'),
+          daysOverdue
         };
       });
 
@@ -327,7 +1645,6 @@ const escalateCustomerSchema = z.object({
     }
   });
 
-  // Approve action - move from pending to scheduled (credit controller approves AI recommendation)
   app.post("/api/actions/:id/approve", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -373,7 +1690,6 @@ const escalateCustomerSchema = z.object({
     }
   });
 
-  // Edit action - credit controller overrides AI recommendation
   app.patch("/api/actions/:id/edit", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -441,7 +1757,6 @@ const escalateCustomerSchema = z.object({
     }
   });
 
-  // Snooze action - delay to a later time
   app.post("/api/actions/:id/snooze", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -499,7 +1814,6 @@ const escalateCustomerSchema = z.object({
     }
   });
 
-  // Escalate action - flag for manual handling
   app.post("/api/actions/:id/escalate", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -546,7 +1860,6 @@ const escalateCustomerSchema = z.object({
     }
   });
 
-  // Assign action - assign to a specific credit controller
   app.patch("/api/actions/:id/assign", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -595,7 +1908,6 @@ const escalateCustomerSchema = z.object({
     }
   });
 
-  // Feedback - record outcome for learning loop
   app.post("/api/actions/:id/feedback", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -647,7 +1959,6 @@ const escalateCustomerSchema = z.object({
     }
   });
 
-  // Voice Call - initiate AI voice call via Retell (simplified - just sends variables to Retell)
   app.post("/api/actions/:id/voice-call", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -752,7 +2063,6 @@ const escalateCustomerSchema = z.object({
     }
   });
 
-  // Email - send email for an action
   app.post("/api/actions/:id/email", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -834,7 +2144,6 @@ const escalateCustomerSchema = z.object({
     }
   });
 
-  // SMS - send SMS for an action
   app.post("/api/actions/:id/sms", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -915,364 +2224,6 @@ const escalateCustomerSchema = z.object({
     }
   });
 
-  // ============================================================================
-  // End Action Centre Triage Endpoints
-  // ============================================================================
-
-  // AI suggestions
-  app.post("/api/ai/suggestions", isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const { invoiceId } = req.body;
-      if (!invoiceId) {
-        return res.status(400).json({ message: "Invoice ID is required" });
-      }
-
-      const invoice = await storage.getInvoice(invoiceId, user.tenantId);
-      if (!invoice) {
-        return res.status(404).json({ message: "Invoice not found" });
-      }
-
-      const daysPastDue = Math.max(0, Math.floor((Date.now() - invoice.dueDate.getTime()) / (1000 * 60 * 60 * 24)));
-      const actions = await storage.getActions(user.tenantId);
-      const contactHistory = actions
-        .filter(a => a.contactId === invoice.contactId)
-        .map(a => ({ type: a.type, date: a.createdAt?.toISOString() || new Date().toISOString(), response: a.status }));
-
-      const suggestions = await generateCollectionSuggestions({
-        amount: Number(invoice.amount),
-        daysPastDue,
-        contactHistory,
-        contactProfile: {
-          name: invoice.contact.name,
-          paymentHistory: "good", // This could be calculated from historical data
-          relationship: "established",
-        },
-      });
-
-      res.json(suggestions);
-    } catch (error) {
-      console.error("Error generating AI suggestions:", error);
-      res.status(500).json({ message: "Failed to generate suggestions" });
-    }
-  });
-
-  // Generate email draft
-  app.post("/api/ai/email-draft", isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const { invoiceId, tone = 'professional' } = req.body;
-      if (!invoiceId) {
-        return res.status(400).json({ message: "Invoice ID is required" });
-      }
-
-      const invoice = await storage.getInvoice(invoiceId, user.tenantId);
-
-  
-      const daysPastDue = Math.max(0, Math.floor((Date.now() - invoice.dueDate.getTime()) / (1000 * 60 * 60 * 24)));
-      const emailActions = await storage.getActions(user.tenantId);
-      const previousEmails = emailActions.filter(a => 
-        a.invoiceId === invoiceId && a.type === 'email'
-      ).length;
-
-      const emailDraft = await generateEmailDraft({
-        contactName: invoice.contact.name,
-        invoiceNumber: invoice.invoiceNumber,
-        amount: Number(invoice.amount),
-        daysPastDue,
-        previousEmails,
-        tone: tone as 'friendly' | 'professional' | 'urgent',
-      });
-
-      res.json(emailDraft);
-    } catch (error) {
-      console.error("Error generating email draft:", error);
-      res.status(500).json({ message: "Failed to generate email draft" });
-    }
-  });
-
-  // Send reminder email using template-based system
-  app.post("/api/communications/send-email", isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const { invoiceId, customMessage } = req.body;
-      if (!invoiceId) {
-        return res.status(400).json({ message: "Invoice ID is required" });
-      }
-
-      const invoice = await storage.getInvoice(invoiceId, user.tenantId);
-      if (!invoice) {
-        return res.status(404).json({ message: "Invoice not found" });
-      }
-
-      if (!invoice.contact.email) {
-        return res.status(400).json({ message: "Contact email not available" });
-      }
-
-      // Get the communication templates and email senders
-      const communicationTemplates = await storage.getCommunicationTemplates(user.tenantId);
-      const geInvoiceTemplate = communicationTemplates.find(template => template.name === 'GE Invoice');
-      
-      if (!geInvoiceTemplate) {
-        return res.status(404).json({ message: "GE Invoice template not found" });
-      }
-
-      // Get the email sender configuration
-      const emailSenders = await storage.getEmailSenders(user.tenantId);
-      const defaultSender = emailSenders.find(sender => sender.isDefault) || emailSenders[0];
-
-      const daysPastDue = Math.max(0, Math.floor((Date.now() - invoice.dueDate.getTime()) / (1000 * 60 * 60 * 24)));
-      const fromEmail = defaultSender?.email || process.env.SENDGRID_FROM_EMAIL || user.email || DEFAULT_FROM_EMAIL;
-
-      // Get all invoices and filter for this contact
-      const allInvoices = await storage.getInvoices(user.tenantId);
-      const contactInvoices = allInvoices.filter(inv => inv.contactId === invoice.contactId);
-      
-      // Calculate total amounts
-      const totalBalance = contactInvoices.reduce((sum, inv) => sum + Number(inv.amount), 0);
-      const totalAmountOverdue = contactInvoices
-        .filter(inv => inv.status === 'overdue' || (inv.dueDate < new Date() && inv.status !== 'paid'))
-        .reduce((sum, inv) => sum + Number(inv.amount), 0);
-
-      // Process template variables
-      const templateData = {
-        first_name: invoice.contact.name?.split(' ')[0] || invoice.contact.name,
-        invoice_number: invoice.invoiceNumber,
-        amount: Number(invoice.amount).toLocaleString(),
-        due_date: formatDate(invoice.dueDate),
-        days_overdue: daysPastDue.toString(),
-        company_name: invoice.contact.companyName || 'Customer',
-        total_amount_overdue: totalAmountOverdue.toLocaleString(),
-        total_balance: totalBalance.toLocaleString(),
-
-  
-      // Replace template variables in subject and content
-      let processedSubject = geInvoiceTemplate.subject || 'Invoice Reminder';
-      let processedContent = geInvoiceTemplate.content || 'Please see attached invoice.';
-
-      Object.entries(templateData).forEach(([key, value]) => {
-        const placeholder = `{{${key}}}`;
-        processedSubject = processedSubject.replace(new RegExp(placeholder, 'g'), value);
-        processedContent = processedContent.replace(new RegExp(placeholder, 'g'), value);
-      });
-
-      // Use the simple email sending system without PDF for now
-      const { sendEmail } = await import('./services/sendgrid.js');
-
-      const success = await sendEmail({
-        to: invoice.contact.email,
-        from: fromEmail,
-        subject: processedSubject,
-        text: processedContent,
-        html: processedContent.replace(/\n/g, '<br>'),
-        tenantId: user.tenantId,
-      });
-
-      if (success) {
-        // Log the action
-        await storage.createAction({
-          tenantId: user.tenantId,
-          invoiceId,
-          contactId: invoice.contactId,
-          userId: user.id,
-          type: 'email',
-          status: 'completed',
-          subject: processedSubject,
-          content: customMessage || 'GE Invoice template email sent',
-          completedAt: new Date(),
-        });
-
-        // Update invoice reminder count
-        await storage.updateInvoice(invoiceId, user.tenantId, {
-          lastReminderSent: new Date(),
-          reminderCount: (invoice.reminderCount || 0) + 1,
-        });
-      }
-
-      res.json({ success, message: success ? 'Email sent successfully' : 'Failed to send email' });
-    } catch (error) {
-      console.error("Error sending collection email:", error);
-      res.status(500).json({ message: "Failed to send collection email" });
-    }
-  });
-
-  // Send SMS reminder
-  app.post("/api/communications/send-sms", isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const { invoiceId } = req.body;
-      if (!invoiceId) {
-        return res.status(400).json({ message: "Invoice ID is required" });
-      }
-
-      const invoice = await storage.getInvoice(invoiceId, user.tenantId);
-      if (!invoice) {
-        return res.status(404).json({ message: "Invoice not found" });
-      }
-
-      if (!invoice.contact.phone) {
-        return res.status(400).json({ message: "Contact phone not available" });
-      }
-
-      const daysPastDue = Math.max(0, Math.floor((Date.now() - invoice.dueDate.getTime()) / (1000 * 60 * 60 * 24)));
-
-      const result = await sendPaymentReminderSMS({
-        phone: invoice.contact.phone,
-        name: invoice.contact.name,
-        invoiceNumber: invoice.invoiceNumber,
-        amount: Number(invoice.amount),
-        daysPastDue,
-      });
-
-      if (result.success) {
-        // Log the action
-        await storage.createAction({
-          tenantId: user.tenantId,
-          invoiceId,
-          contactId: invoice.contactId,
-          userId: user.id,
-          type: 'sms',
-          status: 'completed',
-          subject: `SMS Reminder - Invoice ${invoice.invoiceNumber}`,
-          content: 'Payment reminder SMS sent',
-          completedAt: new Date(),
-          metadata: { messageId: result.messageId },
-        });
-      }
-
-      res.json(result);
-    } catch (error) {
-      console.error("Error sending SMS reminder:", error);
-      res.status(500).json({ message: "Failed to send SMS reminder" });
-    }
-  });
-
-  // Test Communication Routes
-  app.post("/api/test/email", isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const { contactId, overrideEmail } = req.body;
-      if (!contactId) {
-        return res.status(400).json({ message: "Contact ID is required" });
-      }
-
-      const contact = await storage.getContact(contactId, user.tenantId);
-      if (!contact) {
-        return res.status(404).json({ message: "Contact not found" });
-      }
-
-      const emailToUse = overrideEmail || contact.email;
-      if (!emailToUse) {
-        return res.status(400).json({ message: "Contact email not available and no override provided" });
-      }
-
-      const fromEmail = user.email || DEFAULT_FROM_EMAIL;
-
-      const success = await sendReminderEmail({
-        contactEmail: emailToUse,
-        contactName: contact.name,
-        invoiceNumber: "TEST-001",
-        amount: 100.00,
-        dueDate: formatDate(new Date()),
-        daysPastDue: 0,
-      }, fromEmail, "[TEST EMAIL] This is a test communication from Nexus AR");
-
-      if (success) {
-        // Log the test action
-        await storage.createAction({
-          tenantId: user.tenantId,
-          contactId,
-          userId: user.id,
-          type: 'email',
-          status: 'completed',
-          subject: 'TEST EMAIL - Communication Test',
-          content: 'Test email sent successfully from Settings page',
-          completedAt: new Date(),
-        });
-      }
-
-      res.json({ success, message: success ? 'Test email sent successfully' : 'Failed to send test email' });
-    } catch (error) {
-      console.error("Error sending test email:", error);
-      res.status(500).json({ message: "Failed to send test email" });
-    }
-  });
-
-  app.post("/api/test/sms", isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const { contactId, overrideMobile } = req.body;
-      if (!contactId) {
-        return res.status(400).json({ message: "Contact ID is required" });
-      }
-
-      const contact = await storage.getContact(contactId, user.tenantId);
-      if (!contact) {
-        return res.status(404).json({ message: "Contact not found" });
-      }
-
-      const phoneToUse = overrideMobile || contact.phone;
-      if (!phoneToUse) {
-        return res.status(400).json({ message: "Contact phone not available and no override provided" });
-      }
-
-      const result = await sendPaymentReminderSMS({
-        phone: phoneToUse,
-        name: contact.name,
-        invoiceNumber: "TEST-001",
-        amount: 100.00,
-        daysPastDue: 0,
-      });
-
-      if (result.success) {
-        // Log the test action
-        await storage.createAction({
-          tenantId: user.tenantId,
-          contactId,
-          userId: user.id,
-          type: 'sms',
-          status: 'completed',
-          subject: 'TEST SMS - Communication Test',
-          content: 'Test SMS sent successfully from Settings page',
-          completedAt: new Date(),
-          metadata: { messageId: result.messageId },
-        });
-      }
-
-      res.json(result);
-    } catch (error) {
-      console.error("Error sending test SMS:", error);
-      res.status(500).json({ message: "Failed to send test SMS" });
-    }
-  });
-
-  // ==================== ACTION CENTRE API ====================
-
-  // Debug endpoint to create test action items with proper due dates
   app.post("/api/action-centre/create-test-items", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -1327,14 +2278,16 @@ const escalateCustomerSchema = z.object({
       console.log(`✅ Created ${createdItems.length} test action items`);
 
       res.json({
-
-      } catch (error) {
+        success: true,
+        message: `Created ${createdItems.length} test action items`,
+        items: createdItems,
+      });
+    } catch (error) {
       console.error("Error creating test action items:", error);
       res.status(500).json({ message: "Failed to create test action items" });
     }
   });
-  
-  // Smart Queue Management with ML Prioritization
+
   app.get("/api/action-centre/queue", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -1455,233 +2408,6 @@ const escalateCustomerSchema = z.object({
     }
   });
 
-  // Compliance Audit Endpoint - Check for policy violations
-  app.get("/api/admin/compliance-report", isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const { policyDecisions, contactOutcomes } = await import("@shared/schema");
-      const { and: andOp, eq: eqOp, gte: gteOp, sql: sqlFunc } = await import("drizzle-orm");
-      
-      // Look back 30 days
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-      // Query frequency cap violations
-      const frequencyCapViolations = await db
-        .select()
-        .from(policyDecisions)
-        .where(
-          andOp(
-            eqOp(policyDecisions.tenantId, user.tenantId),
-            eqOp(policyDecisions.guardStatus, 'blocked'),
-            gteOp(policyDecisions.createdAt, thirtyDaysAgo)
-          )
-        )
-        .limit(10);
-
-      // Query quiet hours breaches (would need quiet hours logic implemented)
-      const quietHoursBreaches: any[] = []; // Placeholder for quiet hours violations
-
-      // Count total policy decisions
-      const totalDecisionsResult = await db
-        .select({ count: sqlFunc<number>`count(*)` })
-        .from(policyDecisions)
-        .where(
-          andOp(
-            eqOp(policyDecisions.tenantId, user.tenantId),
-            gteOp(policyDecisions.createdAt, thirtyDaysAgo)
-          )
-        );
-      
-      const totalDecisions = Number(totalDecisionsResult[0]?.count || 0);
-      const blockedCount = frequencyCapViolations.length;
-      const allowedCount = totalDecisions - blockedCount;
-      
-      // Calculate compliance rate
-      const complianceRate = totalDecisions > 0 
-        ? (allowedCount / totalDecisions * 100).toFixed(1)
-        : '100.0';
-
-      res.json({
-        summary: {
-          totalDecisions,
-          allowedCount,
-          blockedCount,
-          complianceRate: parseFloat(complianceRate),
-          periodDays: 30,
-        },
-        violations: {
-          frequencyCap: {
-            count: frequencyCapViolations.length,
-            examples: frequencyCapViolations.map(v => ({
-              id: v.id,
-              contactId: v.contactId,
-              invoiceId: v.invoiceId,
-              reason: v.guardReason,
-              timestamp: v.createdAt,
-            })),
-          },
-          quietHours: {
-            count: quietHoursBreaches.length,
-            examples: quietHoursBreaches,
-          },
-        },
-        insights: {
-          mostBlockedReason: frequencyCapViolations.length > 0 
-            ? 'frequency_cap_exceeded'
-            : null,
-          peakViolationHour: null, // Would require time-based analysis
-        },
-      });
-    } catch (error) {
-      console.error("Error generating compliance report:", error);
-      res.status(500).json({ message: "Failed to generate compliance report" });
-    }
-  });
-
-  // Channel Analytics Endpoint - Show channel effectiveness and A/B test results
-  app.get("/api/admin/analytics/channels", isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const { contactOutcomes, policyDecisions } = await import("@shared/schema");
-      const { eq: eqOp, sql: sqlFunc, gte: gteOp, inArray: inArrayOp } = await import("drizzle-orm");
-      
-      const { timeRange = '30d' } = req.query;
-      
-      // Calculate time window
-      const daysAgo = parseInt(timeRange.replace('d', ''), 10);
-      const cutoffDate = new Date();
-      cutoffDate.setDate(cutoffDate.getDate() - daysAgo);
-
-      // Aggregate outcomes by channel
-      const channelStats = await db
-        .select({
-          channel: contactOutcomes.channel,
-          outcome: contactOutcomes.outcome,
-          count: sqlFunc<number>`count(*)`,
-        })
-        .from(contactOutcomes)
-        .where(
-          and(
-            eqOp(contactOutcomes.tenantId, user.tenantId),
-            gteOp(contactOutcomes.eventTimestamp, cutoffDate)
-          )
-        )
-        .groupBy(contactOutcomes.channel, contactOutcomes.outcome);
-
-      // Aggregate outcomes by A/B variant
-      const variantStats = await db
-        .select({
-          variant: policyDecisions.experimentVariant,
-          count: sqlFunc<number>`count(*)`,
-          avgScore: sqlFunc<number>`avg(${policyDecisions.score})`,
-        })
-        .from(policyDecisions)
-        .where(
-          and(
-            eqOp(policyDecisions.tenantId, user.tenantId),
-            gteOp(policyDecisions.createdAt, cutoffDate)
-          )
-        )
-        .groupBy(policyDecisions.experimentVariant);
-
-      // Calculate channel metrics
-      const successOutcomes = ['delivered', 'opened', 'clicked', 'answered', 'completed'];
-      
-      const calculateChannelMetrics = (channel: string) => {
-        const channelData = channelStats.filter(s => s.channel === channel);
-        const totalSent = channelData.reduce((sum, s) => sum + Number(s.count), 0);
-        const successCount = channelData
-          .filter(s => successOutcomes.includes(s.outcome))
-          .reduce((sum, s) => sum + Number(s.count), 0);
-        
-        return {
-          totalSent,
-          responseRate: totalSent > 0 ? (successCount / totalSent) * 100 : 0,
-        };
-      };
-
-      // Calculate A/B test metrics
-      const adaptiveData = variantStats.find(v => v.variant === 'ADAPTIVE');
-      const staticData = variantStats.find(v => v.variant === 'STATIC');
-
-      const adaptiveActions = Number(adaptiveData?.count || 0);
-      const staticActions = Number(staticData?.count || 0);
-      
-      // Response rate approximation (would need to join with outcomes for precise calculation)
-      const adaptiveRate = adaptiveActions > 0 ? Number(adaptiveData?.avgScore || 0) * 100 : 0;
-      const staticRate = staticActions > 0 ? Number(staticData?.avgScore || 0) * 100 : 0;
-      
-      const lift = staticRate > 0 ? ((adaptiveRate - staticRate) / staticRate) * 100 : 0;
-
-      res.json({
-        channels: {
-          email: calculateChannelMetrics('email'),
-          sms: calculateChannelMetrics('sms'),
-          voice: calculateChannelMetrics('voice'),
-        },
-        abTest: {
-          adaptive: {
-            totalActions: adaptiveActions,
-            responseRate: adaptiveRate,
-            avgDaysToPayment: 0, // Would need payment data to calculate
-          },
-          static: {
-            totalActions: staticActions,
-            responseRate: staticRate,
-            avgDaysToPayment: 0, // Would need payment data to calculate
-          },
-          lift,
-        },
-        overdueBands: {
-          // Overdue bands would require joining with invoices table
-          '0-30': { count: 0, responseRate: 0 },
-          '31-60': { count: 0, responseRate: 0 },
-          '61-90': { count: 0, responseRate: 0 },
-          '90+': { count: 0, responseRate: 0 },
-        },
-      });
-    } catch (error) {
-      console.error("Error fetching channel analytics:", error);
-      res.status(500).json({ message: "Failed to fetch channel analytics" });
-    }
-  });
-
-  // Contact Outcomes Endpoint - Show all webhook outcomes
-  app.get("/api/admin/outcomes", isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const { contactOutcomes } = await import("@shared/schema");
-      const { eq: eqOp, desc: descFunc } = await import("drizzle-orm");
-      
-      // Fetch recent outcomes
-      const outcomes = await db
-        .select()
-        .from(contactOutcomes)
-        .where(eqOp(contactOutcomes.tenantId, user.tenantId))
-        .orderBy(descFunc(contactOutcomes.eventTimestamp))
-        .limit(100);
-
-      res.json(outcomes);
-    } catch (error) {
-      console.error("Error fetching outcomes:", error);
-      res.status(500).json({ message: "Failed to fetch outcomes" });
-    }
-  });
-
-  // Priority Management Endpoints
   app.post("/api/action-centre/priority/refresh", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -1868,8 +2594,8 @@ const escalateCustomerSchema = z.object({
       const riskScore = { score: 0.5, riskLevel: 'medium', factors: ['Assessment pending'] }; // TODO: Implement proper risk scoring
 
       // Assemble contact details response
-
-          ...contact,
+      const contactDetails = {
+        ...contact,
         paymentHistory: contactInvoices.map(invoice => ({
           invoiceNumber: invoice.invoiceNumber,
           amount: parseFloat(invoice.amount),
@@ -1937,7 +2663,6 @@ const escalateCustomerSchema = z.object({
     }
   });
 
-  // Action Item Management
   app.post("/api/action-items", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -1998,8 +2723,9 @@ const escalateCustomerSchema = z.object({
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
+      }
 
-        const { id } = req.params;
+      const { id } = req.params;
       const updates = insertActionItemSchema.partial().parse(req.body);
       
       const actionItem = await storage.updateActionItem(id, user.tenantId, updates);
@@ -2093,7 +2819,6 @@ const escalateCustomerSchema = z.object({
     }
   });
 
-  // Action Logging
   app.get("/api/action-items/:id/logs", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -2137,106 +2862,9 @@ const escalateCustomerSchema = z.object({
     }
   });
 
-  // Communication History
-  app.get("/api/communications/history", isAuthenticated, async (req: any, res) => {
+  app.post("/api/payment-plans", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const { contactId, invoiceId, limit } = communicationHistoryQuerySchema.parse(req.query);
-      
-      // Get action items based on filters
-      const filters: any = {};
-      if (contactId) {
-        const actionItems = await storage.getActionItemsByContact(contactId, user.tenantId);
-        return res.json(actionItems);
-      }
-      
-      if (invoiceId) {
-        const actionItems = await storage.getActionItemsByInvoice(invoiceId, user.tenantId);
-        return res.json(actionItems);
-      }
-
-      // Get all recent communication actions if no specific filter
-      const result = await storage.getActionItems(user.tenantId, { 
-        limit: limit || 50,
-        type: 'email' // Filter for communication types
-      });
-      
-      res.json(result.actionItems);
-    } catch (error) {
-      console.error("Error fetching communication history:", error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid query parameters", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to fetch communication history" });
-    }
-  });
-
-  // Payment Promises
-  app.post("/api/payment-promises", isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const promiseData = insertPaymentPromiseSchema.parse({
-        ...req.body,
-        tenantId: user.tenantId,
-        createdByUserId: user.id,
-      });
-
-      const promise = await storage.createPaymentPromise(promiseData);
-      
-      // Create related action item for follow-up
-      await storage.createActionItem({
-        tenantId: user.tenantId,
-        contactId: promiseData.contactId,
-        invoiceId: promiseData.invoiceId,
-        type: 'ptp_followup',
-        priority: 'medium',
-
-          dueAt: new Date(new Date(promiseData.promisedDate).getTime() + 24 * 60 * 60 * 1000), // Day after promise date
-        createdByUserId: user.id,
-      });
-
-      res.status(201).json(promise);
-    } catch (error) {
-      console.error("Error creating payment promise:", error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid payment promise data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to create payment promise" });
-    }
-  });
-
-  app.patch("/api/payment-promises/:id", isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const { id } = req.params;
-      const updates = insertPaymentPromiseSchema.partial().parse(req.body);
-      
-      const promise = await storage.updatePaymentPromise(id, user.tenantId, updates);
-      res.json(promise);
-    } catch (error) {
-      console.error("Error updating payment promise:", error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid update data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to update payment promise" });
-    }
-  });
-
-  // Payment Plan API endpoints
-
-        const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -2294,8 +2922,9 @@ const escalateCustomerSchema = z.object({
       }, 0);
 
       // Calculate first check date based on frequency
-
-          case 'weekly':
+      let nextCheckDate = new Date(planStartDate);
+      switch (paymentFrequency) {
+        case 'weekly':
           nextCheckDate.setDate(nextCheckDate.getDate() + 7);
           break;
         case 'monthly':
@@ -2372,7 +3001,6 @@ const escalateCustomerSchema = z.object({
     }
   });
 
-  // Check if invoices already have active payment plans
   app.post("/api/payment-plans/check-duplicates", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -2400,7 +3028,6 @@ const escalateCustomerSchema = z.object({
     }
   });
 
-  // Activity Log API endpoints
   app.get("/api/activity-logs", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -2461,77 +3088,78 @@ const escalateCustomerSchema = z.object({
 
       const log = await storage.createActivityLog(logData);
       res.json(log);
-
-        if (error instanceof Error && error.name === 'ZodError') {
+    } catch (error) {
+      console.error("Error creating activity log:", error);
+      if (error instanceof Error && error.name === 'ZodError') {
         return res.status(400).json({ message: "Invalid activity log data", error: error.message });
       }
       res.status(500).json({ message: "Failed to create activity log" });
     }
   });
 
-  // Wallet API endpoints
-  app.get("/api/wallet/transactions", isAuthenticated, async (req: any, res) => {
+  app.post("/api/action-items/bulk/complete", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      const { transactionType, source, startDate, endDate, limit } = req.query;
+      const { actionItemIds, outcome } = bulkActionSchema.parse(req.body);
+      
+      const results = await Promise.all(
+        actionItemIds.map(async (id) => {
+          try {
+            const actionItem = await storage.updateActionItem(id, user.tenantId, {
+              status: 'completed',
+              completedAt: new Date(),
+              outcome,
+            });
+            
+            // Log completion
+            await storage.createActionLog({
+              tenantId: user.tenantId,
+              actionItemId: id,
+              eventType: 'bulk_completed',
+              details: { message: `Bulk completed${outcome ? ` with outcome: ${outcome}` : ''}`, outcome },
+              createdByUserId: user.id,
+            });
+            
+            return { id, success: true, actionItem };
+          } catch (error) {
+            console.error(`Error completing action item ${id}:`, error);
+            return { id, success: false, error: error.message };
+          }
+        })
+      );
 
-      const transactions = await storage.getWalletTransactions(user.tenantId, {
-        transactionType: transactionType as string | undefined,
-        source: source as string | undefined,
-        startDate: startDate as string | undefined,
-        endDate: endDate as string | undefined,
-        limit: limit ? parseInt(limit as string) : 100,
+      const successCount = results.filter(r => r.success).length;
+      const failCount = results.length - successCount;
+
+      res.json({
+        total: results.length,
+        successful: successCount,
+        failed: failCount,
+        results
       });
-
-      res.json(transactions);
     } catch (error) {
-      console.error("Error fetching wallet transactions:", error);
-      res.status(500).json({ message: "Failed to fetch wallet transactions" });
+      console.error("Error bulk completing action items:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid bulk action data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to bulk complete action items" });
     }
   });
 
-  app.get("/api/wallet/transactions/:id", isAuthenticated, async (req: any, res) => {
+  app.post("/api/action-items/bulk/assign", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      const transaction = await storage.getWalletTransaction(req.params.id, user.tenantId);
-      if (!transaction) {
-        return res.status(404).json({ message: "Transaction not found" });
-      }
-
-      res.json(transaction);
-    } catch (error) {
-      console.error("Error fetching wallet transaction:", error);
-      res.status(500).json({ message: "Failed to fetch wallet transaction" });
-    }
-  });
-
-  app.post("/api/wallet/transactions", isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const { insertWalletTransactionSchema } = await import("@shared/schema");
-      const validatedData = insertWalletTransactionSchema.omit({ tenantId: true }).parse(req.body);
-
-      const transactionData = {
-        ...validatedData,
-        tenantId: user.tenantId,
-      };
-
-      const transaction = await storage.createWalletTransaction(transactionData);
-      res.json(transaction);
-
-        const results = await Promise.all(
+      const { actionItemIds, assignedToUserId, priority } = bulkActionSchema.parse(req.body);
+      
+      const results = await Promise.all(
         actionItemIds.map(async (id) => {
           try {
             const updates: any = {};
@@ -2641,238 +3269,6 @@ const escalateCustomerSchema = z.object({
     }
   });
 
-  // ==================== END ACTION CENTRE API ====================
-
-  app.post("/api/test/voice", isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const { 
-        phone, 
-        customerName, 
-        companyName, 
-        invoiceNumber, 
-        invoiceAmount, 
-        totalOutstanding, 
-        daysOverdue, 
-        invoiceCount, 
-        dueDate, 
-        organisationName, 
-        demoMessage 
-      } = req.body;
-      
-      if (!phone) {
-        return res.status(400).json({ message: "Phone number is required" });
-      }
-
-      // Get tenant information for fallback organization name
-      const tenant = await storage.getTenant(user.tenantId);
-      
-      // Import the unified Retell helper
-      const { createUnifiedRetellCall, createStandardCollectionVariables } = await import('./utils/retellCallHelper');
-      
-      // Create standard collection variables using the helper (accepts any format)
-      // Demo values provide realistic test data for the voice agent
-      const variablesData = createStandardCollectionVariables({
-        customerName: customerName || "Test Customer",
-        companyName: companyName || "Test Company", 
-        organisationName: organisationName || tenant?.name || "Nexus AR",
-        invoiceNumber: invoiceNumber || "TEST-001",
-        invoiceAmount: invoiceAmount || "1500.00",
-        totalOutstanding: totalOutstanding || "1500.00",
-        daysOverdue: daysOverdue || "14",
-        invoiceCount: invoiceCount || "2",
-        dueDate: dueDate || new Date(),
-        customMessage: demoMessage || "This is a professional collection call regarding outstanding invoices.",
-        // New enhanced context variables with demo values
-        totalOverdue: totalOutstanding || "1500.00",
-        overdueCount: invoiceCount || "2",
-        oldestInvoiceAge: "45",
-        averageDaysOverdue: daysOverdue || "14",
-        lastPaymentDate: null, // Demo: no recent payment
-        lastPaymentAmount: null,
-        lastContactDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
-        contactMethod: "email",
-        previousPromises: "1",
-        disputeCount: "0",
-        creditTerms: "Net 30",
-        accountAge: "180",
-      });
-
-      // Use unified Retell call creation (handles variable normalization, phone formatting, etc.)
-
-          dynamicVariables: variablesData,
-        context: 'TEST_VOICE',
-        metadata: {
-          type: 'test_call',
-          tenantId: user.tenantId,
-          userId: user.id
-        }
-      });
-
-      // Store the test call record
-      const voiceCallData = insertVoiceCallSchema.parse({
-        tenantId: user.tenantId,
-        retellCallId: callResult.callId,
-        retellAgentId: callResult.agentId,
-        fromNumber: callResult.fromNumber,
-        toNumber: callResult.toNumber,
-        direction: callResult.direction,
-        status: callResult.status,
-        scheduledAt: new Date(),
-      });
-
-      const voiceCall = await storage.createVoiceCall(voiceCallData);
-
-      // Log the test action
-      await storage.createAction({
-        tenantId: user.tenantId,
-        userId: user.id,
-        type: 'voice',
-        status: 'completed',
-        subject: 'TEST VOICE - Communication Test',
-        content: `Test voice call initiated to ${callResult.toNumber} for ${customerName || 'Test Customer'}`,
-        completedAt: new Date(),
-        metadata: { 
-          retellCallId: callResult.callId, 
-          dynamicVariables: callResult.normalizedVariables,
-          unifiedCall: true 
-        },
-      });
-
-      res.status(201).json({
-        voiceCall,
-        retellCallId: callResult.callId,
-        message: `Call initiated to ${callResult.toNumber}`,
-        dynamicVariables: callResult.normalizedVariables
-      });
-    } catch (error: any) {
-      console.error("Error creating test voice call:", error);
-      res.status(500).json({ message: error.message || "Failed to create test voice call" });
-    }
-  });
-
-  // Workflow routes
-  app.get("/api/workflows", isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const workflows = await storage.getWorkflows(user.tenantId);
-      res.json(workflows);
-    } catch (error) {
-      console.error("Error fetching workflows:", error);
-      res.status(500).json({ message: "Failed to fetch workflows" });
-    }
-  });
-
-  app.post("/api/workflows", isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const workflowData = insertWorkflowSchema.parse({
-        ...req.body,
-        tenantId: user.tenantId,
-      });
-
-      const workflow = await storage.createWorkflow(workflowData);
-      res.status(201).json(workflow);
-    } catch (error) {
-      console.error("Error creating workflow:", error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid workflow data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to create workflow" });
-    }
-  });
-
-  // Seed Standard Collections Workflow for all tenants
-  app.post("/api/workflows/seed", isAuthenticated, async (req: any, res) => {
-    try {
-      const { WorkflowSeeder } = await import('./services/workflowSeeder');
-      const result = await WorkflowSeeder.seedAllTenants();
-      
-      res.json({
-        success: result.success,
-        message: `Seeded ${result.workflowsCreated} workflows across ${result.tenantsProcessed} tenants`,
-        details: result
-      });
-    } catch (error: any) {
-      console.error("Error seeding workflows:", error);
-      res.status(500).json({ message: "Failed to seed workflows", error: error.message });
-    }
-  });
-
-  // Assign workflow to a contact
-
-        const userId = req.user?.claims?.sub || req.user?.id;
-      const user = await storage.getUser(userId);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const { id: contactId } = req.params;
-      const { workflowId } = req.body;
-
-      // Validate request body
-      if (!workflowId || typeof workflowId !== 'string') {
-        return res.status(400).json({ message: "Invalid workflowId" });
-      }
-
-      // Validate contact exists and belongs to tenant
-      const tenantContacts = await storage.getContacts(user.tenantId);
-      const contact = tenantContacts.find(c => c.id === contactId);
-      
-      if (!contact) {
-        return res.status(404).json({ message: "Contact not found" });
-      }
-
-      // Validate workflow exists and belongs to same tenant
-      const [workflow] = await db.select()
-        .from(workflows)
-        .where(eq(workflows.id, workflowId))
-        .limit(1);
-
-      if (!workflow) {
-        return res.status(404).json({ message: "Workflow not found" });
-      }
-
-      if (workflow.tenantId !== user.tenantId) {
-        return res.status(403).json({ message: "Workflow does not belong to your organization" });
-      }
-
-      // Update contact's workflow assignment with tenant scoping
-      await db.update(contacts)
-        .set({ workflowId, updatedAt: new Date() })
-        .where(and(eq(contacts.id, contactId), eq(contacts.tenantId, user.tenantId)));
-
-      // Fetch updated contact with tenant scoping
-      const [updatedContact] = await db.select()
-        .from(contacts)
-        .where(and(eq(contacts.id, contactId), eq(contacts.tenantId, user.tenantId)))
-        .limit(1);
-
-      res.json({
-        success: true,
-        contact: updatedContact
-      });
-    } catch (error: any) {
-      console.error("Error updating contact workflow:", error);
-      res.status(500).json({ message: "Failed to update contact workflow", error: error.message });
-    }
-  });
-
-  // Collections Workflow Management Routes
-  
-  // Communication Templates
   app.get("/api/collections/templates", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -2927,8 +3323,11 @@ const escalateCustomerSchema = z.object({
     } catch (error) {
       console.error("Error updating communication template:", error);
       if (error instanceof z.ZodError) {
-
-    });
+        return res.status(400).json({ message: "Invalid template data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update communication template" });
+    }
+  });
 
   app.delete("/api/collections/templates/:id", isAuthenticated, async (req: any, res) => {
     try {
@@ -2946,277 +3345,6 @@ const escalateCustomerSchema = z.object({
     }
   });
 
-  // Communication Preview Endpoints
-  const previewRequestSchema = z.object({
-    invoiceId: z.string().optional(),
-    contactId: z.string().optional(),
-    templateId: z.string().optional()
-  }).refine(
-    (data) => data.invoiceId || data.contactId,
-    { message: "Either invoiceId or contactId must be provided" }
-  );
-
-  // Helper function to process template variables
-  const processTemplateVariables = (content: string, variables: Record<string, string>): string => {
-    return content
-      .replace(/{{contact_name}}/g, variables.contact_name || 'Unknown Contact')
-      .replace(/{{invoice_number}}/g, variables.invoice_number || '')
-      .replace(/{{days_overdue}}/g, variables.days_overdue || '0')
-      .replace(/{{amount}}/g, variables.amount || '0.00')
-      .replace(/{{due_date}}/g, variables.due_date || '')
-      .replace(/{{your_name}}/g, variables.your_name || 'Collections Team')
-      .replace(/{{total_balance}}/g, variables.total_balance || '0.00')
-      .replace(/{{total_amount_overdue}}/g, variables.total_amount_overdue || '0.00')
-      .replace(/{{company_name}}/g, variables.company_name || '')
-      .replace(/{{phone}}/g, variables.phone || '')
-      .replace(/{{email}}/g, variables.email || '');
-  };
-
-  // Helper function to get context variables from invoice or contact
-  const getContextVariables = async (invoiceId?: string, contactId?: string, tenantId?: string) => {
-    const variables: Record<string, string> = {};
-    
-    if (invoiceId && tenantId) {
-      const invoice = await storage.getInvoice(invoiceId, tenantId);
-      if (invoice) {
-        const contact = await storage.getContact(invoice.contactId, tenantId);
-        variables.invoice_number = invoice.invoiceNumber;
-        variables.amount = invoice.amount.toString();
-        variables.total_balance = invoice.amount.toString();
-        
-        if (invoice.dueDate) {
-          const dueDate = new Date(invoice.dueDate);
-          const today = new Date();
-          const daysOverdue = Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)));
-          variables.days_overdue = daysOverdue.toString();
-          variables.due_date = formatDate(dueDate);
-          variables.total_amount_overdue = daysOverdue > 0 ? invoice.amount.toString() : '0.00';
-        }
-        
-        if (contact) {
-          variables.contact_name = contact.name || 'Unknown Contact';
-          variables.company_name = contact.companyName || '';
-          variables.phone = contact.phone || '';
-          variables.email = contact.email || '';
-        }
-      }
-    } else if (contactId && tenantId) {
-      const contact = await storage.getContact(contactId, tenantId);
-      if (contact) {
-        variables.contact_name = contact.name || 'Unknown Contact';
-        variables.company_name = contact.companyName || '';
-        variables.phone = contact.phone || '';
-        variables.email = contact.email || '';
-      }
-    }
-    
-    variables.your_name = 'Collections Team'; // Could be made dynamic based on email sender config
-    return variables;
-  };
-
-  // Preview Email Endpoint
-  app.post("/api/communications/preview-email", isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const requestData = previewRequestSchema.parse(req.body);
-      const { invoiceId, contactId, templateId } = requestData;
-
-      // Get context variables
-      const variables = await getContextVariables(invoiceId, contactId, user.tenantId);
-
-      // Get template or use defaults
-      let template = null;
-      let subject = "Payment Reminder";
-      let content = "Dear {{contact_name}},\n\nWe wanted to remind you about your outstanding invoice {{invoice_number}} in the amount of {{amount}}.\n\nPlease contact us if you have any questions.\n\nBest regards,\n{{your_name}}";
-
-      if (templateId) {
-        const templates = await storage.getCommunicationTemplates(user.tenantId, { type: 'email' });
-        template = templates.find(t => t.id === templateId);
-        if (template) {
-          subject = template.subject || subject;
-          content = template.content || content;
-        }
-      } else {
-        // Get default email template
-        const templates = await storage.getCommunicationTemplates(user.tenantId, { type: 'email' });
-        if (templates.length > 0) {
-          template = templates[0];
-          subject = template.subject || subject;
-          content = template.content || content;
-        }
-      }
-
-      // Process template variables
-      const processedSubject = processTemplateVariables(subject, variables);
-      const processedContent = processTemplateVariables(content, variables);
-
-      // Determine recipient
-      let recipient = '';
-      if (invoiceId) {
-        const invoice = await storage.getInvoice(invoiceId, user.tenantId);
-        if (invoice) {
-          const contact = await storage.getContact(invoice.contactId, user.tenantId);
-          recipient = contact?.email || '';
-        }
-      } else if (contactId) {
-        const contact = await storage.getContact(contactId, user.tenantId);
-        recipient = contact?.email || '';
-      }
-
-      res.json({
-        subject: processedSubject,
-        content: processedContent,
-        recipient,
-        templateUsed: template?.id || null,
-        variables
-      });
-
-    } catch (error) {
-      console.error("Error generating email preview:", error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid request data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to generate email preview" });
-    }
-  });
-
-  // Preview SMS Endpoint
-  app.post("/api/communications/preview-sms", isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const requestData = previewRequestSchema.parse(req.body);
-      const { invoiceId, contactId, templateId } = requestData;
-
-      // Get context variables
-      const variables = await getContextVariables(invoiceId, contactId, user.tenantId);
-
-      // Get template or use defaults
-      let template = null;
-      let content = "Hi {{contact_name}}, your invoice {{invoice_number}} for {{amount}} is overdue by {{days_overdue}} days. Please contact us to arrange payment. Thanks, {{your_name}}";
-
-      if (templateId) {
-        const templates = await storage.getCommunicationTemplates(user.tenantId, { type: 'sms' });
-        template = templates.find(t => t.id === templateId);
-        if (template) {
-          content = template.content || content;
-        }
-      } else {
-        // Get default SMS template
-        const templates = await storage.getCommunicationTemplates(user.tenantId, { type: 'sms' });
-        if (templates.length > 0) {
-          template = templates[0];
-          content = template.content || content;
-        }
-      }
-
-      // Process template variables
-      const processedContent = processTemplateVariables(content, variables);
-
-      // Determine recipient
-      let recipient = '';
-      if (invoiceId) {
-        const invoice = await storage.getInvoice(invoiceId, user.tenantId);
-        if (invoice) {
-          const contact = await storage.getContact(invoice.contactId, user.tenantId);
-          recipient = contact?.phone || '';
-        }
-      } else if (contactId) {
-        const contact = await storage.getContact(contactId, user.tenantId);
-        recipient = contact?.phone || '';
-      }
-
-      res.json({
-        subject: null, // SMS doesn't have subjects
-        content: processedContent,
-        recipient,
-        templateUsed: template?.id || null,
-        variables
-      });
-
-    } catch (error) {
-      console.error("Error generating SMS preview:", error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid request data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to generate SMS preview" });
-    }
-  });
-
-  // Preview Voice Endpoint
-  app.post("/api/communications/preview-voice", isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const requestData = previewRequestSchema.parse(req.body);
-      const { invoiceId, contactId, templateId } = requestData;
-
-      // Get context variables
-      const variables = await getContextVariables(invoiceId, contactId, user.tenantId);
-
-      // Get template or use defaults
-      let template = null;
-      let content = "Hello {{contact_name}}, this is {{your_name}} from our collections department. I'm calling regarding your overdue invoice {{invoice_number}} in the amount of {{amount}}. This invoice is now {{days_overdue}} days past due. Please contact us at your earliest convenience to discuss payment arrangements. Thank you.";
-
-      if (templateId) {
-        const templates = await storage.getCommunicationTemplates(user.tenantId, { type: 'voice' });
-        template = templates.find(t => t.id === templateId);
-        if (template) {
-          content = template.content || content;
-        }
-      } else {
-        // Get default voice template
-        const templates = await storage.getCommunicationTemplates(user.tenantId, { type: 'voice' });
-        if (templates.length > 0) {
-          template = templates[0];
-          content = template.content || content;
-        }
-      }
-
-      // Process template variables
-      const processedContent = processTemplateVariables(content, variables);
-
-      // Determine recipient
-      let recipient = '';
-      if (invoiceId) {
-        const invoice = await storage.getInvoice(invoiceId, user.tenantId);
-        if (invoice) {
-          const contact = await storage.getContact(invoice.contactId, user.tenantId);
-          recipient = contact?.phone || '';
-        }
-      } else if (contactId) {
-        const contact = await storage.getContact(contactId, user.tenantId);
-        recipient = contact?.phone || '';
-      }
-
-      res.json({
-        subject: null, // Voice calls don't have subjects
-        content: processedContent,
-        recipient,
-        templateUsed: template?.id || null,
-        variables
-      });
-
-    } catch (error) {
-      console.error("Error generating voice preview:", error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid request data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to generate voice preview" });
-    }
-  });
-
-  // Enhanced template management
   app.get("/api/collections/templates/by-category/:category", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -3277,8 +3405,9 @@ const escalateCustomerSchema = z.object({
             "Payment Request - Invoice #{invoiceNumber}"
           ],
           overdue_notice: [
-
-              "Action Required: Overdue Payment"
+            "Overdue Notice - Invoice #{invoiceNumber}",
+            "Important: Payment Past Due for Invoice #{invoiceNumber}",
+            "Action Required: Overdue Payment"
           ],
           final_demand: [
             "FINAL NOTICE - Invoice #{invoiceNumber}",
@@ -3404,139 +3533,6 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
-  // AI Template Generation Helper Functions
-  function generateEmailSubject(category: string, stage: number, tone: string): string {
-    const subjectTemplates: Record<string, string[]> = {
-      payment_reminder: [
-        "Payment Reminder - Invoice #{invoiceNumber}",
-        "Friendly Reminder: Payment Due for Invoice #{invoiceNumber}",
-        "Payment Request - Invoice #{invoiceNumber}"
-      ],
-      overdue_notice: [
-        "Overdue Notice - Invoice #{invoiceNumber}",
-        "Important: Payment Past Due for Invoice #{invoiceNumber}",
-        "Action Required: Overdue Payment"
-      ],
-      final_demand: [
-        "FINAL NOTICE - Invoice #{invoiceNumber}",
-        "Urgent: Final Payment Demand",
-        "Last Notice Before Collection Action"
-      ]
-    };
-
-    const subjects = subjectTemplates[category] || subjectTemplates.payment_reminder;
-    return subjects[Math.min(stage - 1, subjects.length - 1)] || subjects[0];
-  }
-
-  function generateEmailContent(category: string, stage: number, tone: string): string {
-    const baseContent: Record<string, Record<string, string>> = {
-      payment_reminder: {
-        friendly: `Dear {customerName},
-
-I hope this message finds you well. This is a friendly reminder that your invoice #{invoiceNumber} for $\{amount} was due on {dueDate}.
-
-We understand that sometimes invoices can be overlooked, so we wanted to bring this to your attention. If you have already sent the payment, please disregard this message.
-
-If you have any questions about this invoice or need to discuss payment arrangements, please don't hesitate to reach out to us.
-
-Thank you for your business!
-
-Best regards,
-{senderName}`,
-        professional: `Dear {customerName},
-
-This is a payment reminder for invoice #{invoiceNumber} in the amount of $\{amount}, which was due on {dueDate}.
-
-Please process payment at your earliest convenience. If payment has already been made, please disregard this notice.
-
-For any questions regarding this invoice, please contact our accounts department.
-
-Thank you for your prompt attention to this matter.
-
-Regards,
-{senderName}`,
-        firm: `Dear {customerName},
-
-Our records indicate that invoice #{invoiceNumber} for $\{amount} is past due as of {dueDate}.
-
-Please remit payment immediately to avoid any potential service interruptions or late fees.
-
-If you believe this notice is in error or need to discuss payment terms, contact us immediately.
-
-{senderName}`,
-        urgent: `Dear {customerName},
-
-URGENT: Invoice #{invoiceNumber} for $\{amount} is significantly overdue (due date: {dueDate}).
-
-Immediate payment is required to avoid collection action and additional fees. This is a serious matter that requires your immediate attention.
-
-Contact us today to resolve this outstanding balance.
-
-{senderName}`
-      }
-    };
-
-    const categoryContent = baseContent[category] || baseContent.payment_reminder;
-    return categoryContent[tone] || categoryContent.professional;
-  }
-
-  function generateSMSContent(category: string, stage: number, tone: string): string {
-    const smsTemplates: Record<string, Record<string, string>> = {
-      payment_reminder: {
-        friendly: "Hi {customerName}! Just a friendly reminder that invoice #{invoiceNumber} for $\{amount} was due on {dueDate}. Thanks!",
-        professional: "Payment reminder: Invoice #{invoiceNumber} ($\{amount}) due {dueDate}. Please process payment. Questions? Reply HELP",
-        firm: "NOTICE: Invoice #{invoiceNumber} ($\{amount}) is past due. Payment required immediately. Contact us to avoid further action.",
-        urgent: "URGENT: Invoice #{invoiceNumber} overdue. $\{amount} payment required NOW to avoid collection action. Call immediately."
-      }
-    };
-
-    const categoryContent = smsTemplates[category] || smsTemplates.payment_reminder;
-    return categoryContent[tone] || categoryContent.professional;
-  }
-
-  function generateWhatsAppContent(category: string, stage: number, tone: string): string {
-    const whatsappTemplates: Record<string, Record<string, string>> = {
-      payment_reminder: {
-        friendly: `Hello {customerName}! 👋
-
-Hope you're doing well. Just a quick reminder about invoice #{invoiceNumber} for $\{amount} that was due on {dueDate}.
-
-If you've already sent payment, please ignore this message. Otherwise, we'd appreciate payment when convenient.
-
-Thanks! 😊`,
-        professional: `Dear {customerName},
-
-Payment reminder for invoice #{invoiceNumber}:
-• Amount: $\{amount}
-• Due date: {dueDate}
-
-Please process payment at your earliest convenience. Reply if you have any questions.
-
-Best regards,
-{senderName}`,
-        firm: `{customerName},
-
-Invoice #{invoiceNumber} for $\{amount} is past due (due: {dueDate}).
-
-Immediate payment required. Contact us if you need to discuss payment arrangements.
-
-{senderName}`,
-        urgent: `🚨 URGENT NOTICE 🚨
-
-{customerName}, invoice #{invoiceNumber} is seriously overdue.
-
-Amount: $\{amount}
-Due date: {dueDate}
-
-Payment required immediately to avoid collection action. Contact us NOW.`
-      }
-    };
-
-    const categoryContent = whatsappTemplates[category] || whatsappTemplates.payment_reminder;
-    return categoryContent[tone] || categoryContent.professional;
-  }
-
-  // Email senders management
   app.get("/api/collections/email-senders", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -3608,7 +3604,6 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
-  // Collection schedules management
   app.get("/api/collections/schedules", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -3665,8 +3660,9 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       const scheduleData = {
         ...req.body,
         tenantId: user.tenantId,
+        scheduleSteps: req.body.scheduleSteps || req.body.steps || [],
+      };
 
-  
       console.log("Creating collection schedule with data:", {
         name: scheduleData.name,
         workflow: scheduleData.workflow,
@@ -3732,7 +3728,6 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
-  // Customer schedule assignments
   app.get("/api/collections/customer-assignments", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -3805,7 +3800,6 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
-  // Assign all customers to default schedule
   app.post("/api/collections/assign-all-to-default", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -3878,7 +3872,6 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
-  // Collections Automation
   app.get("/api/collections/automation/check", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -3931,598 +3924,6 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       res.status(500).json({ message: "Failed to update automation status" });
     }
   });
-
-  // Week 1: Supervised Autonomy - Daily Plan & Approval
-  app.get("/api/automation/daily-plan", isAuthenticated, async (req: any, res) => {
-    try {
-
-          return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      // fetchOnly=true means don't auto-generate if no plan exists
-      // This allows showing empty state after deletion
-      const { generateDailyPlan } = await import("./services/dailyPlanGenerator");
-      const plan = await generateDailyPlan(user.tenantId, req.user.id, false, true);
-      
-      res.json(plan);
-    } catch (error: any) {
-      console.error("Error fetching daily plan:", error);
-      res.status(500).json({ message: `Failed to fetch daily plan: ${error.message}` });
-    }
-  });
-
-  // Generate plan now (force regeneration)
-  app.post("/api/automation/generate-plan", isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      console.log(`🔄 Manual plan generation triggered by user ${req.user.id}`);
-
-      const { generateDailyPlan } = await import("./services/dailyPlanGenerator");
-      const plan = await generateDailyPlan(user.tenantId, req.user.id, true); // Force regeneration
-      
-      console.log(`✅ Generated ${plan.actions.length} actions for today's plan`);
-
-      // Trigger message pre-generation asynchronously (don't block response)
-      if (plan.actions.length > 0) {
-        const { messagePreGenerator } = await import("./services/messagePreGenerator");
-        const actionIds = plan.actions.map((a: any) => a.id);
-        
-        // Run pre-generation in background - user gets fast response while messages are prepared
-        messagePreGenerator.preGenerateForActions(actionIds)
-          .then(result => {
-            console.log(`✅ Pre-generated messages: ${result.generated} generated, ${result.failed} failed, ${result.skipped} skipped`);
-          })
-          .catch(err => {
-            console.error(`❌ Message pre-generation failed:`, err.message);
-          });
-      }
-
-      res.json(plan);
-    } catch (error: any) {
-      console.error("Error generating daily plan:", error);
-      res.status(500).json({ message: `Failed to generate daily plan: ${error.message}` });
-    }
-  });
-
-  // Delete all planned actions (for demo/testing purposes)
-  app.delete("/api/automation/daily-plan", isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      // Delete all pending_approval and scheduled actions for this tenant
-      const result = await db
-        .delete(actions)
-        .where(
-          and(
-            eq(actions.tenantId, user.tenantId),
-            inArray(actions.status, ['pending_approval', 'scheduled'])
-          )
-        )
-        .returning({ id: actions.id });
-
-      console.log(`🗑️ Deleted ${result.length} planned actions for tenant ${user.tenantId}`);
-
-      res.json({
-        message: "All planned actions deleted",
-        deletedCount: result.length,
-      });
-    } catch (error: any) {
-      console.error("Error deleting planned actions:", error);
-      res.status(500).json({ message: `Failed to delete planned actions: ${error.message}` });
-    }
-  });
-
-  app.post("/api/automation/approve-plan", isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const tenant = await storage.getTenant(user.tenantId);
-      if (!tenant) {
-        return res.status(404).json({ message: "Tenant not found" });
-      }
-
-      const { mode, scheduledFor } = req.body || {};
-
-      const pendingActions = await db.query.actions.findMany({
-        where: and(
-          eq(actions.tenantId, user.tenantId),
-          eq(actions.status, 'pending_approval')
-        )
-      });
-
-      if (pendingActions.length === 0) {
-        return res.json({ 
-          message: "No actions pending approval",
-          approvedCount: 0 
-        });
-      }
-
-      const actionIds = pendingActions.map(a => a.id);
-
-      if (mode === 'immediate') {
-        res.json({
-          message: "Executing actions now",
-          approvedCount: actionIds.length,
-          mode: 'immediate',
-        });
-
-        const { actionExecutor } = await import("./services/actionExecutor");
-        actionExecutor.executeActionsByIds(actionIds, req.user.id).then(result => {
-          console.log(`✅ Immediate execution complete: ${result.successCount} success, ${result.errorCount} failed`);
-        }).catch(err => {
-          console.error("❌ Immediate execution error:", err);
-        });
-      } else {
-        let executionTime: Date;
-        if (scheduledFor) {
-          executionTime = new Date(scheduledFor);
-        } else {
-          executionTime = new Date();
-          executionTime.setDate(executionTime.getDate() + 1);
-          const [hours, minutes] = (tenant.executionTime || '09:00').split(':');
-          executionTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-        }
-
-        await db.update(actions)
-          .set({
-            status: 'scheduled',
-            scheduledFor: executionTime,
-            approvedBy: req.user.id,
-            approvedAt: new Date(),
-            updatedAt: new Date(),
-          })
-          .where(
-            and(
-              eq(actions.tenantId, user.tenantId),
-              inArray(actions.id, actionIds)
-            )
-          );
-
-        console.log(`✅ Approved ${actionIds.length} actions for execution at ${executionTime.toISOString()}`);
-
-        res.json({
-          message: "Plan approved successfully",
-          approvedCount: actionIds.length,
-          mode: 'scheduled',
-          executionTime: executionTime.toISOString(),
-        });
-      }
-    } catch (error: any) {
-      console.error("Error approving plan:", error);
-      res.status(500).json({ message: `Failed to approve plan: ${error.message}` });
-    }
-  });
-
-  // ============================================================
-  // V0.5 ATTENTION ITEMS API ENDPOINTS
-  // ============================================================
-
-  // Get attention items with filters
-  app.get("/api/attention-items", isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const { type, status, severity, invoiceId, contactId, limit = 50, offset = 0 } = req.query;
-
-      const conditions = [eq(attentionItems.tenantId, user.tenantId)];
-      
-      if (type) conditions.push(eq(attentionItems.type, type as string));
-      if (status) conditions.push(eq(attentionItems.status, status as string));
-      if (severity) conditions.push(eq(attentionItems.severity, severity as string));
-      if (invoiceId) conditions.push(eq(attentionItems.invoiceId, invoiceId as string));
-      if (contactId) conditions.push(eq(attentionItems.contactId, contactId as string));
-
-      console.log("📋 Fetching attention items for tenant:", user.tenantId);
-      
-      const items = await db.query.attentionItems.findMany({
-        where: and(...conditions),
-        with: {
-          invoice: true,
-          contact: true,
-          assignedTo: true,
-        },
-        orderBy: [desc(attentionItems.createdAt)],
-        limit: parseInt(limit as string),
-        offset: parseInt(offset as string),
-      });
-      
-      console.log("📋 Found", items.length, "attention items");
-
-      // Get counts by status
-      const openCount = await db.select({ count: sql<number>`count(*)` })
-        .from(attentionItems)
-        .where(and(eq(attentionItems.tenantId, user.tenantId), eq(attentionItems.status, 'OPEN')));
-      
-      const inProgressCount = await db.select({ count: sql<number>`count(*)` })
-        .from(attentionItems)
-        .where(and(eq(attentionItems.tenantId, user.tenantId), eq(attentionItems.status, 'IN_PROGRESS')));
-
-      res.json({
-        items,
-        counts: {
-          open: Number(openCount[0]?.count ?? 0),
-          inProgress: Number(inProgressCount[0]?.count ?? 0),
-        },
-      });
-    } catch (error: any) {
-      console.error("Error fetching attention items:", error);
-      res.status(500).json({ message: `Failed to fetch attention items: ${error.message}` });
-
-        const user = await storage.getUser(req.user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const item = await db.query.attentionItems.findFirst({
-        where: and(
-          eq(attentionItems.id, req.params.id),
-          eq(attentionItems.tenantId, user.tenantId)
-        ),
-        with: {
-          invoice: true,
-          contact: true,
-          action: true,
-          assignedTo: true,
-          resolvedBy: true,
-        },
-      });
-
-      if (!item) {
-        return res.status(404).json({ message: "Attention item not found" });
-      }
-
-      res.json(item);
-    } catch (error: any) {
-      console.error("Error fetching attention item:", error);
-      res.status(500).json({ message: `Failed to fetch attention item: ${error.message}` });
-    }
-  });
-
-  // Create attention item - Zod validation schema
-  const createAttentionItemSchema = z.object({
-    type: z.enum(['DISPUTE', 'PAYMENT_PLAN_REQUEST', 'REQUEST_MORE_TIME', 'LOW_CONFIDENCE_OUTCOME', 'SYNC_MISMATCH', 'DATA_QUALITY', 'PTP_BREACH', 'FIRST_CONTACT_HIGH_VALUE', 'VIP_CUSTOMER', 'MANUAL_REVIEW']),
-    severity: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional().default('MEDIUM'),
-    title: z.string().min(1, "Title is required"),
-    description: z.string().optional(),
-    invoiceId: z.string().optional(),
-    contactId: z.string().optional(),
-    actionId: z.string().optional(),
-    payloadJson: z.any().optional(),
-  });
-
-  app.post("/api/attention-items", isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      // Validate request body with Zod
-      const parseResult = createAttentionItemSchema.safeParse(req.body);
-      if (!parseResult.success) {
-        return res.status(400).json({ 
-          message: "Validation failed", 
-          errors: parseResult.error.flatten().fieldErrors 
-        });
-      }
-
-      const { type, severity, title, description, invoiceId, contactId, actionId, payloadJson } = parseResult.data;
-
-      // Validate foreign keys belong to tenant (prevent cross-tenant references)
-      if (invoiceId) {
-        const invoice = await db.query.invoices.findFirst({
-          where: and(eq(invoices.id, invoiceId), eq(invoices.tenantId, user.tenantId))
-        });
-        if (!invoice) {
-          return res.status(400).json({ message: "Invoice not found or belongs to different tenant" });
-        }
-      }
-
-      if (contactId) {
-        const contact = await db.query.contacts.findFirst({
-          where: and(eq(contacts.id, contactId), eq(contacts.tenantId, user.tenantId))
-        });
-        if (!contact) {
-          return res.status(400).json({ message: "Contact not found or belongs to different tenant" });
-        }
-      }
-
-      if (actionId) {
-        const action = await db.query.actions.findFirst({
-          where: and(eq(actions.id, actionId), eq(actions.tenantId, user.tenantId))
-        });
-        if (!action) {
-          return res.status(400).json({ message: "Action not found or belongs to different tenant" });
-        }
-      }
-
-      const [item] = await db.insert(attentionItems).values({
-        tenantId: user.tenantId,
-        type,
-        severity,
-        title,
-        description,
-        invoiceId,
-        contactId,
-        actionId,
-        payloadJson,
-      }).returning();
-
-      console.log(`✅ Created attention item: ${item.id} (${type})`);
-
-      res.status(201).json(item);
-    } catch (error: any) {
-      console.error("Error creating attention item:", error);
-      res.status(500).json({ message: `Failed to create attention item: ${error.message}` });
-    }
-  });
-
-  // Update attention item (assign, update status)
-  app.patch("/api/attention-items/:id", isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const { status, severity, assignedToUserId, description } = req.body;
-
-      const updates: any = { updatedAt: new Date() };
-      if (status) updates.status = status;
-      if (severity) updates.severity = severity;
-      if (assignedToUserId !== undefined) updates.assignedToUserId = assignedToUserId;
-      if (description !== undefined) updates.description = description;
-
-      const [item] = await db.update(attentionItems)
-        .set(updates)
-        .where(and(
-          eq(attentionItems.id, req.params.id),
-          eq(attentionItems.tenantId, user.tenantId)
-        ))
-        .returning();
-
-      if (!item) {
-        return res.status(404).json({ message: "Attention item not found" });
-      }
-
-      res.json(item);
-    } catch (error: any) {
-      console.error("Error updating attention item:", error);
-      res.status(500).json({ message: `Failed to update attention item: ${error.message}` });
-    }
-  });
-
-  // Resolve attention item
-  app.post("/api/attention-items/:id/resolve", isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const { resolutionNotes, resolutionAction } = req.body;
-
-      const [item] = await db.update(attentionItems)
-        .set({
-          status: 'RESOLVED',
-          resolvedByUserId: user.id,
-          resolvedAt: new Date(),
-          resolutionNotes,
-          resolutionAction,
-          updatedAt: new Date(),
-        })
-        .where(and(
-          eq(attentionItems.id, req.params.id),
-          eq(attentionItems.tenantId, user.tenantId)
-        ))
-        .returning();
-
-      if (!item) {
-        return res.status(404).json({ message: "Attention item not found" });
-      }
-
-      console.log(`✅ Resolved attention item: ${item.id}`);
-
-      res.json(item);
-    } catch (error: any) {
-      console.error("Error resolving attention item:", error);
-      res.status(500).json({ message: `Failed to resolve attention item: ${error.message}` });
-    }
-  });
-
-  // Dismiss attention item
-  app.post("/api/attention-items/:id/dismiss", isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const { resolutionNotes } = req.body;
-
-      const [item] = await db.update(attentionItems)
-        .set({
-          status: 'DISMISSED',
-          resolvedByUserId: user.id,
-          resolvedAt: new Date(),
-          resolutionNotes,
-          updatedAt: new Date(),
-        })
-        .where(and(
-          eq(attentionItems.id, req.params.id),
-          eq(attentionItems.tenantId, user.tenantId)
-        ))
-        .returning();
-
-      if (!item) {
-        return res.status(404).json({ message: "Attention item not found" });
-      }
-
-      console.log(`✅ Dismissed attention item: ${item.id}`);
-
-      res.json(item);
-    } catch (error: any) {
-      console.error("Error dismissing attention item:", error);
-      res.status(500).json({ message: `Failed to dismiss attention item: ${error.message}` });
-    }
-  });
-
-  // ============================================================
-  // DEBTOR PACKS ENDPOINT - Loop left pane data
-  // Derives debtor packs on-the-fly via SQL aggregation
-  // ============================================================
-
-  app.get("/api/debtor-packs", isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const tenantId = user.tenantId;
-      const { stage } = req.query;
-
-      // Step 1: Get all contacts with open invoices, aggregating invoice data
-      const contactsWithInvoices = await db.execute(sql`
-        SELECT 
-          c.id as contact_id,
-          c.name as contact_name,
-          c.tenant_id,
-          COUNT(i.id) as invoice_count,
-          COALESCE(SUM(i.amount - COALESCE(i.amount_paid, 0)), 0) as total_due,
-          COALESCE(MAX(EXTRACT(day FROM (CURRENT_DATE - i.due_date))::integer), 0) as oldest_days_overdue
-        FROM contacts c
-        INNER JOIN invoices i ON c.id = i.contact_id AND c.tenant_id = i.tenant_id
-        WHERE c.tenant_id = ${tenantId}
-          AND i.status = 'OPEN'
-          AND (i.amount - COALESCE(i.amount_paid, 0)) > 0
-        GROUP BY c.id, c.name, c.tenant_id
-        ORDER BY oldest_days_overdue DESC
-      `);
-
-      // Step 2: Get open attention items per contact
-      const openAttentionItems = await db
-        .select({
-          contactId: attentionItems.contactId,
-          type: attentionItems.type,
-          severity: attentionItems.severity,
-        })
-        .from(attentionItems)
-        .where(and(
-          eq(attentionItems.tenantId, tenantId),
-          or(eq(attentionItems.status, 'OPEN'), eq(attentionItems.status, 'IN_PROGRESS'))
-        ));
-
-      const attentionByContact = new Map<string, { type: string; severity: string }>();
-      for (const item of openAttentionItems) {
-        if (item.contactId && !attentionByContact.has(item.contactId)) {
-          attentionByContact.set(item.contactId, { type: item.type!, severity: item.severity! });
-        }
-      }
-
-      // Step 3: Get latest action per contact to determine in-flight state
-      const latestActions = await db.execute(sql`
-        SELECT DISTINCT ON (a.contact_id)
-          a.contact_id,
-          a.status as action_status,
-          a.work_state,
-          a.in_flight_state,
-          a.scheduled_for,
-          a.completed_at
-        FROM actions a
-
-        for (const action of latestActions.rows as any[]) {
-        actionsByContact.set(action.contact_id, action);
-      }
-
-      // Step 4: Build debtor pack rows with stage derivation
-      const debtorPacks: any[] = [];
-      
-      for (const row of contactsWithInvoices.rows as any[]) {
-        const contactId = row.contact_id;
-        const hasAttention = attentionByContact.has(contactId);
-        const attention = attentionByContact.get(contactId);
-        const latestAction = actionsByContact.get(contactId);
-
-        // Derive stage based on precedence: ATTENTION > IN_FLIGHT > PLANNED
-        let derivedStage: 'PLANNED' | 'IN_FLIGHT' | 'ATTENTION' | 'CLOSED' = 'PLANNED';
-        let inFlightState: string | undefined;
-        let attentionType: string | undefined;
-
-        if (hasAttention) {
-          derivedStage = 'ATTENTION';
-          attentionType = attention?.type;
-        } else if (latestAction) {
-          const actionStatus = latestAction.action_status;
-          const workState = latestAction.work_state;
-          
-          if (workState === 'IN_FLIGHT' || actionStatus === 'SENT' || actionStatus === 'EXECUTED') {
-            derivedStage = 'IN_FLIGHT';
-            inFlightState = latestAction.in_flight_state || 'SENT';
-          } else if (actionStatus === 'APPROVED' || actionStatus === 'PENDING') {
-            derivedStage = 'PLANNED';
-          }
-        }
-
-        // Skip if filtering by stage and doesn't match
-        if (stage && derivedStage !== stage) {
-          continue;
-        }
-
-        debtorPacks.push({
-          packId: `contact:${contactId}`,
-          tenantId: row.tenant_id,
-          contactId,
-          contactName: row.contact_name,
-          invoiceCount: parseInt(row.invoice_count, 10),
-          totalDue: parseFloat(row.total_due),
-          oldestDaysOverdue: parseInt(row.oldest_days_overdue, 10),
-          stage: derivedStage,
-          inFlightState,
-          attentionType,
-          lastActionAt: latestAction?.completed_at || latestAction?.scheduled_for,
-          isBatchSelectable: derivedStage === 'PLANNED',
-        });
-      }
-
-      // Sort by oldest days overdue (most urgent first)
-      debtorPacks.sort((a, b) => b.oldestDaysOverdue - a.oldestDaysOverdue);
-
-      console.log(`📋 Returning ${debtorPacks.length} debtor packs for tenant ${tenantId}`);
-
-      res.json({ 
-        debtorPacks,
-        summary: {
-          total: debtorPacks.length,
-          byStage: {
-            PLANNED: debtorPacks.filter(p => p.stage === 'PLANNED').length,
-            IN_FLIGHT: debtorPacks.filter(p => p.stage === 'IN_FLIGHT').length,
-            ATTENTION: debtorPacks.filter(p => p.stage === 'ATTENTION').length,
-          }
-        }
-      });
-    } catch (error: any) {
-      console.error("Error fetching debtor packs:", error);
-      res.status(500).json({ message: `Failed to fetch debtor packs: ${error.message}` });
-    }
-  });
-
-  // ============================================================
-  // BULK APPROVE/DECLINE ACTIONS ENDPOINT
-  // ============================================================
 
   app.post("/api/actions/bulk-approve", isAuthenticated, async (req: any, res) => {
     try {
@@ -4583,8 +3984,12 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     } catch (error: any) {
       console.error("Error bulk approving actions:", error);
       res.status(500).json({ message: `Failed to bulk approve actions: ${error.message}` });
+    }
+  });
 
-        const user = await storage.getUser(req.user.id);
+  app.post("/api/actions/bulk-decline", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -4623,212 +4028,578 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
-  // ============================================================
-  // OUTCOMES API - Loop Spec V0.5
-  // ============================================================
-
-  // Get outcomes for a debtor
-  app.get("/api/outcomes", isAuthenticated, async (req: any, res) => {
+  app.post("/api/collections/nudge/:invoiceId", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      const { debtorId, invoiceId, type, limit = 50 } = req.query;
+      const { invoiceId } = req.params;
+      if (!invoiceId) {
+        return res.status(400).json({ message: "Invoice ID is required" });
+      }
 
-      // Build conditions array to ensure tenant filter is always applied
-      const conditions = [eq(outcomes.tenantId, user.tenantId)];
-      if (debtorId) conditions.push(eq(outcomes.debtorId, debtorId as string));
-      if (invoiceId) conditions.push(eq(outcomes.invoiceId, invoiceId as string));
-      if (type) conditions.push(eq(outcomes.type, type as string));
+      const { nudgeInvoiceToNextAction } = await import("./services/collectionsAutomation");
+      const nudgeAction = await nudgeInvoiceToNextAction(invoiceId, user.tenantId);
+      
+      if (!nudgeAction) {
+        return res.status(404).json({ message: "Unable to determine next action for this invoice" });
+      }
 
-      const result = await db.select().from(outcomes)
-        .where(and(...conditions))
-        .orderBy(desc(outcomes.createdAt))
-        .limit(parseInt(limit as string));
-
-      res.json(result);
-    } catch (error: any) {
-      console.error("Error fetching outcomes:", error);
-      res.status(500).json({ message: `Failed to fetch outcomes: ${error.message}` });
+      console.log(`✅ Nudged invoice ${nudgeAction.invoiceNumber} to action: ${nudgeAction.action}`);
+      res.json({ 
+        success: true, 
+        action: nudgeAction,
+        message: `Invoice ${nudgeAction.invoiceNumber} nudged to next action: ${nudgeAction.action}` 
+      });
+    } catch (error) {
+      console.error("Error nudging invoice:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: (error as Error).message || "Failed to nudge invoice" 
+      });
     }
   });
 
-  // Create outcome
-  const createOutcomeSchema = z.object({
-    debtorId: z.string().min(1, "Debtor ID is required"),
-    invoiceId: z.string().optional(),
-    linkedInvoiceIds: z.array(z.string()).optional().default([]),
-    type: z.enum([
-      'PROMISE_TO_PAY', 'PAYMENT_PLAN_PROPOSED', 'PAYMENT_IN_PROCESS',
-      'DISPUTE', 'DOCS_REQUESTED', 'CONTACT_ISSUE', 'OUT_OF_OFFICE', 'CANNOT_PAY',
-      'PAID_ALREADY_CLAIM', 'DELIVERY_FAILED', 'BANK_DETAILS_CHANGE_REQUEST', 'REQUEST_CALL_BACK',
-      'AMBIGUOUS', 'NO_RESPONSE',
-      'PAID', 'PART_PAID', 'CREDIT_NOTE', 'WRITTEN_OFF', 'CANCELLED',
-    ]),
-    confidence: z.number().min(0).max(1).default(0.8),
-    sourceChannel: z.enum(['EMAIL', 'SMS', 'VOICE', 'MANUAL']).optional(),
-    sourceMessageId: z.string().optional(),
-    rawSnippet: z.string().optional(),
-    extracted: z.object({
-      promiseToPayDate: z.string().optional(),
-      promiseToPayAmount: z.number().optional(),
-      confirmedBy: z.string().optional(),
-      paymentPlanSchedule: z.array(z.object({ date: z.string(), amount: z.number() })).optional(),
-      paymentProcessWindow: z.object({ earliest: z.string().optional(), latest: z.string().optional() }).optional(),
-      disputeCategory: z.enum(['PRICING', 'DELIVERY', 'QUALITY', 'OTHER']).optional(),
-      docsRequested: z.array(z.enum(['INVOICE_COPY', 'STATEMENT', 'REMITTANCE', 'PO'])).optional(),
-      oooUntil: z.string().optional(),
-      freeTextNotes: z.string().optional(),
-    }).optional().default({}),
-  });
-
-  app.post("/api/outcomes", isAuthenticated, async (req: any, res) => {
+  app.post("/api/collections/nudge", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      const parseResult = createOutcomeSchema.safeParse(req.body);
-      if (!parseResult.success) {
+      // Validate request body using Zod schema
+      const validatedData = nudgeInvoiceSchema.parse(req.body);
+      const { invoiceId } = validatedData;
+
+      // Get the invoice and validate it belongs to the tenant
+      const invoice = await storage.getInvoice(invoiceId, user.tenantId);
+      if (!invoice) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+
+      // Import collections automation service to determine next action
+      const { nudgeInvoiceToNextAction } = await import("./services/collectionsAutomation");
+      const nudgeAction = await nudgeInvoiceToNextAction(invoiceId, user.tenantId);
+      
+      if (!nudgeAction) {
+        return res.status(404).json({ message: "Unable to determine next action for this invoice" });
+      }
+
+      console.log(`📧 Executing nudge action for invoice ${nudgeAction.invoiceNumber}: ${nudgeAction.action} (${nudgeAction.actionType})`);
+
+      let actionExecuted = false;
+      let actionDetails = '';
+      let nextActionDate = new Date();
+
+      // Execute the action based on actionType
+      if (nudgeAction.actionType === 'email') {
+        // Execute email action
+        if (!invoice.contact.email) {
+          return res.status(400).json({ message: "Contact email not available for email action" });
+        }
+
+        // Get email template and sender
+        const templates = await storage.getCommunicationTemplates(user.tenantId, { type: 'email' });
+        const defaultSender = await storage.getDefaultEmailSender(user.tenantId);
+        
+        if (!defaultSender?.email) {
+          return res.status(500).json({ message: "No email sender configured in Collection Workflow" });
+        }
+
+        // Use template if specified, otherwise create basic message
+        let emailContent = nudgeAction.actionDetails?.message || 'Payment reminder regarding outstanding invoice.';
+        let emailSubject = nudgeAction.actionDetails?.subject || `Payment Reminder - Invoice ${invoice.invoiceNumber}`;
+
+        if (nudgeAction.templateId) {
+          const template = templates.find(t => t.id === nudgeAction.templateId);
+          if (template) {
+            emailContent = template.content || emailContent;
+            emailSubject = template.subject || emailSubject;
+          }
+        }
+
+        // Process template variables
+        const dueDate = new Date(invoice.dueDate);
+        const today = new Date();
+        const daysOverdue = Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)));
+        
+        const templateVars = {
+          first_name: invoice.contact.name?.split(' ')[0] || 'Valued Customer',
+          invoice_number: invoice.invoiceNumber,
+          amount: Number(invoice.amount).toLocaleString(),
+          due_date: formatDate(invoice.dueDate),
+          days_overdue: daysOverdue.toString(),
+          company_name: invoice.contact.companyName || '',
+          your_name: defaultSender.fromName || defaultSender.name || 'Collections Team'
+        };
+
+        // Replace template variables
+        Object.entries(templateVars).forEach(([key, value]) => {
+          const placeholder = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
+          emailContent = emailContent.replace(placeholder, value);
+          emailSubject = emailSubject.replace(placeholder, value);
+        });
+
+        // Send email using SendGrid
+        const { sendEmail } = await import("./services/sendgrid");
+        const formattedSender = `${defaultSender.fromName || defaultSender.name} <${defaultSender.email}>`;
+        
+        const emailSent = await sendEmail({
+          to: invoice.contact.email,
+          from: formattedSender,
+          subject: emailSubject,
+          html: emailContent.replace(/\n/g, '<br>'),
+          tenantId: user.tenantId,
+        });
+
+        if (emailSent) {
+          actionExecuted = true;
+          actionDetails = `Email sent to ${invoice.contact.email}`;
+          nextActionDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000); // +3 days for email
+        }
+
+      } else if (nudgeAction.actionType === 'sms') {
+        // Execute SMS action
+        if (!invoice.contact.phone) {
+          return res.status(400).json({ message: "Contact phone not available for SMS action" });
+        }
+
+        const dueDate = new Date(invoice.dueDate);
+        const today = new Date();
+        const daysOverdue = Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)));
+
+        // Send SMS using Twilio
+        const { sendPaymentReminderSMS } = await import("./services/twilio");
+        const smsResult = await sendPaymentReminderSMS({
+          phone: invoice.contact.phone,
+          name: invoice.contact.name || 'Customer',
+          invoiceNumber: invoice.invoiceNumber,
+          amount: Number(invoice.amount),
+          daysPastDue: daysOverdue
+        });
+
+        if (smsResult.success) {
+          actionExecuted = true;
+          actionDetails = `SMS sent to ${invoice.contact.phone}`;
+          nextActionDate = new Date(Date.now() + 1 * 24 * 60 * 60 * 1000); // +1 day for SMS
+        }
+
+      } else {
+        // For call/manual actions, just log and schedule
+        actionExecuted = true;
+        actionDetails = `${nudgeAction.actionType} action scheduled`;
+        nextActionDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000); // +2 days for call/manual
+      }
+
+      if (!actionExecuted && (nudgeAction.actionType === 'email' || nudgeAction.actionType === 'sms')) {
+        return res.status(500).json({ message: `Failed to send ${nudgeAction.actionType}` });
+      }
+
+      // Update invoice with next action details
+      await storage.updateInvoice(invoiceId, user.tenantId, {
+        nextAction: nudgeAction.action,
+        nextActionDate: nextActionDate,
+        lastReminderSent: new Date(),
+        reminderCount: (invoice.reminderCount || 0) + 1,
+        collectionStage: nudgeAction.actionDetails?.escalationLevel || invoice.collectionStage
+      });
+
+      // Create audit trail entry
+      await storage.createAction({
+        tenantId: user.tenantId,
+        invoiceId,
+        contactId: invoice.contactId,
+        userId: user.id,
+        type: nudgeAction.actionType,
+        status: actionExecuted ? 'completed' : 'scheduled',
+        subject: nudgeAction.actionDetails?.subject || `${nudgeAction.action} - Invoice ${invoice.invoiceNumber}`,
+        content: actionDetails,
+        scheduledFor: nextActionDate,
+        completedAt: actionExecuted ? new Date() : undefined,
+        metadata: {
+          nudgeAction: nudgeAction.action,
+          priority: nudgeAction.priority,
+          scheduleName: nudgeAction.scheduleName,
+          templateId: nudgeAction.templateId
+        }
+      });
+
+      console.log(`✅ Nudge completed for invoice ${nudgeAction.invoiceNumber}: ${nudgeAction.action} - ${actionDetails}`);
+
+      res.json({
+        success: true,
+        action: nudgeAction.actionType,
+        scheduledFor: nextActionDate.toISOString(),
+        message: `${actionDetails || `${nudgeAction.action} scheduled`}`,
+        actionDetails: {
+          invoiceNumber: invoice.invoiceNumber,
+          contactName: invoice.contact.name,
+          action: nudgeAction.action,
+          actionType: nudgeAction.actionType,
+          priority: nudgeAction.priority,
+          scheduleName: nudgeAction.scheduleName
+        }
+      });
+
+    } catch (error) {
+      console.error("Error executing nudge action:", error);
+      
+      if (error instanceof z.ZodError) {
         return res.status(400).json({ 
-          message: "Validation failed", 
-          errors: parseResult.error.flatten().fieldErrors 
+          success: false,
+          message: "Invalid request data", 
+          errors: error.errors 
         });
       }
-
-      const data = parseResult.data;
-      const confidenceBand = data.confidence >= 0.85 ? 'HIGH' : data.confidence >= 0.65 ? 'MEDIUM' : 'LOW';
-      const requiresHumanReview = data.confidence < 0.65;
-
-      // Validate debtor belongs to tenant
-      const debtor = await db.query.contacts.findFirst({
-        where: and(eq(contacts.id, data.debtorId), eq(contacts.tenantId, user.tenantId))
+      
+      res.status(500).json({
+        success: false,
+        message: (error as Error).message || "Failed to execute nudge action"
       });
-      if (!debtor) {
-        return res.status(400).json({ message: "Debtor not found or belongs to different tenant" });
-      }
-
-      const [outcome] = await db.insert(outcomes).values({
-        tenantId: user.tenantId,
-        debtorId: data.debtorId,
-        invoiceId: data.invoiceId,
-        linkedInvoiceIds: data.linkedInvoiceIds,
-        type: data.type,
-        confidence: data.confidence.toString(),
-        confidenceBand,
-        requiresHumanReview,
-        sourceChannel: data.sourceChannel,
-        sourceMessageId: data.sourceMessageId,
-        rawSnippet: data.rawSnippet,
-        extracted: data.extracted,
-        createdByUserId: user.id,
-      }).returning();
-
-      // Process outcome routing
-      const { workStateService } = await import("./services/workStateService");
-      await workStateService.processOutcome(outcome);
-
-      console.log(`✅ Created outcome: ${outcome.id} (${data.type})`);
-
-      res.status(201).json(outcome);
-    } catch (error: any) {
-      console.error("Error creating outcome:", error);
-      res.status(500).json({ message: `Failed to create outcome: ${error.message}` });
     }
   });
 
-  // ============================================================
-  // AUDIT EVENTS API - Loop Spec V0.5
-  // ============================================================
+  app.get("/api/collections/scheduler/status", isOwner, async (req: any, res) => {
+    try {
+      const { collectionsScheduler } = await import("./services/collectionsScheduler");
+      const status = collectionsScheduler.getStatus();
+      res.json(status);
+    } catch (error) {
+      console.error("Error getting scheduler status:", error);
+      res.status(500).json({ message: "Failed to get scheduler status" });
+    }
+  });
 
-  // Get audit events (Activity log)
-  app.get("/api/audit-events", isAuthenticated, async (req: any, res) => {
+  app.post("/api/collections/scheduler/start", isOwner, async (req: any, res) => {
+    try {
+      const { collectionsScheduler } = await import("./services/collectionsScheduler");
+      collectionsScheduler.start();
+      res.json({ success: true, message: "Collections scheduler started" });
+    } catch (error) {
+      console.error("Error starting scheduler:", error);
+      res.status(500).json({ message: "Failed to start scheduler" });
+    }
+  });
+
+  app.post("/api/collections/scheduler/stop", isOwner, async (req: any, res) => {
+    try {
+      const { collectionsScheduler } = await import("./services/collectionsScheduler");
+      collectionsScheduler.stop();
+      res.json({ success: true, message: "Collections scheduler stopped" });
+    } catch (error) {
+      console.error("Error stopping scheduler:", error);
+      res.status(500).json({ message: "Failed to stop scheduler" });
+    }
+  });
+
+  app.post("/api/collections/scheduler/run-now", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      const { debtorId, invoiceId, type, actor, limit = 100 } = req.query;
-
-      const conditions = [eq(activityLogs.tenantId, user.tenantId), eq(activityLogs.category, 'audit')];
-      if (debtorId) conditions.push(eq(activityLogs.debtorId, debtorId as string));
-      if (invoiceId) conditions.push(eq(activityLogs.invoiceId, invoiceId as string));
-      if (type) conditions.push(eq(activityLogs.activityType, type as string));
-      if (actor) conditions.push(eq(activityLogs.actor, actor as string));
-
-      const result = await db.select().from(activityLogs)
-        .where(and(...conditions))
-        .orderBy(desc(activityLogs.createdAt))
-        .limit(parseInt(limit as string));
-
-      res.json(result);
-    } catch (error: any) {
-      console.error("Error fetching audit events:", error);
-      res.status(500).json({ message: `Failed to fetch audit events: ${error.message}` });
-    }
-  });
-
-  app.get("/api/security-audit-log", ...withPermission('admin:settings'), async (req: any, res) => {
-    try {
-      const tenantId = req.rbac.tenantId;
-      const { eventType, limit = 200, before, after } = req.query;
-
-      const conditions = [
-        eq(activityLogs.tenantId, tenantId),
-        eq(activityLogs.category, 'security'),
-      ];
+      // Manually trigger a collection run
+      const { checkCollectionActions } = await import("./services/collectionsAutomation");
+      const actions = await checkCollectionActions(user.tenantId);
       
-      if (eventType) conditions.push(eq(activityLogs.activityType, eventType as string));
-
-      const result = await db.select({
-        id: activityLogs.id,
-        eventType: activityLogs.activityType,
-        description: activityLogs.description,
-        result: activityLogs.result,
-        userId: activityLogs.userId,
-        ipAddress: activityLogs.ipAddress,
-        userAgent: activityLogs.userAgent,
-        metadata: activityLogs.metadata,
-        createdAt: activityLogs.createdAt,
-      }).from(activityLogs)
-        .where(and(...conditions))
-        .orderBy(desc(activityLogs.createdAt))
-        .limit(parseInt(limit as string));
-
-      res.json(result);
-    } catch (error: any) {
-      console.error("Error fetching security audit log:", error);
-      res.status(500).json({ message: `Failed to fetch security audit log: ${error.message}` });
-
-  
-  const reportTypeEnum = z.enum(['aged_debtors', 'cashflow_forecast', 'collection_performance', 'dso_summary']);
-  const frequencyEnum = z.enum(['daily', 'weekly', 'monthly']);
-
-  const createScheduledReportSchema = z.object({
-    name: z.string().min(1).max(100),
-    reportType: reportTypeEnum,
-    frequency: frequencyEnum,
-    dayOfWeek: z.number().min(0).max(6).optional(),
-    dayOfMonth: z.number().min(1).max(28).optional(),
-    sendTime: z.string().regex(/^\d{2}:\d{2}$/).default('08:00'),
-    timezone: z.string().default('Europe/London'),
-    recipients: z.array(z.string().email()).min(1).max(20),
-    enabled: z.boolean().default(true),
-  });
-
-  app.get("/api/scheduled-reports", ...withPermission('admin:settings'), async (req: any, res) => {
-    try {
-      const reports = await storage.getScheduledReports(req.rbac.tenantId);
-      res.json(reports);
-    } catch (error: any) {
-      console.error("Error fetching scheduled reports:", error);
-      res.status(500).json({ message: "Failed to fetch scheduled reports" });
+      res.json({ 
+        success: true, 
+        actionsFound: actions.length,
+        actions,
+        message: `Manual collection run completed - ${actions.length} actions found`
+      });
+    } catch (error) {
+      console.error("Error running manual collection:", error);
+      res.status(500).json({ message: "Failed to run manual collection" });
     }
   });
 
-  }
-  
+  app.get("/api/collections/escalation-rules", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const rules = await storage.getEscalationRules(user.tenantId);
+      res.json(rules);
+    } catch (error) {
+      console.error("Error fetching escalation rules:", error);
+      res.status(500).json({ message: "Failed to fetch escalation rules" });
+    }
+  });
+
+  app.post("/api/collections/escalation-rules", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const ruleData = insertEscalationRuleSchema.parse({
+        ...req.body,
+        tenantId: user.tenantId,
+      });
+
+      const rule = await storage.createEscalationRule(ruleData);
+      res.status(201).json(rule);
+    } catch (error) {
+      console.error("Error creating escalation rule:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid rule data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create escalation rule" });
+    }
+  });
+
+  app.get("/api/collections/analytics", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { channel, startDate, endDate } = req.query;
+      const analytics = await storage.getChannelAnalytics(user.tenantId, { 
+        channel: channel as string, 
+        startDate: startDate as string, 
+        endDate: endDate as string 
+      });
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching channel analytics:", error);
+      res.status(500).json({ message: "Failed to fetch channel analytics" });
+    }
+  });
+
+  app.get("/api/collections/dashboard", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const dashboard = await storage.getCollectionsDashboard(user.tenantId);
+      res.json(dashboard);
+    } catch (error) {
+      console.error("Error fetching collections dashboard:", error);
+      res.status(500).json({ message: "Failed to fetch collections dashboard" });
+    }
+  });
+
+  app.get("/api/collections/sms/configuration", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // Get SMS statistics from the database (last 30 days)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const smsActions = await db.select()
+        .from(actions)
+        .where(
+          and(
+            eq(actions.tenantId, user.tenantId),
+            eq(actions.type, 'sms'),
+            gte(actions.createdAt, thirtyDaysAgo)
+          )
+        );
+
+      const messagesSent = smsActions.length;
+      const deliveredMessages = smsActions.filter(a => a.status === 'completed').length;
+      const failedMessages = smsActions.filter(a => a.status === 'failed').length;
+      const deliveryRate = messagesSent > 0 
+        ? Math.round((deliveredMessages / messagesSent) * 100) 
+        : 0;
+
+      res.json({
+        phoneNumber: process.env.VONAGE_PHONE_NUMBER || '+44 7418 317011',
+        country: 'United Kingdom',
+        countryCode: 'GB',
+        capabilities: ['sms', 'voice'],
+        provider: 'Vonage',
+        status: 'active',
+        stats: {
+          messagesSent,
+          deliveryRate,
+          failedMessages
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching SMS configuration:", error);
+      res.status(500).json({ message: "Failed to fetch SMS configuration" });
+    }
+  });
+
+  app.get("/api/collections/workflow-templates", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { category, industry } = req.query;
+      const templates = await storage.getWorkflowTemplates({ category, industry });
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching workflow templates:", error);
+      res.status(500).json({ message: "Failed to fetch workflow templates" });
+    }
+  });
+
+  app.post("/api/collections/workflow-templates/:templateId/clone", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { templateId } = req.params;
+      const { name } = req.body;
+      
+      const workflow = await storage.cloneWorkflowTemplate(templateId, user.tenantId, name);
+      res.status(201).json(workflow);
+    } catch (error) {
+      console.error("Error cloning workflow template:", error);
+      res.status(500).json({ message: "Failed to clone workflow template" });
+    }
+  });
+
+  app.get("/api/collections/ai-learning/insights", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { CollectionLearningService } = await import("./services/collectionLearningService");
+      const learningService = new CollectionLearningService();
+      
+      const insights = await learningService.getLearningInsights(user.tenantId);
+      res.json(insights);
+    } catch (error) {
+      console.error("Error fetching AI learning insights:", error);
+      res.status(500).json({ message: "Failed to fetch AI learning insights" });
+    }
+  });
+
+  app.post("/api/collections/ai-learning/record-outcome", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const outcomeSchema = z.object({
+        actionId: z.string(),
+        wasDelivered: z.boolean(),
+        wasOpened: z.boolean().optional(),
+        wasClicked: z.boolean().optional(),
+        wasReplied: z.boolean().optional(),
+        replyTime: z.number().optional(),
+        replySentiment: z.enum(['positive', 'neutral', 'negative']).optional(),
+        ledToPayment: z.boolean(),
+        paymentAmount: z.number().optional(),
+        paymentDelay: z.number().optional(),
+        partialPayment: z.boolean().optional(),
+      });
+
+      const outcome = outcomeSchema.parse(req.body);
+
+      const { CollectionLearningService } = await import("./services/collectionLearningService");
+      const learningService = new CollectionLearningService();
+      
+      // Record the effectiveness data
+      await learningService.recordActionEffectiveness(outcome);
+      
+      // Update customer learning profile
+      await learningService.updateCustomerProfile(outcome);
+
+      res.status(201).json({ 
+        message: "Action outcome recorded successfully",
+        aiLearning: true 
+      });
+    } catch (error) {
+      console.error("Error recording action outcome:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid outcome data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to record action outcome" });
+    }
+  });
+
+  app.get("/api/collections/ai-learning/customer-profile/:contactId", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId } = req.params;
+
+      const { CollectionLearningService } = await import("./services/collectionLearningService");
+      const learningService = new CollectionLearningService();
+      
+      const profile = await learningService.getOrCreateCustomerProfile(contactId, user.tenantId);
+      res.json(profile);
+    } catch (error) {
+      console.error("Error fetching customer learning profile:", error);
+      res.status(500).json({ message: "Failed to fetch customer learning profile" });
+    }
+  });
+
+  app.post("/api/collections/ai-learning/optimize-actions", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const actionsSchema = z.array(z.object({
+        invoiceId: z.string(),
+        contactId: z.string(),
+        invoiceNumber: z.string(),
+        contactName: z.string(),
+        daysOverdue: z.number(),
+        amount: z.string(),
+        action: z.string(),
+        actionType: z.enum(['email', 'sms', 'voice', 'manual']),
+        scheduleName: z.string(),
+        templateId: z.string().optional(),
+        priority: z.enum(['low', 'normal', 'high', 'urgent']),
+        actionDetails: z.object({
+          template: z.string().optional(),
+          subject: z.string().optional(),
+          message: z.string().optional(),
+          escalationLevel: z.string().optional(),
+        }),
+      }));
+
+      const actions = actionsSchema.parse(req.body.actions || req.body);
+
+      const { CollectionLearningService } = await import("./services/collectionLearningService");
+      const learningService = new CollectionLearningService();
+      
+      const optimizedActions = await learningService.optimizeActions(actions);
+      
+      res.json({
+        originalCount: actions.length,
+        optimizedCount: optimizedActions.length,
+        actions: optimizedActions,
+        aiOptimized: true
+      });
+    } catch (error) {
+      console.error("Error optimizing actions with AI:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid actions data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to optimize actions" });
+    }
+  });
+}

@@ -1,28 +1,65 @@
 import type { Express } from "express";
 import { storage } from "../storage";
-import { isAuthenticated } from "../auth";
+import { isAuthenticated, isOwner } from "../auth";
+import { logSecurityEvent, extractClientInfo } from "../services/securityAuditService";
+import { sanitizeObject, stripSensitiveUserFields, stripSensitiveTenantFields, stripSensitiveFields } from "../utils/sanitize";
+import { withPermission, withRole, withMinimumRole, canManageUser, withRBACContext } from "../middleware/rbac";
+import { 
+  insertContactSchema, insertContactNoteSchema, insertInvoiceSchema, 
+  insertActionSchema, insertWorkflowSchema, insertCommunicationTemplateSchema,
+  insertEscalationRuleSchema, insertChannelAnalyticsSchema, insertWorkflowTemplateSchema,
+  insertVoiceCallSchema, insertBillSchema, insertBankAccountSchema,
+  insertBankTransactionSchema, insertBudgetSchema, insertExchangeRateSchema,
+  insertActionItemSchema, insertActionLogSchema, insertPaymentPromiseSchema,
+  insertPartnerSchema, insertUserContactAssignmentSchema, insertScheduledReportSchema,
+  type Invoice, type Contact, type ContactNote, type Bill, type BankAccount,
+  type BankTransaction, type Budget, type ExchangeRate, type ActionItem,
+  type ActionLog, type PaymentPromise,
+  invoices, contacts, actions, disputes, bankTransactions, customerLearningProfiles,
+  inboundMessages, smsMessages, investorLeads, onboardingProgress, messageDrafts,
+  tenants, paymentPromises, promisesToPay, smeClients, contactNotes, timelineEvents,
+  attentionItems, outcomes, activityLogs, collectionPolicies, paymentPlans,
+  emailMessages, customerContactPersons, scheduledReports,
+} from "@shared/schema";
+import { computeNextRunAt } from "../services/reportScheduler";
+import { REPORT_TYPE_LABELS, type ReportType } from "../services/reportGenerator";
+import { getOverdueCategoryFromDueDate } from "@shared/utils/overdueUtils";
+import { calculateLatePaymentInterest } from "../utils/interestCalculator";
+import { eq, and, desc, asc, sql, count, avg, gte, lte, lt, inArray, or, isNull, isNotNull, gt, not } from 'drizzle-orm';
+import { db } from '../db';
 import { z } from "zod";
+import { generateCollectionSuggestions, generateEmailDraft, generateAiCfoResponse } from "../services/openai";
+import { sendReminderEmail, DEFAULT_FROM, DEFAULT_FROM_EMAIL } from "../services/sendgrid";
+import { sendPaymentReminderSMS } from "../services/vonage";
+import { ActionPrioritizationService } from "../services/actionPrioritizationService";
+import { formatDate } from "@shared/utils/dateFormatter";
+import { xeroService } from "../services/xero";
+import { onboardingService } from "../services/onboardingService";
+import { XeroSyncService } from "../services/xeroSync";
+import { generateMockData } from "../mock-data";
+import { retellService } from "../retell-service";
+import { createRetellClient } from "../mcp/client";
+import { normalizeDynamicVariables, logVariableTransformation } from "../utils/retellVariableNormalizer";
+import { Retell } from "retell-sdk";
+import Stripe from "stripe";
+import { cleanEmailContent } from "../services/messagePostProcessor";
+import { subscriptionService } from "../services/subscriptionService";
 import { getDashboardMetrics } from "../services/metricsService";
 import { computeCashInflow } from "../services/dashboardCashInflowService";
-import { ForecastEngine, type ForecastConfig, type ForecastScenario } from "../../shared/forecast";
-import { db } from "../db";
-import { eq, and, desc, sql, gte, inArray, isNotNull } from "drizzle-orm";
-import { 
-  actions, 
-  contacts, 
-  invoices, 
-  bankTransactions, 
-  promisesToPay, 
-  paymentPlans, 
-  smeClients,
-  type Invoice,
-  type Contact
-} from "@shared/schema";
-import { calculateLatePaymentInterest } from "../utils/interestCalculator";
-import { withPermission } from "../middleware/rbac";
+import { PermissionService } from "../services/permissionService";
+import { signalCollector } from "../lib/signal-collector";
+import { getAssignedContactIds, hasContactAccess } from "./routeHelpers";
+
+import { ForecastEngine, type ForecastConfig, type ForecastScenario } from "@shared/forecast";
+
+const forecastQuerySchema = z.object({
+  weeks: z.string().optional().default('13').transform(Number),
+  scenario: z.enum(['base', 'optimistic', 'pessimistic', 'custom']).optional().default('base'),
+  currency: z.string().optional().default('USD'),
+  include_weekends: z.string().optional().default('false')
+});
 
 export function registerDashboardRoutes(app: Express): void {
-  // Recent Activity endpoint
   app.get("/api/dashboard/recent-activity", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -132,7 +169,7 @@ export function registerDashboardRoutes(app: Express): void {
           id: action.id,
           type: mapActionType(action.type),
           customer: action.contactName || 'Unknown Contact',
-          amount: Number(action.invoiceAmount) || 0,
+          amount: action.invoiceAmount || 0,
           time: timeAgo,
           timestamp: action.createdAt,
           source: 'action'
@@ -146,7 +183,7 @@ export function registerDashboardRoutes(app: Express): void {
           id: payment.id,
           type: 'payment',
           customer: payment.contactName || 'Unknown Contact',
-          amount: Math.abs(Number(payment.amount) || 0),
+          amount: Math.abs(payment.amount || 0),
           time: timeAgo,
           timestamp: payment.createdAt,
           source: 'payment'
@@ -154,7 +191,7 @@ export function registerDashboardRoutes(app: Express): void {
       });
 
       // Sort by timestamp (most recent first) and limit to 8
-      activities.sort((a, b) => new Date(b.timestamp!).getTime() - new Date(a.timestamp!).getTime());
+      activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       const recentActivities = activities.slice(0, 8);
 
       res.json(recentActivities);
@@ -164,7 +201,6 @@ export function registerDashboardRoutes(app: Express): void {
     }
   });
 
-  // Top Debtors endpoint
   app.get("/api/dashboard/top-debtors", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -214,7 +250,6 @@ export function registerDashboardRoutes(app: Express): void {
     }
   });
 
-  // Dashboard metrics
   app.get("/api/dashboard/metrics", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -243,7 +278,6 @@ export function registerDashboardRoutes(app: Express): void {
     }
   });
 
-  // Dashboard cash inflow forecast (real data from invoices + outcomes)
   app.get("/api/dashboard/cash-inflow", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -266,7 +300,6 @@ export function registerDashboardRoutes(app: Express): void {
     }
   });
 
-  // Dashboard leaderboards - Best/Worst Payers and Top Outstanding
   app.get("/api/dashboard/leaderboards", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -422,7 +455,6 @@ export function registerDashboardRoutes(app: Express): void {
     }
   });
 
-  // 1. Cash Flow Forecast - 90-day projections with confidence intervals
   app.get('/api/analytics/cashflow-forecast', isAuthenticated, async (req, res) => {
     try {
       const user = await storage.getUser((req as any).user.id);
@@ -512,7 +544,6 @@ export function registerDashboardRoutes(app: Express): void {
     }
   });
 
-  // 2. Aging Analysis - breakdown by age buckets
   app.get('/api/analytics/aging-analysis', isAuthenticated, async (req, res) => {
     try {
       const user = await storage.getUser((req as any).user.id);
@@ -611,7 +642,6 @@ export function registerDashboardRoutes(app: Express): void {
     }
   });
 
-  // 3. Collection Performance - method effectiveness analysis
   app.get('/api/analytics/collection-performance', isAuthenticated, async (req, res) => {
     try {
       const user = await storage.getUser((req as any).user.id);
@@ -620,7 +650,7 @@ export function registerDashboardRoutes(app: Express): void {
       }
 
       // Get actions and invoices for performance analysis
-      const recentActions = await storage.getActions(user.tenantId, 5000);
+      const actions = await storage.getActions(user.tenantId, 5000);
       const invoices = await storage.getInvoices(user.tenantId, 5000);
 
       // Group actions by communication type
@@ -632,7 +662,7 @@ export function registerDashboardRoutes(app: Express): void {
       };
 
       // Analyze actions
-      recentActions.forEach(action => {
+      actions.forEach(action => {
         const method = action.type === 'email' ? 'email' : 
                      action.type === 'sms' ? 'sms' : 
                      action.type === 'call' ? 'voice' : 'other';
@@ -641,18 +671,18 @@ export function registerDashboardRoutes(app: Express): void {
           performanceByMethod[method].sent += 1;
           
           // Estimate costs per communication type
-          const costs: Record<string, number> = { email: 0.1, sms: 0.5, voice: 2.0, other: 0.2 };
-          performanceByMethod[method].totalCost += costs[method] || 0;
+          const costs = { email: 0.1, sms: 0.5, voice: 2.0, other: 0.2 };
+          performanceByMethod[method].totalCost += costs[method];
           
           // Simulate response and conversion rates based on method effectiveness
-          const responseRates: Record<string, number> = { email: 0.25, sms: 0.45, voice: 0.65, other: 0.15 };
-          const conversionRates: Record<string, number> = { email: 0.12, sms: 0.18, voice: 0.35, other: 0.08 };
+          const responseRates = { email: 0.25, sms: 0.45, voice: 0.65, other: 0.15 };
+          const conversionRates = { email: 0.12, sms: 0.18, voice: 0.35, other: 0.08 };
           
-          if (Math.random() < (responseRates[method] || 0)) {
+          if (Math.random() < responseRates[method]) {
             performanceByMethod[method].responded += 1;
           }
           
-          if (Math.random() < (conversionRates[method] || 0)) {
+          if (Math.random() < conversionRates[method]) {
             performanceByMethod[method].converted += 1;
           }
         }
@@ -711,7 +741,6 @@ export function registerDashboardRoutes(app: Express): void {
     }
   });
 
-  // 4. Customer Risk Matrix - portfolio health analysis
   app.get('/api/analytics/customer-risk-matrix', isAuthenticated, async (req, res) => {
     try {
       const user = await storage.getUser((req as any).user.id);
@@ -719,13 +748,13 @@ export function registerDashboardRoutes(app: Express): void {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      const allContacts = await storage.getContacts(user.tenantId);
-      const allInvoices = await storage.getInvoices(user.tenantId, 5000);
+      const contacts = await storage.getContacts(user.tenantId);
+      const invoices = await storage.getInvoices(user.tenantId, 5000);
       const now = new Date();
 
       // Calculate risk scores for each customer
-      const customerRiskData = allContacts.map(contact => {
-        const customerInvoices = allInvoices.filter(inv => inv.contactId === contact.id);
+      const customerRiskData = contacts.map(contact => {
+        const customerInvoices = invoices.filter(inv => inv.contactId === contact.id);
         
         if (customerInvoices.length === 0) {
           return {
@@ -834,7 +863,7 @@ export function registerDashboardRoutes(app: Express): void {
       };
 
       // Calculate portfolio metrics
-      const totalOutstandingAmount = customerRiskData.reduce((sum, customer) => sum + customer.totalOutstanding, 0);
+      const totalOutstanding = customerRiskData.reduce((sum, customer) => sum + customer.totalOutstanding, 0);
       const highRiskOutstanding = customerRiskData
         .filter(c => c.riskLevel === 'Critical' || c.riskLevel === 'High')
         .reduce((sum, customer) => sum + customer.totalOutstanding, 0);
@@ -844,9 +873,9 @@ export function registerDashboardRoutes(app: Express): void {
         riskDistribution,
         summary: {
           totalCustomers: customerRiskData.length,
-          totalOutstanding: Math.round(totalOutstandingAmount),
+          totalOutstanding: Math.round(totalOutstanding),
           highRiskOutstanding: Math.round(highRiskOutstanding),
-          highRiskPercentage: totalOutstandingAmount > 0 ? Number((highRiskOutstanding / totalOutstandingAmount * 100).toFixed(1)) : 0,
+          highRiskPercentage: totalOutstanding > 0 ? Number((highRiskOutstanding / totalOutstanding * 100).toFixed(1)) : 0,
           averageRiskScore: customerRiskData.length > 0 ? 
             Math.round(customerRiskData.reduce((sum, c) => sum + c.riskScore, 0) / customerRiskData.length) : 0,
           criticalCustomers: riskDistribution.critical,
@@ -864,7 +893,6 @@ export function registerDashboardRoutes(app: Express): void {
     }
   });
 
-  // 5. Automation Performance Analytics - comprehensive automation metrics and ROI analysis
   app.get('/api/analytics/automation-performance', isAuthenticated, async (req, res) => {
     try {
       const user = await storage.getUser((req as any).user.id);
@@ -875,30 +903,29 @@ export function registerDashboardRoutes(app: Express): void {
       const { timeframe = '30d' } = req.query;
       
       // Get base data
-      const contactsList = await storage.getContacts(user.tenantId);
-      const invoicesList = await storage.getInvoices(user.tenantId, 5000);
+      const contacts = await storage.getContacts(user.tenantId);
+      const invoices = await storage.getInvoices(user.tenantId, 5000);
       const schedules = await storage.getCollectionSchedules(user.tenantId);
       const assignments = await storage.getCustomerScheduleAssignments(user.tenantId);
-      const allActions = await storage.getActions(user.tenantId);
+      const actions = await storage.getActions(user.tenantId);
 
       const now = new Date();
-      const timeframeMsMap: Record<string, number> = {
+      const timeframeMs = {
         '7d': 7 * 24 * 60 * 60 * 1000,
         '30d': 30 * 24 * 60 * 60 * 1000,
         '90d': 90 * 24 * 60 * 60 * 1000,
         '1y': 365 * 24 * 60 * 60 * 1000
-      };
-      const timeframeMs = timeframeMsMap[timeframe as string] || 30 * 24 * 60 * 60 * 1000;
+      }[timeframe as string] || 30 * 24 * 60 * 60 * 1000;
       
       const startDate = new Date(now.getTime() - timeframeMs);
 
       // Calculate automation overview
-      const totalContacts = contactsList.length;
+      const totalContacts = contacts.length;
       const automatedContacts = assignments.filter(a => a.isActive).length;
       const automationCoveragePercentage = totalContacts > 0 ? Math.round((automatedContacts / totalContacts) * 100) : 0;
 
       // Calculate real success rates from actions within timeframe
-      const timeframeActions = allActions.filter(action => 
+      const timeframeActions = actions.filter(action => 
         action.createdAt && new Date(action.createdAt) >= startDate
       );
       
@@ -933,7 +960,7 @@ export function registerDashboardRoutes(app: Express): void {
         const bucketEnd = new Date(now.getTime() - (i * bucketSizeMs));
         
         // Get actions for this time bucket
-        const bucketActions = allActions.filter(action => 
+        const bucketActions = actions.filter(action => 
           action.createdAt && 
           new Date(action.createdAt) >= bucketStart && 
           new Date(action.createdAt) < bucketEnd
@@ -993,7 +1020,7 @@ export function registerDashboardRoutes(app: Express): void {
           (schedule.successRate ? Math.round(Number(schedule.successRate)) : 0);
         
         // Calculate real average completion time from invoice payment data
-        const scheduleInvoices = invoicesList.filter(inv => 
+        const scheduleInvoices = invoices.filter(inv => 
           scheduleContactIds.includes(inv.contactId) && 
           inv.paidDate && 
           new Date(inv.paidDate) >= startDate
@@ -1024,17 +1051,17 @@ export function registerDashboardRoutes(app: Express): void {
         
         // Determine trend by comparing recent vs older performance
         const midPoint = new Date(startDate.getTime() + (timeframeMs / 2));
-        const recentActionsInSchedule = scheduleActions.filter(a => 
+        const recentActions = scheduleActions.filter(a => 
           a.createdAt && new Date(a.createdAt) >= midPoint
         );
-        const olderActionsInSchedule = scheduleActions.filter(a => 
+        const olderActions = scheduleActions.filter(a => 
           a.createdAt && new Date(a.createdAt) < midPoint
         );
         
-        const recentSuccessRate = recentActionsInSchedule.length > 0 ? 
-          (recentActionsInSchedule.filter(a => a.status === 'completed').length / recentActionsInSchedule.length) * 100 : 0;
-        const olderSuccessRate = olderActionsInSchedule.length > 0 ? 
-          (olderActionsInSchedule.filter(a => a.status === 'completed').length / olderActionsInSchedule.length) * 100 : 0;
+        const recentSuccessRate = recentActions.length > 0 ? 
+          (recentActions.filter(a => a.status === 'completed').length / recentActions.length) * 100 : 0;
+        const olderSuccessRate = olderActions.length > 0 ? 
+          (olderActions.filter(a => a.status === 'completed').length / olderActions.length) * 100 : 0;
         
         const trendDiff = recentSuccessRate - olderSuccessRate;
         const trend = trendDiff > 5 ? 'improving' as const : 
@@ -1458,622 +1485,6 @@ export function registerDashboardRoutes(app: Express): void {
     }
   });
 
-  app.get('/api/health/dashboard', isAuthenticated, async (req, res) => {
-    try {
-      const userId = (req as any).user.id;
-      const user = await storage.getUser(userId);
-      if (!user?.tenantId) {
-        return res.status(400).json({ error: 'No tenant found' });
-      }
-
-      console.log(`🚀 Health dashboard request for tenant ${user.tenantId}`);
-
-      // Import health analyzer service
-      const { InvoiceHealthAnalyzer } = await import('../services/invoiceHealthAnalyzer');
-      const healthAnalyzer = new InvoiceHealthAnalyzer();
-
-      // Get recent invoices for health analysis
-      const recentInvoices = await storage.getInvoices(user.tenantId, 25);
-      const invoiceIds = recentInvoices.map(inv => inv.id);
-      
-      // Check cache status
-      const cacheStatus = await healthAnalyzer.getCachedHealthScores(user.tenantId, invoiceIds);
-      
-      // Enqueue background processing for stale/missing scores
-      const needsProcessing = [...cacheStatus.stale, ...cacheStatus.missing];
-      if (needsProcessing.length > 0) {
-        healthAnalyzer.enqueueAnalysis(needsProcessing, user.tenantId);
-        console.log(`📋 Enqueued ${needsProcessing.length} invoices for background processing`);
-      }
-
-      // Create invoice map for quick lookup
-      const invoiceMap = new Map(recentInvoices.map(inv => [inv.id, inv]));
-      
-      // Build health scores array from cached data + invoice details
-      const invoiceHealthScores = cacheStatus.cached.map(healthScore => {
-        const invoice = invoiceMap.get(healthScore.invoiceId);
-        if (!invoice) return null;
-        
-        return {
-          invoiceId: healthScore.invoiceId,
-          invoiceNumber: invoice.invoiceNumber,
-          customerName: invoice.contact?.name || 'Unknown Contact',
-          amount: invoice.amount,
-          dueDate: invoice.dueDate,
-          status: invoice.status,
-          healthScore: healthScore.healthScore,
-          riskLevel: healthScore.healthStatus,
-          keyRiskFactors: Array.isArray(healthScore.recommendedActions) 
-            ? healthScore.recommendedActions.slice(0, 3) 
-            : [],
-          paymentLikelihood: Math.round(parseFloat(healthScore.paymentProbability) * 100),
-          isRefreshing: needsProcessing.includes(healthScore.invoiceId)
-        };
-      }).filter(Boolean);
-
-      // Calculate aggregate health metrics from cached data
-      const healthMetrics = {
-        totalInvoices: recentInvoices.length,
-        healthyInvoices: 0,
-        atRiskInvoices: 0,
-        criticalInvoices: 0,
-        emergencyInvoices: 0,
-        easyCollectionInvoices: 0,
-        moderateCollectionInvoices: 0,
-        difficultCollectionInvoices: 0,
-        veryDifficultCollectionInvoices: 0,
-        averageHealthScore: 0,
-        totalOutstanding: 0,
-        totalValueAtRisk: 0,
-        predictedCollectionRate: 0,
-        cacheStatus: {
-          cached: cacheStatus.cached.length,
-          refreshing: needsProcessing.length,
-          total: invoiceIds.length
-        }
-      };
-
-      // Calculate metrics from available data
-      let healthScoreSum = 0;
-      let paymentLikelihoodSum = 0;
-      
-      for (const scoreData of invoiceHealthScores) {
-        if (!scoreData) continue;
-        const invoice = invoiceMap.get(scoreData.invoiceId);
-        if (!invoice) continue;
-
-        healthScoreSum += scoreData.healthScore;
-        paymentLikelihoodSum += scoreData.paymentLikelihood;
-        healthMetrics.totalOutstanding += Number(invoice.amount);
-
-        // Update aggregate metrics by health status
-        switch (scoreData.riskLevel) {
-          case 'healthy':
-            healthMetrics.healthyInvoices++;
-            break;
-          case 'at_risk':
-            healthMetrics.atRiskInvoices++;
-            healthMetrics.totalValueAtRisk += Number(invoice.amount);
-            break;
-          case 'critical':
-            healthMetrics.criticalInvoices++;
-            healthMetrics.totalValueAtRisk += Number(invoice.amount);
-            break;
-          case 'emergency':
-            healthMetrics.emergencyInvoices++;
-            healthMetrics.totalValueAtRisk += Number(invoice.amount);
-            break;
-        }
-      }
-
-      healthMetrics.averageHealthScore = invoiceHealthScores.length > 0 
-        ? Math.round(healthScoreSum / invoiceHealthScores.length) 
-        : 0;
-      healthMetrics.predictedCollectionRate = invoiceHealthScores.length > 0
-        ? Math.round(paymentLikelihoodSum / invoiceHealthScores.length)
-        : 0;
-
-      res.json({
-        metrics: healthMetrics,
-        invoices: invoiceHealthScores
-      });
-    } catch (error: any) {
-      console.error('Health dashboard error:', error);
-      res.status(500).json({ error: 'Failed to retrieve health dashboard' });
-    }
-  });
-
-  app.get('/api/health/invoice/:invoiceId', isAuthenticated, async (req, res) => {
-    try {
-      const userId = (req as any).user.id;
-      const user = await storage.getUser(userId);
-      if (!user?.tenantId) {
-        return res.status(400).json({ error: 'No tenant found' });
-      }
-
-      const { invoiceId } = req.params;
-      const invoice = await storage.getInvoice(invoiceId, user.tenantId);
-      
-      if (!invoice) {
-        return res.status(404).json({ error: 'Invoice not found' });
-      }
-
-      // Import health analyzer service
-      const { InvoiceHealthAnalyzer } = await import('../services/invoiceHealthAnalyzer');
-      const healthAnalyzer = new InvoiceHealthAnalyzer();
-
-      // Get detailed health analysis
-      const healthAnalysis = await healthAnalyzer.analyzeInvoice(invoice.id, user.tenantId);
-
-      if (!healthAnalysis) {
-        return res.status(500).json({ error: 'Failed to analyze invoice health' });
-      }
-
-      res.json({
-        invoice: {
-          id: invoice.id,
-          invoiceNumber: invoice.invoiceNumber,
-          customerName: invoice.contact?.name || 'Unknown Contact',
-          amount: invoice.amount,
-          dueDate: invoice.dueDate,
-          status: invoice.status,
-          description: invoice.description
-        },
-        healthAnalysis: {
-          healthScore: healthAnalysis.healthScore,
-          riskLevel: healthAnalysis.healthStatus,
-          paymentProbability: healthAnalysis.paymentProbability,
-          recommendedActions: healthAnalysis.recommendedActions,
-          analysis: healthAnalysis
-        }
-      });
-    } catch (error: any) {
-      console.error('Invoice health analysis error:', error);
-      res.status(500).json({ error: 'Failed to analyze invoice health' });
-    }
-  });
-
-  app.post('/api/health/bulk-analyze', isAuthenticated, async (req, res) => {
-    try {
-      const userId = (req as any).user.id;
-      const user = await storage.getUser(userId);
-      if (!user?.tenantId) {
-        return res.status(400).json({ error: 'No tenant found' });
-      }
-
-      // Import health analyzer service
-      const { InvoiceHealthAnalyzer } = await import('../services/invoiceHealthAnalyzer');
-      const healthAnalyzer = new InvoiceHealthAnalyzer();
-
-      // Get all invoices for analysis
-      const allInvoices = await storage.getInvoices(user.tenantId);
-      const results = [];
-      
-      console.log(`Starting bulk health analysis for ${allInvoices.length} invoices...`);
-
-      // Process in batches to avoid overwhelming the AI service
-      const batchSize = 5;
-      for (let i = 0; i < allInvoices.length; i += batchSize) {
-        const batch = allInvoices.slice(i, i + batchSize);
-        
-        for (const invoice of batch) {
-          try {
-            const healthAnalysis = await healthAnalyzer.analyzeInvoice(invoice.id, user.tenantId);
-            
-            if (!healthAnalysis) {
-              console.warn(`No health analysis returned for invoice ${invoice.id}`);
-              results.push({
-                invoiceId: invoice.id,
-                invoiceNumber: invoice.invoiceNumber,
-                error: 'Analysis failed - no result returned'
-              });
-              continue;
-            }
-            
-            // Store the health score in database with correct field mappings
-            await storage.createInvoiceHealthScore({
-              tenantId: user.tenantId,
-              invoiceId: invoice.id,
-              contactId: invoice.contactId, // Required field that was missing
-              overallRiskScore: healthAnalysis.overallRiskScore,
-              paymentProbability: healthAnalysis.paymentProbability.toString(),
-              timeRiskScore: healthAnalysis.timeRiskScore,
-              amountRiskScore: healthAnalysis.amountRiskScore,
-              customerRiskScore: healthAnalysis.customerRiskScore,
-              communicationRiskScore: healthAnalysis.communicationRiskScore,
-              healthStatus: healthAnalysis.healthStatus,
-              healthScore: healthAnalysis.healthScore,
-              predictedPaymentDate: healthAnalysis.predictedPaymentDate,
-              recommendedActions: healthAnalysis.recommendedActions,
-              riskFactors: healthAnalysis.riskFactors,
-              lastAnalysis: new Date()
-            });
-            
-            results.push({
-              invoiceId: invoice.id,
-              invoiceNumber: invoice.invoiceNumber,
-              success: true,
-              healthScore: healthAnalysis.healthScore,
-              status: healthAnalysis.healthStatus
-            });
-          } catch (err) {
-            console.error(`Error analyzing invoice ${invoice.id}:`, err);
-            results.push({
-              invoiceId: invoice.id,
-              invoiceNumber: invoice.invoiceNumber,
-              error: err instanceof Error ? err.message : 'Unknown error'
-            });
-          }
-        }
-      }
-
-      res.json({
-        processed: allInvoices.length,
-        results
-      });
-    } catch (error: any) {
-      console.error('Bulk health analysis error:', error);
-      res.status(500).json({ error: 'Failed to perform bulk health analysis' });
-    }
-  });
-
-  app.get('/api/health/analytics/trends', isAuthenticated, async (req, res) => {
-    try {
-      const userId = (req as any).user.id;
-      const user = await storage.getUser(userId);
-      if (!user?.tenantId) {
-        return res.status(400).json({ error: 'No tenant found' });
-      }
-
-      // Get health scores from the last 30 days
-      const healthScores = await storage.getInvoiceHealthScores(user.tenantId);
-      
-      // Group by date and calculate daily averages
-      const dailyAverages = healthScores.reduce((acc: any, score) => {
-        const date = score.lastAnalysis.toISOString().split('T')[0];
-        if (!acc[date]) {
-          acc[date] = { total: 0, count: 0, scores: [] };
-        }
-        acc[date].total += score.healthScore;
-        acc[date].count += 1;
-        acc[date].scores.push(score.healthScore);
-        return acc;
-      }, {});
-
-      const trends = Object.entries(dailyAverages).map(([date, data]: [string, any]) => ({
-        date,
-        averageScore: Math.round(data.total / data.count),
-        invoiceCount: data.count,
-        scoreDistribution: {
-          healthy: data.scores.filter((s: number) => s >= 70).length,
-          atRisk: data.scores.filter((s: number) => s >= 40 && s < 70).length,
-          critical: data.scores.filter((s: number) => s < 40).length
-        }
-      })).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-      res.json({
-        trends,
-        summary: {
-          totalAnalyzed: healthScores.length,
-          averageHealthScore: healthScores.length > 0 
-            ? Math.round(healthScores.reduce((sum, score) => sum + score.healthScore, 0) / healthScores.length)
-            : 0,
-          riskDistribution: {
-            healthy: healthScores.filter(s => s.healthStatus === 'healthy').length,
-            at_risk: healthScores.filter(s => s.healthStatus === 'at_risk').length,
-            critical: healthScores.filter(s => s.healthStatus === 'critical').length,
-            emergency: healthScores.filter(s => s.healthStatus === 'emergency').length
-          }
-        }
-      });
-    } catch (error: any) {
-      console.error('Health analytics trends error:', error);
-      res.status(500).json({ error: 'Failed to get health analytics trends' });
-    }
-  });
-
-  // Dashboard Metrics Endpoint (Sprint 3)
-  app.get('/api/metrics', isAuthenticated, async (req, res) => {
-    try {
-      const user = await storage.getUser((req as any).user.id);
-      if (!user || !user.tenantId) {
-        return res.status(404).json({ message: 'User or tenant not found' });
-      }
-
-      const metrics = await getDashboardMetrics(user.tenantId);
-      res.json(metrics);
-    } catch (error) {
-      console.error('Failed to get dashboard metrics:', error);
-      res.status(500).json({ message: 'Failed to retrieve metrics' });
-    }
-  });
-
-  // Import forecast services
-  const {
-    getLatestARD,
-    getARDHistory,
-    getARDTrend,
-    calculateAndStoreARD,
-  } = await import('../services/ardCalculationService.js');
-  
-  const {
-    getSalesForecasts,
-    upsertSalesForecast,
-    getSalesForecastCashInflows,
-    generateDefaultForecasts
-  } = await import('../services/salesForecastService.js');
-  
-  const {
-    calculateIrregularBufferForForecast,
-    getRecommendedBeta
-  } = await import('../services/irregularBufferService.js');
-
-  /**
-   * GET /api/forecast/ard
-   * Get latest ARD (Average Receivable Days) for tenant
-   */
-  app.get('/api/forecast/ard', isAuthenticated, async (req, res) => {
-    try {
-      const user = await storage.getUser((req as any).user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const ard = await getLatestARD(user.tenantId);
-      
-      res.json({ averageReceivableDays: ard });
-    } catch (error) {
-      console.error('Error fetching ARD:', error);
-      res.status(500).json({ message: "Failed to fetch ARD" });
-    }
-  });
-
-  /**
-   * POST /api/forecast/ard/calculate
-   * Manually trigger ARD calculation
-   */
-  app.post('/api/forecast/ard/calculate', isAuthenticated, async (req, res) => {
-    try {
-      const user = await storage.getUser((req as any).user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const options = req.body || {};
-      const result = await calculateAndStoreARD(user.tenantId, options);
-      
-      res.json(result);
-    } catch (error) {
-      console.error('Error calculating ARD:', error);
-      res.status(500).json({ message: "Failed to calculate ARD" });
-    }
-  });
-
-  /**
-   * GET /api/forecast/ard/history
-   * Get ARD calculation history
-   */
-  app.get('/api/forecast/ard/history', isAuthenticated, async (req, res) => {
-    try {
-      const user = await storage.getUser((req as any).user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const limit = req.query.limit ? parseInt(req.query.limit as string) : 30;
-      const history = await getARDHistory(user.tenantId, limit);
-      
-      res.json(history);
-    } catch (error) {
-      console.error('Error fetching ARD history:', error);
-      res.status(500).json({ message: "Failed to fetch ARD history" });
-    }
-  });
-
-  /**
-   * GET /api/forecast/ard/trend
-   * Get ARD trend (improving/stable/deteriorating)
-   */
-  app.get('/api/forecast/ard/trend', isAuthenticated, async (req, res) => {
-    try {
-      const user = await storage.getUser((req as any).user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const trend = await getARDTrend(user.tenantId);
-      
-      res.json(trend);
-    } catch (error) {
-      console.error('Error fetching ARD trend:', error);
-      res.status(500).json({ message: "Failed to fetch ARD trend" });
-    }
-  });
-
-  /**
-   * GET /api/forecast/sales
-   * Get sales forecasts for a date range
-   */
-  app.get('/api/forecast/sales', isAuthenticated, async (req, res) => {
-    try {
-      const user = await storage.getUser((req as any).user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const { fromMonth, toMonth } = req.query;
-      
-      if (!fromMonth) {
-        return res.status(400).json({ message: "fromMonth is required (format: YYYY-MM)" });
-      }
-
-      const forecasts = await getSalesForecasts(
-        user.tenantId,
-        fromMonth as string,
-        toMonth as string | undefined
-      );
-      
-      res.json(forecasts);
-    } catch (error) {
-      console.error('Error fetching sales forecasts:', error);
-      res.status(500).json({ message: "Failed to fetch sales forecasts" });
-    }
-  });
-
-  /**
-   * POST /api/forecast/sales
-   * Create or update sales forecast for a month
-   */
-  app.post('/api/forecast/sales', isAuthenticated, async (req, res) => {
-    try {
-      const user = await storage.getUser((req as any).user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const { forecastMonth, ...data } = req.body;
-      
-      if (!forecastMonth) {
-        return res.status(400).json({ message: "forecastMonth is required (format: YYYY-MM)" });
-      }
-
-      const forecast = await upsertSalesForecast(
-        user.tenantId,
-        forecastMonth,
-        data,
-        user.id
-      );
-      
-      res.json(forecast);
-    } catch (error) {
-      console.error('Error upserting sales forecast:', error);
-      res.status(500).json({ message: "Failed to save sales forecast" });
-    }
-  });
-
-  /**
-   * POST /api/forecast/sales/batch
-   * Batch update sales forecasts
-   */
-  app.post('/api/forecast/sales/batch', isAuthenticated, async (req, res) => {
-    try {
-      const user = await storage.getUser((req as any).user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const { forecasts } = req.body;
-      
-      if (!Array.isArray(forecasts)) {
-        return res.status(400).json({ message: "forecasts must be an array" });
-      }
-
-      const results = await Promise.all(
-        forecasts.map(({ forecastMonth, ...data }) =>
-          upsertSalesForecast(user.tenantId!, forecastMonth, data, user.id)
-        )
-      );
-      
-      res.json({ updated: results.length, forecasts: results });
-    } catch (error) {
-      console.error('Error batch updating sales forecasts:', error);
-      res.status(500).json({ message: "Failed to batch update sales forecasts" });
-    }
-  });
-
-  /**
-   * GET /api/forecast/sales/cash-inflows
-   * Convert sales forecasts to expected cash inflows (ARD-adjusted)
-   */
-  app.get('/api/forecast/sales/cash-inflows', isAuthenticated, async (req, res) => {
-    try {
-      const user = await storage.getUser((req as any).user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const monthsAhead = req.query.months ? parseInt(req.query.months as string) : 6;
-      
-      const cashInflows = await getSalesForecastCashInflows(user.tenantId, monthsAhead);
-      
-      res.json(cashInflows);
-    } catch (error) {
-      console.error('Error fetching sales cash inflows:', error);
-      res.status(500).json({ message: "Failed to fetch sales cash inflows" });
-    }
-  });
-
-  /**
-   * POST /api/forecast/sales/generate-defaults
-   * Generate default (zero) forecasts for next 12 months
-   */
-  app.post('/api/forecast/sales/generate-defaults', isAuthenticated, async (req, res) => {
-    try {
-      const user = await storage.getUser((req as any).user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const forecasts = await generateDefaultForecasts(user.tenantId, user.id);
-      
-      res.json({ generated: forecasts.length, forecasts });
-    } catch (error) {
-      console.error('Error generating default forecasts:', error);
-      res.status(500).json({ message: "Failed to generate default forecasts" });
-    }
-  });
-
-  /**
-   * GET /api/forecast/irregular-buffer
-   * Get irregular buffer calculation for one-off expenses
-   */
-  app.get('/api/forecast/irregular-buffer', isAuthenticated, async (req, res) => {
-    try {
-      const user = await storage.getUser((req as any).user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const forecastDays = req.query.days ? parseInt(req.query.days as string) : 91;
-      const beta = req.query.beta ? parseFloat(req.query.beta as string) : undefined;
-
-      const buffer = await calculateIrregularBufferForForecast(
-        user.tenantId,
-        forecastDays,
-        beta ? { beta } : {}
-      );
-      
-      res.json(buffer);
-    } catch (error) {
-      console.error('Error calculating irregular buffer:', error);
-      res.status(500).json({ message: "Failed to calculate irregular buffer" });
-    }
-  });
-
-  /**
-   * GET /api/forecast/irregular-buffer/recommended-beta
-   * Get recommended beta coefficient based on expense volatility
-   */
-  app.get('/api/forecast/irregular-buffer/recommended-beta', isAuthenticated, async (req, res) => {
-    try {
-      const user = await storage.getUser((req as any).user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const beta = await getRecommendedBeta(user.tenantId);
-      
-      res.json({ recommendedBeta: beta });
-    } catch (error) {
-      console.error('Error calculating recommended beta:', error);
-      res.status(500).json({ message: "Failed to calculate recommended beta" });
-    }
-  });
-
-  /**
-   * GET /api/cashflow/forecast
-   * Generate 13-week cashflow forecast with scenario support
-   */
   app.get('/api/cashflow/forecast', ...withPermission('finance:cashflow'), async (req: any, res) => {
     try {
       const user = await storage.getUser((req as any).user.id);
@@ -2139,20 +1550,20 @@ export function registerDashboardRoutes(app: Express): void {
       };
 
       // Fetch real data for forecast
-      const invoicesList = await storage.getInvoices(user.tenantId, 5000);
+      const invoices = await storage.getInvoices(user.tenantId, 5000);
       const bills = await storage.getBills(user.tenantId, 5000);
       const bankAccounts = await storage.getBankAccounts(user.tenantId);
-      const bankTransactionsList = await storage.getBankTransactions(user.tenantId, { limit: 1000 });
+      const bankTransactions = await storage.getBankTransactions(user.tenantId, { limit: 1000 });
       const budgets = await storage.getBudgets(user.tenantId, { year: new Date().getFullYear() });
 
       // Generate forecast
       const forecast = await forecastEngine.generateForecast({
         config,
         accountingData: {
-          invoices: invoicesList.map(inv => ({ ...inv, contact: inv.contact })),
+          invoices: invoices.map(inv => ({ ...inv, contact: inv.contact })),
           bills: bills.map(bill => ({ ...bill, vendor: bill.vendor })),
           bankAccounts,
-          bankTransactions: bankTransactionsList.map(tx => ({ 
+          bankTransactions: bankTransactions.map(tx => ({ 
             ...tx, 
             bankAccount: tx.bankAccount,
             contact: tx.contact,
@@ -2171,10 +1582,10 @@ export function registerDashboardRoutes(app: Express): void {
           currency,
           generatedAt: new Date().toISOString(),
           dataPoints: {
-            invoices: invoicesList.length,
+            invoices: invoices.length,
             bills: bills.length,
             bankAccounts: bankAccounts.length,
-            transactions: bankTransactionsList.length,
+            transactions: bankTransactions.length,
             budgets: budgets.length
           }
         }
@@ -2185,10 +1596,6 @@ export function registerDashboardRoutes(app: Express): void {
     }
   });
 
-  /**
-   * POST /api/cashflow/scenarios
-   * Run custom scenario analysis and comparison
-   */
   app.post('/api/cashflow/scenarios', ...withPermission('finance:cashflow'), async (req: any, res) => {
     try {
       const user = await storage.getUser((req as any).user.id);
@@ -2205,17 +1612,17 @@ export function registerDashboardRoutes(app: Express): void {
       const forecastEngine = new ForecastEngine();
       
       // Fetch real data once for all scenarios
-      const invoicesList = await storage.getInvoices(user.tenantId, 5000);
+      const invoices = await storage.getInvoices(user.tenantId, 5000);
       const bills = await storage.getBills(user.tenantId, 5000);
       const bankAccounts = await storage.getBankAccounts(user.tenantId);
-      const bankTransactionsList = await storage.getBankTransactions(user.tenantId, { limit: 1000 });
+      const bankTransactions = await storage.getBankTransactions(user.tenantId, { limit: 1000 });
       const budgets = await storage.getBudgets(user.tenantId, { year: new Date().getFullYear() });
 
       const accountingData = {
-        invoices: invoicesList.map(inv => ({ ...inv, contact: inv.contact })),
+        invoices: invoices.map(inv => ({ ...inv, contact: inv.contact })),
         bills: bills.map(bill => ({ ...bill, vendor: bill.vendor })),
         bankAccounts,
-        bankTransactions: bankTransactionsList.map(tx => ({ 
+        bankTransactions: bankTransactions.map(tx => ({ 
           ...tx, 
           bankAccount: tx.bankAccount,
           contact: tx.contact,
@@ -2269,10 +1676,6 @@ export function registerDashboardRoutes(app: Express): void {
     }
   });
 
-  /**
-   * GET /api/cashflow/metrics
-   * Get key financial metrics (DSO, DPO, cash runway)
-   */
   app.get('/api/cashflow/metrics', ...withPermission('finance:cashflow'), async (req: any, res) => {
     try {
       const user = await storage.getUser((req as any).user.id);
@@ -2369,10 +1772,6 @@ export function registerDashboardRoutes(app: Express): void {
     }
   });
 
-  /**
-   * POST /api/cashflow/optimize
-   * Get cash optimization recommendations
-   */
   app.post('/api/cashflow/optimize', ...withPermission('finance:cashflow'), async (req: any, res) => {
     try {
       const user = await storage.getUser((req as any).user.id);
@@ -2389,7 +1788,7 @@ export function registerDashboardRoutes(app: Express): void {
       const forecastEngine = new ForecastEngine();
 
       // Fetch current data
-      const invoicesList = await storage.getInvoices(user.tenantId, 5000);
+      const invoices = await storage.getInvoices(user.tenantId, 5000);
       const bills = await storage.getBills(user.tenantId, 5000);
       const bankAccounts = await storage.getBankAccounts(user.tenantId);
 
@@ -2399,7 +1798,7 @@ export function registerDashboardRoutes(app: Express): void {
         timeHorizon,
         constraints,
         currentData: {
-          invoices: invoicesList.map(inv => ({ ...inv, contact: inv.contact })),
+          invoices: invoices.map(inv => ({ ...inv, contact: inv.contact })),
           bills: bills.map(bill => ({ ...bill, vendor: bill.vendor })),
           bankAccounts
         }
@@ -2417,6 +1816,224 @@ export function registerDashboardRoutes(app: Express): void {
     } catch (error) {
       console.error('Error generating optimization recommendations:', error);
       res.status(500).json({ message: "Failed to generate optimization recommendations" });
+    }
+  });
+
+  app.get('/api/forecast/ard', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const ard = await getLatestARD(user.tenantId);
+      
+      res.json({ averageReceivableDays: ard });
+    } catch (error) {
+      console.error('Error fetching ARD:', error);
+      res.status(500).json({ message: "Failed to fetch ARD" });
+    }
+  });
+
+  app.post('/api/forecast/ard/calculate', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const options = req.body || {};
+      const result = await calculateAndStoreARD(user.tenantId, options);
+      
+      res.json(result);
+    } catch (error) {
+      console.error('Error calculating ARD:', error);
+      res.status(500).json({ message: "Failed to calculate ARD" });
+    }
+  });
+
+  app.get('/api/forecast/ard/history', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 30;
+      const history = await getARDHistory(user.tenantId, limit);
+      
+      res.json(history);
+    } catch (error) {
+      console.error('Error fetching ARD history:', error);
+      res.status(500).json({ message: "Failed to fetch ARD history" });
+    }
+  });
+
+  app.get('/api/forecast/ard/trend', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const trend = await getARDTrend(user.tenantId);
+      
+      res.json(trend);
+    } catch (error) {
+      console.error('Error fetching ARD trend:', error);
+      res.status(500).json({ message: "Failed to fetch ARD trend" });
+    }
+  });
+
+  app.get('/api/forecast/sales', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { fromMonth, toMonth } = req.query;
+      
+      if (!fromMonth) {
+        return res.status(400).json({ message: "fromMonth is required (format: YYYY-MM)" });
+      }
+
+      const forecasts = await getSalesForecasts(
+        user.tenantId,
+        fromMonth as string,
+        toMonth as string | undefined
+      );
+      
+      res.json(forecasts);
+    } catch (error) {
+      console.error('Error fetching sales forecasts:', error);
+      res.status(500).json({ message: "Failed to fetch sales forecasts" });
+    }
+  });
+
+  app.post('/api/forecast/sales', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { forecastMonth, ...data } = req.body;
+      
+      if (!forecastMonth) {
+        return res.status(400).json({ message: "forecastMonth is required (format: YYYY-MM)" });
+      }
+
+      const forecast = await upsertSalesForecast(
+        user.tenantId,
+        forecastMonth,
+        data,
+        user.id
+      );
+      
+      res.json(forecast);
+    } catch (error) {
+      console.error('Error upserting sales forecast:', error);
+      res.status(500).json({ message: "Failed to save sales forecast" });
+    }
+  });
+
+  app.post('/api/forecast/sales/batch', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { forecasts } = req.body;
+      
+      if (!Array.isArray(forecasts)) {
+        return res.status(400).json({ message: "forecasts must be an array" });
+      }
+
+      const results = await Promise.all(
+        forecasts.map(({ forecastMonth, ...data }) =>
+          upsertSalesForecast(user.tenantId!, forecastMonth, data, user.id)
+        )
+      );
+      
+      res.json({ updated: results.length, forecasts: results });
+    } catch (error) {
+      console.error('Error batch updating sales forecasts:', error);
+      res.status(500).json({ message: "Failed to batch update sales forecasts" });
+    }
+  });
+
+  app.get('/api/forecast/sales/cash-inflows', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const monthsAhead = req.query.months ? parseInt(req.query.months as string) : 6;
+      
+      const cashInflows = await getSalesForecastCashInflows(user.tenantId, monthsAhead);
+      
+      res.json(cashInflows);
+    } catch (error) {
+      console.error('Error fetching sales cash inflows:', error);
+      res.status(500).json({ message: "Failed to fetch sales cash inflows" });
+    }
+  });
+
+  app.post('/api/forecast/sales/generate-defaults', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const forecasts = await generateDefaultForecasts(user.tenantId, user.id);
+      
+      res.json({ generated: forecasts.length, forecasts });
+    } catch (error) {
+      console.error('Error generating default forecasts:', error);
+      res.status(500).json({ message: "Failed to generate default forecasts" });
+    }
+  });
+
+  app.get('/api/forecast/irregular-buffer', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const forecastDays = req.query.days ? parseInt(req.query.days as string) : 91;
+      const beta = req.query.beta ? parseFloat(req.query.beta as string) : undefined;
+
+      const buffer = await calculateIrregularBufferForForecast(
+        user.tenantId,
+        forecastDays,
+        beta ? { beta } : {}
+      );
+      
+      res.json(buffer);
+    } catch (error) {
+      console.error('Error calculating irregular buffer:', error);
+      res.status(500).json({ message: "Failed to calculate irregular buffer" });
+    }
+  });
+
+  app.get('/api/forecast/irregular-buffer/recommended-beta', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const beta = await getRecommendedBeta(user.tenantId);
+      
+      res.json({ recommendedBeta: beta });
+    } catch (error) {
+      console.error('Error calculating recommended beta:', error);
+      res.status(500).json({ message: "Failed to calculate recommended beta" });
     }
   });
 }

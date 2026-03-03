@@ -575,7 +575,7 @@ export default function Dashboard() {
                 <p className="text-3xl font-bold">{metrics.conversionFunnel.overdue}</p>
                 <p className="text-xs mt-2 opacity-80">Invoices</p>
               </div>
-              <div className="absolute top-1/2 -right-2 transform -translate-y-1/2 w-4 h-4 bg-white rotate-45 border-r border-b border-slate-200 z-10"></div>
+              <div className="absolute top-1/2 -right-2 transform -translate-y-1/2 w-4 h-4 bg-background rotate-45 border-r border-b border-border z-10"></div>
             </div>
 
             {/* Planned */}
@@ -585,7 +585,7 @@ export default function Dashboard() {
                 <p className="text-3xl font-bold">{metrics.conversionFunnel.planned}</p>
                 <p className="text-xs mt-2 opacity-80">{Math.round(metrics.conversionFunnel.overdueToPlanned)}% conversion</p>
               </div>
-              <div className="absolute top-1/2 -right-2 transform -translate-y-1/2 w-4 h-4 bg-white rotate-45 border-r border-b border-slate-200 z-10"></div>
+              <div className="absolute top-1/2 -right-2 transform -translate-y-1/2 w-4 h-4 bg-background rotate-45 border-r border-b border-border z-10"></div>
             </div>
 
             {/* Sent */}
@@ -595,7 +595,7 @@ export default function Dashboard() {
                 <p className="text-3xl font-bold">{metrics.conversionFunnel.sent}</p>
                 <p className="text-xs mt-2 opacity-80">{Math.round(metrics.conversionFunnel.plannedToSent)}% conversion</p>
               </div>
-              <div className="absolute top-1/2 -right-2 transform -translate-y-1/2 w-4 h-4 bg-white rotate-45 border-r border-b border-slate-200 z-10"></div>
+              <div className="absolute top-1/2 -right-2 transform -translate-y-1/2 w-4 h-4 bg-background rotate-45 border-r border-b border-border z-10"></div>
             </div>
 
             {/* Responded */}
@@ -605,7 +605,7 @@ export default function Dashboard() {
                 <p className="text-3xl font-bold">{metrics.conversionFunnel.responded}</p>
                 <p className="text-xs mt-2 opacity-80">{Math.round(metrics.conversionFunnel.sentToResponded)}% conversion</p>
               </div>
-              <div className="absolute top-1/2 -right-2 transform -translate-y-1/2 w-4 h-4 bg-white rotate-45 border-r border-b border-slate-200 z-10"></div>
+              <div className="absolute top-1/2 -right-2 transform -translate-y-1/2 w-4 h-4 bg-background rotate-45 border-r border-b border-border z-10"></div>
             </div>
 
             {/* Paid */}
@@ -618,18 +618,18 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="mt-6 pt-6 border-t border-slate-200 text-center">
-            <p className="text-xs text-slate-500 mb-2">Overall Funnel Performance</p>
+          <div className="mt-6 pt-6 border-t border-border text-center">
+            <p className="text-xs text-muted-foreground mb-2">Overall Funnel Performance</p>
             <div className="flex justify-center gap-8">
               <div>
-                <p className="text-sm text-slate-600">Total Conversion</p>
+                <p className="text-sm text-muted-foreground">Total Conversion</p>
                 <p className="text-2xl font-bold text-green-600">
                   {Math.round((metrics.conversionFunnel.paid / metrics.conversionFunnel.overdue) * 1000) / 10}%
                 </p>
               </div>
               <div>
-                <p className="text-sm text-slate-600">Time Period</p>
-                <p className="text-2xl font-bold text-slate-700">Last 30d</p>
+                <p className="text-sm text-muted-foreground">Time Period</p>
+                <p className="text-2xl font-bold text-foreground">Last 30d</p>
               </div>
             </div>
           </div>

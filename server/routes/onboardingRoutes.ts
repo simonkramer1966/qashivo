@@ -1,173 +1,57 @@
-import { Express } from "express";
+import type { Express } from "express";
 import { storage } from "../storage";
-import { isAuthenticated } from "../auth";
-import { withPermission, withRBACContext } from "../middleware/rbac";
-import { z } from "zod";
-import { onboardingService } from "../services/onboardingService";
-import { generateMockData } from "../mock-data";
-import { db } from "../db";
-import { eq, and, sql, inArray } from "drizzle-orm";
+import { isAuthenticated, isOwner } from "../auth";
+import { logSecurityEvent, extractClientInfo } from "../services/securityAuditService";
+import { sanitizeObject, stripSensitiveUserFields, stripSensitiveTenantFields, stripSensitiveFields } from "../utils/sanitize";
+import { withPermission, withRole, withMinimumRole, canManageUser, withRBACContext } from "../middleware/rbac";
 import { 
-  actions, 
-  invoices, 
-  contacts, 
-  onboardingProgress,
-  activityLogs,
-  timelineEvents,
-  paymentPromises,
-  disputes,
-  voiceCalls,
-  emailMessages,
-  smsMessages,
-  contactNotes,
-  customerContactPersons,
-  paymentPlans,
-  paymentPlanInvoices,
-  workflowTimers,
-  inboundMessages,
-  contactOutcomes,
-  policyDecisions,
-  messageDrafts,
-  customerBehaviorSignals,
-  customerScheduleAssignments,
-  customerPreferences,
-  customerLearningProfiles,
-  actionEffectiveness,
-  actionItems,
-  debtorPayments,
-  financeAdvances,
-  invoiceHealthScores,
-  magicLinkTokens,
-  promisesToPay,
-  riskScores,
-  userContactAssignments,
-  walletTransactions,
-  emailDomainMappings,
-  debtorProfiles,
-  outcomes,
-  emailClarifications,
-  conversations,
-  attentionItems,
-  investorLeads,
-  tenants,
-  bankTransactions,
-  bills
+  insertContactSchema, insertContactNoteSchema, insertInvoiceSchema, 
+  insertActionSchema, insertWorkflowSchema, insertCommunicationTemplateSchema,
+  insertEscalationRuleSchema, insertChannelAnalyticsSchema, insertWorkflowTemplateSchema,
+  insertVoiceCallSchema, insertBillSchema, insertBankAccountSchema,
+  insertBankTransactionSchema, insertBudgetSchema, insertExchangeRateSchema,
+  insertActionItemSchema, insertActionLogSchema, insertPaymentPromiseSchema,
+  insertPartnerSchema, insertUserContactAssignmentSchema, insertScheduledReportSchema,
+  type Invoice, type Contact, type ContactNote, type Bill, type BankAccount,
+  type BankTransaction, type Budget, type ExchangeRate, type ActionItem,
+  type ActionLog, type PaymentPromise,
+  invoices, contacts, actions, disputes, bankTransactions, customerLearningProfiles,
+  inboundMessages, smsMessages, investorLeads, onboardingProgress, messageDrafts,
+  tenants, paymentPromises, promisesToPay, smeClients, contactNotes, timelineEvents,
+  attentionItems, outcomes, activityLogs, collectionPolicies, paymentPlans,
+  emailMessages, customerContactPersons, scheduledReports,
 } from "@shared/schema";
-import { stripSensitiveUserFields, stripSensitiveTenantFields } from "../utils/sanitize";
+import { computeNextRunAt } from "../services/reportScheduler";
+import { REPORT_TYPE_LABELS, type ReportType } from "../services/reportGenerator";
+import { getOverdueCategoryFromDueDate } from "@shared/utils/overdueUtils";
+import { calculateLatePaymentInterest } from "../utils/interestCalculator";
+import { eq, and, desc, asc, sql, count, avg, gte, lte, lt, inArray, or, isNull, isNotNull, gt, not } from 'drizzle-orm';
+import { db } from '../db';
+import { z } from "zod";
+import { generateCollectionSuggestions, generateEmailDraft, generateAiCfoResponse } from "../services/openai";
+import { sendReminderEmail, DEFAULT_FROM, DEFAULT_FROM_EMAIL } from "../services/sendgrid";
+import { sendPaymentReminderSMS } from "../services/vonage";
+import { ActionPrioritizationService } from "../services/actionPrioritizationService";
+import { formatDate } from "@shared/utils/dateFormatter";
+import { xeroService } from "../services/xero";
+import { onboardingService } from "../services/onboardingService";
+import { XeroSyncService } from "../services/xeroSync";
+import { generateMockData } from "../mock-data";
+import { retellService } from "../retell-service";
+import { createRetellClient } from "../mcp/client";
+import { normalizeDynamicVariables, logVariableTransformation } from "../utils/retellVariableNormalizer";
+import { Retell } from "retell-sdk";
+import Stripe from "stripe";
+import { cleanEmailContent } from "../services/messagePostProcessor";
+import { subscriptionService } from "../services/subscriptionService";
+import { getDashboardMetrics } from "../services/metricsService";
+import { computeCashInflow } from "../services/dashboardCashInflowService";
+import { PermissionService } from "../services/permissionService";
+import { signalCollector } from "../lib/signal-collector";
+import { getAssignedContactIds, hasContactAccess } from "./routeHelpers";
+
 
 export function registerOnboardingRoutes(app: Express): void {
-  // Mock data generation (for demo purposes)
-  app.post('/api/mock-data/generate', isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      console.log('🚀 Starting mock data generation for tenant:', user.tenantId);
-      await generateMockData(user.tenantId);
-      
-      res.json({ 
-        success: true, 
-        message: "Mock data generated successfully! 80 clients and 1,800 invoices created."
-      });
-    } catch (error) {
-      console.error("Error generating mock data:", error);
-      res.status(500).json({ message: "Failed to generate mock data" });
-    }
-  });
-
-  // Seed payment behavior customers (good payer vs bad payer)
-  app.post('/api/mock-data/seed-payment-behavior', isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      console.log('🎯 Seeding payment behavior customers for tenant:', user.tenantId);
-      const { seedPaymentBehaviorCustomers } = await import("../mock-data");
-      await seedPaymentBehaviorCustomers(user.tenantId);
-      
-      res.json({ 
-        success: true, 
-        message: "Payment behavior customers seeded successfully! 2 customers with 60 invoices created."
-      });
-    } catch (error) {
-      console.error("Error seeding payment behavior customers:", error);
-      res.status(500).json({ message: "Failed to seed payment behavior customers" });
-    }
-  });
-
-  // Admin endpoint for comprehensive 3-year dataset generation
-  app.post('/api/admin/seed/mock-dataset', isAuthenticated, withPermission('admin:settings')[0], withPermission('admin:settings')[1], async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const { confirmDestroy = false, years = 3, clientCount = 30, invoicesPerMonthRange = [5, 10] } = req.body;
-
-      if (!confirmDestroy) {
-        return res.status(400).json({ 
-          message: "Must set confirmDestroy: true to proceed. This will DELETE ALL existing data.",
-          warning: "This action will permanently delete all contacts, invoices, and actions for your tenant.",
-          usage: "POST with body: { confirmDestroy: true, years: 3, clientCount: 30, invoicesPerMonthRange: [5, 10] }"
-        });
-      }
-
-      console.log(`🚀 Admin: ${user.email} initiating comprehensive dataset generation for tenant ${user.tenantId}`);
-
-      const { generateComprehensiveDataset } = await import("../mock-data");
-      
-      await generateComprehensiveDataset(user.tenantId, {
-        years,
-        clientCount,
-        invoicesPerMonthRange,
-        confirmDestroy: true
-      });
-
-      res.json({
-        success: true,
-        message: "Comprehensive 3-year dataset generated successfully! Perfect for ML training and investor demos.",
-        configuration: {
-          years,
-          clientCount,
-          invoicesPerMonthRange,
-          estimatedInvoices: `${clientCount * years * 12 * invoicesPerMonthRange[0]}-${clientCount * years * 12 * invoicesPerMonthRange[1]}`,
-          features: [
-            "4 client behavior segments for ML learning",
-            "36 months of historical invoice data", 
-            "Realistic communication tracking",
-            "Proper outstanding distribution (20% current, 40% <30 days, 40% 30-75 days)",
-            "Industry-specific payment patterns",
-            "Communication effectiveness data for AI training"
-          ]
-        }
-      });
-    } catch (error) {
-      console.error("Error generating comprehensive dataset:", error);
-      res.status(500).json({ 
-        message: "Failed to generate comprehensive dataset", 
-        error: error instanceof Error ? error.message : "Unknown error"
-      });
-    }
-  });
-
-  // ===== ONBOARDING API ENDPOINTS =====
-  
-  // Onboarding request validation schemas
-  const onboardingPhaseSchema = z.enum(['technical_connection', 'business_setup', 'brand_customization', 'ai_review_launch']);
-  const updateProgressSchema = z.object({
-    phase: onboardingPhaseSchema,
-    data: z.record(z.any()).optional()
-  });
-  const completePhaseSchema = z.object({
-    phase: onboardingPhaseSchema
-  });
-
-  // Initialize onboarding for a tenant
   app.post('/api/onboarding/start', ...withPermission('admin:settings'), async (req: any, res) => {
     try {
       // Apply RBAC context manually
@@ -190,7 +74,6 @@ export function registerOnboardingRoutes(app: Express): void {
     }
   });
 
-  // Get current onboarding progress
   app.get('/api/onboarding/progress', isAuthenticated, async (req: any, res) => {
     try {
       // Apply RBAC context manually
@@ -222,7 +105,6 @@ export function registerOnboardingRoutes(app: Express): void {
     }
   });
 
-  // Update phase progress
   app.put('/api/onboarding/progress', ...withPermission('admin:settings'), async (req: any, res) => {
     try {
       // Validate request body first
@@ -233,6 +115,8 @@ export function registerOnboardingRoutes(app: Express): void {
           errors: validationResult.error.errors 
         });
       }
+      
+      // Apply RBAC context manually
       
       // Apply RBAC context manually
       await new Promise<void>((resolve, reject) => {
@@ -255,7 +139,6 @@ export function registerOnboardingRoutes(app: Express): void {
     }
   });
 
-  // Complete a phase
   app.post('/api/onboarding/complete-phase', ...withPermission('admin:settings'), async (req: any, res) => {
     try {
       // Validate request body first
@@ -266,6 +149,8 @@ export function registerOnboardingRoutes(app: Express): void {
           errors: validationResult.error.errors 
         });
       }
+      
+      // Apply RBAC context manually
       
       // Apply RBAC context manually
       await new Promise<void>((resolve, reject) => {
@@ -298,9 +183,10 @@ export function registerOnboardingRoutes(app: Express): void {
     }
   });
 
-  // Complete entire onboarding
   app.post('/api/onboarding/complete', ...withPermission('admin:settings'), async (req: any, res) => {
     try {
+      // Apply RBAC context manually
+      
       // Apply RBAC context manually
       await new Promise<void>((resolve, reject) => {
         withRBACContext(req, res, (error) => {
@@ -321,7 +207,6 @@ export function registerOnboardingRoutes(app: Express): void {
     }
   });
 
-  // Check onboarding status
   app.get('/api/onboarding/status', isAuthenticated, async (req: any, res) => {
     try {
       // Get user's tenant - support both regular users and partner-mode users
@@ -340,9 +225,10 @@ export function registerOnboardingRoutes(app: Express): void {
     }
   });
 
-  // Xero automated data import for onboarding
   app.post('/api/onboarding/xero-import', ...withPermission('admin:settings'), async (req: any, res) => {
     try {
+      // Apply RBAC context manually
+      
       // Apply RBAC context manually
       await new Promise<void>((resolve, reject) => {
         withRBACContext(req, res, (error) => {
@@ -353,7 +239,7 @@ export function registerOnboardingRoutes(app: Express): void {
       
       const { tenantId } = req.rbac;
       
-      // Get Xero tokens for this tenant
+      // Get Xero tokens for this tenant (TODO: implement getXeroTokens method)
       const tenant = await storage.getTenant(tenantId);
       if (!tenant?.xeroAccessToken || !tenant?.xeroRefreshToken) {
         return res.status(400).json({ 
@@ -369,7 +255,7 @@ export function registerOnboardingRoutes(app: Express): void {
       };
       
       // Import data using XeroOnboardingService
-      const { xeroOnboardingService } = await import('../services/xeroOnboardingService');
+      const { xeroOnboardingService } = await import('./services/xeroOnboardingService');
       const importResult = await xeroOnboardingService.performAutomatedDataImport(xeroTokens, tenantId);
       
       if (importResult.success) {
@@ -470,7 +356,6 @@ export function registerOnboardingRoutes(app: Express): void {
     }
   });
 
-  // New 6-step onboarding endpoints
   app.get('/api/onboarding/full-status', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -667,30 +552,6 @@ export function registerOnboardingRoutes(app: Express): void {
     }
   });
 
-  app.post('/api/settings/recompute-debtor-scores', isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      const tenantId = user?.tenantId || req.session?.activeTenantId;
-      if (!tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
-
-      const job = await onboardingService.enqueueDebtorScoring(tenantId, "SETTINGS");
-
-      await storage.createActivityLog({
-        tenantId,
-        userId: user?.id,
-        activityType: "debtor_scoring_queued",
-        category: "audit",
-        description: "Debtor scoring job queued from settings",
-        metadata: { jobId: job.id, triggeredBy: "SETTINGS" },
-      });
-
-      res.json(job);
-    } catch (error) {
-      console.error("Error recomputing debtor scores:", error);
-      res.status(500).json({ message: "Failed to recompute debtor scores" });
-    }
-  });
-
   app.post('/api/onboarding/complete-all', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -715,44 +576,9 @@ export function registerOnboardingRoutes(app: Express): void {
     }
   });
 
-  // Demo: Cleanup demo actions
-  app.delete("/api/demo/cleanup/:sessionId", isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const { sessionId } = req.params;
-
-      // Delete all actions for this demo session
-      await db
-        .delete(actions)
-        .where(
-          and(
-            eq(actions.tenantId, user.tenantId),
-            sql`${actions.metadata}->>'demoSessionId' = ${sessionId}`
-          )
-        );
-
-      console.log(`🧹 Demo cleanup: Removed demo session ${sessionId}`);
-
-      res.json({
-        message: "Demo session cleaned up successfully",
-        sessionId
-      });
-    } catch (error) {
-      console.error("Error cleaning up demo session:", error);
-      res.status(500).json({ message: "Failed to cleanup demo session" });
-    }
-  });
-
-  // ==================== DEMO MODE API ====================
-  
-  // Get demo mode status
   app.get("/api/demo-mode/status", isAuthenticated, async (req: any, res) => {
     try {
-      const { demoModeService } = await import('../services/demoModeService.js');
+      const { demoModeService } = await import('./services/demoModeService.js');
       res.json(demoModeService.getStatus());
     } catch (error) {
       console.error("Error getting demo mode status:", error);
@@ -760,7 +586,6 @@ export function registerOnboardingRoutes(app: Express): void {
     }
   });
 
-  // Toggle demo mode
   app.post("/api/demo-mode/toggle", isAuthenticated, async (req: any, res) => {
     try {
       const { enabled } = req.body;
@@ -769,7 +594,7 @@ export function registerOnboardingRoutes(app: Express): void {
         return res.status(400).json({ message: "enabled must be a boolean" });
       }
 
-      const { demoModeService } = await import('../services/demoModeService.js');
+      const { demoModeService } = await import('./services/demoModeService.js');
       demoModeService.setEnabled(enabled);
       
       res.json({ 
@@ -783,7 +608,6 @@ export function registerOnboardingRoutes(app: Express): void {
     }
   });
 
-  // Seed demo data
   app.post("/api/demo-mode/seed", isAuthenticated, async (req: any, res) => {
     try {
       const tenantId = req.user?.tenantId;
@@ -791,7 +615,7 @@ export function registerOnboardingRoutes(app: Express): void {
         return res.status(400).json({ message: "No tenant associated with user" });
       }
 
-      const { demoDataService } = await import('../services/demoDataService.js');
+      const { demoDataService } = await import('./services/demoDataService.js');
       const result = await demoDataService.seedDemoData(tenantId);
       
       if (result.success) {
@@ -805,7 +629,6 @@ export function registerOnboardingRoutes(app: Express): void {
     }
   });
 
-  // Seed forecast demo data (100 invoices with payment promises across 6 weeks)
   app.post("/api/demo-mode/seed-forecast", isAuthenticated, async (req: any, res) => {
     try {
       const tenantId = req.user?.tenantId;
@@ -817,7 +640,7 @@ export function registerOnboardingRoutes(app: Express): void {
         return res.status(400).json({ message: "No user ID available" });
       }
 
-      const { demoDataService } = await import('../services/demoDataService.js');
+      const { demoDataService } = await import('./services/demoDataService.js');
       const result = await demoDataService.seedForecastData(tenantId, userId);
       
       if (result.success) {
@@ -831,7 +654,6 @@ export function registerOnboardingRoutes(app: Express): void {
     }
   });
 
-  // Clear demo data
   app.post("/api/demo-mode/clear", isAuthenticated, async (req: any, res) => {
     try {
       const tenantId = req.user?.tenantId;
@@ -839,7 +661,7 @@ export function registerOnboardingRoutes(app: Express): void {
         return res.status(400).json({ message: "No tenant associated with user" });
       }
 
-      const { demoDataService } = await import('../services/demoDataService.js');
+      const { demoDataService } = await import('./services/demoDataService.js');
       const result = await demoDataService.clearDemoData(tenantId);
       
       if (result.success) {
@@ -853,7 +675,6 @@ export function registerOnboardingRoutes(app: Express): void {
     }
   });
 
-  // Check if demo data exists
   app.get("/api/demo-mode/has-data", isAuthenticated, async (req: any, res) => {
     try {
       const tenantId = req.user?.tenantId;
@@ -861,7 +682,7 @@ export function registerOnboardingRoutes(app: Express): void {
         return res.status(400).json({ message: "No tenant associated with user" });
       }
 
-      const { demoDataService } = await import('../services/demoDataService.js');
+      const { demoDataService } = await import('./services/demoDataService.js');
       const hasData = await demoDataService.hasDemoData(tenantId);
       
       res.json({ hasData });
@@ -871,16 +692,27 @@ export function registerOnboardingRoutes(app: Express): void {
     }
   });
 
-  // ==================== DEMO DATA TESTING API ====================
-  // Comprehensive testing environment for development and demos
-
-  // Reset ALL data for tenant (not just DEMO-prefixed)
   app.post("/api/demo-data/reset-all", isAuthenticated, async (req: any, res) => {
     try {
       const tenantId = req.user?.tenantId;
       if (!tenantId) {
         return res.status(400).json({ message: "No tenant associated with user" });
       }
+
+      // Import all tenant-scoped tables for deletion (comprehensive list based on FK constraints to contacts)
+      const { 
+        timelineEvents, paymentPromises, disputes, voiceCalls, emailMessages, smsMessages,
+        contactNotes, customerContactPersons, paymentPlans, paymentPlanInvoices,
+        workflowTimers, inboundMessages, contactOutcomes, policyDecisions,
+        messageDrafts, customerBehaviorSignals, customerScheduleAssignments,
+        customerPreferences, customerLearningProfiles,
+        actionEffectiveness, actionItems, bankTransactions, bills, debtorPayments, financeAdvances,
+        invoiceHealthScores, magicLinkTokens, promisesToPay, riskScores,
+        userContactAssignments, walletTransactions,
+        emailDomainMappings, debtorProfiles
+      } = await import('@shared/schema.js');
+      
+      const { outcomes } = await import('@shared/schema.js');
 
       // Delete in order respecting foreign key constraints (child tables first)
       const result = await db.transaction(async (tx) => {
@@ -897,7 +729,7 @@ export function registerOnboardingRoutes(app: Express): void {
         
         // Outcomes and decisions
         const deletedContactOutcomes = await tx.delete(contactOutcomes).where(eq(contactOutcomes.tenantId, tenantId)).returning();
-        const deletedOutcomesResult = await tx.delete(outcomes).where(eq(outcomes.tenantId, tenantId)).returning();
+        const deletedOutcomes = await tx.delete(outcomes).where(eq(outcomes.tenantId, tenantId)).returning();
         const deletedPolicyDecisions = await tx.delete(policyDecisions).where(eq(policyDecisions.tenantId, tenantId)).returning();
         
         // Promises, disputes, workflow timers
@@ -959,7 +791,7 @@ export function registerOnboardingRoutes(app: Express): void {
           inboundMessages: deletedInbound.length,
           messageDrafts: deletedDrafts.length,
           contactOutcomes: deletedContactOutcomes.length,
-          outcomes: deletedOutcomesResult.length,
+          outcomes: deletedOutcomes.length,
           policyDecisions: deletedPolicyDecisions.length,
           promises: deletedPromises.length,
           disputes: deletedDisputes.length,
@@ -994,12 +826,19 @@ export function registerOnboardingRoutes(app: Express): void {
         return res.status(400).json({ message: "No tenant associated with user" });
       }
 
+      const {
+        timelineEvents, emailMessages, inboundMessages, contactOutcomes,
+        emailClarifications, conversations, promisesToPay, paymentPlans, paymentPlanInvoices,
+        outcomes, attentionItems, voiceCalls, smsMessages, messageDrafts,
+        paymentPromises, disputes, workflowTimers, policyDecisions
+      } = await import('@shared/schema.js');
+
       const result = await db.transaction(async (tx) => {
         const deletedActivityLogs = await tx.delete(activityLogs).where(eq(activityLogs.tenantId, tenantId)).returning();
 
         const deletedTimeline = await tx.delete(timelineEvents).where(eq(timelineEvents.tenantId, tenantId)).returning();
         const deletedContactOutcomes = await tx.delete(contactOutcomes).where(eq(contactOutcomes.tenantId, tenantId)).returning();
-        const deletedOutcomesResult = await tx.delete(outcomes).where(eq(outcomes.tenantId, tenantId)).returning();
+        const deletedOutcomes = await tx.delete(outcomes).where(eq(outcomes.tenantId, tenantId)).returning();
         const deletedAttention = await tx.delete(attentionItems).where(eq(attentionItems.tenantId, tenantId)).returning();
         const deletedClarifications = await tx.delete(emailClarifications).where(eq(emailClarifications.tenantId, tenantId)).returning();
         const deletedEmails = await tx.delete(emailMessages).where(eq(emailMessages.tenantId, tenantId)).returning();
@@ -1036,7 +875,7 @@ export function registerOnboardingRoutes(app: Express): void {
           voiceCalls: deletedVoice.length,
           inboundMessages: deletedInbound.length,
           conversations: deletedConversations.length,
-          outcomes: deletedOutcomesResult.length,
+          outcomes: deletedOutcomes.length,
           contactOutcomes: deletedContactOutcomes.length,
           clarifications: deletedClarifications.length,
           attentionItems: deletedAttention.length,
@@ -1063,11 +902,6 @@ export function registerOnboardingRoutes(app: Express): void {
     }
   });
 
-  // Create demo customer with varied invoices
-  const createDemoCustomerSchema = z.object({
-    customerName: z.string().min(1).max(200).default("Nexus KPI Limited"),
-  });
-  
   app.post("/api/demo-data/create-demo-customer", isAuthenticated, async (req: any, res) => {
     try {
       const tenantId = req.user?.tenantId;
@@ -1169,30 +1003,28 @@ export function registerOnboardingRoutes(app: Express): void {
               currency: "GBP",
               description: `Professional services - ${serviceTypes[i]}`,
               workflowState: status === "overdue" ? "late" : "pre_due",
+              reminderCount: daysFromDue < -30 ? 2 : daysFromDue < 0 ? 1 : 0,
             })
             .returning();
+
           createdInvoices.push(invoice);
         }
 
-        return { contact, invoices: createdInvoices };
+        return {
+          customer: contact,
+          invoices: createdInvoices,
+        };
       });
 
-      res.json({
-        success: true,
-        message: `Demo customer '${customerName}' created with 8 invoices`,
-        data: result
+      res.json({ 
+        success: true, 
+        message: `Created ${result.customer.companyName} with ${result.invoices.length} invoices`,
+        data: result 
       });
     } catch (error) {
       console.error("Error creating demo customer:", error);
       res.status(500).json({ message: "Failed to create demo customer" });
     }
-  });
-
-  // Generate varied invoices for existing customer
-  const generateInvoiceSchema = z.object({
-    contactId: z.string().min(1),
-    count: z.number().min(1).max(50).default(5),
-    daysOverdue: z.number().optional(),
   });
 
   app.post("/api/demo-data/generate-invoice", isAuthenticated, async (req: any, res) => {
@@ -1206,85 +1038,67 @@ export function registerOnboardingRoutes(app: Express): void {
       if (!parsed.success) {
         return res.status(400).json({ message: "Invalid input", errors: parsed.error.issues });
       }
-      const { contactId, count, daysOverdue } = parsed.data;
+      const { contactId, daysUntilDue, amount } = parsed.data;
 
-      // Verify contact exists
-      const [contact] = await db.select().from(contacts).where(and(eq(contacts.id, contactId), eq(contacts.tenantId, tenantId))).limit(1);
-      if (!contact) {
-        return res.status(404).json({ message: "Customer not found" });
+      // Get contact or use first available
+      let targetContact;
+      if (contactId) {
+        const [contact] = await db.select().from(contacts).where(and(eq(contacts.id, contactId), eq(contacts.tenantId, tenantId)));
+        targetContact = contact;
+      } else {
+        const [contact] = await db.select().from(contacts).where(eq(contacts.tenantId, tenantId)).limit(1);
+        targetContact = contact;
+      }
+
+      if (!targetContact) {
+        return res.status(400).json({ message: "No customer found. Create a demo customer first." });
       }
 
       const now = new Date();
-      const existingInvNums = await db
-        .select({ invoiceNumber: invoices.invoiceNumber })
-        .from(invoices)
-        .where(eq(invoices.tenantId, tenantId));
-      const usedInvNums = new Set<string>(existingInvNums.map(r => r.invoiceNumber));
+      const dueDate = new Date(now);
+      dueDate.setDate(dueDate.getDate() + daysUntilDue);
+      const issueDate = new Date(now);
 
-      const generateUniqueInvNum = () => {
-        let invNum: string;
-        do {
-          const num = Math.floor(Math.random() * 900000) + 100000;
-          invNum = `INV-${num}`;
-        } while (usedInvNums.has(invNum));
-        usedInvNums.add(invNum);
-        return invNum;
-      };
+      // Generate random amount if not provided
+      const invoiceAmount = amount || (Math.random() * 9000 + 1000).toFixed(2);
+      
+      // Generate invoice number
+      const existingCount = await db.select({ count: sql`count(*)::int` }).from(invoices).where(eq(invoices.tenantId, tenantId));
+      const sequence = (existingCount[0]?.count as number || 0) + 1;
 
-      const createdInvoices = [];
-      for (let i = 0; i < count; i++) {
-        const invNum = generateUniqueInvNum();
-        const amount = (Math.random() * 10000 + 500).toFixed(2);
-        
-        // If daysOverdue is specified, use it, otherwise random mix of current and overdue
-        const offset = daysOverdue !== undefined ? -daysOverdue : Math.floor(Math.random() * 60) - 30;
-        
-        const dueDate = new Date(now);
-        dueDate.setDate(dueDate.getDate() + offset);
-        const issueDate = new Date(dueDate);
-        issueDate.setDate(issueDate.getDate() - 30);
-        
-        const status = dueDate < now ? "overdue" : "outstanding";
+      const [invoice] = await db
+        .insert(invoices)
+        .values({
+          tenantId,
+          contactId: targetContact.id,
+          invoiceNumber: `INV-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}-${String(sequence).padStart(4, '0')}`,
+          amount: invoiceAmount,
+          amountPaid: "0",
+          status: daysUntilDue < 0 ? "overdue" : "outstanding",
+          issueDate,
+          dueDate,
+          currency: "GBP",
+          description: `Generated invoice - ${['Consulting', 'Development', 'Support', 'Training'][Math.floor(Math.random() * 4)]}`,
+          workflowState: daysUntilDue < 0 ? "late" : "pre_due",
+          reminderCount: 0,
+        })
+        .returning();
 
-        const [invoice] = await db
-          .insert(invoices)
-          .values({
-            tenantId,
-            contactId,
-            invoiceNumber: invNum,
-            amount,
-            amountPaid: "0",
-            status,
-            issueDate,
-            dueDate,
-            currency: "GBP",
-            description: "Generated demo invoice",
-            workflowState: status === "overdue" ? "late" : "pre_due",
-          })
-          .returning();
-        createdInvoices.push(invoice);
-      }
-
-      res.json({
-        success: true,
-        message: `Generated ${count} invoices for ${contact.companyName || contact.name}`,
-        invoices: createdInvoices
+      res.json({ 
+        success: true, 
+        message: `Generated invoice ${invoice.invoiceNumber} for £${invoice.amount}`,
+        invoice 
       });
     } catch (error) {
-      console.error("Error generating invoices:", error);
-      res.status(500).json({ message: "Failed to generate invoices" });
+      console.error("Error generating invoice:", error);
+      res.status(500).json({ message: "Failed to generate invoice" });
     }
-  });
-
-  // Simulate payment for an invoice
-  const simulatePaymentSchema = z.object({
-    invoiceId: z.string().min(1),
-    amount: z.number().optional(), // If not provided, pay in full
   });
 
   app.post("/api/demo-data/simulate-payment", isAuthenticated, async (req: any, res) => {
     try {
       const tenantId = req.user?.tenantId;
+      const userId = req.user?.id;
       if (!tenantId) {
         return res.status(400).json({ message: "No tenant associated with user" });
       }
@@ -1293,45 +1107,67 @@ export function registerOnboardingRoutes(app: Express): void {
       if (!parsed.success) {
         return res.status(400).json({ message: "Invalid input", errors: parsed.error.issues });
       }
-      const { invoiceId, amount } = parsed.data;
+      const { invoiceId, paymentAmount, paymentDate } = parsed.data;
 
-      // Get invoice
-      const [targetInvoice] = await db.select().from(invoices).where(and(eq(invoices.id, invoiceId), eq(invoices.tenantId, tenantId))).limit(1);
+      // If no invoiceId specified, pick a random overdue invoice
+      let targetInvoice;
+      if (invoiceId) {
+        const [invoice] = await db.select().from(invoices).where(and(eq(invoices.id, invoiceId), eq(invoices.tenantId, tenantId)));
+        targetInvoice = invoice;
+      } else {
+        const overdueInvoices = await db.select().from(invoices).where(and(eq(invoices.tenantId, tenantId), eq(invoices.status, 'overdue'))).limit(10);
+        if (overdueInvoices.length > 0) {
+          targetInvoice = overdueInvoices[Math.floor(Math.random() * overdueInvoices.length)];
+        }
+      }
+
       if (!targetInvoice) {
-        return res.status(404).json({ message: "Invoice not found" });
+        return res.status(400).json({ message: "No invoice found to apply payment to." });
       }
 
       const outstanding = parseFloat(targetInvoice.amount) - parseFloat(targetInvoice.amountPaid || "0");
-      const payment = amount !== undefined ? Math.min(amount, outstanding) : outstanding;
+      const payment = paymentAmount ?? outstanding; // Full payment by default (paymentAmount is already a number from Zod)
+      const paidDate = paymentDate ? new Date(paymentDate) : new Date();
+
       const newAmountPaid = parseFloat(targetInvoice.amountPaid || "0") + payment;
       const isFullyPaid = newAmountPaid >= parseFloat(targetInvoice.amount);
 
+      // Update invoice
       const [updatedInvoice] = await db
         .update(invoices)
         .set({
           amountPaid: newAmountPaid.toFixed(2),
           status: isFullyPaid ? "paid" : targetInvoice.status,
-          paidDate: isFullyPaid ? new Date() : null,
-          workflowState: isFullyPaid ? "resolved" : targetInvoice.workflowState,
-          updatedAt: new Date()
+          paidDate: isFullyPaid ? paidDate : null,
+          workflowState: isFullyPaid ? "completed" : targetInvoice.workflowState,
+          updatedAt: new Date(),
         })
-        .where(eq(invoices.id, invoiceId))
+        .where(eq(invoices.id, targetInvoice.id))
         .returning();
 
-      // Create activity log
-      await storage.createActivityLog({
+      // Create timeline event for the payment (simulating Xero webhook)
+      const { timelineEvents } = await import('@shared/schema.js');
+      await db.insert(timelineEvents).values({
         tenantId,
-        userId: req.user?.id,
-        activityType: "payment_received",
-        category: "collections",
-        action: "payment",
-        result: "success",
-        description: `Simulated payment of £${payment.toFixed(2)} for invoice ${targetInvoice.invoiceNumber}`,
-        metadata: { invoiceId, amount: payment, isFullyPaid },
+        customerId: targetInvoice.contactId,
+        invoiceId: targetInvoice.id,
+        occurredAt: paidDate,
+        direction: "inbound",
+        channel: "system",
+        summary: `Payment received: £${payment.toFixed(2)} via bank transfer`,
+        preview: `Payment of £${payment.toFixed(2)} applied to invoice ${targetInvoice.invoiceNumber}`,
+        eventType: "payment_received",
+        status: "completed",
+        metadata: {
+          source: "xero_simulation",
+          paymentAmount: payment,
+          paymentMethod: "bank_transfer",
+          reference: `PAY-${Date.now()}`,
+        },
       });
 
       if (isFullyPaid) {
-        import('../services/emailCommunications.js').then(({ sendPaymentThankYouEmail }) => {
+        import('./services/emailCommunications.js').then(({ sendPaymentThankYouEmail }) => {
           sendPaymentThankYouEmail(targetInvoice.id, tenantId).catch(err =>
             console.error(`[ThankYou] Failed for invoice ${targetInvoice.id}:`, err.message)
           );
@@ -1355,7 +1191,6 @@ export function registerOnboardingRoutes(app: Express): void {
     }
   });
 
-  // Get demo data stats
   app.get("/api/demo-data/stats", isAuthenticated, async (req: any, res) => {
     try {
       const tenantId = req.user?.tenantId;

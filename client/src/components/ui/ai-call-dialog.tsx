@@ -236,15 +236,15 @@ export function AiCallDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white/80 backdrop-blur-sm border-white/50 shadow-xl">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-background/80 backdrop-blur-sm border-white/50 shadow-xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-3 text-2xl font-semibold text-gray-900">
+          <DialogTitle className="flex items-center gap-3 text-2xl font-semibold text-foreground">
             <div className="p-2 bg-gradient-to-r from-[#17B6C3] to-[#17B6C3]/80 rounded-lg">
               <Brain className="h-6 w-6 text-white" />
             </div>
             AI Call Configuration
           </DialogTitle>
-          <DialogDescription className="text-gray-600 text-base">
+          <DialogDescription className="text-muted-foreground text-base">
             Configure and initiate an AI-powered collection call
           </DialogDescription>
         </DialogHeader>
@@ -252,7 +252,7 @@ export function AiCallDialog({
         {isLoading && (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin text-[#17B6C3]" />
-            <span className="ml-2 text-gray-600">Loading customer data...</span>
+            <span className="ml-2 text-muted-foreground">Loading customer data...</span>
           </div>
         )}
 
@@ -270,9 +270,9 @@ export function AiCallDialog({
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Customer Context Display */}
             <div className="space-y-4">
-              <Card className="bg-white/70 backdrop-blur-sm border-white/50 shadow-lg">
+              <Card className="bg-background/70 backdrop-blur-sm border-white/50 shadow-lg">
                 <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-lg text-gray-800">
+                  <CardTitle className="flex items-center gap-2 text-lg text-foreground">
                     <User className="h-5 w-5 text-[#17B6C3]" />
                     Customer Information
                   </CardTitle>
@@ -280,22 +280,22 @@ export function AiCallDialog({
                 <CardContent className="space-y-3">
                   <div className="grid grid-cols-1 gap-3">
                     <div data-testid="customer-name">
-                      <Label className="text-sm font-medium text-gray-700">Customer Name</Label>
-                      <p className="text-base text-gray-900 font-medium">{contactData?.name || 'Loading...'}</p>
+                      <Label className="text-sm font-medium text-foreground">Customer Name</Label>
+                      <p className="text-base text-foreground font-medium">{contactData?.name || 'Loading...'}</p>
                     </div>
                     
                     {contactData?.companyName && (
                       <div data-testid="company-name">
-                        <Label className="text-sm font-medium text-gray-700">Company</Label>
+                        <Label className="text-sm font-medium text-foreground">Company</Label>
                         <div className="flex items-center gap-2">
-                          <Building className="h-4 w-4 text-gray-500" />
-                          <p className="text-base text-gray-900">{contactData.companyName}</p>
+                          <Building className="h-4 w-4 text-muted-foreground" />
+                          <p className="text-base text-foreground">{contactData.companyName}</p>
                         </div>
                       </div>
                     )}
 
                     <div>
-                      <Label className="text-sm font-medium text-gray-700">Phone Number</Label>
+                      <Label className="text-sm font-medium text-foreground">Phone Number</Label>
                       <div className="flex items-center gap-2 mt-1">
                         <Input
                           data-testid="input-phone"
@@ -308,7 +308,7 @@ export function AiCallDialog({
                           placeholder="Enter phone number"
                           className={`flex-1 ${!validatePhoneNumber(phoneNumber) && phoneNumber ? 'border-red-300 focus:ring-red-500' : ''}`}
                         />
-                        <Phone className="h-4 w-4 text-gray-500" />
+                        <Phone className="h-4 w-4 text-muted-foreground" />
                       </div>
                       {phoneNumber && !validatePhoneNumber(phoneNumber) && (
                         <p className="text-red-500 text-sm mt-1">Please enter a valid phone number</p>
@@ -317,8 +317,8 @@ export function AiCallDialog({
 
                     {contactData?.email && (
                       <div data-testid="customer-email">
-                        <Label className="text-sm font-medium text-gray-700">Email</Label>
-                        <p className="text-base text-gray-600">{contactData.email}</p>
+                        <Label className="text-sm font-medium text-foreground">Email</Label>
+                        <p className="text-base text-muted-foreground">{contactData.email}</p>
                       </div>
                     )}
                   </div>
@@ -327,9 +327,9 @@ export function AiCallDialog({
 
               {/* Invoice Details (if available) */}
               {invoiceData && (
-                <Card className="bg-white/70 backdrop-blur-sm border-white/50 shadow-lg">
+                <Card className="bg-background/70 backdrop-blur-sm border-white/50 shadow-lg">
                   <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-lg text-gray-800">
+                    <CardTitle className="flex items-center gap-2 text-lg text-foreground">
                       <DollarSign className="h-5 w-5 text-[#17B6C3]" />
                       Invoice Details
                     </CardTitle>
@@ -337,28 +337,28 @@ export function AiCallDialog({
                   <CardContent className="space-y-3">
                     <div className="grid grid-cols-2 gap-3">
                       <div data-testid="invoice-number">
-                        <Label className="text-sm font-medium text-gray-700">Invoice #</Label>
-                        <p className="text-base text-gray-900 font-medium">{invoiceData.invoiceNumber}</p>
+                        <Label className="text-sm font-medium text-foreground">Invoice #</Label>
+                        <p className="text-base text-foreground font-medium">{invoiceData.invoiceNumber}</p>
                       </div>
                       
                       <div data-testid="invoice-amount">
-                        <Label className="text-sm font-medium text-gray-700">Outstanding Amount</Label>
-                        <p className="text-base text-gray-900 font-bold">
+                        <Label className="text-sm font-medium text-foreground">Outstanding Amount</Label>
+                        <p className="text-base text-foreground font-bold">
                           {callSummary.amount}
                         </p>
                       </div>
                       
                       <div data-testid="due-date">
-                        <Label className="text-sm font-medium text-gray-700">Due Date</Label>
+                        <Label className="text-sm font-medium text-foreground">Due Date</Label>
                         <div className="flex items-center gap-1">
-                          <Calendar className="h-4 w-4 text-gray-500" />
-                          <p className="text-base text-gray-900">{callSummary.dueDate}</p>
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <p className="text-base text-foreground">{callSummary.dueDate}</p>
                         </div>
                       </div>
                       
                       {invoiceData.daysOverdue! > 0 && (
                         <div data-testid="days-overdue">
-                          <Label className="text-sm font-medium text-gray-700">Days Overdue</Label>
+                          <Label className="text-sm font-medium text-foreground">Days Overdue</Label>
                           <div className="flex items-center gap-1">
                             <AlertTriangle className="h-4 w-4 text-orange-500" />
                             <p className="text-base text-orange-600 font-medium">
@@ -376,9 +376,9 @@ export function AiCallDialog({
             {/* AI Configuration & Call Summary */}
             <div className="space-y-4">
               {/* AI Voice Configuration */}
-              <Card className="bg-white/70 backdrop-blur-sm border-white/50 shadow-lg">
+              <Card className="bg-background/70 backdrop-blur-sm border-white/50 shadow-lg">
                 <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-lg text-gray-800">
+                  <CardTitle className="flex items-center gap-2 text-lg text-foreground">
                     <Settings className="h-5 w-5 text-[#17B6C3]" />
                     AI Voice Configuration
                   </CardTitle>
@@ -386,7 +386,7 @@ export function AiCallDialog({
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 gap-4">
                     <div>
-                      <Label className="text-sm font-medium text-gray-700">Tone</Label>
+                      <Label className="text-sm font-medium text-foreground">Tone</Label>
                       <Select 
                         data-testid="select-tone"
                         value={callConfig.tone} 
@@ -407,7 +407,7 @@ export function AiCallDialog({
                     </div>
 
                     <div>
-                      <Label className="text-sm font-medium text-gray-700">Personality</Label>
+                      <Label className="text-sm font-medium text-foreground">Personality</Label>
                       <Select 
                         data-testid="select-personality"
                         value={callConfig.personality} 
@@ -428,7 +428,7 @@ export function AiCallDialog({
                     </div>
 
                     <div>
-                      <Label className="text-sm font-medium text-gray-700">Speed</Label>
+                      <Label className="text-sm font-medium text-foreground">Speed</Label>
                       <Select 
                         data-testid="select-speed"
                         value={callConfig.speed} 
@@ -453,7 +453,7 @@ export function AiCallDialog({
               {/* Call Summary */}
               <Card className="bg-gradient-to-br from-[#17B6C3]/10 to-[#17B6C3]/5 backdrop-blur-sm border-[#17B6C3]/20 shadow-lg">
                 <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-lg text-gray-800">
+                  <CardTitle className="flex items-center gap-2 text-lg text-foreground">
                     <MessageSquare className="h-5 w-5 text-[#17B6C3]" />
                     Call Summary
                   </CardTitle>
@@ -461,20 +461,20 @@ export function AiCallDialog({
                 <CardContent>
                   <div className="space-y-3 text-sm" data-testid="call-summary">
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Customer:</span>
-                      <span className="text-gray-900 font-medium">{callSummary.customerName}</span>
+                      <span className="text-muted-foreground">Customer:</span>
+                      <span className="text-foreground font-medium">{callSummary.customerName}</span>
                     </div>
                     
                     {callSummary.companyName && (
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Company:</span>
-                        <span className="text-gray-900 font-medium">{callSummary.companyName}</span>
+                        <span className="text-muted-foreground">Company:</span>
+                        <span className="text-foreground font-medium">{callSummary.companyName}</span>
                       </div>
                     )}
                     
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Phone:</span>
-                      <span className="text-gray-900 font-medium">{callSummary.phoneNumber}</span>
+                      <span className="text-muted-foreground">Phone:</span>
+                      <span className="text-foreground font-medium">{callSummary.phoneNumber}</span>
                     </div>
                     
                     <Separator className="my-2" />
@@ -482,18 +482,18 @@ export function AiCallDialog({
                     {callSummary.invoiceNumber && (
                       <>
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Invoice:</span>
-                          <span className="text-gray-900 font-medium">{callSummary.invoiceNumber}</span>
+                          <span className="text-muted-foreground">Invoice:</span>
+                          <span className="text-foreground font-medium">{callSummary.invoiceNumber}</span>
                         </div>
                         
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Amount:</span>
-                          <span className="text-gray-900 font-bold">{callSummary.amount}</span>
+                          <span className="text-muted-foreground">Amount:</span>
+                          <span className="text-foreground font-bold">{callSummary.amount}</span>
                         </div>
                         
                         {callSummary.daysOverdue > 0 && (
                           <div className="flex justify-between">
-                            <span className="text-gray-600">Days Overdue:</span>
+                            <span className="text-muted-foreground">Days Overdue:</span>
                             <span className="text-orange-600 font-medium">{callSummary.daysOverdue} days</span>
                           </div>
                         )}
@@ -503,18 +503,18 @@ export function AiCallDialog({
                     <Separator className="my-2" />
                     
                     <div className="flex justify-between">
-                      <span className="text-gray-600">AI Tone:</span>
-                      <span className="text-gray-900 capitalize">{callConfig.tone}</span>
+                      <span className="text-muted-foreground">AI Tone:</span>
+                      <span className="text-foreground capitalize">{callConfig.tone}</span>
                     </div>
                     
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Personality:</span>
-                      <span className="text-gray-900 capitalize">{callConfig.personality.replace('_', ' ')}</span>
+                      <span className="text-muted-foreground">Personality:</span>
+                      <span className="text-foreground capitalize">{callConfig.personality.replace('_', ' ')}</span>
                     </div>
                     
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Speed:</span>
-                      <span className="text-gray-900 capitalize">{callConfig.speed}</span>
+                      <span className="text-muted-foreground">Speed:</span>
+                      <span className="text-foreground capitalize">{callConfig.speed}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -529,7 +529,7 @@ export function AiCallDialog({
             variant="outline"
             onClick={onClose}
             disabled={callMutation.isPending}
-            className="bg-white/70 backdrop-blur-sm hover:bg-white/90"
+            className="bg-background/70 backdrop-blur-sm hover:bg-background/90"
           >
             Cancel
           </Button>

@@ -185,51 +185,51 @@ const PerformanceTooltip = ({ active, payload, label }: PerformanceTooltipProps)
           <methodConfig.icon className="h-4 w-4 text-[#17B6C3]" />
         </div>
         <div>
-          <p className="font-semibold text-slate-900">{methodConfig.name}</p>
-          <p className="text-xs text-slate-600">{methodConfig.description}</p>
+          <p className="font-semibold text-foreground">{methodConfig.name}</p>
+          <p className="text-xs text-muted-foreground">{methodConfig.description}</p>
         </div>
       </div>
       
       <div className="space-y-2 text-sm">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <span className="text-slate-600">Attempts:</span>
-            <span className="font-medium text-slate-900 ml-2">{data.attempts.toLocaleString()}</span>
+            <span className="text-muted-foreground">Attempts:</span>
+            <span className="font-medium text-foreground ml-2">{data.attempts.toLocaleString()}</span>
           </div>
           <div>
-            <span className="text-slate-600">Successes:</span>
+            <span className="text-muted-foreground">Successes:</span>
             <span className="font-medium text-[#17B6C3] ml-2">{data.successes.toLocaleString()}</span>
           </div>
         </div>
         
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <span className="text-slate-600">Success Rate:</span>
-            <span className="font-medium text-slate-900 ml-2">{data.successRate}%</span>
+            <span className="text-muted-foreground">Success Rate:</span>
+            <span className="font-medium text-foreground ml-2">{data.successRate}%</span>
           </div>
           <div>
-            <span className="text-slate-600">Response Rate:</span>
-            <span className="font-medium text-slate-900 ml-2">{data.responseRate}%</span>
+            <span className="text-muted-foreground">Response Rate:</span>
+            <span className="font-medium text-foreground ml-2">{data.responseRate}%</span>
           </div>
         </div>
         
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <span className="text-slate-600">Total Collected:</span>
+            <span className="text-muted-foreground">Total Collected:</span>
             <span className="font-medium text-green-600 ml-2">${data.totalCollected.toLocaleString()}</span>
           </div>
           <div>
-            <span className="text-slate-600">ROI:</span>
+            <span className="text-muted-foreground">ROI:</span>
             <span className={`font-medium ml-2 ${data.roi > 0 ? 'text-green-600' : 'text-red-600'}`}>
               {data.roi}%
             </span>
           </div>
         </div>
         
-        <div className="pt-2 border-t border-slate-200">
+        <div className="pt-2 border-t border-border">
           <div className="flex items-center justify-between">
-            <span className="text-slate-600">Cost per Success:</span>
-            <span className="font-medium text-slate-900">${data.costPerSuccess.toFixed(2)}</span>
+            <span className="text-muted-foreground">Cost per Success:</span>
+            <span className="font-medium text-foreground">${data.costPerSuccess.toFixed(2)}</span>
           </div>
         </div>
       </div>
@@ -253,11 +253,11 @@ const RadarTooltip = ({ active, payload, label }: RadarTooltipProps) => {
 
   return (
     <div className="glass-card p-3 shadow-lg">
-      <p className="font-semibold text-slate-900 mb-2">{label}</p>
+      <p className="font-semibold text-foreground mb-2">{label}</p>
       {payload.map((entry, index) => (
         <div key={index} className="flex justify-between items-center text-sm">
-          <span className="text-slate-600">{entry.name}:</span>
-          <span className="font-medium text-slate-900 ml-2">
+          <span className="text-muted-foreground">{entry.name}:</span>
+          <span className="font-medium text-foreground ml-2">
             {METRIC_CONFIGS[entry.name as keyof typeof METRIC_CONFIGS]?.format(entry.value) || entry.value}
           </span>
         </div>
@@ -322,7 +322,7 @@ export default function CollectionMethodPerformance() {
             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <AlertTriangle className="h-8 w-8 text-red-600" />
             </div>
-            <p className="text-lg font-semibold text-slate-900 mb-2">Unable to load performance data</p>
+            <p className="text-lg font-semibold text-foreground mb-2">Unable to load performance data</p>
             <p className="text-sm text-muted-foreground">Please try again later</p>
           </div>
         </CardContent>
@@ -346,7 +346,7 @@ export default function CollectionMethodPerformance() {
             <div className="w-16 h-16 bg-[#17B6C3]/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle className="h-8 w-8 text-[#17B6C3]" />
             </div>
-            <p className="text-lg font-semibold text-slate-900 mb-2">No performance data available</p>
+            <p className="text-lg font-semibold text-foreground mb-2">No performance data available</p>
             <p className="text-sm text-muted-foreground">Start collection activities to generate analytics</p>
           </div>
         </CardContent>
@@ -465,10 +465,10 @@ export default function CollectionMethodPerformance() {
                 )}
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">
+                <p className="text-sm font-medium text-muted-foreground mb-1">
                   {metric.title}
                 </p>
-                <p className="text-lg font-bold text-gray-900" data-testid={`${metric.testId}-value`}>
+                <p className="text-lg font-bold text-foreground" data-testid={`${metric.testId}-value`}>
                   {metric.value}
                 </p>
                 <p className="text-xs text-muted-foreground" data-testid={`${metric.testId}-change`}>
@@ -491,7 +491,7 @@ export default function CollectionMethodPerformance() {
           <TabsContent value="performance" className="space-y-6">
             {/* Metric Selection */}
             <div className="flex flex-wrap gap-2">
-              <span className="text-sm font-medium text-slate-700 mr-2 my-2">Compare by:</span>
+              <span className="text-sm font-medium text-foreground mr-2 my-2">Compare by:</span>
               {Object.entries(METRIC_CONFIGS).map(([key, config]) => (
                 <Button
                   key={key}
@@ -510,7 +510,7 @@ export default function CollectionMethodPerformance() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Bar Chart */}
               <div className="glass-card p-6">
-                <h3 className="text-lg font-semibold text-slate-900 mb-4" data-testid="text-bar-chart-title">
+                <h3 className="text-lg font-semibold text-foreground mb-4" data-testid="text-bar-chart-title">
                   Method Comparison - {METRIC_CONFIGS[selectedMetric].label}
                 </h3>
                 <ResponsiveContainer width="100%" height={300}>
@@ -537,7 +537,7 @@ export default function CollectionMethodPerformance() {
 
               {/* Radar Chart */}
               <div className="glass-card p-6">
-                <h3 className="text-lg font-semibold text-slate-900 mb-4" data-testid="text-radar-chart-title">
+                <h3 className="text-lg font-semibold text-foreground mb-4" data-testid="text-radar-chart-title">
                   Multi-Metric Performance Radar
                 </h3>
                 <ResponsiveContainer width="100%" height={300}>
@@ -586,7 +586,7 @@ export default function CollectionMethodPerformance() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Cost Efficiency Chart */}
               <div className="glass-card p-6">
-                <h3 className="text-lg font-semibold text-slate-900 mb-4" data-testid="text-cost-chart-title">
+                <h3 className="text-lg font-semibold text-foreground mb-4" data-testid="text-cost-chart-title">
                   Cost per Successful Collection
                 </h3>
                 <ResponsiveContainer width="100%" height={300}>
@@ -609,7 +609,7 @@ export default function CollectionMethodPerformance() {
 
               {/* Budget Analysis */}
               <div className="glass-card p-6">
-                <h3 className="text-lg font-semibold text-slate-900 mb-4" data-testid="text-budget-analysis-title">
+                <h3 className="text-lg font-semibold text-foreground mb-4" data-testid="text-budget-analysis-title">
                   Budget Utilization Analysis
                 </h3>
                 <div className="space-y-4">
@@ -619,12 +619,12 @@ export default function CollectionMethodPerformance() {
                                            cost.budgetUtilization > 70 ? 'text-amber-600' : 'text-green-600';
                     
                     return (
-                      <div key={index} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                      <div key={index} className="flex items-center justify-between p-3 bg-muted dark:bg-slate-800 rounded-lg">
                         <div className="flex items-center space-x-3">
                           <methodConfig.icon className="h-5 w-5 text-[#17B6C3]" />
                           <div>
-                            <p className="font-medium text-slate-900">{methodConfig.name}</p>
-                            <p className="text-sm text-slate-600">
+                            <p className="font-medium text-foreground">{methodConfig.name}</p>
+                            <p className="text-sm text-muted-foreground">
                               ${cost.actualSpent.toLocaleString()} / ${cost.monthlyBudget.toLocaleString()}
                             </p>
                           </div>
@@ -633,7 +633,7 @@ export default function CollectionMethodPerformance() {
                           <p className={`font-medium ${utilizationColor}`}>
                             {cost.budgetUtilization}%
                           </p>
-                          <p className="text-xs text-slate-600">utilized</p>
+                          <p className="text-xs text-muted-foreground">utilized</p>
                         </div>
                       </div>
                     );
@@ -648,7 +648,7 @@ export default function CollectionMethodPerformance() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Performance Benchmarks */}
               <div className="glass-card p-6">
-                <h3 className="text-lg font-semibold text-slate-900 mb-4" data-testid="text-benchmark-title">
+                <h3 className="text-lg font-semibold text-foreground mb-4" data-testid="text-benchmark-title">
                   Industry Benchmarks Comparison
                 </h3>
                 <div className="space-y-4">
@@ -664,16 +664,16 @@ export default function CollectionMethodPerformance() {
                         case 'good': return 'text-blue-600 bg-blue-100';
                         case 'average': return 'text-amber-600 bg-amber-100';
                         case 'below_average': return 'text-red-600 bg-red-100';
-                        default: return 'text-slate-600 bg-slate-100';
+                        default: return 'text-muted-foreground bg-muted';
                       }
                     };
                     
                     return (
-                      <div key={index} className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                      <div key={index} className="p-4 bg-muted dark:bg-slate-800 rounded-lg">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center space-x-2">
                             <methodConfig.icon className="h-4 w-4 text-[#17B6C3]" />
-                            <span className="font-medium text-slate-900">{methodConfig.name}</span>
+                            <span className="font-medium text-foreground">{methodConfig.name}</span>
                           </div>
                           <Badge 
                             className={`text-xs ${getRankingColor(benchmark.ranking)}`}
@@ -684,15 +684,15 @@ export default function CollectionMethodPerformance() {
                         </div>
                         <div className="grid grid-cols-3 gap-4 text-sm">
                           <div>
-                            <p className="text-slate-600">Your Performance</p>
-                            <p className="font-medium text-slate-900">{performance}%</p>
+                            <p className="text-muted-foreground">Your Performance</p>
+                            <p className="font-medium text-foreground">{performance}%</p>
                           </div>
                           <div>
-                            <p className="text-slate-600">Industry Average</p>
-                            <p className="font-medium text-slate-900">{industry}%</p>
+                            <p className="text-muted-foreground">Industry Average</p>
+                            <p className="font-medium text-foreground">{industry}%</p>
                           </div>
                           <div>
-                            <p className="text-slate-600">Variance</p>
+                            <p className="text-muted-foreground">Variance</p>
                             <p className={`font-medium ${variance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                               {variance >= 0 ? '+' : ''}{variance}%
                             </p>
@@ -706,7 +706,7 @@ export default function CollectionMethodPerformance() {
 
               {/* Method Trends */}
               <div className="glass-card p-6">
-                <h3 className="text-lg font-semibold text-slate-900 mb-4" data-testid="text-trends-title">
+                <h3 className="text-lg font-semibold text-foreground mb-4" data-testid="text-trends-title">
                   Performance Trends
                 </h3>
                 <div className="space-y-4">
@@ -715,15 +715,15 @@ export default function CollectionMethodPerformance() {
                     const TrendIcon = method.trend === 'improving' ? TrendingUp : 
                                      method.trend === 'declining' ? TrendingDown : Activity;
                     const trendColor = method.trend === 'improving' ? 'text-green-600' : 
-                                      method.trend === 'declining' ? 'text-red-600' : 'text-slate-600';
+                                      method.trend === 'declining' ? 'text-red-600' : 'text-muted-foreground';
                     
                     return (
-                      <div key={index} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                      <div key={index} className="flex items-center justify-between p-3 bg-muted dark:bg-slate-800 rounded-lg">
                         <div className="flex items-center space-x-3">
                           <methodConfig.icon className="h-5 w-5 text-[#17B6C3]" />
                           <div>
-                            <p className="font-medium text-slate-900">{methodConfig.name}</p>
-                            <p className="text-sm text-slate-600 capitalize">{method.trend} trend</p>
+                            <p className="font-medium text-foreground">{methodConfig.name}</p>
+                            <p className="text-sm text-muted-foreground capitalize">{method.trend} trend</p>
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
@@ -744,7 +744,7 @@ export default function CollectionMethodPerformance() {
         {/* Recommendations Section */}
         {recommendations.length > 0 && (
           <div className="glass-card p-6">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center" data-testid="text-recommendations-title">
+            <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center" data-testid="text-recommendations-title">
               <Lightbulb className="h-5 w-5 text-[#17B6C3] mr-2" />
               Strategic Recommendations
             </h3>
@@ -779,9 +779,9 @@ export default function CollectionMethodPerformance() {
                         +{rec.expectedImprovement}% improvement
                       </span>
                     </div>
-                    <h4 className="font-semibold text-slate-900 mb-1">{rec.action}</h4>
-                    <p className="text-sm text-slate-700 mb-2">{rec.reason}</p>
-                    <div className="flex justify-between items-center text-xs text-slate-600">
+                    <h4 className="font-semibold text-foreground mb-1">{rec.action}</h4>
+                    <p className="text-sm text-foreground mb-2">{rec.reason}</p>
+                    <div className="flex justify-between items-center text-xs text-muted-foreground">
                       <span>Cost: ${rec.implementationCost.toLocaleString()}</span>
                       <span>Timeline: {rec.timeframe}</span>
                     </div>

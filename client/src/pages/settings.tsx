@@ -1287,8 +1287,8 @@ function DemoDataTabContent() {
           <div className="animate-pulse flex flex-wrap gap-x-16 gap-y-6">
             {[1, 2, 3, 4].map((i) => (
               <div key={i} className="space-y-2">
-                <div className="h-4 w-16 bg-gray-200 rounded-lg"></div>
-                <div className="h-8 w-20 bg-gray-200 rounded-lg"></div>
+                <div className="h-4 w-16 bg-muted rounded-lg"></div>
+                <div className="h-8 w-20 bg-muted rounded-lg"></div>
               </div>
             ))}
           </div>
@@ -1546,8 +1546,8 @@ function AutomationTabContent() {
   if (isLoading) {
     return (
       <div className="animate-pulse space-y-4">
-        <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-        <div className="h-64 bg-gray-200 rounded"></div>
+        <div className="h-8 bg-muted rounded w-1/4"></div>
+        <div className="h-64 bg-muted rounded"></div>
       </div>
     );
   }

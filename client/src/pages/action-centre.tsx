@@ -406,20 +406,20 @@ export default function ActionCentreV2() {
   };
 
   return (
-    <div className="flex h-screen bg-white">
+    <div className="flex h-screen bg-background">
       <div className="hidden lg:block">
         <NewSidebar />
       </div>
       
       <main className="flex-1 overflow-y-auto main-with-bottom-nav">
         {/* Combined sticky header with title + tabs */}
-        <div className="sticky top-0 z-40 bg-white">
+        <div className="sticky top-0 z-40 bg-background">
           {/* Title row */}
-          <div className="px-6 lg:px-8 py-5 border-b border-slate-100">
+          <div className="px-6 lg:px-8 py-5 border-b border-border/50">
             <div className="hidden lg:flex items-center justify-between">
               <div>
-                <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight">Action Centre</h2>
-                <p className="text-[13px] text-slate-400 mt-0.5">
+                <h2 className="text-[17px] font-semibold text-foreground tracking-tight">Action Centre</h2>
+                <p className="text-[13px] text-muted-foreground mt-0.5">
                   {activeTab === 'planned' && dailyPlan?.tenantPolicies?.executionTime 
                     ? `Today's Plan · Executes at ${dailyPlan.tenantPolicies.executionTime}`
                     : activeTab === 'planned' ? "Today's Plan"
@@ -432,15 +432,15 @@ export default function ActionCentreV2() {
                 </p>
               </div>
               <div className="flex items-center gap-4">
-                <span className="text-[11px] text-slate-400">All figures are in £ GBP</span>
+                <span className="text-[11px] text-muted-foreground">All figures are in £ GBP</span>
                 <div className="relative w-[240px]">
-                  <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-slate-300" />
+                  <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                   <input
                     type="text"
                     placeholder="Search..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="w-full pl-8 pr-3 h-8 text-[12px] text-slate-600 placeholder:text-slate-300 bg-transparent border border-slate-200/60 rounded focus:outline-none focus:border-slate-300 transition-colors"
+                    className="w-full pl-8 pr-3 h-8 text-[12px] text-muted-foreground placeholder:text-muted-foreground bg-transparent border border-border/60 rounded focus:outline-none focus:border-border transition-colors"
                     data-testid="input-search-action-centre"
                   />
                 </div>
@@ -448,7 +448,7 @@ export default function ActionCentreV2() {
                   <button
                     onClick={() => approvePlanMutation.mutate()}
                     disabled={approvePlanMutation.isPending || (dailyPlan?.actions?.filter((a: any) => a.status === 'pending_approval').length || 0) === 0}
-                    className="h-8 px-4 text-[13px] font-medium bg-slate-900 hover:bg-slate-800 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="h-8 px-4 text-[13px] font-medium bg-foreground text-background hover:bg-foreground/90 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     {approvePlanMutation.isPending ? 'Approving...' : `Approve All`}
                   </button>
@@ -457,12 +457,12 @@ export default function ActionCentreV2() {
             </div>
             {/* Mobile title */}
             <div className="lg:hidden text-center">
-              <h2 className="text-xl font-semibold text-slate-900">Action Centre</h2>
+              <h2 className="text-xl font-semibold text-foreground">Action Centre</h2>
             </div>
           </div>
           
           {/* Tabs row */}
-          <div className="bg-white border-b border-slate-100 px-6 lg:px-8">
+          <div className="bg-background border-b border-border/50 px-6 lg:px-8">
             <div className="flex items-center gap-2">
               {TABS.map(tab => (
                 <button
@@ -470,8 +470,8 @@ export default function ActionCentreV2() {
                   onClick={() => setActiveTab(tab.id)}
                   className={`px-4 py-3 text-[13px] font-medium transition-colors relative ${
                     activeTab === tab.id
-                      ? 'text-slate-900'
-                      : 'text-slate-400 hover:text-slate-600'
+                      ? 'text-foreground'
+                      : 'text-muted-foreground hover:text-muted-foreground'
                   }`}
                 >
                   {tab.label}
@@ -484,7 +484,7 @@ export default function ActionCentreV2() {
           </div>
         </div>
 
-        <div className="p-6 lg:p-8 space-y-6 bg-white min-h-[calc(100vh-140px)]">
+        <div className="p-6 lg:p-8 space-y-6 bg-background min-h-[calc(100vh-140px)]">
 
           {activeTab === 'planned' && (
             <PlannedTabContent
@@ -553,33 +553,33 @@ export default function ActionCentreV2() {
             <div className="mt-6 space-y-4">
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">Outstanding</span>
+                  <span className="text-muted-foreground">Outstanding</span>
                   <span className="font-medium tabular-nums">{formatCurrency(selectedDebtor.totalOutstanding)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">Invoices</span>
+                  <span className="text-muted-foreground">Invoices</span>
                   <span>{selectedDebtor.invoiceCount}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">Oldest Overdue</span>
+                  <span className="text-muted-foreground">Oldest Overdue</span>
                   <span>{selectedDebtor.oldestDaysOverdue} days</span>
                 </div>
                 {selectedDebtor.ptpDate && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">Promise to Pay</span>
+                    <span className="text-muted-foreground">Promise to Pay</span>
                     <span>{new Date(selectedDebtor.ptpDate).toLocaleDateString('en-GB')}</span>
                   </div>
                 )}
               </div>
               {selectedDebtor.email && (
                 <div className="pt-4 border-t">
-                  <span className="text-xs text-slate-400">Email</span>
+                  <span className="text-xs text-muted-foreground">Email</span>
                   <p className="text-sm">{selectedDebtor.email}</p>
                 </div>
               )}
               {selectedDebtor.phone && (
                 <div>
-                  <span className="text-xs text-slate-400">Phone</span>
+                  <span className="text-xs text-muted-foreground">Phone</span>
                   <p className="text-sm">{selectedDebtor.phone}</p>
                 </div>
               )}
@@ -751,9 +751,9 @@ function PlannedTabContent({
   if (isLoading) {
     return (
       <div className="space-y-1">
-        <div className="h-10 bg-slate-50 animate-pulse" />
+        <div className="h-10 bg-muted animate-pulse" />
         {[...Array(6)].map((_, i) => (
-          <div key={i} className="h-12 bg-slate-50/50 animate-pulse" />
+          <div key={i} className="h-12 bg-muted/50 animate-pulse" />
         ))}
       </div>
     );
@@ -762,13 +762,13 @@ function PlannedTabContent({
   if (!dailyPlan || dailyPlan.actions.length === 0) {
     return (
       <div className="py-16 text-center">
-        <Clock className="h-12 w-12 mx-auto mb-4 text-slate-300" />
-        <p className="text-slate-600 font-medium">No planned actions</p>
-        <p className="text-slate-400 text-sm mt-1 mb-6">AI generates action plans based on your overdue invoices</p>
+        <Clock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+        <p className="text-muted-foreground font-medium">No planned actions</p>
+        <p className="text-muted-foreground text-sm mt-1 mb-6">AI generates action plans based on your overdue invoices</p>
         <Button
           onClick={onGeneratePlan}
           disabled={isGenerating}
-          className="bg-slate-900 hover:bg-slate-800 text-white"
+          className="bg-foreground text-background hover:bg-foreground/90"
         >
           <RefreshCw className={`h-4 w-4 mr-2 ${isGenerating ? 'animate-spin' : ''}`} />
           {isGenerating ? 'Generating...' : 'Generate Plan Now'}
@@ -788,7 +788,7 @@ function PlannedTabContent({
   return (
     <div className="flex flex-col h-[calc(100vh-220px)]">
       <div className="flex items-center justify-between pb-2 flex-shrink-0">
-        <p className="text-[13px] text-slate-400">
+        <p className="text-[13px] text-muted-foreground">
           {statsLine}
         </p>
         <div className="flex items-center gap-1">
@@ -798,8 +798,8 @@ function PlannedTabContent({
               onClick={() => setChannelFilter(ch)}
               className={`px-2.5 py-1 text-[12px] font-medium transition-colors rounded ${
                 channelFilter === ch 
-                  ? 'bg-slate-100 text-slate-900' 
-                  : 'text-slate-400 hover:text-slate-600'
+                  ? 'bg-muted text-foreground' 
+                  : 'text-muted-foreground hover:text-muted-foreground'
               }`}
             >
               {ch === 'all' ? 'All' : ch === 'sms' ? 'SMS' : ch.charAt(0).toUpperCase() + ch.slice(1)}
@@ -809,14 +809,14 @@ function PlannedTabContent({
       </div>
 
       {hasSelection && (
-        <div className="sticky top-0 z-10 py-3 flex items-center justify-between border-y border-slate-100 bg-white">
+        <div className="sticky top-0 z-10 py-3 flex items-center justify-between border-y border-border/50 bg-background">
           <div className="flex items-center gap-3">
-            <span className="text-[13px] font-medium text-slate-700">
+            <span className="text-[13px] font-medium text-foreground">
               {selectedIds.size} selected
             </span>
             <button
               onClick={clearSelection}
-              className="text-[12px] text-slate-400 hover:text-slate-600"
+              className="text-[12px] text-muted-foreground hover:text-muted-foreground"
             >
               Clear
             </button>
@@ -824,13 +824,13 @@ function PlannedTabContent({
           <div className="flex items-center gap-2">
             <Popover open={isBulkSkipOpen} onOpenChange={setIsBulkSkipOpen}>
               <PopoverTrigger asChild>
-                <button className="px-3 py-1.5 text-[12px] font-medium text-slate-600 hover:bg-slate-50 rounded transition-colors">
+                <button className="px-3 py-1.5 text-[12px] font-medium text-muted-foreground hover:bg-muted rounded transition-colors">
                   Skip
                 </button>
               </PopoverTrigger>
               <PopoverContent className="w-48 p-3" align="end">
                 <form onSubmit={handleBulkSkipSubmit} className="space-y-2">
-                  <label className="text-[12px] text-slate-500">Skip for how many days?</label>
+                  <label className="text-[12px] text-muted-foreground">Skip for how many days?</label>
                   <Input
                     type="number"
                     min="1"
@@ -858,25 +858,25 @@ function PlannedTabContent({
 
       {filteredActions.length === 0 ? (
         <div className="py-16 text-center flex-1">
-          <p className="text-slate-400 text-[13px]">No actions match filters</p>
+          <p className="text-muted-foreground text-[13px]">No actions match filters</p>
         </div>
       ) : (
         <>
           <div className="overflow-auto flex-1">
             <table className="w-full">
               <thead className="sticky top-0 z-20">
-                <tr className="border-b border-slate-200 bg-slate-50 h-16">
-                  <th className="w-10 px-3 text-left bg-slate-50 align-middle">
+                <tr className="border-b border-border bg-muted h-16">
+                  <th className="w-10 px-3 text-left bg-muted align-middle">
                     <Checkbox
                       checked={allSelected}
                       onCheckedChange={(checked) => handleSelectAll(checked as boolean)}
                     />
                   </th>
-                  <th className="px-3 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">Customer</th>
-                  <th className="px-3 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider w-16 bg-slate-50 align-middle">Channel</th>
-                  <th className="px-3 text-right text-[11px] font-medium text-slate-600 uppercase tracking-wider w-20 bg-slate-50 align-middle">Overdue</th>
-                  <th className="px-3 text-right text-[11px] font-medium text-slate-600 uppercase tracking-wider w-20 bg-slate-50 align-middle">Invoices</th>
-                  <th className="px-3 text-right text-[11px] font-medium text-slate-600 uppercase tracking-wider w-28 bg-slate-50 align-middle">Amount</th>
+                  <th className="px-3 text-left text-[11px] font-medium text-muted-foreground uppercase tracking-wider bg-muted align-middle">Customer</th>
+                  <th className="px-3 text-left text-[11px] font-medium text-muted-foreground uppercase tracking-wider w-16 bg-muted align-middle">Channel</th>
+                  <th className="px-3 text-right text-[11px] font-medium text-muted-foreground uppercase tracking-wider w-20 bg-muted align-middle">Overdue</th>
+                  <th className="px-3 text-right text-[11px] font-medium text-muted-foreground uppercase tracking-wider w-20 bg-muted align-middle">Invoices</th>
+                  <th className="px-3 text-right text-[11px] font-medium text-muted-foreground uppercase tracking-wider w-28 bg-muted align-middle">Amount</th>
                 </tr>
               </thead>
               <tbody>
@@ -884,8 +884,8 @@ function PlannedTabContent({
                   <tr 
                     key={item.id}
                     onClick={() => onPreviewAction(item)}
-                    className={`group border-b border-slate-200 cursor-pointer transition-colors ${
-                      selectedIds.has(item.id) ? 'bg-slate-100' : 'hover:bg-slate-100'
+                    className={`group border-b border-border cursor-pointer transition-colors ${
+                      selectedIds.has(item.id) ? 'bg-muted' : 'hover:bg-muted'
                     }`}
                   >
                     <td className="py-[5px] px-3" onClick={(e) => e.stopPropagation()}>
@@ -895,28 +895,28 @@ function PlannedTabContent({
                       />
                     </td>
                     <td className="py-[5px] px-3">
-                      <div className="text-[13px] font-medium text-slate-900">
+                      <div className="text-[13px] font-medium text-foreground">
                         {item.companyName || item.contactName || 'Unknown'}
                       </div>
                       {item.companyName && item.contactName && (
-                        <div className="text-[12px] text-slate-400">
+                        <div className="text-[12px] text-muted-foreground">
                           {item.contactName}
                         </div>
                       )}
                     </td>
                     <td className="py-[5px] px-3">
-                      <span className="text-[13px] text-slate-400">
+                      <span className="text-[13px] text-muted-foreground">
                         {getChannelLabel(item.actionType)}
                       </span>
                     </td>
                     <td className="py-[5px] px-3 text-right">
-                      <span className="text-[13px] tabular-nums text-slate-500">{item.daysOverdue}d</span>
+                      <span className="text-[13px] tabular-nums text-muted-foreground">{item.daysOverdue}d</span>
                     </td>
                     <td className="py-[5px] px-3 text-right">
-                      <span className="text-[13px] tabular-nums text-slate-500">{item.invoiceCount || 1}</span>
+                      <span className="text-[13px] tabular-nums text-muted-foreground">{item.invoiceCount || 1}</span>
                     </td>
                     <td className="py-[5px] px-3 text-right">
-                      <span className="text-[13px] font-medium tabular-nums text-slate-900">
+                      <span className="text-[13px] font-medium tabular-nums text-foreground">
                         {formatCurrency(parseFloat(item.amount))}
                       </span>
                     </td>
@@ -929,14 +929,14 @@ function PlannedTabContent({
           {/* Footer with pagination */}
           <div className="flex items-center justify-end pt-2 flex-shrink-0">
             {filteredActions.length > 0 && (
-              <div className="flex items-center gap-4 text-[12px] text-slate-500">
+              <div className="flex items-center gap-4 text-[12px] text-muted-foreground">
                 {/* Rows per page selector */}
                 <div className="flex items-center gap-2">
-                  <span className="text-slate-400">Rows:</span>
+                  <span className="text-muted-foreground">Rows:</span>
                   <select
                     value={itemsPerPage}
                     onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                    className="bg-white border border-slate-200 rounded px-2 py-1 text-[12px] text-slate-600 cursor-pointer hover:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-300"
+                    className="bg-background border border-border rounded px-2 py-1 text-[12px] text-muted-foreground cursor-pointer hover:border-border focus:outline-none focus:ring-1 focus:ring-slate-300"
                   >
                     {PAGE_SIZE_OPTIONS.map(size => (
                       <option key={size} value={size}>{size}</option>
@@ -950,7 +950,7 @@ function PlannedTabContent({
                     <button
                       onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                       disabled={currentPage === 1}
-                      className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                     >
                       <ChevronLeft className="w-4 h-4" />
                     </button>
@@ -960,7 +960,7 @@ function PlannedTabContent({
                     <button
                       onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                       disabled={currentPage === totalPages}
-                      className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                     >
                       <ChevronRight className="w-4 h-4" />
                     </button>

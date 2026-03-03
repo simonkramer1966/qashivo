@@ -1,23 +1,56 @@
-import { Express } from "express";
+import type { Express } from "express";
 import { storage } from "../storage";
-import { isAuthenticated } from "../auth";
-import { withPermission } from "../middleware/rbac";
-import { z } from "zod";
+import { isAuthenticated, isOwner } from "../auth";
+import { logSecurityEvent, extractClientInfo } from "../services/securityAuditService";
+import { sanitizeObject, stripSensitiveUserFields, stripSensitiveTenantFields, stripSensitiveFields } from "../utils/sanitize";
+import { withPermission, withRole, withMinimumRole, canManageUser, withRBACContext } from "../middleware/rbac";
 import { 
-  invoices, 
-  promisesToPay, 
-  paymentPlans, 
-  insertInvoiceSchema 
+  insertContactSchema, insertContactNoteSchema, insertInvoiceSchema, 
+  insertActionSchema, insertWorkflowSchema, insertCommunicationTemplateSchema,
+  insertEscalationRuleSchema, insertChannelAnalyticsSchema, insertWorkflowTemplateSchema,
+  insertVoiceCallSchema, insertBillSchema, insertBankAccountSchema,
+  insertBankTransactionSchema, insertBudgetSchema, insertExchangeRateSchema,
+  insertActionItemSchema, insertActionLogSchema, insertPaymentPromiseSchema,
+  insertPartnerSchema, insertUserContactAssignmentSchema, insertScheduledReportSchema,
+  type Invoice, type Contact, type ContactNote, type Bill, type BankAccount,
+  type BankTransaction, type Budget, type ExchangeRate, type ActionItem,
+  type ActionLog, type PaymentPromise,
+  invoices, contacts, actions, disputes, bankTransactions, customerLearningProfiles,
+  inboundMessages, smsMessages, investorLeads, onboardingProgress, messageDrafts,
+  tenants, paymentPromises, promisesToPay, smeClients, contactNotes, timelineEvents,
+  attentionItems, outcomes, activityLogs, collectionPolicies, paymentPlans,
+  emailMessages, customerContactPersons, scheduledReports,
 } from "@shared/schema";
-import { db } from "../db";
-import { eq, and, inArray, isNotNull, desc } from "drizzle-orm";
-import { hasContactAccess } from "./routeHelpers";
-import { calculateLatePaymentInterest } from "../utils/interestCalculator";
+import { computeNextRunAt } from "../services/reportScheduler";
+import { REPORT_TYPE_LABELS, type ReportType } from "../services/reportGenerator";
 import { getOverdueCategoryFromDueDate } from "@shared/utils/overdueUtils";
-import { formatDate } from "../../shared/utils/dateFormatter";
+import { calculateLatePaymentInterest } from "../utils/interestCalculator";
+import { eq, and, desc, asc, sql, count, avg, gte, lte, lt, inArray, or, isNull, isNotNull, gt, not } from 'drizzle-orm';
+import { db } from '../db';
+import { z } from "zod";
+import { generateCollectionSuggestions, generateEmailDraft, generateAiCfoResponse } from "../services/openai";
+import { sendReminderEmail, DEFAULT_FROM, DEFAULT_FROM_EMAIL } from "../services/sendgrid";
+import { sendPaymentReminderSMS } from "../services/vonage";
+import { ActionPrioritizationService } from "../services/actionPrioritizationService";
+import { formatDate } from "@shared/utils/dateFormatter";
+import { xeroService } from "../services/xero";
+import { onboardingService } from "../services/onboardingService";
+import { XeroSyncService } from "../services/xeroSync";
+import { generateMockData } from "../mock-data";
+import { retellService } from "../retell-service";
+import { createRetellClient } from "../mcp/client";
+import { normalizeDynamicVariables, logVariableTransformation } from "../utils/retellVariableNormalizer";
+import { Retell } from "retell-sdk";
+import Stripe from "stripe";
+import { cleanEmailContent } from "../services/messagePostProcessor";
+import { subscriptionService } from "../services/subscriptionService";
+import { getDashboardMetrics } from "../services/metricsService";
+import { computeCashInflow } from "../services/dashboardCashInflowService";
+import { PermissionService } from "../services/permissionService";
 import { signalCollector } from "../lib/signal-collector";
+import { getAssignedContactIds, hasContactAccess } from "./routeHelpers";
 
-// Additional Zod validation schemas
+
 const invoicesQuerySchema = z.object({
   status: z.enum(['pending', 'overdue', 'paid', 'cancelled', 'open', 'all']).optional().default('open'),
   search: z.string().optional(),
@@ -29,10 +62,7 @@ const invoicesQuerySchema = z.object({
   limit: z.string().optional().default('50').transform(Number)
 });
 
-const DEFAULT_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'hello@qashivo.com';
-
 export function registerInvoiceRoutes(app: Express): void {
-  // Interest calculation endpoint
   app.get("/api/invoices/interest-summary", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -99,7 +129,6 @@ export function registerInvoiceRoutes(app: Express): void {
     }
   });
 
-  // Invoice routes - Optimized with server-side filtering
   app.get("/api/invoices", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -112,10 +141,9 @@ export function registerInvoiceRoutes(app: Express): void {
       const validatedQuery = invoicesQuerySchema.parse(req.query);
       const { status, search, overdue, contactId, sortBy, sortDir, page, limit } = validatedQuery;
 
-      const { getAssignedContactIds } = await import("./routeHelpers");
       const allowedContactIds = await getAssignedContactIds(user);
 
-      console.log(`\u{1F4CA} Optimized Invoices API - Tenant: ${user.tenantId}, Filters: status=${status}, search="${search}", overdue=${overdue}, sortBy=${sortBy}, sortDir=${sortDir}, page=${page}, limit=${limit}${allowedContactIds ? `, restricted to ${allowedContactIds.length} assigned contacts` : ''}`);
+      console.log(`📊 Optimized Invoices API - Tenant: ${user.tenantId}, Filters: status=${status}, search="${search}", overdue=${overdue}, sortBy=${sortBy}, sortDir=${sortDir}, page=${page}, limit=${limit}${allowedContactIds ? `, restricted to ${allowedContactIds.length} assigned contacts` : ''}`);
       
       // Call optimized storage method with server-side filtering
       const result = await storage.getInvoicesFiltered(user.tenantId, {
@@ -200,7 +228,7 @@ export function registerInvoiceRoutes(app: Express): void {
       
       // Calculate EPD for each invoice
       type EpdConfidence = 'high' | 'medium' | 'low';
-      type EpdSource = 'ptp' | 'plan' | 'history' | 'due_date' | 'adjusted';
+      type EpdSource = 'ptp' | 'plan' | 'history' | 'due_date';
       
       const calculateEpd = (invoice: any): { date: string; confidence: EpdConfidence; source: EpdSource; sourceLabel: string } => {
         // 1. Check for active PTP (highest confidence)
@@ -313,7 +341,7 @@ export function registerInvoiceRoutes(app: Express): void {
         }
       });
       
-      console.log(`\u{1F4CA} Server-side filtered results: ${invoicesWithCategories.length}/${result.total} invoices (filtered from ${systemTotal} total)`);
+      console.log(`📊 Server-side filtered results: ${invoicesWithCategories.length}/${result.total} invoices (filtered from ${systemTotal} total)`);
       
       // Get all filtered invoices to calculate aggregates (not just current page)
       const allFilteredResult = await storage.getInvoicesFiltered(user.tenantId, {
@@ -469,7 +497,6 @@ export function registerInvoiceRoutes(app: Express): void {
     }
   });
 
-  // Hold invoice endpoint
   app.put("/api/invoices/:id/hold", ...withPermission('invoices:edit'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -488,7 +515,6 @@ export function registerInvoiceRoutes(app: Express): void {
     }
   });
 
-  // Unhold invoice endpoint
   app.put("/api/invoices/:id/unhold", ...withPermission('invoices:edit'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -507,7 +533,6 @@ export function registerInvoiceRoutes(app: Express): void {
     }
   });
 
-  // Mark invoice as paid and send thank you SMS
   app.post("/api/invoices/:id/mark-paid", ...withPermission('invoices:edit'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -547,12 +572,12 @@ export function registerInvoiceRoutes(app: Express): void {
         paidDate: new Date(),
         isPartial: false,
       }).catch((err: Error) => {
-        console.error('\u{274C} Failed to record payment signal from manual mark-paid:', err);
+        console.error('❌ Failed to record payment signal from manual mark-paid:', err);
       });
 
-      console.log(`\u{1F4CA} Triggered payment signal collection for invoice ${invoice.id} from manual mark-paid`);
+      console.log(`📊 Triggered payment signal collection for invoice ${invoice.id} from manual mark-paid`);
 
-      import('../services/emailCommunications.js').then(({ sendPaymentThankYouEmail }) => {
+      import('./services/emailCommunications.js').then(({ sendPaymentThankYouEmail }) => {
         sendPaymentThankYouEmail(invoice.id, user.tenantId).catch(err =>
           console.error(`[ThankYou] Failed for invoice ${invoice.id}:`, err.message)
         );
@@ -565,7 +590,7 @@ export function registerInvoiceRoutes(app: Express): void {
         
         const thankYouMessage = `Thank you for your payment of ${amount} for invoice ${invoice.invoiceNumber}! We really appreciate your business.`;
 
-        const vonageService = await import('../services/vonage.js');
+        const vonageService = await import('./services/vonage.js');
         const smsResult = await vonageService.sendSMS({
           to: contact.phone,
           message: thankYouMessage,
@@ -598,7 +623,6 @@ export function registerInvoiceRoutes(app: Express): void {
     }
   });
 
-  // Pause invoice (dispute, PTP, payment plan)
   app.post("/api/invoices/:id/pause", ...withPermission('invoices:edit'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -624,7 +648,7 @@ export function registerInvoiceRoutes(app: Express): void {
         return res.status(404).json({ message: "Invoice not found" });
       }
 
-      const { pauseManager } = await import('../lib/pause-manager.js');
+      const { pauseManager } = await import('./lib/pause-manager.js');
       
       await pauseManager.pauseInvoice({
         invoiceId,
@@ -642,7 +666,6 @@ export function registerInvoiceRoutes(app: Express): void {
     }
   });
 
-  // Resume invoice (clear pause state)
   app.post("/api/invoices/:id/resume", ...withPermission('invoices:edit'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -662,7 +685,7 @@ export function registerInvoiceRoutes(app: Express): void {
         return res.status(404).json({ message: "Invoice not found" });
       }
 
-      const { pauseManager } = await import('../lib/pause-manager.js');
+      const { pauseManager } = await import('./lib/pause-manager.js');
       
       await pauseManager.resumeInvoice({
         invoiceId,
@@ -677,7 +700,6 @@ export function registerInvoiceRoutes(app: Express): void {
     }
   });
 
-  // Get invoice pause status
   app.get("/api/invoices/:id/pause-status", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -692,7 +714,7 @@ export function registerInvoiceRoutes(app: Express): void {
         return res.status(404).json({ message: "Invoice not found" });
       }
 
-      const { pauseManager } = await import('../lib/pause-manager.js');
+      const { pauseManager } = await import('./lib/pause-manager.js');
       
       const pauseDetails = await pauseManager.getPauseDetails(invoiceId, user.tenantId);
 
@@ -706,7 +728,6 @@ export function registerInvoiceRoutes(app: Express): void {
     }
   });
 
-  // Send SMS for invoice with template selection
   app.post("/api/invoices/:id/send-sms", ...withPermission('collections:sms'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -747,7 +768,7 @@ export function registerInvoiceRoutes(app: Express): void {
       const firstName = nameParts[0] || invoice.contact.name || "Customer";
       const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : "";
       const companyName = invoice.contact.companyName || "";
-      const amount = `\u00A3${Number(invoice.amount).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      const amount = `£${Number(invoice.amount).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
       const dueDate = new Date(invoice.dueDate).toLocaleDateString('en-GB');
       const today = new Date();
       const due = new Date(invoice.dueDate);
@@ -766,7 +787,7 @@ export function registerInvoiceRoutes(app: Express): void {
         .replace(/{daysOverdue}/g, daysOverdue.toString());
 
       // Send via Vonage
-      const vonageService = await import('../services/vonage.js');
+      const vonageService = await import('./services/vonage.js');
       const result = await vonageService.sendSMS({
         to: invoice.contact.phone,
         message: message,
@@ -792,7 +813,7 @@ export function registerInvoiceRoutes(app: Express): void {
         };
 
         await storage.createSmsMessage(smsData);
-        console.log("\u2705 SMS saved to database");
+        console.log("✅ SMS saved to database");
 
         // Log the action
         await storage.createAction({
@@ -831,7 +852,6 @@ export function registerInvoiceRoutes(app: Express): void {
     }
   });
 
-  // Initiate AI voice call for invoice
   app.post("/api/invoices/:id/initiate-voice-call", ...withPermission('collections:voice'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -849,7 +869,7 @@ export function registerInvoiceRoutes(app: Express): void {
       }
 
       // Import agent manager
-      const { getAgentManager } = await import('../services/agentManager.js');
+      const { getAgentManager } = await import('./services/agentManager.js');
       const agentManager = getAgentManager();
 
       // Get invoice with contact details
@@ -877,7 +897,7 @@ export function registerInvoiceRoutes(app: Express): void {
       const customerName = invoice.contact.name || invoice.contact.companyName || "Customer";
       const nameParts = (invoice.contact.name || "").split(' ');
       const firstName = nameParts[0] || invoice.contact.name || "Customer";
-      const amount = `\u00A3${Number(invoice.amount).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      const amount = `£${Number(invoice.amount).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
       const dueDate = new Date(invoice.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 
       const dynamicVariables = {
@@ -912,7 +932,7 @@ export function registerInvoiceRoutes(app: Express): void {
       }
 
       // Import and use RetellService
-      const { RetellService } = await import('../retell-service.js');
+      const { RetellService } = await import('./retell-service.js');
       const retellService = new RetellService();
 
       // Initiate call
@@ -930,7 +950,7 @@ export function registerInvoiceRoutes(app: Express): void {
         },
       });
 
-      console.log(`\u{1F4DE} AI voice call initiated: ${callResult.callId} to ${invoice.contact.phone}`);
+      console.log(`📞 AI voice call initiated: ${callResult.callId} to ${invoice.contact.phone}`);
 
       // Log the action
       await storage.createAction({
@@ -978,7 +998,6 @@ export function registerInvoiceRoutes(app: Express): void {
     }
   });
 
-  // Get outstanding invoices for a specific contact (for payment plan creation)
   app.get("/api/invoices/outstanding/:contactId", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -1025,7 +1044,6 @@ export function registerInvoiceRoutes(app: Express): void {
     }
   });
 
-  // Apply for invoice finance advance
   app.post("/api/invoices/:invoiceId/apply-advance", ...withPermission('invoices:edit'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -1099,7 +1117,6 @@ export function registerInvoiceRoutes(app: Express): void {
     }
   });
 
-  // Accept insurance coverage for an invoice
   app.post("/api/invoices/:invoiceId/accept-insurance", ...withPermission('invoices:edit'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -1149,7 +1166,6 @@ export function registerInvoiceRoutes(app: Express): void {
     }
   });
 
-  // Get contact history for a specific invoice
   app.get("/api/invoices/:invoiceId/contact-history", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -1180,7 +1196,6 @@ export function registerInvoiceRoutes(app: Express): void {
     }
   });
 
-  // Send single invoice email
   app.post("/api/invoices/:invoiceId/send-email", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -1219,14 +1234,14 @@ export function registerInvoiceRoutes(app: Express): void {
         .replace(/\{\{first_name\}\}/g, invoice.contact.name?.split(' ')[0] || 'Valued Customer')
         .replace(/\{\{your_name\}\}/g, defaultSender.fromName || defaultSender.name || 'Accounts Receivable')
         .replace(/\{\{invoice_number\}\}/g, invoice.invoiceNumber)
-        .replace(/\{\{amount\}\}/g, `\u00A3${Number(invoice.amount).toLocaleString()}`)
-        .replace(/\{\{total_balance\}\}/g, `\u00A3${Number(invoice.amount).toLocaleString()}`)
+        .replace(/\{\{amount\}\}/g, `£${Number(invoice.amount).toLocaleString()}`)
+        .replace(/\{\{total_balance\}\}/g, `£${Number(invoice.amount).toLocaleString()}`)
         .replace(/\{\{invoice_count\}\}/g, '1')
         .replace(/\{\{due_date\}\}/g, formatDate(invoice.dueDate))
         .replace(/\{\{days_overdue\}\}/g, daysOverdue.toString())
-        .replace(/\{\{total_amount_overdue\}\}/g, `\u00A3${amountOverdue.toLocaleString()}`)
-        .replace(/\u00A3X as unpaid/g, `\u00A3${Number(invoice.amount).toLocaleString()} as unpaid`)
-        .replace(/\u00A3X due for payment now/g, `\u00A3${Number(invoice.amount).toLocaleString()} due for payment ${daysOverdue > 0 ? `${daysOverdue} days ago` : 'now'}`);
+        .replace(/\{\{total_amount_overdue\}\}/g, `£${amountOverdue.toLocaleString()}`)
+        .replace(/£X as unpaid/g, `£${Number(invoice.amount).toLocaleString()} as unpaid`)
+        .replace(/£X due for payment now/g, `£${Number(invoice.amount).toLocaleString()} due for payment ${daysOverdue > 0 ? `${daysOverdue} days ago` : 'now'}`);
 
       // Process template subject line with variables
       let processedSubject: string = defaultTemplate.subject || 'Payment Reminder';
@@ -1234,18 +1249,18 @@ export function registerInvoiceRoutes(app: Express): void {
         .replace(/\{\{first_name\}\}/g, invoice.contact.name?.split(' ')[0] || 'Valued Customer')
         .replace(/\{\{your_name\}\}/g, defaultSender.fromName || defaultSender.name || 'Accounts Receivable')
         .replace(/\{\{invoice_number\}\}/g, invoice.invoiceNumber)
-        .replace(/\{\{amount\}\}/g, `\u00A3${Number(invoice.amount).toLocaleString()}`)
-        .replace(/\{\{total_balance\}\}/g, `\u00A3${Number(invoice.amount).toLocaleString()}`)
+        .replace(/\{\{amount\}\}/g, `£${Number(invoice.amount).toLocaleString()}`)
+        .replace(/\{\{total_balance\}\}/g, `£${Number(invoice.amount).toLocaleString()}`)
         .replace(/\{\{due_date\}\}/g, formatDate(invoice.dueDate))
         .replace(/\{\{days_overdue\}\}/g, daysOverdue.toString())
-        .replace(/\{\{total_amount_overdue\}\}/g, `\u00A3${amountOverdue.toLocaleString()}`);
+        .replace(/\{\{total_amount_overdue\}\}/g, `£${amountOverdue.toLocaleString()}`);
         
       if (daysOverdue > 0) {
         processedSubject = `Overdue Payment - ${processedSubject}`;
       }
 
       // Send email using SendGrid with properly formatted sender from Collection Workflow
-      const { sendEmail } = await import("../services/sendgrid");
+      const { sendEmail } = await import("./services/sendgrid");
       const senderEmail = defaultSender.email;
       const senderName = defaultSender.fromName || defaultSender.name || 'Accounts Receivable';
       
@@ -1264,7 +1279,7 @@ export function registerInvoiceRoutes(app: Express): void {
       });
 
       if (emailSent) {
-        console.log(`\u2705 Email sent for invoice ${invoice.invoiceNumber} to ${invoice.contact.email}`);
+        console.log(`✅ Email sent for invoice ${invoice.invoiceNumber} to ${invoice.contact.email}`);
         res.json({ 
           success: true, 
           message: `Payment reminder sent to ${invoice.contact.name}` 
@@ -1284,7 +1299,6 @@ export function registerInvoiceRoutes(app: Express): void {
     }
   });
 
-  // New dropdown email endpoints
   app.post("/api/invoices/:invoiceId/send-email/:actionType", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -1313,9 +1327,9 @@ export function registerInvoiceRoutes(app: Express): void {
       }
 
       let templateToUse;
-      let processedSubject: string = "";
-      let processedContent: string = "";
-      let successMessage: string = "";
+      let processedSubject: string;
+      let processedContent: string;
+      let successMessage: string;
 
       switch (actionType) {
         case 'general-chase':
@@ -1333,14 +1347,14 @@ export function registerInvoiceRoutes(app: Express): void {
             .replace(/\{\{first_name\}\}/g, invoice.contact.name?.split(' ')[0] || 'Valued Customer')
             .replace(/\{\{your_name\}\}/g, defaultSender.fromName || defaultSender.name || 'Accounts Receivable')
             .replace(/\{\{invoice_number\}\}/g, invoice.invoiceNumber)
-            .replace(/\{\{amount\}\}/g, `\u00A3${Number(invoice.amount).toLocaleString()}`)
-            .replace(/\{\{total_balance\}\}/g, `\u00A3${Number(invoice.amount).toLocaleString()}`)
+            .replace(/\{\{amount\}\}/g, `£${Number(invoice.amount).toLocaleString()}`)
+            .replace(/\{\{total_balance\}\}/g, `£${Number(invoice.amount).toLocaleString()}`)
             .replace(/\{\{invoice_count\}\}/g, '1')
             .replace(/\{\{due_date\}\}/g, formatDate(invoice.dueDate))
             .replace(/\{\{days_overdue\}\}/g, daysOverdue.toString())
-            .replace(/\{\{total_amount_overdue\}\}/g, `\u00A3${amountOverdue.toLocaleString()}`)
-            .replace(/\u00A3X as unpaid/g, `\u00A3${Number(invoice.amount).toLocaleString()} as unpaid`)
-            .replace(/\u00A3X due for payment now/g, `\u00A3${Number(invoice.amount).toLocaleString()} due for payment ${daysOverdue > 0 ? `${daysOverdue} days ago` : 'now'}`);
+            .replace(/\{\{total_amount_overdue\}\}/g, `£${amountOverdue.toLocaleString()}`)
+            .replace(/£X as unpaid/g, `£${Number(invoice.amount).toLocaleString()} as unpaid`)
+            .replace(/£X due for payment now/g, `£${Number(invoice.amount).toLocaleString()} due for payment ${daysOverdue > 0 ? `${daysOverdue} days ago` : 'now'}`);
 
           // Process template subject line with variables
           processedSubject = templateToUse.subject || 'Payment Reminder';
@@ -1348,11 +1362,11 @@ export function registerInvoiceRoutes(app: Express): void {
             .replace(/\{\{first_name\}\}/g, invoice.contact.name?.split(' ')[0] || 'Valued Customer')
             .replace(/\{\{your_name\}\}/g, defaultSender.fromName || defaultSender.name || 'Accounts Receivable')
             .replace(/\{\{invoice_number\}\}/g, invoice.invoiceNumber)
-            .replace(/\{\{amount\}\}/g, `\u00A3${Number(invoice.amount).toLocaleString()}`)
-            .replace(/\{\{total_balance\}\}/g, `\u00A3${Number(invoice.amount).toLocaleString()}`)
+            .replace(/\{\{amount\}\}/g, `£${Number(invoice.amount).toLocaleString()}`)
+            .replace(/\{\{total_balance\}\}/g, `£${Number(invoice.amount).toLocaleString()}`)
             .replace(/\{\{due_date\}\}/g, formatDate(invoice.dueDate))
             .replace(/\{\{days_overdue\}\}/g, daysOverdue.toString())
-            .replace(/\{\{total_amount_overdue\}\}/g, `\u00A3${amountOverdue.toLocaleString()}`);
+            .replace(/\{\{total_amount_overdue\}\}/g, `£${amountOverdue.toLocaleString()}`);
             
           if (daysOverdue > 0) {
             processedSubject = `Overdue Payment - ${processedSubject}`;
@@ -1365,9 +1379,9 @@ export function registerInvoiceRoutes(app: Express): void {
           processedContent = `Dear ${invoice.contact.name?.split(' ')[0] || 'Valued Customer'},<br><br>
             Please find attached a copy of your invoice as requested.<br><br>
             <strong>Invoice Details:</strong><br>
-            \u2022 Invoice Number: ${invoice.invoiceNumber}<br>
-            \u2022 Amount: \u00A3${Number(invoice.amount).toLocaleString()}<br>
-            \u2022 Due Date: ${formatDate(invoice.dueDate)}<br><br>
+            • Invoice Number: ${invoice.invoiceNumber}<br>
+            • Amount: £${Number(invoice.amount).toLocaleString()}<br>
+            • Due Date: ${formatDate(invoice.dueDate)}<br><br>
             If you have any questions, please don't hesitate to contact us.<br><br>
             Best regards,<br>
             ${defaultSender.fromName || defaultSender.name || 'Accounts Receivable'}`;
@@ -1377,7 +1391,7 @@ export function registerInvoiceRoutes(app: Express): void {
         case 'thank-you':
           processedSubject = `Thank You for Your Payment - ${invoice.invoiceNumber}`;
           processedContent = `Dear ${invoice.contact.name?.split(' ')[0] || 'Valued Customer'},<br><br>
-            Thank you for your recent payment of \u00A3${Number(invoice.amount).toLocaleString()} for invoice ${invoice.invoiceNumber}.<br><br>
+            Thank you for your recent payment of £${Number(invoice.amount).toLocaleString()} for invoice ${invoice.invoiceNumber}.<br><br>
             We appreciate your prompt payment and your continued business with us.<br><br>
             Best regards,<br>
             ${defaultSender.fromName || defaultSender.name || 'Accounts Receivable'}`;
@@ -1389,7 +1403,7 @@ export function registerInvoiceRoutes(app: Express): void {
       }
 
       // Send email using SendGrid with properly formatted sender from Collection Workflow
-      const { sendEmail } = await import("../services/sendgrid");
+      const { sendEmail } = await import("./services/sendgrid");
       const senderEmail = defaultSender.email;
       const senderName = defaultSender.fromName || defaultSender.name || 'Accounts Receivable';
       
@@ -1408,7 +1422,7 @@ export function registerInvoiceRoutes(app: Express): void {
       });
 
       if (emailSent) {
-        console.log(`\u2705 Email (${actionType}) sent for invoice ${invoice.invoiceNumber} to ${invoice.contact.email}`);
+        console.log(`✅ Email (${actionType}) sent for invoice ${invoice.invoiceNumber} to ${invoice.contact.email}`);
         res.json({ 
           success: true, 
           message: successMessage
@@ -1428,7 +1442,6 @@ export function registerInvoiceRoutes(app: Express): void {
     }
   });
 
-  // New dropdown SMS endpoints
   app.post("/api/invoices/:invoiceId/send-sms/:actionType", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -1457,12 +1470,12 @@ export function registerInvoiceRoutes(app: Express): void {
           const today = new Date();
           const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
           
-          smsMessage = `Payment reminder: Invoice ${invoice.invoiceNumber} for \u00A3${Number(invoice.amount).toLocaleString()} is ${daysOverdue > 0 ? `${daysOverdue} days overdue` : 'due for payment'}. Please contact us to arrange payment.`;
+          smsMessage = `Payment reminder: Invoice ${invoice.invoiceNumber} for £${Number(invoice.amount).toLocaleString()} is ${daysOverdue > 0 ? `${daysOverdue} days overdue` : 'due for payment'}. Please contact us to arrange payment.`;
           successMessage = `SMS reminder sent to ${invoice.contact.name}`;
           break;
 
         case 'thank-you':
-          smsMessage = `Thank you for your payment of \u00A3${Number(invoice.amount).toLocaleString()} for invoice ${invoice.invoiceNumber}. We appreciate your business!`;
+          smsMessage = `Thank you for your payment of £${Number(invoice.amount).toLocaleString()} for invoice ${invoice.invoiceNumber}. We appreciate your business!`;
           successMessage = `Thank you SMS sent to ${invoice.contact.name}`;
           break;
 
@@ -1472,7 +1485,7 @@ export function registerInvoiceRoutes(app: Express): void {
 
       // Send SMS using Twilio (when implemented)
       // For now, we'll simulate the SMS sending
-      console.log(`\u{1F4F1} SMS (${actionType}) would be sent to ${invoice.contact.phone}: ${smsMessage}`);
+      console.log(`📱 SMS (${actionType}) would be sent to ${invoice.contact.phone}: ${smsMessage}`);
       
       res.json({ 
         success: true, 
@@ -1488,7 +1501,6 @@ export function registerInvoiceRoutes(app: Express): void {
     }
   });
 
-  // Send Invoice PDF by Email - Direct API endpoint for testing
   app.post("/api/invoices/send-pdf-email", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -1518,8 +1530,8 @@ export function registerInvoiceRoutes(app: Express): void {
       }
 
       // Import PDF and email services
-      const { generateInvoicePDF } = await import('../services/invoicePDF.js');
-      const { sendEmailWithAttachment } = await import('../services/sendgrid.js');
+      const { generateInvoicePDF } = await import('./services/invoicePDF.js');
+      const { sendEmailWithAttachment } = await import('./services/sendgrid.js');
 
       // Generate PDF
       console.log(`Generating PDF for invoice ${invoice.invoiceNumber}...`);
@@ -1586,7 +1598,7 @@ ${tenant.name}
   <p>Payment is due by <strong>${formatDate(invoice.dueDate)}</strong>. If you have any questions about this invoice or need to discuss payment arrangements, please don't hesitate to contact us.</p>
   
   <div style="margin: 30px 0; padding: 15px; background: #f0f9ff; border-radius: 4px;">
-    <p style="margin: 0; color: #0369a1; font-size: 14px;"><strong>\uD83D\uDCCE PDF Invoice attached</strong> - Please open the attached PDF for the complete invoice details.</p>
+    <p style="margin: 0; color: #0369a1; font-size: 14px;"><strong>📎 PDF Invoice attached</strong> - Please open the attached PDF for the complete invoice details.</p>
   </div>
   
   <p>Best regards,<br>
@@ -1666,7 +1678,6 @@ ${tenant.name}
     }
   });
 
-  // Manual Invoice Override
   app.post('/api/invoices/:id/override', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;

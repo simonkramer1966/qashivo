@@ -436,7 +436,7 @@ export default function ActionCentre2() {
             <div className="flex items-center gap-4">
               <span className="text-[11px] text-muted-foreground/60">All figures are in £ GBP</span>
               <div className="relative w-[240px]">
-                <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-gray-300" />
+                <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                 <input
                   type="text"
                   placeholder="Search..."
@@ -477,7 +477,7 @@ export default function ActionCentre2() {
               >
                 {tab.label}
                 {activeTab === tab.id && (
-                  <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gray-900 rounded-full" />
+                  <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-foreground rounded-full" />
                 )}
               </button>
             ))}
@@ -643,12 +643,12 @@ export default function ActionCentre2() {
                 className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
                   approveMode === 'immediate'
                     ? 'border-[#17B6C3] bg-[#17B6C3]/5'
-                    : 'border-border hover:border-gray-300'
+                    : 'border-border hover:border-border'
                 }`}
                 onClick={() => setApproveMode('immediate')}
               >
                 <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                  approveMode === 'immediate' ? 'border-[#17B6C3]' : 'border-gray-300'
+                  approveMode === 'immediate' ? 'border-[#17B6C3]' : 'border-border'
                 }`}>
                   {approveMode === 'immediate' && <div className="w-2 h-2 rounded-full bg-[#17B6C3]" />}
                 </div>
@@ -662,12 +662,12 @@ export default function ActionCentre2() {
                 className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
                   approveMode === 'scheduled'
                     ? 'border-[#17B6C3] bg-[#17B6C3]/5'
-                    : 'border-border hover:border-gray-300'
+                    : 'border-border hover:border-border'
                 }`}
                 onClick={() => setApproveMode('scheduled')}
               >
                 <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                  approveMode === 'scheduled' ? 'border-[#17B6C3]' : 'border-gray-300'
+                  approveMode === 'scheduled' ? 'border-[#17B6C3]' : 'border-border'
                 }`}>
                   {approveMode === 'scheduled' && <div className="w-2 h-2 rounded-full bg-[#17B6C3]" />}
                 </div>
@@ -864,7 +864,7 @@ function PlannedTab2({
   if (!dailyPlan || dailyPlan.actions.length === 0) {
     return (
       <div className="py-16 text-center">
-        <Clock className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+        <Clock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
         <p className="text-muted-foreground font-medium">No planned actions</p>
         <p className="text-muted-foreground/60 text-[13px] mt-1 mb-6">AI generates action plans based on your overdue invoices</p>
         <Button
@@ -979,7 +979,7 @@ function PlannedTab2({
                 <div 
                   key={item.id}
                   onClick={() => onPreviewAction(item)}
-                  className={`flex items-center py-2.5 border-b border-gray-50 cursor-pointer transition-colors ${
+                  className={`flex items-center py-2.5 border-b border-border/30 cursor-pointer transition-colors ${
                     selectedIds.has(item.id) ? 'bg-muted' : 'hover:bg-muted'
                   }`}
                 >
@@ -1024,7 +1024,7 @@ function PlannedTab2({
                 <select
                   value={itemsPerPage}
                   onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                  className="bg-background border border-border rounded-lg px-2 py-1 text-[12px] text-muted-foreground cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                  className="bg-background border border-border rounded-lg px-2 py-1 text-[12px] text-muted-foreground cursor-pointer hover:border-border focus:outline-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                 >
                   {PAGE_SIZE_OPTIONS.map(size => (
                     <option key={size} value={size}>{size}</option>
@@ -1206,7 +1206,7 @@ function ExecutedTab2({ actions, onSelectDebtor, isLoading }: ExecutedTab2Props)
                 <div 
                   key={action.id}
                   onClick={() => onSelectDebtor(action.debtorId, action.id)}
-                  className="flex items-center py-2.5 border-b border-gray-50 hover:bg-muted cursor-pointer transition-colors"
+                  className="flex items-center py-2.5 border-b border-border/30 hover:bg-muted cursor-pointer transition-colors"
                 >
                   <div className="w-[28%] px-3 min-w-0">
                     <div className="text-[13px] font-medium text-foreground truncate">{action.debtorName}</div>
@@ -1239,7 +1239,7 @@ function ExecutedTab2({ actions, onSelectDebtor, isLoading }: ExecutedTab2Props)
                 <select
                   value={itemsPerPage}
                   onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                  className="bg-background border border-border rounded-lg px-2 py-1 text-[12px] text-muted-foreground cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                  className="bg-background border border-border rounded-lg px-2 py-1 text-[12px] text-muted-foreground cursor-pointer hover:border-border focus:outline-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                 >
                   {PAGE_SIZE_OPTIONS.map(size => (
                     <option key={size} value={size}>{size}</option>
@@ -1377,7 +1377,7 @@ function AttentionTab2({ items, onSelectDebtor, isLoading, search = '' }: Attent
               return (
                 <div 
                   key={item.id}
-                  className="flex items-center py-2.5 border-b border-gray-50 hover:bg-muted cursor-pointer transition-colors"
+                  className="flex items-center py-2.5 border-b border-border/30 hover:bg-muted cursor-pointer transition-colors"
                   onClick={() => onSelectDebtor(item.debtorId)}
                 >
                   <div className="w-[18%] px-3 min-w-0">
@@ -1415,7 +1415,7 @@ function AttentionTab2({ items, onSelectDebtor, isLoading, search = '' }: Attent
                         {formatRelativeTime(item.lastActionAt)}
                       </div>
                     ) : (
-                      <div className="text-xs text-gray-300">—</div>
+                      <div className="text-xs text-muted-foreground">—</div>
                     )}
                   </div>
                 </div>
@@ -1431,7 +1431,7 @@ function AttentionTab2({ items, onSelectDebtor, isLoading, search = '' }: Attent
               <select
                 value={itemsPerPage}
                 onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                className="bg-background border border-border rounded-lg px-2 py-1 text-[12px] text-muted-foreground cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                className="bg-background border border-border rounded-lg px-2 py-1 text-[12px] text-muted-foreground cursor-pointer hover:border-border focus:outline-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
               >
                 {PAGE_SIZE_OPTIONS.map(size => (
                   <option key={size} value={size}>{size}</option>
@@ -1615,7 +1615,7 @@ function CashboardTab2({ debtors, onSelectDebtor, isLoading, formatCurrency }: C
               {paginatedMatrix.map(row => (
                 <tr 
                   key={row.debtor.id} 
-                  className="group border-b border-gray-50 hover:bg-muted transition-colors cursor-pointer"
+                  className="group border-b border-border/30 hover:bg-muted transition-colors cursor-pointer"
                   onClick={() => onSelectDebtor(row.debtor.id)}
                 >
                   <td className="py-[5px] px-3 sticky left-0 bg-background group-hover:bg-muted z-10 transition-colors">
@@ -1632,7 +1632,7 @@ function CashboardTab2({ debtors, onSelectDebtor, isLoading, formatCurrency }: C
                     if (!cell) {
                       return (
                         <td key={status} className={`py-[5px] px-2 text-right ${borderClass}`}>
-                          <span className="text-gray-200 text-[13px]">—</span>
+                          <span className="text-muted-foreground text-[13px]">—</span>
                         </td>
                       );
                     }
@@ -1677,7 +1677,7 @@ function CashboardTab2({ debtors, onSelectDebtor, isLoading, formatCurrency }: C
                 <select
                   value={itemsPerPage}
                   onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                  className="bg-background border border-border rounded-lg px-2 py-1 text-[12px] text-muted-foreground cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                  className="bg-background border border-border rounded-lg px-2 py-1 text-[12px] text-muted-foreground cursor-pointer hover:border-border focus:outline-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                 >
                   {PAGE_SIZE_OPTIONS.map(size => (
                     <option key={size} value={size}>{size}</option>
@@ -1837,7 +1837,7 @@ function ForecastTab2({ debtors, onSelectDebtor, isLoading }: ForecastTab2Props)
                     return (
                       <tr 
                         key={debtor.id} 
-                        className={`group hover:bg-muted transition-colors ${!isLast ? 'border-b border-gray-50' : ''}`}
+                        className={`group hover:bg-muted transition-colors ${!isLast ? 'border-b border-border/30' : ''}`}
                       >
                         <td className="py-2.5 px-3 sticky left-0 bg-background group-hover:bg-muted z-10 transition-colors">
                           <button
@@ -1860,7 +1860,7 @@ function ForecastTab2({ debtors, onSelectDebtor, isLoading }: ForecastTab2Props)
                           if (!cell) {
                             return (
                               <td key={bucket.weekCommencing} className={`text-right py-2.5 px-2 ${borderClass}`}>
-                                <span className="text-gray-200">—</span>
+                                <span className="text-muted-foreground">—</span>
                               </td>
                             );
                           }
@@ -1934,7 +1934,7 @@ function ForecastTab2({ debtors, onSelectDebtor, isLoading }: ForecastTab2Props)
                 <select
                   value={itemsPerPage}
                   onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                  className="bg-background border border-border rounded px-2 py-1 text-[12px] text-muted-foreground cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-300"
+                  className="bg-background border border-border rounded px-2 py-1 text-[12px] text-muted-foreground cursor-pointer hover:border-border focus:outline-none focus:ring-1 focus:ring-border"
                 >
                   {PAGE_SIZE_OPTIONS.map(size => (
                     <option key={size} value={size}>{size}</option>
@@ -2058,7 +2058,7 @@ function ActivityTab2({ items, onSelectCustomer, isLoading, search = '' }: Activ
             <div 
               key={item.id}
               onClick={() => onSelectCustomer(item.customerId)}
-              className="flex items-center py-2.5 border-b border-gray-50 hover:bg-muted cursor-pointer transition-colors"
+              className="flex items-center py-2.5 border-b border-border/30 hover:bg-muted cursor-pointer transition-colors"
             >
               <div className="w-[25%] px-3 min-w-0">
                 <div className="text-[13px] font-medium text-foreground truncate">{item.customerName}</div>
@@ -2093,7 +2093,7 @@ function ActivityTab2({ items, onSelectCustomer, isLoading, search = '' }: Activ
             <select
               value={itemsPerPage}
               onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-              className="bg-background border border-border rounded-lg px-2 py-1 text-[12px] text-muted-foreground cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+              className="bg-background border border-border rounded-lg px-2 py-1 text-[12px] text-muted-foreground cursor-pointer hover:border-border focus:outline-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
             >
               {PAGE_SIZE_OPTIONS.map(size => (
                 <option key={size} value={size}>{size}</option>

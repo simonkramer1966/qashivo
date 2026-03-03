@@ -339,7 +339,7 @@ export function ActionPreviewDrawer({
     switch (action.priority) {
       case 'high': return 'bg-rose-100 text-rose-700';
       case 'medium': return 'bg-amber-100 text-amber-700';
-      default: return 'bg-slate-100 text-slate-600';
+      default: return 'bg-muted text-muted-foreground';
     }
   };
 
@@ -357,8 +357,8 @@ export function ActionPreviewDrawer({
     if (isLoadingPreview) {
       return (
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
-          <span className="ml-2 text-slate-500">Loading...</span>
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <span className="ml-2 text-muted-foreground">Loading...</span>
         </div>
       );
     }
@@ -366,7 +366,7 @@ export function ActionPreviewDrawer({
     if (isError) {
       return (
         <div className="text-center py-8">
-          <p className="text-slate-500 mb-3">Failed to load preview</p>
+          <p className="text-muted-foreground mb-3">Failed to load preview</p>
           <Button variant="outline" size="sm" onClick={() => refetch()} data-testid="button-retry-preview">
             <RefreshCw className="h-4 w-4 mr-2" />
             Retry
@@ -379,16 +379,16 @@ export function ActionPreviewDrawer({
       <div className="space-y-6">
         <div className="grid grid-cols-3 gap-4 text-center">
           <div>
-            <div className="text-2xl font-semibold text-slate-900">{action.daysOverdue}</div>
-            <div className="text-xs text-slate-500">Days Overdue</div>
+            <div className="text-2xl font-semibold text-foreground">{action.daysOverdue}</div>
+            <div className="text-xs text-muted-foreground">Days Overdue</div>
           </div>
           <div>
-            <div className="text-2xl font-semibold text-slate-900">{formatCurrency(parseFloat(action.amount))}</div>
-            <div className="text-xs text-slate-500">Amount</div>
+            <div className="text-2xl font-semibold text-foreground">{formatCurrency(parseFloat(action.amount))}</div>
+            <div className="text-xs text-muted-foreground">Amount</div>
           </div>
           <div>
-            <div className="text-sm font-medium text-slate-900 truncate">{action.invoiceNumber}</div>
-            <div className="text-xs text-slate-500">Invoice</div>
+            <div className="text-sm font-medium text-foreground truncate">{action.invoiceNumber}</div>
+            <div className="text-xs text-muted-foreground">Invoice</div>
           </div>
         </div>
 
@@ -396,23 +396,23 @@ export function ActionPreviewDrawer({
 
         {action.actionType === 'voice' ? (
           <div className="space-y-4">
-            <div className="text-sm font-medium text-slate-700">AI Voice Call</div>
-            <p className="text-sm text-slate-600">
+            <div className="text-sm font-medium text-foreground">AI Voice Call</div>
+            <p className="text-sm text-muted-foreground">
               AI will call <span className="font-medium">{preview?.contactName || action.contactName}</span> regarding{' '}
               {preview?.invoiceCount || 1} invoice{(preview?.invoiceCount || 1) > 1 ? 's' : ''} totalling{' '}
               {preview?.totalOverdue || formatCurrency(parseFloat(action.amount))}.
             </p>
-            <ul className="text-sm text-slate-600 space-y-1 ml-4">
+            <ul className="text-sm text-muted-foreground space-y-1 ml-4">
               <li>• Introduce on behalf of your company</li>
               <li>• Ask for payment status and expected date</li>
               <li>• Record any disputes or promises</li>
             </ul>
             {preview?.invoices && preview.invoices.length > 0 && (
               <div className="mt-4">
-                <div className="text-xs text-slate-500 mb-2">Invoices to reference</div>
+                <div className="text-xs text-muted-foreground mb-2">Invoices to reference</div>
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b text-left text-slate-500">
+                    <tr className="border-b text-left text-muted-foreground">
                       <th className="pb-2 font-medium">Invoice</th>
                       <th className="pb-2 font-medium text-right">Amount</th>
                       <th className="pb-2 font-medium text-right">Overdue</th>
@@ -420,10 +420,10 @@ export function ActionPreviewDrawer({
                   </thead>
                   <tbody>
                     {preview.invoices.map((inv, idx) => (
-                      <tr key={idx} className="border-b border-slate-100">
-                        <td className="py-2 text-slate-900">{inv.invoiceNumber}</td>
-                        <td className="py-2 text-right text-slate-900">{inv.amount}</td>
-                        <td className="py-2 text-right text-slate-600">{inv.daysOverdue}d</td>
+                      <tr key={idx} className="border-b border-border/50">
+                        <td className="py-2 text-foreground">{inv.invoiceNumber}</td>
+                        <td className="py-2 text-right text-foreground">{inv.amount}</td>
+                        <td className="py-2 text-right text-muted-foreground">{inv.daysOverdue}d</td>
                       </tr>
                     ))}
                   </tbody>
@@ -433,25 +433,25 @@ export function ActionPreviewDrawer({
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="text-sm font-medium text-slate-700">
+            <div className="text-sm font-medium text-foreground">
               {action.actionType === 'email' ? 'Email' : 'SMS'} Preview
             </div>
 
             {action.actionType === 'email' && preview?.subject && (
               <div>
-                <div className="text-xs text-slate-500 mb-1">Subject</div>
-                <div className="text-sm font-medium text-slate-900">{preview.subject}</div>
+                <div className="text-xs text-muted-foreground mb-1">Subject</div>
+                <div className="text-sm font-medium text-foreground">{preview.subject}</div>
               </div>
             )}
 
-            <div className={`rounded border p-4 ${action.actionType === 'email' ? 'bg-white' : 'bg-slate-50'}`}>
+            <div className={`rounded border p-4 ${action.actionType === 'email' ? 'bg-background' : 'bg-muted'}`}>
               {action.actionType === 'email' ? (
                 <div 
-                  className="prose prose-sm max-w-none text-slate-700"
+                  className="prose prose-sm max-w-none text-foreground"
                   dangerouslySetInnerHTML={{ __html: preview?.content || action.content || '' }}
                 />
               ) : (
-                <p className="text-sm text-slate-700 whitespace-pre-wrap">
+                <p className="text-sm text-foreground whitespace-pre-wrap">
                   {preview?.content || action.content || ''}
                 </p>
               )}
@@ -459,10 +459,10 @@ export function ActionPreviewDrawer({
 
             {preview?.invoices && preview.invoices.length > 1 && (
               <div>
-                <div className="text-xs text-slate-500 mb-2">Invoices referenced</div>
+                <div className="text-xs text-muted-foreground mb-2">Invoices referenced</div>
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b text-left text-slate-500">
+                    <tr className="border-b text-left text-muted-foreground">
                       <th className="pb-2 font-medium">Invoice</th>
                       <th className="pb-2 font-medium text-right">Amount</th>
                       <th className="pb-2 font-medium text-right">Overdue</th>
@@ -470,10 +470,10 @@ export function ActionPreviewDrawer({
                   </thead>
                   <tbody>
                     {preview.invoices.map((inv, idx) => (
-                      <tr key={idx} className="border-b border-slate-100">
-                        <td className="py-2 text-slate-900">{inv.invoiceNumber}</td>
-                        <td className="py-2 text-right text-slate-900">{inv.amount}</td>
-                        <td className="py-2 text-right text-slate-600">{inv.daysOverdue}d</td>
+                      <tr key={idx} className="border-b border-border/50">
+                        <td className="py-2 text-foreground">{inv.invoiceNumber}</td>
+                        <td className="py-2 text-right text-foreground">{inv.amount}</td>
+                        <td className="py-2 text-right text-muted-foreground">{inv.daysOverdue}d</td>
                       </tr>
                     ))}
                   </tbody>
@@ -500,15 +500,15 @@ export function ActionPreviewDrawer({
     if (isLoadingDebtor) {
       return (
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
-          <span className="ml-2 text-slate-500">Loading debtor info...</span>
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <span className="ml-2 text-muted-foreground">Loading debtor info...</span>
         </div>
       );
     }
 
     if (!debtorData) {
       return (
-        <div className="text-center py-8 text-slate-500">
+        <div className="text-center py-8 text-muted-foreground">
           <p>No debtor information available</p>
         </div>
       );
@@ -520,19 +520,19 @@ export function ActionPreviewDrawer({
       <div className="space-y-6">
         {/* Financial Snapshot */}
         <div>
-          <div className="text-xs text-slate-500 mb-3 uppercase tracking-wide">Financial Position</div>
+          <div className="text-xs text-muted-foreground mb-3 uppercase tracking-wide">Financial Position</div>
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
-              <div className="text-xl font-semibold text-slate-900">{formatCurrency(debtor.totalOutstanding)}</div>
-              <div className="text-xs text-slate-500">Outstanding</div>
+              <div className="text-xl font-semibold text-foreground">{formatCurrency(debtor.totalOutstanding)}</div>
+              <div className="text-xs text-muted-foreground">Outstanding</div>
             </div>
             <div>
-              <div className="text-xl font-semibold text-slate-900">{debtor.invoiceCount}</div>
-              <div className="text-xs text-slate-500">Invoices</div>
+              <div className="text-xl font-semibold text-foreground">{debtor.invoiceCount}</div>
+              <div className="text-xs text-muted-foreground">Invoices</div>
             </div>
             <div>
-              <div className="text-xl font-semibold text-slate-900">{debtor.oldestOverdueDays}d</div>
-              <div className="text-xs text-slate-500">Oldest Overdue</div>
+              <div className="text-xl font-semibold text-foreground">{debtor.oldestOverdueDays}d</div>
+              <div className="text-xs text-muted-foreground">Oldest Overdue</div>
             </div>
           </div>
         </div>
@@ -541,18 +541,18 @@ export function ActionPreviewDrawer({
 
         {/* Payment Behavior */}
         <div>
-          <div className="text-xs text-slate-500 mb-3 uppercase tracking-wide">Payment Behaviour</div>
+          <div className="text-xs text-muted-foreground mb-3 uppercase tracking-wide">Payment Behaviour</div>
           <div className="space-y-2 text-sm">
             {debtor.vipFlag && (
               <div className="text-amber-700 font-medium">VIP Customer - Manual review required</div>
             )}
             <div className="flex justify-between">
-              <span className="text-slate-500">Payment Pattern</span>
-              <span className="text-slate-900">{debtor.paymentBehavior || '—'}</span>
+              <span className="text-muted-foreground">Payment Pattern</span>
+              <span className="text-foreground">{debtor.paymentBehavior || '—'}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">Promises Kept / Broken</span>
-              <span className="text-slate-900">{debtor.promisesKept} / {debtor.promisesBroken}</span>
+              <span className="text-muted-foreground">Promises Kept / Broken</span>
+              <span className="text-foreground">{debtor.promisesKept} / {debtor.promisesBroken}</span>
             </div>
           </div>
         </div>
@@ -562,19 +562,19 @@ export function ActionPreviewDrawer({
           <>
             <Separator />
             <div>
-              <div className="text-xs text-slate-500 mb-3 uppercase tracking-wide">Active Commitment</div>
+              <div className="text-xs text-muted-foreground mb-3 uppercase tracking-wide">Active Commitment</div>
               <div className="text-sm space-y-1">
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Amount</span>
-                  <span className="text-slate-900 font-medium">{formatCurrency(debtor.activePTP.amount)}</span>
+                  <span className="text-muted-foreground">Amount</span>
+                  <span className="text-foreground font-medium">{formatCurrency(debtor.activePTP.amount)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Due Date</span>
-                  <span className="text-slate-900">{formatDate(debtor.activePTP.promisedDate)}</span>
+                  <span className="text-muted-foreground">Due Date</span>
+                  <span className="text-foreground">{formatDate(debtor.activePTP.promisedDate)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Status</span>
-                  <span className={debtor.activePTP.status === 'open' ? 'text-teal-600' : 'text-slate-600'}>
+                  <span className="text-muted-foreground">Status</span>
+                  <span className={debtor.activePTP.status === 'open' ? 'text-teal-600' : 'text-muted-foreground'}>
                     {debtor.activePTP.status}
                   </span>
                 </div>
@@ -587,28 +587,28 @@ export function ActionPreviewDrawer({
 
         {/* Contact Details */}
         <div>
-          <div className="text-xs text-slate-500 mb-3 uppercase tracking-wide">Contact</div>
+          <div className="text-xs text-muted-foreground mb-3 uppercase tracking-wide">Contact</div>
           <div className="text-sm space-y-1">
             <div className="flex justify-between">
-              <span className="text-slate-500">Name</span>
-              <span className="text-slate-900">{debtor.contactName}</span>
+              <span className="text-muted-foreground">Name</span>
+              <span className="text-foreground">{debtor.contactName}</span>
             </div>
             {debtor.email && (
               <div className="flex justify-between">
-                <span className="text-slate-500">Email</span>
-                <span className="text-slate-900 truncate ml-4">{debtor.email}</span>
+                <span className="text-muted-foreground">Email</span>
+                <span className="text-foreground truncate ml-4">{debtor.email}</span>
               </div>
             )}
             {debtor.phone && (
               <div className="flex justify-between">
-                <span className="text-slate-500">Phone</span>
-                <span className="text-slate-900">{debtor.phone}</span>
+                <span className="text-muted-foreground">Phone</span>
+                <span className="text-foreground">{debtor.phone}</span>
               </div>
             )}
             {debtor.preferredChannel && (
               <div className="flex justify-between">
-                <span className="text-slate-500">Preferred Channel</span>
-                <span className="text-slate-900">{debtor.preferredChannel}</span>
+                <span className="text-muted-foreground">Preferred Channel</span>
+                <span className="text-foreground">{debtor.preferredChannel}</span>
               </div>
             )}
           </div>
@@ -619,7 +619,7 @@ export function ActionPreviewDrawer({
         {/* Communications Timeline */}
         <div>
           <div className="flex justify-between items-center mb-3">
-            <div className="text-xs text-slate-500 uppercase tracking-wide">Communications Timeline</div>
+            <div className="text-xs text-muted-foreground uppercase tracking-wide">Communications Timeline</div>
             {!isAddingNote && (
               <button
                 onClick={() => setIsAddingNote(true)}
@@ -681,15 +681,15 @@ export function ActionPreviewDrawer({
       return (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-6 h-6 animate-spin text-[#17B6C3]" />
-          <span className="ml-2 text-sm text-gray-500">Loading history...</span>
+          <span className="ml-2 text-sm text-muted-foreground">Loading history...</span>
         </div>
       );
     }
 
     if (!historyData?.history?.length) {
       return (
-        <div className="text-center py-12 text-gray-500">
-          <Clock className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+        <div className="text-center py-12 text-muted-foreground">
+          <Clock className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
           <p className="text-sm">No communication history yet</p>
         </div>
       );
@@ -717,7 +717,7 @@ export function ActionPreviewDrawer({
         case 'queued':
           return 'bg-amber-100 text-amber-700';
         default:
-          return 'bg-slate-100 text-slate-600';
+          return 'bg-muted text-muted-foreground';
       }
     };
 
@@ -729,11 +729,11 @@ export function ActionPreviewDrawer({
         dispute_raised: 'bg-rose-100 text-rose-700',
         dispute: 'bg-rose-100 text-rose-700',
         callback_requested: 'bg-blue-100 text-blue-700',
-        no_response: 'bg-slate-100 text-slate-600',
+        no_response: 'bg-muted text-muted-foreground',
         voicemail: 'bg-amber-100 text-amber-700',
       };
       return (
-        <Badge className={`text-xs ${outcomeColors[outcome] || 'bg-slate-100 text-slate-600'}`}>
+        <Badge className={`text-xs ${outcomeColors[outcome] || 'bg-muted text-muted-foreground'}`}>
           {outcome.replace(/_/g, ' ')}
         </Badge>
       );
@@ -741,13 +741,13 @@ export function ActionPreviewDrawer({
 
     return (
       <div className="space-y-3">
-        <div className="text-xs text-gray-500 mb-2">
+        <div className="text-xs text-muted-foreground mb-2">
           {historyData.total} communication{historyData.total !== 1 ? 's' : ''}
         </div>
         {historyData.history.map((entry) => (
           <div 
             key={entry.id} 
-            className="border rounded-lg p-3 hover:bg-slate-50 transition-colors"
+            className="border rounded-lg p-3 hover:bg-muted transition-colors"
             data-testid={`history-entry-${entry.id}`}
           >
             <div className="flex items-start gap-3">
@@ -775,18 +775,18 @@ export function ActionPreviewDrawer({
 
                 {/* Subject/content */}
                 {entry.subject && (
-                  <div className="text-sm font-medium text-gray-700 truncate">
+                  <div className="text-sm font-medium text-foreground truncate">
                     {entry.subject}
                   </div>
                 )}
                 {entry.bodySnippet && (
-                  <div className="text-xs text-gray-500 line-clamp-2 mt-0.5">
+                  <div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
                     {entry.bodySnippet}
                   </div>
                 )}
 
                 {/* Timestamp */}
-                <div className="text-xs text-gray-400 mt-1">
+                <div className="text-xs text-muted-foreground mt-1">
                   {formatSmartTime(entry.occurredAt)}
                 </div>
               </div>
@@ -805,7 +805,7 @@ export function ActionPreviewDrawer({
         data-testid="action-preview-drawer"
       >
         {/* Header with company/contact name */}
-        <SheetHeader className="px-6 py-4 border-b bg-slate-50/80">
+        <SheetHeader className="px-6 py-4 border-b bg-muted/80">
           <div className="flex items-center justify-between">
             <div>
               <SheetTitle className="text-lg">{action.companyName || action.contactName}</SheetTitle>
@@ -821,24 +821,24 @@ export function ActionPreviewDrawer({
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-          <TabsList className="mx-6 mt-4 grid w-auto grid-cols-3 bg-slate-100">
+          <TabsList className="mx-6 mt-4 grid w-auto grid-cols-3 bg-muted">
             <TabsTrigger 
               value="action" 
-              className="data-[state=active]:bg-white"
+              className="data-[state=active]:bg-background"
               data-testid="tab-action"
             >
               Action
             </TabsTrigger>
             <TabsTrigger 
               value="history" 
-              className="data-[state=active]:bg-white"
+              className="data-[state=active]:bg-background"
               data-testid="tab-history"
             >
               History
             </TabsTrigger>
             <TabsTrigger 
               value="debtor" 
-              className="data-[state=active]:bg-white"
+              className="data-[state=active]:bg-background"
               data-testid="tab-debtor"
             >
               Debtor
@@ -865,7 +865,7 @@ export function ActionPreviewDrawer({
         </Tabs>
 
         {/* Footer with actions */}
-        <div className="px-6 py-4 border-t bg-slate-50/80 flex items-center gap-2">
+        <div className="px-6 py-4 border-t bg-muted/80 flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"

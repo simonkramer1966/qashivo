@@ -53,7 +53,7 @@ export default function PartnerPracticeDashboard() {
     return (
       <div className="flex h-screen bg-white">
         <main className="flex-1 overflow-y-auto">
-          <div className="sticky top-0 z-40 bg-white border-b border-slate-100">
+          <div className="sticky top-0 z-40 bg-white border-b border-border/50">
             <div className="px-6 lg:px-8 py-5">
               <Skeleton className="h-5 w-48" />
               <Skeleton className="h-4 w-32 mt-1" />
@@ -76,16 +76,16 @@ export default function PartnerPracticeDashboard() {
     return (
       <div className="flex h-screen bg-white">
         <main className="flex-1 overflow-y-auto">
-          <div className="sticky top-0 z-40 bg-white border-b border-slate-100">
+          <div className="sticky top-0 z-40 bg-white border-b border-border/50">
             <div className="px-6 lg:px-8 py-5">
-              <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight">Practice Dashboard</h2>
+              <h2 className="text-[17px] font-semibold text-foreground tracking-tight">Practice Dashboard</h2>
             </div>
           </div>
           <div className="p-6 lg:p-8">
             <div className="py-16 text-center">
-              <AlertCircle className="w-10 h-10 text-slate-300 mx-auto mb-4" />
-              <p className="text-[15px] font-medium text-slate-900 mb-1">Unable to load dashboard</p>
-              <p className="text-[13px] text-slate-400">Please check your access permissions or try again later.</p>
+              <AlertCircle className="w-10 h-10 text-muted-foreground mx-auto mb-4" />
+              <p className="text-[15px] font-medium text-foreground mb-1">Unable to load dashboard</p>
+              <p className="text-[13px] text-muted-foreground">Please check your access permissions or try again later.</p>
             </div>
           </div>
         </main>
@@ -103,17 +103,17 @@ export default function PartnerPracticeDashboard() {
     <div className="flex h-screen bg-white">
       <main className="flex-1 overflow-y-auto">
         {/* Sticky header */}
-        <div className="sticky top-0 z-40 bg-white border-b border-slate-100">
+        <div className="sticky top-0 z-40 bg-white border-b border-border/50">
           <div className="px-6 lg:px-8 py-5">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight">Practice Dashboard</h2>
-                <p className="text-[13px] text-slate-400 mt-0.5">
+                <h2 className="text-[17px] font-semibold text-foreground tracking-tight">Practice Dashboard</h2>
+                <p className="text-[13px] text-muted-foreground mt-0.5">
                   Portfolio overview
                 </p>
               </div>
               <Link href={`/p/${partnerSlug}/clients`}>
-                <button className="h-8 px-4 text-[13px] font-medium bg-slate-900 hover:bg-slate-800 text-white rounded transition-colors">
+                <button className="h-8 px-4 text-[13px] font-medium bg-foreground text-background hover:bg-foreground/90 rounded transition-colors">
                   View All Clients
                 </button>
               </Link>
@@ -124,25 +124,25 @@ export default function PartnerPracticeDashboard() {
         {/* Content */}
         <div className="p-6 lg:p-8 space-y-8">
           {/* KPI metrics - inline with hairline dividers */}
-          <div className="flex flex-wrap gap-x-8 gap-y-4 pb-6 border-b border-slate-100">
+          <div className="flex flex-wrap gap-x-8 gap-y-4 pb-6 border-b border-border/50">
             <div>
-              <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">Active Clients</p>
-              <p className="text-[28px] font-semibold text-slate-900 tabular-nums leading-none">{kpis.activeClients}</p>
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1">Active Clients</p>
+              <p className="text-[28px] font-semibold text-foreground tabular-nums leading-none">{kpis.activeClients}</p>
             </div>
-            <div className="w-px bg-slate-100 self-stretch hidden sm:block" />
+            <div className="w-px bg-muted self-stretch hidden sm:block" />
             <div>
-              <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">Total Outstanding</p>
-              <p className="text-[28px] font-semibold text-slate-900 tabular-nums leading-none">{formatCurrencyCompact(kpis.totalOutstanding)}</p>
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1">Total Outstanding</p>
+              <p className="text-[28px] font-semibold text-foreground tabular-nums leading-none">{formatCurrencyCompact(kpis.totalOutstanding)}</p>
             </div>
-            <div className="w-px bg-slate-100 self-stretch hidden sm:block" />
+            <div className="w-px bg-muted self-stretch hidden sm:block" />
             <div>
-              <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">Expected (30d)</p>
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1">Expected (30d)</p>
               <p className="text-[28px] font-semibold text-emerald-600 tabular-nums leading-none">{formatCurrencyCompact(kpis.expectedCash30d)}</p>
             </div>
-            <div className="w-px bg-slate-100 self-stretch hidden sm:block" />
+            <div className="w-px bg-muted self-stretch hidden sm:block" />
             <div>
-              <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">Exceptions</p>
-              <p className={`text-[28px] font-semibold tabular-nums leading-none ${kpis.exceptionsCount > 0 ? 'text-amber-600' : 'text-slate-900'}`}>
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1">Exceptions</p>
+              <p className={`text-[28px] font-semibold tabular-nums leading-none ${kpis.exceptionsCount > 0 ? 'text-amber-600' : 'text-foreground'}`}>
                 {kpis.exceptionsCount}
               </p>
             </div>
@@ -153,19 +153,19 @@ export default function PartnerPracticeDashboard() {
             {/* Workload by Controller */}
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Workload by Controller</span>
+                <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Workload by Controller</span>
               </div>
               {workload.length === 0 ? (
-                <p className="text-[13px] text-slate-400 py-4">No active client assignments</p>
+                <p className="text-[13px] text-muted-foreground py-4">No active client assignments</p>
               ) : (
                 <div className="space-y-0">
                   {workload.map((w, i) => (
                     <div 
                       key={i} 
-                      className="flex items-center justify-between py-3 border-b border-slate-50 last:border-0"
+                      className="flex items-center justify-between py-3 border-b border-border/50 last:border-0"
                     >
-                      <span className="text-[14px] text-slate-700">{w.controllerName}</span>
-                      <span className="text-[13px] text-slate-400 tabular-nums">
+                      <span className="text-[14px] text-foreground">{w.controllerName}</span>
+                      <span className="text-[13px] text-muted-foreground tabular-nums">
                         {w.clientCount} client{w.clientCount !== 1 ? "s" : ""}
                       </span>
                     </div>
@@ -177,25 +177,25 @@ export default function PartnerPracticeDashboard() {
             {/* Clients Needing Attention */}
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Needs Attention</span>
+                <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Needs Attention</span>
                 {needsAttention.length > 0 && (
-                  <span className="text-[11px] text-slate-300">({needsAttention.length})</span>
+                  <span className="text-[11px] text-muted-foreground">({needsAttention.length})</span>
                 )}
               </div>
               {needsAttention.length === 0 ? (
-                <p className="text-[13px] text-slate-400 py-4">All clients are on track</p>
+                <p className="text-[13px] text-muted-foreground py-4">All clients are on track</p>
               ) : (
                 <div className="space-y-0">
                   {needsAttention.map((client) => (
                     <Link key={client.id} href={`/p/${partnerSlug}/clients/${client.id}`}>
                       <div 
-                        className="flex items-center justify-between py-3 border-b border-slate-50 last:border-0 hover:bg-slate-50/50 -mx-2 px-2 rounded cursor-pointer transition-colors"
+                        className="flex items-center justify-between py-3 border-b border-border/50 last:border-0 hover:bg-muted/50 -mx-2 px-2 rounded cursor-pointer transition-colors"
                       >
                         <div>
-                          <span className="text-[14px] font-medium text-slate-900">{client.name}</span>
-                          <p className="text-[12px] text-slate-400">{client.reason}</p>
+                          <span className="text-[14px] font-medium text-foreground">{client.name}</span>
+                          <p className="text-[12px] text-muted-foreground">{client.reason}</p>
                         </div>
-                        <span className="text-[12px] text-slate-400">{client.status}</span>
+                        <span className="text-[12px] text-muted-foreground">{client.status}</span>
                       </div>
                     </Link>
                   ))}

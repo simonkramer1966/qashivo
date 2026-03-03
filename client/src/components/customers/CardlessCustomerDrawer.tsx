@@ -1115,8 +1115,8 @@ ${signOff}`);
         case "sms": return <MessageSquare className="h-4 w-4 text-green-500" />;
         case "voice": return <Phone className={cn("h-4 w-4", isVoiceAI ? "text-[#0D9488]" : "text-purple-500")} />;
         case "note": return <StickyNote className="h-4 w-4 text-amber-500" />;
-        case "system": return <Settings className="h-4 w-4 text-gray-400" />;
-        default: return <Clock className="h-4 w-4 text-gray-400" />;
+        case "system": return <Settings className="h-4 w-4 text-muted-foreground" />;
+        default: return <Clock className="h-4 w-4 text-muted-foreground" />;
       }
     };
     
@@ -1126,9 +1126,9 @@ ${signOff}`);
         <div className="relative">
           {getIcon()}
           {direction === 'inbound' ? (
-            <ArrowDownLeft className="h-2.5 w-2.5 text-gray-500 absolute -bottom-1 -right-1 bg-white rounded-full" />
+            <ArrowDownLeft className="h-2.5 w-2.5 text-muted-foreground absolute -bottom-1 -right-1 bg-background rounded-full" />
           ) : (
-            <ArrowUpRight className="h-2.5 w-2.5 text-[#17B6C3] absolute -bottom-1 -right-1 bg-white rounded-full" />
+            <ArrowUpRight className="h-2.5 w-2.5 text-[#17B6C3] absolute -bottom-1 -right-1 bg-background rounded-full" />
           )}
         </div>
       );
@@ -1156,7 +1156,7 @@ ${signOff}`);
       case "dispute": return "text-[#E8A23B]";
       case "paid_confirmed": return "text-[#4FAD80]";
       case "refused": return "text-[#C75C5C]";
-      default: return "text-gray-600";
+      default: return "text-muted-foreground";
     }
   };
 
@@ -1246,7 +1246,7 @@ ${signOff}`);
     if (invoice.daysOverdue && invoice.daysOverdue > 0) {
       return "text-[#C75C5C]";
     }
-    return "text-gray-600";
+    return "text-muted-foreground";
   };
 
   return (
@@ -1254,12 +1254,12 @@ ${signOff}`);
       if (!newOpen) resetNoteForm();
       onOpenChange(newOpen);
     }}>
-      <SheetContent className="w-full sm:max-w-4xl p-0 flex flex-col bg-white" hideCloseButton>
+      <SheetContent className="w-full sm:max-w-4xl p-0 flex flex-col bg-background" hideCloseButton>
         {/* Compact Header - v2.0 */}
-        <SheetHeader className="px-6 pt-5 pb-4 flex-shrink-0 border-b border-gray-100">
+        <SheetHeader className="px-6 pt-5 pb-4 flex-shrink-0 border-b border-border/50">
           <div className="flex items-start justify-between">
             <div>
-              <SheetTitle className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <SheetTitle className="text-xl font-bold text-foreground flex items-center gap-2">
                 {isLoading ? (
                   <Skeleton className="h-6 w-48" />
                 ) : (
@@ -1267,7 +1267,7 @@ ${signOff}`);
                     {preview?.customer.companyName || preview?.customer.name || "Customer"}
                     <Popover>
                       <PopoverTrigger asChild>
-                        <button className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-gray-300 text-gray-400 hover:text-gray-600 hover:border-gray-400 transition-colors">
+                        <button className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-border text-muted-foreground hover:text-muted-foreground hover:border-gray-400 transition-colors">
                           <Info className="h-3 w-3" />
                         </button>
                       </PopoverTrigger>
@@ -1277,79 +1277,79 @@ ${signOff}`);
                           return (
                             <div className="space-y-3">
                               <div>
-                                <h4 className="font-medium text-sm text-gray-900">Email/SMS Variables</h4>
+                                <h4 className="font-medium text-sm text-foreground">Email/SMS Variables</h4>
                                 <div className="space-y-1 text-xs mt-2">
-                                  <div className="flex justify-between py-1 border-b border-gray-100">
+                                  <div className="flex justify-between py-1 border-b border-border/50">
                                     <code className="text-blue-600 bg-blue-50 px-1 rounded">{"{firstName}"}</code>
-                                    <span className="text-gray-500 truncate ml-2">{primaryContact?.name?.split(' ')[0] || '—'}</span>
+                                    <span className="text-muted-foreground truncate ml-2">{primaryContact?.name?.split(' ')[0] || '—'}</span>
                                   </div>
-                                  <div className="flex justify-between py-1 border-b border-gray-100">
+                                  <div className="flex justify-between py-1 border-b border-border/50">
                                     <code className="text-blue-600 bg-blue-50 px-1 rounded">{"{customerName}"}</code>
-                                    <span className="text-gray-500 truncate ml-2">{primaryContact?.name || '—'}</span>
+                                    <span className="text-muted-foreground truncate ml-2">{primaryContact?.name || '—'}</span>
                                   </div>
-                                  <div className="flex justify-between py-1 border-b border-gray-100">
+                                  <div className="flex justify-between py-1 border-b border-border/50">
                                     <code className="text-blue-600 bg-blue-50 px-1 rounded">{"{companyName}"}</code>
-                                    <span className="text-gray-500 truncate ml-2">{preview?.customer?.companyName || '—'}</span>
+                                    <span className="text-muted-foreground truncate ml-2">{preview?.customer?.companyName || '—'}</span>
                                   </div>
-                                  <div className="flex justify-between py-1 border-b border-gray-100">
+                                  <div className="flex justify-between py-1 border-b border-border/50">
                                     <code className="text-blue-600 bg-blue-50 px-1 rounded">{"{amount}"}</code>
-                                    <span className="text-gray-500">Invoice amount</span>
+                                    <span className="text-muted-foreground">Invoice amount</span>
                                   </div>
-                                  <div className="flex justify-between py-1 border-b border-gray-100">
+                                  <div className="flex justify-between py-1 border-b border-border/50">
                                     <code className="text-blue-600 bg-blue-50 px-1 rounded">{"{invoiceNumber}"}</code>
-                                    <span className="text-gray-500">Invoice ref</span>
+                                    <span className="text-muted-foreground">Invoice ref</span>
                                   </div>
-                                  <div className="flex justify-between py-1 border-b border-gray-100">
+                                  <div className="flex justify-between py-1 border-b border-border/50">
                                     <code className="text-blue-600 bg-blue-50 px-1 rounded">{"{dueDate}"}</code>
-                                    <span className="text-gray-500">Due date</span>
+                                    <span className="text-muted-foreground">Due date</span>
                                   </div>
                                   <div className="flex justify-between py-1">
                                     <code className="text-blue-600 bg-blue-50 px-1 rounded">{"{daysOverdue}"}</code>
-                                    <span className="text-gray-500">Days overdue</span>
+                                    <span className="text-muted-foreground">Days overdue</span>
                                   </div>
                                 </div>
                               </div>
-                              <div className="border-t border-gray-200 pt-2">
-                                <h4 className="font-medium text-sm text-gray-900 flex items-center gap-1">
+                              <div className="border-t border-border pt-2">
+                                <h4 className="font-medium text-sm text-foreground flex items-center gap-1">
                                   <Mic className="h-3 w-3" /> AI Voice Variables
                                 </h4>
-                                <p className="text-xs text-gray-400 mb-2">Sent to Retell (snake_case)</p>
+                                <p className="text-xs text-muted-foreground mb-2">Sent to Retell (snake_case)</p>
                                 <div className="space-y-1 text-xs">
-                                  <div className="flex justify-between py-1 border-b border-gray-100">
+                                  <div className="flex justify-between py-1 border-b border-border/50">
                                     <code className="text-purple-600 bg-purple-50 px-1 rounded">customer_name</code>
-                                    <span className="text-gray-500 truncate ml-2">{primaryContact?.name || '—'}</span>
+                                    <span className="text-muted-foreground truncate ml-2">{primaryContact?.name || '—'}</span>
                                   </div>
-                                  <div className="flex justify-between py-1 border-b border-gray-100">
+                                  <div className="flex justify-between py-1 border-b border-border/50">
                                     <code className="text-purple-600 bg-purple-50 px-1 rounded">company_name</code>
-                                    <span className="text-gray-500 truncate ml-2">{preview?.customer?.companyName || '—'}</span>
+                                    <span className="text-muted-foreground truncate ml-2">{preview?.customer?.companyName || '—'}</span>
                                   </div>
-                                  <div className="flex justify-between py-1 border-b border-gray-100">
+                                  <div className="flex justify-between py-1 border-b border-border/50">
                                     <code className="text-purple-600 bg-purple-50 px-1 rounded">total_outstanding</code>
-                                    <span className="text-gray-500">Total owed</span>
+                                    <span className="text-muted-foreground">Total owed</span>
                                   </div>
-                                  <div className="flex justify-between py-1 border-b border-gray-100">
+                                  <div className="flex justify-between py-1 border-b border-border/50">
                                     <code className="text-purple-600 bg-purple-50 px-1 rounded">invoice_count</code>
-                                    <span className="text-gray-500">Number of invoices</span>
+                                    <span className="text-muted-foreground">Number of invoices</span>
                                   </div>
-                                  <div className="flex justify-between py-1 border-b border-gray-100">
+                                  <div className="flex justify-between py-1 border-b border-border/50">
                                     <code className="text-purple-600 bg-purple-50 px-1 rounded">invoice_number</code>
-                                    <span className="text-gray-500">Invoice ref</span>
+                                    <span className="text-muted-foreground">Invoice ref</span>
                                   </div>
-                                  <div className="flex justify-between py-1 border-b border-gray-100">
+                                  <div className="flex justify-between py-1 border-b border-border/50">
                                     <code className="text-purple-600 bg-purple-50 px-1 rounded">invoice_amount</code>
-                                    <span className="text-gray-500">Single invoice amount</span>
+                                    <span className="text-muted-foreground">Single invoice amount</span>
                                   </div>
-                                  <div className="flex justify-between py-1 border-b border-gray-100">
+                                  <div className="flex justify-between py-1 border-b border-border/50">
                                     <code className="text-purple-600 bg-purple-50 px-1 rounded">due_date</code>
-                                    <span className="text-gray-500">Payment due date</span>
+                                    <span className="text-muted-foreground">Payment due date</span>
                                   </div>
-                                  <div className="flex justify-between py-1 border-b border-gray-100">
+                                  <div className="flex justify-between py-1 border-b border-border/50">
                                     <code className="text-purple-600 bg-purple-50 px-1 rounded">days_overdue</code>
-                                    <span className="text-gray-500">Days past due</span>
+                                    <span className="text-muted-foreground">Days past due</span>
                                   </div>
                                   <div className="flex justify-between py-1">
                                     <code className="text-purple-600 bg-purple-50 px-1 rounded">custom_message</code>
-                                    <span className="text-gray-500">Additional context</span>
+                                    <span className="text-muted-foreground">Additional context</span>
                                   </div>
                                 </div>
                               </div>
@@ -1361,7 +1361,7 @@ ${signOff}`);
                   </>
                 )}
               </SheetTitle>
-              <SheetDescription className="text-sm text-gray-500 mt-0.5">
+              <SheetDescription className="text-sm text-muted-foreground mt-0.5">
                 {isLoading ? (
                   <Skeleton className="h-4 w-36" />
                 ) : (
@@ -1372,7 +1372,7 @@ ${signOff}`);
             {!isLoading && preview && (
               <button
                 onClick={handleDetailClick}
-                className="text-sm text-gray-500 hover:text-gray-900 transition-colors flex items-center gap-1"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
               >
                 Full profile
                 <ArrowUpRight className="h-3.5 w-3.5" />
@@ -1391,7 +1391,7 @@ ${signOff}`);
 
         <div className="flex-1 flex min-h-0 overflow-hidden">
           {/* Left Column - Balance & Activity - Compact v2.0 */}
-          <div className="w-1/2 flex flex-col border-r border-gray-100 min-w-0 overflow-hidden">
+          <div className="w-1/2 flex flex-col border-r border-border/50 min-w-0 overflow-hidden">
             <ScrollArea className="flex-1">
               <div className="px-6 py-5 min-w-0 overflow-hidden">
                 {isLoading ? (
@@ -1402,11 +1402,11 @@ ${signOff}`);
                 ) : preview ? (
                   <>
                     {/* Financial Summary - Compact v2.0 */}
-                    <section className="pb-5 border-b border-gray-100">
-                      <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-2">
+                    <section className="pb-5 border-b border-border/50">
+                      <p className="text-[11px] text-muted-foreground uppercase tracking-wider mb-2">
                         Outstanding Balance
                       </p>
-                      <p className="text-2xl font-semibold text-gray-900 tabular-nums">
+                      <p className="text-2xl font-semibold text-foreground tabular-nums">
                         {formatCurrency(preview.customer.outstandingTotal, { showDecimals: true })}
                       </p>
                       {preview.customer.overdueTotal > 0 && (
@@ -1418,25 +1418,25 @@ ${signOff}`);
 
                     {/* Loop Anchor Strip - Cardless v2.0 */}
                     {!isNoteMode && !isCallMode && !isEmailMode && !isSmsMode && (
-                      <section className="pt-4 border-t border-gray-100">
+                      <section className="pt-4 border-t border-border/50">
                         <div className="flex gap-4">
                           {/* Next Action */}
                           <div className="flex-1 min-w-0">
-                            <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Next</p>
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Next</p>
                             {preview.latestTimeline && preview.latestTimeline.length > 0 && 
                              preview.latestTimeline[0].channel && 
                              ['email', 'sms', 'call'].includes(preview.latestTimeline[0].channel.toLowerCase()) ? (
-                              <p className="text-sm text-gray-900 truncate">
+                              <p className="text-sm text-foreground truncate">
                                 Follow-up
                               </p>
                             ) : (
-                              <p className="text-sm text-gray-400">—</p>
+                              <p className="text-sm text-muted-foreground">—</p>
                             )}
                           </div>
                           
                           {/* Expected Payment */}
                           <div className="flex-1 min-w-0">
-                            <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Expected</p>
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Expected</p>
                             {(() => {
                               // Sort outcomes by createdAt desc and find latest with payment date
                               const sortedOutcomes = outcomesData 
@@ -1453,13 +1453,13 @@ ${signOff}`);
                               } else if (preview.customer.overdueTotal > 0) {
                                 return <p className="text-sm text-[#C75C5C] truncate">Overdue</p>;
                               }
-                              return <p className="text-sm text-gray-400">—</p>;
+                              return <p className="text-sm text-muted-foreground">—</p>;
                             })()}
                           </div>
                           
                           {/* Flags */}
                           <div className="flex-1 min-w-0">
-                            <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Flags</p>
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Flags</p>
                             <div className="flex gap-1">
                               {outcomesData && outcomesData.some(o => o.type === 'DISPUTE') && (
                                 <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-[#C75C5C]/10 text-[#C75C5C]">
@@ -1472,7 +1472,7 @@ ${signOff}`);
                                 </span>
                               )}
                               {(!outcomesData || !outcomesData.some(o => o.type === 'DISPUTE' || o.requiresHumanReview)) && (
-                                <p className="text-sm text-gray-400">—</p>
+                                <p className="text-sm text-muted-foreground">—</p>
                               )}
                             </div>
                           </div>
@@ -1484,14 +1484,14 @@ ${signOff}`);
                     {!isNoteMode && !isCallMode && !isEmailMode && !isSmsMode && (
                       <section className="pt-5 overflow-hidden">
                         <div className="flex items-center justify-between mb-3">
-                          <p className="text-[11px] text-gray-400 uppercase tracking-wider">
+                          <p className="text-[11px] text-muted-foreground uppercase tracking-wider">
                             Conversation
                           </p>
                           <button
                             onClick={toggleActivitySearch}
-                            className="h-8 w-8 flex items-center justify-center hover:bg-gray-100 rounded transition-colors"
+                            className="h-8 w-8 flex items-center justify-center hover:bg-muted rounded transition-colors"
                           >
-                            <Search className={`h-3.5 w-3.5 ${activitySearchOpen ? 'text-gray-900' : 'text-gray-400'}`} />
+                            <Search className={`h-3.5 w-3.5 ${activitySearchOpen ? 'text-foreground' : 'text-muted-foreground'}`} />
                           </button>
                         </div>
                         
@@ -1504,8 +1504,8 @@ ${signOff}`);
                               className={cn(
                                 "px-2.5 py-1 text-xs font-medium rounded transition-colors",
                                 conversationFilter === filter
-                                  ? "bg-gray-900 text-white"
-                                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                                  ? "bg-foreground text-white"
+                                  : "bg-muted text-muted-foreground hover:bg-muted"
                               )}
                             >
                               {filter === "all" ? "All" : filter === "messages" ? "Messages" : filter === "outcomes" ? "Outcomes" : "Notes"}
@@ -1521,15 +1521,15 @@ ${signOff}`);
                               value={activitySearchQuery}
                               onChange={(e) => setActivitySearchQuery(e.target.value)}
                               onKeyDown={handleSearchKeyDown}
-                              className="h-9 text-sm bg-white border border-gray-200 rounded-lg px-3 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                              className="h-9 text-sm bg-background border border-border rounded-lg px-3 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                               autoFocus
                             />
                             {activitySearchQuery && (
                               <button
                                 onClick={() => setActivitySearchQuery("")}
-                                className="absolute right-0 top-1/2 -translate-y-1/2 min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-gray-100 rounded-full"
+                                className="absolute right-0 top-1/2 -translate-y-1/2 min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-muted rounded-full"
                               >
-                                <X className="h-4 w-4 text-gray-400" />
+                                <X className="h-4 w-4 text-muted-foreground" />
                               </button>
                             )}
                           </div>
@@ -1551,11 +1551,11 @@ ${signOff}`);
                                   outcome.effect === 'MANUAL_REVIEW' ? 'Manual Review' : null;
                                 
                                 return (
-                                  <div key={outcome.id} className="border border-gray-100 rounded p-3 bg-white">
+                                  <div key={outcome.id} className="border border-border/50 rounded p-3 bg-background">
                                     <div className="flex items-start justify-between gap-2">
                                       <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                          <span className="text-sm font-medium text-gray-900">
+                                          <span className="text-sm font-medium text-foreground">
                                             {outcome.type.replace(/_/g, ' ')}
                                           </span>
                                           <span className={cn("px-1.5 py-0.5 text-[10px] font-medium rounded", confidenceBg, confidenceColor)}>
@@ -1567,13 +1567,13 @@ ${signOff}`);
                                             </span>
                                           )}
                                           {effectLabel && (
-                                            <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-gray-100 text-gray-600">
+                                            <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-muted text-muted-foreground">
                                               {effectLabel}
                                             </span>
                                           )}
                                         </div>
                                         {outcome.rawSnippet && (
-                                          <p className="text-xs text-gray-500 line-clamp-2">{outcome.rawSnippet}</p>
+                                          <p className="text-xs text-muted-foreground line-clamp-2">{outcome.rawSnippet}</p>
                                         )}
                                         {outcome.extracted?.promisedPaymentDate && (
                                           <p className="text-xs text-[#2E7D32] mt-1">
@@ -1584,19 +1584,19 @@ ${signOff}`);
                                         {outcome.linkedInvoiceIds && outcome.linkedInvoiceIds.length > 0 && (
                                           <div className="flex flex-wrap gap-1 mt-2">
                                             {outcome.linkedInvoiceIds.slice(0, 3).map((invId) => (
-                                              <span key={invId} className="px-1.5 py-0.5 text-[10px] bg-gray-50 text-gray-500 rounded">
+                                              <span key={invId} className="px-1.5 py-0.5 text-[10px] bg-muted text-muted-foreground rounded">
                                                 {invId.slice(-6)}
                                               </span>
                                             ))}
                                             {outcome.linkedInvoiceIds.length > 3 && (
-                                              <span className="px-1.5 py-0.5 text-[10px] bg-gray-50 text-gray-500 rounded">
+                                              <span className="px-1.5 py-0.5 text-[10px] bg-muted text-muted-foreground rounded">
                                                 +{outcome.linkedInvoiceIds.length - 3}
                                               </span>
                                             )}
                                           </div>
                                         )}
                                       </div>
-                                      <span className="text-[10px] text-gray-400 flex-shrink-0">
+                                      <span className="text-[10px] text-muted-foreground flex-shrink-0">
                                         {new Date(outcome.createdAt).toLocaleDateString()}
                                       </span>
                                     </div>
@@ -1607,13 +1607,13 @@ ${signOff}`);
                           )}
                           
                           {conversationFilter === "outcomes" && (!outcomesData || outcomesData.length === 0) && (
-                            <p className="text-sm text-gray-400 py-4">No outcomes recorded</p>
+                            <p className="text-sm text-muted-foreground py-4">No outcomes recorded</p>
                           )}
                           
                           {/* All View - includes recent outcomes summary block */}
                           {conversationFilter === "all" && outcomesData && outcomesData.length > 0 && (
-                            <div className="mb-4 pb-3 border-b border-gray-100">
-                              <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-2">Recent Outcomes</p>
+                            <div className="mb-4 pb-3 border-b border-border/50">
+                              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">Recent Outcomes</p>
                               <div className="space-y-1.5">
                                 {[...outcomesData]
                                   .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -1623,9 +1623,9 @@ ${signOff}`);
                                       outcome.confidenceBand === 'MEDIUM' ? 'text-[#F59E0B]' : 'text-[#C75C5C]';
                                     return (
                                       <div key={outcome.id} className="flex items-center gap-2 text-xs">
-                                        <span className="font-medium text-gray-700">{outcome.type.replace(/_/g, ' ')}</span>
+                                        <span className="font-medium text-foreground">{outcome.type.replace(/_/g, ' ')}</span>
                                         <span className={cn("font-medium", confidenceColor)}>{outcome.confidenceBand}</span>
-                                        <span className="text-gray-400">{new Date(outcome.createdAt).toLocaleDateString()}</span>
+                                        <span className="text-muted-foreground">{new Date(outcome.createdAt).toLocaleDateString()}</span>
                                       </div>
                                     );
                                   })}
@@ -1670,15 +1670,15 @@ ${signOff}`);
                               if (items.length === 0 && debouncedSearchQuery) {
                                 return (
                                   <div className="text-center py-8">
-                                    <Search className="h-8 w-8 text-gray-300 mx-auto mb-3" />
-                                    <p className="text-sm text-gray-400">No matching activity</p>
+                                    <Search className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
+                                    <p className="text-sm text-muted-foreground">No matching activity</p>
                                   </div>
                                 );
                               }
                               
                               if (items.length === 0) {
                                 return (
-                                  <p className="text-sm text-gray-400 py-4">
+                                  <p className="text-sm text-muted-foreground py-4">
                                     No {conversationFilter === "messages" ? "messages" : conversationFilter === "notes" ? "notes" : "activity"}
                                   </p>
                                 );
@@ -1721,31 +1721,31 @@ ${signOff}`);
                                     };
                                     
                                     return (
-                                      <div key={item.id} className="border-b border-gray-50 last:border-0 overflow-hidden">
+                                      <div key={item.id} className="border-b border-border/30 last:border-0 overflow-hidden">
                                         <button
                                           onClick={() => toggleTimelineItem(item.id)}
-                                          className="group w-full flex items-center py-2.5 hover:bg-gray-50 transition-colors text-left overflow-hidden"
+                                          className="group w-full flex items-center py-2.5 hover:bg-muted transition-colors text-left overflow-hidden"
                                         >
                                           <span className="mr-3 flex-shrink-0">
                                             {getChannelIcon(item.channel, isVoiceAI, itemDirection)}
                                           </span>
                                           
                                           <div className="flex-1 w-0 min-w-0 mr-3 overflow-hidden">
-                                            <p className="text-sm text-gray-900 truncate block">
+                                            <p className="text-sm text-foreground truncate block">
                                               {getVoiceTitle()}
                                             </p>
-                                            <p className="text-xs text-gray-400 mt-0.5 truncate block">
+                                            <p className="text-xs text-muted-foreground mt-0.5 truncate block">
                                               {dateInfo.relative}
                                             </p>
                                           </div>
                                           
                                           {amount && (
-                                            <span className="text-sm font-semibold text-gray-900 tabular-nums mr-3">
+                                            <span className="text-sm font-semibold text-foreground tabular-nums mr-3">
                                               {formatCurrency(amount)}
                                             </span>
                                           )}
                                           
-                                          <ChevronRight className={`h-3.5 w-3.5 text-gray-300 transition-transform ${isItemExpanded ? 'rotate-90' : ''}`} />
+                                          <ChevronRight className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${isItemExpanded ? 'rotate-90' : ''}`} />
                                         </button>
                                         
                                         {isItemExpanded && (
@@ -1778,7 +1778,7 @@ ${signOff}`);
                                               };
                                               const sentimentColor: Record<string, string> = {
                                                 'positive': 'bg-green-50 text-green-700',
-                                                'neutral': 'bg-gray-100 text-gray-600',
+                                                'neutral': 'bg-muted text-muted-foreground',
                                                 'negative': 'bg-red-50 text-red-700',
                                                 'frustrated': 'bg-amber-50 text-amber-700',
                                                 'cooperative': 'bg-green-50 text-green-700',
@@ -1802,12 +1802,12 @@ ${signOff}`);
                                                   {(voiceOutcomeType || voiceSentiment || voiceIntent) && (
                                                     <div className="flex flex-wrap gap-1.5">
                                                       {voiceOutcomeType && (
-                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${outcomeColor[voiceOutcomeType] || 'bg-gray-100 text-gray-600'}`}>
+                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${outcomeColor[voiceOutcomeType] || 'bg-muted text-muted-foreground'}`}>
                                                           {outcomeLabel[voiceOutcomeType] || voiceOutcomeType}
                                                         </span>
                                                       )}
                                                       {voiceSentiment && (
-                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${sentimentColor[voiceSentiment.toLowerCase()] || 'bg-gray-100 text-gray-600'}`}>
+                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${sentimentColor[voiceSentiment.toLowerCase()] || 'bg-muted text-muted-foreground'}`}>
                                                           {voiceSentiment.charAt(0).toUpperCase() + voiceSentiment.slice(1)}
                                                         </span>
                                                       )}
@@ -1817,7 +1817,7 @@ ${signOff}`);
                                                         </span>
                                                       )}
                                                       {outcomeData.confidenceBand && (
-                                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-gray-50 text-gray-500">
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-muted text-muted-foreground">
                                                           {outcomeData.confidenceBand} confidence
                                                         </span>
                                                       )}
@@ -1826,7 +1826,7 @@ ${signOff}`);
                                                   
                                                   {/* AI Summary */}
                                                   {voiceSummary && (
-                                                    <p className="text-xs text-gray-600 leading-relaxed">
+                                                    <p className="text-xs text-muted-foreground leading-relaxed">
                                                       {voiceSummary}
                                                     </p>
                                                   )}
@@ -1845,7 +1845,7 @@ ${signOff}`);
 
                                                   {/* Full transcript (collapsible) */}
                                                   {fullTranscript && (
-                                                    <div className="border border-gray-100 rounded">
+                                                    <div className="border border-border/50 rounded">
                                                       <button
                                                         onClick={(e) => {
                                                           e.stopPropagation();
@@ -1856,14 +1856,14 @@ ${signOff}`);
                                                             return next;
                                                           });
                                                         }}
-                                                        className="w-full flex items-center justify-between px-2 py-1.5 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors"
+                                                        className="w-full flex items-center justify-between px-2 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                                                       >
                                                         <span>Full transcript</span>
                                                         <ChevronRight className={`h-3 w-3 transition-transform ${isTranscriptExpanded ? 'rotate-90' : ''}`} />
                                                       </button>
                                                       {isTranscriptExpanded && (
                                                         <div className="px-2 pb-2 max-h-64 overflow-y-auto">
-                                                          <div className="text-xs text-gray-600 whitespace-pre-wrap leading-relaxed font-mono">
+                                                          <div className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed font-mono">
                                                             {fullTranscript}
                                                           </div>
                                                         </div>
@@ -1873,7 +1873,7 @@ ${signOff}`);
 
                                                   {/* Fallback: show transcript snippet if no full transcript */}
                                                   {!fullTranscript && transcriptSnippet && (
-                                                    <div className="bg-gray-50 rounded p-2 text-xs text-gray-600 italic">
+                                                    <div className="bg-muted rounded p-2 text-xs text-muted-foreground italic">
                                                       "{transcriptSnippet.length > 200 ? transcriptSnippet.substring(0, 200) + '...' : transcriptSnippet}"
                                                     </div>
                                                   )}
@@ -1883,11 +1883,11 @@ ${signOff}`);
 
                                             {/* Non-voice message body */}
                                             {item.body && !isVoiceAI && (
-                                              <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">
+                                              <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
                                                 {item.body}
                                               </p>
                                             )}
-                                            <p className="text-xs text-gray-400">
+                                            <p className="text-xs text-muted-foreground">
                                               {formatExactDate(item.occurredAt)}
                                               {item.createdBy && ` · ${item.createdBy.name || (item.createdBy.type === 'system' ? 'System' : 'User')}`}
                                               {isVoiceAI && payload.provider && ` · ${payload.provider}`}
@@ -1902,7 +1902,7 @@ ${signOff}`);
                                     <button
                                       onClick={loadMoreTimeline}
                                       disabled={isLoadingMoreTimeline}
-                                      className="w-full py-3 text-sm text-gray-500 hover:text-gray-900 transition-colors flex items-center justify-center gap-2"
+                                      className="w-full py-3 text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center gap-2"
                                     >
                                       {isLoadingMoreTimeline ? (
                                         <>
@@ -1918,7 +1918,7 @@ ${signOff}`);
                               );
                             })()
                           ) : (
-                            <p className="text-base text-gray-400 py-4">No recent activity</p>
+                            <p className="text-base text-muted-foreground py-4">No recent activity</p>
                           )}
                         </div>
                       </section>
@@ -1927,13 +1927,13 @@ ${signOff}`);
                     {/* Note Entry Section - Cardless */}
                     {isNoteMode && (
                       <section className="pt-10 space-y-6">
-                        <p className="text-xs text-gray-400 uppercase tracking-wider">Add Note</p>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wider">Add Note</p>
                         
                         <div className="space-y-4">
                           <div className="w-40">
-                            <Label className="text-xs text-gray-500 mb-1.5 block">Type</Label>
+                            <Label className="text-xs text-muted-foreground mb-1.5 block">Type</Label>
                             <Select value={noteType} onValueChange={(v) => setNoteType(v as NoteType)}>
-                              <SelectTrigger className="h-9 bg-white border border-gray-200 rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]">
+                              <SelectTrigger className="h-9 bg-background border border-border rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -1948,30 +1948,30 @@ ${signOff}`);
                             <>
                               <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                  <Label className="text-xs text-gray-500 mb-1.5 block">Date</Label>
+                                  <Label className="text-xs text-muted-foreground mb-1.5 block">Date</Label>
                                   <Input
                                     type="date"
                                     value={reminderDate}
                                     onChange={(e) => setReminderDate(e.target.value)}
-                                    className="h-9 bg-white border border-gray-200 rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                                    className="h-9 bg-background border border-border rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                                     min={new Date().toISOString().split('T')[0]}
                                   />
                                 </div>
                                 <div>
-                                  <Label className="text-xs text-gray-500 mb-1.5 block">Time</Label>
+                                  <Label className="text-xs text-muted-foreground mb-1.5 block">Time</Label>
                                   <Input
                                     type="time"
                                     value={reminderTime}
                                     onChange={(e) => setReminderTime(e.target.value)}
-                                    className="h-9 bg-white border border-gray-200 rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                                    className="h-9 bg-background border border-border rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                                   />
                                 </div>
                               </div>
 
                               <div>
-                                <Label className="text-xs text-gray-500 mb-1.5 block">Assign to</Label>
+                                <Label className="text-xs text-muted-foreground mb-1.5 block">Assign to</Label>
                                 <Select value={assignedToUserId} onValueChange={setAssignedToUserId}>
-                                  <SelectTrigger className="h-9 bg-white border border-gray-200 rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]">
+                                  <SelectTrigger className="h-9 bg-background border border-border rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]">
                                     <SelectValue placeholder="Select user (optional)" />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -1994,7 +1994,7 @@ ${signOff}`);
                               placeholder="Type your note here..."
                               value={noteContent}
                               onChange={(e) => setNoteContent(e.target.value)}
-                              className="min-h-[100px] bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                              className="min-h-[100px] bg-background border border-border rounded-lg px-3 py-2 text-sm resize-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                             />
                           </div>
                         </div>
@@ -2005,11 +2005,11 @@ ${signOff}`);
                     {isCallMode && (
                       <section className="pt-10 space-y-6">
                         <div className="flex items-center justify-between">
-                          <p className="text-xs text-gray-400 uppercase tracking-wider">Schedule AI Call</p>
+                          <p className="text-xs text-muted-foreground uppercase tracking-wider">Schedule AI Call</p>
                           <button
                             type="button"
                             onClick={() => setVoiceAgentDebugOpen(true)}
-                            className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                            className="p-1 text-muted-foreground hover:text-muted-foreground transition-colors"
                             title="View Voice Agent Variables"
                           >
                             <Info className="h-4 w-4" />
@@ -2018,7 +2018,7 @@ ${signOff}`);
                         
                         <div className="space-y-4">
                           <div>
-                            <Label className="text-xs text-gray-500 mb-1.5 block">To</Label>
+                            <Label className="text-xs text-muted-foreground mb-1.5 block">To</Label>
                             <Select 
                               value={selectedCallRecipientPhone} 
                               onValueChange={(phone) => {
@@ -2029,7 +2029,7 @@ ${signOff}`);
                                 setSelectedCallRecipientName(name);
                               }}
                             >
-                              <SelectTrigger className="h-9 bg-white border border-gray-200 rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]">
+                              <SelectTrigger className="h-9 bg-background border border-border rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]">
                                 <SelectValue placeholder="Select recipient..." />
                               </SelectTrigger>
                               <SelectContent>
@@ -2043,20 +2043,20 @@ ${signOff}`);
                           </div>
 
                           <div>
-                            <Label className="text-xs text-gray-500 mb-1.5 block">Reason</Label>
+                            <Label className="text-xs text-muted-foreground mb-1.5 block">Reason</Label>
                             <Textarea
                               placeholder="e.g., Follow up on overdue invoice..."
                               value={callReason}
                               onChange={(e) => setCallReason(e.target.value)}
-                              className="min-h-[70px] bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                              className="min-h-[70px] bg-background border border-border rounded-lg px-3 py-2 text-sm resize-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                             />
                           </div>
 
                           <div className="grid grid-cols-2 gap-4">
                             <div>
-                              <Label className="text-xs text-gray-500 mb-1.5 block">Goal</Label>
+                              <Label className="text-xs text-muted-foreground mb-1.5 block">Goal</Label>
                               <Select value={callGoal} onValueChange={(v) => setCallGoal(v as CallGoal)}>
-                                <SelectTrigger className="h-9 bg-white border border-gray-200 rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]">
+                                <SelectTrigger className="h-9 bg-background border border-border rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -2067,7 +2067,7 @@ ${signOff}`);
                               </Select>
                             </div>
                             <div>
-                              <Label className="text-xs text-gray-500 mb-1.5 block">Max Duration</Label>
+                              <Label className="text-xs text-muted-foreground mb-1.5 block">Max Duration</Label>
                               <div className="flex items-center gap-3 h-11">
                                 <Slider
                                   value={[callMaxDuration]}
@@ -2077,13 +2077,13 @@ ${signOff}`);
                                   step={1}
                                   className="flex-1"
                                 />
-                                <span className="text-base text-gray-600 w-16 text-right">{callMaxDuration} min</span>
+                                <span className="text-base text-muted-foreground w-16 text-right">{callMaxDuration} min</span>
                               </div>
                             </div>
                           </div>
 
                           <div>
-                            <Label className="text-xs text-gray-500 mb-1.5 block">Tone</Label>
+                            <Label className="text-xs text-muted-foreground mb-1.5 block">Tone</Label>
                             <div className="flex items-center gap-3 h-11">
                               <Slider
                                 value={[callTone]}
@@ -2093,12 +2093,12 @@ ${signOff}`);
                                 step={1}
                                 className="flex-1"
                               />
-                              <span className="text-base text-gray-600 w-24 text-right">{toneLabels[callTone]}</span>
+                              <span className="text-base text-muted-foreground w-24 text-right">{toneLabels[callTone]}</span>
                             </div>
                           </div>
 
                           <div>
-                            <Label className="text-sm text-gray-500 mb-3 block">When</Label>
+                            <Label className="text-sm text-muted-foreground mb-3 block">When</Label>
                             <div className="flex gap-2">
                               {(['now', 'asap', 'scheduled'] as const).map((mode) => (
                                 <button
@@ -2107,8 +2107,8 @@ ${signOff}`);
                                   onClick={() => setCallScheduleMode(mode)}
                                   className={`flex-1 py-2.5 text-base font-medium transition-colors ${
                                     callScheduleMode === mode
-                                      ? "text-gray-900 border-b-2 border-gray-900"
-                                      : "text-gray-400 hover:text-gray-600"
+                                      ? "text-foreground border-b-2 border-foreground"
+                                      : "text-muted-foreground hover:text-muted-foreground"
                                   }`}
                                 >
                                   {mode === 'now' ? 'Now' : mode === 'asap' ? 'ASAP' : 'Scheduled'}
@@ -2120,22 +2120,22 @@ ${signOff}`);
                           {callScheduleMode === "scheduled" && (
                             <div className="grid grid-cols-2 gap-4">
                               <div>
-                                <Label className="text-xs text-gray-500 mb-1.5 block">Date</Label>
+                                <Label className="text-xs text-muted-foreground mb-1.5 block">Date</Label>
                                 <Input
                                   type="date"
                                   value={callScheduleDate}
                                   onChange={(e) => setCallScheduleDate(e.target.value)}
-                                  className="h-9 bg-white border border-gray-200 rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                                  className="h-9 bg-background border border-border rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                                   min={new Date().toISOString().split('T')[0]}
                                 />
                               </div>
                               <div>
-                                <Label className="text-xs text-gray-500 mb-1.5 block">Time</Label>
+                                <Label className="text-xs text-muted-foreground mb-1.5 block">Time</Label>
                                 <Input
                                   type="time"
                                   value={callScheduleTime}
                                   onChange={(e) => setCallScheduleTime(e.target.value)}
-                                  className="h-9 bg-white border border-gray-200 rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                                  className="h-9 bg-background border border-border rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                                 />
                               </div>
                             </div>
@@ -2147,14 +2147,14 @@ ${signOff}`);
                     {/* Email Section - Cardless */}
                     {isEmailMode && (
                       <section className="pt-10 space-y-6">
-                        <p className="text-xs text-gray-400 uppercase tracking-wider">Compose Email</p>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wider">Compose Email</p>
                         
                         <div className="space-y-4">
                           <div className="flex gap-4">
                             <div className="flex-1">
-                              <Label className="text-xs text-gray-500 mb-1.5 block">Template</Label>
+                              <Label className="text-xs text-muted-foreground mb-1.5 block">Template</Label>
                               <Select value={emailTemplate} onValueChange={(v: EmailTemplateType) => setEmailTemplate(v)}>
-                                <SelectTrigger className="h-9 bg-white border border-gray-200 rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]">
+                                <SelectTrigger className="h-9 bg-background border border-border rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -2165,7 +2165,7 @@ ${signOff}`);
                               </Select>
                             </div>
                             <div className="w-32">
-                              <Label className="text-xs text-gray-500 mb-1.5 block">Tone</Label>
+                              <Label className="text-xs text-muted-foreground mb-1.5 block">Tone</Label>
                               <div className="flex items-center gap-2 h-11">
                                 <Slider
                                   value={[emailTone]}
@@ -2180,10 +2180,10 @@ ${signOff}`);
                           </div>
 
                           <div>
-                            <Label className="text-xs text-gray-500 mb-1.5 block">To</Label>
+                            <Label className="text-xs text-muted-foreground mb-1.5 block">To</Label>
                             <div className="flex gap-3 items-center">
                               <Select value={selectedRecipientEmail} onValueChange={setSelectedRecipientEmail}>
-                                <SelectTrigger className="h-9 bg-white border border-gray-200 rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3] flex-1">
+                                <SelectTrigger className="h-9 bg-background border border-border rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3] flex-1">
                                   <SelectValue placeholder="Select recipient..." />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -2198,7 +2198,7 @@ ${signOff}`);
                                 <button
                                   onClick={handleGenerateEmail}
                                   disabled={isGeneratingEmail}
-                                  className="p-2.5 text-gray-400 hover:text-gray-900 transition-colors"
+                                  className="p-2.5 text-muted-foreground hover:text-foreground transition-colors"
                                   title="Generate with AI"
                                 >
                                   {isGeneratingEmail ? (
@@ -2212,22 +2212,22 @@ ${signOff}`);
                           </div>
 
                           <div>
-                            <Label className="text-xs text-gray-500 mb-1.5 block">Subject</Label>
+                            <Label className="text-xs text-muted-foreground mb-1.5 block">Subject</Label>
                             <Input
                               placeholder="Email subject..."
                               value={emailSubject}
                               onChange={(e) => setEmailSubject(e.target.value)}
-                              className="h-9 bg-white border border-gray-200 rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                              className="h-9 bg-background border border-border rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                             />
                           </div>
 
                           <div>
-                            <Label className="text-xs text-gray-500 mb-1.5 block">Message</Label>
+                            <Label className="text-xs text-muted-foreground mb-1.5 block">Message</Label>
                             <Textarea
                               placeholder="Type your message..."
                               value={emailBody}
                               onChange={(e) => setEmailBody(e.target.value)}
-                              className="min-h-[140px] bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                              className="min-h-[140px] bg-background border border-border rounded-lg px-3 py-2 text-sm resize-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                             />
                           </div>
                         </div>
@@ -2237,14 +2237,14 @@ ${signOff}`);
                     {/* SMS Section - Cardless */}
                     {isSmsMode && (
                       <section className="pt-10 space-y-6">
-                        <p className="text-xs text-gray-400 uppercase tracking-wider">Compose SMS</p>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wider">Compose SMS</p>
                         
                         <div className="space-y-4">
                           <div className="flex gap-4">
                             <div className="flex-1">
-                              <Label className="text-xs text-gray-500 mb-1.5 block">Template</Label>
+                              <Label className="text-xs text-muted-foreground mb-1.5 block">Template</Label>
                               <Select value={smsTemplate} onValueChange={(v: SmsTemplateType) => setSmsTemplate(v)}>
-                                <SelectTrigger className="h-9 bg-white border border-gray-200 rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]">
+                                <SelectTrigger className="h-9 bg-background border border-border rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -2255,7 +2255,7 @@ ${signOff}`);
                               </Select>
                             </div>
                             <div className="w-32">
-                              <Label className="text-xs text-gray-500 mb-1.5 block">Tone</Label>
+                              <Label className="text-xs text-muted-foreground mb-1.5 block">Tone</Label>
                               <div className="flex items-center gap-2 h-11">
                                 <Slider
                                   value={[smsTone]}
@@ -2270,10 +2270,10 @@ ${signOff}`);
                           </div>
 
                           <div>
-                            <Label className="text-xs text-gray-500 mb-1.5 block">To</Label>
+                            <Label className="text-xs text-muted-foreground mb-1.5 block">To</Label>
                             <div className="flex gap-3 items-center">
                               <Select value={selectedRecipientPhone} onValueChange={setSelectedRecipientPhone}>
-                                <SelectTrigger className="h-9 bg-white border border-gray-200 rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3] flex-1">
+                                <SelectTrigger className="h-9 bg-background border border-border rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3] flex-1">
                                   <SelectValue placeholder="Select recipient..." />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -2288,7 +2288,7 @@ ${signOff}`);
                                 <button
                                   onClick={handleGenerateSms}
                                   disabled={isGeneratingSms}
-                                  className="p-2.5 text-gray-400 hover:text-gray-900 transition-colors"
+                                  className="p-2.5 text-muted-foreground hover:text-foreground transition-colors"
                                   title="Generate with AI"
                                 >
                                   {isGeneratingSms ? (
@@ -2302,14 +2302,14 @@ ${signOff}`);
                           </div>
 
                           <div>
-                            <Label className="text-xs text-gray-500 mb-1.5 block">Message</Label>
+                            <Label className="text-xs text-muted-foreground mb-1.5 block">Message</Label>
                             <Textarea
                               placeholder="Type your message..."
                               value={smsBody}
                               onChange={(e) => setSmsBody(e.target.value)}
-                              className="min-h-[100px] bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                              className="min-h-[100px] bg-background border border-border rounded-lg px-3 py-2 text-sm resize-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                             />
-                            <p className="text-sm text-gray-400 mt-2">{smsBody.length}/160 characters</p>
+                            <p className="text-sm text-muted-foreground mt-2">{smsBody.length}/160 characters</p>
                           </div>
                         </div>
                       </section>
@@ -2320,12 +2320,12 @@ ${signOff}`);
             </ScrollArea>
 
             {/* Left Footer - Communication Actions - Compact v2.0 */}
-            <div className="px-6 py-3 border-t border-gray-100 flex-shrink-0">
+            <div className="px-6 py-3 border-t border-border/50 flex-shrink-0">
               {isNoteMode ? (
                 <div className="flex gap-3">
                   <button
                     onClick={resetNoteForm}
-                    className="flex-1 h-9 py-2 text-sm text-gray-600 font-medium hover:text-gray-900 transition-colors"
+                    className="flex-1 h-9 py-2 text-sm text-muted-foreground font-medium hover:text-foreground transition-colors"
                   >
                     Cancel
                   </button>
@@ -2341,7 +2341,7 @@ ${signOff}`);
                 <div className="flex gap-3">
                   <button
                     onClick={resetCallForm}
-                    className="flex-1 h-9 py-2 text-sm text-gray-600 font-medium hover:text-gray-900 transition-colors"
+                    className="flex-1 h-9 py-2 text-sm text-muted-foreground font-medium hover:text-foreground transition-colors"
                   >
                     Cancel
                   </button>
@@ -2357,7 +2357,7 @@ ${signOff}`);
                 <div className="flex gap-3">
                   <button
                     onClick={resetEmailForm}
-                    className="flex-1 h-9 py-2 text-sm text-gray-600 font-medium hover:text-gray-900 transition-colors"
+                    className="flex-1 h-9 py-2 text-sm text-muted-foreground font-medium hover:text-foreground transition-colors"
                   >
                     Cancel
                   </button>
@@ -2373,7 +2373,7 @@ ${signOff}`);
                 <div className="flex gap-3">
                   <button
                     onClick={resetSmsForm}
-                    className="flex-1 h-9 py-2 text-sm text-gray-600 font-medium hover:text-gray-900 transition-colors"
+                    className="flex-1 h-9 py-2 text-sm text-muted-foreground font-medium hover:text-foreground transition-colors"
                   >
                     Cancel
                   </button>
@@ -2389,28 +2389,28 @@ ${signOff}`);
                 <div className="flex gap-4">
                   <button
                     onClick={handleNoteButtonClick}
-                    className="flex items-center gap-1.5 h-9 px-2.5 text-sm text-gray-600 font-medium hover:text-gray-900 transition-colors"
+                    className="flex items-center gap-1.5 h-9 px-2.5 text-sm text-muted-foreground font-medium hover:text-foreground transition-colors"
                   >
                     <StickyNote className="h-4 w-4 text-amber-500" />
                     Note
                   </button>
                   <button
                     onClick={handleEmailButtonClick}
-                    className="flex items-center gap-1.5 h-9 px-2.5 text-sm text-gray-600 font-medium hover:text-gray-900 transition-colors"
+                    className="flex items-center gap-1.5 h-9 px-2.5 text-sm text-muted-foreground font-medium hover:text-foreground transition-colors"
                   >
                     <Mail className="h-4 w-4 text-blue-500" />
                     Email
                   </button>
                   <button
                     onClick={handleSmsButtonClick}
-                    className="flex items-center gap-1.5 h-9 px-2.5 text-sm text-gray-600 font-medium hover:text-gray-900 transition-colors"
+                    className="flex items-center gap-1.5 h-9 px-2.5 text-sm text-muted-foreground font-medium hover:text-foreground transition-colors"
                   >
                     <MessageSquare className="h-4 w-4 text-green-500" />
                     SMS
                   </button>
                   <button
                     onClick={handleCallButtonClick}
-                    className="flex items-center gap-1.5 h-9 px-2.5 text-sm text-gray-600 font-medium hover:text-gray-900 transition-colors"
+                    className="flex items-center gap-1.5 h-9 px-2.5 text-sm text-muted-foreground font-medium hover:text-foreground transition-colors"
                   >
                     <Phone className="h-4 w-4 text-purple-500" />
                     Call
@@ -2438,8 +2438,8 @@ ${signOff}`);
                         onClick={() => setInvoiceFilter("all")}
                         className={`text-sm transition-colors ${
                           invoiceFilter === "all"
-                            ? "text-gray-900 font-medium"
-                            : "text-gray-400 hover:text-gray-600"
+                            ? "text-foreground font-medium"
+                            : "text-muted-foreground hover:text-muted-foreground"
                         }`}
                       >
                         All ({preview.totalInvoiceCount || preview.invoices?.length || 0})
@@ -2448,8 +2448,8 @@ ${signOff}`);
                         onClick={() => setInvoiceFilter("due")}
                         className={`text-sm transition-colors ${
                           invoiceFilter === "due"
-                            ? "text-gray-900 font-medium"
-                            : "text-gray-400 hover:text-gray-600"
+                            ? "text-foreground font-medium"
+                            : "text-muted-foreground hover:text-muted-foreground"
                         }`}
                       >
                         Due ({[...(preview.invoices || []), ...additionalInvoices].filter(inv => !inv.daysOverdue || inv.daysOverdue <= 0).length || 0})
@@ -2458,13 +2458,13 @@ ${signOff}`);
                         onClick={() => setInvoiceFilter("overdue")}
                         className={`text-sm transition-colors ${
                           invoiceFilter === "overdue"
-                            ? "text-gray-900 font-medium"
-                            : "text-gray-400 hover:text-gray-600"
+                            ? "text-foreground font-medium"
+                            : "text-muted-foreground hover:text-muted-foreground"
                         }`}
                       >
                         Overdue ({[...(preview.invoices || []), ...additionalInvoices].filter(inv => inv.daysOverdue && inv.daysOverdue > 0).length || 0})
                       </button>
-                      <span className="text-gray-300">|</span>
+                      <span className="text-muted-foreground">|</span>
                       <button
                         onClick={() => {
                           setInvoiceFilter("paid");
@@ -2489,7 +2489,7 @@ ${signOff}`);
                         className={`text-sm transition-colors ${
                           invoiceFilter === "paid"
                             ? "text-[#4FAD80] font-medium"
-                            : "text-gray-400 hover:text-gray-600"
+                            : "text-muted-foreground hover:text-muted-foreground"
                         }`}
                       >
                         Paid ({paidInvoicesTotal})
@@ -2519,7 +2519,7 @@ ${signOff}`);
                               setPtpAllocations(newAllocations);
                             }
                           }}
-                          className="ml-auto text-sm text-gray-500 hover:text-gray-900 transition-colors"
+                          className="ml-auto text-sm text-muted-foreground hover:text-foreground transition-colors"
                         >
                           {(() => {
                             const allInvoices = [...(preview.invoices || []), ...additionalInvoices];
@@ -2540,23 +2540,23 @@ ${signOff}`);
                       <>
                         {isLoadingPaidInvoices ? (
                           <div className="py-8 flex items-center justify-center">
-                            <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                           </div>
                         ) : paidInvoices.length > 0 ? (
                           <div className="space-y-0">
                             {paidInvoices.map((invoice) => {
                               const isExpanded = expandedInvoices.has(invoice.id);
                               return (
-                                <div key={invoice.id} className="border-b border-gray-50 last:border-0">
+                                <div key={invoice.id} className="border-b border-border/30 last:border-0">
                                   <div
                                     onClick={() => toggleInvoice(invoice.id)}
-                                    className="group w-full flex items-center py-2.5 cursor-pointer transition-colors hover:bg-gray-50"
+                                    className="group w-full flex items-center py-2.5 cursor-pointer transition-colors hover:bg-muted"
                                   >
                                     <div className="flex-1 min-w-0 mr-3">
-                                      <p className="text-sm font-medium text-gray-600">
+                                      <p className="text-sm font-medium text-muted-foreground">
                                         {invoice.invoiceNumber}
                                       </p>
-                                      <p className="text-sm text-gray-400 mt-0.5">
+                                      <p className="text-sm text-muted-foreground mt-0.5">
                                         Paid {invoice.paidDate ? formatShortDate(invoice.paidDate) : 'N/A'}
                                       </p>
                                     </div>
@@ -2565,30 +2565,30 @@ ${signOff}`);
                                       {formatCurrency(invoice.amountPaid, { showDecimals: true })}
                                     </span>
                                     
-                                    <ChevronRight className={`h-4 w-4 text-gray-300 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                                    <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
                                   </div>
                                   
                                   {isExpanded && (
                                     <div className="pb-4 space-y-2">
                                       {invoice.description && (
-                                        <p className="text-base text-gray-600">{invoice.description}</p>
+                                        <p className="text-base text-muted-foreground">{invoice.description}</p>
                                       )}
                                       <div className="flex gap-8 text-base">
                                         <div>
-                                          <span className="text-gray-400">Invoice total</span>
-                                          <span className="ml-2 text-gray-900 font-medium">{formatCurrency(invoice.amount, { showDecimals: true })}</span>
+                                          <span className="text-muted-foreground">Invoice total</span>
+                                          <span className="ml-2 text-foreground font-medium">{formatCurrency(invoice.amount, { showDecimals: true })}</span>
                                         </div>
                                         <div>
-                                          <span className="text-gray-400">Paid</span>
+                                          <span className="text-muted-foreground">Paid</span>
                                           <span className="ml-2 text-[#4FAD80] font-medium">{formatCurrency(invoice.amountPaid, { showDecimals: true })}</span>
                                         </div>
                                       </div>
                                       <div className="text-base">
-                                        <span className="text-gray-400">Allocation date</span>
-                                        <span className="ml-2 text-gray-900 font-medium">{invoice.paidDate ? formatShortDate(invoice.paidDate) : 'N/A'}</span>
+                                        <span className="text-muted-foreground">Allocation date</span>
+                                        <span className="ml-2 text-foreground font-medium">{invoice.paidDate ? formatShortDate(invoice.paidDate) : 'N/A'}</span>
                                       </div>
                                       <div className="text-base">
-                                        <span className="text-gray-400">Balance</span>
+                                        <span className="text-muted-foreground">Balance</span>
                                         <span className="ml-2 text-[#4FAD80] font-medium">£0.00</span>
                                       </div>
                                     </div>
@@ -2615,7 +2615,7 @@ ${signOff}`);
                                     .finally(() => setIsLoadingPaidInvoices(false));
                                 }}
                                 disabled={isLoadingPaidInvoices}
-                                className="w-full py-4 text-base text-gray-500 hover:text-gray-900 transition-colors flex items-center justify-center gap-2"
+                                className="w-full py-4 text-base text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center gap-2"
                               >
                                 {isLoadingPaidInvoices ? (
                                   <>
@@ -2630,8 +2630,8 @@ ${signOff}`);
                           </div>
                         ) : (
                           <div className="text-center py-12">
-                            <FileText className="h-10 w-10 text-gray-300 mx-auto mb-3" />
-                            <p className="text-base text-gray-400">No paid invoices</p>
+                            <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                            <p className="text-base text-muted-foreground">No paid invoices</p>
                           </div>
                         )}
                       </>
@@ -2666,36 +2666,36 @@ ${signOff}`);
                             const isOverdue = invoice.daysOverdue && invoice.daysOverdue > 0;
                             
                             return (
-                              <div key={invoice.id} className="border-b border-gray-50 last:border-0">
+                              <div key={invoice.id} className="border-b border-border/30 last:border-0">
                                 <div
                                   onClick={() => isPtpMode ? togglePtpInvoice(invoice.id, invoice.balance) : toggleInvoice(invoice.id)}
                                   className={`group w-full flex items-center py-2.5 cursor-pointer transition-colors ${
                                     isPtpMode && isPtpSelected 
-                                      ? 'bg-gray-50' 
-                                      : 'hover:bg-gray-50'
+                                      ? 'bg-muted' 
+                                      : 'hover:bg-muted'
                                   }`}
                                 >
                                   <div className="flex-1 min-w-0 mr-3">
-                                    <p className={`text-sm font-medium ${isOverdue ? 'text-[#C75C5C]' : 'text-gray-900'}`}>
+                                    <p className={`text-sm font-medium ${isOverdue ? 'text-[#C75C5C]' : 'text-foreground'}`}>
                                       {invoice.invoiceNumber}
                                     </p>
-                                    <p className="text-sm text-gray-400 mt-0.5">
+                                    <p className="text-sm text-muted-foreground mt-0.5">
                                       Due {formatShortDate(invoice.dueDate)}
                                       {isOverdue && ` · ${invoice.daysOverdue} days overdue`}
                                     </p>
                                   </div>
                                   
-                                  <span className={`text-lg font-semibold tabular-nums mr-4 ${isOverdue ? 'text-[#C75C5C]' : 'text-gray-900'}`}>
+                                  <span className={`text-lg font-semibold tabular-nums mr-4 ${isOverdue ? 'text-[#C75C5C]' : 'text-foreground'}`}>
                                     {formatCurrency(invoice.balance, { showDecimals: true })}
                                   </span>
                                   
                                   {!isPtpMode && (
-                                    <ChevronRight className={`h-4 w-4 text-gray-300 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                                    <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
                                   )}
                                   
                                   {isPtpMode && (
                                     <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                                      isPtpSelected ? 'border-gray-900 bg-gray-900' : 'border-gray-300'
+                                      isPtpSelected ? 'border-foreground bg-foreground' : 'border-border'
                                     }`}>
                                       {isPtpSelected && <span className="text-white text-xs">✓</span>}
                                     </div>
@@ -2705,15 +2705,15 @@ ${signOff}`);
                                 {isExpanded && !isPtpMode && (
                                   <div className="pb-4 space-y-2">
                                     {invoice.description && (
-                                      <p className="text-base text-gray-600">{invoice.description}</p>
+                                      <p className="text-base text-muted-foreground">{invoice.description}</p>
                                     )}
                                     <div className="flex gap-8 text-base">
                                       <div>
-                                        <span className="text-gray-400">Invoice total</span>
-                                        <span className="ml-2 text-gray-900 font-medium">{formatCurrency(invoice.amount, { showDecimals: true })}</span>
+                                        <span className="text-muted-foreground">Invoice total</span>
+                                        <span className="ml-2 text-foreground font-medium">{formatCurrency(invoice.amount, { showDecimals: true })}</span>
                                       </div>
                                       <div>
-                                        <span className="text-gray-400">Paid</span>
+                                        <span className="text-muted-foreground">Paid</span>
                                         <span className="ml-2 text-[#4FAD80] font-medium">{formatCurrency(invoice.amountPaid, { showDecimals: true })}</span>
                                       </div>
                                     </div>
@@ -2727,7 +2727,7 @@ ${signOff}`);
                             <button
                               onClick={loadMoreInvoices}
                               disabled={isLoadingMoreInvoices}
-                              className="w-full py-4 text-base text-gray-500 hover:text-gray-900 transition-colors flex items-center justify-center gap-2"
+                              className="w-full py-4 text-base text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center gap-2"
                             >
                               {isLoadingMoreInvoices ? (
                                 <>
@@ -2742,8 +2742,8 @@ ${signOff}`);
                         </div>
                       ) : (
                         <div className="text-center py-12">
-                          <FileText className="h-10 w-10 text-gray-300 mx-auto mb-3" />
-                          <p className="text-base text-gray-400">No outstanding invoices</p>
+                          <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                          <p className="text-base text-muted-foreground">No outstanding invoices</p>
                         </div>
                       );
                     })()}
@@ -2754,24 +2754,24 @@ ${signOff}`);
 
             {/* PTP Form Footer - Compact v2.0 */}
             {preview && isPtpMode && (
-              <div className="px-6 py-4 flex-1 space-y-3 overflow-y-auto border-t border-gray-100">
-                <p className="text-[11px] text-gray-400 uppercase tracking-wider">Promise to Pay</p>
+              <div className="px-6 py-4 flex-1 space-y-3 overflow-y-auto border-t border-border/50">
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Promise to Pay</p>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-xs text-gray-500 mb-1.5 block">Payment Date</Label>
+                    <Label className="text-xs text-muted-foreground mb-1.5 block">Payment Date</Label>
                     <Input
                       type="date"
                       value={ptpPaymentDate}
                       onChange={(e) => setPtpPaymentDate(e.target.value)}
-                      className={`h-9 bg-white border rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3] ${ptpValidationAttempted && !ptpPaymentDate ? 'border-[#C75C5C]' : 'border-gray-200'}`}
+                      className={`h-9 bg-background border rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3] ${ptpValidationAttempted && !ptpPaymentDate ? 'border-[#C75C5C]' : 'border-border'}`}
                       min={new Date().toISOString().split('T')[0]}
                     />
                   </div>
                   <div>
-                    <Label className="text-xs text-gray-500 mb-1.5 block">Type</Label>
+                    <Label className="text-xs text-muted-foreground mb-1.5 block">Type</Label>
                     <Select value={ptpPaymentType} onValueChange={(v) => setPtpPaymentType(v as "full" | "part")}>
-                      <SelectTrigger className="h-9 bg-white border border-gray-200 rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]">
+                      <SelectTrigger className="h-9 bg-background border border-border rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -2784,9 +2784,9 @@ ${signOff}`);
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-xs text-gray-500 mb-1.5 block">Confirmed by</Label>
+                    <Label className="text-xs text-muted-foreground mb-1.5 block">Confirmed by</Label>
                     <Select value={ptpConfirmedBy} onValueChange={setPtpConfirmedBy}>
-                      <SelectTrigger className={`h-9 bg-white border rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3] ${ptpValidationAttempted && !ptpConfirmedBy ? 'border-[#C75C5C]' : 'border-gray-200'}`}>
+                      <SelectTrigger className={`h-9 bg-background border rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3] ${ptpValidationAttempted && !ptpConfirmedBy ? 'border-[#C75C5C]' : 'border-border'}`}>
                         <SelectValue placeholder="Select contact..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -2800,11 +2800,11 @@ ${signOff}`);
                     </Select>
                   </div>
                   <div>
-                    <Label className="text-xs text-gray-500 mb-1.5 block">
-                      Amount {selectedPtpInvoices.size > 0 && <span className="text-gray-400">({selectedPtpInvoices.size})</span>}
+                    <Label className="text-xs text-muted-foreground mb-1.5 block">
+                      Amount {selectedPtpInvoices.size > 0 && <span className="text-muted-foreground">({selectedPtpInvoices.size})</span>}
                     </Label>
                     <div className="relative">
-                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-gray-500">£</span>
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">£</span>
                       <Input
                         type="text"
                         inputMode="decimal"
@@ -2828,7 +2828,7 @@ ${signOff}`);
                           }
                         }}
                         placeholder="0.00"
-                        className={`h-9 bg-white border rounded-lg pl-7 pr-3 text-sm text-right tabular-nums focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3] ${ptpValidationAttempted && (!ptpAmount || parseFloat(stripCommas(ptpAmount) || "0") <= 0) ? 'border-[#C75C5C]' : 'border-gray-200'}`}
+                        className={`h-9 bg-background border rounded-lg pl-7 pr-3 text-sm text-right tabular-nums focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3] ${ptpValidationAttempted && (!ptpAmount || parseFloat(stripCommas(ptpAmount) || "0") <= 0) ? 'border-[#C75C5C]' : 'border-border'}`}
                       />
                     </div>
                   </div>
@@ -2836,23 +2836,23 @@ ${signOff}`);
                 
                 {ptpConfirmedBy === "new" && (
                   <div>
-                    <Label className="text-xs text-gray-500 mb-1.5 block">Contact Name</Label>
+                    <Label className="text-xs text-muted-foreground mb-1.5 block">Contact Name</Label>
                     <Input
                       type="text"
                       value={ptpNewContactName}
                       onChange={(e) => setPtpNewContactName(e.target.value)}
-                      className={`h-9 bg-white border rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3] ${ptpValidationAttempted && !ptpNewContactName ? 'border-[#C75C5C]' : 'border-gray-200'}`}
+                      className={`h-9 bg-background border rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3] ${ptpValidationAttempted && !ptpNewContactName ? 'border-[#C75C5C]' : 'border-border'}`}
                       placeholder="Enter contact name"
                     />
                   </div>
                 )}
                 
                 <div>
-                  <Label className="text-xs text-gray-500 mb-1.5 block">Notes (optional)</Label>
+                  <Label className="text-xs text-muted-foreground mb-1.5 block">Notes (optional)</Label>
                   <Textarea
                     value={ptpNotes}
                     onChange={(e) => setPtpNotes(e.target.value)}
-                    className="min-h-[70px] bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                    className="min-h-[70px] bg-background border border-border rounded-lg px-3 py-2 text-sm resize-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                     placeholder="Any additional notes..."
                   />
                 </div>
@@ -2861,14 +2861,14 @@ ${signOff}`);
 
             {/* Right Footer - Action Buttons - Compact v2.0 */}
             {preview && !isPtpMode && (
-              <div className="px-6 py-3 border-t border-gray-100 flex-shrink-0">
+              <div className="px-6 py-3 border-t border-border/50 flex-shrink-0">
                 <div className="flex gap-4">
                   <TooltipProvider delayDuration={750}>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button
                           onClick={handlePtpButtonClick}
-                          className="flex items-center gap-1.5 h-9 px-2.5 text-sm text-gray-600 font-medium hover:text-gray-900 transition-colors"
+                          className="flex items-center gap-1.5 h-9 px-2.5 text-sm text-muted-foreground font-medium hover:text-foreground transition-colors"
                         >
                           <Handshake className="h-4 w-4" />
                           PTP
@@ -2879,15 +2879,15 @@ ${signOff}`);
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
-                  <button className="flex items-center gap-1.5 h-9 px-2.5 text-sm text-gray-600 font-medium hover:text-gray-900 transition-colors">
+                  <button className="flex items-center gap-1.5 h-9 px-2.5 text-sm text-muted-foreground font-medium hover:text-foreground transition-colors">
                     <Calendar className="h-4 w-4" />
                     Plan
                   </button>
-                  <button className="flex items-center gap-1.5 h-9 px-2.5 text-sm text-gray-600 font-medium hover:text-gray-900 transition-colors">
+                  <button className="flex items-center gap-1.5 h-9 px-2.5 text-sm text-muted-foreground font-medium hover:text-foreground transition-colors">
                     <Scale className="h-4 w-4" />
                     Dispute
                   </button>
-                  <button className="flex items-center gap-1.5 h-9 px-2.5 text-sm text-gray-600 font-medium hover:text-gray-900 transition-colors">
+                  <button className="flex items-center gap-1.5 h-9 px-2.5 text-sm text-muted-foreground font-medium hover:text-foreground transition-colors">
                     <Shield className="h-4 w-4" />
                     Debt
                   </button>
@@ -2897,11 +2897,11 @@ ${signOff}`);
 
             {/* PTP Mode Actions - Compact v2.0 */}
             {preview && isPtpMode && (
-              <div className="px-6 py-3 border-t border-gray-100 flex-shrink-0">
+              <div className="px-6 py-3 border-t border-border/50 flex-shrink-0">
                 <div className="flex gap-3">
                   <button
                     onClick={resetPtpMode}
-                    className="flex-1 h-9 py-2 text-sm text-gray-600 font-medium hover:text-gray-900 transition-colors"
+                    className="flex-1 h-9 py-2 text-sm text-muted-foreground font-medium hover:text-foreground transition-colors"
                   >
                     Cancel
                   </button>
@@ -2932,15 +2932,15 @@ ${signOff}`);
           <DialogOverlay />
           <DialogPrimitive.Content
             className={cn(
-              "fixed left-[50%] top-[50%] z-50 w-full max-w-lg translate-x-[-50%] translate-y-[-50%] bg-white border border-gray-200 p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg"
+              "fixed left-[50%] top-[50%] z-50 w-full max-w-lg translate-x-[-50%] translate-y-[-50%] bg-background border border-border p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg"
             )}
           >
             <div className="space-y-6">
               <div>
-                <DialogTitle className="text-base font-medium text-gray-900">
+                <DialogTitle className="text-base font-medium text-foreground">
                   Voice Agent Variables
                 </DialogTitle>
-                <DialogDescription className="text-sm text-gray-500 mt-1">
+                <DialogDescription className="text-sm text-muted-foreground mt-1">
                   Data that will be passed to the AI voice agent for this call.
                 </DialogDescription>
               </div>
@@ -2948,87 +2948,87 @@ ${signOff}`);
               <div className="space-y-5 max-h-[60vh] overflow-y-auto">
                 {/* Retell Dynamic Variables - what the voice agent can use */}
                 <div>
-                  <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">Retell Dynamic Variables</p>
-                  <p className="text-xs text-gray-400 mb-3">Passed to createUnifiedRetellCall dynamicVariables</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Retell Dynamic Variables</p>
+                  <p className="text-xs text-muted-foreground mb-3">Passed to createUnifiedRetellCall dynamicVariables</p>
                   <div className="space-y-1.5">
                     <div className="flex justify-between text-sm gap-4">
-                      <span className="text-gray-500 flex-shrink-0">customerName</span>
-                      <span className="text-gray-900 font-medium text-right">{selectedCallRecipientName || "—"}</span>
+                      <span className="text-muted-foreground flex-shrink-0">customerName</span>
+                      <span className="text-foreground font-medium text-right">{selectedCallRecipientName || "—"}</span>
                     </div>
                     <div className="flex justify-between text-sm gap-4">
-                      <span className="text-gray-500 flex-shrink-0">companyName</span>
-                      <span className="text-gray-900 font-medium text-right">{preview?.customer?.companyName || preview?.customer?.name || "—"}</span>
+                      <span className="text-muted-foreground flex-shrink-0">companyName</span>
+                      <span className="text-foreground font-medium text-right">{preview?.customer?.companyName || preview?.customer?.name || "—"}</span>
                     </div>
                     <div className="flex justify-between text-sm gap-4">
-                      <span className="text-gray-500 flex-shrink-0">invoiceNumber</span>
-                      <span className="text-gray-900 font-medium text-right">
+                      <span className="text-muted-foreground flex-shrink-0">invoiceNumber</span>
+                      <span className="text-foreground font-medium text-right">
                         {preview?.invoices?.sort((a, b) => (b.daysOverdue || 0) - (a.daysOverdue || 0))[0]?.invoiceNumber || "N/A"}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm gap-4">
-                      <span className="text-gray-500 flex-shrink-0">invoiceAmount</span>
-                      <span className="text-gray-900 font-medium text-right">
+                      <span className="text-muted-foreground flex-shrink-0">invoiceAmount</span>
+                      <span className="text-foreground font-medium text-right">
                         {preview?.invoices?.sort((a, b) => (b.daysOverdue || 0) - (a.daysOverdue || 0))[0]?.balance || 0}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm gap-4">
-                      <span className="text-gray-500 flex-shrink-0">totalOutstanding</span>
-                      <span className="text-gray-900 font-medium text-right">{preview?.customer?.outstandingTotal || 0}</span>
+                      <span className="text-muted-foreground flex-shrink-0">totalOutstanding</span>
+                      <span className="text-foreground font-medium text-right">{preview?.customer?.outstandingTotal || 0}</span>
                     </div>
                     <div className="flex justify-between text-sm gap-4">
-                      <span className="text-gray-500 flex-shrink-0">invoiceCount</span>
-                      <span className="text-gray-900 font-medium text-right">{preview?.invoices?.length || 0}</span>
+                      <span className="text-muted-foreground flex-shrink-0">invoiceCount</span>
+                      <span className="text-foreground font-medium text-right">{preview?.invoices?.length || 0}</span>
                     </div>
                     <div className="flex justify-between text-sm gap-4">
-                      <span className="text-gray-500 flex-shrink-0">daysOverdue</span>
-                      <span className="text-gray-900 font-medium text-right">
+                      <span className="text-muted-foreground flex-shrink-0">daysOverdue</span>
+                      <span className="text-foreground font-medium text-right">
                         {preview?.invoices?.reduce((max, inv) => Math.max(max, inv.daysOverdue || 0), 0) || 0}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm gap-4">
-                      <span className="text-gray-500 flex-shrink-0">dueDate</span>
-                      <span className="text-gray-900 font-medium text-right">
+                      <span className="text-muted-foreground flex-shrink-0">dueDate</span>
+                      <span className="text-foreground font-medium text-right">
                         {preview?.invoices?.sort((a, b) => (b.daysOverdue || 0) - (a.daysOverdue || 0))[0]?.dueDate || "—"}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm gap-4">
-                      <span className="text-gray-500 flex-shrink-0">voiceTone</span>
-                      <span className="text-gray-900 font-medium text-right">
+                      <span className="text-muted-foreground flex-shrink-0">voiceTone</span>
+                      <span className="text-foreground font-medium text-right">
                         {['VOICE_TONE_WARM_FRIENDLY', 'VOICE_TONE_CALM_COLLABORATIVE', 'VOICE_TONE_FIRM_ASSERTIVE'][callTone]}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm gap-4">
-                      <span className="text-gray-500 flex-shrink-0">toneLabel</span>
-                      <span className="text-gray-900 font-medium text-right">{toneLabels[callTone]}</span>
+                      <span className="text-muted-foreground flex-shrink-0">toneLabel</span>
+                      <span className="text-foreground font-medium text-right">{toneLabels[callTone]}</span>
                     </div>
                     <div className="flex justify-between text-sm gap-4">
-                      <span className="text-gray-500 flex-shrink-0">reasonForCall</span>
-                      <span className="text-gray-900 font-medium text-right max-w-[180px] truncate">{callReason || "''"}</span>
+                      <span className="text-muted-foreground flex-shrink-0">reasonForCall</span>
+                      <span className="text-foreground font-medium text-right max-w-[180px] truncate">{callReason || "''"}</span>
                     </div>
                     <div className="flex justify-between text-sm gap-4">
-                      <span className="text-gray-500 flex-shrink-0">callGoal</span>
-                      <span className="text-gray-900 font-medium text-right">{callGoal}</span>
+                      <span className="text-muted-foreground flex-shrink-0">callGoal</span>
+                      <span className="text-foreground font-medium text-right">{callGoal}</span>
                     </div>
                     <div className="flex justify-between text-sm gap-4">
-                      <span className="text-gray-500 flex-shrink-0">totalOverdue</span>
-                      <span className="text-gray-900 font-medium text-right">
+                      <span className="text-muted-foreground flex-shrink-0">totalOverdue</span>
+                      <span className="text-foreground font-medium text-right">
                         {preview?.invoices?.filter(inv => (inv.daysOverdue || 0) > 0)
                           .reduce((sum, inv) => sum + (inv.balance || 0), 0) || 0}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm gap-4">
-                      <span className="text-gray-500 flex-shrink-0">overdueCount</span>
-                      <span className="text-gray-900 font-medium text-right">
+                      <span className="text-muted-foreground flex-shrink-0">overdueCount</span>
+                      <span className="text-foreground font-medium text-right">
                         {preview?.invoices?.filter(inv => (inv.daysOverdue || 0) > 0).length || 0}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm gap-4">
-                      <span className="text-gray-500 flex-shrink-0">oldestInvoiceAge</span>
-                      <span className="text-gray-900 font-medium text-right italic text-gray-400">calculated at call time</span>
+                      <span className="text-muted-foreground flex-shrink-0">oldestInvoiceAge</span>
+                      <span className="text-foreground font-medium text-right italic text-muted-foreground">calculated at call time</span>
                     </div>
                     <div className="flex justify-between text-sm gap-4">
-                      <span className="text-gray-500 flex-shrink-0">averageDaysOverdue</span>
-                      <span className="text-gray-900 font-medium text-right">
+                      <span className="text-muted-foreground flex-shrink-0">averageDaysOverdue</span>
+                      <span className="text-foreground font-medium text-right">
                         {(() => {
                           const overdueInvs = preview?.invoices?.filter(inv => (inv.daysOverdue || 0) > 0) || [];
                           if (overdueInvs.length === 0) return 0;
@@ -3038,76 +3038,76 @@ ${signOff}`);
                       </span>
                     </div>
                     <div className="flex justify-between text-sm gap-4">
-                      <span className="text-gray-500 flex-shrink-0">lastPaymentDate</span>
-                      <span className="text-gray-900 font-medium text-right italic text-gray-400">calculated at call time</span>
+                      <span className="text-muted-foreground flex-shrink-0">lastPaymentDate</span>
+                      <span className="text-foreground font-medium text-right italic text-muted-foreground">calculated at call time</span>
                     </div>
                     <div className="flex justify-between text-sm gap-4">
-                      <span className="text-gray-500 flex-shrink-0">lastPaymentAmount</span>
-                      <span className="text-gray-900 font-medium text-right italic text-gray-400">calculated at call time</span>
+                      <span className="text-muted-foreground flex-shrink-0">lastPaymentAmount</span>
+                      <span className="text-foreground font-medium text-right italic text-muted-foreground">calculated at call time</span>
                     </div>
                     <div className="flex justify-between text-sm gap-4">
-                      <span className="text-gray-500 flex-shrink-0">lastContactDate</span>
-                      <span className="text-gray-900 font-medium text-right italic text-gray-400">calculated at call time</span>
+                      <span className="text-muted-foreground flex-shrink-0">lastContactDate</span>
+                      <span className="text-foreground font-medium text-right italic text-muted-foreground">calculated at call time</span>
                     </div>
                     <div className="flex justify-between text-sm gap-4">
-                      <span className="text-gray-500 flex-shrink-0">contactMethod</span>
-                      <span className="text-gray-900 font-medium text-right italic text-gray-400">calculated at call time</span>
+                      <span className="text-muted-foreground flex-shrink-0">contactMethod</span>
+                      <span className="text-foreground font-medium text-right italic text-muted-foreground">calculated at call time</span>
                     </div>
                     <div className="flex justify-between text-sm gap-4">
-                      <span className="text-gray-500 flex-shrink-0">previousPromises</span>
-                      <span className="text-gray-900 font-medium text-right italic text-gray-400">calculated at call time</span>
+                      <span className="text-muted-foreground flex-shrink-0">previousPromises</span>
+                      <span className="text-foreground font-medium text-right italic text-muted-foreground">calculated at call time</span>
                     </div>
                     <div className="flex justify-between text-sm gap-4">
-                      <span className="text-gray-500 flex-shrink-0">disputeCount</span>
-                      <span className="text-gray-900 font-medium text-right italic text-gray-400">calculated at call time</span>
+                      <span className="text-muted-foreground flex-shrink-0">disputeCount</span>
+                      <span className="text-foreground font-medium text-right italic text-muted-foreground">calculated at call time</span>
                     </div>
                     <div className="flex justify-between text-sm gap-4">
-                      <span className="text-gray-500 flex-shrink-0">creditTerms</span>
-                      <span className="text-gray-900 font-medium text-right">Net 30</span>
+                      <span className="text-muted-foreground flex-shrink-0">creditTerms</span>
+                      <span className="text-foreground font-medium text-right">Net 30</span>
                     </div>
                     <div className="flex justify-between text-sm gap-4">
-                      <span className="text-gray-500 flex-shrink-0">accountAge</span>
-                      <span className="text-gray-900 font-medium text-right italic text-gray-400">calculated at call time</span>
+                      <span className="text-muted-foreground flex-shrink-0">accountAge</span>
+                      <span className="text-foreground font-medium text-right italic text-muted-foreground">calculated at call time</span>
                     </div>
                     <div className="flex justify-between text-sm gap-4">
-                      <span className="text-gray-500 flex-shrink-0">maxDuration</span>
-                      <span className="text-gray-900 font-medium text-right">{callMaxDuration}</span>
+                      <span className="text-muted-foreground flex-shrink-0">maxDuration</span>
+                      <span className="text-foreground font-medium text-right">{callMaxDuration}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Call Routing - used to place the call */}
                 <div>
-                  <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">Call Routing</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Call Routing</p>
                   <div className="space-y-1.5">
                     <div className="flex justify-between text-sm gap-4">
-                      <span className="text-gray-500 flex-shrink-0">To Number <span className="text-gray-400 font-mono text-xs">(toNumber)</span></span>
-                      <span className="text-gray-900 font-medium text-right">{selectedCallRecipientPhone || "—"}</span>
+                      <span className="text-muted-foreground flex-shrink-0">To Number <span className="text-muted-foreground font-mono text-xs">(toNumber)</span></span>
+                      <span className="text-foreground font-medium text-right">{selectedCallRecipientPhone || "—"}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Action Metadata - stored with the action record */}
                 <div>
-                  <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">Action Metadata</p>
-                  <p className="text-xs text-gray-400 mb-3">Stored in actions.metadata, not sent to Retell</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Action Metadata</p>
+                  <p className="text-xs text-muted-foreground mb-3">Stored in actions.metadata, not sent to Retell</p>
                   <div className="space-y-1.5">
                     <div className="flex justify-between text-sm gap-4">
-                      <span className="text-gray-500 flex-shrink-0">Schedule Mode <span className="text-gray-400 font-mono text-xs">(scheduleMode)</span></span>
-                      <span className="text-gray-900 font-medium text-right">{callScheduleMode}</span>
+                      <span className="text-muted-foreground flex-shrink-0">Schedule Mode <span className="text-muted-foreground font-mono text-xs">(scheduleMode)</span></span>
+                      <span className="text-foreground font-medium text-right">{callScheduleMode}</span>
                     </div>
                     {callScheduleMode === 'scheduled' && (
                       <div className="flex justify-between text-sm gap-4">
-                        <span className="text-gray-500 flex-shrink-0">Scheduled For <span className="text-gray-400 font-mono text-xs">(scheduledFor)</span></span>
-                        <span className="text-gray-900 font-medium text-right">
+                        <span className="text-muted-foreground flex-shrink-0">Scheduled For <span className="text-muted-foreground font-mono text-xs">(scheduledFor)</span></span>
+                        <span className="text-foreground font-medium text-right">
                           {callScheduleDate}T{callScheduleTime || '09:00'}:00.000Z
                         </span>
                       </div>
                     )}
                     {callReason && (
                       <div className="flex justify-between text-sm gap-4">
-                        <span className="text-gray-500 flex-shrink-0">Reason <span className="text-gray-400 font-mono text-xs">(reason)</span></span>
-                        <span className="text-gray-900 font-medium text-right max-w-[180px] truncate">{callReason}</span>
+                        <span className="text-muted-foreground flex-shrink-0">Reason <span className="text-muted-foreground font-mono text-xs">(reason)</span></span>
+                        <span className="text-foreground font-medium text-right max-w-[180px] truncate">{callReason}</span>
                       </div>
                     )}
                   </div>
@@ -3117,7 +3117,7 @@ ${signOff}`);
               <div className="pt-2">
                 <button
                   onClick={() => setVoiceAgentDebugOpen(false)}
-                  className="w-full h-10 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors border border-gray-200 rounded-lg"
+                  className="w-full h-10 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors border border-border rounded-lg"
                 >
                   Cancel
                 </button>

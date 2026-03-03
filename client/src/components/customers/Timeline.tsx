@@ -242,7 +242,7 @@ export function Timeline({ customerId, invoiceId, compact = false, initialData }
               variant="ghost" 
               size="sm" 
               onClick={clearFilters}
-              className="text-xs text-slate-400 hover:text-slate-600"
+              className="text-xs text-muted-foreground hover:text-muted-foreground"
             >
               Clear
             </Button>
@@ -253,7 +253,7 @@ export function Timeline({ customerId, invoiceId, compact = false, initialData }
           variant="ghost"
           size="sm"
           onClick={() => setShowNoteInput(true)}
-          className="text-slate-500 hover:text-slate-700"
+          className="text-muted-foreground hover:text-foreground"
         >
           <Plus className="h-4 w-4 mr-1" />
           Add note
@@ -262,7 +262,7 @@ export function Timeline({ customerId, invoiceId, compact = false, initialData }
 
       {/* Note Input */}
       {showNoteInput && (
-        <div className="space-y-2 p-3 bg-slate-50 rounded-lg border border-slate-100">
+        <div className="space-y-2 p-3 bg-muted rounded-lg border border-border/50">
           <Textarea
             placeholder="Add a note about this customer..."
             value={noteText}
@@ -321,7 +321,7 @@ export function Timeline({ customerId, invoiceId, compact = false, initialData }
                 size="sm"
                 onClick={handleLoadMore}
                 disabled={isLoadingMore}
-                className="text-slate-500"
+                className="text-muted-foreground"
               >
                 {isLoadingMore ? (
                   <Loader2 className="h-4 w-4 mr-1 animate-spin" />
@@ -334,7 +334,7 @@ export function Timeline({ customerId, invoiceId, compact = false, initialData }
           )}
         </div>
       ) : (
-        <div className="py-8 text-center text-sm text-slate-400">
+        <div className="py-8 text-center text-sm text-muted-foreground">
           No activity yet
         </div>
       )}
@@ -342,8 +342,8 @@ export function Timeline({ customerId, invoiceId, compact = false, initialData }
       {/* Item Detail Drawer */}
       <Sheet open={showItemDrawer} onOpenChange={setShowItemDrawer}>
         <SheetContent className="w-full sm:max-w-lg p-0 flex flex-col">
-          <SheetHeader className="px-6 pt-6 pb-4 flex-shrink-0 border-b border-slate-100">
-            <SheetTitle className="text-base font-medium text-slate-900">
+          <SheetHeader className="px-6 pt-6 pb-4 flex-shrink-0 border-b border-border/50">
+            <SheetTitle className="text-base font-medium text-foreground">
               {selectedItem ? channelLabels[selectedItem.channel] : "Activity Detail"}
             </SheetTitle>
             <SheetDescription className="sr-only">
@@ -356,7 +356,7 @@ export function Timeline({ customerId, invoiceId, compact = false, initialData }
               <div className="p-6 space-y-6">
                 {/* Meta */}
                 <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2 text-slate-500">
+                  <div className="flex items-center gap-2 text-muted-foreground">
                     {selectedItem.direction === "outbound" && (
                       <ArrowUpRight className="h-4 w-4" />
                     )}
@@ -365,7 +365,7 @@ export function Timeline({ customerId, invoiceId, compact = false, initialData }
                     )}
                     <span className="capitalize">{selectedItem.direction}</span>
                   </div>
-                  <span className="text-slate-400">
+                  <span className="text-muted-foreground">
                     {formatFullDate(selectedItem.occurredAt)}
                   </span>
                 </div>
@@ -373,16 +373,16 @@ export function Timeline({ customerId, invoiceId, compact = false, initialData }
                 {/* Subject */}
                 {selectedItem.subject && (
                   <div>
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Subject</p>
-                    <p className="text-sm text-slate-700">{selectedItem.subject}</p>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Subject</p>
+                    <p className="text-sm text-foreground">{selectedItem.subject}</p>
                   </div>
                 )}
 
                 {/* Body */}
                 {selectedItem.body && (
                   <div>
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Content</p>
-                    <div className="text-sm text-slate-700 whitespace-pre-wrap bg-slate-50 p-3 rounded-lg">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Content</p>
+                    <div className="text-sm text-foreground whitespace-pre-wrap bg-muted p-3 rounded-lg">
                       {selectedItem.body}
                     </div>
                   </div>
@@ -391,8 +391,8 @@ export function Timeline({ customerId, invoiceId, compact = false, initialData }
                 {/* Participants */}
                 {selectedItem.participants && (
                   <div>
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Participants</p>
-                    <div className="text-sm text-slate-600 space-y-1">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Participants</p>
+                    <div className="text-sm text-muted-foreground space-y-1">
                       {selectedItem.participants.from && (
                         <p>From: {selectedItem.participants.from}</p>
                       )}
@@ -406,16 +406,16 @@ export function Timeline({ customerId, invoiceId, compact = false, initialData }
                 {/* Outcome */}
                 {selectedItem.outcome && (
                   <div>
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Detected Outcome</p>
-                    <div className="bg-slate-50 p-3 rounded-lg space-y-2">
-                      <p className="text-sm font-medium text-slate-700 capitalize">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Detected Outcome</p>
+                    <div className="bg-muted p-3 rounded-lg space-y-2">
+                      <p className="text-sm font-medium text-foreground capitalize">
                         {selectedItem.outcome.type.replace(/_/g, " ")}
                       </p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-muted-foreground">
                         {confidenceLabels[getConfidenceLabel(selectedItem.outcome.confidence)]}
                       </p>
                       {selectedItem.outcome.extracted && Object.keys(selectedItem.outcome.extracted).length > 0 && (
-                        <div className="text-xs text-slate-500 pt-2 border-t border-slate-200">
+                        <div className="text-xs text-muted-foreground pt-2 border-t border-border">
                           {Object.entries(selectedItem.outcome.extracted).map(([key, value]) => (
                             <p key={key}>
                               <span className="font-medium">{key}:</span> {String(value)}
@@ -430,7 +430,7 @@ export function Timeline({ customerId, invoiceId, compact = false, initialData }
                 {/* Status */}
                 {selectedItem.status && (
                   <div>
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Status</p>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Status</p>
                     <div className="flex items-center gap-1.5">
                       {statusIcons[selectedItem.status] && (
                         (() => {
@@ -439,7 +439,7 @@ export function Timeline({ customerId, invoiceId, compact = false, initialData }
                           return <StatusIcon className={`h-4 w-4 ${iconColor}`} />;
                         })()
                       )}
-                      <span className="text-sm text-slate-700 capitalize">{selectedItem.status}</span>
+                      <span className="text-sm text-foreground capitalize">{selectedItem.status}</span>
                     </div>
                   </div>
                 )}
@@ -447,8 +447,8 @@ export function Timeline({ customerId, invoiceId, compact = false, initialData }
                 {/* Created By */}
                 {selectedItem.createdBy && (
                   <div>
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Created By</p>
-                    <p className="text-sm text-slate-600">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Created By</p>
+                    <p className="text-sm text-muted-foreground">
                       {selectedItem.createdBy.name || (selectedItem.createdBy.type === "system" ? "Qashivo AI" : "Unknown")}
                     </p>
                   </div>
@@ -471,7 +471,7 @@ interface TimelineItemRowProps {
 
 function TimelineItemRow({ item, compact, onClick, isLast }: TimelineItemRowProps) {
   const ChannelIcon = channelIcons[item.channel] || Mail;
-  const channelColor = channelColors[item.channel] || "text-slate-400";
+  const channelColor = channelColors[item.channel] || "text-muted-foreground";
   
   const formatTimeAgo = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -489,8 +489,8 @@ function TimelineItemRow({ item, compact, onClick, isLast }: TimelineItemRowProp
 
   return (
     <div 
-      className={`py-3 cursor-pointer hover:bg-slate-50/50 transition-colors ${
-        !isLast ? 'border-b border-slate-100' : ''
+      className={`py-3 cursor-pointer hover:bg-muted/50 transition-colors ${
+        !isLast ? 'border-b border-border/50' : ''
       }`}
       onClick={onClick}
     >
@@ -499,21 +499,21 @@ function TimelineItemRow({ item, compact, onClick, isLast }: TimelineItemRowProp
         <div className="flex items-center gap-1 flex-shrink-0 mt-0.5">
           <ChannelIcon className={`h-4 w-4 ${channelColor}`} />
           {item.direction === "outbound" && (
-            <ArrowUpRight className="h-3 w-3 text-slate-400" />
+            <ArrowUpRight className="h-3 w-3 text-muted-foreground" />
           )}
           {item.direction === "inbound" && (
-            <ArrowDownLeft className="h-3 w-3 text-slate-400" />
+            <ArrowDownLeft className="h-3 w-3 text-muted-foreground" />
           )}
         </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <p className={`text-slate-700 ${compact ? 'line-clamp-1' : 'line-clamp-2'} text-sm`}>
+          <p className={`text-foreground ${compact ? 'line-clamp-1' : 'line-clamp-2'} text-sm`}>
             {item.summary}
           </p>
           
           <div className="flex items-center gap-3 mt-1">
-            <span className="text-xs text-slate-400">
+            <span className="text-xs text-muted-foreground">
               {formatTimeAgo(item.occurredAt)}
             </span>
             
@@ -521,14 +521,14 @@ function TimelineItemRow({ item, compact, onClick, isLast }: TimelineItemRowProp
               <span className={`text-xs ${
                 getConfidenceLabel(item.outcome.confidence) === "low" 
                   ? "text-amber-600" 
-                  : "text-slate-500"
+                  : "text-muted-foreground"
               }`}>
                 {item.outcome.type.replace(/_/g, " ")}
               </span>
             )}
             
             {item.status && item.status !== "sent" && item.status !== "delivered" && (
-              <span className="text-xs text-slate-400">
+              <span className="text-xs text-muted-foreground">
                 {item.status}
               </span>
             )}
@@ -571,7 +571,7 @@ function TimelineFilterPopover({ filters, onChange, hasActiveFilters }: Timeline
         <Button 
           variant="ghost" 
           size="sm" 
-          className={`text-slate-500 ${hasActiveFilters ? 'bg-slate-100' : ''}`}
+          className={`text-muted-foreground ${hasActiveFilters ? 'bg-muted' : ''}`}
         >
           <Filter className="h-4 w-4 mr-1" />
           Filter
@@ -585,7 +585,7 @@ function TimelineFilterPopover({ filters, onChange, hasActiveFilters }: Timeline
       <PopoverContent className="w-64 p-4" align="start">
         <div className="space-y-4">
           <div>
-            <p className="text-xs font-medium text-slate-500 mb-2">Channel</p>
+            <p className="text-xs font-medium text-muted-foreground mb-2">Channel</p>
             <div className="space-y-2">
               {channels.map(channel => (
                 <label key={channel} className="flex items-center gap-2 cursor-pointer">
@@ -593,14 +593,14 @@ function TimelineFilterPopover({ filters, onChange, hasActiveFilters }: Timeline
                     checked={filters.channel?.includes(channel) || false}
                     onCheckedChange={() => toggleChannel(channel)}
                   />
-                  <span className="text-sm text-slate-700 capitalize">{channel}</span>
+                  <span className="text-sm text-foreground capitalize">{channel}</span>
                 </label>
               ))}
             </div>
           </div>
 
           <div>
-            <p className="text-xs font-medium text-slate-500 mb-2">Direction</p>
+            <p className="text-xs font-medium text-muted-foreground mb-2">Direction</p>
             <div className="space-y-2">
               {directions.map(direction => (
                 <label key={direction} className="flex items-center gap-2 cursor-pointer">
@@ -608,26 +608,26 @@ function TimelineFilterPopover({ filters, onChange, hasActiveFilters }: Timeline
                     checked={filters.direction?.includes(direction) || false}
                     onCheckedChange={() => toggleDirection(direction)}
                   />
-                  <span className="text-sm text-slate-700 capitalize">{direction}</span>
+                  <span className="text-sm text-foreground capitalize">{direction}</span>
                 </label>
               ))}
             </div>
           </div>
 
-          <div className="space-y-2 pt-2 border-t border-slate-100">
+          <div className="space-y-2 pt-2 border-t border-border/50">
             <label className="flex items-center gap-2 cursor-pointer">
               <Checkbox
                 checked={filters.outcomesOnly || false}
                 onCheckedChange={(checked) => onChange({ outcomesOnly: !!checked })}
               />
-              <span className="text-sm text-slate-700">With outcomes only</span>
+              <span className="text-sm text-foreground">With outcomes only</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <Checkbox
                 checked={filters.needsReviewOnly || false}
                 onCheckedChange={(checked) => onChange({ needsReviewOnly: !!checked })}
               />
-              <span className="text-sm text-slate-700">Needs review</span>
+              <span className="text-sm text-foreground">Needs review</span>
             </label>
           </div>
         </div>

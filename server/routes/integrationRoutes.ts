@@ -1,17 +1,58 @@
-import { Express } from "express";
+import type { Express } from "express";
 import { storage } from "../storage";
-import { isAuthenticated } from "../auth";
-import { withPermission } from "../middleware/rbac";
-import { xeroService } from "../services/xero";
-import { XeroSyncService } from "../services/xeroSync";
-import { onboardingService } from "../services/onboardingService";
-import * as express from "express";
+import { isAuthenticated, isOwner } from "../auth";
+import { logSecurityEvent, extractClientInfo } from "../services/securityAuditService";
+import { sanitizeObject, stripSensitiveUserFields, stripSensitiveTenantFields, stripSensitiveFields } from "../utils/sanitize";
+import { withPermission, withRole, withMinimumRole, canManageUser, withRBACContext } from "../middleware/rbac";
+import { 
+  insertContactSchema, insertContactNoteSchema, insertInvoiceSchema, 
+  insertActionSchema, insertWorkflowSchema, insertCommunicationTemplateSchema,
+  insertEscalationRuleSchema, insertChannelAnalyticsSchema, insertWorkflowTemplateSchema,
+  insertVoiceCallSchema, insertBillSchema, insertBankAccountSchema,
+  insertBankTransactionSchema, insertBudgetSchema, insertExchangeRateSchema,
+  insertActionItemSchema, insertActionLogSchema, insertPaymentPromiseSchema,
+  insertPartnerSchema, insertUserContactAssignmentSchema, insertScheduledReportSchema,
+  type Invoice, type Contact, type ContactNote, type Bill, type BankAccount,
+  type BankTransaction, type Budget, type ExchangeRate, type ActionItem,
+  type ActionLog, type PaymentPromise,
+  invoices, contacts, actions, disputes, bankTransactions, customerLearningProfiles,
+  inboundMessages, smsMessages, investorLeads, onboardingProgress, messageDrafts,
+  tenants, paymentPromises, promisesToPay, smeClients, contactNotes, timelineEvents,
+  attentionItems, outcomes, activityLogs, collectionPolicies, paymentPlans,
+  emailMessages, customerContactPersons, scheduledReports,
+} from "@shared/schema";
+import { computeNextRunAt } from "../services/reportScheduler";
+import { REPORT_TYPE_LABELS, type ReportType } from "../services/reportGenerator";
+import { getOverdueCategoryFromDueDate } from "@shared/utils/overdueUtils";
+import { calculateLatePaymentInterest } from "../utils/interestCalculator";
+import { eq, and, desc, asc, sql, count, avg, gte, lte, lt, inArray, or, isNull, isNotNull, gt, not } from 'drizzle-orm';
+import { db } from '../db';
 import { z } from "zod";
+import { generateCollectionSuggestions, generateEmailDraft, generateAiCfoResponse } from "../services/openai";
+import { sendReminderEmail, DEFAULT_FROM, DEFAULT_FROM_EMAIL } from "../services/sendgrid";
+import { sendPaymentReminderSMS } from "../services/vonage";
+import { ActionPrioritizationService } from "../services/actionPrioritizationService";
+import { formatDate } from "@shared/utils/dateFormatter";
+import { xeroService } from "../services/xero";
+import { onboardingService } from "../services/onboardingService";
+import { XeroSyncService } from "../services/xeroSync";
+import { generateMockData } from "../mock-data";
+import { retellService } from "../retell-service";
+import { createRetellClient } from "../mcp/client";
+import { normalizeDynamicVariables, logVariableTransformation } from "../utils/retellVariableNormalizer";
+import { Retell } from "retell-sdk";
+import Stripe from "stripe";
+import { cleanEmailContent } from "../services/messagePostProcessor";
+import { subscriptionService } from "../services/subscriptionService";
+import { getDashboardMetrics } from "../services/metricsService";
+import { computeCashInflow } from "../services/dashboardCashInflowService";
+import { PermissionService } from "../services/permissionService";
+import { signalCollector } from "../lib/signal-collector";
+import { getAssignedContactIds, hasContactAccess } from "./routeHelpers";
+
+import { apiMiddleware } from "../middleware";
 
 export async function registerIntegrationRoutes(app: Express): Promise<void> {
-  const { apiMiddleware } = await import("../middleware");
-
-  // Xero integration routes
   app.get("/api/integrations/xero/connect", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -195,7 +236,6 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
     }
   });
 
-  // Disconnect from Xero
   app.post("/api/xero/disconnect", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -225,7 +265,6 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
     }
   });
 
-  // Get Xero connection health status
   app.get("/api/xero/health", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -255,7 +294,6 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
     }
   });
 
-  // Force a health check for current tenant
   app.post("/api/xero/health/check", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -263,7 +301,7 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      const { xeroHealthCheckService } = await import("../services/xeroHealthCheck");
+      const { xeroHealthCheckService } = await import("./services/xeroHealthCheck");
       const result = await xeroHealthCheckService.checkSingleTenant(user.tenantId);
       
       res.json(result);
@@ -273,7 +311,6 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
     }
   });
 
-  // Test endpoint to verify callback URL is reachable
   app.get("/api/xero/test-callback", async (req, res) => {
     res.send(`
       <html>
@@ -290,7 +327,6 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
     `);
   });
 
-  // Mock Xero auth endpoint for development
   app.get("/api/xero/mock-auth", async (req, res) => {
     try {
       // Simulate successful Xero connection
@@ -524,7 +560,7 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
           if (result.success) {
             console.log(`✅ Initial Xero sync completed successfully:`, result);
             try {
-              const { enqueueDebtorScoringAfterSync } = await import("../jobs/debtorScoringJob");
+              const { enqueueDebtorScoringAfterSync } = await import("./jobs/debtorScoringJob");
               await enqueueDebtorScoringAfterSync(appTenantId);
             } catch (err) {
               console.error("Failed to enqueue debtor scoring after sync:", err);
@@ -765,7 +801,6 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
     }
   });
 
-  // Xero raw invoice data endpoint with pagination
   app.get("/api/xero/invoices", async (req: any, res) => { // Temporarily disabled auth for demo
     try {
       // Use the logged in user's tenant for Xero API
@@ -855,10 +890,6 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
     }
   });
 
-  // Initialize sync service
-  const xeroSyncService = new XeroSyncService();
-
-  // Xero sync endpoints
   app.post("/api/xero/sync", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -893,7 +924,6 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
     }
   });
 
-  // Separate endpoints for individual syncing (optional)
   app.post("/api/xero/sync/contacts", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -959,7 +989,6 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
     }
   });
 
-  // Get cached invoices endpoint (replaces live Xero calls)
   app.get("/api/xero/invoices/cached", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -989,7 +1018,6 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
     }
   });
 
-  // Get sync settings
   app.get("/api/xero/sync/settings", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -1009,7 +1037,6 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
     }
   });
 
-  // Update sync settings
   app.put("/api/xero/sync/settings", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -1042,47 +1069,6 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
     }
   });
 
-  // Helper functions for Xero data transformation
-  function mapXeroStatusToLocal(xeroStatus: string): string {
-    switch (xeroStatus) {
-      case 'PAID': return 'paid';
-      case 'AUTHORISED': return 'pending';
-      case 'VOIDED': return 'cancelled';
-      default: return 'pending';
-    }
-  }
-
-  function calculateCollectionStage(status: string, dueDate: Date): string {
-    if (status === 'PAID') return 'resolved';
-    
-    const now = new Date();
-    const daysDiff = Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
-    
-    if (daysDiff <= 0) return 'current';
-    if (daysDiff <= 30) return 'first_notice';
-    if (daysDiff <= 60) return 'second_notice';
-    if (daysDiff <= 90) return 'final_notice';
-    return 'collections';
-  }
-
-  function calculateCollectionStageWithPayments(status: string, dueDate: Date, paidDate?: string): string {
-    // If invoice is paid (has a payment date), it's resolved regardless of status
-    if (paidDate) return 'resolved';
-    
-    // If status shows paid but no payment date found, treat as paid (Xero status wins)
-    if (status === 'PAID') return 'resolved';
-    
-    const now = new Date();
-    const daysDiff = Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
-    
-    if (daysDiff <= 0) return 'current';
-    if (daysDiff <= 30) return 'first_notice';
-    if (daysDiff <= 60) return 'second_notice';
-    if (daysDiff <= 90) return 'final_notice';
-    return 'collections';
-  }
-
-  // Unified accounting status endpoint
   app.get('/api/accounting/status', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -1139,35 +1125,6 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
     }
   });
 
-  // List available providers
-  app.get('/api/providers', isAuthenticated, async (req: any, res) => {
-    try {
-      const providers = apiMiddleware.getProviders().map(provider => ({
-        name: provider.name,
-        type: provider.type,
-        isConnected: false, // Will be updated with actual connection status
-        config: {
-          name: provider.config.name,
-          type: provider.config.type,
-          environment: provider.config.environment
-        }
-      }));
-
-      res.json({ 
-        success: true, 
-        providers,
-        total: providers.length
-      });
-    } catch (error) {
-      console.error("Error listing providers:", error);
-      res.status(500).json({ 
-        success: false, 
-        message: "Failed to list providers" 
-      });
-    }
-  });
-
-  // Provider health check
   app.get('/api/providers/health', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -1216,7 +1173,6 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
     }
   });
 
-  // Initiate provider connection (OAuth flow)
   app.get('/api/providers/connect/:provider', isAuthenticated, async (req: any, res) => {
     try {
       const { provider: providerName } = req.params;
@@ -1272,7 +1228,6 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
     }
   });
 
-  // Provider disconnect endpoint
   app.post('/api/providers/disconnect/:provider', isAuthenticated, async (req: any, res) => {
     try {
       const { provider: providerName } = req.params;
@@ -1306,7 +1261,6 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
     }
   });
 
-  // Provider data sync endpoint
   app.post('/api/providers/sync/:provider', isAuthenticated, async (req: any, res) => {
     try {
       const { provider: providerName } = req.params;
@@ -1355,7 +1309,6 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
     }
   });
 
-  // Provider-specific API request endpoint
   app.post('/api/providers/:provider/request', isAuthenticated, async (req: any, res) => {
     try {
       const { provider: providerName } = req.params;
@@ -1401,6 +1354,510 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
         message: "Failed to make provider API request",
         error: error instanceof Error ? error.message : 'Unknown error'
       });
+    }
+  });
+
+  app.get('/api/accounting/bills', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { limit = 100, status, vendor_id, overdue_only } = req.query;
+      
+      const bills = await storage.getBills(user.tenantId, Number(limit));
+      
+      // Apply filtering
+      let filteredBills = bills;
+      if (status) {
+        filteredBills = filteredBills.filter(bill => bill.status === status);
+      }
+      if (vendor_id) {
+        filteredBills = filteredBills.filter(bill => bill.vendorId === vendor_id);
+      }
+      if (overdue_only === 'true') {
+        const today = new Date();
+        filteredBills = filteredBills.filter(bill => 
+          bill.dueDate && new Date(bill.dueDate) < today && bill.status !== 'paid'
+        );
+      }
+
+      res.json({
+        bills: filteredBills,
+        total: filteredBills.length,
+        metadata: {
+          totalAmount: filteredBills.reduce((sum, bill) => sum + Number(bill.amount), 0),
+          paidAmount: filteredBills.filter(b => b.status === 'paid').reduce((sum, bill) => sum + Number(bill.amount), 0),
+          overdueAmount: filteredBills.filter(b => {
+            const today = new Date();
+            return b.dueDate && new Date(b.dueDate) < today && b.status !== 'paid';
+          }).reduce((sum, bill) => sum + Number(bill.amount), 0)
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching bills:', error);
+      res.status(500).json({ message: "Failed to fetch bills" });
+    }
+  });
+
+  app.get('/api/accounting/bills/:id', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const bill = await storage.getBill(req.params.id, user.tenantId);
+      if (!bill) {
+        return res.status(404).json({ message: "Bill not found" });
+      }
+
+      res.json(bill);
+    } catch (error) {
+      console.error('Error fetching bill:', error);
+      res.status(500).json({ message: "Failed to fetch bill" });
+    }
+  });
+
+  app.post('/api/accounting/bills', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const validatedData = insertBillSchema.parse({
+        ...req.body,
+        tenantId: user.tenantId
+      });
+
+      const bill = await storage.createBill(validatedData);
+      res.status(201).json(bill);
+    } catch (error) {
+      console.error('Error creating bill:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create bill" });
+    }
+  });
+
+  app.put('/api/accounting/bills/:id', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const validatedData = insertBillSchema.partial().parse(req.body);
+      const bill = await storage.updateBill(req.params.id, user.tenantId, validatedData);
+      res.json(bill);
+    } catch (error) {
+      console.error('Error updating bill:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update bill" });
+    }
+  });
+
+  app.delete('/api/accounting/bills/:id', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      await storage.deleteBill(req.params.id, user.tenantId);
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting bill:', error);
+      res.status(500).json({ message: "Failed to delete bill" });
+    }
+  });
+
+  app.get('/api/accounting/bank-accounts', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const accounts = await storage.getBankAccounts(user.tenantId);
+      
+      res.json({
+        accounts,
+        total: accounts.length,
+        metadata: {
+          totalBalance: accounts.reduce((sum, account) => sum + Number(account.currentBalance), 0),
+          totalAvailable: accounts.reduce((sum, account) => sum + Number(account.availableBalance || account.currentBalance), 0),
+          activeCurrencies: [...new Set(accounts.map(a => a.currencyCode))]
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching bank accounts:', error);
+      res.status(500).json({ message: "Failed to fetch bank accounts" });
+    }
+  });
+
+  app.get('/api/accounting/bank-accounts/:id', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const account = await storage.getBankAccount(req.params.id, user.tenantId);
+      if (!account) {
+        return res.status(404).json({ message: "Bank account not found" });
+      }
+
+      res.json(account);
+    } catch (error) {
+      console.error('Error fetching bank account:', error);
+      res.status(500).json({ message: "Failed to fetch bank account" });
+    }
+  });
+
+  app.post('/api/accounting/bank-accounts', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const validatedData = insertBankAccountSchema.parse({
+        ...req.body,
+        tenantId: user.tenantId
+      });
+
+      const account = await storage.createBankAccount(validatedData);
+      res.status(201).json(account);
+    } catch (error) {
+      console.error('Error creating bank account:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create bank account" });
+    }
+  });
+
+  app.put('/api/accounting/bank-accounts/:id', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const validatedData = insertBankAccountSchema.partial().parse(req.body);
+      const account = await storage.updateBankAccount(req.params.id, user.tenantId, validatedData);
+      res.json(account);
+    } catch (error) {
+      console.error('Error updating bank account:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update bank account" });
+    }
+  });
+
+  app.delete('/api/accounting/bank-accounts/:id', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      await storage.deleteBankAccount(req.params.id, user.tenantId);
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting bank account:', error);
+      res.status(500).json({ message: "Failed to delete bank account" });
+    }
+  });
+
+  app.get('/api/accounting/bank-transactions', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { 
+        bank_account_id, 
+        start_date, 
+        end_date, 
+        limit = 500, 
+        type, 
+        category,
+        status 
+      } = req.query;
+
+      const filters: any = {};
+      if (bank_account_id) filters.bankAccountId = bank_account_id as string;
+      if (start_date) filters.startDate = start_date as string;
+      if (end_date) filters.endDate = end_date as string;
+      if (limit) filters.limit = Number(limit);
+
+      const transactions = await storage.getBankTransactions(user.tenantId, filters);
+      
+      // Apply additional filtering
+      let filteredTransactions = transactions;
+      if (type) {
+        filteredTransactions = filteredTransactions.filter(t => t.transactionType === type);
+      }
+      if (category) {
+        filteredTransactions = filteredTransactions.filter(t => t.category === category);
+      }
+      if (status) {
+        filteredTransactions = filteredTransactions.filter(t => t.status === status);
+      }
+
+      res.json({
+        transactions: filteredTransactions,
+        total: filteredTransactions.length,
+        metadata: {
+          totalInflows: filteredTransactions
+            .filter(t => Number(t.amount) > 0)
+            .reduce((sum, t) => sum + Number(t.amount), 0),
+          totalOutflows: filteredTransactions
+            .filter(t => Number(t.amount) < 0)
+            .reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0),
+          netCashFlow: filteredTransactions.reduce((sum, t) => sum + Number(t.amount), 0),
+          categories: [...new Set(filteredTransactions.map(t => t.category).filter(Boolean))]
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching bank transactions:', error);
+      res.status(500).json({ message: "Failed to fetch bank transactions" });
+    }
+  });
+
+  app.get('/api/accounting/bank-transactions/:id', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const transaction = await storage.getBankTransaction(req.params.id, user.tenantId);
+      if (!transaction) {
+        return res.status(404).json({ message: "Bank transaction not found" });
+      }
+
+      res.json(transaction);
+    } catch (error) {
+      console.error('Error fetching bank transaction:', error);
+      res.status(500).json({ message: "Failed to fetch bank transaction" });
+    }
+  });
+
+  app.post('/api/accounting/bank-transactions', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const validatedData = insertBankTransactionSchema.parse({
+        ...req.body,
+        tenantId: user.tenantId
+      });
+
+      const transaction = await storage.createBankTransaction(validatedData);
+      res.status(201).json(transaction);
+    } catch (error) {
+      console.error('Error creating bank transaction:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create bank transaction" });
+    }
+  });
+
+  app.put('/api/accounting/bank-transactions/:id', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const validatedData = insertBankTransactionSchema.partial().parse(req.body);
+      const transaction = await storage.updateBankTransaction(req.params.id, user.tenantId, validatedData);
+      res.json(transaction);
+    } catch (error) {
+      console.error('Error updating bank transaction:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update bank transaction" });
+    }
+  });
+
+  app.get('/api/accounting/budgets', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { year, status } = req.query;
+      const filters: any = {};
+      if (year) filters.year = Number(year);
+      if (status) filters.status = status as string;
+
+      const budgets = await storage.getBudgets(user.tenantId, filters);
+      
+      res.json({
+        budgets,
+        total: budgets.length,
+        metadata: {
+          totalBudgetedAmount: budgets.reduce((sum, budget) => sum + Number(budget.totalBudgetedAmount || 0), 0),
+          totalActualAmount: budgets.reduce((sum, budget) => sum + Number(budget.totalActualAmount || 0), 0),
+          years: [...new Set(budgets.map(b => b.year))].sort(),
+          statuses: [...new Set(budgets.map(b => b.status))]
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching budgets:', error);
+      res.status(500).json({ message: "Failed to fetch budgets" });
+    }
+  });
+
+  app.get('/api/accounting/budgets/:id', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const budget = await storage.getBudget(req.params.id, user.tenantId);
+      if (!budget) {
+        return res.status(404).json({ message: "Budget not found" });
+      }
+
+      res.json(budget);
+    } catch (error) {
+      console.error('Error fetching budget:', error);
+      res.status(500).json({ message: "Failed to fetch budget" });
+    }
+  });
+
+  app.post('/api/accounting/budgets', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const validatedData = insertBudgetSchema.parse({
+        ...req.body,
+        tenantId: user.tenantId,
+        createdBy: user.id
+      });
+
+      const budget = await storage.createBudget(validatedData);
+      res.status(201).json(budget);
+    } catch (error) {
+      console.error('Error creating budget:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create budget" });
+    }
+  });
+
+  app.put('/api/accounting/budgets/:id', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const validatedData = insertBudgetSchema.partial().parse(req.body);
+      const budget = await storage.updateBudget(req.params.id, user.tenantId, validatedData);
+      res.json(budget);
+    } catch (error) {
+      console.error('Error updating budget:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update budget" });
+    }
+  });
+
+  app.delete('/api/accounting/budgets/:id', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      await storage.deleteBudget(req.params.id, user.tenantId);
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting budget:', error);
+      res.status(500).json({ message: "Failed to delete budget" });
+    }
+  });
+
+  app.get('/api/accounting/fx', isAuthenticated, async (req, res) => {
+    try {
+      const { base_currency, target_currency, date } = req.query;
+      
+      const exchangeRates = await storage.getExchangeRates(
+        base_currency as string,
+        target_currency as string,
+        date as string
+      );
+
+      res.json({
+        exchangeRates,
+        total: exchangeRates.length,
+        metadata: {
+          currencies: [...new Set([
+            ...exchangeRates.map(r => r.baseCurrency),
+            ...exchangeRates.map(r => r.targetCurrency)
+          ])].sort(),
+          latestUpdate: exchangeRates.length > 0 ? exchangeRates[0].rateDate : null,
+          sources: [...new Set(exchangeRates.map(r => r.source).filter(Boolean))]
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching exchange rates:', error);
+      res.status(500).json({ message: "Failed to fetch exchange rates" });
+    }
+  });
+
+  app.get('/api/accounting/fx/latest/:baseCurrency', isAuthenticated, async (req, res) => {
+    try {
+      const { baseCurrency } = req.params;
+      const exchangeRates = await storage.getLatestExchangeRates(baseCurrency);
+
+      res.json({
+        baseCurrency,
+        exchangeRates,
+        total: exchangeRates.length,
+        lastUpdated: exchangeRates.length > 0 ? exchangeRates[0].rateDate : null
+      });
+    } catch (error) {
+      console.error('Error fetching latest exchange rates:', error);
+      res.status(500).json({ message: "Failed to fetch latest exchange rates" });
+    }
+  });
+
+  app.post('/api/accounting/fx', isAuthenticated, async (req, res) => {
+    try {
+      const validatedData = insertExchangeRateSchema.parse(req.body);
+      const exchangeRate = await storage.createExchangeRate(validatedData);
+      res.status(201).json(exchangeRate);
+    } catch (error) {
+      console.error('Error creating exchange rate:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create exchange rate" });
     }
   });
 }

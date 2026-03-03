@@ -182,8 +182,8 @@ const RiskScatterTooltip = ({ active, payload }: RiskScatterTooltipProps) => {
     <div className="glass-card p-4 shadow-lg min-w-[320px]">
       <div className="flex items-center justify-between mb-3">
         <div>
-          <p className="font-semibold text-slate-900 text-sm">{customer.customerName}</p>
-          <p className="text-xs text-slate-600">{customer.email}</p>
+          <p className="font-semibold text-foreground text-sm">{customer.customerName}</p>
+          <p className="text-xs text-muted-foreground">{customer.email}</p>
         </div>
         <Badge className={`${riskConfig.bgColor} ${riskConfig.textColor} text-xs`}>
           {riskConfig.label}
@@ -193,14 +193,14 @@ const RiskScatterTooltip = ({ active, payload }: RiskScatterTooltipProps) => {
       <div className="space-y-2 text-sm">
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <span className="text-slate-600">Outstanding:</span>
+            <span className="text-muted-foreground">Outstanding:</span>
             <span className="font-medium text-[#17B6C3] ml-2">
               ${(customer.totalOutstanding || 0).toLocaleString()}
             </span>
           </div>
           <div>
-            <span className="text-slate-600">Risk Score:</span>
-            <span className="font-medium text-slate-900 ml-2">
+            <span className="text-muted-foreground">Risk Score:</span>
+            <span className="font-medium text-foreground ml-2">
               {customer.riskScore}/100
             </span>
           </div>
@@ -208,13 +208,13 @@ const RiskScatterTooltip = ({ active, payload }: RiskScatterTooltipProps) => {
         
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <span className="text-slate-600">Overdue:</span>
-            <span className="font-medium text-slate-900 ml-2">
+            <span className="text-muted-foreground">Overdue:</span>
+            <span className="font-medium text-foreground ml-2">
               {customer.overdueInvoices} invoices
             </span>
           </div>
           <div>
-            <span className="text-slate-600">Payment History:</span>
+            <span className="text-muted-foreground">Payment History:</span>
             <span className={`font-medium ml-2 ${customer.paymentHistory >= 80 ? 'text-green-600' : customer.paymentHistory >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
               {customer.paymentHistory}%
             </span>
@@ -223,24 +223,24 @@ const RiskScatterTooltip = ({ active, payload }: RiskScatterTooltipProps) => {
         
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <span className="text-slate-600">Avg Delay:</span>
-            <span className="font-medium text-slate-900 ml-2">
+            <span className="text-muted-foreground">Avg Delay:</span>
+            <span className="font-medium text-foreground ml-2">
               {customer.averagePaymentDelay} days
             </span>
           </div>
           <div>
-            <span className="text-slate-600">Last Payment:</span>
-            <span className="font-medium text-slate-900 ml-2 text-xs">
+            <span className="text-muted-foreground">Last Payment:</span>
+            <span className="font-medium text-foreground ml-2 text-xs">
               {new Date(customer.lastPaymentDate).toLocaleDateString()}
             </span>
           </div>
         </div>
         
         {customer.riskFactors.length > 0 && (
-          <div className="pt-2 border-t border-slate-200">
-            <p className="text-slate-600 text-xs mb-1">Top Risk Factor:</p>
+          <div className="pt-2 border-t border-border">
+            <p className="text-muted-foreground text-xs mb-1">Top Risk Factor:</p>
             <div className="flex justify-between items-center">
-              <span className="font-medium text-slate-900 text-xs">
+              <span className="font-medium text-foreground text-xs">
                 {customer.riskFactors[0].factor}
               </span>
               <span className="font-medium text-red-600 text-xs">
@@ -250,9 +250,9 @@ const RiskScatterTooltip = ({ active, payload }: RiskScatterTooltipProps) => {
           </div>
         )}
         
-        <div className="pt-2 border-t border-slate-200">
-          <p className="text-slate-600 text-xs mb-1">Recommended Action:</p>
-          <p className="font-medium text-slate-900 text-xs">
+        <div className="pt-2 border-t border-border">
+          <p className="text-muted-foreground text-xs mb-1">Recommended Action:</p>
+          <p className="font-medium text-foreground text-xs">
             {customer.recommendedAction}
           </p>
         </div>
@@ -285,27 +285,27 @@ const DistributionTooltip = ({ active, payload, label }: DistributionTooltipProp
         <div className={`p-1 ${riskConfig.bgColor} rounded mr-2`}>
           <riskConfig.icon className={`h-3 w-3 ${riskConfig.textColor}`} />
         </div>
-        <p className="font-semibold text-slate-900">{riskConfig.label}</p>
+        <p className="font-semibold text-foreground">{riskConfig.label}</p>
       </div>
       
       <div className="space-y-1 text-sm">
         <div className="flex justify-between items-center">
-          <span className="text-slate-600">Customers:</span>
-          <span className="font-medium text-slate-900">{data.count}</span>
+          <span className="text-muted-foreground">Customers:</span>
+          <span className="font-medium text-foreground">{data.count}</span>
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-slate-600">Total Balance:</span>
+          <span className="text-muted-foreground">Total Balance:</span>
           <span className="font-medium text-[#17B6C3]">
             ${data.totalBalance.toLocaleString()}
           </span>
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-slate-600">Portfolio %:</span>
-          <span className="font-medium text-slate-900">{data.percentage}%</span>
+          <span className="text-muted-foreground">Portfolio %:</span>
+          <span className="font-medium text-foreground">{data.percentage}%</span>
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-slate-600">Avg Risk Score:</span>
-          <span className="font-medium text-slate-900">{data.averageRiskScore}/100</span>
+          <span className="text-muted-foreground">Avg Risk Score:</span>
+          <span className="font-medium text-foreground">{data.averageRiskScore}/100</span>
         </div>
       </div>
     </div>
@@ -369,7 +369,7 @@ export default function CustomerRiskMatrix() {
             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <AlertTriangle className="h-8 w-8 text-red-600" />
             </div>
-            <p className="text-lg font-semibold text-slate-900 mb-2">Unable to load risk matrix data</p>
+            <p className="text-lg font-semibold text-foreground mb-2">Unable to load risk matrix data</p>
             <p className="text-sm text-muted-foreground">Please try again later</p>
           </div>
         </CardContent>
@@ -393,7 +393,7 @@ export default function CustomerRiskMatrix() {
             <div className="w-16 h-16 bg-[#17B6C3]/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle className="h-8 w-8 text-[#17B6C3]" />
             </div>
-            <p className="text-lg font-semibold text-slate-900 mb-2">No customer risk data available</p>
+            <p className="text-lg font-semibold text-foreground mb-2">No customer risk data available</p>
             <p className="text-sm text-muted-foreground">Start collecting payments to generate risk analytics</p>
           </div>
         </CardContent>
@@ -607,7 +607,7 @@ export default function CustomerRiskMatrix() {
                 </div>
                 <div className={`flex items-center text-xs ${
                   metric.changeType === 'positive' ? 'text-green-600' : 
-                  metric.changeType === 'negative' ? 'text-red-600' : 'text-slate-600'
+                  metric.changeType === 'negative' ? 'text-red-600' : 'text-muted-foreground'
                 }`}>
                   {metric.changeType === 'positive' && <TrendingUp className="h-3 w-3 mr-1" />}
                   {metric.changeType === 'negative' && <TrendingDown className="h-3 w-3 mr-1" />}
@@ -616,7 +616,7 @@ export default function CustomerRiskMatrix() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground mb-1">{metric.title}</p>
-                <p className="text-lg font-bold text-slate-900">{metric.value}</p>
+                <p className="text-lg font-bold text-foreground">{metric.value}</p>
               </div>
             </div>
           ))}
@@ -627,14 +627,14 @@ export default function CustomerRiskMatrix() {
           <div className="glass-card p-4 border-l-4 border-red-500" data-testid="section-critical-alerts">
             <div className="flex items-center mb-3">
               <AlertTriangle className="h-5 w-5 text-red-600 mr-2" />
-              <h3 className="font-semibold text-slate-900">Critical Risk Alerts</h3>
+              <h3 className="font-semibold text-foreground">Critical Risk Alerts</h3>
             </div>
             <div className="space-y-2">
               {criticalAlerts.map((alert, index) => (
                 <div key={index} className="flex items-center justify-between p-2 bg-red-50 rounded">
                   <div className="flex-1">
-                    <p className="font-medium text-slate-900 text-sm">{alert.customerName}</p>
-                    <p className="text-xs text-slate-600">{alert.message}</p>
+                    <p className="font-medium text-foreground text-sm">{alert.customerName}</p>
+                    <p className="text-xs text-muted-foreground">{alert.message}</p>
                   </div>
                   <div className="flex items-center space-x-1 ml-4">
                     <Badge variant="destructive" className="text-xs">
@@ -659,8 +659,8 @@ export default function CustomerRiskMatrix() {
         {/* Risk Level Filters */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Filter className="h-4 w-4 text-slate-600" />
-            <span className="text-sm font-medium text-slate-700">Filter by Risk Level:</span>
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium text-foreground">Filter by Risk Level:</span>
             {Object.entries(RISK_LEVEL_CONFIG).map(([level, config]) => (
               <Button
                 key={level}
@@ -708,8 +708,8 @@ export default function CustomerRiskMatrix() {
           <TabsContent value="scatter" className="space-y-4">
             <div className="glass-card p-6" data-testid="chart-risk-scatter">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-slate-900">Risk Score vs Outstanding Balance</h3>
-                <div className="text-sm text-slate-600">
+                <h3 className="text-lg font-semibold text-foreground">Risk Score vs Outstanding Balance</h3>
+                <div className="text-sm text-muted-foreground">
                   Bubble size represents overdue invoices
                 </div>
               </div>
@@ -751,7 +751,7 @@ export default function CustomerRiskMatrix() {
           <TabsContent value="distribution" className="space-y-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="glass-card p-6" data-testid="chart-risk-pie">
-                <h3 className="text-lg font-semibold text-slate-900 mb-4">Risk Distribution</h3>
+                <h3 className="text-lg font-semibold text-foreground mb-4">Risk Distribution</h3>
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
                     <Pie
@@ -782,7 +782,7 @@ export default function CustomerRiskMatrix() {
               </div>
 
               <div className="glass-card p-6" data-testid="chart-risk-bar">
-                <h3 className="text-lg font-semibold text-slate-900 mb-4">Outstanding by Risk Level</h3>
+                <h3 className="text-lg font-semibold text-foreground mb-4">Outstanding by Risk Level</h3>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={pieData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -822,26 +822,26 @@ export default function CustomerRiskMatrix() {
 
           <TabsContent value="factors" className="space-y-4">
             <div className="glass-card p-6" data-testid="section-risk-factors">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">Risk Factor Breakdown</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-4">Risk Factor Breakdown</h3>
               <div className="space-y-4">
                 {riskFactorBreakdown.map((factor, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                  <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="font-medium text-slate-900">{factor.factor}</span>
+                        <span className="font-medium text-foreground">{factor.factor}</span>
                         <span className="text-sm font-medium text-[#17B6C3]">
                           {factor.averageContribution}% avg contribution
                         </span>
                       </div>
-                      <p className="text-sm text-slate-600">{factor.description}</p>
+                      <p className="text-sm text-muted-foreground">{factor.description}</p>
                       <div className="flex items-center mt-2">
-                        <div className="flex-1 bg-gray-200 rounded-full h-2 mr-2">
+                        <div className="flex-1 bg-muted rounded-full h-2 mr-2">
                           <div 
                             className="bg-[#17B6C3] h-2 rounded-full transition-all duration-300"
                             style={{ width: `${factor.averageContribution}%` }}
                           />
                         </div>
-                        <span className="text-xs text-slate-600">
+                        <span className="text-xs text-muted-foreground">
                           {factor.highRiskCount} high-risk customers
                         </span>
                       </div>
@@ -856,7 +856,7 @@ export default function CustomerRiskMatrix() {
         {/* High-Risk Customers Table */}
         <div className="glass-card p-6" data-testid="table-high-risk-customers">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-slate-900">Top High-Risk Customers</h3>
+            <h3 className="text-lg font-semibold text-foreground">Top High-Risk Customers</h3>
             <Button variant="outline" size="sm" data-testid="button-export-high-risk">
               <Download className="h-4 w-4 mr-1" />
               Export
@@ -865,25 +865,25 @@ export default function CustomerRiskMatrix() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-slate-200">
-                  <th className="text-left py-3 px-4 font-medium text-slate-700">Customer</th>
-                  <th className="text-left py-3 px-4 font-medium text-slate-700">Risk Level</th>
-                  <th className="text-right py-3 px-4 font-medium text-slate-700">Outstanding</th>
-                  <th className="text-right py-3 px-4 font-medium text-slate-700">Risk Score</th>
-                  <th className="text-right py-3 px-4 font-medium text-slate-700">Overdue</th>
-                  <th className="text-left py-3 px-4 font-medium text-slate-700">Recommended Action</th>
-                  <th className="text-center py-3 px-4 font-medium text-slate-700">Actions</th>
+                <tr className="border-b border-border">
+                  <th className="text-left py-3 px-4 font-medium text-foreground">Customer</th>
+                  <th className="text-left py-3 px-4 font-medium text-foreground">Risk Level</th>
+                  <th className="text-right py-3 px-4 font-medium text-foreground">Outstanding</th>
+                  <th className="text-right py-3 px-4 font-medium text-foreground">Risk Score</th>
+                  <th className="text-right py-3 px-4 font-medium text-foreground">Overdue</th>
+                  <th className="text-left py-3 px-4 font-medium text-foreground">Recommended Action</th>
+                  <th className="text-center py-3 px-4 font-medium text-foreground">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {highRiskCustomers.map((customer, index) => {
                   const riskConfig = RISK_LEVEL_CONFIG[customer.riskLevel?.toLowerCase() as keyof typeof RISK_LEVEL_CONFIG] || RISK_LEVEL_CONFIG.medium;
                   return (
-                    <tr key={customer.customerId} className="border-b border-slate-100 hover:bg-slate-50" data-testid={`row-customer-${index}`}>
+                    <tr key={customer.customerId} className="border-b border-border/50 hover:bg-muted" data-testid={`row-customer-${index}`}>
                       <td className="py-3 px-4">
                         <div>
-                          <p className="font-medium text-slate-900">{customer.customerName}</p>
-                          <p className="text-xs text-slate-600">{customer.email}</p>
+                          <p className="font-medium text-foreground">{customer.customerName}</p>
+                          <p className="text-xs text-muted-foreground">{customer.email}</p>
                         </div>
                       </td>
                       <td className="py-3 px-4">
@@ -892,13 +892,13 @@ export default function CustomerRiskMatrix() {
                           {riskConfig.label}
                         </Badge>
                       </td>
-                      <td className="py-3 px-4 text-right font-medium text-slate-900">
+                      <td className="py-3 px-4 text-right font-medium text-foreground">
                         ${(customer.totalOutstanding || 0).toLocaleString()}
                       </td>
                       <td className="py-3 px-4 text-right">
                         <div className="flex items-center justify-end">
-                          <span className="font-medium text-slate-900 mr-2">{customer.riskScore}/100</span>
-                          <div className="w-12 bg-gray-200 rounded-full h-1.5">
+                          <span className="font-medium text-foreground mr-2">{customer.riskScore}/100</span>
+                          <div className="w-12 bg-muted rounded-full h-1.5">
                             <div 
                               className="bg-[#17B6C3] h-1.5 rounded-full"
                               style={{ width: `${customer.riskScore}%` }}
@@ -907,12 +907,12 @@ export default function CustomerRiskMatrix() {
                         </div>
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <span className={`font-medium ${(customer.overdueCount || 0) > 0 ? 'text-red-600' : 'text-slate-900'}`}>
+                        <span className={`font-medium ${(customer.overdueCount || 0) > 0 ? 'text-red-600' : 'text-foreground'}`}>
                           {customer.overdueCount || 0}
                         </span>
                       </td>
                       <td className="py-3 px-4">
-                        <span className="text-sm text-slate-700">{customer.recommendedAction}</span>
+                        <span className="text-sm text-foreground">{customer.recommendedAction}</span>
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex items-center justify-center space-x-1">

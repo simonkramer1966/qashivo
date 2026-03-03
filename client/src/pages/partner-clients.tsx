@@ -95,9 +95,9 @@ export default function PartnerClientsList() {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen bg-white">
+      <div className="flex h-screen bg-background">
         <main className="flex-1 overflow-y-auto">
-          <div className="sticky top-0 z-40 bg-white border-b border-slate-100">
+          <div className="sticky top-0 z-40 bg-background border-b border-border/50">
             <div className="px-6 lg:px-8 py-5">
               <Skeleton className="h-5 w-32" />
               <Skeleton className="h-4 w-48 mt-1" />
@@ -117,18 +117,18 @@ export default function PartnerClientsList() {
 
   if (error) {
     return (
-      <div className="flex h-screen bg-white">
+      <div className="flex h-screen bg-background">
         <main className="flex-1 overflow-y-auto">
-          <div className="sticky top-0 z-40 bg-white border-b border-slate-100">
+          <div className="sticky top-0 z-40 bg-background border-b border-border/50">
             <div className="px-6 lg:px-8 py-5">
-              <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight">Clients</h2>
+              <h2 className="text-[17px] font-semibold text-foreground tracking-tight">Clients</h2>
             </div>
           </div>
           <div className="p-6 lg:p-8">
             <div className="py-16 text-center">
-              <AlertCircle className="w-10 h-10 text-slate-300 mx-auto mb-4" />
-              <p className="text-[15px] font-medium text-slate-900 mb-1">Unable to load clients</p>
-              <p className="text-[13px] text-slate-400">Please check your access permissions or try again later.</p>
+              <AlertCircle className="w-10 h-10 text-muted-foreground mx-auto mb-4" />
+              <p className="text-[15px] font-medium text-foreground mb-1">Unable to load clients</p>
+              <p className="text-[13px] text-muted-foreground">Please check your access permissions or try again later.</p>
             </div>
           </div>
         </main>
@@ -137,28 +137,28 @@ export default function PartnerClientsList() {
   }
 
   return (
-    <div className="flex h-screen bg-white">
+    <div className="flex h-screen bg-background">
       <main className="flex-1 overflow-y-auto">
         {/* Sticky header */}
-        <div className="sticky top-0 z-40 bg-white border-b border-slate-100">
+        <div className="sticky top-0 z-40 bg-background border-b border-border/50">
           <div className="px-6 lg:px-8 py-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Link href={`/p/${partnerSlug}/practice`}>
-                  <button className="p-1.5 -ml-1.5 hover:bg-slate-100 rounded transition-colors">
-                    <ArrowLeft className="w-4 h-4 text-slate-400" />
+                  <button className="p-1.5 -ml-1.5 hover:bg-muted rounded transition-colors">
+                    <ArrowLeft className="w-4 h-4 text-muted-foreground" />
                   </button>
                 </Link>
                 <div>
-                  <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight">Clients</h2>
-                  <p className="text-[13px] text-slate-400 mt-0.5">
+                  <h2 className="text-[17px] font-semibold text-foreground tracking-tight">Clients</h2>
+                  <p className="text-[13px] text-muted-foreground mt-0.5">
                     {clients?.length || 0} client{clients?.length !== 1 ? 's' : ''}
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setIsCreateDialogOpen(true)}
-                className="h-8 px-3 text-[13px] font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors"
+                className="h-8 px-3 text-[13px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
               >
                 <Plus className="w-4 h-4 inline mr-1.5" />
                 Add Client
@@ -173,12 +173,12 @@ export default function PartnerClientsList() {
           {(clients?.length || 0) > 0 && (
             <div className="mb-6">
               <div className="relative max-w-xs">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   placeholder="Search clients..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9 h-9 text-[13px] bg-white border-slate-200 focus:border-slate-300 focus:ring-0"
+                  className="pl-9 h-9 text-[13px] bg-background border-border focus:border-border focus:ring-0"
                 />
               </div>
             </div>
@@ -187,10 +187,10 @@ export default function PartnerClientsList() {
           {filteredClients.length === 0 ? (
             <div className="py-20 text-center">
               <Building2 className="w-10 h-10 text-slate-200 mx-auto mb-4" />
-              <p className="text-[15px] font-medium text-slate-900 mb-1">
+              <p className="text-[15px] font-medium text-foreground mb-1">
                 {searchTerm ? "No matching clients" : "No clients yet"}
               </p>
-              <p className="text-[13px] text-slate-400 mb-6">
+              <p className="text-[13px] text-muted-foreground mb-6">
                 {searchTerm
                   ? "Try adjusting your search term"
                   : "Add your first client to get started"}
@@ -198,7 +198,7 @@ export default function PartnerClientsList() {
               {!searchTerm && (
                 <button
                   onClick={() => setIsCreateDialogOpen(true)}
-                  className="h-9 px-4 text-[13px] font-medium bg-slate-900 hover:bg-slate-800 text-white rounded transition-colors"
+                  className="h-9 px-4 text-[13px] font-medium bg-foreground text-background hover:bg-foreground/90 rounded transition-colors"
                 >
                   Add Client
                 </button>
@@ -208,20 +208,20 @@ export default function PartnerClientsList() {
             <div className="overflow-x-auto">
               <table className="w-full" style={{ minWidth: '600px' }}>
                 <thead>
-                  <tr className="border-b border-slate-100">
-                    <th className="py-2 text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider">
+                  <tr className="border-b border-border/50">
+                    <th className="py-2 text-left text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                       Client
                     </th>
-                    <th className="py-2 text-right text-[11px] font-medium text-slate-400 uppercase tracking-wider">
+                    <th className="py-2 text-right text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                       Accounts
                     </th>
-                    <th className="py-2 text-right text-[11px] font-medium text-slate-400 uppercase tracking-wider">
+                    <th className="py-2 text-right text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                       Outstanding
                     </th>
-                    <th className="py-2 text-right text-[11px] font-medium text-slate-400 uppercase tracking-wider">
+                    <th className="py-2 text-right text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                       Overdue
                     </th>
-                    <th className="py-2 text-right text-[11px] font-medium text-slate-400 uppercase tracking-wider">
+                    <th className="py-2 text-right text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                       Status
                     </th>
                   </tr>
@@ -231,13 +231,13 @@ export default function PartnerClientsList() {
                     <tr 
                       key={client.id}
                       onClick={() => navigate(`/p/${partnerSlug}/clients/${client.id}`)}
-                      className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors cursor-pointer"
+                      className="border-b border-border/50 hover:bg-muted/50 transition-colors cursor-pointer"
                     >
                       <td className="py-3">
-                        <div className="text-[14px] font-medium text-slate-900">
+                        <div className="text-[14px] font-medium text-foreground">
                           {client.name}
                         </div>
-                        <div className="text-[12px] text-slate-400">
+                        <div className="text-[12px] text-muted-foreground">
                           Added {new Date(client.createdAt).toLocaleDateString("en-GB", { 
                             day: "numeric", 
                             month: "short", 
@@ -246,12 +246,12 @@ export default function PartnerClientsList() {
                         </div>
                       </td>
                       <td className="py-3 text-right">
-                        <span className="text-[13px] text-slate-400 tabular-nums">
+                        <span className="text-[13px] text-muted-foreground tabular-nums">
                           {client.activeAccounts ?? '—'}
                         </span>
                       </td>
                       <td className="py-3 text-right">
-                        <span className="text-[14px] font-medium text-slate-900 tabular-nums">
+                        <span className="text-[14px] font-medium text-foreground tabular-nums">
                           {client.totalOutstanding !== undefined 
                             ? formatCurrency(client.totalOutstanding)
                             : '—'}
@@ -261,7 +261,7 @@ export default function PartnerClientsList() {
                         <span className={`text-[14px] tabular-nums ${
                           (client.totalOverdue ?? 0) > 0 
                             ? 'text-red-600' 
-                            : 'text-slate-400'
+                            : 'text-muted-foreground'
                         }`}>
                           {client.totalOverdue !== undefined 
                             ? formatCurrency(client.totalOverdue)
@@ -269,7 +269,7 @@ export default function PartnerClientsList() {
                         </span>
                       </td>
                       <td className="py-3 text-right">
-                        <span className="text-[13px] text-slate-400">
+                        <span className="text-[13px] text-muted-foreground">
                           {getStatusText(client.status)}
                         </span>
                       </td>
@@ -287,12 +287,12 @@ export default function PartnerClientsList() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-[17px] font-semibold">Add New Client</DialogTitle>
-            <DialogDescription className="text-[13px] text-slate-400">
+            <DialogDescription className="text-[13px] text-muted-foreground">
               Create a new client record. You can invite them to connect their accounting system afterwards.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <Label htmlFor="clientName" className="text-[13px] font-medium text-slate-700">
+            <Label htmlFor="clientName" className="text-[13px] font-medium text-foreground">
               Business Name
             </Label>
             <Input
@@ -314,7 +314,7 @@ export default function PartnerClientsList() {
             <Button
               onClick={() => createMutation.mutate(newClientName)}
               disabled={!newClientName.trim() || createMutation.isPending}
-              className="bg-slate-900 hover:bg-slate-800 text-white text-[13px]"
+              className="bg-foreground text-background hover:bg-foreground/90 text-[13px]"
             >
               {createMutation.isPending ? "Creating..." : "Create Client"}
             </Button>

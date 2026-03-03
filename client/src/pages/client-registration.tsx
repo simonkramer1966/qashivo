@@ -104,22 +104,22 @@ export default function ClientRegistration() {
   if (isSuccess) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-2xl bg-white/80 backdrop-blur-sm border-white/50 shadow-xl">
+        <Card className="w-full max-w-2xl bg-background/80 backdrop-blur-sm border-white/50 shadow-xl">
           <CardContent className="p-8 text-center">
             <div className="p-4 bg-green-500/10 rounded-full w-20 h-20 mx-auto mb-6 flex items-center justify-center">
               <CheckCircle className="h-10 w-10 text-green-600" />
             </div>
-            <h1 className="text-2xl font-bold text-slate-900 mb-4">Welcome to Qashivo!</h1>
-            <p className="text-slate-600 mb-6 leading-relaxed">
+            <h1 className="text-2xl font-bold text-foreground mb-4">Welcome to Qashivo!</h1>
+            <p className="text-muted-foreground mb-6 leading-relaxed">
               Your 30-day {PLAN_DETAILS[selectedPlan].name} plan trial has started successfully. You'll receive an email with login details and next steps 
               to start automating your debt collection and improving cash flow.
             </p>
-            <div className="bg-slate-50 rounded-lg p-4 mb-6">
-              <h3 className="font-medium text-slate-800 mb-2">Your Plan: {PLAN_DETAILS[selectedPlan].name}</h3>
-              <p className="text-sm text-slate-600 mb-2">
+            <div className="bg-muted rounded-lg p-4 mb-6">
+              <h3 className="font-medium text-foreground mb-2">Your Plan: {PLAN_DETAILS[selectedPlan].name}</h3>
+              <p className="text-sm text-muted-foreground mb-2">
                 After your trial, you'll be billed {PLAN_DETAILS[selectedPlan].price}/month
               </p>
-              <div className="text-xs text-slate-500">
+              <div className="text-xs text-muted-foreground">
                 Features: {PLAN_DETAILS[selectedPlan].features.slice(0, 2).join(', ')}...
               </div>
             </div>
@@ -151,12 +151,12 @@ export default function ClientRegistration() {
       <div className="w-full max-w-4xl">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">Start Your Free Trial</h1>
-          <p className="text-lg text-slate-600">
+          <h1 className="text-3xl font-bold text-foreground mb-2">Start Your Free Trial</h1>
+          <p className="text-lg text-muted-foreground">
             Get paid 2 weeks faster with automated debt collection - {PLAN_DETAILS[selectedPlan].price}/month after trial
           </p>
-          <div className="inline-flex items-center bg-white/60 backdrop-blur-sm border border-white/40 rounded-full px-4 py-2 mt-2">
-            <span className="text-sm font-medium text-slate-700">
+          <div className="inline-flex items-center bg-background/60 backdrop-blur-sm border border-white/40 rounded-full px-4 py-2 mt-2">
+            <span className="text-sm font-medium text-foreground">
               Selected: {PLAN_DETAILS[selectedPlan].name} Plan ({PLAN_DETAILS[selectedPlan].price}/month)
             </span>
           </div>
@@ -164,37 +164,37 @@ export default function ClientRegistration() {
 
         {/* Benefits Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl text-center">
+          <Card className="bg-background/70 backdrop-blur-md border-0 shadow-xl text-center">
             <CardContent className="p-6">
               <div className="p-2 bg-[#17B6C3]/10 rounded-lg w-fit mx-auto mb-4">
                 <Clock className="h-8 w-8 text-[#17B6C3]" />
               </div>
               <CardTitle className="text-lg mb-2">30-Day Free Trial</CardTitle>
-              <p className="text-slate-600 text-sm">
+              <p className="text-muted-foreground text-sm">
                 Full access to all features. No credit card required.
               </p>
             </CardContent>
           </Card>
 
-          <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl text-center">
+          <Card className="bg-background/70 backdrop-blur-md border-0 shadow-xl text-center">
             <CardContent className="p-6">
               <div className="p-2 bg-[#17B6C3]/10 rounded-lg w-fit mx-auto mb-4">
                 <Building className="h-8 w-8 text-[#17B6C3]" />
               </div>
               <CardTitle className="text-lg mb-2">Simple Setup</CardTitle>
-              <p className="text-slate-600 text-sm">
+              <p className="text-muted-foreground text-sm">
                 Connect your Xero account in 60 seconds and start automating.
               </p>
             </CardContent>
           </Card>
 
-          <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl text-center">
+          <Card className="bg-background/70 backdrop-blur-md border-0 shadow-xl text-center">
             <CardContent className="p-6">
               <div className="p-2 bg-[#17B6C3]/10 rounded-lg w-fit mx-auto mb-4">
                 <CreditCard className="h-8 w-8 text-[#17B6C3]" />
               </div>
               <CardTitle className="text-lg mb-2">Get Paid Faster</CardTitle>
-              <p className="text-slate-600 text-sm">
+              <p className="text-muted-foreground text-sm">
                 Reduce overdue invoices by 60% and improve cash flow.
               </p>
             </CardContent>
@@ -202,10 +202,10 @@ export default function ClientRegistration() {
         </div>
 
         {/* Registration Form */}
-        <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-xl">
+        <Card className="bg-background/80 backdrop-blur-sm border-white/50 shadow-xl">
           <CardHeader className="text-center pb-6">
             <CardTitle className="text-xl font-bold">Company Information</CardTitle>
-            <CardDescription className="text-slate-600">
+            <CardDescription className="text-muted-foreground">
               Tell us about your business to get started
             </CardDescription>
           </CardHeader>
@@ -213,13 +213,13 @@ export default function ClientRegistration() {
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 {/* Plan Selection */}
-                <div className="mb-8 p-6 bg-slate-50/50 rounded-lg border border-slate-200/30">
+                <div className="mb-8 p-6 bg-muted/50 rounded-lg border border-border/30">
                   <FormField
                     control={form.control}
                     name="selectedPlan"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="font-medium text-slate-700 text-base">Select Your Plan *</FormLabel>
+                        <FormLabel className="font-medium text-foreground text-base">Select Your Plan *</FormLabel>
                         <FormControl>
                           <Select 
                             value={field.value} 
@@ -229,26 +229,26 @@ export default function ClientRegistration() {
                             }}
                             data-testid="select-plan"
                           >
-                            <SelectTrigger className="bg-white border-gray-200">
+                            <SelectTrigger className="bg-background border-border">
                               <SelectValue placeholder="Choose your plan" />
                             </SelectTrigger>
-                            <SelectContent className="bg-white">
+                            <SelectContent className="bg-background">
                               <SelectItem value="standard">
                                 <div className="flex items-center justify-between w-full">
                                   <div>
                                     <div className="font-medium">Standard Plan</div>
-                                    <div className="text-sm text-slate-500">Perfect for small businesses</div>
+                                    <div className="text-sm text-muted-foreground">Perfect for small businesses</div>
                                   </div>
-                                  <div className="ml-4 font-bold text-slate-900">£49/month</div>
+                                  <div className="ml-4 font-bold text-foreground">£49/month</div>
                                 </div>
                               </SelectItem>
                               <SelectItem value="premium">
                                 <div className="flex items-center justify-between w-full">
                                   <div>
                                     <div className="font-medium">Premium Plan</div>
-                                    <div className="text-sm text-slate-500">Advanced features & priority support</div>
+                                    <div className="text-sm text-muted-foreground">Advanced features & priority support</div>
                                   </div>
-                                  <div className="ml-4 font-bold text-slate-900">£99/month</div>
+                                  <div className="ml-4 font-bold text-foreground">£99/month</div>
                                 </div>
                               </SelectItem>
                             </SelectContent>
@@ -257,11 +257,11 @@ export default function ClientRegistration() {
                         <FormMessage />
                         
                         {/* Plan Features */}
-                        <div className="mt-4 p-4 bg-white/60 rounded-lg border border-slate-200/20">
-                          <h4 className="font-medium text-slate-800 mb-2">
+                        <div className="mt-4 p-4 bg-background/60 rounded-lg border border-border/20">
+                          <h4 className="font-medium text-foreground mb-2">
                             {PLAN_DETAILS[selectedPlan].name} Plan Includes:
                           </h4>
-                          <ul className="text-sm text-slate-600 space-y-1">
+                          <ul className="text-sm text-muted-foreground space-y-1">
                             {PLAN_DETAILS[selectedPlan].features.map((feature, index) => (
                               <li key={index} className="flex items-center">
                                 <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
@@ -269,8 +269,8 @@ export default function ClientRegistration() {
                               </li>
                             ))}
                           </ul>
-                          <div className="mt-3 pt-3 border-t border-slate-200/30">
-                            <p className="text-sm font-medium text-slate-700">
+                          <div className="mt-3 pt-3 border-t border-border/30">
+                            <p className="text-sm font-medium text-foreground">
                               30-day free trial, then {PLAN_DETAILS[selectedPlan].price}/month
                             </p>
                           </div>
@@ -286,11 +286,11 @@ export default function ClientRegistration() {
                     name="companyName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="font-medium text-slate-700">Company Name *</FormLabel>
+                        <FormLabel className="font-medium text-foreground">Company Name *</FormLabel>
                         <FormControl>
                           <Input 
                             placeholder="Your Company Ltd" 
-                            className="bg-white/70 border-gray-200/30"
+                            className="bg-background/70 border-border/30"
                             data-testid="input-company-name"
                             {...field} 
                           />
@@ -305,11 +305,11 @@ export default function ClientRegistration() {
                     name="contactName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="font-medium text-slate-700">Contact Name *</FormLabel>
+                        <FormLabel className="font-medium text-foreground">Contact Name *</FormLabel>
                         <FormControl>
                           <Input 
                             placeholder="John Smith" 
-                            className="bg-white/70 border-gray-200/30"
+                            className="bg-background/70 border-border/30"
                             data-testid="input-contact-name"
                             {...field} 
                           />
@@ -324,12 +324,12 @@ export default function ClientRegistration() {
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="font-medium text-slate-700">Email Address *</FormLabel>
+                        <FormLabel className="font-medium text-foreground">Email Address *</FormLabel>
                         <FormControl>
                           <Input 
                             type="email" 
                             placeholder="john@yourcompany.com" 
-                            className="bg-white/70 border-gray-200/30"
+                            className="bg-background/70 border-border/30"
                             data-testid="input-email"
                             {...field} 
                           />
@@ -344,11 +344,11 @@ export default function ClientRegistration() {
                     name="phone"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="font-medium text-slate-700">Phone Number *</FormLabel>
+                        <FormLabel className="font-medium text-foreground">Phone Number *</FormLabel>
                         <FormControl>
                           <Input 
                             placeholder="+44 123 456 7890" 
-                            className="bg-white/70 border-gray-200/30"
+                            className="bg-background/70 border-border/30"
                             data-testid="input-phone"
                             {...field} 
                           />
@@ -363,11 +363,11 @@ export default function ClientRegistration() {
                     name="website"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="font-medium text-slate-700">Website (Optional)</FormLabel>
+                        <FormLabel className="font-medium text-foreground">Website (Optional)</FormLabel>
                         <FormControl>
                           <Input 
                             placeholder="https://yourcompany.com" 
-                            className="bg-white/70 border-gray-200/30"
+                            className="bg-background/70 border-border/30"
                             data-testid="input-website"
                             {...field} 
                           />
@@ -382,10 +382,10 @@ export default function ClientRegistration() {
                     name="monthlyRevenue"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="font-medium text-slate-700">Monthly Revenue *</FormLabel>
+                        <FormLabel className="font-medium text-foreground">Monthly Revenue *</FormLabel>
                         <FormControl>
                           <select 
-                            className="w-full p-2 bg-white/70 border border-gray-200/30 rounded-md"
+                            className="w-full p-2 bg-background/70 border border-border/30 rounded-md"
                             data-testid="select-monthly-revenue"
                             {...field}
                           >
@@ -403,7 +403,7 @@ export default function ClientRegistration() {
                   />
                 </div>
 
-                <div className="pt-6 border-t border-slate-200/50">
+                <div className="pt-6 border-t border-border/50">
                   <Button 
                     type="submit" 
                     className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white font-semibold py-3 text-lg"
@@ -420,7 +420,7 @@ export default function ClientRegistration() {
                     )}
                   </Button>
                   
-                  <p className="text-center text-sm text-slate-500 mt-4">
+                  <p className="text-center text-sm text-muted-foreground mt-4">
                     By signing up, you agree to our Terms of Service and Privacy Policy.<br/>
                     30-day free trial, then {PLAN_DETAILS[selectedPlan].price}/month. Cancel anytime.
                   </p>
@@ -431,7 +431,7 @@ export default function ClientRegistration() {
         </Card>
 
         <div className="text-center mt-6">
-          <p className="text-slate-600">
+          <p className="text-muted-foreground">
             Already have an account?{' '}
             <a href="/signin" className="text-[#17B6C3] hover:underline font-medium">
               Sign in here

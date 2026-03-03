@@ -308,8 +308,8 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
       case "sms": return "bg-green-100 text-green-800 border-green-200";
       case "whatsapp": return "bg-green-100 text-green-800 border-green-200";
       case "call": return "bg-purple-100 text-purple-800 border-purple-200";
-      case "wait": return "bg-gray-100 text-gray-800 border-gray-200";
-      default: return "bg-gray-100 text-gray-800 border-gray-200";
+      case "wait": return "bg-muted text-foreground border-border";
+      default: return "bg-muted text-foreground border-border";
     }
   };
 
@@ -347,8 +347,8 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Workflow Builder</h2>
-          <p className="text-gray-600">Create automated collection workflows with perfect timing</p>
+          <h2 className="text-2xl font-bold text-foreground">Workflow Builder</h2>
+          <p className="text-muted-foreground">Create automated collection workflows with perfect timing</p>
         </div>
         <div className="flex items-center gap-3">
           <Button
@@ -385,30 +385,30 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
       {viewMode === 'list' ? (
         <>
           {/* Workflows Table */}
-          <div className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-lg shadow-lg overflow-hidden max-h-[calc(100vh-280px)]">
+          <div className="bg-background/80 backdrop-blur-sm border border-white/50 rounded-lg shadow-lg overflow-hidden max-h-[calc(100vh-280px)]">
             <div className="overflow-x-auto overflow-y-auto h-full">
               <table className="w-full">
-                <thead className="bg-gray-50/50 border-b border-gray-200 sticky top-0 z-10">
+                <thead className="bg-muted/50 border-b border-border sticky top-0 z-10">
                   <tr>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    <th className="px-4 py-2 text-left text-xs font-medium text-foreground uppercase tracking-wider">
                       Workflow Name
                     </th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    <th className="px-4 py-2 text-left text-xs font-medium text-foreground uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    <th className="px-4 py-2 text-left text-xs font-medium text-foreground uppercase tracking-wider">
                       Steps
                     </th>
-                    <th className="px-4 py-2 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    <th className="px-4 py-2 text-center text-xs font-medium text-foreground uppercase tracking-wider">
                       Customers
                     </th>
-                    <th className="px-4 py-2 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    <th className="px-4 py-2 text-center text-xs font-medium text-foreground uppercase tracking-wider">
                       Duration
                     </th>
-                    <th className="px-4 py-2 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    <th className="px-4 py-2 text-center text-xs font-medium text-foreground uppercase tracking-wider">
                       Success Rate
                     </th>
-                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    <th className="px-4 py-2 text-right text-xs font-medium text-foreground uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
@@ -417,17 +417,17 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
                   {(schedules as CollectionSchedule[]).map((schedule: CollectionSchedule) => (
                     <tr 
                       key={schedule.id} 
-                      className="hover:bg-gray-50/50 transition-colors"
+                      className="hover:bg-muted/50 transition-colors"
                       data-testid={`row-schedule-${schedule.id}`}
                     >
                       {/* Workflow Name */}
                       <td className="px-4 py-2">
                         <div className="flex items-center gap-2">
-                          <Target className="h-3.5 w-3.5 text-gray-600 flex-shrink-0" />
+                          <Target className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
                           <div>
-                            <div className="text-sm font-medium text-gray-900">{schedule.name}</div>
+                            <div className="text-sm font-medium text-foreground">{schedule.name}</div>
                             {schedule.description && (
-                              <div className="text-xs text-gray-500 line-clamp-1">{schedule.description}</div>
+                              <div className="text-xs text-muted-foreground line-clamp-1">{schedule.description}</div>
                             )}
                           </div>
                         </div>
@@ -460,17 +460,17 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
                                       <StepIcon className="h-3 w-3" />
                                     </div>
                                     {index < Math.min(4, (schedule.scheduleSteps as any[]).length - 1) && (
-                                      <ArrowRight className="h-2 w-2 text-gray-400" />
+                                      <ArrowRight className="h-2 w-2 text-muted-foreground" />
                                     )}
                                   </div>
                                 );
                               })}
                               {schedule.scheduleSteps.length > 5 && (
-                                <span className="text-xs text-gray-500">+{schedule.scheduleSteps.length - 5}</span>
+                                <span className="text-xs text-muted-foreground">+{schedule.scheduleSteps.length - 5}</span>
                               )}
                             </>
                           ) : (
-                            <span className="text-xs text-gray-400">No steps</span>
+                            <span className="text-xs text-muted-foreground">No steps</span>
                           )}
                         </div>
                       </td>
@@ -478,16 +478,16 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
                       {/* Customers */}
                       <td className="px-4 py-2 text-center">
                         <div className="flex items-center justify-center gap-1">
-                          <Users className="h-3 w-3 text-gray-500" />
-                          <span className="text-sm font-medium text-gray-900">{schedule.totalCustomersAssigned || 0}</span>
+                          <Users className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-sm font-medium text-foreground">{schedule.totalCustomersAssigned || 0}</span>
                         </div>
                       </td>
 
                       {/* Duration */}
                       <td className="px-4 py-2 text-center">
                         <div className="flex items-center justify-center gap-1">
-                          <Clock className="h-3 w-3 text-gray-500" />
-                          <span className="text-sm font-medium text-gray-900">
+                          <Clock className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-sm font-medium text-foreground">
                             {calculateTotalDelay(Array.isArray(schedule.scheduleSteps) ? schedule.scheduleSteps : [])}
                           </span>
                         </div>
@@ -503,12 +503,12 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
                                 className="h-2"
                               />
                             </div>
-                            <span className="text-sm font-medium text-gray-900 w-10 text-right">
+                            <span className="text-sm font-medium text-foreground w-10 text-right">
                               {Math.round(((schedule.successRate ?? 0) as number) * 100)}%
                             </span>
                           </div>
                         ) : (
-                          <span className="text-xs text-gray-400">-</span>
+                          <span className="text-xs text-muted-foreground">-</span>
                         )}
                       </td>
 
@@ -557,9 +557,9 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
             {/* Empty State */}
             {schedules.length === 0 && (
               <div className="text-center py-12">
-                <Target className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No workflows yet</h3>
-                <p className="text-gray-600 mb-4">Create your first collection workflow to get started</p>
+                <Target className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">No workflows yet</h3>
+                <p className="text-muted-foreground mb-4">Create your first collection workflow to get started</p>
                 <Button
                   onClick={openCreateDialog}
                   className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
@@ -574,7 +574,7 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
 
       {/* Create/Edit Schedule Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white/70 backdrop-blur-sm border border-gray-200/30">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-background/70 backdrop-blur-sm border border-border/30">
           <DialogHeader>
             <DialogTitle>
               {editingSchedule ? 'Edit Collection Schedule' : 'Create New Collection Schedule'}
@@ -674,7 +674,7 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
                     <FormItem>
                       <FormLabel className="text-base font-semibold">Scheduler Type</FormLabel>
                       <FormControl>
-                        <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
+                        <div className="flex items-center gap-4 p-4 bg-muted rounded-lg">
                           <div className="flex items-center space-x-2">
                             <input
                               type="radio"
@@ -687,7 +687,7 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
                             />
                             <label htmlFor="static" className="text-sm font-medium cursor-pointer">
                               Static Schedule
-                              <p className="text-xs text-gray-600 font-normal">Fixed timing based on days overdue</p>
+                              <p className="text-xs text-muted-foreground font-normal">Fixed timing based on days overdue</p>
                             </label>
                           </div>
                           <div className="flex items-center space-x-2">
@@ -702,7 +702,7 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
                             />
                             <label htmlFor="adaptive" className="text-sm font-medium cursor-pointer">
                               Adaptive Scheduler 🧠
-                              <p className="text-xs text-gray-600 font-normal">AI-powered timing based on customer behavior</p>
+                              <p className="text-xs text-muted-foreground font-normal">AI-powered timing based on customer behavior</p>
                             </label>
                           </div>
                         </div>
@@ -733,7 +733,7 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
                                 data-testid="input-target-dso"
                               />
                             </FormControl>
-                            <p className="text-xs text-gray-600">Portfolio-wide DSO target</p>
+                            <p className="text-xs text-muted-foreground">Portfolio-wide DSO target</p>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -754,7 +754,7 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
                                 data-testid="input-max-daily-touches"
                               />
                             </FormControl>
-                            <p className="text-xs text-gray-600">Maximum contacts per day</p>
+                            <p className="text-xs text-muted-foreground">Maximum contacts per day</p>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -775,7 +775,7 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
                                 data-testid="input-min-gap-hours"
                               />
                             </FormControl>
-                            <p className="text-xs text-gray-600">Minimum hours between contacts</p>
+                            <p className="text-xs text-muted-foreground">Minimum hours between contacts</p>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -797,7 +797,7 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
                                 data-testid="input-urgency-factor"
                               />
                             </FormControl>
-                            <p className="text-xs text-gray-600">Portfolio urgency (0-2)</p>
+                            <p className="text-xs text-muted-foreground">Portfolio urgency (0-2)</p>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -867,15 +867,15 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-semibold">Workflow Steps</h3>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-600">
+                      <span className="text-sm text-muted-foreground">
                         {steps.length} steps • {calculateTotalDelay(steps)} total duration
                       </span>
                     </div>
                   </div>
 
                 {/* Add Step Buttons */}
-                <div className="flex flex-wrap gap-2 p-4 bg-gray-50 rounded-lg">
-                  <span className="text-sm font-medium text-gray-700 mr-2">Add step:</span>
+                <div className="flex flex-wrap gap-2 p-4 bg-muted rounded-lg">
+                  <span className="text-sm font-medium text-foreground mr-2">Add step:</span>
                   <Button
                     type="button"
                     size="sm"
@@ -961,7 +961,7 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
                         <div className="flex items-start gap-4">
                           {/* Drag Handle */}
                           <div className="cursor-move mt-1">
-                            <GripVertical className="h-4 w-4 text-gray-400" />
+                            <GripVertical className="h-4 w-4 text-muted-foreground" />
                           </div>
 
                           {/* Step Icon and Order */}
@@ -995,7 +995,7 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
                                   <SelectTrigger className="w-24" data-testid={`select-step-delay-unit-${step.id}`}>
                                     <SelectValue />
                                   </SelectTrigger>
-                                  <SelectContent className="bg-white/70 backdrop-blur-sm border border-gray-200/30">
+                                  <SelectContent className="bg-background/70 backdrop-blur-sm border border-border/30">
                                     <SelectItem value="hours">Hours</SelectItem>
                                     <SelectItem value="days">Days</SelectItem>
                                     <SelectItem value="weeks">Weeks</SelectItem>
@@ -1015,7 +1015,7 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
                                   <SelectTrigger data-testid={`select-step-template-${step.id}`}>
                                     <SelectValue placeholder="Select template" />
                                   </SelectTrigger>
-                                  <SelectContent className="bg-white/70 backdrop-blur-sm border border-gray-200/30">
+                                  <SelectContent className="bg-background/70 backdrop-blur-sm border border-border/30">
                                     {availableTemplates.map((template: CommunicationTemplate) => (
                                       <SelectItem key={template.id} value={template.id}>
                                         {template.name}
@@ -1045,7 +1045,7 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
                   })}
 
                   {steps.length === 0 && (
-                    <div className="text-center py-8 text-gray-500">
+                    <div className="text-center py-8 text-muted-foreground">
                       <Target className="h-8 w-8 mx-auto mb-2 opacity-50" />
                       <p>No steps added yet. Use the buttons above to build your workflow.</p>
                     </div>

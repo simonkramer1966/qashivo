@@ -91,16 +91,16 @@ export default function AILearningInsightsDashboard({ className }: AILearningIns
             <Brain className="h-6 w-6 text-[#17B6C3] animate-pulse" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">AI Learning Insights</h2>
-            <p className="text-gray-600">Loading AI collection intelligence...</p>
+            <h2 className="text-2xl font-bold text-foreground">AI Learning Insights</h2>
+            <p className="text-muted-foreground">Loading AI collection intelligence...</p>
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[1, 2, 3, 4].map((i) => (
-            <Card key={i} className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg animate-pulse">
+            <Card key={i} className="bg-background/80 backdrop-blur-sm border-white/50 shadow-lg animate-pulse">
               <CardContent className="p-6">
-                <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
-                <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+                <div className="h-4 bg-muted rounded w-3/4 mb-4"></div>
+                <div className="h-8 bg-muted rounded w-1/2"></div>
               </CardContent>
             </Card>
           ))}
@@ -117,7 +117,7 @@ export default function AILearningInsightsDashboard({ className }: AILearningIns
             <AlertCircle className="h-6 w-6 text-red-600" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">AI Learning Insights</h2>
+            <h2 className="text-2xl font-bold text-foreground">AI Learning Insights</h2>
             <p className="text-red-600">Unable to load AI learning data. Please try again.</p>
           </div>
         </div>
@@ -139,7 +139,7 @@ export default function AILearningInsightsDashboard({ className }: AILearningIns
       case 'email': return 'text-blue-600 bg-blue-100';
       case 'sms': return 'text-green-600 bg-green-100';
       case 'voice': return 'text-purple-600 bg-purple-100';
-      default: return 'text-gray-600 bg-gray-100';
+      default: return 'text-muted-foreground bg-muted';
     }
   };
 
@@ -152,8 +152,8 @@ export default function AILearningInsightsDashboard({ className }: AILearningIns
             <Brain className="h-6 w-6 text-[#17B6C3]" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Advanced AI & ML Intelligence</h2>
-            <p className="text-gray-600">Comprehensive machine learning analytics for credit control</p>
+            <h2 className="text-2xl font-bold text-foreground">Advanced AI & ML Intelligence</h2>
+            <p className="text-muted-foreground">Comprehensive machine learning analytics for credit control</p>
           </div>
         </div>
         <div className="flex items-center space-x-3">
@@ -170,7 +170,7 @@ export default function AILearningInsightsDashboard({ className }: AILearningIns
 
       {/* Advanced ML Tabs */}
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 bg-white/60 backdrop-blur-sm">
+        <TabsList className="grid w-full grid-cols-5 bg-background/60 backdrop-blur-sm">
           <TabsTrigger value="overview" className="flex items-center space-x-2">
             <Brain className="h-4 w-4" />
             <span>Overview</span>
@@ -198,12 +198,12 @@ export default function AILearningInsightsDashboard({ className }: AILearningIns
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
+        <Card className="bg-background/70 backdrop-blur-md border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Customers Learned</p>
-                <p className="text-2xl font-bold text-gray-900" data-testid="metric-customers-learned">
+                <p className="text-sm font-medium text-muted-foreground">Customers Learned</p>
+                <p className="text-2xl font-bold text-foreground" data-testid="metric-customers-learned">
                   {insights?.totalCustomersLearned || 0}
                 </p>
               </div>
@@ -220,12 +220,12 @@ export default function AILearningInsightsDashboard({ className }: AILearningIns
           </CardContent>
         </Card>
 
-        <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
+        <Card className="bg-background/70 backdrop-blur-md border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">AI Confidence</p>
-                <p className="text-2xl font-bold text-gray-900" data-testid="metric-ai-confidence">
+                <p className="text-sm font-medium text-muted-foreground">AI Confidence</p>
+                <p className="text-2xl font-bold text-foreground" data-testid="metric-ai-confidence">
                   {insights?.averageConfidence || 0}%
                 </p>
               </div>
@@ -235,17 +235,17 @@ export default function AILearningInsightsDashboard({ className }: AILearningIns
             </div>
             <div className="mt-4">
               <Progress value={insights?.averageConfidence || 0} className="h-2" />
-              <p className="text-xs text-gray-500 mt-1">Learning progress</p>
+              <p className="text-xs text-muted-foreground mt-1">Learning progress</p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
+        <Card className="bg-background/70 backdrop-blur-md border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Success Rate</p>
-                <p className="text-2xl font-bold text-gray-900" data-testid="metric-success-rate">
+                <p className="text-sm font-medium text-muted-foreground">Success Rate</p>
+                <p className="text-2xl font-bold text-foreground" data-testid="metric-success-rate">
                   {insights?.averageImprovementRate || 0}%
                 </p>
               </div>
@@ -262,12 +262,12 @@ export default function AILearningInsightsDashboard({ className }: AILearningIns
           </CardContent>
         </Card>
 
-        <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
+        <Card className="bg-background/70 backdrop-blur-md border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">AI Optimizations</p>
-                <p className="text-2xl font-bold text-gray-900" data-testid="metric-optimizations">
+                <p className="text-sm font-medium text-muted-foreground">AI Optimizations</p>
+                <p className="text-2xl font-bold text-foreground" data-testid="metric-optimizations">
                   {(insights?.customerProfiles?.length || 0) * 3}
                 </p>
               </div>
@@ -278,7 +278,7 @@ export default function AILearningInsightsDashboard({ className }: AILearningIns
             <div className="mt-4">
               <div className="flex items-center text-sm">
                 <CheckCircle2 className="h-4 w-4 text-green-500 mr-1" />
-                <span className="text-gray-600">Active today</span>
+                <span className="text-muted-foreground">Active today</span>
               </div>
             </div>
           </CardContent>
@@ -286,7 +286,7 @@ export default function AILearningInsightsDashboard({ className }: AILearningIns
       </div>
 
       {/* AI Insights Summary */}
-      <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+      <Card className="bg-background/80 backdrop-blur-sm border-white/50 shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <BookOpen className="h-5 w-5 text-[#17B6C3]" />
@@ -300,21 +300,21 @@ export default function AILearningInsightsDashboard({ className }: AILearningIns
                 <div className="p-1 bg-[#17B6C3]/10 rounded">
                   <Eye className="h-4 w-4 text-[#17B6C3]" />
                 </div>
-                <p className="text-gray-700 text-sm" data-testid={`insight-${index}`}>{insight}</p>
+                <p className="text-foreground text-sm" data-testid={`insight-${index}`}>{insight}</p>
               </div>
             ))
           ) : (
             <div className="text-center py-8">
-              <Brain className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">AI is learning customer patterns...</p>
-              <p className="text-sm text-gray-400 mt-1">Insights will appear as the system learns</p>
+              <Brain className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">AI is learning customer patterns...</p>
+              <p className="text-sm text-muted-foreground mt-1">Insights will appear as the system learns</p>
             </div>
           )}
         </CardContent>
       </Card>
 
       {/* Customer Learning Profiles */}
-      <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+      <Card className="bg-background/80 backdrop-blur-sm border-white/50 shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
@@ -332,7 +332,7 @@ export default function AILearningInsightsDashboard({ className }: AILearningIns
               {insights.customerProfiles.slice(0, 8).map((profile, index) => {
                 const ChannelIcon = getChannelIcon(profile.preferredChannel);
                 return (
-                  <div key={profile.id} className="flex items-center justify-between p-4 rounded-lg bg-gray-50/80 hover:bg-gray-100/80 transition-colors" data-testid={`profile-${index}`}>
+                  <div key={profile.id} className="flex items-center justify-between p-4 rounded-lg bg-muted/80 hover:bg-muted/80 transition-colors" data-testid={`profile-${index}`}>
                     <div className="flex items-center space-x-4">
                       <div className="flex-shrink-0">
                         <div className={`p-2 rounded-lg ${getChannelColor(profile.preferredChannel)}`}>
@@ -340,22 +340,22 @@ export default function AILearningInsightsDashboard({ className }: AILearningIns
                         </div>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h4 className="font-medium text-gray-900 truncate">{profile.name}</h4>
-                        <p className="text-sm text-gray-600">{profile.latestInsight}</p>
+                        <h4 className="font-medium text-foreground truncate">{profile.name}</h4>
+                        <p className="text-sm text-muted-foreground">{profile.latestInsight}</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-6 text-sm">
                       <div className="text-center">
-                        <p className="font-medium text-gray-900">{profile.confidence}%</p>
-                        <p className="text-gray-500">Confidence</p>
+                        <p className="font-medium text-foreground">{profile.confidence}%</p>
+                        <p className="text-muted-foreground">Confidence</p>
                       </div>
                       <div className="text-center">
-                        <p className="font-medium text-gray-900">{profile.successRate}%</p>
-                        <p className="text-gray-500">Success</p>
+                        <p className="font-medium text-foreground">{profile.successRate}%</p>
+                        <p className="text-muted-foreground">Success</p>
                       </div>
                       <div className="text-center">
-                        <p className="font-medium text-gray-900">{profile.averagePaymentDelay}d</p>
-                        <p className="text-gray-500">Avg Delay</p>
+                        <p className="font-medium text-foreground">{profile.averagePaymentDelay}d</p>
+                        <p className="text-muted-foreground">Avg Delay</p>
                       </div>
                     </div>
                   </div>
@@ -363,7 +363,7 @@ export default function AILearningInsightsDashboard({ className }: AILearningIns
               })}
               {insights.customerProfiles.length > 8 && (
                 <div className="text-center pt-4">
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-muted-foreground">
                     +{insights.customerProfiles.length - 8} more customers learning...
                   </p>
                 </div>
@@ -371,10 +371,10 @@ export default function AILearningInsightsDashboard({ className }: AILearningIns
             </div>
           ) : (
             <div className="text-center py-12">
-              <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Building Customer Intelligence</h3>
-              <p className="text-gray-600 mb-4">AI will create customer profiles as collection actions are executed</p>
-              <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
+              <Users className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">Building Customer Intelligence</h3>
+              <p className="text-muted-foreground mb-4">AI will create customer profiles as collection actions are executed</p>
+              <div className="flex items-center justify-center space-x-2 text-sm text-muted-foreground">
                 <Clock className="h-4 w-4" />
                 <span>Learning typically takes 5-10 customer interactions</span>
               </div>
@@ -385,7 +385,7 @@ export default function AILearningInsightsDashboard({ className }: AILearningIns
 
       {/* Learning Progress Visualization */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+        <Card className="bg-background/80 backdrop-blur-sm border-white/50 shadow-lg">
           <CardHeader>
             <CardTitle className="text-lg">Channel Preferences</CardTitle>
           </CardHeader>
@@ -396,7 +396,7 @@ export default function AILearningInsightsDashboard({ className }: AILearningIns
                   <Mail className="h-4 w-4 text-blue-600" />
                   <span className="text-sm font-medium">Email</span>
                 </div>
-                <span className="text-sm text-gray-600">65%</span>
+                <span className="text-sm text-muted-foreground">65%</span>
               </div>
               <Progress value={65} className="h-2" />
             </div>
@@ -406,7 +406,7 @@ export default function AILearningInsightsDashboard({ className }: AILearningIns
                   <MessageSquare className="h-4 w-4 text-green-600" />
                   <span className="text-sm font-medium">SMS</span>
                 </div>
-                <span className="text-sm text-gray-600">25%</span>
+                <span className="text-sm text-muted-foreground">25%</span>
               </div>
               <Progress value={25} className="h-2" />
             </div>
@@ -416,29 +416,29 @@ export default function AILearningInsightsDashboard({ className }: AILearningIns
                   <Phone className="h-4 w-4 text-purple-600" />
                   <span className="text-sm font-medium">Voice</span>
                 </div>
-                <span className="text-sm text-gray-600">10%</span>
+                <span className="text-sm text-muted-foreground">10%</span>
               </div>
               <Progress value={10} className="h-2" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+        <Card className="bg-background/80 backdrop-blur-sm border-white/50 shadow-lg">
           <CardHeader>
             <CardTitle className="text-lg">Learning Velocity</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-center space-y-4">
               <div className="text-3xl font-bold text-[#17B6C3]">2.3x</div>
-              <p className="text-sm text-gray-600">Faster than traditional methods</p>
+              <p className="text-sm text-muted-foreground">Faster than traditional methods</p>
               <Separator />
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Traditional</span>
+                  <span className="text-muted-foreground">Traditional</span>
                   <span className="font-medium">6-8 weeks</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">AI Learning</span>
+                  <span className="text-muted-foreground">AI Learning</span>
                   <span className="font-medium text-[#17B6C3]">2-3 weeks</span>
                 </div>
               </div>
@@ -446,7 +446,7 @@ export default function AILearningInsightsDashboard({ className }: AILearningIns
           </CardContent>
         </Card>
 
-        <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+        <Card className="bg-background/80 backdrop-blur-sm border-white/50 shadow-lg">
           <CardHeader>
             <CardTitle className="text-lg">Next Actions</CardTitle>
           </CardHeader>
@@ -457,7 +457,7 @@ export default function AILearningInsightsDashboard({ className }: AILearningIns
               </div>
               <div>
                 <p className="text-sm font-medium">Optimize 12 customers</p>
-                <p className="text-xs text-gray-500">Ready for channel switching</p>
+                <p className="text-xs text-muted-foreground">Ready for channel switching</p>
               </div>
             </div>
             <div className="flex items-start space-x-3">
@@ -466,7 +466,7 @@ export default function AILearningInsightsDashboard({ className }: AILearningIns
               </div>
               <div>
                 <p className="text-sm font-medium">Start A/B test</p>
-                <p className="text-xs text-gray-500">Test new timing strategy</p>
+                <p className="text-xs text-muted-foreground">Test new timing strategy</p>
               </div>
             </div>
             <div className="flex items-start space-x-3">
@@ -475,7 +475,7 @@ export default function AILearningInsightsDashboard({ className }: AILearningIns
               </div>
               <div>
                 <p className="text-sm font-medium">Review insights</p>
-                <p className="text-xs text-gray-500">3 new learning patterns</p>
+                <p className="text-xs text-muted-foreground">3 new learning patterns</p>
               </div>
             </div>
           </CardContent>

@@ -89,13 +89,13 @@ function DebtorPackRow({
     ? "text-red-600 dark:text-red-400" 
     : pack.oldestDaysOverdue > 14 
       ? "text-amber-600 dark:text-amber-400" 
-      : "text-gray-500 dark:text-gray-400";
+      : "text-muted-foreground dark:text-muted-foreground";
 
   return (
     <div 
       className={cn(
-        "px-3 py-2 border-b border-gray-100 dark:border-gray-800 cursor-pointer transition-colors",
-        isActive && "bg-gray-50 dark:bg-gray-900"
+        "px-3 py-2 border-b border-border/50 dark:border-gray-800 cursor-pointer transition-colors",
+        isActive && "bg-muted dark:bg-gray-900"
       )}
       onClick={onClick}
     >
@@ -110,24 +110,24 @@ function DebtorPackRow({
         )}
         
         <div className="flex-1 min-w-0 flex items-baseline gap-2">
-          <span className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">
+          <span className="font-medium text-sm text-foreground dark:text-gray-100 truncate">
             {pack.contactName}
           </span>
           <span className={cn("text-xs font-medium", stageConfig.color)}>
             {stageConfig.label}
           </span>
           {substateLabel && (
-            <span className="text-xs text-gray-400">
+            <span className="text-xs text-muted-foreground">
               {substateLabel}
             </span>
           )}
         </div>
 
         <div className="flex items-center gap-3 text-xs tabular-nums">
-          <span className="text-gray-500 dark:text-gray-400">
+          <span className="text-muted-foreground dark:text-muted-foreground">
             {pack.invoiceCount}
           </span>
-          <span className="font-medium text-gray-900 dark:text-gray-100 w-20 text-right">
+          <span className="font-medium text-foreground dark:text-gray-100 w-20 text-right">
             {formatCurrency(pack.totalDue)}
           </span>
           {pack.oldestDaysOverdue > 0 && (
@@ -147,7 +147,7 @@ function PackBuilder({ selectedPack }: { selectedPack: DebtorPackRow | null }) {
   if (!selectedPack) {
     return (
       <div className="h-full flex items-center justify-center">
-        <p className="text-sm text-gray-400">Select a debtor</p>
+        <p className="text-sm text-muted-foreground">Select a debtor</p>
       </div>
     );
   }
@@ -161,9 +161,9 @@ function PackBuilder({ selectedPack }: { selectedPack: DebtorPackRow | null }) {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+      <div className="px-4 py-3 border-b border-border/50 dark:border-gray-800">
         <div className="flex items-baseline gap-2 mb-1">
-          <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+          <h2 className="text-base font-semibold text-foreground dark:text-gray-100">
             {selectedPack.contactName}
           </h2>
           <span className={cn("text-xs font-medium", stageConfig.color)}>
@@ -173,20 +173,20 @@ function PackBuilder({ selectedPack }: { selectedPack: DebtorPackRow | null }) {
 
         <div className="flex items-center gap-6 text-xs">
           <div>
-            <span className="text-gray-500 dark:text-gray-400">Total </span>
-            <span className="font-semibold text-gray-900 dark:text-gray-100">
+            <span className="text-muted-foreground dark:text-muted-foreground">Total </span>
+            <span className="font-semibold text-foreground dark:text-gray-100">
               {formatCurrency(selectedPack.totalDue)}
             </span>
           </div>
           <div>
-            <span className="text-gray-500 dark:text-gray-400">Invoices </span>
-            <span className="font-semibold text-gray-900 dark:text-gray-100">
+            <span className="text-muted-foreground dark:text-muted-foreground">Invoices </span>
+            <span className="font-semibold text-foreground dark:text-gray-100">
               {selectedPack.invoiceCount}
             </span>
           </div>
           <div>
-            <span className="text-gray-500 dark:text-gray-400">Oldest </span>
-            <span className={cn("font-semibold", overdueColor || "text-gray-900 dark:text-gray-100")}>
+            <span className="text-muted-foreground dark:text-muted-foreground">Oldest </span>
+            <span className={cn("font-semibold", overdueColor || "text-foreground dark:text-gray-100")}>
               {selectedPack.oldestDaysOverdue}d
             </span>
           </div>
@@ -195,27 +195,27 @@ function PackBuilder({ selectedPack }: { selectedPack: DebtorPackRow | null }) {
 
       <div className="flex-1 overflow-auto px-4 py-3">
         <div className="mb-4">
-          <h3 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+          <h3 className="text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase tracking-wide mb-2">
             Invoices
           </h3>
-          <p className="text-xs text-gray-400">Invoice list loads here...</p>
+          <p className="text-xs text-muted-foreground">Invoice list loads here...</p>
         </div>
 
         <div>
-          <h3 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+          <h3 className="text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase tracking-wide mb-2">
             Recommended
           </h3>
           <div className="flex items-center gap-2 text-sm">
             <Mail className="w-4 h-4 text-teal-600" />
-            <span className="text-gray-900 dark:text-gray-100">Email Reminder</span>
+            <span className="text-foreground dark:text-gray-100">Email Reminder</span>
           </div>
-          <p className="text-xs text-gray-500 mt-1 ml-6">
+          <p className="text-xs text-muted-foreground mt-1 ml-6">
             Standard reminder for overdue invoices
           </p>
         </div>
       </div>
 
-      <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-800">
+      <div className="px-4 py-3 border-t border-border/50 dark:border-gray-800">
         {selectedPack.stage === 'PLANNED' && (
           <div className="flex gap-2">
             <Button size="sm" className="flex-1 h-8 text-xs">
@@ -255,7 +255,7 @@ function Timeline({ selectedPack }: { selectedPack: DebtorPackRow | null }) {
   if (!selectedPack) {
     return (
       <div className="h-full flex items-center justify-center">
-        <p className="text-sm text-gray-400">Select a debtor</p>
+        <p className="text-sm text-muted-foreground">Select a debtor</p>
       </div>
     );
   }
@@ -268,9 +268,9 @@ function Timeline({ selectedPack }: { selectedPack: DebtorPackRow | null }) {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Timeline</h3>
-        <p className="text-xs text-gray-500 dark:text-gray-400">{selectedPack.contactName}</p>
+      <div className="px-4 py-3 border-b border-border/50 dark:border-gray-800">
+        <h3 className="text-sm font-semibold text-foreground dark:text-gray-100">Timeline</h3>
+        <p className="text-xs text-muted-foreground dark:text-muted-foreground">{selectedPack.contactName}</p>
       </div>
 
       <ScrollArea className="flex-1">
@@ -283,10 +283,10 @@ function Timeline({ selectedPack }: { selectedPack: DebtorPackRow | null }) {
                 </div>
                 <div className="flex-1 min-w-0 pb-3">
                   <div className="flex items-baseline gap-2">
-                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{event.label}</span>
-                    <span className="text-xs text-gray-400">{event.time}</span>
+                    <span className="text-sm font-medium text-foreground dark:text-gray-100">{event.label}</span>
+                    <span className="text-xs text-muted-foreground">{event.time}</span>
                   </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{event.detail}</p>
+                  <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-0.5">{event.detail}</p>
                 </div>
               </div>
             ))}
@@ -339,11 +339,11 @@ export default function Loop() {
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="flex-1 flex overflow-hidden">
           {/* Left Pane: Debtor Queue */}
-          <div className="flex-1 border-r border-gray-100 dark:border-gray-800 flex flex-col">
-            <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-800">
+          <div className="flex-1 border-r border-border/50 dark:border-gray-800 flex flex-col">
+            <div className="px-3 py-2 border-b border-border/50 dark:border-gray-800">
               <div className="flex items-center justify-between mb-2">
-                <h1 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Loop</h1>
-                <span className="text-xs text-gray-400 tabular-nums">
+                <h1 className="text-sm font-semibold text-foreground dark:text-gray-100">Loop</h1>
+                <span className="text-xs text-muted-foreground tabular-nums">
                   {data?.summary?.total || 0}
                 </span>
               </div>
@@ -360,8 +360,8 @@ export default function Loop() {
                       className={cn(
                         "px-2 py-1 text-xs transition-colors rounded",
                         activeStageFilter === stage 
-                          ? "bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900 font-medium" 
-                          : "text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+                          ? "bg-gray-900 text-white dark:bg-muted dark:text-foreground font-medium" 
+                          : "text-muted-foreground hover:text-foreground dark:hover:text-gray-100"
                       )}
                     >
                       {stage === 'ALL' ? 'All' : STAGE_CONFIG[stage].label}
@@ -375,8 +375,8 @@ export default function Loop() {
             </div>
 
             {selectedPackIds.size > 0 && (
-              <div className="px-3 py-1.5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50 dark:bg-gray-900">
-                <span className="text-xs text-gray-600 dark:text-gray-300">
+              <div className="px-3 py-1.5 border-b border-border/50 dark:border-gray-800 flex items-center justify-between bg-muted dark:bg-gray-900">
+                <span className="text-xs text-muted-foreground dark:text-gray-300">
                   {selectedPackIds.size} selected
                 </span>
                 <div className="flex gap-1">
@@ -398,7 +398,7 @@ export default function Loop() {
             <ScrollArea className="flex-1">
               {isLoading && (
                 <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                 </div>
               )}
 
@@ -409,7 +409,7 @@ export default function Loop() {
               )}
 
               {!isLoading && !error && filteredPacks.length === 0 && (
-                <div className="px-3 py-8 text-center text-xs text-gray-400">
+                <div className="px-3 py-8 text-center text-xs text-muted-foreground">
                   No debtors
                 </div>
               )}
@@ -428,7 +428,7 @@ export default function Loop() {
           </div>
 
           {/* Middle Pane: Pack Builder */}
-          <div className="flex-1 border-r border-gray-100 dark:border-gray-800">
+          <div className="flex-1 border-r border-border/50 dark:border-gray-800">
             <PackBuilder selectedPack={selectedPack} />
           </div>
 
