@@ -123,30 +123,30 @@
   /* ========== MOBILE-FIRST CARD SYSTEM ========== */
   
   .card-apple {
-    @apply bg-white rounded-2xl shadow-sm border border-slate-200;
+    @apply bg-white rounded-lg shadow-sm border border-border;
     @apply transition-all duration-200;
   }
   
   .card-apple-hover {
-    @apply bg-white rounded-2xl shadow-sm border border-slate-200;
+    @apply bg-white rounded-lg shadow-sm border border-border;
     @apply transition-all duration-200 hover:shadow-md active:scale-[0.99];
   }
   
   /* ========== GLASSMORPHISM CARD SYSTEM ========== */
   
   .glass-card {
-    @apply bg-white/90 backdrop-blur-md rounded-2xl shadow-lg border border-white/50;
+    @apply bg-white/90 backdrop-blur-md rounded-lg shadow-lg border border-white/50;
     @apply transition-all duration-200;
   }
   
   .glass-card-light {
-    @apply bg-white/70 backdrop-blur-sm rounded-2xl shadow-sm border border-white/40;
+    @apply bg-white/70 backdrop-blur-sm rounded-lg shadow-sm border border-white/40;
     @apply transition-all duration-200;
   }
   
   .glass-card-strong {
     background: linear-gradient(135deg, #F0F4F5 0%, #E5ECEE 100%);
-    @apply backdrop-blur-lg rounded-2xl shadow-xl border border-white/30;
+    @apply backdrop-blur-lg rounded-lg shadow-xl border border-white/30;
     @apply transition-all duration-200;
   }
   
@@ -155,7 +155,7 @@
   /* Primary button - full width on mobile */
   .btn-apple-primary {
     @apply w-full sm:w-auto bg-[#17B6C3] text-white font-semibold;
-    @apply px-6 py-3 rounded-2xl shadow-sm;
+    @apply px-6 py-3 rounded-md shadow-sm;
     @apply transition-all duration-200 hover:bg-[#1396A1] active:scale-[0.98];
     @apply min-h-[44px] flex items-center justify-center;
   }
@@ -163,7 +163,7 @@
   /* Secondary button */
   .btn-apple-secondary {
     @apply w-full sm:w-auto bg-slate-100 text-slate-900 font-medium;
-    @apply px-6 py-3 rounded-2xl;
+    @apply px-6 py-3 rounded-md;
     @apply transition-all duration-200 hover:bg-slate-200 active:scale-[0.98];
     @apply min-h-[44px] flex items-center justify-center;
   }
@@ -171,7 +171,7 @@
   /* Ghost button */
   .btn-apple-ghost {
     @apply w-full sm:w-auto text-slate-600 font-medium;
-    @apply px-4 py-2 rounded-xl;
+    @apply px-4 py-2 rounded-md;
     @apply transition-all duration-200 hover:bg-slate-100 active:scale-[0.98];
     @apply min-h-[44px] flex items-center justify-center;
   }
@@ -179,7 +179,7 @@
   /* ========== INPUT SYSTEM ========== */
   
   .input-apple {
-    @apply w-full bg-white border border-slate-200 rounded-xl;
+    @apply w-full bg-white border border-border rounded-md;
     @apply px-4 py-3 text-base;
     @apply transition-all duration-200;
     @apply focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3];
