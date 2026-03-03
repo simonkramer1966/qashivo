@@ -22821,7 +22821,8 @@ ${tenant.name}
         customerPreferences, customerLearningProfiles,
         actionEffectiveness, actionItems, bankTransactions, bills, debtorPayments, financeAdvances,
         invoiceHealthScores, magicLinkTokens, promisesToPay, riskScores,
-        userContactAssignments, walletTransactions
+        userContactAssignments, walletTransactions,
+        emailDomainMappings, debtorProfiles
       } = await import('@shared/schema.js');
       
       const { outcomes } = await import('@shared/schema.js');
@@ -22887,6 +22888,10 @@ ${tenant.name}
         await tx.delete(userContactAssignments).where(eq(userContactAssignments.tenantId, tenantId));
         await tx.delete(walletTransactions).where(eq(walletTransactions.tenantId, tenantId));
         
+        // Email domain mappings and debtor profiles (FK to contacts — must delete before contacts)
+        await tx.delete(emailDomainMappings).where(eq(emailDomainMappings.tenantId, tenantId));
+        await tx.delete(debtorProfiles).where(eq(debtorProfiles.tenantId, tenantId));
+
         // Contacts (last due to foreign keys)
         const deletedContacts = await tx.delete(contacts).where(eq(contacts.tenantId, tenantId)).returning();
         
