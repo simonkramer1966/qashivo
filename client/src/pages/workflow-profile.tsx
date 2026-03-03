@@ -233,25 +233,25 @@ export default function WorkflowProfilePage() {
 
   if (!tenantId) {
     return (
-      <div className="flex h-screen bg-white items-center justify-center">
+      <div className="flex h-screen bg-background items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-white">
+    <div className="flex h-screen bg-background">
       <div className="hidden lg:block">
         <NewSidebar />
       </div>
       
       <main className="flex-1 overflow-y-auto main-with-bottom-nav">
-        <div className="sticky top-0 z-40 bg-white">
-          <div className="px-6 lg:px-8 py-5 border-b border-slate-100">
+        <div className="sticky top-0 z-40 bg-background">
+          <div className="px-6 lg:px-8 py-5 border-b border-border">
             <div className="hidden lg:flex items-center justify-between">
               <div>
-                <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight">Workflow Settings</h2>
-                <p className="text-[13px] text-slate-400 mt-0.5">
+                <h2 className="text-[17px] font-semibold text-foreground tracking-tight">Workflow Settings</h2>
+                <p className="text-[13px] text-muted-foreground mt-0.5">
                   Configure your collections policy, messaging, and automation
                 </p>
               </div>
@@ -274,7 +274,7 @@ export default function WorkflowProfilePage() {
                     size="sm"
                     onClick={() => approveMutation.mutate()}
                     disabled={approveMutation.isPending}
-                    className="text-[13px] h-8 bg-slate-900 hover:bg-slate-800"
+                    className="text-[13px] h-8 bg-foreground text-background hover:bg-foreground/90"
                   >
                     {approveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
                     Activate Workflow
@@ -283,11 +283,11 @@ export default function WorkflowProfilePage() {
               </div>
             </div>
             <div className="lg:hidden text-center">
-              <h2 className="text-xl font-semibold text-slate-900">Workflow Settings</h2>
+              <h2 className="text-xl font-semibold text-foreground">Workflow Settings</h2>
             </div>
           </div>
           
-          <div className="bg-white border-b border-slate-100 px-6 lg:px-8">
+          <div className="bg-background border-b border-border px-6 lg:px-8">
             <div className="flex items-center gap-2">
               {TABS.map(tab => (
                 <button
@@ -295,14 +295,14 @@ export default function WorkflowProfilePage() {
                   onClick={() => setActiveTab(tab.id)}
                   className={`px-4 py-3 text-[13px] font-medium transition-colors relative flex items-center gap-1.5 ${
                     activeTab === tab.id
-                      ? 'text-slate-900'
-                      : 'text-slate-400 hover:text-slate-600'
+                      ? 'text-foreground'
+                      : 'text-muted-foreground/60 hover:text-muted-foreground'
                   }`}
                 >
                   <tab.icon className="h-4 w-4" />
                   {tab.label}
                   {activeTab === tab.id && (
-                    <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-slate-900 rounded-full" />
+                    <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-foreground rounded-full" />
                   )}
                 </button>
               ))}
@@ -310,7 +310,7 @@ export default function WorkflowProfilePage() {
           </div>
         </div>
 
-        <div className="p-6 lg:p-8 space-y-6 bg-white min-h-[calc(100vh-140px)]">
+        <div className="p-6 lg:p-8 space-y-6 bg-background min-h-[calc(100vh-140px)]">
           {activeTab === 'policy' && (
             <PolicySection
               policy={policy}
@@ -382,11 +382,11 @@ function PolicySection({
 }) {
   return (
     <div className="space-y-8">
-      <div className="bg-slate-50 rounded-lg p-6">
-        <h3 className="text-[15px] font-semibold text-slate-900 mb-4">Payment Terms</h3>
+      <div className="bg-muted rounded-lg p-6">
+        <h3 className="text-[15px] font-semibold text-foreground mb-4">Payment Terms</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
-            <Label className="text-[13px] text-slate-600">Typical payment terms (days)</Label>
+            <Label className="text-[13px] text-muted-foreground">Typical payment terms (days)</Label>
             <Input
               type="number"
               value={policy.typicalPaymentTerms || 30}
@@ -395,7 +395,7 @@ function PolicySection({
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-[13px] text-slate-600">Start chasing</Label>
+            <Label className="text-[13px] text-muted-foreground">Start chasing</Label>
             <Select
               value={policy.chasingStart || 'on_due'}
               onValueChange={(v) => onUpdatePolicy('chasingStart', v)}
@@ -413,11 +413,11 @@ function PolicySection({
         </div>
       </div>
 
-      <div className="bg-slate-50 rounded-lg p-6">
-        <h3 className="text-[15px] font-semibold text-slate-900 mb-4">Communication Limits</h3>
+      <div className="bg-muted rounded-lg p-6">
+        <h3 className="text-[15px] font-semibold text-foreground mb-4">Communication Limits</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
-            <Label className="text-[13px] text-slate-600">Maximum touches per week</Label>
+            <Label className="text-[13px] text-muted-foreground">Maximum touches per week</Label>
             <Input
               type="number"
               value={policy.maxTouchesPerWeek || 3}
@@ -428,7 +428,7 @@ function PolicySection({
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-[13px] text-slate-600">Escalation cadence</Label>
+            <Label className="text-[13px] text-muted-foreground">Escalation cadence</Label>
             <Select
               value={policy.escalationCadence || 'standard'}
               onValueChange={(v) => onUpdatePolicy('escalationCadence', v)}
@@ -446,9 +446,9 @@ function PolicySection({
         </div>
       </div>
 
-      <div className="bg-slate-50 rounded-lg p-6">
-        <h3 className="text-[15px] font-semibold text-slate-900 mb-4">Message Tone</h3>
-        <p className="text-[13px] text-slate-500 mb-4">
+      <div className="bg-muted rounded-lg p-6">
+        <h3 className="text-[15px] font-semibold text-foreground mb-4">Message Tone</h3>
+        <p className="text-[13px] text-muted-foreground mb-4">
           Set the overall tone for your collection messages
         </p>
         <div className="space-y-4">
@@ -460,9 +460,9 @@ function PolicySection({
             step={1}
             className="w-full"
           />
-          <div className="flex justify-between text-[12px] text-slate-500">
+          <div className="flex justify-between text-[12px] text-muted-foreground">
             {TONE_LABELS.map((label, i) => (
-              <span key={i} className={tone === i + 1 ? 'text-slate-900 font-medium' : ''}>
+              <span key={i} className={tone === i + 1 ? 'text-foreground font-medium' : ''}>
                 {label}
               </span>
             ))}
@@ -470,14 +470,14 @@ function PolicySection({
         </div>
       </div>
 
-      <div className="bg-slate-50 rounded-lg p-6">
-        <h3 className="text-[15px] font-semibold text-slate-900 mb-4">Message Footer</h3>
-        <p className="text-[13px] text-slate-500 mb-4">
+      <div className="bg-muted rounded-lg p-6">
+        <h3 className="text-[15px] font-semibold text-foreground mb-4">Message Footer</h3>
+        <p className="text-[13px] text-muted-foreground mb-4">
           Information included at the end of all messages
         </p>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label className="text-[13px] text-slate-600">Payment link</Label>
+            <Label className="text-[13px] text-muted-foreground">Payment link</Label>
             <Input
               value={footer.paymentLink || ''}
               onChange={(e) => onUpdateFooter('paymentLink', e.target.value)}
@@ -486,7 +486,7 @@ function PolicySection({
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-[13px] text-slate-600">Contact email</Label>
+            <Label className="text-[13px] text-muted-foreground">Contact email</Label>
             <Input
               type="email"
               value={footer.contactEmail || ''}
@@ -496,7 +496,7 @@ function PolicySection({
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-[13px] text-slate-600">Dispute guidance text</Label>
+            <Label className="text-[13px] text-muted-foreground">Dispute guidance text</Label>
             <Textarea
               value={footer.disputeGuidance || ''}
               onChange={(e) => onUpdateFooter('disputeGuidance', e.target.value)}
@@ -519,21 +519,21 @@ function ChannelsSection({
 }) {
   return (
     <div className="space-y-6">
-      <div className="bg-slate-50 rounded-lg p-6">
-        <h3 className="text-[15px] font-semibold text-slate-900 mb-4">Enabled Channels</h3>
-        <p className="text-[13px] text-slate-500 mb-6">
+      <div className="bg-muted rounded-lg p-6">
+        <h3 className="text-[15px] font-semibold text-foreground mb-4">Enabled Channels</h3>
+        <p className="text-[13px] text-muted-foreground mb-6">
           Select which communication channels to use for collections
         </p>
         
         <div className="space-y-4">
-          <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-100">
+          <div className="flex items-center justify-between p-4 bg-background rounded-lg border border-border">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-50 rounded-lg">
-                <Mail className="h-5 w-5 text-blue-600" />
+              <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
+                <Mail className="h-5 w-5 text-[#17B6C3]" />
               </div>
               <div>
-                <p className="text-[14px] font-medium text-slate-900">Email</p>
-                <p className="text-[12px] text-slate-500">Send collection emails to customers</p>
+                <p className="text-[14px] font-medium text-foreground">Email</p>
+                <p className="text-[12px] text-muted-foreground">Send collection emails to customers</p>
               </div>
             </div>
             <Switch
@@ -542,14 +542,14 @@ function ChannelsSection({
             />
           </div>
 
-          <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-100">
+          <div className="flex items-center justify-between p-4 bg-background rounded-lg border border-border">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-green-50 rounded-lg">
                 <MessageSquare className="h-5 w-5 text-green-600" />
               </div>
               <div>
-                <p className="text-[14px] font-medium text-slate-900">SMS</p>
-                <p className="text-[12px] text-slate-500">Send text message reminders</p>
+                <p className="text-[14px] font-medium text-foreground">SMS</p>
+                <p className="text-[12px] text-muted-foreground">Send text message reminders</p>
               </div>
             </div>
             <Switch
@@ -558,14 +558,14 @@ function ChannelsSection({
             />
           </div>
 
-          <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-100">
+          <div className="flex items-center justify-between p-4 bg-background rounded-lg border border-border">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-purple-50 rounded-lg">
                 <Phone className="h-5 w-5 text-purple-600" />
               </div>
               <div>
-                <p className="text-[14px] font-medium text-slate-900">Voice Calls</p>
-                <p className="text-[12px] text-slate-500">AI-powered collection calls</p>
+                <p className="text-[14px] font-medium text-foreground">Voice Calls</p>
+                <p className="text-[12px] text-muted-foreground">AI-powered collection calls</p>
               </div>
             </div>
             <Switch
@@ -592,14 +592,14 @@ function OutcomesSection({
 
   return (
     <div className="space-y-6">
-      <div className="bg-slate-50 rounded-lg p-6">
-        <h3 className="text-[15px] font-semibold text-slate-900 mb-4">Promise to Pay</h3>
-        <p className="text-[13px] text-slate-500 mb-4">
+      <div className="bg-muted rounded-lg p-6">
+        <h3 className="text-[15px] font-semibold text-foreground mb-4">Promise to Pay</h3>
+        <p className="text-[13px] text-muted-foreground mb-4">
           When a customer commits to pay by a specific date
         </p>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label className="text-[13px] text-slate-600">Action</Label>
+            <Label className="text-[13px] text-muted-foreground">Action</Label>
             <Select
               value={ptp.action || 'pause_until_date'}
               onValueChange={(v) => onUpdate({
@@ -624,12 +624,12 @@ function OutcomesSection({
                 promiseToPay: { ...ptp, followUpNextDay: v },
               })}
             />
-            <Label className="text-[13px] text-slate-600">Follow up next day if payment not received</Label>
+            <Label className="text-[13px] text-muted-foreground">Follow up next day if payment not received</Label>
           </div>
         </div>
       </div>
 
-      <div className="bg-slate-50 rounded-lg p-6">
+      <div className="bg-muted rounded-lg p-6">
         <h3 className="text-[15px] font-semibold text-slate-900 mb-4">Request for More Time</h3>
         <p className="text-[13px] text-slate-500 mb-4">
           When a customer asks for an extension without a specific date

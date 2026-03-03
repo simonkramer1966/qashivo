@@ -102,7 +102,7 @@ export default function Dashboard() {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen bg-white">
+      <div className="flex h-screen bg-background">
         <div className="hidden lg:block">
           <NewSidebar />
         </div>
@@ -131,7 +131,7 @@ export default function Dashboard() {
 
   if (error || !metrics) {
     return (
-      <div className="flex h-screen bg-white">
+      <div className="flex h-screen bg-background">
         <div className="hidden lg:block">
           <NewSidebar />
         </div>
@@ -141,9 +141,9 @@ export default function Dashboard() {
             subtitle="AI performance and automation metrics"
           />
           <div className="container-apple py-4 sm:py-6 lg:py-8">
-            <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-              <p className="text-red-800 font-semibold">Failed to load dashboard metrics</p>
-              <p className="text-red-600 text-sm mt-1">Please try refreshing the page</p>
+            <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-lg p-6">
+              <p className="text-red-800 dark:text-red-400 font-semibold">Failed to load dashboard metrics</p>
+              <p className="text-red-600 dark:text-red-500 text-sm mt-1">Please try refreshing the page</p>
             </div>
           </div>
         </main>
@@ -159,7 +159,7 @@ export default function Dashboard() {
   }));
 
   return (
-    <div className="flex h-screen bg-white">
+    <div className="flex h-screen bg-background">
       <div className="hidden lg:block">
         <NewSidebar />
       </div>
@@ -170,33 +170,33 @@ export default function Dashboard() {
           subtitle="AI performance and automation metrics"
         />
         
-        <div className="container-apple py-4 sm:py-6 lg:py-8 bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
+        <div className="container-apple py-4 sm:py-6 lg:py-8">
 
         {/* Top Row: 4 Metric Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {/* DSO Card */}
-          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-xl p-6" data-testid="card-dso">
+          <Card className="bg-background/80 backdrop-blur-sm border-border/50 shadow-xl p-6" data-testid="card-dso">
             <div className="flex items-start justify-between mb-4">
               <div>
-                <p className="text-sm font-medium text-slate-600">Days Sales Outstanding</p>
+                <p className="text-sm font-medium text-muted-foreground">Days Sales Outstanding</p>
                 <div className="flex items-baseline gap-2 mt-1">
-                  <span className="text-3xl font-bold text-slate-900">{metrics.dso.actual}</span>
-                  <span className="text-sm text-slate-500">days</span>
+                  <span className="text-3xl font-bold text-foreground">{metrics.dso.actual}</span>
+                  <span className="text-sm text-muted-foreground">days</span>
                 </div>
               </div>
-              <div className={`p-2 rounded-lg ${metrics.dso.delta30Days < 0 ? 'bg-green-50' : 'bg-red-50'}`}>
+              <div className={`p-2 rounded-lg ${metrics.dso.delta30Days < 0 ? 'bg-green-50 dark:bg-green-950/30' : 'bg-red-50 dark:bg-red-950/30'}`}>
                 {metrics.dso.delta30Days < 0 ? (
-                  <TrendingDown className="h-5 w-5 text-green-600" />
+                  <TrendingDown className="h-5 w-5 text-green-600 dark:text-green-400" />
                 ) : (
-                  <TrendingUp className="h-5 w-5 text-red-600" />
+                  <TrendingUp className="h-5 w-5 text-red-600 dark:text-red-400" />
                 )}
               </div>
             </div>
             
             <div className="mb-3">
-              <div className="flex justify-between items-center text-xs text-slate-500 mb-1">
+              <div className="flex justify-between items-center text-xs text-muted-foreground mb-1">
                 <span>Last 30 days</span>
-                <span className={metrics.dso.delta30Days < 0 ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>
+                <span className={metrics.dso.delta30Days < 0 ? 'text-green-600 dark:text-green-400 font-semibold' : 'text-red-600 dark:text-red-400 font-semibold'}>
                   {metrics.dso.delta30Days > 0 ? '+' : ''}{Math.round(metrics.dso.delta30Days * 10) / 10}
                 </span>
               </div>
@@ -214,38 +214,38 @@ export default function Dashboard() {
               </ResponsiveContainer>
             </div>
 
-            <div className="flex justify-between text-xs pt-3 border-t border-slate-200">
-              <span className="text-slate-500">Projected:</span>
-              <span className="font-semibold text-slate-700">{metrics.dso.projected} days</span>
+            <div className="flex justify-between text-xs pt-3 border-t border-border">
+              <span className="text-muted-foreground">Projected:</span>
+              <span className="font-semibold text-foreground/80">{metrics.dso.projected} days</span>
             </div>
             <div className="flex justify-between text-xs mt-1">
-              <span className="text-slate-500">Target:</span>
+              <span className="text-muted-foreground">Target:</span>
               <span className="font-semibold text-[#17B6C3]">{metrics.dso.target} days</span>
             </div>
           </Card>
 
           {/* Automation Rate Card */}
-          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-xl p-6" data-testid="card-automation">
+          <Card className="bg-background/80 backdrop-blur-sm border-border/50 shadow-xl p-6" data-testid="card-automation">
             <div className="flex items-start justify-between mb-4">
               <div>
-                <p className="text-sm font-medium text-slate-600">Automation Rate</p>
+                <p className="text-sm font-medium text-muted-foreground">Automation Rate</p>
                 <div className="flex items-baseline gap-2 mt-1">
-                  <span className="text-3xl font-bold text-slate-900">{Math.round(metrics.automation.rate)}</span>
-                  <span className="text-sm text-slate-500">%</span>
+                  <span className="text-3xl font-bold text-foreground">{Math.round(metrics.automation.rate)}</span>
+                  <span className="text-sm text-muted-foreground">%</span>
                 </div>
               </div>
-              <div className="p-2 bg-purple-50 rounded-lg">
-                <Sparkles className="h-5 w-5 text-purple-600" />
+              <div className="p-2 bg-purple-50 dark:bg-purple-950/30 rounded-lg">
+                <Sparkles className="h-5 w-5 text-purple-600 dark:text-purple-400" />
               </div>
             </div>
 
             <div className="space-y-2">
               <div>
-                <div className="flex justify-between text-xs text-slate-600 mb-1">
+                <div className="flex justify-between text-xs text-muted-foreground mb-1">
                   <span>Automated</span>
                   <span className="font-semibold">{metrics.automation.autoSent}</span>
                 </div>
-                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
                   <div 
                     className="h-full bg-gradient-to-r from-purple-500 to-purple-600 rounded-full transition-all duration-500"
                     style={{ width: `${metrics.automation.rate}%` }}
@@ -254,46 +254,46 @@ export default function Dashboard() {
               </div>
               
               <div>
-                <div className="flex justify-between text-xs text-slate-600 mb-1">
+                <div className="flex justify-between text-xs text-muted-foreground mb-1">
                   <span>Manual</span>
                   <span className="font-semibold">{metrics.automation.agentSent}</span>
                 </div>
-                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
                   <div 
-                    className="h-full bg-slate-300 rounded-full transition-all duration-500"
+                    className="h-full bg-muted-foreground/30 rounded-full transition-all duration-500"
                     style={{ width: `${100 - metrics.automation.rate}%` }}
                   />
                 </div>
               </div>
             </div>
 
-            <div className="flex justify-between text-xs pt-3 border-t border-slate-200 mt-3">
-              <span className="text-slate-500">Total actions:</span>
-              <span className="font-semibold text-slate-700">{metrics.automation.totalSent}</span>
+            <div className="flex justify-between text-xs pt-3 border-t border-border mt-3">
+              <span className="text-muted-foreground">Total actions:</span>
+              <span className="font-semibold text-foreground/80">{metrics.automation.totalSent}</span>
             </div>
           </Card>
 
           {/* Cure Rate Card */}
-          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-xl p-6" data-testid="card-cure-rate">
+          <Card className="bg-background/80 backdrop-blur-sm border-border/50 shadow-xl p-6" data-testid="card-cure-rate">
             <div className="flex items-start justify-between mb-4">
               <div>
-                <p className="text-sm font-medium text-slate-600">Cure Rate (30d)</p>
+                <p className="text-sm font-medium text-muted-foreground">Cure Rate (30d)</p>
                 <div className="flex items-baseline gap-2 mt-1">
-                  <span className="text-3xl font-bold text-slate-900">{Math.round(metrics.cureRate.cure30Days)}</span>
-                  <span className="text-sm text-slate-500">%</span>
+                  <span className="text-3xl font-bold text-foreground">{Math.round(metrics.cureRate.cure30Days)}</span>
+                  <span className="text-sm text-muted-foreground">%</span>
                 </div>
               </div>
-              <div className="p-2 bg-green-50 rounded-lg">
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
+              <div className="p-2 bg-green-50 dark:bg-green-950/30 rounded-lg">
+                <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
               </div>
             </div>
 
             <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-xs text-slate-600">7 days</span>
-                <span className="text-sm font-semibold text-green-600">{Math.round(metrics.cureRate.cure7Days)}%</span>
+                <span className="text-xs text-muted-foreground">7 days</span>
+                <span className="text-sm font-semibold text-green-600 dark:text-green-400">{Math.round(metrics.cureRate.cure7Days)}%</span>
               </div>
-              <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-gradient-to-r from-green-400 to-green-500 rounded-full"
                   style={{ width: `${metrics.cureRate.cure7Days}%` }}
@@ -301,10 +301,10 @@ export default function Dashboard() {
               </div>
 
               <div className="flex justify-between items-center">
-                <span className="text-xs text-slate-600">14 days</span>
-                <span className="text-sm font-semibold text-emerald-600">{Math.round(metrics.cureRate.cure14Days)}%</span>
+                <span className="text-xs text-muted-foreground">14 days</span>
+                <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{Math.round(metrics.cureRate.cure14Days)}%</span>
               </div>
-              <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 rounded-full"
                   style={{ width: `${metrics.cureRate.cure14Days}%` }}
@@ -312,10 +312,10 @@ export default function Dashboard() {
               </div>
 
               <div className="flex justify-between items-center">
-                <span className="text-xs text-slate-600">30 days</span>
-                <span className="text-sm font-semibold text-teal-600">{Math.round(metrics.cureRate.cure30Days)}%</span>
+                <span className="text-xs text-muted-foreground">30 days</span>
+                <span className="text-sm font-semibold text-teal-600 dark:text-teal-400">{Math.round(metrics.cureRate.cure30Days)}%</span>
               </div>
-              <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-gradient-to-r from-teal-400 to-teal-500 rounded-full"
                   style={{ width: `${metrics.cureRate.cure30Days}%` }}
@@ -325,33 +325,33 @@ export default function Dashboard() {
           </Card>
 
           {/* Collector Load Card */}
-          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-xl p-6" data-testid="card-collector-load">
+          <Card className="bg-background/80 backdrop-blur-sm border-border/50 shadow-xl p-6" data-testid="card-collector-load">
             <div className="flex items-start justify-between mb-4">
               <div>
-                <p className="text-sm font-medium text-slate-600">Controller Load</p>
+                <p className="text-sm font-medium text-muted-foreground">Controller Load</p>
                 <div className="flex items-baseline gap-2 mt-1">
-                  <span className="text-3xl font-bold text-slate-900">{metrics.collectorLoad.actionsPerDay}</span>
-                  <span className="text-sm text-slate-500">/day</span>
+                  <span className="text-3xl font-bold text-foreground">{metrics.collectorLoad.actionsPerDay}</span>
+                  <span className="text-sm text-muted-foreground">/day</span>
                 </div>
               </div>
-              <div className="p-2 bg-blue-50 rounded-lg">
-                <Users className="h-5 w-5 text-blue-600" />
+              <div className="p-2 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
+                <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
             </div>
 
             <div className="space-y-3 pt-2">
               <div className="flex justify-between items-center">
-                <span className="text-xs text-slate-600">Active controllers</span>
-                <span className="text-lg font-semibold text-blue-600">{metrics.collectorLoad.totalCollectors}</span>
+                <span className="text-xs text-muted-foreground">Active controllers</span>
+                <span className="text-lg font-semibold text-blue-600 dark:text-blue-400">{metrics.collectorLoad.totalCollectors}</span>
               </div>
 
               <div className="flex justify-between items-center">
-                <span className="text-xs text-slate-600">Total actions (7d)</span>
-                <span className="text-lg font-semibold text-slate-700">{metrics.collectorLoad.totalActions}</span>
+                <span className="text-xs text-muted-foreground">Total actions (7d)</span>
+                <span className="text-lg font-semibold text-foreground/80">{metrics.collectorLoad.totalActions}</span>
               </div>
 
-              <div className="pt-3 border-t border-slate-200">
-                <div className="flex items-center gap-2 text-xs text-slate-500">
+              <div className="pt-3 border-t border-border">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Clock className="h-3.5 w-3.5" />
                   <span>Per controller workload</span>
                 </div>
@@ -363,10 +363,10 @@ export default function Dashboard() {
         {/* Middle Row: Adaptive vs Static Lift + Exceptions Over Time */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Adaptive vs Static Lift */}
-          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-xl p-6" data-testid="card-adaptive-lift">
+          <Card className="bg-background/80 backdrop-blur-sm border-border/50 shadow-xl p-6" data-testid="card-adaptive-lift">
             <div className="mb-6">
-              <h3 className="text-xl font-bold text-slate-900 mb-1">Adaptive vs Static Lift</h3>
-              <p className="text-sm text-slate-600">Performance comparison proving AI impact</p>
+              <h3 className="text-xl font-bold text-foreground mb-1">Adaptive vs Static Lift</h3>
+              <p className="text-sm text-muted-foreground">Performance comparison proving AI impact</p>
             </div>
 
             {/* Baseline Toggle */}
@@ -376,7 +376,7 @@ export default function Dashboard() {
                 className={`flex-1 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
                   baselineMode === 'adaptive'
                     ? 'bg-[#17B6C3] text-white shadow-md'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
                 }`}
                 data-testid="button-baseline-adaptive"
               >
@@ -386,8 +386,8 @@ export default function Dashboard() {
                 onClick={() => setBaselineMode('static')}
                 className={`flex-1 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
                   baselineMode === 'static'
-                    ? 'bg-slate-600 text-white shadow-md'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    ? 'bg-muted-foreground text-background shadow-md'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
                 }`}
                 data-testid="button-baseline-static"
               >
@@ -419,22 +419,23 @@ export default function Dashboard() {
                 ]}
                 margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" vertical={false} />
                 <XAxis 
                   dataKey="metric" 
-                  tick={{ fill: '#64748b', fontSize: 12 }}
-                  axisLine={{ stroke: '#cbd5e1' }}
+                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                  axisLine={{ stroke: 'hsl(var(--border))' }}
                 />
                 <YAxis 
-                  tick={{ fill: '#64748b', fontSize: 12 }}
-                  axisLine={{ stroke: '#cbd5e1' }}
+                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                  axisLine={{ stroke: 'hsl(var(--border))' }}
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                    border: '1px solid #e2e8f0',
+                    backgroundColor: 'var(--background)',
+                    border: '1px solid var(--border)',
                     borderRadius: '8px',
                     padding: '12px',
+                    color: 'var(--foreground)'
                   }}
                   formatter={(value: number, name: string, props: any) => [
                     `${Math.round(value * 10) / 10}${props.payload.unit}`,
@@ -446,31 +447,31 @@ export default function Dashboard() {
                   iconType="circle"
                 />
                 <Bar dataKey="adaptive" fill="#17B6C3" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="static" fill="#94a3b8" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="static" fill="hsl(var(--muted-foreground) / 0.4)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
 
-            <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-slate-200">
+            <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-border">
               <div className="text-center">
-                <p className="text-xs text-slate-600 mb-1">Cure Rate Uplift</p>
-                <p className="text-lg font-bold text-green-600">+{Math.round(metrics.adaptiveLift.cureRateUplift)}%</p>
+                <p className="text-xs text-muted-foreground mb-1">Cure Rate Uplift</p>
+                <p className="text-lg font-bold text-green-600 dark:text-green-400">+{Math.round(metrics.adaptiveLift.cureRateUplift)}%</p>
               </div>
               <div className="text-center">
-                <p className="text-xs text-slate-600 mb-1">Days Saved</p>
-                <p className="text-lg font-bold text-green-600">-{Math.round(metrics.adaptiveLift.avgDaysToPayReduction)}d</p>
+                <p className="text-xs text-muted-foreground mb-1">Days Saved</p>
+                <p className="text-lg font-bold text-green-600 dark:text-green-400">-{Math.round(metrics.adaptiveLift.avgDaysToPayReduction)}d</p>
               </div>
               <div className="text-center">
-                <p className="text-xs text-slate-600 mb-1">Touch Reduction</p>
-                <p className="text-lg font-bold text-green-600">-{Math.round(metrics.adaptiveLift.touchesPerCureReduction)}%</p>
+                <p className="text-xs text-muted-foreground mb-1">Touch Reduction</p>
+                <p className="text-lg font-bold text-green-600 dark:text-green-400">-{Math.round(metrics.adaptiveLift.touchesPerCureReduction)}%</p>
               </div>
             </div>
           </Card>
 
           {/* Exceptions Over Time */}
-          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-xl p-6" data-testid="card-exceptions">
+          <Card className="bg-background/80 backdrop-blur-sm border-border/50 shadow-xl p-6" data-testid="card-exceptions">
             <div className="mb-6">
-              <h3 className="text-xl font-bold text-slate-900 mb-1">Exceptions Over Time</h3>
-              <p className="text-sm text-slate-600">Last 30 days by exception type</p>
+              <h3 className="text-xl font-bold text-foreground mb-1">Exceptions Over Time</h3>
+              <p className="text-sm text-muted-foreground">Last 30 days by exception type</p>
             </div>
 
             <ResponsiveContainer width="100%" height={320}>
@@ -478,26 +479,27 @@ export default function Dashboard() {
                 data={metrics.exceptionsTimeSeries}
                 margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" vertical={false} />
                 <XAxis 
                   dataKey="date" 
-                  tick={{ fill: '#64748b', fontSize: 11 }}
-                  axisLine={{ stroke: '#cbd5e1' }}
+                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
+                  axisLine={{ stroke: 'hsl(var(--border))' }}
                   tickFormatter={(value) => {
                     const date = new Date(value);
                     return `${date.getMonth() + 1}/${date.getDate()}`;
                   }}
                 />
                 <YAxis 
-                  tick={{ fill: '#64748b', fontSize: 12 }}
-                  axisLine={{ stroke: '#cbd5e1' }}
+                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                  axisLine={{ stroke: 'hsl(var(--border))' }}
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                    border: '1px solid #e2e8f0',
+                    backgroundColor: 'var(--background)',
+                    border: '1px solid var(--border)',
                     borderRadius: '8px',
                     padding: '12px',
+                    color: 'var(--foreground)'
                   }}
                   labelFormatter={(value) => {
                     const date = new Date(value);
@@ -559,10 +561,10 @@ export default function Dashboard() {
         </div>
 
         {/* Bottom Row: Conversion Funnel */}
-        <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-xl p-6" data-testid="card-funnel">
+        <Card className="bg-background/80 backdrop-blur-sm border-border/50 shadow-xl p-6" data-testid="card-funnel">
           <div className="mb-6">
-            <h3 className="text-xl font-bold text-slate-900 mb-1">Collection Conversion Funnel</h3>
-            <p className="text-sm text-slate-600">Journey from overdue to paid</p>
+            <h3 className="text-xl font-bold text-foreground mb-1">Collection Conversion Funnel</h3>
+            <p className="text-sm text-muted-foreground">Journey from overdue to paid</p>
           </div>
 
           <div className="grid grid-cols-5 gap-4">

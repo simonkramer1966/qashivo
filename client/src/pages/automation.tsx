@@ -123,7 +123,7 @@ export default function Automation() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
+      <div className="flex min-h-screen bg-background">
         <NewSidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <Header title="Automation" subtitle="AI Policy Settings" />
@@ -136,7 +136,7 @@ export default function Automation() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
+    <div className="flex min-h-screen bg-background">
       <NewSidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <Header title="Automation" subtitle="AI Policy Settings" />
@@ -144,8 +144,8 @@ export default function Automation() {
           <div className="max-w-4xl mx-auto space-y-6">
             
             {hasChanges && (
-              <div className="sticky top-0 z-10 bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center justify-between">
-                <div className="flex items-center gap-2 text-amber-700">
+              <div className="sticky top-0 z-10 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg p-3 flex items-center justify-between">
+                <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
                   <Info className="h-4 w-4" />
                   <span className="text-sm font-medium">You have unsaved changes</span>
                 </div>
@@ -164,7 +164,7 @@ export default function Automation() {
               </div>
             )}
 
-            <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+            <Card className="bg-background/80 backdrop-blur-sm border-border/50 shadow-lg">
               <CardHeader>
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
@@ -180,7 +180,7 @@ export default function Automation() {
                 <div className="flex items-center justify-between">
                   <div>
                     <Label className="font-medium">Enable AI Collections</Label>
-                    <p className="text-sm text-slate-500">Allow AI to generate and execute collection actions</p>
+                    <p className="text-sm text-muted-foreground">Allow AI to generate and execute collection actions</p>
                   </div>
                   <Switch 
                     checked={localSettings.collectionsAutomationEnabled ?? true}
@@ -192,36 +192,36 @@ export default function Automation() {
                 <Separator />
 
                 <div className="space-y-3">
-                  <Label className="font-medium">Approval Mode</Label>
+                  <Label className="font-medium text-foreground">Approval Mode</Label>
                   <Select 
                     value={localSettings.approvalMode || 'manual'}
                     onValueChange={(value) => updateSetting('approvalMode', value)}
                   >
-                    <SelectTrigger data-testid="select-approval-mode">
+                    <SelectTrigger data-testid="select-approval-mode" className="bg-background border-border">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-popover border-border">
                       <SelectItem value="manual">
                         <div className="flex items-center gap-2">
                           <Shield className="h-4 w-4 text-blue-500" />
-                          <span>Manual - Review every action</span>
+                          <span className="text-foreground">Manual - Review every action</span>
                         </div>
                       </SelectItem>
                       <SelectItem value="auto_after_timeout">
                         <div className="flex items-center gap-2">
                           <Clock className="h-4 w-4 text-amber-500" />
-                          <span>Auto after timeout - Auto-approve if not reviewed</span>
+                          <span className="text-foreground">Auto after timeout - Auto-approve if not reviewed</span>
                         </div>
                       </SelectItem>
                       <SelectItem value="full_auto">
                         <div className="flex items-center gap-2">
                           <Bot className="h-4 w-4 text-emerald-500" />
-                          <span>Full Auto - Execute without approval</span>
+                          <span className="text-foreground">Full Auto - Execute without approval</span>
                         </div>
                       </SelectItem>
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-muted-foreground">
                     {localSettings.approvalMode === 'manual' && 'You review and approve every AI-recommended action before execution.'}
                     {localSettings.approvalMode === 'auto_after_timeout' && 'Actions auto-approve if you don\'t review them within the timeout period.'}
                     {localSettings.approvalMode === 'full_auto' && 'AI executes actions automatically. Exceptions still require review.'}
@@ -229,19 +229,19 @@ export default function Automation() {
                 </div>
 
                 {localSettings.approvalMode === 'auto_after_timeout' && (
-                  <div className="space-y-3 pl-4 border-l-2 border-amber-200">
-                    <Label className="font-medium">Auto-approve Timeout</Label>
+                  <div className="space-y-3 pl-4 border-l-2 border-amber-200 dark:border-amber-900">
+                    <Label className="font-medium text-foreground">Auto-approve Timeout</Label>
                     <div className="flex items-center gap-3">
                       <Input 
                         type="number"
                         value={localSettings.approvalTimeoutHours || 12}
                         onChange={(e) => updateSetting('approvalTimeoutHours', parseInt(e.target.value) || 12)}
-                        className="w-24"
+                        className="w-24 bg-background border-border text-foreground"
                         min={1}
                         max={48}
                         data-testid="input-timeout-hours"
                       />
-                      <span className="text-sm text-slate-500">hours</span>
+                      <span className="text-sm text-muted-foreground">hours</span>
                     </div>
                   </div>
                 )}
@@ -249,20 +249,20 @@ export default function Automation() {
                 <Separator />
 
                 <div className="space-y-3">
-                  <Label className="font-medium">Daily Execution Time</Label>
+                  <Label className="font-medium text-foreground">Daily Execution Time</Label>
                   <Input 
                     type="time"
                     value={localSettings.executionTime || '09:00'}
                     onChange={(e) => updateSetting('executionTime', e.target.value)}
-                    className="w-32"
+                    className="w-32 bg-background border-border text-foreground"
                     data-testid="input-execution-time"
                   />
-                  <p className="text-xs text-slate-500">AI generates the daily plan overnight and executes at this time</p>
+                  <p className="text-xs text-muted-foreground">AI generates the daily plan overnight and executes at this time</p>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+            <Card className="bg-background/80 backdrop-blur-sm border-border/50 shadow-lg">
               <CardHeader>
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
@@ -276,15 +276,15 @@ export default function Automation() {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="space-y-4 p-4 bg-blue-50/50 rounded-lg">
+                  <div className="space-y-4 p-4 bg-blue-50/50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
                     <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-blue-600" />
-                      <Label className="font-medium">Email</Label>
+                      <Mail className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      <Label className="font-medium text-foreground">Email</Label>
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-slate-500">Daily limit</span>
-                        <span className="font-medium">{localSettings.dailyLimits?.email || 100}</span>
+                        <span className="text-muted-foreground">Daily limit</span>
+                        <span className="font-medium text-foreground">{localSettings.dailyLimits?.email || 100}</span>
                       </div>
                       <Slider 
                         value={[localSettings.dailyLimits?.email || 100]}
@@ -296,8 +296,8 @@ export default function Automation() {
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-slate-500">Cooldown</span>
-                        <span className="font-medium">{localSettings.channelCooldowns?.email || 3} days</span>
+                        <span className="text-muted-foreground">Cooldown</span>
+                        <span className="font-medium text-foreground">{localSettings.channelCooldowns?.email || 3} days</span>
                       </div>
                       <Slider 
                         value={[localSettings.channelCooldowns?.email || 3]}
@@ -310,15 +310,15 @@ export default function Automation() {
                     </div>
                   </div>
 
-                  <div className="space-y-4 p-4 bg-green-50/50 rounded-lg">
+                  <div className="space-y-4 p-4 bg-green-50/50 dark:bg-green-900/20 rounded-lg border border-green-100 dark:border-green-800">
                     <div className="flex items-center gap-2">
-                      <MessageSquare className="h-4 w-4 text-green-600" />
-                      <Label className="font-medium">SMS</Label>
+                      <MessageSquare className="h-4 w-4 text-green-600 dark:text-green-400" />
+                      <Label className="font-medium text-foreground">SMS</Label>
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-slate-500">Daily limit</span>
-                        <span className="font-medium">{localSettings.dailyLimits?.sms || 50}</span>
+                        <span className="text-muted-foreground">Daily limit</span>
+                        <span className="font-medium text-foreground">{localSettings.dailyLimits?.sms || 50}</span>
                       </div>
                       <Slider 
                         value={[localSettings.dailyLimits?.sms || 50]}
@@ -330,8 +330,8 @@ export default function Automation() {
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-slate-500">Cooldown</span>
-                        <span className="font-medium">{localSettings.channelCooldowns?.sms || 5} days</span>
+                        <span className="text-muted-foreground">Cooldown</span>
+                        <span className="font-medium text-foreground">{localSettings.channelCooldowns?.sms || 5} days</span>
                       </div>
                       <Slider 
                         value={[localSettings.channelCooldowns?.sms || 5]}
@@ -344,15 +344,15 @@ export default function Automation() {
                     </div>
                   </div>
 
-                  <div className="space-y-4 p-4 bg-purple-50/50 rounded-lg">
+                  <div className="space-y-4 p-4 bg-purple-50/50 dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-800">
                     <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-purple-600" />
-                      <Label className="font-medium">Voice</Label>
+                      <Phone className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                      <Label className="font-medium text-foreground">Voice</Label>
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-slate-500">Daily limit</span>
-                        <span className="font-medium">{localSettings.dailyLimits?.voice || 20}</span>
+                        <span className="text-muted-foreground">Daily limit</span>
+                        <span className="font-medium text-foreground">{localSettings.dailyLimits?.voice || 20}</span>
                       </div>
                       <Slider 
                         value={[localSettings.dailyLimits?.voice || 20]}
@@ -364,8 +364,8 @@ export default function Automation() {
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-slate-500">Cooldown</span>
-                        <span className="font-medium">{localSettings.channelCooldowns?.voice || 7} days</span>
+                        <span className="text-muted-foreground">Cooldown</span>
+                        <span className="font-medium text-foreground">{localSettings.channelCooldowns?.voice || 7} days</span>
                       </div>
                       <Slider 
                         value={[localSettings.channelCooldowns?.voice || 7]}
@@ -382,66 +382,66 @@ export default function Automation() {
                 <Separator />
 
                 <div className="space-y-3">
-                  <Label className="font-medium">Business Hours (for Voice Calls)</Label>
+                  <Label className="font-medium text-foreground">Business Hours (for Voice Calls)</Label>
                   <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2">
-                      <Label className="text-sm text-slate-500">From</Label>
+                      <Label className="text-sm text-muted-foreground">From</Label>
                       <Input 
                         type="time"
                         value={localSettings.businessHoursStart || '08:00'}
                         onChange={(e) => updateSetting('businessHoursStart', e.target.value)}
-                        className="w-28"
+                        className="w-28 bg-background border-border text-foreground"
                         data-testid="input-business-hours-start"
                       />
                     </div>
                     <div className="flex items-center gap-2">
-                      <Label className="text-sm text-slate-500">To</Label>
+                      <Label className="text-sm text-muted-foreground">To</Label>
                       <Input 
                         type="time"
                         value={localSettings.businessHoursEnd || '18:00'}
                         onChange={(e) => updateSetting('businessHoursEnd', e.target.value)}
-                        className="w-28"
+                        className="w-28 bg-background border-border text-foreground"
                         data-testid="input-business-hours-end"
                       />
                     </div>
                   </div>
-                  <p className="text-xs text-slate-500">Voice calls will only be scheduled within these hours</p>
+                  <p className="text-xs text-muted-foreground">Voice calls will only be scheduled within these hours</p>
                 </div>
 
                 <div className="space-y-3">
-                  <Label className="font-medium">Contact Frequency</Label>
+                  <Label className="font-medium text-foreground">Contact Frequency</Label>
                   <div className="flex items-center gap-4">
-                    <span className="text-sm text-slate-500">Max</span>
+                    <span className="text-sm text-muted-foreground">Max</span>
                     <Input 
                       type="number"
                       value={localSettings.maxTouchesPerWindow || 3}
                       onChange={(e) => updateSetting('maxTouchesPerWindow', parseInt(e.target.value) || 3)}
-                      className="w-16"
+                      className="w-16 bg-background border-border text-foreground"
                       min={1}
                       max={10}
                       data-testid="input-max-touches"
                     />
-                    <span className="text-sm text-slate-500">contacts per</span>
+                    <span className="text-sm text-muted-foreground">contacts per</span>
                     <Input 
                       type="number"
                       value={localSettings.contactWindowDays || 14}
                       onChange={(e) => updateSetting('contactWindowDays', parseInt(e.target.value) || 14)}
-                      className="w-16"
+                      className="w-16 bg-background border-border text-foreground"
                       min={7}
                       max={30}
                       data-testid="input-contact-window"
                     />
-                    <span className="text-sm text-slate-500">days</span>
+                    <span className="text-sm text-muted-foreground">days</span>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+            <Card className="bg-background/80 backdrop-blur-sm border-border/50 shadow-lg">
               <CardHeader>
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-amber-100 rounded-lg">
-                    <AlertTriangle className="h-5 w-5 text-amber-600" />
+                  <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                    <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                   </div>
                   <div>
                     <CardTitle>Exception Rules</CardTitle>
@@ -453,7 +453,7 @@ export default function Automation() {
                 <div className="flex items-center justify-between py-2">
                   <div>
                     <Label className="font-medium">Flag first contact</Label>
-                    <p className="text-sm text-slate-500">Review before contacting a debtor for the first time</p>
+                    <p className="text-sm text-muted-foreground">Review before contacting a debtor for the first time</p>
                   </div>
                   <Switch 
                     checked={localSettings.exceptionRules?.flagFirstContact ?? true}
@@ -468,12 +468,12 @@ export default function Automation() {
                 <Separator />
 
                 <div className="flex items-center justify-between py-2">
-                  <div className="flex-1">
-                    <Label className="font-medium">Flag high-value invoices</Label>
-                    <p className="text-sm text-slate-500">Review invoices above this threshold</p>
+                  <div>
+                    <Label className="font-medium text-foreground">Flag high-value invoices</Label>
+                    <p className="text-sm text-muted-foreground">Review invoices above this threshold</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-slate-500">£</span>
+                    <span className="text-sm text-muted-foreground">£</span>
                     <Input 
                       type="number"
                       value={localSettings.exceptionRules?.flagHighValue || 10000}
@@ -481,7 +481,7 @@ export default function Automation() {
                         ...localSettings.exceptionRules!, 
                         flagHighValue: parseInt(e.target.value) || 10000 
                       })}
-                      className="w-28"
+                      className="w-28 bg-background border-border text-foreground"
                       min={0}
                       step={1000}
                       data-testid="input-high-value-threshold"
@@ -494,7 +494,7 @@ export default function Automation() {
                 <div className="flex items-center justify-between py-2">
                   <div>
                     <Label className="font-medium">Flag dispute indicators</Label>
-                    <p className="text-sm text-slate-500">Review when AI detects dispute keywords in responses</p>
+                    <p className="text-sm text-muted-foreground">Review when AI detects dispute keywords in responses</p>
                   </div>
                   <Switch 
                     checked={localSettings.exceptionRules?.flagDisputeKeywords ?? true}

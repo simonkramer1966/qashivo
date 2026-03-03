@@ -102,12 +102,12 @@ export default function Workflows() {
     <div className="space-y-6">
       {/* Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
+        <Card className="bg-background/70 backdrop-blur-md border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Active Workflows</p>
-                <p className="text-3xl font-bold text-gray-900" data-testid="text-active-workflows">
+                <p className="text-sm font-medium text-muted-foreground">Active Workflows</p>
+                <p className="text-3xl font-bold text-foreground" data-testid="text-active-workflows">
                   {(dashboardData as any)?.activeWorkflows || 0}
                 </p>
               </div>
@@ -118,12 +118,12 @@ export default function Workflows() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
+        <Card className="bg-background/70 backdrop-blur-md border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Templates</p>
-                <p className="text-3xl font-bold text-gray-900" data-testid="text-total-templates">
+                <p className="text-sm font-medium text-muted-foreground">Total Templates</p>
+                <p className="text-3xl font-bold text-foreground" data-testid="text-total-templates">
                   {(dashboardData as any)?.totalTemplates || 0}
                 </p>
               </div>
@@ -134,12 +134,12 @@ export default function Workflows() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
+        <Card className="bg-background/70 backdrop-blur-md border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">AI Agents</p>
-                <p className="text-3xl font-bold text-gray-900" data-testid="text-ai-agents">
+                <p className="text-sm font-medium text-muted-foreground">AI Agents</p>
+                <p className="text-3xl font-bold text-foreground" data-testid="text-ai-agents">
                   {(aiAgents as any[])?.length || 0}
                 </p>
               </div>
@@ -150,11 +150,11 @@ export default function Workflows() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
+        <Card className="bg-background/70 backdrop-blur-md border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Success Rate</p>
+                <p className="text-sm font-medium text-muted-foreground">Success Rate</p>
                 <p className="text-3xl font-bold text-[#4FAD80]" data-testid="text-success-rate">
                   73%
                 </p>
@@ -168,7 +168,7 @@ export default function Workflows() {
       </div>
 
       {/* Channel Performance */}
-      <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+      <Card className="bg-background/80 backdrop-blur-sm border-border/50 shadow-lg">
         <CardHeader>
           <CardTitle className="text-xl font-bold">Channel Performance</CardTitle>
           <CardDescription>Effectiveness across different communication channels</CardDescription>
@@ -176,7 +176,7 @@ export default function Workflows() {
         <CardContent>
           <div className="space-y-4">
             {((dashboardData as any)?.channelPerformance || []).map((channel: any) => (
-              <div key={channel.channel} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div key={channel.channel} className="flex items-center justify-between p-4 bg-muted rounded-lg">
                 <div className="flex items-center space-x-3">
                   <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
                     {channel.channel === 'email' && <Mail className="h-5 w-5 text-[#17B6C3]" />}
@@ -185,13 +185,13 @@ export default function Workflows() {
                     {channel.channel === 'voice' && <Phone className="h-5 w-5 text-[#17B6C3]" />}
                   </div>
                   <div>
-                    <p className="font-medium capitalize">{channel.channel}</p>
-                    <p className="text-sm text-gray-600">${channel.cost} per contact</p>
+                    <p className="font-medium capitalize text-foreground">{channel.channel}</p>
+                    <p className="text-sm text-muted-foreground">${channel.cost} per contact</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-4">
                   <div className="text-right">
-                    <p className="font-medium">{channel.successRate}%</p>
+                    <p className="font-medium text-foreground">{channel.successRate}%</p>
                     <Progress value={channel.successRate} className="w-24" />
                   </div>
                 </div>
@@ -340,7 +340,7 @@ export default function Workflows() {
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-semibold">Email Sequence Templates</h3>
-            <p className="text-sm text-gray-600">Manage your multi-stage email collection sequence</p>
+            <p className="text-sm text-muted-foreground">Manage your multi-stage email collection sequence</p>
           </div>
           <Button 
             onClick={addStage}
@@ -356,7 +356,7 @@ export default function Workflows() {
           {stages.sort((a, b) => a.order - b.order).map((stage) => (
             <Card 
               key={stage.id} 
-              className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow cursor-move"
+              className="bg-background border border-border shadow-sm hover:shadow-md transition-shadow cursor-move"
               draggable
               onDragStart={(e) => handleDragStart(e, stage)}
               onDragOver={handleDragOver}
@@ -366,7 +366,7 @@ export default function Workflows() {
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <GripVertical className="h-5 w-5 text-gray-400" />
+                    <GripVertical className="h-5 w-5 text-muted-foreground/60" />
                     <Badge variant="outline" className="bg-[#17B6C3]/10 text-[#17B6C3] border-[#17B6C3]/20">
                       Stage {stage.order}
                     </Badge>
@@ -398,10 +398,10 @@ export default function Workflows() {
               <CardContent>
                 <div className="space-y-2">
                   <p className="text-sm font-medium">Subject: {stage.subject}</p>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-muted-foreground">
                     Sent after: <span className="font-medium">{stage.daysOverdue} days overdue</span>
                   </p>
-                  <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded border-l-4 border-[#17B6C3]">
+                  <p className="text-sm text-muted-foreground bg-muted p-3 rounded border-l-4 border-[#17B6C3]">
                     {stage.content.substring(0, 120)}...
                   </p>
                 </div>
@@ -412,7 +412,7 @@ export default function Workflows() {
 
         {/* Edit Stage Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="max-w-2xl bg-white border border-gray-200 shadow-lg">
+          <DialogContent className="max-w-2xl bg-background border border-border shadow-lg">
             <DialogHeader>
               <DialogTitle>Edit Email Stage</DialogTitle>
             </DialogHeader>
@@ -426,7 +426,7 @@ export default function Workflows() {
                       <FormItem>
                         <FormLabel>Stage Title</FormLabel>
                         <FormControl>
-                          <Input placeholder="e.g., Friendly Reminder" {...field} className="border-gray-200" data-testid="input-stage-title" />
+                          <Input placeholder="e.g., Friendly Reminder" {...field} className="border-border" data-testid="input-stage-title" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -443,7 +443,7 @@ export default function Workflows() {
                             type="number" 
                             placeholder="7" 
                             {...field} 
-                            className="border-gray-200"
+                            className="border-border"
                             onChange={(e) => field.onChange(parseInt(e.target.value))}
                             data-testid="input-days-overdue"
                           />
@@ -460,7 +460,7 @@ export default function Workflows() {
                     <FormItem>
                       <FormLabel>Email Subject</FormLabel>
                       <FormControl>
-                        <Input placeholder="Payment Reminder - Invoice #{invoiceNumber}" {...field} className="border-gray-200" data-testid="input-email-subject" />
+                        <Input placeholder="Payment Reminder - Invoice #{invoiceNumber}" {...field} className="border-border" data-testid="input-email-subject" />
                       </FormControl>
                       <FormDescription>
                         Use {`{customerName}, {invoiceNumber}, {amount}, {dueDate}, {daysOverdue}`} for dynamic content
@@ -478,7 +478,7 @@ export default function Workflows() {
                       <FormControl>
                         <Textarea 
                           placeholder="Dear {customerName}..."
-                          className="min-h-[150px] border-gray-200" 
+                          className="min-h-[150px] border-border" 
                           {...field}
                           data-testid="textarea-email-content"
                         />
@@ -494,7 +494,7 @@ export default function Workflows() {
                   <Button 
                     type="button" 
                     variant="outline" 
-                    className="border-gray-200"
+                    className="border-border"
                     onClick={() => setIsEditDialogOpen(false)}
                     data-testid="button-cancel-edit"
                   >
@@ -522,7 +522,7 @@ export default function Workflows() {
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold">SMS Templates & Timing</h3>
-          <p className="text-sm text-gray-600">Configure SMS reminders that complement your email sequence</p>
+          <p className="text-sm text-muted-foreground">Configure SMS reminders that complement your email sequence</p>
         </div>
         <Button className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="button-add-sms-template">
           <Plus className="mr-2 h-4 w-4" />
@@ -538,7 +538,7 @@ export default function Workflows() {
           { day: 25, type: "Final Appeal", message: "Final notice: Please contact us immediately about your ${amount} overdue payment." },
           { day: 35, type: "Last Chance", message: "Account escalation pending. Resolve ${amount} balance immediately: {link}" }
         ].map((sms, index) => (
-          <Card key={index} className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+          <Card key={index} className="bg-background/80 backdrop-blur-sm border-border/50 shadow-lg">
             <CardContent className="p-6">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
@@ -548,10 +548,10 @@ export default function Workflows() {
                     </Badge>
                     <h4 className="font-medium">{sms.type}</h4>
                   </div>
-                  <div className="bg-gray-50 p-4 rounded-lg border-l-4 border-blue-500">
+                  <div className="bg-muted p-4 rounded-lg border-l-4 border-blue-500">
                     <p className="text-sm font-mono">{sms.message}</p>
                   </div>
-                  <div className="mt-3 flex items-center space-x-4 text-sm text-gray-600">
+                  <div className="mt-3 flex items-center space-x-4 text-sm text-muted-foreground">
                     <span className="flex items-center">
                       <Clock className="h-4 w-4 mr-1" />
                       Send between 9 AM - 8 PM

@@ -44,7 +44,7 @@ export default function AdminImports() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "QUEUED":
-        return <Badge variant="outline" className="text-slate-500 border-slate-200">Queued</Badge>;
+        return <Badge variant="outline" className="text-muted-foreground border-border">Queued</Badge>;
       case "RUNNING":
         return <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50">Running</Badge>;
       case "SUCCESS":
@@ -52,7 +52,7 @@ export default function AdminImports() {
       case "ERROR":
         return <Badge variant="outline" className="text-red-600 border-red-200 bg-red-50">Error</Badge>;
       default:
-        return <Badge variant="outline" className="text-slate-400">Unknown</Badge>;
+        return <Badge variant="outline" className="text-muted-foreground/60">Unknown</Badge>;
     }
   };
 
@@ -68,10 +68,10 @@ export default function AdminImports() {
 
   return (
     <AdminLayout>
-      <div className="sticky top-0 z-40 bg-white border-b border-slate-100">
+      <div className="sticky top-0 z-40 bg-background border-b border-border">
         <div className="px-6 lg:px-8 py-5">
-          <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight">Imports & Sync</h2>
-          <p className="text-[13px] text-slate-400 mt-0.5">Data import job history</p>
+          <h2 className="text-[17px] font-semibold text-foreground tracking-tight">Imports & Sync</h2>
+          <p className="text-[13px] text-muted-foreground/60 mt-0.5">Data import job history</p>
         </div>
       </div>
 
@@ -85,47 +85,47 @@ export default function AdminImports() {
         ) : error ? (
           <div className="py-16 text-center">
             <AlertCircle className="w-10 h-10 text-slate-300 mx-auto mb-4" />
-            <p className="text-[15px] font-medium text-slate-900 mb-1">Failed to load imports</p>
-            <p className="text-[13px] text-slate-400">Please try again later</p>
+            <p className="text-[15px] font-medium text-foreground mb-1">Failed to load imports</p>
+            <p className="text-[13px] text-muted-foreground/60">Please try again later</p>
           </div>
         ) : !jobs || jobs.length === 0 ? (
           <div className="py-16 text-center">
             <FileDown className="w-10 h-10 text-slate-300 mx-auto mb-4" />
-            <p className="text-[15px] font-medium text-slate-900 mb-1">No import jobs yet</p>
-            <p className="text-[13px] text-slate-400">Import jobs will appear here when SMEs connect their data</p>
+            <p className="text-[15px] font-medium text-foreground mb-1">No import jobs yet</p>
+            <p className="text-[13px] text-muted-foreground/60">Import jobs will appear here when SMEs connect their data</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-slate-100">
-                  <th className="text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider py-3 pr-4">SME</th>
-                  <th className="text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider py-3 px-4">Type</th>
-                  <th className="text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider py-3 px-4">Status</th>
-                  <th className="text-right text-[11px] font-medium text-slate-400 uppercase tracking-wider py-3 px-4">Records</th>
-                  <th className="text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider py-3 px-4">Started</th>
-                  <th className="text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider py-3 px-4">Finished</th>
-                  <th className="text-right text-[11px] font-medium text-slate-400 uppercase tracking-wider py-3 pl-4">Actions</th>
+                <tr className="border-b border-border">
+                  <th className="text-left text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider py-3 pr-4">SME</th>
+                  <th className="text-left text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider py-3 px-4">Type</th>
+                  <th className="text-left text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider py-3 px-4">Status</th>
+                  <th className="text-right text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider py-3 px-4">Records</th>
+                  <th className="text-left text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider py-3 px-4">Started</th>
+                  <th className="text-left text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider py-3 px-4">Finished</th>
+                  <th className="text-right text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider py-3 pl-4">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {jobs.map((job) => (
-                  <tr key={job.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                  <tr key={job.id} className="border-b border-slate-50 hover:bg-muted/50 transition-colors">
                     <td className="py-3 pr-4">
-                      <span className="text-[14px] font-medium text-slate-900">{job.smeName}</span>
-                      <span className="text-[12px] text-slate-400 ml-2">{job.partnerName}</span>
+                      <span className="text-[14px] font-medium text-foreground">{job.smeName}</span>
+                      <span className="text-[12px] text-muted-foreground/60 ml-2">{job.partnerName}</span>
                     </td>
-                    <td className="py-3 px-4 text-[13px] text-slate-600">{job.type}</td>
+                    <td className="py-3 px-4 text-[13px] text-muted-foreground">{job.type}</td>
                     <td className="py-3 px-4">{getStatusBadge(job.status)}</td>
-                    <td className="py-3 px-4 text-right text-[13px] text-slate-600 tabular-nums">
+                    <td className="py-3 px-4 text-right text-[13px] text-muted-foreground tabular-nums">
                       {job.counts ? (
                         <span>
                           {job.counts.inserted + job.counts.updated} / {job.counts.failed} failed
                         </span>
                       ) : "—"}
                     </td>
-                    <td className="py-3 px-4 text-[13px] text-slate-400">{formatDateTime(job.startedAt)}</td>
-                    <td className="py-3 px-4 text-[13px] text-slate-400">{formatDateTime(job.finishedAt)}</td>
+                    <td className="py-3 px-4 text-[13px] text-muted-foreground/60">{formatDateTime(job.startedAt)}</td>
+                    <td className="py-3 px-4 text-[13px] text-muted-foreground/60">{formatDateTime(job.finishedAt)}</td>
                     <td className="py-3 pl-4 text-right">
                       <Button
                         size="sm"

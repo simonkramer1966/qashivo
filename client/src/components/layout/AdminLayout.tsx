@@ -50,12 +50,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   });
 
   return (
-    <div className="flex h-screen bg-white">
-      <aside className="w-56 border-r border-slate-100 flex flex-col">
-        <div className="p-4 border-b border-slate-100">
+    <div className="flex h-screen bg-background">
+      <aside className="w-56 border-r border-border flex flex-col">
+        <div className="p-4 border-b border-border">
           <div className="flex items-center gap-2">
             <img src={nexusLogo} alt="Qashivo" className="w-7 h-7 object-contain" />
-            <span className="text-[17px] font-semibold text-slate-900 tracking-tight">Qashivo Admin</span>
+            <span className="text-[17px] font-semibold text-foreground tracking-tight">Qashivo Admin</span>
           </div>
         </div>
         
@@ -68,8 +68,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   className={cn(
                     "flex items-center gap-2 px-3 py-2 rounded text-[13px] font-medium transition-colors cursor-pointer",
                     isActive
-                      ? "bg-slate-100 text-slate-900"
-                      : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                      ? "bg-muted text-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   )}
                 >
                   <item.icon className="w-4 h-4" />
@@ -80,9 +80,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           })}
         </nav>
         
-        <div className="p-4 border-t border-slate-100 space-y-3">
+        <div className="p-4 border-t border-border space-y-3">
           {authStatus?.user && (
-            <p className="text-[11px] text-slate-500 truncate">
+            <p className="text-[11px] text-muted-foreground truncate">
               {authStatus.user.email}
             </p>
           )}
@@ -91,12 +91,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             size="sm"
             onClick={() => logoutMutation.mutate()}
             disabled={logoutMutation.isPending}
-            className="w-full justify-start text-[12px] text-slate-500 hover:text-slate-700 h-8"
+            className="w-full justify-start text-[12px] text-muted-foreground hover:text-foreground h-8"
           >
             <LogOut className="w-3.5 h-3.5 mr-2" />
             Sign out
           </Button>
-          <p className="text-[11px] text-slate-400">Qashivo Internal</p>
+          <p className="text-[11px] text-muted-foreground/60">Qashivo Internal</p>
         </div>
       </aside>
       

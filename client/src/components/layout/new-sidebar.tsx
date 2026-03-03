@@ -43,7 +43,7 @@ function SimpleAvatar({ src, fallback, className, "data-testid": dataTestId }: {
       {showImg ? (
         <img src={src} alt="" className="aspect-square h-full w-full object-cover" onError={() => setImgError(true)} />
       ) : (
-        <span className="flex h-full w-full items-center justify-center rounded-full bg-gray-100 text-gray-600 text-xs font-medium">
+        <span className="flex h-full w-full items-center justify-center rounded-full bg-muted text-muted-foreground text-xs font-medium">
           {fallback}
         </span>
       )}
@@ -122,7 +122,7 @@ function SimpleDropdown({
         <div
           ref={contentRef}
           className={cn(
-            "fixed z-50 min-w-[8rem] rounded-md border bg-white p-1 shadow-md",
+            "fixed z-50 min-w-[8rem] rounded-md border bg-background p-1 shadow-md",
             className
           )}
           style={{
@@ -160,7 +160,7 @@ function SimpleDropdownItem({
   return (
     <button
       className={cn(
-        "relative flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-gray-50 focus:bg-gray-50",
+        "relative flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-muted focus:bg-muted",
         className
       )}
       onClick={() => {
@@ -175,7 +175,7 @@ function SimpleDropdownItem({
 }
 
 function SimpleDropdownSeparator() {
-  return <div className="-mx-1 my-1 h-px bg-gray-100" />;
+  return <div className="-mx-1 my-1 h-px bg-border" />;
 }
 import {
   Tooltip,
@@ -289,7 +289,7 @@ function NavSection({
   return (
     <div className="mb-6">
       {!isCollapsed && (
-        <p className="text-[11px] uppercase tracking-wider text-gray-400 font-medium mb-2 px-3">
+        <p className="text-[11px] uppercase tracking-wider text-muted-foreground/60 font-medium mb-2 px-3">
           {label}
         </p>
       )}
@@ -329,8 +329,8 @@ function NavItem({
           "w-full flex items-center text-[14px] transition-colors duration-150 relative",
           isCollapsed ? "justify-center px-2 py-2" : "px-3 py-2",
           isActive
-            ? "text-gray-900 font-medium"
-            : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+            ? "text-foreground font-medium"
+            : "text-muted-foreground hover:text-foreground hover:bg-muted"
         )}
         data-testid={`nav-${name.toLowerCase().replace(/\s+/g, '-')}`}
       >
@@ -339,7 +339,7 @@ function NavItem({
           <span className="absolute left-0 top-1 bottom-1 w-0.5 bg-[#17B6C3] rounded-full" />
         )}
         
-        {Icon && <Icon className={cn("w-4 h-4 flex-shrink-0", isCollapsed ? "" : "mr-3", isActive ? "text-[#17B6C3]" : "text-gray-400")} />}
+        {Icon && <Icon className={cn("w-4 h-4 flex-shrink-0", isCollapsed ? "" : "mr-3", isActive ? "text-[#17B6C3]" : "text-muted-foreground/60")} />}
         {!isCollapsed && <span>{name}</span>}
       </button>
     </li>
@@ -574,7 +574,7 @@ export default function NewSidebar() {
   return (
     <>
       <aside className={cn(
-        "hidden lg:flex bg-white border-r border-gray-100 flex-col h-full transition-all duration-300",
+        "hidden lg:flex bg-background border-r border-border flex-col h-full transition-all duration-300",
         isCollapsed ? "w-16" : "w-56"
       )}>
         {/* Header - Simplified */}
@@ -593,13 +593,13 @@ export default function NewSidebar() {
           >
             <div className="w-8 h-8 flex items-center justify-center">
               {isFullscreen ? (
-                <Minimize2 className="w-5 h-5 text-gray-600" />
+                <Minimize2 className="w-5 h-5 text-muted-foreground" />
               ) : (
                 <img src={nexusLogo} alt="Qashivo" className="w-full h-full object-contain" />
               )}
             </div>
             {!isCollapsed && (
-              <span className="text-gray-900 tracking-tight text-[24px] font-bold">
+              <span className="text-foreground tracking-tight text-[24px] font-bold">
                 {isFullscreen ? "Exit" : "Qashivo"}
               </span>
             )}
@@ -608,7 +608,7 @@ export default function NewSidebar() {
             variant="ghost"
             size="sm"
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="h-7 w-7 p-0 text-gray-400 hover:text-gray-600 hover:bg-gray-50"
+            className="h-7 w-7 p-0 text-muted-foreground/60 hover:text-muted-foreground hover:bg-muted"
             data-testid="button-toggle-sidebar"
           >
             <Menu className="h-4 w-4" />
@@ -621,10 +621,10 @@ export default function NewSidebar() {
             <SimpleDropdown
               align="start"
               side="bottom"
-              className="w-56 border-gray-100"
+              className="w-56 border-border"
               trigger={
                 <button
-                  className="w-full flex items-center justify-between px-3 py-2 text-left text-[13px] text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                  className="w-full flex items-center justify-between px-3 py-2 text-left text-[13px] text-muted-foreground hover:bg-muted rounded-lg transition-colors"
                   disabled={switchTenantMutation.isPending}
                   data-testid="button-organization-dropdown"
                 >
@@ -635,9 +635,9 @@ export default function NewSidebar() {
                     }
                   </span>
                   {switchTenantMutation.isPending ? (
-                    <RefreshCw className="h-3.5 w-3.5 text-gray-400 animate-spin flex-shrink-0" />
+                    <RefreshCw className="h-3.5 w-3.5 text-muted-foreground/60 animate-spin flex-shrink-0" />
                   ) : (
-                    <ChevronDown className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground/60 flex-shrink-0" />
                   )}
                 </button>
               }
@@ -646,19 +646,19 @@ export default function NewSidebar() {
                 <>
                   <div className="px-2 py-1.5 text-[#17B6C3] text-sm font-medium">Change organisation</div>
                   <div className="relative p-2">
-                    <Search className="absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                    <Search className="absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60" />
                     <Input
                       placeholder="Search organisations"
                       value={orgSearchQuery}
                       onChange={(e) => { e.stopPropagation(); setOrgSearchQuery(e.target.value); }}
                       onClick={(e) => e.stopPropagation()}
-                      className="pl-10 pr-10 h-8 text-sm bg-white border-gray-200 rounded-lg focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                      className="pl-10 pr-10 h-8 text-sm bg-background border-border rounded-lg focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                       data-testid="input-organization-search"
                     />
                     {orgSearchQuery && (
                       <button
                         onClick={(e) => { e.stopPropagation(); setOrgSearchQuery(""); }}
-                        className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        className="absolute right-5 top-1/2 -translate-y-1/2 text-muted-foreground/60 hover:text-muted-foreground"
                         data-testid="button-clear-search"
                       >
                         <X className="h-4 w-4" />

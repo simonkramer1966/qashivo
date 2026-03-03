@@ -72,7 +72,7 @@ export default function AdminOutcomes() {
         <main className="flex-1 overflow-y-auto">
           <div className="max-w-7xl mx-auto p-6 space-y-6">
             {/* Page Header with Filters */}
-            <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+            <Card className="bg-background/80 backdrop-blur-sm border-white/50 shadow-lg">
               <CardHeader>
                 <CardTitle className="text-xl flex items-center gap-2">
                   <Filter className="h-5 w-5 text-[#17B6C3]" />
@@ -83,7 +83,7 @@ export default function AdminOutcomes() {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   {/* Search */}
                   <div className="relative">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground/60" />
                     <Input
                       placeholder="Search contact..."
                       value={searchQuery}
@@ -139,25 +139,25 @@ export default function AdminOutcomes() {
 
             {/* Summary Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl">
+              <Card className="bg-background/70 backdrop-blur-md border-0 shadow-xl">
                 <CardContent className="pt-6">
-                  <p className="text-sm text-slate-600">Total Outcomes</p>
-                  <p className="text-3xl font-bold text-slate-900" data-testid="text-total-outcomes">
+                  <p className="text-sm text-muted-foreground">Total Outcomes</p>
+                  <p className="text-3xl font-bold text-foreground" data-testid="text-total-outcomes">
                     {totalOutcomes}
                   </p>
                 </CardContent>
               </Card>
-              <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl">
+              <Card className="bg-background/70 backdrop-blur-md border-0 shadow-xl">
                 <CardContent className="pt-6">
-                  <p className="text-sm text-slate-600">Success Rate</p>
+                  <p className="text-sm text-muted-foreground">Success Rate</p>
                   <p className="text-3xl font-bold text-green-600" data-testid="text-success-rate">
                     {successRate.toFixed(1)}%
                   </p>
                 </CardContent>
               </Card>
-              <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl">
+              <Card className="bg-background/70 backdrop-blur-md border-0 shadow-xl">
                 <CardContent className="pt-6">
-                  <p className="text-sm text-slate-600">Response Rate</p>
+                  <p className="text-sm text-muted-foreground">Response Rate</p>
                   <p className="text-3xl font-bold text-[#17B6C3]" data-testid="text-response-rate">
                     {successRate.toFixed(1)}%
                   </p>
@@ -166,45 +166,45 @@ export default function AdminOutcomes() {
             </div>
 
             {/* Outcomes Table */}
-            <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+            <Card className="bg-background/80 backdrop-blur-sm border-white/50 shadow-lg">
               <CardHeader>
                 <CardTitle className="text-xl">Recent Contact Outcomes</CardTitle>
               </CardHeader>
               <CardContent>
                 {isLoading ? (
-                  <p className="text-center text-slate-600 py-8">Loading outcomes...</p>
+                  <p className="text-center text-muted-foreground py-8">Loading outcomes...</p>
                 ) : filteredOutcomes.length === 0 ? (
                   <div className="text-center py-12">
                     <Clock className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-                    <p className="text-slate-600">No outcomes recorded yet</p>
-                    <p className="text-sm text-slate-400 mt-2">
+                    <p className="text-muted-foreground">No outcomes recorded yet</p>
+                    <p className="text-sm text-muted-foreground/60 mt-2">
                       Outcomes will appear as webhooks are received from communication providers
                     </p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full">
-                      <thead className="bg-slate-50 border-b border-slate-200">
+                      <thead className="bg-muted border-b border-border">
                         <tr>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Timestamp</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Contact</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Channel</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Outcome</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Variant</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Action ID</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Timestamp</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Contact</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Channel</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Outcome</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Variant</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Action ID</th>
                         </tr>
                       </thead>
                       <tbody>
                         {filteredOutcomes.slice(0, 50).map((outcome: any) => (
                           <tr 
                             key={outcome.id} 
-                            className="border-b border-slate-100 hover:bg-slate-50"
+                            className="border-b border-border hover:bg-muted"
                             data-testid={`row-outcome-${outcome.id}`}
                           >
-                            <td className="px-4 py-3 text-sm text-slate-700">
+                            <td className="px-4 py-3 text-sm text-foreground">
                               {new Date(outcome.eventTimestamp).toLocaleString()}
                             </td>
-                            <td className="px-4 py-3 text-sm text-slate-900 font-medium">
+                            <td className="px-4 py-3 text-sm text-foreground font-medium">
                               {outcome.contactName || outcome.contactId}
                             </td>
                             <td className="px-4 py-3">
@@ -220,7 +220,7 @@ export default function AdminOutcomes() {
                                 </Badge>
                               )}
                             </td>
-                            <td className="px-4 py-3 text-xs text-slate-500 font-mono">
+                            <td className="px-4 py-3 text-xs text-muted-foreground font-mono">
                               {outcome.actionId?.slice(0, 8)}...
                             </td>
                           </tr>
@@ -251,7 +251,7 @@ function getChannelBadge(channel: string) {
     whatsapp: { icon: MessageSquare, className: "bg-emerald-100 text-emerald-800" },
   };
 
-  const { icon: Icon, className } = config[channel] || { icon: MessageSquare, className: "bg-gray-100 text-gray-800" };
+  const { icon: Icon, className } = config[channel] || { icon: MessageSquare, className: "bg-muted text-foreground" };
 
   return (
     <Badge className={`${className} flex items-center gap-1 text-xs w-fit`}>
@@ -284,7 +284,7 @@ function getOutcomeBadge(outcome: string) {
   }
 
   return (
-    <Badge className="bg-slate-100 text-slate-800 text-xs">
+    <Badge className="bg-muted text-foreground text-xs">
       {outcome}
     </Badge>
   );

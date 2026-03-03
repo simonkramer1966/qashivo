@@ -116,14 +116,14 @@ export default function Account() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 pb-24 lg:pb-0">
-      <div className="lg:hidden sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-gray-200/50 px-4 py-4">
-        <h1 className="text-2xl font-bold text-gray-900">Account</h1>
+    <div className="min-h-screen bg-background pb-24 lg:pb-0">
+      <div className="lg:hidden sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border/50 px-4 py-4">
+        <h1 className="text-2xl font-bold text-foreground">Account</h1>
       </div>
 
       <div className="p-4 space-y-4">
         {/* User Profile Card */}
-        <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+        <Card className="bg-background/80 backdrop-blur-sm border-border/50 shadow-lg">
           <CardHeader>
             <CardTitle className="text-xl font-bold flex items-center">
               <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
@@ -138,12 +138,12 @@ export default function Account() {
                 <User className="h-8 w-8 text-[#17B6C3]" />
               </div>
               <div>
-                <p className="font-semibold text-lg">
+                <p className="font-semibold text-lg text-foreground">
                   {(user as any)?.firstName && (user as any)?.lastName 
                     ? `${(user as any).firstName} ${(user as any).lastName}`
                     : (user as any)?.email?.split('@')[0] || 'User'}
                 </p>
-                <p className="text-sm text-gray-600 flex items-center">
+                <p className="text-sm text-muted-foreground flex items-center">
                   <Mail className="h-3 w-3 mr-1" />
                   {(user as any)?.email}
                 </p>
@@ -151,17 +151,17 @@ export default function Account() {
             </div>
 
             {(user as any)?.role && (
-              <div className="flex items-center space-x-2 pt-2 border-t border-gray-200">
-                <Shield className="h-4 w-4 text-gray-500" />
-                <span className="text-sm text-gray-600">Role:</span>
-                <span className="text-sm font-medium capitalize">{(user as any).role}</span>
+              <div className="flex items-center space-x-2 pt-2 border-t border-border">
+                <Shield className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Role:</span>
+                <span className="text-sm font-medium capitalize text-foreground">{(user as any).role}</span>
               </div>
             )}
           </CardContent>
         </Card>
 
         {/* Integration Card */}
-        <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+        <Card className="bg-background/80 backdrop-blur-sm border-border/50 shadow-lg">
           <CardHeader>
             <CardTitle className="text-xl font-bold flex items-center">
               <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
@@ -174,7 +174,7 @@ export default function Account() {
             {connectedIntegration ? (
               <>
                 {/* Connected Status */}
-                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
+                <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-900">
                   <div className="flex items-center space-x-2">
                     {selectedIntegrationData && (
                       <selectedIntegrationData.icon 
@@ -182,13 +182,13 @@ export default function Account() {
                         style={{ color: selectedIntegrationData.color }}
                       />
                     )}
-                    <span className="font-medium text-sm">
+                    <span className="font-medium text-sm text-foreground">
                       {integrationOptions.find(opt => opt.value === connectedIntegration)?.label}
                     </span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <div className="h-2 w-2 bg-green-500 rounded-full" />
-                    <span className="text-xs text-green-600 font-medium">Connected</span>
+                    <span className="text-xs text-green-600 dark:text-green-400 font-medium">Connected</span>
                   </div>
                 </div>
                 
@@ -197,7 +197,7 @@ export default function Account() {
                   onClick={handleDisconnect}
                   disabled={isDisconnecting}
                   variant="outline"
-                  className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
+                  className="w-full border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-700 dark:hover:text-red-300 hover:border-red-300 dark:hover:border-red-800"
                   data-testid="button-disconnect-integration"
                 >
                   {isDisconnecting ? (
@@ -217,9 +217,9 @@ export default function Account() {
               <>
                 {/* Integration Selector */}
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Select Integration</label>
+                  <label className="text-sm font-medium text-foreground">Select Integration</label>
                   <Select value={selectedIntegration} onValueChange={setSelectedIntegration}>
-                    <SelectTrigger className="bg-white/70 border-gray-200/30" data-testid="select-integration">
+                    <SelectTrigger className="bg-background/70 border-border/30" data-testid="select-integration">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -263,12 +263,12 @@ export default function Account() {
         </Card>
 
         {/* Logout Card */}
-        <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+        <Card className="bg-background/80 backdrop-blur-sm border-border/50 shadow-lg">
           <CardContent className="pt-6">
             <Button
               onClick={handleLogout}
               variant="outline"
-              className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-300 py-6"
+              className="w-full border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-700 dark:hover:text-red-300 hover:border-red-300 dark:hover:border-red-800 py-6"
               data-testid="button-logout"
             >
               <LogOut className="mr-2 h-5 w-5" />

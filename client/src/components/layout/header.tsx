@@ -203,7 +203,7 @@ export default function Header({ title, subtitle, systemMessage, action, noBorde
   const showConnectionBar = xeroHealth?.connectionStatus && xeroHealth.connectionStatus !== 'not_configured';
 
   return (
-    <header className="sticky top-0 z-40 bg-white border-b border-slate-100 [scrollbar-gutter:stable]">
+    <header className="sticky top-0 z-40 bg-background border-b border-border [scrollbar-gutter:stable]">
       <div className="px-6 lg:px-8 py-5">
 
       {/* Mobile View - Logo, Name, and Page Title */}
@@ -213,7 +213,7 @@ export default function Header({ title, subtitle, systemMessage, action, noBorde
             <div className="w-8 h-8 flex items-center justify-center">
               <img src={nexusLogo} alt="Qashivo" className="w-full h-full object-contain" />
             </div>
-            <h1 className="text-[22px] font-semibold text-gray-900">
+            <h1 className="text-[22px] font-semibold text-foreground">
               Qashivo
             </h1>
           </div>
@@ -274,7 +274,7 @@ export default function Header({ title, subtitle, systemMessage, action, noBorde
         </div>
         {tenant?.name && (
           <div className="mb-3">
-            <p className="text-sm text-slate-600" data-testid="text-tenant-name">
+            <p className="text-sm text-muted-foreground" data-testid="text-tenant-name">
               {tenant.name}
             </p>
           </div>
@@ -289,16 +289,16 @@ export default function Header({ title, subtitle, systemMessage, action, noBorde
       {/* Desktop View - Page Title and Actions */}
       <div className="hidden lg:flex items-center justify-between">
         <div>
-          <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight" data-testid="text-page-title">
+          <h2 className="text-[17px] font-semibold text-foreground tracking-tight" data-testid="text-page-title">
             {title}
           </h2>
           {subtitle && (
-            <p className="text-[13px] text-slate-400 mt-0.5" data-testid="text-page-subtitle">
+            <p className="text-[13px] text-muted-foreground/60 mt-0.5" data-testid="text-page-subtitle">
               {subtitle}
             </p>
           )}
           {systemMessage && (
-            <p className="text-[12px] text-slate-400 mt-1" data-testid="text-system-message">
+            <p className="text-[12px] text-muted-foreground/60 mt-1" data-testid="text-system-message">
               {systemMessage}
             </p>
           )}

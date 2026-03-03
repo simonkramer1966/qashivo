@@ -77,10 +77,10 @@ export default function AdminProvisioning() {
 
   return (
     <AdminLayout>
-      <div className="sticky top-0 z-40 bg-white border-b border-slate-100">
+      <div className="sticky top-0 z-40 bg-background border-b border-border">
         <div className="px-6 lg:px-8 py-5">
-          <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight">Provisioning</h2>
-          <p className="text-[13px] text-slate-400 mt-0.5">SME onboarding status and blockers</p>
+          <h2 className="text-[17px] font-semibold text-foreground tracking-tight">Provisioning</h2>
+          <p className="text-[13px] text-muted-foreground/60 mt-0.5">SME onboarding status and blockers</p>
         </div>
       </div>
 
@@ -94,27 +94,27 @@ export default function AdminProvisioning() {
         ) : error ? (
           <div className="py-16 text-center">
             <AlertCircle className="w-10 h-10 text-slate-300 mx-auto mb-4" />
-            <p className="text-[15px] font-medium text-slate-900 mb-1">Failed to load provisioning data</p>
-            <p className="text-[13px] text-slate-400">Please try again later</p>
+            <p className="text-[15px] font-medium text-foreground mb-1">Failed to load provisioning data</p>
+            <p className="text-[13px] text-muted-foreground/60">Please try again later</p>
           </div>
         ) : !items || items.length === 0 ? (
           <div className="py-16 text-center">
             <ListChecks className="w-10 h-10 text-slate-300 mx-auto mb-4" />
-            <p className="text-[15px] font-medium text-slate-900 mb-1">No SMEs to provision</p>
-            <p className="text-[13px] text-slate-400">Create SMEs from the SMEs page to see them here</p>
+            <p className="text-[15px] font-medium text-foreground mb-1">No SMEs to provision</p>
+            <p className="text-[13px] text-muted-foreground/60">Create SMEs from the SMEs page to see them here</p>
           </div>
         ) : (
           <div className="space-y-3">
             {items.map((item) => (
               <div
                 key={item.id}
-                className="border border-slate-100 rounded-lg p-4 hover:border-slate-200 transition-colors"
+                className="border border-border rounded-lg p-4 hover:border-border transition-colors"
               >
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[14px] font-medium text-slate-900">{item.name}</span>
-                      <span className="text-[12px] text-slate-400">{item.partnerName}</span>
+                      <span className="text-[14px] font-medium text-foreground">{item.name}</span>
+                      <span className="text-[12px] text-muted-foreground/60">{item.partnerName}</span>
                     </div>
                     {item.blockers.length > 0 && (
                       <p className="text-[12px] text-amber-600 mt-1">
@@ -169,8 +169,8 @@ export default function AdminProvisioning() {
                         )}
                         <span className={`text-[11px] ${
                           item.stages[stage.key as keyof typeof item.stages] 
-                            ? "text-slate-700" 
-                            : "text-slate-400"
+                            ? "text-foreground" 
+                            : "text-muted-foreground/60"
                         }`}>
                           {stage.label}
                         </span>

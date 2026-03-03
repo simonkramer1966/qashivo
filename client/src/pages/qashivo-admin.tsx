@@ -124,8 +124,8 @@ export default function QashivoAdminDashboard() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 flex items-center justify-center">
         <div className="text-center">
-          <Shield className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600">Access restricted to platform administrators</p>
+          <Shield className="w-12 h-12 text-muted-foreground/60 mx-auto mb-4" />
+          <p className="text-muted-foreground">Access restricted to platform administrators</p>
         </div>
       </div>
     );
@@ -167,10 +167,10 @@ export default function QashivoAdminDashboard() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900" data-testid="heading-platform-admin">
+            <h1 className="text-2xl font-bold text-foreground" data-testid="heading-platform-admin">
               Qashivo Platform Administration
             </h1>
-            <p className="text-sm text-gray-600 mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               Internal platform management and oversight
             </p>
           </div>
@@ -184,7 +184,7 @@ export default function QashivoAdminDashboard() {
 
         {/* Stats Overview Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg" data-testid="card-stat-users">
+          <Card className="bg-background/80 backdrop-blur-sm border-white/50 shadow-lg" data-testid="card-stat-users">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Users</CardTitle>
               <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
@@ -201,7 +201,7 @@ export default function QashivoAdminDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg" data-testid="card-stat-tenants">
+          <Card className="bg-background/80 backdrop-blur-sm border-white/50 shadow-lg" data-testid="card-stat-tenants">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Tenants</CardTitle>
               <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
@@ -218,7 +218,7 @@ export default function QashivoAdminDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg" data-testid="card-stat-partners">
+          <Card className="bg-background/80 backdrop-blur-sm border-white/50 shadow-lg" data-testid="card-stat-partners">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Partners</CardTitle>
               <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
@@ -235,7 +235,7 @@ export default function QashivoAdminDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg" data-testid="card-stat-relationships">
+          <Card className="bg-background/80 backdrop-blur-sm border-white/50 shadow-lg" data-testid="card-stat-relationships">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Partner Relationships</CardTitle>
               <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
@@ -275,7 +275,7 @@ export default function QashivoAdminDashboard() {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4" data-testid="content-overview">
-            <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+            <Card className="bg-background/80 backdrop-blur-sm border-white/50 shadow-lg">
               <CardHeader>
                 <CardTitle className="text-xl font-bold">Platform Overview</CardTitle>
                 <CardDescription>
@@ -285,7 +285,7 @@ export default function QashivoAdminDashboard() {
               <CardContent className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <p className="text-sm font-medium text-gray-600">User Distribution</p>
+                    <p className="text-sm font-medium text-muted-foreground">User Distribution</p>
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm">
                         <span>Partners:</span>
@@ -307,7 +307,7 @@ export default function QashivoAdminDashboard() {
                   </div>
                   
                   <div className="space-y-2">
-                    <p className="text-sm font-medium text-gray-600">Partner Status</p>
+                    <p className="text-sm font-medium text-muted-foreground">Partner Status</p>
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm">
                         <span>Active:</span>
@@ -325,7 +325,7 @@ export default function QashivoAdminDashboard() {
           </TabsContent>
 
           <TabsContent value="users" className="space-y-4" data-testid="content-users">
-            <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+            <Card className="bg-background/80 backdrop-blur-sm border-white/50 shadow-lg">
               <CardHeader>
                 <CardTitle className="text-xl font-bold">All Platform Users</CardTitle>
                 <CardDescription>
@@ -334,23 +334,23 @@ export default function QashivoAdminDashboard() {
               </CardHeader>
               <CardContent>
                 {usersLoading ? (
-                  <div className="text-center py-8 text-gray-500">Loading users...</div>
+                  <div className="text-center py-8 text-muted-foreground">Loading users...</div>
                 ) : users.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">No users found</div>
+                  <div className="text-center py-8 text-muted-foreground">No users found</div>
                 ) : (
                   <div className="space-y-1">
                     {users.map((user, idx) => (
                       <div
                         key={user.id}
                         className={cn(
-                          "flex items-center justify-between py-3 px-4 hover:bg-gray-50/50 rounded-lg transition-colors",
-                          idx !== users.length - 1 && "border-b border-gray-100"
+                          "flex items-center justify-between py-3 px-4 hover:bg-muted/50 rounded-lg transition-colors",
+                          idx !== users.length - 1 && "border-b border-border"
                         )}
                         data-testid={`row-user-${user.id}`}
                       >
                         <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <div className="p-2 bg-gray-100 rounded-lg shrink-0">
-                            <UserCircle className="w-5 h-5 text-gray-600" />
+                          <div className="p-2 bg-muted rounded-lg shrink-0">
+                            <UserCircle className="w-5 h-5 text-muted-foreground" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
@@ -376,10 +376,10 @@ export default function QashivoAdminDashboard() {
                           </div>
                         </div>
                         <div className="text-right shrink-0 ml-4">
-                          <p className="text-sm font-medium text-gray-700">
+                          <p className="text-sm font-medium text-foreground">
                             {user.tenant?.name || user.partner?.name || 'No org'}
                           </p>
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-muted-foreground mt-1">
                             {formatDate(user.createdAt)}
                           </p>
                         </div>
@@ -392,7 +392,7 @@ export default function QashivoAdminDashboard() {
           </TabsContent>
 
           <TabsContent value="tenants" className="space-y-4" data-testid="content-tenants">
-            <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+            <Card className="bg-background/80 backdrop-blur-sm border-white/50 shadow-lg">
               <CardHeader>
                 <CardTitle className="text-xl font-bold">All Tenants</CardTitle>
                 <CardDescription>
@@ -401,17 +401,17 @@ export default function QashivoAdminDashboard() {
               </CardHeader>
               <CardContent>
                 {tenantsLoading ? (
-                  <div className="text-center py-8 text-gray-500">Loading tenants...</div>
+                  <div className="text-center py-8 text-muted-foreground">Loading tenants...</div>
                 ) : tenants.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">No tenants found</div>
+                  <div className="text-center py-8 text-muted-foreground">No tenants found</div>
                 ) : (
                   <div className="space-y-1">
                     {tenants.map((tenant, idx) => (
                       <div
                         key={tenant.id}
                         className={cn(
-                          "flex items-center justify-between py-3 px-4 hover:bg-gray-50/50 rounded-lg transition-colors",
-                          idx !== tenants.length - 1 && "border-b border-gray-100"
+                          "flex items-center justify-between py-3 px-4 hover:bg-muted/50 rounded-lg transition-colors",
+                          idx !== tenants.length - 1 && "border-b border-border"
                         )}
                         data-testid={`row-tenant-${tenant.id}`}
                       >
@@ -424,14 +424,14 @@ export default function QashivoAdminDashboard() {
                               {tenant.name}
                             </p>
                             {tenant.settings?.companyName && (
-                              <p className="text-xs text-gray-500 mt-1 truncate">
+                              <p className="text-xs text-muted-foreground mt-1 truncate">
                                 {tenant.settings.companyName}
                               </p>
                             )}
                           </div>
                         </div>
                         <div className="text-right shrink-0 ml-4">
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-muted-foreground">
                             Created {formatDate(tenant.createdAt)}
                           </p>
                         </div>
@@ -444,7 +444,7 @@ export default function QashivoAdminDashboard() {
           </TabsContent>
 
           <TabsContent value="partners" className="space-y-4" data-testid="content-partners">
-            <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+            <Card className="bg-background/80 backdrop-blur-sm border-white/50 shadow-lg">
               <CardHeader>
                 <CardTitle className="text-xl font-bold">All Partners</CardTitle>
                 <CardDescription>
@@ -453,17 +453,17 @@ export default function QashivoAdminDashboard() {
               </CardHeader>
               <CardContent>
                 {partnersLoading ? (
-                  <div className="text-center py-8 text-gray-500">Loading partners...</div>
+                  <div className="text-center py-8 text-muted-foreground">Loading partners...</div>
                 ) : partners.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">No partners found</div>
+                  <div className="text-center py-8 text-muted-foreground">No partners found</div>
                 ) : (
                   <div className="space-y-1">
                     {partners.map((partner, idx) => (
                       <div
                         key={partner.id}
                         className={cn(
-                          "flex items-center justify-between py-3 px-4 hover:bg-gray-50/50 rounded-lg transition-colors",
-                          idx !== partners.length - 1 && "border-b border-gray-100"
+                          "flex items-center justify-between py-3 px-4 hover:bg-muted/50 rounded-lg transition-colors",
+                          idx !== partners.length - 1 && "border-b border-border"
                         )}
                         data-testid={`row-partner-${partner.id}`}
                       >
@@ -481,20 +481,20 @@ export default function QashivoAdminDashboard() {
                                   Active
                                 </Badge>
                               ) : (
-                                <Badge variant="outline" className="text-xs text-gray-500 border-gray-400">
+                                <Badge variant="outline" className="text-xs text-muted-foreground border-gray-400">
                                   Inactive
                                 </Badge>
                               )}
                             </div>
                             {partner.email && (
-                              <p className="text-xs text-gray-500 mt-1 truncate">
+                              <p className="text-xs text-muted-foreground mt-1 truncate">
                                 {partner.email}
                               </p>
                             )}
                           </div>
                         </div>
                         <div className="text-right shrink-0 ml-4">
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-muted-foreground">
                             Created {formatDate(partner.createdAt)}
                           </p>
                         </div>

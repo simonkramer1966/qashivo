@@ -164,7 +164,7 @@ export default function Customers2() {
     const profile = contact.debtorProfile;
     if (!profile || profile.score0To100 === null || profile.score0To100 === undefined) {
       const { label } = getBehaviourLabel(contact.riskBand, contact.riskScore);
-      let dotColor = 'bg-slate-300';
+      let dotColor = 'bg-muted-foreground/30';
       if (label === 'Pays on time') dotColor = 'bg-[#4FAD80]';
       else if (label === 'Pays late but reliable') dotColor = 'bg-[#E8A23B]';
       else if (label === 'Inconsistent') dotColor = 'bg-[#C75C5C]';
@@ -177,35 +177,35 @@ export default function Customers2() {
 
     const score = profile.score0To100;
     const band = profile.scoreBand;
-    let dotColor = 'bg-gray-400';
+    let dotColor = 'bg-muted-foreground/30';
     if (band === 'EXCELLENT' || band === 'GOOD') dotColor = 'bg-[#22c55e]';
     else if (band === 'OK') dotColor = 'bg-[#f59e0b]';
     else if (band === 'RISKY') dotColor = 'bg-[#ef4444]';
-    else if (band === 'UNKNOWN') dotColor = 'bg-gray-400';
+    else if (band === 'UNKNOWN') dotColor = 'bg-muted-foreground/30';
 
     return (
       <div className="flex items-center justify-end gap-1.5">
         <span className={`inline-block w-2 h-2 rounded-full ${dotColor}`} />
         {band === 'UNKNOWN' ? (
-          <span className="text-[11px] text-gray-400">insufficient history</span>
+          <span className="text-[11px] text-muted-foreground/60">insufficient history</span>
         ) : (
-          <span className="text-[12px] text-gray-600 tabular-nums font-medium">{score}</span>
+          <span className="text-[12px] text-muted-foreground tabular-nums font-medium">{score}</span>
         )}
       </div>
     );
   };
 
   return (
-    <div className="flex h-screen bg-white">
+    <div className="flex h-screen bg-background">
       <div className="hidden lg:block">
         <NewSidebar />
       </div>
 
       <main className="flex-1 flex flex-col min-h-0 main-with-bottom-nav">
         {/* Compact Header - v2.0 */}
-        <div className="max-w-7xl mx-auto w-full px-6 py-5 border-b border-gray-100">
-          <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight">Customers</h2>
-          <p className="text-[13px] text-slate-400 mt-0.5">
+        <div className="max-w-7xl mx-auto w-full px-6 py-5 border-b border-border">
+          <h2 className="text-[17px] font-semibold text-foreground tracking-tight">Customers</h2>
+          <p className="text-[13px] text-muted-foreground/60 mt-0.5">
             Qashivo manages collections automatically. Review only when flagged.
           </p>
         </div>
@@ -214,42 +214,42 @@ export default function Customers2() {
           <div className="max-w-7xl mx-auto w-full px-6 flex-1 flex flex-col min-h-0">
             
             {/* Compact Search - v2.0 */}
-            <div className="py-3 border-b border-gray-100">
+            <div className="py-3 border-b border-border">
               <div className="relative max-w-xs">
-                <Search className="absolute left-0 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+                <Search className="absolute left-0 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/60" />
                 <input
                   type="text"
                   placeholder="Find a customer…"
                   value={search}
                   onChange={(e) => handleSearchChange(e.target.value)}
-                  className="w-full pl-5 pr-3 py-1.5 text-sm text-gray-900 placeholder:text-gray-400 bg-transparent border-b border-gray-200 focus:outline-none focus:border-[#17B6C3] transition-colors"
+                  className="w-full pl-5 pr-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground/60 bg-transparent border-b border-border focus:outline-none focus:border-[#17B6C3] transition-colors"
                   data-testid="input-search-customers2"
                 />
               </div>
             </div>
 
             {/* Compact Metrics Row - v2.0: Inline horizontal layout */}
-            <div className="py-4 border-b border-gray-100 flex flex-wrap items-center gap-x-10 gap-y-3">
+            <div className="py-4 border-b border-border flex flex-wrap items-center gap-x-10 gap-y-3">
               {/* Behaviour Profiles - Live data from aggregates */}
               <div className="flex items-center gap-1.5">
                 <span className="inline-block w-2 h-2 rounded-full bg-[#4FAD80]" />
-                <span className="text-sm text-gray-600">On time</span>
-                <span className="text-sm font-semibold text-gray-900 tabular-nums ml-1">{aggregates.onTimePercent ?? 0}%</span>
+                <span className="text-sm text-muted-foreground">On time</span>
+                <span className="text-sm font-semibold text-foreground tabular-nums ml-1">{aggregates.onTimePercent ?? 0}%</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="inline-block w-2 h-2 rounded-full bg-[#E8A23B]" />
-                <span className="text-sm text-gray-600">Late reliable</span>
-                <span className="text-sm font-semibold text-gray-900 tabular-nums ml-1">{aggregates.lateReliablePercent ?? 0}%</span>
+                <span className="text-sm text-muted-foreground">Late reliable</span>
+                <span className="text-sm font-semibold text-foreground tabular-nums ml-1">{aggregates.lateReliablePercent ?? 0}%</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="inline-block w-2 h-2 rounded-full bg-[#C75C5C]" />
-                <span className="text-sm text-gray-600">Inconsistent</span>
-                <span className="text-sm font-semibold text-gray-900 tabular-nums ml-1">{aggregates.inconsistentPercent ?? 0}%</span>
+                <span className="text-sm text-muted-foreground">Inconsistent</span>
+                <span className="text-sm font-semibold text-foreground tabular-nums ml-1">{aggregates.inconsistentPercent ?? 0}%</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="inline-block w-2 h-2 rounded-full bg-slate-300" />
-                <span className="text-sm text-gray-600">Unknown</span>
-                <span className="text-sm font-semibold text-gray-500 tabular-nums ml-1">{aggregates.unknownPercent ?? 0}%</span>
+                <span className="inline-block w-2 h-2 rounded-full bg-muted-foreground/30" />
+                <span className="text-sm text-muted-foreground">Unknown</span>
+                <span className="text-sm font-semibold text-muted-foreground tabular-nums ml-1">{aggregates.unknownPercent ?? 0}%</span>
               </div>
               
               {/* Divider */}
@@ -257,15 +257,15 @@ export default function Customers2() {
               
               {/* Invoice Summary - All/Due/Overdue with £ values */}
               <div className="flex items-center gap-1.5">
-                <span className="text-sm text-gray-500">All</span>
-                <span className="text-sm font-semibold text-gray-900 tabular-nums">{formatCurrency(aggregates.allInvoiceAmount)}</span>
+                <span className="text-sm text-muted-foreground">All</span>
+                <span className="text-sm font-semibold text-foreground tabular-nums">{formatCurrency(aggregates.allInvoiceAmount)}</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="text-sm text-gray-500">Due</span>
-                <span className="text-sm font-semibold text-gray-900 tabular-nums">{formatCurrency(aggregates.dueInvoiceAmount)}</span>
+                <span className="text-sm text-muted-foreground">Due</span>
+                <span className="text-sm font-semibold text-foreground tabular-nums">{formatCurrency(aggregates.dueInvoiceAmount)}</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="text-sm text-gray-500">Overdue</span>
+                <span className="text-sm text-muted-foreground">Overdue</span>
                 <span className="text-sm font-semibold text-[#C75C5C] tabular-nums">{formatCurrency(aggregates.overdueInvoiceAmount)}</span>
               </div>
             </div>
@@ -274,20 +274,20 @@ export default function Customers2() {
             <div className="space-y-0 sm:hidden flex-1 py-2">
               {isLoading ? (
                 [...Array(5)].map((_, i) => (
-                  <div key={i} className="py-2.5 border-b border-gray-100">
-                    <div className="h-10 bg-gray-100 animate-pulse rounded"></div>
+                  <div key={i} className="py-2.5 border-b border-border">
+                    <div className="h-10 bg-muted animate-pulse rounded"></div>
                   </div>
                 ))
               ) : contacts.length === 0 ? (
                 <div className="py-8 text-center">
                   <User className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-                  <p className="text-sm text-gray-500">No customers found</p>
+                  <p className="text-sm text-muted-foreground">No customers found</p>
                 </div>
               ) : (
                 contacts.map((contact, idx) => (
                   <div 
                     key={contact.id} 
-                    className={`py-2.5 cursor-pointer hover:bg-gray-50 transition-colors ${idx !== contacts.length - 1 ? 'border-b border-gray-100' : ''}`}
+                    className={`py-2.5 cursor-pointer hover:bg-muted transition-colors ${idx !== contacts.length - 1 ? 'border-b border-border' : ''}`}
                     onClick={() => {
                       setSelectedContactId(contact.id);
                       setShowPreviewDrawer(true);
@@ -296,10 +296,10 @@ export default function Customers2() {
                   >
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">
+                        <p className="text-sm font-medium text-foreground truncate">
                           {getCustomerCompanyName(contact)}
                         </p>
-                        <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-500">
+                        <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
                           <span className="tabular-nums">{formatCurrency(contact.outstandingAmount)}</span>
                           {contact.overdueAmount > 0 && (
                             <span className="text-[#C75C5C] tabular-nums">{formatCurrency(contact.overdueAmount)} overdue</span>
@@ -318,60 +318,60 @@ export default function Customers2() {
               {isLoading ? (
                 <div>
                   {[...Array(8)].map((_, i) => (
-                    <div key={i} className="py-2 border-b border-gray-100">
-                      <div className="h-4 bg-gray-100 animate-pulse rounded w-3/4"></div>
+                    <div key={i} className="py-2 border-b border-border">
+                      <div className="h-4 bg-muted animate-pulse rounded w-3/4"></div>
                     </div>
                   ))}
                 </div>
               ) : contacts.length === 0 ? (
                 <div className="py-10 text-center">
                   <User className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-                  <p className="text-sm text-gray-500">No customers found</p>
+                  <p className="text-sm text-muted-foreground">No customers found</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     {/* Compact sortable header v2.0 */}
                     <thead>
-                      <tr className="border-b border-gray-200">
+                      <tr className="border-b border-border">
                         <th 
-                          className="text-left py-2 text-[11px] font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-gray-600 transition-colors select-none"
+                          className="text-left py-2 text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider cursor-pointer hover:text-muted-foreground transition-colors select-none"
                           onClick={() => handleSort('customer')}
                         >
                           Customer<SortIndicator columnKey="customer" />
                         </th>
                         <th 
-                          className="text-right py-2 text-[11px] font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-gray-600 transition-colors select-none"
+                          className="text-right py-2 text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider cursor-pointer hover:text-muted-foreground transition-colors select-none"
                           onClick={() => handleSort('outstanding')}
                         >
                           Outstanding<SortIndicator columnKey="outstanding" />
                         </th>
                         <th 
-                          className="text-right py-2 text-[11px] font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-gray-600 transition-colors select-none"
+                          className="text-right py-2 text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider cursor-pointer hover:text-muted-foreground transition-colors select-none"
                           onClick={() => handleSort('overdue')}
                         >
                           Overdue<SortIndicator columnKey="overdue" />
                         </th>
                         <th 
-                          className="text-right py-2 text-[11px] font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-gray-600 transition-colors select-none"
+                          className="text-right py-2 text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider cursor-pointer hover:text-muted-foreground transition-colors select-none"
                           onClick={() => handleSort('adpd')}
                         >
                           ADPD<SortIndicator columnKey="adpd" />
                         </th>
                         <th 
-                          className="text-right py-2 text-[11px] font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-gray-600 transition-colors select-none"
+                          className="text-right py-2 text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider cursor-pointer hover:text-muted-foreground transition-colors select-none"
                           onClick={() => handleSort('lastPaid')}
                         >
                           Last Paid<SortIndicator columnKey="lastPaid" />
                         </th>
-                        <th className="text-right py-2 text-[11px] font-medium text-gray-400 uppercase tracking-wider pr-1">Score</th>
+                        <th className="text-right py-2 text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider pr-1">Score</th>
                       </tr>
                     </thead>
                     <tbody>
                       {contacts.map((contact) => (
                         <tr
                           key={contact.id}
-                          className="border-b border-gray-50 hover:bg-gray-50/50 cursor-pointer transition-colors"
+                          className="border-b border-gray-50 hover:bg-muted/50 cursor-pointer transition-colors"
                           onClick={() => {
                             setSelectedContactId(contact.id);
                             setShowPreviewDrawer(true);
@@ -379,16 +379,16 @@ export default function Customers2() {
                           data-testid={`customer2-item-${contact.id}`}
                         >
                           <td className="py-2">
-                            <p className="text-[13px] font-medium text-gray-900 truncate max-w-[200px]">
+                            <p className="text-[13px] font-medium text-foreground truncate max-w-[200px]">
                               {getCustomerCompanyName(contact)}
                             </p>
                           </td>
 
                           <td className="py-2 text-right">
-                            <span className="text-[13px] text-gray-700 tabular-nums">
+                            <span className="text-[13px] text-foreground tabular-nums">
                               {formatCurrency(contact.outstandingAmount)}
                             </span>
-                            <span className="text-[11px] text-gray-400 ml-0.5">({contact.invoiceCount})</span>
+                            <span className="text-[11px] text-muted-foreground/60 ml-0.5">({contact.invoiceCount})</span>
                           </td>
 
                           <td className="py-2 text-right">
@@ -397,7 +397,7 @@ export default function Customers2() {
                                 <span className="text-[13px] text-[#C75C5C] tabular-nums">
                                   {formatCurrency(contact.overdueAmount)}
                                 </span>
-                                <span className="text-[11px] text-gray-400 ml-0.5">({contact.overdueCount})</span>
+                                <span className="text-[11px] text-muted-foreground/60 ml-0.5">({contact.overdueCount})</span>
                               </>
                             ) : (
                               <span className="text-[13px] text-gray-300">–</span>
@@ -406,7 +406,7 @@ export default function Customers2() {
 
                           <td className="py-2 text-right">
                             {contact.averageDaysPastDue > 0 ? (
-                              <span className="text-[13px] text-gray-600 tabular-nums">
+                              <span className="text-[13px] text-muted-foreground tabular-nums">
                                 {contact.averageDaysPastDue}d
                               </span>
                             ) : (
@@ -415,7 +415,7 @@ export default function Customers2() {
                           </td>
 
                           <td className="py-2 text-right">
-                            <span className="text-[13px] text-gray-500 tabular-nums">
+                            <span className="text-[13px] text-muted-foreground tabular-nums">
                               {formatDateShort(contact.lastPaymentDate)}
                             </span>
                           </td>
@@ -438,8 +438,8 @@ export default function Customers2() {
             </div>
 
             {/* Compact Pagination v2.0 */}
-            <div className="sticky bottom-0 flex items-center justify-end gap-4 py-2.5 border-t border-gray-100 bg-white shrink-0">
-              <span className="text-xs text-gray-400">
+            <div className="sticky bottom-0 flex items-center justify-end gap-4 py-2.5 border-t border-border bg-background shrink-0">
+              <span className="text-xs text-muted-foreground/60">
                 {pagination.total} customer{pagination.total !== 1 ? 's' : ''}
               </span>
               
@@ -449,7 +449,7 @@ export default function Customers2() {
                   setLimit(Number(e.target.value));
                   setPage(1);
                 }}
-                className="text-xs text-gray-600 bg-transparent border-b border-gray-200 px-0.5 py-0.5 focus:outline-none focus:border-[#17B6C3] cursor-pointer"
+                className="text-xs text-muted-foreground bg-transparent border-b border-border px-0.5 py-0.5 focus:outline-none focus:border-[#17B6C3] cursor-pointer"
                 data-testid="select-page-size2"
               >
                 <option value={10}>10</option>
@@ -459,24 +459,24 @@ export default function Customers2() {
               </select>
 
               <div className="flex items-center gap-1.5">
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-muted-foreground/60">
                   {page}/{pagination.totalPages}
                 </span>
                 <button
                   onClick={() => setPage(Math.max(1, page - 1))}
                   disabled={page === 1}
-                  className="p-1 hover:bg-gray-100 rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  className="p-1 hover:bg-muted rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   data-testid="button-previous-page2"
                 >
-                  <ChevronLeft className="h-3.5 w-3.5 text-gray-500" />
+                  <ChevronLeft className="h-3.5 w-3.5 text-muted-foreground" />
                 </button>
                 <button
                   onClick={() => setPage(Math.min(pagination.totalPages, page + 1))}
                   disabled={page === pagination.totalPages}
-                  className="p-1 hover:bg-gray-100 rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  className="p-1 hover:bg-muted rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   data-testid="button-next-page2"
                 >
-                  <ChevronRight className="h-3.5 w-3.5 text-gray-500" />
+                  <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
                 </button>
               </div>
             </div>

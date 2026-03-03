@@ -96,7 +96,7 @@ function getStatusBadge(status: string) {
     case "RUNNING":
       return <span className="inline-block px-1.5 py-0.5 text-[11px] font-medium rounded bg-blue-50 text-blue-700">Running</span>;
     default:
-      return <span className="inline-block px-1.5 py-0.5 text-[11px] font-medium rounded bg-gray-50 text-gray-500">Not Started</span>;
+      return <span className="inline-block px-1.5 py-0.5 text-[11px] font-medium rounded bg-muted text-muted-foreground">Not Started</span>;
   }
 }
 
@@ -177,8 +177,8 @@ function OnboardingSettingsSection() {
     return (
       <div className="py-6">
         <div className="animate-pulse space-y-3">
-          <div className="h-4 bg-gray-100 rounded w-1/3"></div>
-          <div className="h-4 bg-gray-100 rounded w-1/2"></div>
+          <div className="h-4 bg-muted rounded w-1/3"></div>
+          <div className="h-4 bg-muted rounded w-1/2"></div>
         </div>
       </div>
     );
@@ -189,19 +189,19 @@ function OnboardingSettingsSection() {
 
   return (
     <div className="space-y-0">
-      <div className="py-6 border-b border-gray-100">
+      <div className="py-6 border-b border-border">
         <div className="flex items-center mb-1">
           <SettingsIcon className="h-5 w-5 text-[#17B6C3] mr-2" />
-          <h2 className="text-lg font-semibold text-gray-900">Onboarding Status</h2>
+          <h2 className="text-lg font-semibold text-foreground">Onboarding Status</h2>
         </div>
-        <p className="text-sm text-gray-500 mb-4">
+        <p className="text-sm text-muted-foreground mb-4">
           View and manage your onboarding progress
         </p>
 
         <div className="space-y-2 mb-6">
           {(["step1Status", "step2Status", "step3Status", "step4Status", "step5Status", "step6Status"] as const).map((key, idx) => (
             <div key={key} className="flex items-center justify-between py-1.5">
-              <span className="text-[13px] text-gray-700">{idx + 1}. {STEP_LABELS[key]}</span>
+              <span className="text-[13px] text-foreground">{idx + 1}. {STEP_LABELS[key]}</span>
               {getStatusBadge((onboardingStatus?.[key as keyof OnboardingStatus] as string) || "NOT_STARTED")}
             </div>
           ))}
@@ -361,12 +361,12 @@ function PlaybookTabContent() {
 
   return (
     <div className="space-y-0">
-      <div className="py-6 border-b border-gray-100">
+      <div className="py-6 border-b border-border">
         <div className="flex items-center mb-1">
           <BookOpen className="h-5 w-5 text-[#17B6C3] mr-2" />
-          <h2 className="text-lg font-semibold text-gray-900">AI Collections Playbook</h2>
+          <h2 className="text-lg font-semibold text-foreground">AI Collections Playbook</h2>
         </div>
-        <p className="text-sm text-gray-500 mb-6">
+        <p className="text-sm text-muted-foreground mb-6">
           Configure how Qashivo's AI autonomously manages your credit control and collections. 
           The playbook determines who to contact, when, and how - based on best-practice credit control principles.
         </p>
@@ -379,19 +379,19 @@ function PlaybookTabContent() {
         </Alert>
       </div>
 
-      <div className="py-6 border-b border-gray-100">
+      <div className="py-6 border-b border-border">
         <div className="flex items-center mb-1">
           <Volume2 className="h-5 w-5 text-[#17B6C3] mr-2" />
-          <h2 className="text-lg font-semibold text-gray-900">Communication Tone</h2>
+          <h2 className="text-lg font-semibold text-foreground">Communication Tone</h2>
         </div>
-        <p className="text-sm text-gray-500 mb-6">
+        <p className="text-sm text-muted-foreground mb-6">
           Set your preferred communication style. This affects email, SMS, and voice call tone across all stages.
         </p>
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="tenantStyle" className="text-sm">Tenant Communication Style</Label>
             <Select value={tenantStyle} onValueChange={setTenantStyle}>
-              <SelectTrigger className="h-9 rounded-lg bg-white border-gray-200 max-w-md focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]" data-testid="select-tenant-style">
+              <SelectTrigger className="h-9 rounded-lg bg-background border-border max-w-md focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]" data-testid="select-tenant-style">
                 <SelectValue placeholder="Select style" />
               </SelectTrigger>
               <SelectContent>
@@ -400,19 +400,19 @@ function PlaybookTabContent() {
                 <SelectItem value="FIRM">Firm - Direct and assertive while remaining professional</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted-foreground">
               This affects how AI communicates across credit control and recovery stages.
             </p>
           </div>
         </div>
       </div>
 
-      <div className="py-6 border-b border-gray-100">
+      <div className="py-6 border-b border-border">
         <div className="flex items-center mb-1">
           <Gauge className="h-5 w-5 text-[#17B6C3] mr-2" />
-          <h2 className="text-lg font-semibold text-gray-900">High-Value Thresholds</h2>
+          <h2 className="text-lg font-semibold text-foreground">High-Value Thresholds</h2>
         </div>
-        <p className="text-sm text-gray-500 mb-6">
+        <p className="text-sm text-muted-foreground mb-6">
           Define what constitutes a high-value customer for escalation and VIP handling.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -423,10 +423,10 @@ function PlaybookTabContent() {
               type="number"
               value={highValueThreshold}
               onChange={(e) => setHighValueThreshold(e.target.value)}
-              className="h-9 rounded-lg bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+              className="h-9 rounded-lg bg-background border-border focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
               data-testid="input-high-value-threshold"
             />
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted-foreground">
               Customers with total overdue above this are flagged as HIGH_VALUE
             </p>
           </div>
@@ -437,22 +437,22 @@ function PlaybookTabContent() {
               type="number"
               value={singleInvoiceThreshold}
               onChange={(e) => setSingleInvoiceThreshold(e.target.value)}
-              className="h-9 rounded-lg bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+              className="h-9 rounded-lg bg-background border-border focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
               data-testid="input-single-invoice-threshold"
             />
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted-foreground">
               Any single invoice above this triggers HIGH_VALUE treatment
             </p>
           </div>
         </div>
       </div>
 
-      <div className="py-6 border-b border-gray-100">
+      <div className="py-6 border-b border-border">
         <div className="flex items-center mb-1">
           <Timer className="h-5 w-5 text-[#17B6C3] mr-2" />
-          <h2 className="text-lg font-semibold text-gray-900">Contact Frequency & Cooldowns</h2>
+          <h2 className="text-lg font-semibold text-foreground">Contact Frequency & Cooldowns</h2>
         </div>
-        <p className="text-sm text-gray-500 mb-6">
+        <p className="text-sm text-muted-foreground mb-6">
           Control how often AI contacts customers to avoid over-communication.
         </p>
         <div className="space-y-6">
@@ -466,7 +466,7 @@ function PlaybookTabContent() {
                 max="30"
                 value={emailCooldown}
                 onChange={(e) => setEmailCooldown(e.target.value)}
-                className="h-9 rounded-lg bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                className="h-9 rounded-lg bg-background border-border focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                 data-testid="input-email-cooldown"
               />
             </div>
@@ -479,7 +479,7 @@ function PlaybookTabContent() {
                 max="30"
                 value={smsCooldown}
                 onChange={(e) => setSmsCooldown(e.target.value)}
-                className="h-9 rounded-lg bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                className="h-9 rounded-lg bg-background border-border focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                 data-testid="input-sms-cooldown"
               />
             </div>
@@ -492,13 +492,13 @@ function PlaybookTabContent() {
                 max="30"
                 value={voiceCooldown}
                 onChange={(e) => setVoiceCooldown(e.target.value)}
-                className="h-9 rounded-lg bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                className="h-9 rounded-lg bg-background border-border focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                 data-testid="input-voice-cooldown"
               />
             </div>
           </div>
           
-          <div className="border-t border-gray-100 pt-6">
+          <div className="border-t border-border pt-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="maxTouches" className="text-sm">Max Touches per 14-day Window</Label>
@@ -509,10 +509,10 @@ function PlaybookTabContent() {
                   max="10"
                   value={maxTouchesPerWindow}
                   onChange={(e) => setMaxTouchesPerWindow(e.target.value)}
-                  className="h-9 rounded-lg bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                  className="h-9 rounded-lg bg-background border-border focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                   data-testid="input-max-touches"
                 />
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-muted-foreground">
                   Maximum outbound contacts per customer within any 14-day period
                 </p>
               </div>
@@ -523,15 +523,15 @@ function PlaybookTabContent() {
                     type="time"
                     value={businessHoursStart}
                     onChange={(e) => setBusinessHoursStart(e.target.value)}
-                    className="h-9 rounded-lg bg-white border-gray-200 w-32 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                    className="h-9 rounded-lg bg-background border-border w-32 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                     data-testid="input-business-hours-start"
                   />
-                  <span className="text-sm text-gray-500">to</span>
+                  <span className="text-sm text-muted-foreground">to</span>
                   <Input 
                     type="time"
                     value={businessHoursEnd}
                     onChange={(e) => setBusinessHoursEnd(e.target.value)}
-                    className="h-9 rounded-lg bg-white border-gray-200 w-32 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                    className="h-9 rounded-lg bg-background border-border w-32 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                     data-testid="input-business-hours-end"
                   />
                 </div>
@@ -541,18 +541,18 @@ function PlaybookTabContent() {
         </div>
       </div>
 
-      <div className="py-6 border-b border-gray-100">
+      <div className="py-6 border-b border-border">
         <div className="flex items-center mb-1">
           <ShieldAlert className="h-5 w-5 text-[#17B6C3] mr-2" />
-          <h2 className="text-lg font-semibold text-gray-900">Late Payment Legislation</h2>
+          <h2 className="text-lg font-semibold text-foreground">Late Payment Legislation</h2>
         </div>
-        <p className="text-sm text-gray-500 mb-6">
+        <p className="text-sm text-muted-foreground mb-6">
           Enable statutory interest and compensation notifications for recovery-stage invoices.
         </p>
         <div className="flex items-center justify-between py-4">
           <div>
-            <p className="text-[13px] font-medium text-gray-900">Enable Late Payment Legislation</p>
-            <p className="text-sm text-gray-500">
+            <p className="text-[13px] font-medium text-foreground">Enable Late Payment Legislation</p>
+            <p className="text-sm text-muted-foreground">
               When enabled, AI will include statutory interest (Bank of England base rate + 8%) 
               and compensation information in recovery-stage communications.
             </p>
@@ -883,18 +883,18 @@ function TestTabContent() {
 
   return (
     <div className="space-y-0">
-      <div className="py-6 border-b border-gray-100">
+      <div className="py-6 border-b border-border">
         <div className="flex items-center mb-1">
           <TestTube className="h-5 w-5 text-[#17B6C3] mr-2" />
-          <h2 className="text-lg font-semibold text-gray-900">Communication Testing</h2>
+          <h2 className="text-lg font-semibold text-foreground">Communication Testing</h2>
         </div>
-        <p className="text-sm text-gray-500 mb-6">
+        <p className="text-sm text-muted-foreground mb-6">
           Test email, SMS, and voice call functionality with custom parameters
         </p>
         
         <div className="space-y-6">
-          <div className="py-4 border-b border-gray-100">
-            <h3 className="font-medium text-gray-900 mb-4">Test Contact Details</h3>
+          <div className="py-4 border-b border-border">
+            <h3 className="font-medium text-foreground mb-4">Test Contact Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="testEmail">Email Address</Label>
@@ -903,7 +903,7 @@ function TestTabContent() {
                   type="email"
                   value={testEmail}
                   onChange={(e) => setTestEmail(e.target.value)}
-                  className="h-9 rounded-lg bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                  className="h-9 rounded-lg bg-background border-border focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                   data-testid="input-test-email"
                 />
               </div>
@@ -914,7 +914,7 @@ function TestTabContent() {
                   type="tel"
                   value={testMobile}
                   onChange={(e) => setTestMobile(e.target.value)}
-                  className="h-9 rounded-lg bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                  className="h-9 rounded-lg bg-background border-border focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                   data-testid="input-test-mobile"
                 />
               </div>
@@ -925,15 +925,15 @@ function TestTabContent() {
                   type="tel"
                   value={testTelephone}
                   onChange={(e) => setTestTelephone(e.target.value)}
-                  className="h-9 rounded-lg bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                  className="h-9 rounded-lg bg-background border-border focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                   data-testid="input-test-telephone"
                 />
               </div>
             </div>
           </div>
 
-          <div className="py-4 border-b border-gray-100">
-            <h3 className="font-medium text-gray-900 mb-4">Test Data Variables</h3>
+          <div className="py-4 border-b border-border">
+            <h3 className="font-medium text-foreground mb-4">Test Data Variables</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="customerName">Customer Name</Label>
@@ -941,7 +941,7 @@ function TestTabContent() {
                   id="customerName"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  className="h-9 rounded-lg bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                  className="h-9 rounded-lg bg-background border-border focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                   data-testid="input-customer-name"
                 />
               </div>
@@ -951,7 +951,7 @@ function TestTabContent() {
                   id="companyName"
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
-                  className="h-9 rounded-lg bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                  className="h-9 rounded-lg bg-background border-border focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                   data-testid="input-company-name"
                 />
               </div>
@@ -961,7 +961,7 @@ function TestTabContent() {
                   id="invoiceNumber"
                   value={invoiceNumber}
                   onChange={(e) => setInvoiceNumber(e.target.value)}
-                  className="h-9 rounded-lg bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                  className="h-9 rounded-lg bg-background border-border focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                   data-testid="input-invoice-number"
                 />
               </div>
@@ -972,7 +972,7 @@ function TestTabContent() {
                   type="number"
                   value={invoiceAmount}
                   onChange={(e) => setInvoiceAmount(e.target.value)}
-                  className="h-9 rounded-lg bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                  className="h-9 rounded-lg bg-background border-border focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                   data-testid="input-invoice-amount"
                 />
               </div>
@@ -983,7 +983,7 @@ function TestTabContent() {
                   type="number"
                   value={daysOverdue}
                   onChange={(e) => setDaysOverdue(e.target.value)}
-                  className="h-9 rounded-lg bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                  className="h-9 rounded-lg bg-background border-border focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                   data-testid="input-days-overdue"
                 />
               </div>
@@ -993,7 +993,7 @@ function TestTabContent() {
                   id="organisationName"
                   value={organisationName}
                   onChange={(e) => setOrganisationName(e.target.value)}
-                  className="h-9 rounded-lg bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                  className="h-9 rounded-lg bg-background border-border focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                   data-testid="input-organisation-name"
                 />
               </div>
@@ -1001,7 +1001,7 @@ function TestTabContent() {
           </div>
 
           <div className="py-4">
-            <h3 className="font-medium text-gray-900 mb-4">Send Test Communications</h3>
+            <h3 className="font-medium text-foreground mb-4">Send Test Communications</h3>
             <div className="flex flex-wrap gap-3">
               <Button 
                 onClick={handleTestEmail}
@@ -1038,9 +1038,9 @@ function TestTabContent() {
       <div className="py-6">
         <div className="flex items-center mb-1">
           <Database className="h-5 w-5 text-[#17B6C3] mr-2" />
-          <h2 className="text-lg font-semibold text-gray-900">Demo Data Management</h2>
+          <h2 className="text-lg font-semibold text-foreground">Demo Data Management</h2>
         </div>
-        <p className="text-sm text-gray-500 mb-6">
+        <p className="text-sm text-muted-foreground mb-6">
           Set up and manage demo data for testing and demonstrations
         </p>
         
@@ -1049,7 +1049,7 @@ function TestTabContent() {
             onClick={handleDemoSetup}
             disabled={isDemoSetup}
             variant="outline"
-            className="h-9 rounded-lg border-gray-200"
+            className="h-9 rounded-lg border-border"
             data-testid="button-demo-setup"
           >
             <Zap className="h-4 w-4 mr-2" />
@@ -1059,7 +1059,7 @@ function TestTabContent() {
             onClick={handleRegenerate}
             disabled={isRegenerating}
             variant="outline"
-            className="h-9 rounded-lg border-gray-200"
+            className="h-9 rounded-lg border-border"
             data-testid="button-regenerate"
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${isRegenerating ? 'animate-spin' : ''}`} />
@@ -1069,7 +1069,7 @@ function TestTabContent() {
             onClick={handleGenerateMockData}
             disabled={isGeneratingMockData}
             variant="outline"
-            className="h-9 rounded-lg border-gray-200"
+            className="h-9 rounded-lg border-border"
             data-testid="button-generate-mock"
           >
             <Database className="h-4 w-4 mr-2" />
@@ -1274,12 +1274,12 @@ function DemoDataTabContent() {
 
   return (
     <div className="space-y-0">
-      <div className="py-6 border-b border-gray-100">
+      <div className="py-6 border-b border-border">
         <div className="flex items-center mb-1">
           <Database className="h-5 w-5 text-[#17B6C3] mr-2" />
-          <h2 className="text-lg font-semibold text-gray-900">Demo Data Statistics</h2>
+          <h2 className="text-lg font-semibold text-foreground">Demo Data Statistics</h2>
         </div>
-        <p className="text-sm text-gray-500 mb-6">
+        <p className="text-sm text-muted-foreground mb-6">
           Current demo data overview
         </p>
         
@@ -1295,21 +1295,21 @@ function DemoDataTabContent() {
         ) : (
           <div className="flex flex-wrap gap-x-16 gap-y-6">
             <div>
-              <p className="text-sm text-gray-500 mb-1">Customers</p>
-              <p className="text-3xl font-semibold text-gray-900">{stats?.customers ?? 0}</p>
+              <p className="text-sm text-muted-foreground mb-1">Customers</p>
+              <p className="text-3xl font-semibold text-foreground">{stats?.customers ?? 0}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500 mb-1">Invoices</p>
-              <p className="text-3xl font-semibold text-gray-900">{stats?.invoices ?? 0}</p>
+              <p className="text-sm text-muted-foreground mb-1">Invoices</p>
+              <p className="text-3xl font-semibold text-foreground">{stats?.invoices ?? 0}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500 mb-1">Outstanding</p>
-              <p className="text-3xl font-semibold text-gray-900">
+              <p className="text-sm text-muted-foreground mb-1">Outstanding</p>
+              <p className="text-3xl font-semibold text-foreground">
                 £{(stats?.totalOutstanding ?? 0).toLocaleString()}
               </p>
             </div>
             <div>
-              <p className="text-sm text-gray-500 mb-1">Paid</p>
+              <p className="text-sm text-muted-foreground mb-1">Paid</p>
               <p className="text-3xl font-semibold text-green-600">
                 £{(stats?.totalPaid ?? 0).toLocaleString()}
               </p>
@@ -1318,20 +1318,20 @@ function DemoDataTabContent() {
         )}
       </div>
 
-      <div className="py-6 border-b border-gray-100">
+      <div className="py-6 border-b border-border">
         <div className="flex items-center mb-1">
           <PlusCircle className="h-5 w-5 text-[#17B6C3] mr-2" />
-          <h2 className="text-lg font-semibold text-gray-900">Create Demo Data</h2>
+          <h2 className="text-lg font-semibold text-foreground">Create Demo Data</h2>
         </div>
-        <p className="text-sm text-gray-500 mb-6">
+        <p className="text-sm text-muted-foreground mb-6">
           Generate new demo customers, invoices, and simulate payments
         </p>
         
         <div className="space-y-4">
-          <div className="flex items-center justify-between py-4 border-b border-gray-100">
+          <div className="flex items-center justify-between py-4 border-b border-border">
             <div>
-              <p className="font-medium text-gray-900">Create Demo Customer</p>
-              <p className="text-sm text-gray-500">Add a new random demo customer to the system</p>
+              <p className="font-medium text-foreground">Create Demo Customer</p>
+              <p className="text-sm text-muted-foreground">Add a new random demo customer to the system</p>
             </div>
             <Button 
               onClick={handleCreateDemoCustomer}
@@ -1344,10 +1344,10 @@ function DemoDataTabContent() {
             </Button>
           </div>
 
-          <div className="flex items-center justify-between py-4 border-b border-gray-100">
+          <div className="flex items-center justify-between py-4 border-b border-border">
             <div>
-              <p className="font-medium text-gray-900">Generate Invoice</p>
-              <p className="text-sm text-gray-500">Create a new demo invoice for an existing customer</p>
+              <p className="font-medium text-foreground">Generate Invoice</p>
+              <p className="text-sm text-muted-foreground">Create a new demo invoice for an existing customer</p>
             </div>
             <Button 
               onClick={handleGenerateInvoice}
@@ -1362,8 +1362,8 @@ function DemoDataTabContent() {
 
           <div className="flex items-center justify-between py-4">
             <div>
-              <p className="font-medium text-gray-900">Simulate Payment</p>
-              <p className="text-sm text-gray-500">Simulate a payment on a random outstanding invoice</p>
+              <p className="font-medium text-foreground">Simulate Payment</p>
+              <p className="text-sm text-muted-foreground">Simulate a payment on a random outstanding invoice</p>
             </div>
             <Button 
               onClick={handleSimulatePayment}
@@ -1381,9 +1381,9 @@ function DemoDataTabContent() {
       <div className="py-6">
         <div className="flex items-center mb-1">
           <RotateCcw className="h-5 w-5 text-red-500 mr-2" />
-          <h2 className="text-lg font-semibold text-gray-900">Reset Data</h2>
+          <h2 className="text-lg font-semibold text-foreground">Reset Data</h2>
         </div>
-        <p className="text-sm text-gray-500 mb-6">
+        <p className="text-sm text-muted-foreground mb-6">
           Completely reset all demo data. This action cannot be undone.
         </p>
         
@@ -1563,12 +1563,12 @@ function AutomationTabContent() {
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-0">
-          <div className="py-6 border-b border-gray-100">
+          <div className="py-6 border-b border-border">
             <div className="flex items-center mb-1">
               <Zap className="h-5 w-5 text-[#17B6C3] mr-2" />
-              <h2 className="text-lg font-semibold text-gray-900">Automation Mode</h2>
+              <h2 className="text-lg font-semibold text-foreground">Automation Mode</h2>
             </div>
-            <p className="text-sm text-gray-500 mb-6">
+            <p className="text-sm text-muted-foreground mb-6">
               Choose between manual approval (supervised) or full automation
             </p>
             
@@ -1577,12 +1577,12 @@ function AutomationTabContent() {
               name="approvalMode"
               render={({ field }) => (
                 <FormItem>
-                  <div className="flex items-center justify-between py-4 border border-gray-100 rounded-lg px-4 bg-gray-50">
+                  <div className="flex items-center justify-between py-4 border border-border rounded-lg px-4 bg-muted">
                     <div className="space-y-0.5 flex-1">
-                      <FormLabel className="text-base font-semibold text-gray-900">
+                      <FormLabel className="text-base font-semibold text-foreground">
                         {field.value === 'manual' ? 'Manual Approval (Recommended)' : 'Full Automation'}
                       </FormLabel>
-                      <FormDescription className="text-gray-500">
+                      <FormDescription className="text-muted-foreground">
                         {field.value === 'manual' 
                           ? 'AI generates plan, you approve daily, AI executes (10 min/day supervision)'
                           : 'AI generates and executes plan automatically without approval'}
@@ -1610,12 +1610,12 @@ function AutomationTabContent() {
             />
           </div>
 
-          <div className="py-6 border-b border-gray-100">
+          <div className="py-6 border-b border-border">
             <div className="flex items-center mb-1">
               <Clock className="h-5 w-5 text-[#17B6C3] mr-2" />
-              <h2 className="text-lg font-semibold text-gray-900">Execution Timing</h2>
+              <h2 className="text-lg font-semibold text-foreground">Execution Timing</h2>
             </div>
-            <p className="text-sm text-gray-500 mb-6">
+            <p className="text-sm text-muted-foreground mb-6">
               Set when approved actions should be executed each day
             </p>
             
@@ -1629,12 +1629,12 @@ function AutomationTabContent() {
                     <Input
                       type="time"
                       placeholder="09:00"
-                      className="h-9 rounded-lg bg-white border-gray-200 max-w-xs focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                      className="h-9 rounded-lg bg-background border-border max-w-xs focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                       data-testid="input-execution-time"
                       {...field}
                     />
                   </FormControl>
-                  <FormDescription className="text-gray-500">
+                  <FormDescription className="text-muted-foreground">
                     Actions will be executed at this time each day. Recommended: 09:00 (9 AM)
                   </FormDescription>
                   <FormMessage />
@@ -1643,12 +1643,12 @@ function AutomationTabContent() {
             />
           </div>
 
-          <div className="py-6 border-b border-gray-100">
+          <div className="py-6 border-b border-border">
             <div className="flex items-center mb-1">
               <TrendingUp className="h-5 w-5 text-[#17B6C3] mr-2" />
-              <h2 className="text-lg font-semibold text-gray-900">Daily Limits by Channel</h2>
+              <h2 className="text-lg font-semibold text-foreground">Daily Limits by Channel</h2>
             </div>
-            <p className="text-sm text-gray-500 mb-6">
+            <p className="text-sm text-muted-foreground mb-6">
               Maximum number of actions per channel to prevent overwhelming customers
             </p>
             
@@ -1659,7 +1659,7 @@ function AutomationTabContent() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-gray-500" />
+                      <Mail className="h-4 w-4 text-muted-foreground" />
                       Email Limit
                     </FormLabel>
                     <FormControl>
@@ -1667,13 +1667,13 @@ function AutomationTabContent() {
                         type="number"
                         min="0"
                         max="500"
-                        className="h-9 rounded-lg bg-white border-gray-200 max-w-xs focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                        className="h-9 rounded-lg bg-background border-border max-w-xs focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                         data-testid="input-limit-email"
                         {...field}
                         onChange={(e) => field.onChange(parseInt(e.target.value))}
                       />
                     </FormControl>
-                    <FormDescription className="text-gray-500">
+                    <FormDescription className="text-muted-foreground">
                       Maximum emails sent per day (0-500)
                     </FormDescription>
                     <FormMessage />
@@ -1687,7 +1687,7 @@ function AutomationTabContent() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-2">
-                      <MessageSquare className="h-4 w-4 text-gray-500" />
+                      <MessageSquare className="h-4 w-4 text-muted-foreground" />
                       SMS Limit
                     </FormLabel>
                     <FormControl>
@@ -1695,13 +1695,13 @@ function AutomationTabContent() {
                         type="number"
                         min="0"
                         max="200"
-                        className="h-9 rounded-lg bg-white border-gray-200 max-w-xs focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                        className="h-9 rounded-lg bg-background border-border max-w-xs focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                         data-testid="input-limit-sms"
                         {...field}
                         onChange={(e) => field.onChange(parseInt(e.target.value))}
                       />
                     </FormControl>
-                    <FormDescription className="text-gray-500">
+                    <FormDescription className="text-muted-foreground">
                       Maximum SMS messages sent per day (0-200)
                     </FormDescription>
                     <FormMessage />
@@ -1715,7 +1715,7 @@ function AutomationTabContent() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-gray-500" />
+                      <Phone className="h-4 w-4 text-muted-foreground" />
                       Voice Call Limit
                     </FormLabel>
                     <FormControl>
@@ -1723,13 +1723,13 @@ function AutomationTabContent() {
                         type="number"
                         min="0"
                         max="100"
-                        className="h-9 rounded-lg bg-white border-gray-200 max-w-xs focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                        className="h-9 rounded-lg bg-background border-border max-w-xs focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                         data-testid="input-limit-voice"
                         {...field}
                         onChange={(e) => field.onChange(parseInt(e.target.value))}
                       />
                     </FormControl>
-                    <FormDescription className="text-gray-500">
+                    <FormDescription className="text-muted-foreground">
                       Maximum voice calls made per day (0-100)
                     </FormDescription>
                     <FormMessage />
@@ -1739,12 +1739,12 @@ function AutomationTabContent() {
             </div>
           </div>
 
-          <div className="py-6 border-b border-gray-100">
+          <div className="py-6 border-b border-border">
             <div className="flex items-center mb-1">
               <CheckCircle className="h-5 w-5 text-[#17B6C3] mr-2" />
-              <h2 className="text-lg font-semibold text-gray-900">AI Confidence Thresholds</h2>
+              <h2 className="text-lg font-semibold text-foreground">AI Confidence Thresholds</h2>
             </div>
-            <p className="text-sm text-gray-500 mb-6">
+            <p className="text-sm text-muted-foreground mb-6">
               Minimum confidence scores required for automated execution
             </p>
             
@@ -1756,7 +1756,7 @@ function AutomationTabContent() {
                   <FormItem>
                     <div className="flex items-center justify-between mb-2">
                       <FormLabel className="flex items-center gap-2">
-                        <Mail className="h-4 w-4 text-gray-500" />
+                        <Mail className="h-4 w-4 text-muted-foreground" />
                         Email Confidence
                       </FormLabel>
                       <Badge variant="outline">{Math.round(field.value * 100)}%</Badge>
@@ -1767,13 +1767,13 @@ function AutomationTabContent() {
                         min="0"
                         max="1"
                         step="0.05"
-                        className="bg-white max-w-md"
+                        className="bg-background max-w-md"
                         data-testid="slider-confidence-email"
                         {...field}
                         onChange={(e) => field.onChange(parseFloat(e.target.value))}
                       />
                     </FormControl>
-                    <FormDescription className="text-gray-500">
+                    <FormDescription className="text-muted-foreground">
                       Minimum AI confidence to auto-send emails (recommended: 80%)
                     </FormDescription>
                     <FormMessage />
@@ -1788,7 +1788,7 @@ function AutomationTabContent() {
                   <FormItem>
                     <div className="flex items-center justify-between mb-2">
                       <FormLabel className="flex items-center gap-2">
-                        <MessageSquare className="h-4 w-4 text-gray-500" />
+                        <MessageSquare className="h-4 w-4 text-muted-foreground" />
                         SMS Confidence
                       </FormLabel>
                       <Badge variant="outline">{Math.round(field.value * 100)}%</Badge>
@@ -1799,13 +1799,13 @@ function AutomationTabContent() {
                         min="0"
                         max="1"
                         step="0.05"
-                        className="bg-white max-w-md"
+                        className="bg-background max-w-md"
                         data-testid="slider-confidence-sms"
                         {...field}
                         onChange={(e) => field.onChange(parseFloat(e.target.value))}
                       />
                     </FormControl>
-                    <FormDescription className="text-gray-500">
+                    <FormDescription className="text-muted-foreground">
                       Minimum AI confidence to auto-send SMS (recommended: 85%)
                     </FormDescription>
                     <FormMessage />
@@ -1820,7 +1820,7 @@ function AutomationTabContent() {
                   <FormItem>
                     <div className="flex items-center justify-between mb-2">
                       <FormLabel className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-gray-500" />
+                        <Phone className="h-4 w-4 text-muted-foreground" />
                         Voice Call Confidence
                       </FormLabel>
                       <Badge variant="outline">{Math.round(field.value * 100)}%</Badge>
@@ -1831,13 +1831,13 @@ function AutomationTabContent() {
                         min="0"
                         max="1"
                         step="0.05"
-                        className="bg-white max-w-md"
+                        className="bg-background max-w-md"
                         data-testid="slider-confidence-voice"
                         {...field}
                         onChange={(e) => field.onChange(parseFloat(e.target.value))}
                       />
                     </FormControl>
-                    <FormDescription className="text-gray-500">
+                    <FormDescription className="text-muted-foreground">
                       Minimum AI confidence to auto-make calls (recommended: 90%)
                     </FormDescription>
                     <FormMessage />
@@ -1847,12 +1847,12 @@ function AutomationTabContent() {
             </div>
           </div>
 
-          <div className="py-6 border-b border-gray-100">
+          <div className="py-6 border-b border-border">
             <div className="flex items-center mb-1">
               <ShieldAlert className="h-5 w-5 text-[#17B6C3] mr-2" />
-              <h2 className="text-lg font-semibold text-gray-900">Exception Rules</h2>
+              <h2 className="text-lg font-semibold text-foreground">Exception Rules</h2>
             </div>
-            <p className="text-sm text-gray-500 mb-6">
+            <p className="text-sm text-muted-foreground mb-6">
               Automatically flag actions requiring manual review
             </p>
             
@@ -1861,10 +1861,10 @@ function AutomationTabContent() {
                 control={form.control}
                 name="exceptionRules.flagFirstContact"
                 render={({ field }) => (
-                  <FormItem className="flex items-center justify-between py-4 border-b border-gray-100">
+                  <FormItem className="flex items-center justify-between py-4 border-b border-border">
                     <div className="space-y-0.5">
-                      <FormLabel className="text-base font-medium text-gray-900">Flag First Contact</FormLabel>
-                      <FormDescription className="text-gray-500">
+                      <FormLabel className="text-base font-medium text-foreground">Flag First Contact</FormLabel>
+                      <FormDescription className="text-muted-foreground">
                         Require approval for first-time contact with new customers
                       </FormDescription>
                     </div>
@@ -1883,21 +1883,21 @@ function AutomationTabContent() {
                 control={form.control}
                 name="exceptionRules.flagHighValue"
                 render={({ field }) => (
-                  <FormItem className="py-4 border-b border-gray-100">
-                    <FormLabel className="font-medium text-gray-900">High Value Threshold</FormLabel>
+                  <FormItem className="py-4 border-b border-border">
+                    <FormLabel className="font-medium text-foreground">High Value Threshold</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
                         min="0"
                         step="1000"
                         placeholder="10000"
-                        className="h-9 rounded-lg bg-white border-gray-200 max-w-xs focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                        className="h-9 rounded-lg bg-background border-border max-w-xs focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                         data-testid="input-exception-high-value"
                         {...field}
                         onChange={(e) => field.onChange(parseInt(e.target.value))}
                       />
                     </FormControl>
-                    <FormDescription className="text-gray-500">
+                    <FormDescription className="text-muted-foreground">
                       Flag invoices above this amount (£) for manual review
                     </FormDescription>
                     <FormMessage />
@@ -1909,10 +1909,10 @@ function AutomationTabContent() {
                 control={form.control}
                 name="exceptionRules.flagDisputeKeywords"
                 render={({ field }) => (
-                  <FormItem className="flex items-center justify-between py-4 border-b border-gray-100">
+                  <FormItem className="flex items-center justify-between py-4 border-b border-border">
                     <div className="space-y-0.5">
-                      <FormLabel className="text-base font-medium text-gray-900">Flag Dispute Keywords</FormLabel>
-                      <FormDescription className="text-gray-500">
+                      <FormLabel className="text-base font-medium text-foreground">Flag Dispute Keywords</FormLabel>
+                      <FormDescription className="text-muted-foreground">
                         Require approval if customer messages contain dispute language
                       </FormDescription>
                     </div>
@@ -1933,8 +1933,8 @@ function AutomationTabContent() {
                 render={({ field }) => (
                   <FormItem className="flex items-center justify-between py-4">
                     <div className="space-y-0.5">
-                      <FormLabel className="text-base font-medium text-gray-900">Flag VIP Customers</FormLabel>
-                      <FormDescription className="text-gray-500">
+                      <FormLabel className="text-base font-medium text-foreground">Flag VIP Customers</FormLabel>
+                      <FormDescription className="text-muted-foreground">
                         Require approval for actions involving VIP/priority customers
                       </FormDescription>
                     </div>
@@ -1951,35 +1951,35 @@ function AutomationTabContent() {
             </div>
           </div>
 
-          <div className="py-6 border-b border-gray-100">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Current Configuration Summary</h3>
-            <div className="space-y-2 text-sm bg-gray-50 p-4 rounded-lg border border-gray-100">
+          <div className="py-6 border-b border-border">
+            <h3 className="text-lg font-semibold text-foreground mb-4">Current Configuration Summary</h3>
+            <div className="space-y-2 text-sm bg-muted p-4 rounded-lg border border-border">
               <div className="flex justify-between">
-                <span className="text-gray-500">Mode:</span>
+                <span className="text-muted-foreground">Mode:</span>
                 <Badge variant={approvalMode === 'manual' ? 'default' : 'destructive'}>
                   {approvalMode === 'manual' ? 'Manual Approval' : 'Full Automation'}
                 </Badge>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Execution Time:</span>
-                <strong className="text-gray-900">{executionTime}</strong>
+                <span className="text-muted-foreground">Execution Time:</span>
+                <strong className="text-foreground">{executionTime}</strong>
               </div>
-              <div className="border-t border-gray-100 pt-2 mt-2">
+              <div className="border-t border-border pt-2 mt-2">
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Daily Capacity:</span>
-                  <strong className="text-gray-900">{dailyLimits.email + dailyLimits.sms + dailyLimits.voice} actions/day</strong>
+                  <span className="text-muted-foreground">Daily Capacity:</span>
+                  <strong className="text-foreground">{dailyLimits.email + dailyLimits.sms + dailyLimits.voice} actions/day</strong>
                 </div>
                 <div className="flex justify-between pl-4 mt-1">
-                  <span className="text-gray-500">• Emails:</span>
-                  <span className="text-gray-900">{dailyLimits.email}</span>
+                  <span className="text-muted-foreground">• Emails:</span>
+                  <span className="text-foreground">{dailyLimits.email}</span>
                 </div>
                 <div className="flex justify-between pl-4">
-                  <span className="text-gray-500">• SMS:</span>
-                  <span className="text-gray-900">{dailyLimits.sms}</span>
+                  <span className="text-muted-foreground">• SMS:</span>
+                  <span className="text-foreground">{dailyLimits.sms}</span>
                 </div>
                 <div className="flex justify-between pl-4">
-                  <span className="text-gray-500">• Voice:</span>
-                  <span className="text-gray-900">{dailyLimits.voice}</span>
+                  <span className="text-muted-foreground">• Voice:</span>
+                  <span className="text-foreground">{dailyLimits.voice}</span>
                 </div>
               </div>
             </div>
@@ -2013,7 +2013,7 @@ function FinishOnboardingBanner() {
   return (
     <div className="border-l-4 border-amber-400 bg-amber-50/50 px-4 py-3 mb-6">
       <div className="flex items-center justify-between">
-        <p className="text-[13px] text-gray-800">You haven't finished setting up your account</p>
+        <p className="text-[13px] text-foreground">You haven't finished setting up your account</p>
         <Button
           onClick={() => setLocation("/onboarding")}
           className="h-8 rounded-full bg-amber-500 hover:bg-amber-600 text-white text-[13px] px-4"
@@ -2308,26 +2308,26 @@ export default function Settings() {
   };
 
   return (
-    <div className="flex h-screen bg-white">
+    <div className="flex h-screen bg-background">
       <div className="hidden lg:block">
         <NewSidebar />
       </div>
 
       <main className="flex-1 overflow-y-auto">
         <div className="max-w-7xl mx-auto w-full px-6 py-5">
-          <h1 className="text-2xl font-bold text-gray-900 font-heading">Settings</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-2xl font-bold text-foreground font-heading">Settings</h1>
+          <p className="text-sm text-muted-foreground mt-1">
             Manage your account, integrations, and preferences
           </p>
         </div>
         
         <div className="max-w-7xl mx-auto w-full px-6 pb-6">
             <Tabs defaultValue="general" className="space-y-6">
-              <div className="border-b border-gray-100 overflow-x-auto">
+              <div className="border-b border-border overflow-x-auto">
                 <TabsList className="bg-transparent h-auto p-0 gap-0">
                   <TabsTrigger 
                     value="general" 
-                    className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
+                    className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-muted-foreground hover:text-foreground"
                     data-testid="tab-general"
                   >
                     General
@@ -2335,7 +2335,7 @@ export default function Settings() {
                   <ProtectedComponent permission="admin:users" hideOnDeny>
                     <TabsTrigger 
                       value="users" 
-                      className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
+                      className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-muted-foreground hover:text-foreground"
                       data-testid="tab-users"
                     >
                       Users
@@ -2343,63 +2343,63 @@ export default function Settings() {
                   </ProtectedComponent>
                   <TabsTrigger 
                     value="integrations" 
-                    className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
+                    className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-muted-foreground hover:text-foreground"
                     data-testid="tab-integrations"
                   >
                     Integrations
                   </TabsTrigger>
                   <TabsTrigger 
                     value="notifications" 
-                    className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
+                    className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-muted-foreground hover:text-foreground"
                     data-testid="tab-notifications"
                   >
                     Notifications
                   </TabsTrigger>
                   <TabsTrigger 
                     value="security" 
-                    className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
+                    className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-muted-foreground hover:text-foreground"
                     data-testid="tab-security"
                   >
                     Security
                   </TabsTrigger>
                   <TabsTrigger 
                     value="branding" 
-                    className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
+                    className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-muted-foreground hover:text-foreground"
                     data-testid="tab-branding"
                   >
                     Branding
                   </TabsTrigger>
                   <TabsTrigger 
                     value="playbook" 
-                    className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
+                    className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-muted-foreground hover:text-foreground"
                     data-testid="tab-playbook"
                   >
                     Playbook
                   </TabsTrigger>
                   <TabsTrigger 
                     value="test" 
-                    className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
+                    className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-muted-foreground hover:text-foreground"
                     data-testid="tab-test"
                   >
                     Test
                   </TabsTrigger>
                   <TabsTrigger 
                     value="reports" 
-                    className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
+                    className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-muted-foreground hover:text-foreground"
                     data-testid="tab-reports"
                   >
                     Reports
                   </TabsTrigger>
                   <TabsTrigger 
                     value="demo-data" 
-                    className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
+                    className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-muted-foreground hover:text-foreground"
                     data-testid="tab-demo-data"
                   >
                     Demo Data
                   </TabsTrigger>
                   <TabsTrigger 
                     value="onboarding" 
-                    className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
+                    className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-muted-foreground hover:text-foreground"
                     data-testid="tab-onboarding"
                   >
                     Onboarding
@@ -2409,12 +2409,12 @@ export default function Settings() {
 
               <TabsContent value="general" className="mt-0">
                 <FinishOnboardingBanner />
-                <div className="py-6 border-b border-gray-100">
+                <div className="py-6 border-b border-border">
                   <div className="flex items-center mb-1">
                     <User className="h-5 w-5 text-[#17B6C3] mr-2" />
-                    <h2 className="text-lg font-semibold text-gray-900">Profile Information</h2>
+                    <h2 className="text-lg font-semibold text-foreground">Profile Information</h2>
                   </div>
-                  <p className="text-sm text-gray-500 mb-6">
+                  <p className="text-sm text-muted-foreground mb-6">
                     Update your subscriber information and preferences
                   </p>
                   
@@ -2425,7 +2425,7 @@ export default function Settings() {
                         <Input 
                           id="firstName"
                           defaultValue={(user as any)?.firstName || ""}
-                          className="h-9 rounded-lg bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                          className="h-9 rounded-lg bg-background border-border focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                           data-testid="input-first-name"
                         />
                       </div>
@@ -2434,7 +2434,7 @@ export default function Settings() {
                         <Input 
                           id="lastName"
                           defaultValue={(user as any)?.lastName || ""}
-                          className="h-9 rounded-lg bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                          className="h-9 rounded-lg bg-background border-border focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                           data-testid="input-last-name"
                         />
                       </div>
@@ -2446,10 +2446,10 @@ export default function Settings() {
                         type="email"
                         defaultValue={(user as any)?.email || ""}
                         disabled
-                        className="h-9 rounded-lg bg-gray-50 border-gray-200"
+                        className="h-9 rounded-lg bg-muted border-border"
                         data-testid="input-email"
                       />
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-muted-foreground">
                         Email cannot be changed. Contact support if needed.
                       </p>
                     </div>
@@ -2462,9 +2462,9 @@ export default function Settings() {
                 <div className="py-6">
                   <div className="flex items-center mb-1">
                     <Building2 className="h-5 w-5 text-[#17B6C3] mr-2" />
-                    <h2 className="text-lg font-semibold text-gray-900">Organization Settings</h2>
+                    <h2 className="text-lg font-semibold text-foreground">Organization Settings</h2>
                   </div>
-                  <p className="text-sm text-gray-500 mb-6">
+                  <p className="text-sm text-muted-foreground mb-6">
                     Configure your organization details and preferences
                   </p>
                   
@@ -2476,7 +2476,7 @@ export default function Settings() {
                         value={organizationName}
                         onChange={(e) => setOrganizationName(e.target.value)}
                         placeholder="Your Company Name"
-                        className="h-9 rounded-lg bg-white border-gray-200 max-w-md focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                        className="h-9 rounded-lg bg-background border-border max-w-md focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                         data-testid="input-org-name"
                       />
                     </div>
@@ -2486,10 +2486,10 @@ export default function Settings() {
                         value={organizationCurrency} 
                         onValueChange={setOrganizationCurrency}
                       >
-                        <SelectTrigger className="h-9 rounded-lg bg-white border-gray-200 max-w-md focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]" data-testid="select-currency">
+                        <SelectTrigger className="h-9 rounded-lg bg-background border-border max-w-md focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]" data-testid="select-currency">
                           <SelectValue placeholder="Select currency" />
                         </SelectTrigger>
-                        <SelectContent className="bg-white border-gray-200">
+                        <SelectContent className="bg-background border-border">
                           {CURRENCIES.map((currency) => (
                             <SelectItem key={currency.code} value={currency.code}>
                               {currency.symbol} {currency.name} ({currency.code})
@@ -2504,10 +2504,10 @@ export default function Settings() {
                         value={eomDay} 
                         onValueChange={setEomDay}
                       >
-                        <SelectTrigger className="h-9 rounded-lg bg-white border-gray-200 max-w-md focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]" data-testid="select-eom-day">
+                        <SelectTrigger className="h-9 rounded-lg bg-background border-border max-w-md focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]" data-testid="select-eom-day">
                           <SelectValue placeholder="Select EOM day" />
                         </SelectTrigger>
-                        <SelectContent className="bg-white border-gray-200">
+                        <SelectContent className="bg-background border-border">
                           {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
                             <SelectItem key={day} value={day.toString()}>
                               Day {day} of the month
@@ -2515,7 +2515,7 @@ export default function Settings() {
                           ))}
                         </SelectContent>
                       </Select>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-muted-foreground">
                         Set the day of month for EOM cash flow calculations (typically payroll day)
                       </p>
                     </div>
@@ -2525,10 +2525,10 @@ export default function Settings() {
                         <Input 
                           id="subdomain"
                           placeholder="yourcompany"
-                          className="h-9 rounded-l-lg rounded-r-none bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                          className="h-9 rounded-l-lg rounded-r-none bg-background border-border focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                           data-testid="input-subdomain"
                         />
-                        <div className="inline-flex items-center px-3 h-9 rounded-r-lg border border-l-0 border-gray-200 bg-gray-50 text-[13px] text-gray-600">
+                        <div className="inline-flex items-center px-3 h-9 rounded-r-lg border border-l-0 border-border bg-muted text-[13px] text-muted-foreground">
                           .arpro.com
                         </div>
                       </div>
@@ -2546,11 +2546,11 @@ export default function Settings() {
               </TabsContent>
 
               <TabsContent value="integrations" className="mt-0">
-                <div className="py-6 border-b border-gray-100">
+                <div className="py-6 border-b border-border">
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center">
                       <BarChart3 className="h-5 w-5 text-[#17B6C3] mr-2" />
-                      <h2 className="text-lg font-semibold text-gray-900">Accounting Integration</h2>
+                      <h2 className="text-lg font-semibold text-foreground">Accounting Integration</h2>
                     </div>
                     <Badge 
                       className={accountingStatus?.connectedProvider 
@@ -2562,22 +2562,22 @@ export default function Settings() {
                       {accountingStatus?.connectedProvider ? "Connected" : "Not Connected"}
                     </Badge>
                   </div>
-                  <p className="text-sm text-gray-500 mb-6">
+                  <p className="text-sm text-muted-foreground mb-6">
                     Connect to your accounting software to automatically sync invoices and contacts
                   </p>
 
                   {!accountingStatus?.connectedProvider ? (
                     <div className="space-y-4">
-                      <h4 className="text-[13px] font-medium text-gray-900">Choose Your Accounting Software</h4>
+                      <h4 className="text-[13px] font-medium text-foreground">Choose Your Accounting Software</h4>
                       <div className="space-y-3">
-                        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-100">
+                        <div className="flex items-center justify-between p-4 bg-muted rounded-lg border border-border">
                           <div className="flex items-center space-x-4">
                             <div className="p-3 bg-blue-100 rounded-lg">
                               <SiXero className="h-6 w-6 text-blue-600" />
                             </div>
                             <div>
-                              <p className="text-[13px] font-semibold text-gray-900">Xero</p>
-                              <p className="text-sm text-gray-500">Cloud-based accounting software</p>
+                              <p className="text-[13px] font-semibold text-foreground">Xero</p>
+                              <p className="text-sm text-muted-foreground">Cloud-based accounting software</p>
                             </div>
                           </div>
                           <Button 
@@ -2593,7 +2593,7 @@ export default function Settings() {
                     </div>
                   ) : (
                     <div className="space-y-6">
-                      <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-100">
+                      <div className="flex items-center justify-between p-4 bg-muted rounded-lg border border-border">
                         <div className="flex items-center space-x-4">
                           <div className={`p-3 rounded-lg ${
                             accountingStatus.connectedProvider.name === 'xero' ? 'bg-blue-100' :
@@ -2605,19 +2605,19 @@ export default function Settings() {
                             {accountingStatus.connectedProvider.name === 'quickbooks' && <SiQuickbooks className="h-6 w-6 text-orange-600" />}
                           </div>
                           <div>
-                            <p className="text-[13px] font-semibold text-gray-900">
+                            <p className="text-[13px] font-semibold text-foreground">
                               Connected to {accountingStatus.connectedProvider.displayName}
                             </p>
-                            <p className="text-sm text-gray-500">
+                            <p className="text-sm text-muted-foreground">
                               Syncing invoices, contacts, and payment data
                             </p>
                             {accountingStatus.connectedProvider.organizationName && (
-                              <p className="text-[13px] text-gray-700 font-medium mt-1">
+                              <p className="text-[13px] text-foreground font-medium mt-1">
                                 Organization: {accountingStatus.connectedProvider.organizationName}
                               </p>
                             )}
                             {syncSettings?.lastSyncAt && (
-                              <p className="text-xs text-gray-500 mt-1">
+                              <p className="text-xs text-muted-foreground mt-1">
                                 Last sync: {new Date(syncSettings.lastSyncAt).toLocaleString()}
                               </p>
                             )}
@@ -2648,12 +2648,12 @@ export default function Settings() {
                         </div>
                       </div>
 
-                      <div className="border-t border-gray-100 pt-6">
-                        <h4 className="text-[13px] font-medium text-gray-900 mb-4">Sync Settings</h4>
+                      <div className="border-t border-border pt-6">
+                        <h4 className="text-[13px] font-medium text-foreground mb-4">Sync Settings</h4>
                         <div className="flex items-center justify-between py-4">
                           <div>
-                            <p className="text-[13px] font-medium text-gray-900">Auto Sync</p>
-                            <p className="text-sm text-gray-500">
+                            <p className="text-[13px] font-medium text-foreground">Auto Sync</p>
+                            <p className="text-sm text-muted-foreground">
                               Automatically sync invoices at regular intervals
                             </p>
                           </div>
@@ -2676,11 +2676,11 @@ export default function Settings() {
                   )}
                 </div>
 
-                <div className="py-6 border-b border-gray-100">
+                <div className="py-6 border-b border-border">
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center">
                       <Mail className="h-5 w-5 text-[#17B6C3] mr-2" />
-                      <h2 className="text-lg font-semibold text-gray-900">Email Connection</h2>
+                      <h2 className="text-lg font-semibold text-foreground">Email Connection</h2>
                     </div>
                     <Badge 
                       className={emailConnectionStatus?.status === 'connected'
@@ -2691,22 +2691,22 @@ export default function Settings() {
                       {emailConnectionStatus?.status === 'connected' ? "Connected" : "Not Connected"}
                     </Badge>
                   </div>
-                  <p className="text-sm text-gray-500 mb-6">
+                  <p className="text-sm text-muted-foreground mb-6">
                     Connect your email account to send collection emails from your own address
                   </p>
 
                   {emailConnectionStatus?.status !== 'connected' ? (
                     <div className="space-y-4">
-                      <h4 className="text-[13px] font-medium text-gray-900">Choose Your Email Provider</h4>
+                      <h4 className="text-[13px] font-medium text-foreground">Choose Your Email Provider</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-100">
+                        <div className="flex items-center justify-between p-4 bg-muted rounded-lg border border-border">
                           <div className="flex items-center space-x-4">
                             <div className="p-3 bg-red-100 rounded-lg">
                               <SiGoogle className="h-6 w-6 text-red-500" />
                             </div>
                             <div>
-                              <p className="text-[13px] font-semibold text-gray-900">Gmail / Google Workspace</p>
-                              <p className="text-sm text-gray-500">Send emails from your Google account</p>
+                              <p className="text-[13px] font-semibold text-foreground">Gmail / Google Workspace</p>
+                              <p className="text-sm text-muted-foreground">Send emails from your Google account</p>
                             </div>
                           </div>
                           <Button 
@@ -2716,14 +2716,14 @@ export default function Settings() {
                             Connect
                           </Button>
                         </div>
-                        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-100">
+                        <div className="flex items-center justify-between p-4 bg-muted rounded-lg border border-border">
                           <div className="flex items-center space-x-4">
                             <div className="p-3 bg-blue-100 rounded-lg">
                               <Mail className="h-6 w-6 text-blue-600" />
                             </div>
                             <div>
-                              <p className="text-[13px] font-semibold text-gray-900">Outlook / Microsoft 365</p>
-                              <p className="text-sm text-gray-500">Send emails from your Microsoft account</p>
+                              <p className="text-[13px] font-semibold text-foreground">Outlook / Microsoft 365</p>
+                              <p className="text-sm text-muted-foreground">Send emails from your Microsoft account</p>
                             </div>
                           </div>
                           <Button 
@@ -2737,7 +2737,7 @@ export default function Settings() {
                     </div>
                   ) : (
                     <div className="space-y-6">
-                      <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-100">
+                      <div className="flex items-center justify-between p-4 bg-muted rounded-lg border border-border">
                         <div className="flex items-center space-x-4">
                           <div className={`p-3 rounded-lg ${emailConnectionStatus.provider === 'gmail' ? 'bg-red-100' : 'bg-blue-100'}`}>
                             {emailConnectionStatus.provider === 'gmail' 
@@ -2746,16 +2746,16 @@ export default function Settings() {
                             }
                           </div>
                           <div>
-                            <p className="text-[13px] font-semibold text-gray-900">
+                            <p className="text-[13px] font-semibold text-foreground">
                               Connected to {emailConnectionStatus.provider === 'gmail' ? 'Gmail / Google Workspace' : 'Outlook / Microsoft 365'}
                             </p>
                             {emailConnectionStatus.email && (
-                              <p className="text-sm text-gray-500">
+                              <p className="text-sm text-muted-foreground">
                                 {emailConnectionStatus.email}
                               </p>
                             )}
                             {emailConnectionStatus.lastSyncAt && (
-                              <p className="text-xs text-gray-500 mt-1">
+                              <p className="text-xs text-muted-foreground mt-1">
                                 Last sync: {new Date(emailConnectionStatus.lastSyncAt).toLocaleString()}
                               </p>
                             )}
@@ -2783,32 +2783,32 @@ export default function Settings() {
                   )}
                 </div>
 
-                <div className="py-6 border-b border-gray-100">
+                <div className="py-6 border-b border-border">
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center">
                       <Bot className="h-5 w-5 text-[#17B6C3] mr-2" />
-                      <h2 className="text-lg font-semibold text-gray-900">AI Integration (OpenAI)</h2>
+                      <h2 className="text-lg font-semibold text-foreground">AI Integration (OpenAI)</h2>
                     </div>
                     <Badge className="bg-[#4FAD80]/10 text-[#4FAD80] border-[#4FAD80]/20" data-testid="badge-openai-status">
                       Active
                     </Badge>
                   </div>
-                  <p className="text-sm text-gray-500 mb-6">
+                  <p className="text-sm text-muted-foreground mb-6">
                     AI-powered suggestions and automated message generation
                   </p>
 
                   <div className="space-y-0">
-                    <div className="flex items-center justify-between py-4 border-b border-gray-100">
+                    <div className="flex items-center justify-between py-4 border-b border-border">
                       <div>
-                        <p className="text-[13px] font-medium text-gray-900">Enable AI Suggestions</p>
-                        <p className="text-sm text-gray-500">Get intelligent collection recommendations</p>
+                        <p className="text-[13px] font-medium text-foreground">Enable AI Suggestions</p>
+                        <p className="text-sm text-muted-foreground">Get intelligent collection recommendations</p>
                       </div>
                       <Switch defaultChecked data-testid="switch-ai-suggestions" />
                     </div>
                     <div className="flex items-center justify-between py-4">
                       <div>
-                        <p className="text-[13px] font-medium text-gray-900">Auto-generate Email Content</p>
-                        <p className="text-sm text-gray-500">Use AI to create personalized reminder emails</p>
+                        <p className="text-[13px] font-medium text-foreground">Auto-generate Email Content</p>
+                        <p className="text-sm text-muted-foreground">Use AI to create personalized reminder emails</p>
                       </div>
                       <Switch defaultChecked data-testid="switch-ai-emails" />
                     </div>
@@ -2818,41 +2818,41 @@ export default function Settings() {
               </TabsContent>
 
               <TabsContent value="notifications" className="mt-0">
-                <div className="py-6 border-b border-gray-100">
+                <div className="py-6 border-b border-border">
                   <div className="flex items-center mb-1">
                     <Bell className="h-5 w-5 text-[#17B6C3] mr-2" />
-                    <h2 className="text-lg font-semibold text-gray-900">Notification Preferences</h2>
+                    <h2 className="text-lg font-semibold text-foreground">Notification Preferences</h2>
                   </div>
-                  <p className="text-sm text-gray-500 mb-6">
+                  <p className="text-sm text-muted-foreground mb-6">
                     Choose how you want to be notified about important events
                   </p>
 
                   <div className="space-y-0">
-                    <div className="flex items-center justify-between py-4 border-b border-gray-100">
+                    <div className="flex items-center justify-between py-4 border-b border-border">
                       <div>
-                        <p className="text-[13px] font-medium text-gray-900">New Overdue Invoices</p>
-                        <p className="text-sm text-gray-500">Get notified when invoices become overdue</p>
+                        <p className="text-[13px] font-medium text-foreground">New Overdue Invoices</p>
+                        <p className="text-sm text-muted-foreground">Get notified when invoices become overdue</p>
                       </div>
                       <Switch defaultChecked data-testid="switch-notify-overdue" />
                     </div>
-                    <div className="flex items-center justify-between py-4 border-b border-gray-100">
+                    <div className="flex items-center justify-between py-4 border-b border-border">
                       <div>
-                        <p className="text-[13px] font-medium text-gray-900">Payment Received</p>
-                        <p className="text-sm text-gray-500">Get notified when payments are received</p>
+                        <p className="text-[13px] font-medium text-foreground">Payment Received</p>
+                        <p className="text-sm text-muted-foreground">Get notified when payments are received</p>
                       </div>
                       <Switch defaultChecked data-testid="switch-notify-payment" />
                     </div>
-                    <div className="flex items-center justify-between py-4 border-b border-gray-100">
+                    <div className="flex items-center justify-between py-4 border-b border-border">
                       <div>
-                        <p className="text-[13px] font-medium text-gray-900">Collection Status Updates</p>
-                        <p className="text-sm text-gray-500">Get notified about collection workflow changes</p>
+                        <p className="text-[13px] font-medium text-foreground">Collection Status Updates</p>
+                        <p className="text-sm text-muted-foreground">Get notified about collection workflow changes</p>
                       </div>
                       <Switch defaultChecked data-testid="switch-notify-collection" />
                     </div>
                     <div className="flex items-center justify-between py-4">
                       <div>
-                        <p className="text-[13px] font-medium text-gray-900">Weekly Summary</p>
-                        <p className="text-sm text-gray-500">Receive a weekly summary of your AR status</p>
+                        <p className="text-[13px] font-medium text-foreground">Weekly Summary</p>
+                        <p className="text-sm text-muted-foreground">Receive a weekly summary of your AR status</p>
                       </div>
                       <Switch defaultChecked data-testid="switch-notify-weekly" />
                     </div>
@@ -2867,41 +2867,41 @@ export default function Settings() {
               </TabsContent>
 
               <TabsContent value="security" className="mt-0">
-                <div className="py-6 border-b border-gray-100">
+                <div className="py-6 border-b border-border">
                   <div className="flex items-center mb-1">
                     <Shield className="h-5 w-5 text-[#17B6C3] mr-2" />
-                    <h2 className="text-lg font-semibold text-gray-900">Account Security</h2>
+                    <h2 className="text-lg font-semibold text-foreground">Account Security</h2>
                   </div>
-                  <p className="text-sm text-gray-500 mb-6">
+                  <p className="text-sm text-muted-foreground mb-6">
                     Manage your security settings and two-factor authentication
                   </p>
 
                   <div className="space-y-0">
-                    <div className="flex items-center justify-between py-4 border-b border-gray-100">
+                    <div className="flex items-center justify-between py-4 border-b border-border">
                       <div>
-                        <p className="text-[13px] font-medium text-gray-900">Two-Factor Authentication</p>
-                        <p className="text-sm text-gray-500">Add an extra layer of security to your account</p>
+                        <p className="text-[13px] font-medium text-foreground">Two-Factor Authentication</p>
+                        <p className="text-sm text-muted-foreground">Add an extra layer of security to your account</p>
                       </div>
-                      <Button variant="outline" className="h-9 rounded-lg border-gray-200" data-testid="button-enable-2fa">
+                      <Button variant="outline" className="h-9 rounded-lg border-border" data-testid="button-enable-2fa">
                         Enable
                       </Button>
                     </div>
-                    <div className="flex items-center justify-between py-4 border-b border-gray-100">
+                    <div className="flex items-center justify-between py-4 border-b border-border">
                       <div>
-                        <p className="text-[13px] font-medium text-gray-900">Change Password</p>
-                        <p className="text-sm text-gray-500">Update your password regularly for better security</p>
+                        <p className="text-[13px] font-medium text-foreground">Change Password</p>
+                        <p className="text-sm text-muted-foreground">Update your password regularly for better security</p>
                       </div>
-                      <Button variant="outline" className="h-9 rounded-lg border-gray-200" data-testid="button-change-password">
+                      <Button variant="outline" className="h-9 rounded-lg border-border" data-testid="button-change-password">
                         Change
                       </Button>
                     </div>
                     <div className="flex items-center justify-between py-4">
                       <div>
-                        <p className="text-[13px] font-medium text-gray-900">Session Timeout</p>
-                        <p className="text-sm text-gray-500">Auto-logout after period of inactivity</p>
+                        <p className="text-[13px] font-medium text-foreground">Session Timeout</p>
+                        <p className="text-sm text-muted-foreground">Auto-logout after period of inactivity</p>
                       </div>
                       <Select defaultValue="30">
-                        <SelectTrigger className="h-9 w-32 rounded-lg bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]" data-testid="select-session-timeout">
+                        <SelectTrigger className="h-9 w-32 rounded-lg bg-background border-border focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]" data-testid="select-session-timeout">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -2923,12 +2923,12 @@ export default function Settings() {
               </TabsContent>
 
               <TabsContent value="branding" className="mt-0">
-                <div className="py-6 border-b border-gray-100">
+                <div className="py-6 border-b border-border">
                   <div className="flex items-center mb-1">
                     <Palette className="h-5 w-5 text-[#17B6C3] mr-2" />
-                    <h2 className="text-lg font-semibold text-gray-900">Brand Settings</h2>
+                    <h2 className="text-lg font-semibold text-foreground">Brand Settings</h2>
                   </div>
-                  <p className="text-sm text-gray-500 mb-6">
+                  <p className="text-sm text-muted-foreground mb-6">
                     Customize the look and feel of your portal and communications
                   </p>
 
@@ -2940,10 +2940,10 @@ export default function Settings() {
                         value={logoUrl}
                         onChange={(e) => setLogoUrl(e.target.value)}
                         placeholder="https://example.com/logo.png"
-                        className="h-9 rounded-lg bg-white border-gray-200 max-w-md focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                        className="h-9 rounded-lg bg-background border-border max-w-md focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                         data-testid="input-logo-url"
                       />
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-muted-foreground">
                         Enter the URL to your company logo (PNG or SVG recommended)
                       </p>
                     </div>
@@ -2955,17 +2955,17 @@ export default function Settings() {
                           type="color"
                           value={primaryColor}
                           onChange={(e) => setPrimaryColor(e.target.value)}
-                          className="w-16 h-9 p-1 rounded-lg bg-white border-gray-200"
+                          className="w-16 h-9 p-1 rounded-lg bg-background border-border"
                           data-testid="input-primary-color"
                         />
                         <Input 
                           value={primaryColor}
                           onChange={(e) => setPrimaryColor(e.target.value)}
-                          className="h-9 flex-1 rounded-lg bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                          className="h-9 flex-1 rounded-lg bg-background border-border focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                           placeholder="#17B6C3"
                         />
                       </div>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-muted-foreground">
                         This color will be used for buttons and accents
                       </p>
                     </div>

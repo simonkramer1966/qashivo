@@ -70,7 +70,7 @@ export default function Documentation() {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
+    <div className="flex h-screen overflow-hidden bg-background">
       <NewSidebar />
       
       <main className="flex-1 overflow-y-auto">
@@ -80,15 +80,15 @@ export default function Documentation() {
           {/* Page Header */}
           <div className="mb-8 flex items-start justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">System Documentation</h1>
-              <p className="text-gray-600">
+              <h1 className="text-3xl font-bold text-foreground mb-2">System Documentation</h1>
+              <p className="text-muted-foreground">
                 Complete guide to understanding how Qashivo's AI-driven collections platform works
               </p>
             </div>
             <Button
               onClick={handleUpdateDocs}
               disabled={syncDocsMutation.isPending}
-              className="bg-white/70 hover:bg-white/90 backdrop-blur-md border border-gray-200/30 shadow-lg text-[#17B6C3] hover:text-[#1396A1] font-medium transition-all"
+              className="bg-background/70 hover:bg-background/90 backdrop-blur-md border border-border/30 shadow-lg text-[#17B6C3] hover:text-[#1396A1] font-medium transition-all"
               data-testid="button-update-docs"
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${syncDocsMutation.isPending ? 'animate-spin' : ''}`} />
