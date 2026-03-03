@@ -7,7 +7,7 @@
 @layer base {
   :root {
     /* Apple-inspired Clean Design System */
-    --background: 0 0% 100%; /* Pure white */
+    --background: 195 60% 97%; /* CANARY - pale teal test */
     --foreground: 215 16% 20%; /* Dark grey text */
     
     /* Cards - clean white with subtle shadows */
