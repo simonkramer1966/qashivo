@@ -50,7 +50,7 @@ export default function AdminAudit() {
     if (eventType.includes("INVITED") || eventType.includes("SENT")) {
       return <Badge variant="outline" className="text-purple-600 border-purple-200 bg-purple-50">{eventType}</Badge>;
     }
-    return <Badge variant="outline" className="text-slate-600 border-slate-200">{eventType}</Badge>;
+    return <Badge variant="outline" className="text-muted-foreground border-border">{eventType}</Badge>;
   };
 
   const filteredLogs = logs?.filter(log => {
@@ -67,15 +67,15 @@ export default function AdminAudit() {
 
   return (
     <AdminLayout>
-      <div className="sticky top-0 z-40 bg-white border-b border-slate-100">
+      <div className="sticky top-0 z-40 bg-background border-b border-border">
         <div className="px-6 lg:px-8 py-5">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight">Audit Log</h2>
-              <p className="text-[13px] text-slate-400 mt-0.5">All admin actions and changes</p>
+              <h2 className="text-[17px] font-semibold text-foreground tracking-tight">Audit Log</h2>
+              <p className="text-[13px] text-muted-foreground mt-0.5">All admin actions and changes</p>
             </div>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/60" />
               <Input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -96,17 +96,17 @@ export default function AdminAudit() {
           </div>
         ) : error ? (
           <div className="py-16 text-center">
-            <AlertCircle className="w-10 h-10 text-slate-300 mx-auto mb-4" />
-            <p className="text-[15px] font-medium text-slate-900 mb-1">Failed to load audit log</p>
-            <p className="text-[13px] text-slate-400">Please try again later</p>
+            <AlertCircle className="w-10 h-10 text-muted-foreground/60 mx-auto mb-4" />
+            <p className="text-[15px] font-medium text-foreground mb-1">Failed to load audit log</p>
+            <p className="text-[13px] text-muted-foreground">Please try again later</p>
           </div>
         ) : !filteredLogs || filteredLogs.length === 0 ? (
           <div className="py-16 text-center">
-            <ScrollText className="w-10 h-10 text-slate-300 mx-auto mb-4" />
-            <p className="text-[15px] font-medium text-slate-900 mb-1">
+            <ScrollText className="w-10 h-10 text-muted-foreground/60 mx-auto mb-4" />
+            <p className="text-[15px] font-medium text-foreground mb-1">
               {searchQuery ? "No matching logs found" : "No audit logs yet"}
             </p>
-            <p className="text-[13px] text-slate-400">
+            <p className="text-[13px] text-muted-foreground">
               {searchQuery ? "Try a different search term" : "Actions will be logged here as they occur"}
             </p>
           </div>
@@ -114,29 +114,29 @@ export default function AdminAudit() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-slate-100">
-                  <th className="text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider py-3 pr-4">Time</th>
-                  <th className="text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider py-3 px-4">Actor</th>
-                  <th className="text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider py-3 px-4">Action</th>
-                  <th className="text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider py-3 px-4">Entity</th>
-                  <th className="text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider py-3 pl-4">Scope</th>
+                <tr className="border-b border-border">
+                  <th className="text-left text-[11px] font-medium text-muted-foreground uppercase tracking-wider py-3 pr-4">Time</th>
+                  <th className="text-left text-[11px] font-medium text-muted-foreground uppercase tracking-wider py-3 px-4">Actor</th>
+                  <th className="text-left text-[11px] font-medium text-muted-foreground uppercase tracking-wider py-3 px-4">Action</th>
+                  <th className="text-left text-[11px] font-medium text-muted-foreground uppercase tracking-wider py-3 px-4">Entity</th>
+                  <th className="text-left text-[11px] font-medium text-muted-foreground uppercase tracking-wider py-3 pl-4">Scope</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredLogs.map((log) => (
-                  <tr key={log.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-                    <td className="py-3 pr-4 text-[13px] text-slate-500 tabular-nums whitespace-nowrap">
+                  <tr key={log.id} className="border-b border-border hover:bg-muted/50 transition-colors">
+                    <td className="py-3 pr-4 text-[13px] text-muted-foreground tabular-nums whitespace-nowrap">
                       {formatDateTime(log.createdAt)}
                     </td>
-                    <td className="py-3 px-4 text-[13px] text-slate-700">{log.actorEmail}</td>
+                    <td className="py-3 px-4 text-[13px] text-foreground">{log.actorEmail}</td>
                     <td className="py-3 px-4">{getEventBadge(log.eventType)}</td>
-                    <td className="py-3 px-4 text-[13px] text-slate-600">
+                    <td className="py-3 px-4 text-[13px] text-muted-foreground">
                       {log.targetType}
-                      <span className="text-slate-400 ml-1 text-[11px]">
+                      <span className="text-muted-foreground/60 ml-1 text-[11px]">
                         {log.targetId.substring(0, 8)}...
                       </span>
                     </td>
-                    <td className="py-3 pl-4 text-[13px] text-slate-400">
+                    <td className="py-3 pl-4 text-[13px] text-muted-foreground/60">
                       {log.partnerName || log.smeName || "—"}
                     </td>
                   </tr>

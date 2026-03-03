@@ -126,7 +126,7 @@ export default function CashFlow() {
   const yAxisMin = minNetCash - Math.min(calculatedPadding, maxPadding);
 
   return (
-    <div className="flex h-screen bg-white">
+    <div className="flex h-screen bg-background">
       <div className="hidden lg:block">
         <NewSidebar />
       </div>
@@ -143,8 +143,8 @@ export default function CashFlow() {
             <section className="flex-1 flex flex-col min-h-0 mb-6">
               <div className="flex items-center justify-between mb-3 flex-shrink-0">
                 <div>
-                  <h3 className="text-[14px] font-medium text-slate-900">Expected cash position</h3>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Net cash over time, with confidence intervals. Updates automatically.</p>
+                  <h3 className="text-[14px] font-medium text-foreground">Expected cash position</h3>
+                  <p className="text-[11px] text-muted-foreground/60 mt-0.5">Net cash over time, with confidence intervals. Updates automatically.</p>
                 </div>
                 <div className="flex items-center gap-0.5">
                   {(["4W", "13W", "6M", "12M"] as ForecastRange[]).map((range) => (
@@ -153,8 +153,8 @@ export default function CashFlow() {
                       onClick={() => setForecastRange(range)}
                       className={`px-2.5 py-1 text-[11px] transition-colors ${
                         forecastRange === range 
-                          ? "text-slate-900 font-medium" 
-                          : "text-slate-400 hover:text-slate-600"
+                          ? "text-foreground font-medium" 
+                          : "text-muted-foreground/60 hover:text-foreground"
                       }`}
                     >
                       {range}
@@ -165,7 +165,7 @@ export default function CashFlow() {
               
               {/* Main net cash chart */}
               <div className="flex-1 min-h-[200px] relative">
-                <p className="absolute top-2 right-4 text-[10px] text-slate-400 z-10">
+                <p className="absolute top-2 right-4 text-[10px] text-muted-foreground/60 z-10">
                   Shaded = confidence range
                 </p>
                 
@@ -203,8 +203,8 @@ export default function CashFlow() {
                       }}
                       filterNull={true}
                       contentStyle={{
-                        backgroundColor: 'white',
-                        border: '1px solid #e2e8f0',
+                        backgroundColor: 'hsl(var(--background))',
+                        border: '1px solid hsl(var(--border))',
                         borderRadius: '4px',
                         padding: '8px 12px',
                         fontSize: '12px',
@@ -224,7 +224,7 @@ export default function CashFlow() {
                       type="monotone"
                       dataKey="ci95Lower"
                       stroke="none"
-                      fill="white"
+                      fill="hsl(var(--background))"
                       fillOpacity={1}
                       isAnimationActive={false}
                     />
@@ -240,7 +240,7 @@ export default function CashFlow() {
                       type="monotone"
                       dataKey="ci80Lower"
                       stroke="none"
-                      fill="white"
+                      fill="hsl(var(--background))"
                       fillOpacity={1}
                       isAnimationActive={false}
                     />
@@ -260,8 +260,8 @@ export default function CashFlow() {
               {/* Cash in/out micro-bar strip - separate chart below */}
               <div className="h-[80px] flex-shrink-0 relative">
                 <div className="flex items-center justify-between mb-1 px-1">
-                  <p className="text-[10px] text-slate-400">Weekly cash in/out</p>
-                  <div className="flex items-center gap-3 text-[9px] text-slate-400">
+                  <p className="text-[10px] text-muted-foreground/60">Weekly cash in/out</p>
+                  <div className="flex items-center gap-3 text-[9px] text-muted-foreground/60">
                     <span className="flex items-center gap-1">
                       <span className="w-2 h-2 bg-emerald-500/40 rounded-sm"></span> In
                     </span>
@@ -288,7 +288,7 @@ export default function CashFlow() {
                       width={55}
                       domain={[-maxCashFlow * 1.1, maxCashFlow * 1.1]}
                     />
-                    <ReferenceLine y={0} stroke="#e2e8f0" />
+                    <ReferenceLine y={0} stroke="hsl(var(--border))" />
                     <RechartsTooltip
                       formatter={(value: any, name: string) => {
                         if (name === 'cashIn') return [formatCurrency(value), 'Cash In'];
@@ -297,8 +297,8 @@ export default function CashFlow() {
                       }}
                       filterNull={true}
                       contentStyle={{
-                        backgroundColor: 'white',
-                        border: '1px solid #e2e8f0',
+                        backgroundColor: 'hsl(var(--background))',
+                        border: '1px solid hsl(var(--border))',
                         borderRadius: '4px',
                         padding: '6px 10px',
                         fontSize: '11px',
@@ -324,7 +324,7 @@ export default function CashFlow() {
                 
                 {largestInflowWeek && (
                   <div 
-                    className="absolute text-[9px] text-emerald-600 bg-white/90 px-1.5 py-0.5 rounded pointer-events-none"
+                    className="absolute text-[9px] text-emerald-600 bg-background/90 px-1.5 py-0.5 rounded pointer-events-none"
                     style={{ 
                       top: '2px', 
                       left: `${(forecastData.indexOf(largestInflowWeek) / forecastData.length) * 75 + 12}%` 
@@ -335,7 +335,7 @@ export default function CashFlow() {
                 )}
                 {highestOutflowWeek && (
                   <div 
-                    className="absolute text-[9px] text-red-500 bg-white/90 px-1.5 py-0.5 rounded pointer-events-none"
+                    className="absolute text-[9px] text-red-500 bg-background/90 px-1.5 py-0.5 rounded pointer-events-none"
                     style={{ 
                       bottom: '8px', 
                       left: `${(forecastData.indexOf(highestOutflowWeek) / forecastData.length) * 75 + 12}%` 
@@ -347,35 +347,35 @@ export default function CashFlow() {
               </div>
             </section>
 
-            <div className="border-t border-slate-100/80 mb-6 flex-shrink-0" />
+            <div className="border-t border-border/80 mb-6 flex-shrink-0" />
 
             <section className="flex-shrink-0 pb-4">
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-4">Forecast Quality & Cashflow Health</p>
+              <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider mb-4">Forecast Quality & Cashflow Health</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-8">
                 <div>
-                  <p className="text-[12px] text-slate-500 mb-1">Forecast Confidence (30d)</p>
-                  <p className="text-[20px] font-semibold text-slate-900 tabular-nums">
-                    High <span className="text-[14px] font-normal text-slate-400">· 92%</span>
+                  <p className="text-[12px] text-muted-foreground mb-1">Forecast Confidence (30d)</p>
+                  <p className="text-[20px] font-semibold text-foreground tabular-nums">
+                    High <span className="text-[14px] font-normal text-muted-foreground/60">· 92%</span>
                   </p>
                 </div>
                 
                 <div>
-                  <p className="text-[12px] text-slate-500 mb-1">Expected Net Change (30d)</p>
+                  <p className="text-[12px] text-muted-foreground mb-1">Expected Net Change (30d)</p>
                   <p className="text-[20px] font-semibold text-emerald-600 tabular-nums">
                     +{formatCurrency(48200)}
                   </p>
                 </div>
                 
                 <div>
-                  <p className="text-[12px] text-slate-500 mb-1">Cash Runway</p>
-                  <p className="text-[20px] font-semibold text-slate-900 tabular-nums">
-                    4.6 <span className="text-[12px] font-normal text-slate-400">months</span>
+                  <p className="text-[12px] text-muted-foreground mb-1">Cash Runway</p>
+                  <p className="text-[20px] font-semibold text-foreground tabular-nums">
+                    4.6 <span className="text-[12px] font-normal text-muted-foreground/60">months</span>
                   </p>
                 </div>
                 
                 <div>
-                  <p className="text-[12px] text-slate-500 mb-1">Volatility</p>
-                  <p className="text-[20px] font-semibold text-slate-900 tabular-nums">
+                  <p className="text-[12px] text-muted-foreground mb-1">Volatility</p>
+                  <p className="text-[20px] font-semibold text-foreground tabular-nums">
                     Low
                   </p>
                 </div>

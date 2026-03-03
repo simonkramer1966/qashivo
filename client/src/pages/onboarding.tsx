@@ -141,7 +141,7 @@ export default function Onboarding() {
   };
 
   return (
-    <div className="flex h-screen bg-white">
+    <div className="flex h-screen bg-background">
       {/* Desktop Sidebar */}
       <div className="hidden lg:block">
         <NewSidebar />
@@ -154,20 +154,20 @@ export default function Onboarding() {
           subtitle="Add new customers with AI-powered credit assessment"
         />
         
-        <main className="flex-1 overflow-y-auto bg-white pb-20 lg:pb-8">
+        <main className="flex-1 overflow-y-auto bg-background pb-20 lg:pb-8">
           <div className="max-w-4xl mx-auto p-4 md:p-8">
             {/* Header */}
             <div className="mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2 flex items-center gap-2">
+              <h1 className="text-3xl font-bold text-foreground mb-2 flex items-center gap-2">
                 <UserPlus className="w-8 h-8 text-[#17B6C3]" />
                 Customer Onboarding
               </h1>
-              <p className="text-gray-600">Add new customers with AI-powered credit assessment</p>
+              <p className="text-muted-foreground">Add new customers with AI-powered credit assessment</p>
               
               {/* Progress bar */}
               <div className="mt-4">
                 <Progress value={getStepProgress()} className="h-2" />
-                <div className="flex justify-between mt-2 text-sm text-gray-600">
+                <div className="flex justify-between mt-2 text-sm text-muted-foreground">
                   <span className={currentStep === "details" ? "font-semibold text-[#17B6C3]" : ""}>Customer Details</span>
                   <span className={currentStep === "credit-check" ? "font-semibold text-[#17B6C3]" : ""}>Credit Check</span>
                   <span className={currentStep === "complete" ? "font-semibold text-[#17B6C3]" : ""}>Complete</span>
@@ -194,7 +194,7 @@ export default function Onboarding() {
                     value={formData.companyName}
                     onChange={(e) => handleInputChange("companyName", e.target.value)}
                     placeholder="Acme Corporation Ltd"
-                    className="bg-white/70"
+                    className="bg-background/70"
                     data-testid="input-company-name"
                   />
                 </div>
@@ -206,7 +206,7 @@ export default function Onboarding() {
                     value={formData.contactName}
                     onChange={(e) => handleInputChange("contactName", e.target.value)}
                     placeholder="John Smith"
-                    className="bg-white/70"
+                    className="bg-background/70"
                     data-testid="input-contact-name"
                   />
                 </div>
@@ -221,7 +221,7 @@ export default function Onboarding() {
                     value={formData.email}
                     onChange={(e) => handleInputChange("email", e.target.value)}
                     placeholder="john@acme.com"
-                    className="bg-white/70"
+                    className="bg-background/70"
                     data-testid="input-email"
                   />
                 </div>
@@ -234,7 +234,7 @@ export default function Onboarding() {
                     value={formData.phone}
                     onChange={(e) => handleInputChange("phone", e.target.value)}
                     placeholder="+44 20 1234 5678"
-                    className="bg-white/70"
+                    className="bg-background/70"
                     data-testid="input-phone"
                   />
                 </div>
@@ -247,7 +247,7 @@ export default function Onboarding() {
                   value={formData.address}
                   onChange={(e) => handleInputChange("address", e.target.value)}
                   placeholder="123 High Street, London, UK"
-                  className="bg-white/70"
+                  className="bg-background/70"
                   data-testid="input-address"
                 />
               </div>
@@ -260,7 +260,7 @@ export default function Onboarding() {
                     value={formData.businessRegistrationNumber}
                     onChange={(e) => handleInputChange("businessRegistrationNumber", e.target.value)}
                     placeholder="12345678"
-                    className="bg-white/70"
+                    className="bg-background/70"
                     data-testid="input-registration-number"
                   />
                 </div>
@@ -273,7 +273,7 @@ export default function Onboarding() {
                     value={formData.yearsInBusiness}
                     onChange={(e) => handleInputChange("yearsInBusiness", e.target.value)}
                     placeholder="5"
-                    className="bg-white/70"
+                    className="bg-background/70"
                     data-testid="input-years-business"
                   />
                 </div>
@@ -286,7 +286,7 @@ export default function Onboarding() {
                     value={formData.annualRevenue}
                     onChange={(e) => handleInputChange("annualRevenue", e.target.value)}
                     placeholder="500000"
-                    className="bg-white/70"
+                    className="bg-background/70"
                     data-testid="input-annual-revenue"
                   />
                 </div>
@@ -299,7 +299,7 @@ export default function Onboarding() {
                   value={formData.notes}
                   onChange={(e) => handleInputChange("notes", e.target.value)}
                   placeholder="Any additional information about this customer..."
-                  className="bg-white/70"
+                  className="bg-background/70"
                   rows={3}
                   data-testid="input-notes"
                 />
@@ -343,47 +343,47 @@ export default function Onboarding() {
               <CardContent className="space-y-6">
                 {/* Credit Score */}
                 <div className="text-center p-6 bg-gradient-to-br from-blue-50 to-teal-50 rounded-xl">
-                  <div className="text-5xl font-bold text-gray-900 mb-2">
+                  <div className="text-5xl font-bold text-foreground mb-2">
                     {creditCheckResult.score}
                   </div>
                   <Badge variant={creditCheckResult.rating === "Excellent" ? "default" : "secondary"} className="text-lg px-4 py-1">
                     {creditCheckResult.rating}
                   </Badge>
-                  <p className="text-sm text-gray-600 mt-2">Credit Score</p>
+                  <p className="text-sm text-muted-foreground mt-2">Credit Score</p>
                 </div>
 
                 {/* Risk Level */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-4 bg-white/70 rounded-lg">
+                  <div className="p-4 bg-background/70 rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
                       {creditCheckResult.riskLevel === "Low" ? (
                         <CheckCircle2 className="w-5 h-5 text-green-600" />
                       ) : (
                         <AlertCircle className="w-5 h-5 text-amber-600" />
                       )}
-                      <span className="font-semibold text-gray-900">Risk Level</span>
+                      <span className="font-semibold text-foreground">Risk Level</span>
                     </div>
-                    <p className="text-2xl font-bold text-gray-900">{creditCheckResult.riskLevel}</p>
+                    <p className="text-2xl font-bold text-foreground">{creditCheckResult.riskLevel}</p>
                   </div>
 
-                  <div className="p-4 bg-white/70 rounded-lg">
+                  <div className="p-4 bg-background/70 rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
                       <CreditCard className="w-5 h-5 text-[#17B6C3]" />
-                      <span className="font-semibold text-gray-900">Recommended Limit</span>
+                      <span className="font-semibold text-foreground">Recommended Limit</span>
                     </div>
-                    <p className="text-2xl font-bold text-gray-900">£{creditCheckResult.recommendedLimit.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-foreground">£{creditCheckResult.recommendedLimit.toLocaleString()}</p>
                   </div>
                 </div>
 
                 {/* Key Factors */}
                 <div>
-                  <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <h4 className="font-semibold text-foreground mb-3 flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-[#17B6C3]" />
                     AI Analysis Factors
                   </h4>
                   <ul className="space-y-2">
                     {creditCheckResult.factors.map((factor, index) => (
-                      <li key={index} className="flex items-start gap-2 text-gray-700">
+                      <li key={index} className="flex items-start gap-2 text-muted-foreground">
                         <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5" />
                         <span>{factor}</span>
                       </li>
@@ -430,8 +430,8 @@ export default function Onboarding() {
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <CheckCircle2 className="w-8 h-8 text-green-600" />
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Onboarding Complete!</h2>
-              <p className="text-gray-600 mb-6">
+              <h2 className="text-2xl font-bold text-foreground mb-2">Onboarding Complete!</h2>
+              <p className="text-muted-foreground mb-6">
                 {formData.companyName} has been successfully added to your customer list.
               </p>
               <div className="flex justify-center gap-3">

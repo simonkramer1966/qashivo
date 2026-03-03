@@ -106,12 +106,12 @@ export default function AdminUsers() {
       return <Badge className="bg-purple-100 text-purple-700 border-purple-200">Platform Admin</Badge>;
     }
     if (user.role) {
-      return <Badge variant="outline" className="text-slate-600">{user.role.replace(/_/g, " ")}</Badge>;
+      return <Badge variant="outline" className="text-muted-foreground">{user.role.replace(/_/g, " ")}</Badge>;
     }
     if (user.tenantRole) {
-      return <Badge variant="outline" className="text-slate-500">{user.tenantRole}</Badge>;
+      return <Badge variant="outline" className="text-muted-foreground">{user.tenantRole}</Badge>;
     }
-    return <Badge variant="outline" className="text-slate-400">No role</Badge>;
+    return <Badge variant="outline" className="text-muted-foreground/60">No role</Badge>;
   };
 
   const formatDate = (date: string | null) => {
@@ -125,15 +125,15 @@ export default function AdminUsers() {
 
   return (
     <AdminLayout>
-      <div className="sticky top-0 z-40 bg-white border-b border-slate-100">
+      <div className="sticky top-0 z-40 bg-background border-b border-border">
         <div className="px-6 lg:px-8 py-5 flex items-center justify-between">
           <div>
-            <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight">Users</h2>
-            <p className="text-[13px] text-slate-400 mt-0.5">All platform users across partners and SMEs</p>
+            <h2 className="text-[17px] font-semibold text-foreground tracking-tight">Users</h2>
+            <p className="text-[13px] text-muted-foreground/60 mt-0.5">All platform users across partners and SMEs</p>
           </div>
           <Button
             onClick={() => setIsInviteOpen(true)}
-            className="h-8 px-4 text-[13px] font-medium bg-slate-900 hover:bg-slate-800 text-white"
+            className="h-8 px-4 text-[13px] font-medium bg-foreground hover:bg-foreground/90 text-background"
           >
             <Plus className="w-4 h-4 mr-1" />
             Invite User
@@ -150,47 +150,47 @@ export default function AdminUsers() {
           </div>
         ) : error ? (
           <div className="py-16 text-center">
-            <AlertCircle className="w-10 h-10 text-slate-300 mx-auto mb-4" />
-            <p className="text-[15px] font-medium text-slate-900 mb-1">Failed to load users</p>
-            <p className="text-[13px] text-slate-400">Please try again later</p>
+            <AlertCircle className="w-10 h-10 text-muted/60 mx-auto mb-4" />
+            <p className="text-[15px] font-medium text-foreground mb-1">Failed to load users</p>
+            <p className="text-[13px] text-muted-foreground">Please try again later</p>
           </div>
         ) : !users || users.length === 0 ? (
           <div className="py-16 text-center">
-            <Users className="w-10 h-10 text-slate-300 mx-auto mb-4" />
-            <p className="text-[15px] font-medium text-slate-900 mb-1">No users yet</p>
-            <p className="text-[13px] text-slate-400 mb-6">Invite your first user to get started</p>
+            <Users className="w-10 h-10 text-muted/60 mx-auto mb-4" />
+            <p className="text-[15px] font-medium text-foreground mb-1">No users yet</p>
+            <p className="text-[13px] text-muted-foreground mb-6">Invite your first user to get started</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-slate-100">
-                  <th className="text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider py-3 pr-4">Name</th>
-                  <th className="text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider py-3 px-4">Email</th>
-                  <th className="text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider py-3 px-4">Role</th>
-                  <th className="text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider py-3 px-4">Scope</th>
-                  <th className="text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider py-3 pl-4">Created</th>
+                <tr className="border-b border-border">
+                  <th className="text-left text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider py-3 pr-4">Name</th>
+                  <th className="text-left text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider py-3 px-4">Email</th>
+                  <th className="text-left text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider py-3 px-4">Role</th>
+                  <th className="text-left text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider py-3 px-4">Scope</th>
+                  <th className="text-left text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider py-3 pl-4">Created</th>
                 </tr>
               </thead>
               <tbody>
                 {users.map((user) => (
                   <tr
                     key={user.id}
-                    className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors"
+                    className="border-b border-muted/50 hover:bg-muted/50 transition-colors"
                   >
                     <td className="py-3 pr-4">
-                      <span className="text-[14px] font-medium text-slate-900">
+                      <span className="text-[14px] font-medium text-foreground">
                         {user.firstName || user.lastName 
                           ? `${user.firstName || ""} ${user.lastName || ""}`.trim()
                           : "—"}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-[13px] text-slate-600">{user.email}</td>
+                    <td className="py-3 px-4 text-[13px] text-muted-foreground">{user.email}</td>
                     <td className="py-3 px-4">{getRoleBadge(user)}</td>
-                    <td className="py-3 px-4 text-[13px] text-slate-400">
+                    <td className="py-3 px-4 text-[13px] text-muted-foreground/60">
                       {user.partnerName || user.tenantName || "—"}
                     </td>
-                    <td className="py-3 pl-4 text-[13px] text-slate-400">{formatDate(user.createdAt)}</td>
+                    <td className="py-3 pl-4 text-[13px] text-muted-foreground/60">{formatDate(user.createdAt)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -206,7 +206,7 @@ export default function AdminUsers() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
-              <Label className="text-[13px] font-medium text-slate-700">Email *</Label>
+              <Label className="text-[13px] font-medium text-muted-foreground">Email *</Label>
               <Input
                 type="email"
                 value={formData.email}
@@ -217,7 +217,7 @@ export default function AdminUsers() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-[13px] font-medium text-slate-700">First name</Label>
+                <Label className="text-[13px] font-medium text-muted-foreground">First name</Label>
                 <Input
                   value={formData.firstName}
                   onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
@@ -225,7 +225,7 @@ export default function AdminUsers() {
                 />
               </div>
               <div>
-                <Label className="text-[13px] font-medium text-slate-700">Last name</Label>
+                <Label className="text-[13px] font-medium text-muted-foreground">Last name</Label>
                 <Input
                   value={formData.lastName}
                   onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
@@ -234,7 +234,7 @@ export default function AdminUsers() {
               </div>
             </div>
             <div>
-              <Label className="text-[13px] font-medium text-slate-700">Role *</Label>
+              <Label className="text-[13px] font-medium text-muted-foreground">Role *</Label>
               <Select
                 value={formData.role}
                 onValueChange={(value) => setFormData({ ...formData, role: value, partnerId: "", smeId: "" })}
@@ -251,7 +251,7 @@ export default function AdminUsers() {
             </div>
             {showPartnerSelect && (
               <div>
-                <Label className="text-[13px] font-medium text-slate-700">Partner *</Label>
+                <Label className="text-[13px] font-medium text-muted-foreground">Partner *</Label>
                 <Select
                   value={formData.partnerId}
                   onValueChange={(value) => setFormData({ ...formData, partnerId: value })}
@@ -269,7 +269,7 @@ export default function AdminUsers() {
             )}
             {showSmeSelect && (
               <div>
-                <Label className="text-[13px] font-medium text-slate-700">SME *</Label>
+                <Label className="text-[13px] font-medium text-muted-foreground">SME *</Label>
                 <Select
                   value={formData.smeId}
                   onValueChange={(value) => setFormData({ ...formData, smeId: value })}
@@ -299,7 +299,7 @@ export default function AdminUsers() {
                 (showSmeSelect && !formData.smeId) ||
                 inviteMutation.isPending
               }
-              className="bg-slate-900 hover:bg-slate-800 text-white text-[13px]"
+              className="bg-foreground hover:bg-foreground/90 text-background text-[13px]"
             >
               {inviteMutation.isPending ? "Sending..." : "Send Invite"}
             </Button>
