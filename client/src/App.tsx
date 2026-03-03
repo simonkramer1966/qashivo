@@ -227,6 +227,7 @@ function Router() {
           <Route path="/design-partner/thank-you" component={DesignPartnerThankYou} />
           <Route path="/design-partner" component={DesignPartner} />
           <Route path="/partner-scorecard" component={PartnerScorecard} />
+          <Route path="/ui-preview" component={UiPreview} />
           <Route path="/product" component={Product} />
           <Route path="/homepage" component={Homepage} />
           <Route path="/demo" component={InvestorDemo} />
