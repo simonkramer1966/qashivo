@@ -178,6 +178,7 @@ export default function ActionCentre2() {
           time: timeStr,
           direction: direction as 'in' | 'out',
           channel,
+          category: 'communication',
           customerId,
           customerName: action.companyName || action.contactName || 'Unknown',
           contactName: action.contactName || 'Unknown',
@@ -417,11 +418,11 @@ export default function ActionCentre2() {
       
       <main className="flex-1 flex flex-col min-h-0 main-with-bottom-nav">
         {/* Cardless v2.0 Header */}
-        <div className="max-w-7xl mx-auto w-full px-6 py-5 border-b border-gray-100">
+        <div className="max-w-7xl mx-auto w-full px-6 py-5 border-b border-border">
           <div className="hidden lg:flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Action Centre</h1>
-              <p className="text-xs text-gray-400 mt-0.5">
+              <h1 className="text-2xl font-bold text-foreground">Action Centre</h1>
+              <p className="text-xs text-muted-foreground/60 mt-0.5">
                 {activeTab === 'planned' && dailyPlan?.tenantPolicies?.executionTime 
                   ? `Today's Plan · Executes at ${dailyPlan.tenantPolicies.executionTime}`
                   : activeTab === 'planned' ? "Today's Plan"
@@ -434,15 +435,15 @@ export default function ActionCentre2() {
               </p>
             </div>
             <div className="flex items-center gap-4">
-              <span className="text-[11px] text-gray-400">All figures are in £ GBP</span>
+              <span className="text-[11px] text-muted-foreground/60">All figures are in £ GBP</span>
               <div className="relative w-[240px]">
-                <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-gray-300" />
+                <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/60" />
                 <input
                   type="text"
                   placeholder="Search..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-full pl-8 pr-3 h-9 text-[13px] text-gray-900 placeholder:text-gray-400 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3] transition-colors"
+                  className="w-full pl-8 pr-3 h-9 text-[13px] text-foreground placeholder:text-muted-foreground/60 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3] transition-colors"
                 />
               </div>
               {activeTab === 'planned' && (dailyPlan?.actions?.length ?? 0) > 0 && (
@@ -458,12 +459,12 @@ export default function ActionCentre2() {
           </div>
           {/* Mobile title */}
           <div className="lg:hidden text-center">
-            <h1 className="text-2xl font-bold text-gray-900">Action Centre</h1>
+            <h1 className="text-2xl font-bold text-foreground">Action Centre</h1>
           </div>
         </div>
         
         {/* Cardless v2.0 Tabs */}
-        <div className="max-w-7xl mx-auto w-full px-6 border-b border-gray-100">
+        <div className="max-w-7xl mx-auto w-full px-6 border-b border-border">
           <div className="flex items-center gap-1">
             {TABS.map(tab => (
               <button
@@ -471,13 +472,13 @@ export default function ActionCentre2() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`px-4 py-3 text-[13px] font-medium transition-colors relative ${
                   activeTab === tab.id
-                    ? 'text-gray-900'
-                    : 'text-gray-400 hover:text-gray-600'
+                    ? 'text-foreground'
+                    : 'text-muted-foreground/60 hover:text-muted-foreground'
                 }`}
               >
                 {tab.label}
                 {activeTab === tab.id && (
-                  <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gray-900 rounded-full" />
+                  <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-foreground rounded-full" />
                 )}
               </button>
             ))}
@@ -547,42 +548,42 @@ export default function ActionCentre2() {
       </main>
 
       <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
-        <SheetContent className="w-[400px] sm:w-[540px] bg-white">
+        <SheetContent className="w-[400px] sm:w-[540px] bg-background text-foreground">
           <SheetHeader>
-            <SheetTitle className="text-lg font-semibold text-gray-900">{selectedDebtor?.name || 'Debtor Details'}</SheetTitle>
+            <SheetTitle className="text-lg font-semibold text-foreground">{selectedDebtor?.name || 'Debtor Details'}</SheetTitle>
           </SheetHeader>
           {selectedDebtor && (
             <div className="mt-6 space-y-4">
               <div className="space-y-2">
                 <div className="flex justify-between text-[13px]">
-                  <span className="text-gray-500">Outstanding</span>
-                  <span className="font-medium tabular-nums text-gray-900">{formatCurrency(selectedDebtor.totalOutstanding)}</span>
+                  <span className="text-muted-foreground">Outstanding</span>
+                  <span className="font-medium tabular-nums text-foreground">{formatCurrency(selectedDebtor.totalOutstanding)}</span>
                 </div>
                 <div className="flex justify-between text-[13px]">
-                  <span className="text-gray-500">Invoices</span>
-                  <span className="text-gray-900">{selectedDebtor.invoiceCount}</span>
+                  <span className="text-muted-foreground">Invoices</span>
+                  <span className="text-foreground">{selectedDebtor.invoiceCount}</span>
                 </div>
                 <div className="flex justify-between text-[13px]">
-                  <span className="text-gray-500">Oldest Overdue</span>
-                  <span className="text-gray-900">{selectedDebtor.oldestDaysOverdue} days</span>
+                  <span className="text-muted-foreground">Oldest Overdue</span>
+                  <span className="text-foreground">{selectedDebtor.oldestDaysOverdue} days</span>
                 </div>
                 {selectedDebtor.ptpDate && (
                   <div className="flex justify-between text-[13px]">
-                    <span className="text-gray-500">Promise to Pay</span>
-                    <span className="text-gray-900">{new Date(selectedDebtor.ptpDate).toLocaleDateString('en-GB')}</span>
+                    <span className="text-muted-foreground">Promise to Pay</span>
+                    <span className="text-foreground">{new Date(selectedDebtor.ptpDate).toLocaleDateString('en-GB')}</span>
                   </div>
                 )}
               </div>
               {selectedDebtor.email && (
-                <div className="pt-4 border-t border-gray-100">
-                  <span className="text-xs text-gray-400">Email</span>
-                  <p className="text-[13px] text-gray-900">{selectedDebtor.email}</p>
+                <div className="pt-4 border-t border-border">
+                  <span className="text-xs text-muted-foreground/60">Email</span>
+                  <p className="text-[13px] text-foreground">{selectedDebtor.email}</p>
                 </div>
               )}
               {selectedDebtor.phone && (
                 <div>
-                  <span className="text-xs text-gray-400">Phone</span>
-                  <p className="text-[13px] text-gray-900">{selectedDebtor.phone}</p>
+                  <span className="text-xs text-muted-foreground/60">Phone</span>
+                  <p className="text-[13px] text-foreground">{selectedDebtor.phone}</p>
                 </div>
               )}
             </div>
@@ -629,12 +630,12 @@ export default function ActionCentre2() {
       />
 
       <Dialog open={isApproveDialogOpen} onOpenChange={setIsApproveDialogOpen}>
-        <DialogContent className="sm:max-w-[400px] bg-white">
+        <DialogContent className="sm:max-w-[400px] bg-background text-foreground">
           <DialogHeader>
-            <DialogTitle className="text-lg font-semibold text-gray-900">Approve All Actions</DialogTitle>
+            <DialogTitle className="text-lg font-semibold text-foreground">Approve All Actions</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-2">
-            <p className="text-[13px] text-gray-500">
+            <p className="text-[13px] text-muted-foreground">
               {dailyPlan?.actions?.filter((a: any) => a.status === 'pending_approval').length || 0} actions will be approved. When should they execute?
             </p>
 
@@ -643,18 +644,18 @@ export default function ActionCentre2() {
                 className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
                   approveMode === 'immediate'
                     ? 'border-[#17B6C3] bg-[#17B6C3]/5'
-                    : 'border-gray-200 hover:border-gray-300'
+                    : 'border-border hover:border-muted-foreground/60'
                 }`}
                 onClick={() => setApproveMode('immediate')}
               >
                 <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                  approveMode === 'immediate' ? 'border-[#17B6C3]' : 'border-gray-300'
+                  approveMode === 'immediate' ? 'border-[#17B6C3]' : 'border-border'
                 }`}>
                   {approveMode === 'immediate' && <div className="w-2 h-2 rounded-full bg-[#17B6C3]" />}
                 </div>
                 <div>
-                  <span className="text-[13px] font-medium text-gray-900">Immediately</span>
-                  <p className="text-[12px] text-gray-400">Send all emails and initiate calls right now</p>
+                  <span className="text-[13px] font-medium text-foreground">Immediately</span>
+                  <p className="text-[12px] text-muted-foreground/60">Send all emails and initiate calls right now</p>
                 </div>
               </label>
 
@@ -662,18 +663,18 @@ export default function ActionCentre2() {
                 className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
                   approveMode === 'scheduled'
                     ? 'border-[#17B6C3] bg-[#17B6C3]/5'
-                    : 'border-gray-200 hover:border-gray-300'
+                    : 'border-border hover:border-muted-foreground/60'
                 }`}
                 onClick={() => setApproveMode('scheduled')}
               >
                 <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                  approveMode === 'scheduled' ? 'border-[#17B6C3]' : 'border-gray-300'
+                  approveMode === 'scheduled' ? 'border-[#17B6C3]' : 'border-border'
                 }`}>
                   {approveMode === 'scheduled' && <div className="w-2 h-2 rounded-full bg-[#17B6C3]" />}
                 </div>
                 <div>
-                  <span className="text-[13px] font-medium text-gray-900">Scheduled</span>
-                  <p className="text-[12px] text-gray-400">Choose a specific date and time</p>
+                  <span className="text-[13px] font-medium text-foreground">Scheduled</span>
+                  <p className="text-[12px] text-muted-foreground/60">Choose a specific date and time</p>
                 </div>
               </label>
             </div>
@@ -681,22 +682,22 @@ export default function ActionCentre2() {
             {approveMode === 'scheduled' && (
               <div className="flex gap-3 pl-7">
                 <div className="flex-1">
-                  <Label className="text-[12px] text-gray-500 mb-1 block">Date</Label>
+                  <Label className="text-[12px] text-muted-foreground mb-1 block">Date</Label>
                   <Input
                     type="date"
                     value={scheduledDate}
                     onChange={(e) => setScheduledDate(e.target.value)}
                     min={new Date().toISOString().split('T')[0]}
-                    className="h-9 text-[13px] bg-white border-gray-200 rounded-lg"
+                    className="h-9 text-[13px] bg-background border-border rounded-lg"
                   />
                 </div>
                 <div className="w-28">
-                  <Label className="text-[12px] text-gray-500 mb-1 block">Time</Label>
+                  <Label className="text-[12px] text-muted-foreground mb-1 block">Time</Label>
                   <Input
                     type="time"
                     value={scheduledTime}
                     onChange={(e) => setScheduledTime(e.target.value)}
-                    className="h-9 text-[13px] bg-white border-gray-200 rounded-lg"
+                    className="h-9 text-[13px] bg-background border-border rounded-lg"
                   />
                 </div>
               </div>
@@ -706,24 +707,24 @@ export default function ActionCentre2() {
               <Button
                 variant="outline"
                 onClick={() => setIsApproveDialogOpen(false)}
-                className="flex-1 h-9 text-[13px] rounded-full border-gray-200"
+                className="flex-1 h-9 text-[13px] rounded-full border-border"
               >
                 Cancel
               </Button>
-              <Button
-                onClick={() => {
-                  if (approveMode === 'immediate') {
-                    approvePlanMutation.mutate({ mode: 'immediate' });
-                  } else {
-                    const scheduledFor = new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString();
-                    approvePlanMutation.mutate({ mode: 'scheduled', scheduledFor });
-                  }
-                }}
-                disabled={approvePlanMutation.isPending}
-                className="flex-1 h-9 text-[13px] font-medium bg-[#17B6C3] hover:bg-[#1396A1] text-white rounded-full"
-              >
-                {approvePlanMutation.isPending ? 'Approving...' : approveMode === 'immediate' ? 'Execute Now' : 'Schedule'}
-              </Button>
+                <Button
+                  onClick={() => {
+                    if (approveMode === 'immediate') {
+                      approvePlanMutation.mutate({ mode: 'immediate' });
+                    } else {
+                      const scheduledFor = new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString();
+                      approvePlanMutation.mutate({ mode: 'scheduled', scheduledFor });
+                    }
+                  }}
+                  disabled={approvePlanMutation.isPending}
+                  className="flex-1 h-9 text-[13px] font-medium bg-[#17B6C3] hover:bg-[#1396A1] text-white rounded-full"
+                >
+                  {approvePlanMutation.isPending ? 'Approving...' : approveMode === 'immediate' ? 'Execute Now' : 'Schedule'}
+                </Button>
             </div>
           </div>
         </DialogContent>
@@ -855,7 +856,7 @@ function PlannedTab2({
     return (
       <div className="space-y-1">
         {[...Array(6)].map((_, i) => (
-          <div key={i} className="h-12 bg-gray-50 animate-pulse rounded-lg" />
+          <div key={i} className="h-12 bg-muted animate-pulse rounded-lg" />
         ))}
       </div>
     );
@@ -864,9 +865,9 @@ function PlannedTab2({
   if (!dailyPlan || dailyPlan.actions.length === 0) {
     return (
       <div className="py-16 text-center">
-        <Clock className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-        <p className="text-gray-600 font-medium">No planned actions</p>
-        <p className="text-gray-400 text-[13px] mt-1 mb-6">AI generates action plans based on your overdue invoices</p>
+        <Clock className="h-12 w-12 mx-auto mb-4 text-muted-foreground/60" />
+        <p className="text-foreground font-medium">No planned actions</p>
+        <p className="text-muted-foreground text-[13px] mt-1 mb-6">AI generates action plans based on your overdue invoices</p>
         <Button
           onClick={onGeneratePlan}
           disabled={isGenerating}
@@ -890,7 +891,7 @@ function PlannedTab2({
   return (
     <div className="flex flex-col h-[calc(100vh-260px)]">
       <div className="flex items-center justify-between pb-3 flex-shrink-0">
-        <p className="text-[13px] text-gray-400">{statsLine}</p>
+        <p className="text-[13px] text-muted-foreground/60">{statsLine}</p>
         <div className="flex items-center gap-1">
           {(['all', 'email', 'sms', 'voice'] as const).map(ch => (
             <button
@@ -898,8 +899,8 @@ function PlannedTab2({
               onClick={() => setChannelFilter(ch)}
               className={`px-2.5 py-1 text-[12px] font-medium transition-colors rounded-lg ${
                 channelFilter === ch 
-                  ? 'bg-gray-100 text-gray-900' 
-                  : 'text-gray-400 hover:text-gray-600'
+                  ? 'bg-muted text-foreground' 
+                  : 'text-muted-foreground/60 hover:text-muted-foreground'
               }`}
             >
               {ch === 'all' ? 'All' : ch === 'sms' ? 'SMS' : ch.charAt(0).toUpperCase() + ch.slice(1)}
@@ -909,30 +910,30 @@ function PlannedTab2({
       </div>
 
       {hasSelection && (
-        <div className="py-3 flex items-center justify-between border-y border-gray-100 bg-white mb-3">
+        <div className="py-3 flex items-center justify-between border-y border-border bg-background mb-3">
           <div className="flex items-center gap-3">
-            <span className="text-[13px] font-medium text-gray-700">{selectedIds.size} selected</span>
-            <button onClick={clearSelection} className="text-[12px] text-gray-400 hover:text-gray-600">
+            <span className="text-[13px] font-medium text-foreground">{selectedIds.size} selected</span>
+            <button onClick={clearSelection} className="text-[12px] text-muted-foreground/60 hover:text-muted-foreground">
               Clear
             </button>
           </div>
           <div className="flex items-center gap-2">
             <Popover open={isBulkSkipOpen} onOpenChange={setIsBulkSkipOpen}>
               <PopoverTrigger asChild>
-                <button className="px-3 py-1.5 text-[12px] font-medium text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
+                <button className="px-3 py-1.5 text-[12px] font-medium text-foreground hover:bg-muted rounded-lg transition-colors">
                   Skip
                 </button>
               </PopoverTrigger>
               <PopoverContent className="w-48 p-3" align="end">
                 <form onSubmit={handleBulkSkipSubmit} className="space-y-2">
-                  <label className="text-[12px] text-gray-500">Skip for how many days?</label>
+                  <label className="text-[12px] text-muted-foreground">Skip for how many days?</label>
                   <Input
                     type="number"
                     min="1"
                     max="90"
                     value={bulkSkipDays}
                     onChange={(e) => setBulkSkipDays(e.target.value)}
-                    className="h-9 text-[13px] bg-white border-gray-200 rounded-lg"
+                    className="h-9 text-[13px] bg-background border-border rounded-lg"
                     autoFocus
                   />
                   <Button type="submit" size="sm" className="w-full h-9 text-[12px] bg-[#17B6C3] hover:bg-[#1396A1] rounded-full">
@@ -953,14 +954,14 @@ function PlannedTab2({
 
       {filteredActions.length === 0 ? (
         <div className="py-16 text-center flex-1">
-          <p className="text-gray-400 text-[13px]">No actions match filters</p>
+          <p className="text-muted-foreground/60 text-[13px]">No actions match filters</p>
         </div>
       ) : (
         <>
           <div className="overflow-auto flex-1 -mx-6">
             <div className="px-6">
               {/* Cardless v2.0 Table Header */}
-              <div className="flex items-center py-2 border-b border-gray-100 text-[11px] font-medium text-gray-400 uppercase tracking-wider">
+              <div className="flex items-center py-2 border-b border-border text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider">
                 <div className="w-10 px-3">
                   <Checkbox
                     checked={allSelected}
@@ -979,8 +980,8 @@ function PlannedTab2({
                 <div 
                   key={item.id}
                   onClick={() => onPreviewAction(item)}
-                  className={`flex items-center py-2.5 border-b border-gray-50 cursor-pointer transition-colors ${
-                    selectedIds.has(item.id) ? 'bg-gray-50' : 'hover:bg-gray-50'
+                  className={`flex items-center py-2.5 border-b border-border cursor-pointer transition-colors ${
+                    selectedIds.has(item.id) ? 'bg-muted' : 'hover:bg-muted'
                   }`}
                 >
                   <div className="w-10 px-3" onClick={(e) => e.stopPropagation()}>
@@ -990,24 +991,24 @@ function PlannedTab2({
                     />
                   </div>
                   <div className="flex-1 px-3 min-w-0">
-                    <div className="text-[13px] font-medium text-gray-900 truncate">
+                    <div className="text-[13px] font-medium text-foreground truncate">
                       {item.companyName || item.contactName || 'Unknown'}
                     </div>
                     {item.companyName && item.contactName && (
-                      <div className="text-xs text-gray-500 truncate">{item.contactName}</div>
+                      <div className="text-xs text-muted-foreground truncate">{item.contactName}</div>
                     )}
                   </div>
                   <div className="w-20 px-3">
-                    <span className="text-[13px] text-gray-500">{getChannelLabel(item.actionType)}</span>
+                    <span className="text-[13px] text-muted-foreground">{getChannelLabel(item.actionType)}</span>
                   </div>
                   <div className="w-20 px-3 text-right">
-                    <span className="text-[13px] tabular-nums text-gray-500">{item.daysOverdue}d</span>
+                    <span className="text-[13px] tabular-nums text-muted-foreground">{item.daysOverdue}d</span>
                   </div>
                   <div className="w-20 px-3 text-right">
-                    <span className="text-[13px] tabular-nums text-gray-500">{item.invoiceCount || 1}</span>
+                    <span className="text-[13px] tabular-nums text-muted-foreground">{item.invoiceCount || 1}</span>
                   </div>
                   <div className="w-28 px-3 text-right">
-                    <span className="text-[13px] font-medium tabular-nums text-gray-900">
+                    <span className="text-[13px] font-medium tabular-nums text-foreground">
                       {formatCurrency(parseFloat(item.amount))}
                     </span>
                   </div>
@@ -1017,14 +1018,14 @@ function PlannedTab2({
           </div>
           
           {/* Pagination Footer */}
-          <div className="flex items-center justify-end pt-3 flex-shrink-0 border-t border-gray-100 mt-3">
-            <div className="flex items-center gap-4 text-[12px] text-gray-500">
+          <div className="flex items-center justify-end pt-3 flex-shrink-0 border-t border-border mt-3">
+            <div className="flex items-center gap-4 text-[12px] text-muted-foreground">
               <div className="flex items-center gap-2">
-                <span className="text-gray-400">Rows:</span>
+                <span className="text-muted-foreground/60">Rows:</span>
                 <select
                   value={itemsPerPage}
                   onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                  className="bg-white border border-gray-200 rounded-lg px-2 py-1 text-[12px] text-gray-600 cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                  className="bg-background border border-border rounded-lg px-2 py-1 text-[12px] text-muted-foreground cursor-pointer hover:border-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                 >
                   {PAGE_SIZE_OPTIONS.map(size => (
                     <option key={size} value={size}>{size}</option>
@@ -1037,7 +1038,7 @@ function PlannedTab2({
                   <button
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className="p-1 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="p-1 rounded-lg hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
@@ -1045,7 +1046,7 @@ function PlannedTab2({
                   <button
                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                     disabled={currentPage === totalPages}
-                    className="p-1 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="p-1 rounded-lg hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>
@@ -1116,15 +1117,15 @@ function ExecutedTab2({ actions, onSelectDebtor, isLoading }: ExecutedTab2Props)
 
   const getOutcomeStyle = (status: string) => {
     const styles: Record<string, string> = {
-      sent: 'text-gray-500',
+      sent: 'text-muted-foreground',
       delivered: 'text-[#4FAD80]',
       failed: 'text-[#C75C5C]',
-      no_answer: 'text-gray-500',
+      no_answer: 'text-muted-foreground',
       ptp: 'text-[#4FAD80]',
       dispute: 'text-[#C75C5C]',
       query: 'text-[#E8A23B]',
     };
-    return styles[status] || 'text-gray-500';
+    return styles[status] || 'text-muted-foreground';
   };
 
   const getOutcomeLabel = (status: string) => {
@@ -1144,7 +1145,7 @@ function ExecutedTab2({ actions, onSelectDebtor, isLoading }: ExecutedTab2Props)
     return (
       <div className="space-y-1">
         {[...Array(6)].map((_, i) => (
-          <div key={i} className="h-12 bg-gray-50 animate-pulse rounded-lg" />
+          <div key={i} className="h-12 bg-muted animate-pulse rounded-lg" />
         ))}
       </div>
     );
@@ -1153,7 +1154,7 @@ function ExecutedTab2({ actions, onSelectDebtor, isLoading }: ExecutedTab2Props)
   return (
     <div className="flex flex-col h-[calc(100vh-260px)]">
       <div className="flex items-center justify-between pb-3 flex-shrink-0">
-        <p className="text-[13px] text-gray-400">
+        <p className="text-[13px] text-muted-foreground/60">
           {filteredActions.length} actions
           {(['today', 'week', 'all'] as const).map(opt => (
             <button
@@ -1161,8 +1162,8 @@ function ExecutedTab2({ actions, onSelectDebtor, isLoading }: ExecutedTab2Props)
               onClick={() => setDateFilter(opt)}
               className={`ml-3 text-[12px] transition-colors ${
                 dateFilter === opt 
-                  ? 'text-gray-900 font-medium' 
-                  : 'text-gray-400 hover:text-gray-600'
+                  ? 'text-foreground font-medium' 
+                  : 'text-muted-foreground/60 hover:text-muted-foreground'
               }`}
             >
               {opt === 'today' ? 'Today' : opt === 'week' ? '7 days' : 'All time'}
@@ -1176,8 +1177,8 @@ function ExecutedTab2({ actions, onSelectDebtor, isLoading }: ExecutedTab2Props)
               onClick={() => setChannelFilter(opt)}
               className={`px-2.5 py-1 text-[12px] font-medium rounded-lg transition-colors ${
                 channelFilter === opt 
-                  ? 'bg-gray-100 text-gray-900' 
-                  : 'text-gray-400 hover:text-gray-600'
+                  ? 'bg-muted text-foreground' 
+                  : 'text-muted-foreground/60 hover:text-muted-foreground'
               }`}
             >
               {opt === 'all' ? 'All' : opt === 'sms' ? 'SMS' : opt.charAt(0).toUpperCase() + opt.slice(1)}
@@ -1188,13 +1189,13 @@ function ExecutedTab2({ actions, onSelectDebtor, isLoading }: ExecutedTab2Props)
 
       {filteredActions.length === 0 ? (
         <div className="py-16 text-center flex-1">
-          <p className="text-gray-400 text-[13px]">No executed actions found</p>
+          <p className="text-muted-foreground/60 text-[13px]">No executed actions found</p>
         </div>
       ) : (
         <>
           <div className="overflow-auto flex-1 -mx-6">
             <div className="px-6">
-              <div className="flex items-center py-2 border-b border-gray-100 text-[11px] font-medium text-gray-400 uppercase tracking-wider">
+              <div className="flex items-center py-2 border-b border-border text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider">
                 <div className="w-[28%] px-3">Customer</div>
                 <div className="w-[12%] px-3">Channel</div>
                 <div className="w-[20%] px-3">Action</div>
@@ -1206,21 +1207,21 @@ function ExecutedTab2({ actions, onSelectDebtor, isLoading }: ExecutedTab2Props)
                 <div 
                   key={action.id}
                   onClick={() => onSelectDebtor(action.debtorId, action.id)}
-                  className="flex items-center py-2.5 border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors"
+                  className="flex items-center py-2.5 border-b border-border hover:bg-muted cursor-pointer transition-colors"
                 >
                   <div className="w-[28%] px-3 min-w-0">
-                    <div className="text-[13px] font-medium text-gray-900 truncate">{action.debtorName}</div>
-                    <div className="text-xs text-gray-500 tabular-nums">{formatRelativeTime(action.executedAt)}</div>
+                    <div className="text-[13px] font-medium text-foreground truncate">{action.debtorName}</div>
+                    <div className="text-xs text-muted-foreground tabular-nums">{formatRelativeTime(action.executedAt)}</div>
                   </div>
-                  <div className="w-[12%] px-3 text-[13px] text-gray-500">
+                  <div className="w-[12%] px-3 text-[13px] text-muted-foreground">
                     {getChannelLabel(action.channel)}
                   </div>
-                  <div className="w-[20%] px-3 text-[13px] text-gray-600 truncate">
+                  <div className="w-[20%] px-3 text-[13px] text-muted-foreground/60 truncate">
                     {action.actionType}
                   </div>
                   <div className="w-[22%] px-3 text-right">
-                    <span className="text-[13px] font-medium tabular-nums text-gray-900">{formatCurrencyCompact(action.totalAmount)}</span>
-                    <span className="text-xs text-gray-500 ml-1">· {action.invoiceCount} inv</span>
+                    <span className="text-[13px] font-medium tabular-nums text-foreground">{formatCurrencyCompact(action.totalAmount)}</span>
+                    <span className="text-xs text-muted-foreground ml-1">· {action.invoiceCount} inv</span>
                   </div>
                   <div className="w-[18%] px-3">
                     <span className={`text-[13px] font-medium ${getOutcomeStyle(action.status)}`}>
@@ -1232,14 +1233,14 @@ function ExecutedTab2({ actions, onSelectDebtor, isLoading }: ExecutedTab2Props)
             </div>
           </div>
           
-          <div className="flex items-center justify-end pt-3 flex-shrink-0 border-t border-gray-100 mt-3">
-            <div className="flex items-center gap-4 text-[12px] text-gray-500">
+          <div className="flex items-center justify-end pt-3 flex-shrink-0 border-t border-border mt-3">
+            <div className="flex items-center gap-4 text-[12px] text-muted-foreground">
               <div className="flex items-center gap-2">
-                <span className="text-gray-400">Rows:</span>
+                <span className="text-muted-foreground/60">Rows:</span>
                 <select
                   value={itemsPerPage}
                   onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                  className="bg-white border border-gray-200 rounded-lg px-2 py-1 text-[12px] text-gray-600 cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                  className="bg-background border border-border rounded-lg px-2 py-1 text-[12px] text-muted-foreground cursor-pointer hover:border-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                 >
                   {PAGE_SIZE_OPTIONS.map(size => (
                     <option key={size} value={size}>{size}</option>
@@ -1252,7 +1253,7 @@ function ExecutedTab2({ actions, onSelectDebtor, isLoading }: ExecutedTab2Props)
                   <button
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className="p-1 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="p-1 rounded-lg hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
@@ -1260,7 +1261,7 @@ function ExecutedTab2({ actions, onSelectDebtor, isLoading }: ExecutedTab2Props)
                   <button
                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                     disabled={currentPage === totalPages}
-                    className="p-1 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="p-1 rounded-lg hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>
@@ -1333,7 +1334,7 @@ function AttentionTab2({ items, onSelectDebtor, isLoading, search = '' }: Attent
     return (
       <div className="space-y-1">
         {[...Array(6)].map((_, i) => (
-          <div key={i} className="h-12 bg-gray-50 animate-pulse rounded-lg" />
+          <div key={i} className="h-12 bg-muted animate-pulse rounded-lg" />
         ))}
       </div>
     );
@@ -1345,8 +1346,8 @@ function AttentionTab2({ items, onSelectDebtor, isLoading, search = '' }: Attent
         <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#4FAD80]/10 mb-4">
           <CheckCircle2 className="w-6 h-6 text-[#4FAD80]" />
         </div>
-        <p className="text-gray-600 font-medium">No exceptions — you're all caught up.</p>
-        <p className="text-gray-400 text-[13px] mt-1">All items are flowing through normally</p>
+        <p className="text-muted-foreground font-medium">No exceptions — you're all caught up.</p>
+        <p className="text-muted-foreground/60 text-[13px] mt-1">All items are flowing through normally</p>
       </div>
     );
   }
@@ -1356,13 +1357,13 @@ function AttentionTab2({ items, onSelectDebtor, isLoading, search = '' }: Attent
       <div className="flex flex-col h-[calc(100vh-260px)]">
         <div className="overflow-auto flex-1 -mx-6">
           <div className="px-6">
-            <div className="flex items-center py-2 border-b border-gray-100 text-[11px] font-medium text-gray-400 uppercase tracking-wider">
+            <div className="flex items-center py-2 border-b border-border text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider">
               <div className="w-[18%] px-3">Customer</div>
               <div className="w-[10%] px-3 text-center">Type</div>
               <div className="w-[32%] px-3">Reason</div>
               <div className="w-[12%] px-3 text-center">
                 <div>Amount</div>
-                <div className="font-semibold text-gray-800 text-[13px] mt-0.5 tabular-nums normal-case">
+                <div className="font-semibold text-foreground text-[13px] mt-0.5 tabular-nums normal-case">
                   {formatCurrencyCompact(totalAmount)}
                 </div>
               </div>
@@ -1377,12 +1378,12 @@ function AttentionTab2({ items, onSelectDebtor, isLoading, search = '' }: Attent
               return (
                 <div 
                   key={item.id}
-                  className="flex items-center py-2.5 border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors"
+                  className="flex items-center py-2.5 border-b border-border hover:bg-muted cursor-pointer transition-colors"
                   onClick={() => onSelectDebtor(item.debtorId)}
                 >
                   <div className="w-[18%] px-3 min-w-0">
-                    <div className="text-[13px] font-medium text-gray-900 truncate">{item.debtorName}</div>
-                    <div className="text-xs text-gray-500 tabular-nums">{item.invoiceCount || 1} inv</div>
+                    <div className="text-[13px] font-medium text-foreground truncate">{item.debtorName}</div>
+                    <div className="text-xs text-muted-foreground tabular-nums">{item.invoiceCount || 1} inv</div>
                   </div>
                   <div className="w-[10%] px-3 text-center">
                     <Tooltip>
@@ -1397,25 +1398,25 @@ function AttentionTab2({ items, onSelectDebtor, isLoading, search = '' }: Attent
                     </Tooltip>
                   </div>
                   <div className="w-[32%] px-3">
-                    <div className="text-[13px] text-gray-600 truncate">{item.reason}</div>
+                    <div className="text-[13px] text-muted-foreground truncate">{item.reason}</div>
                   </div>
                   <div className="w-[12%] px-3 text-center">
-                    <div className="text-[13px] font-medium text-gray-900 tabular-nums">
+                    <div className="text-[13px] font-medium text-foreground tabular-nums">
                       {formatCurrencyCompact(item.amountImpacted)}
                     </div>
                   </div>
                   <div className="w-[10%] px-3 text-center">
-                    <div className="text-[13px] text-gray-600 tabular-nums">{item.oldestDaysOverdue}d</div>
+                    <div className="text-[13px] text-muted-foreground tabular-nums">{item.oldestDaysOverdue}d</div>
                   </div>
                   <div className="w-[18%] px-3 text-center">
                     {item.lastActionAt ? (
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-muted-foreground">
                         {item.lastActionChannel && getChannelLabel(item.lastActionChannel)}
                         {' · '}
                         {formatRelativeTime(item.lastActionAt)}
                       </div>
                     ) : (
-                      <div className="text-xs text-gray-300">—</div>
+                      <div className="text-xs text-muted-foreground/60">—</div>
                     )}
                   </div>
                 </div>
@@ -1424,14 +1425,14 @@ function AttentionTab2({ items, onSelectDebtor, isLoading, search = '' }: Attent
           </div>
         </div>
         
-        <div className="flex items-center justify-end pt-3 flex-shrink-0 border-t border-gray-100 mt-3">
-          <div className="flex items-center gap-4 text-[12px] text-gray-500">
+        <div className="flex items-center justify-end pt-3 flex-shrink-0 border-t border-border mt-3">
+          <div className="flex items-center gap-4 text-[12px] text-muted-foreground">
             <div className="flex items-center gap-2">
-              <span className="text-gray-400">Rows:</span>
+              <span className="text-muted-foreground/60">Rows:</span>
               <select
                 value={itemsPerPage}
                 onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                className="bg-white border border-gray-200 rounded-lg px-2 py-1 text-[12px] text-gray-600 cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                className="bg-background border border-border rounded-lg px-2 py-1 text-[12px] text-muted-foreground cursor-pointer hover:border-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
               >
                 {PAGE_SIZE_OPTIONS.map(size => (
                   <option key={size} value={size}>{size}</option>
@@ -1444,7 +1445,7 @@ function AttentionTab2({ items, onSelectDebtor, isLoading, search = '' }: Attent
                 <button
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
-                  className="p-1 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  className="p-1 rounded-lg hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
@@ -1452,7 +1453,7 @@ function AttentionTab2({ items, onSelectDebtor, isLoading, search = '' }: Attent
                 <button
                   onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
-                  className="p-1 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  className="p-1 rounded-lg hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
@@ -1566,9 +1567,9 @@ function CashboardTab2({ debtors, onSelectDebtor, isLoading, formatCurrency }: C
   if (isLoading) {
     return (
       <div className="space-y-1">
-        <div className="h-10 bg-gray-50 animate-pulse rounded-lg" />
+        <div className="h-10 bg-muted animate-pulse rounded-lg" />
         {[...Array(6)].map((_, i) => (
-          <div key={i} className="h-12 bg-gray-50 animate-pulse rounded-lg" />
+          <div key={i} className="h-12 bg-muted animate-pulse rounded-lg" />
         ))}
       </div>
     );
@@ -1577,7 +1578,7 @@ function CashboardTab2({ debtors, onSelectDebtor, isLoading, formatCurrency }: C
   if (debtors.length === 0) {
     return (
       <div className="py-16 text-center">
-        <p className="text-gray-400 text-[13px]">No customers found</p>
+        <p className="text-muted-foreground/60 text-[13px]">No customers found</p>
       </div>
     );
   }
@@ -1586,25 +1587,25 @@ function CashboardTab2({ debtors, onSelectDebtor, isLoading, formatCurrency }: C
     <TooltipProvider delayDuration={200}>
       <div className="flex flex-col h-[calc(100vh-260px)]">
         <div className="overflow-auto flex-1">
-          <table className="w-full bg-white" style={{ minWidth: '900px', tableLayout: 'fixed' }}>
+          <table className="w-full bg-background" style={{ minWidth: '900px', tableLayout: 'fixed' }}>
             <colgroup>
               <col style={{ width: '18%' }} />
               {STATUS_ORDER.map(status => (
                 <col key={status} style={{ width: `${82 / STATUS_ORDER.length}%` }} />
               ))}
             </colgroup>
-            <thead className="sticky top-0 z-20 bg-white">
-              <tr className="border-b border-gray-100">
-                <th className="py-2 px-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider sticky left-0 bg-white z-30 align-bottom">
+            <thead className="sticky top-0 z-20 bg-background">
+              <tr className="border-b border-border">
+                <th className="py-2 px-3 text-left text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider sticky left-0 bg-background z-30 align-bottom">
                   Customer
                 </th>
                 {STATUS_ORDER.map((status, idx) => (
                   <th 
                     key={status} 
-                    className={`py-2 px-2 text-right bg-white align-bottom ${idx > 0 ? 'border-l border-gray-100' : ''}`}
+                    className={`py-2 px-2 text-right bg-background align-bottom ${idx > 0 ? 'border-l border-border' : ''}`}
                   >
-                    <div className="text-[11px] font-medium text-gray-400 uppercase tracking-wider">{getStatusLabel(status)}</div>
-                    <div className="font-semibold text-gray-900 text-[13px] mt-0.5 tabular-nums">
+                    <div className="text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider">{getStatusLabel(status)}</div>
+                    <div className="font-semibold text-foreground text-[13px] mt-0.5 tabular-nums">
                       {formatCurrencyCompact(columnTotals[status])}
                     </div>
                   </th>
@@ -1615,24 +1616,24 @@ function CashboardTab2({ debtors, onSelectDebtor, isLoading, formatCurrency }: C
               {paginatedMatrix.map(row => (
                 <tr 
                   key={row.debtor.id} 
-                  className="group border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer"
+                  className="group border-b border-border/50 hover:bg-muted cursor-pointer transition-colors"
                   onClick={() => onSelectDebtor(row.debtor.id)}
                 >
-                  <td className="py-[5px] px-3 sticky left-0 bg-white group-hover:bg-gray-50 z-10 transition-colors">
-                    <div className="text-[13px] font-medium text-gray-900 truncate max-w-[170px]">
+                  <td className="py-[5px] px-3 sticky left-0 bg-background group-hover:bg-muted z-10 transition-colors">
+                    <div className="text-[13px] font-medium text-foreground truncate max-w-[170px]">
                       {row.debtor.name}
                     </div>
-                    <div className="text-[12px] text-gray-400 truncate tabular-nums">
+                    <div className="text-[12px] text-muted-foreground/60 truncate tabular-nums">
                       {formatCurrencyCompact(row.debtor.totalOutstanding)} outstanding
                     </div>
                   </td>
                   {STATUS_ORDER.map((status, idx) => {
                     const cell = row.cells[status];
-                    const borderClass = idx > 0 ? 'border-l border-gray-100' : '';
+                    const borderClass = idx > 0 ? 'border-l border-border/50' : '';
                     if (!cell) {
                       return (
                         <td key={status} className={`py-[5px] px-2 text-right ${borderClass}`}>
-                          <span className="text-gray-200 text-[13px]">—</span>
+                          <span className="text-muted-foreground/20 text-[13px]">Wait...</span>
                         </td>
                       );
                     }
@@ -1641,21 +1642,21 @@ function CashboardTab2({ debtors, onSelectDebtor, isLoading, formatCurrency }: C
                       <td key={status} className={`py-[5px] px-2 text-right ${borderClass}`}>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <span className="text-[13px] font-medium tabular-nums text-gray-900 cursor-pointer">
+                            <span className="text-[13px] font-medium tabular-nums text-foreground cursor-pointer">
                               {formatCurrencyCompact(cell.amount)}
                             </span>
                           </TooltipTrigger>
                           <TooltipContent side="top" className="max-w-xs">
                             <div className="text-xs space-y-1">
                               <div className="font-medium">{formatCurrencyCompact(cell.amount)} · {cell.invoiceCount} invoices</div>
-                              <div className="text-gray-400">Oldest: {cell.oldestDaysOverdue}d</div>
+                              <div className="text-muted-foreground/60">Oldest: {cell.oldestDaysOverdue}d</div>
                               {cell.lastActionAt && cell.lastActionChannel && (
-                                <div className="text-gray-400">
+                                <div className="text-muted-foreground/60">
                                   Last: {getChannelLabel(cell.lastActionChannel)} {formatRelativeTime(cell.lastActionAt)}
                                 </div>
                               )}
                               {cell.ptpDate && (
-                                <div className="text-gray-500">PTP: {new Date(cell.ptpDate).toLocaleDateString('en-GB')}</div>
+                                <div className="text-muted-foreground">PTP: {new Date(cell.ptpDate).toLocaleDateString('en-GB')}</div>
                               )}
                             </div>
                           </TooltipContent>
@@ -1669,15 +1670,15 @@ function CashboardTab2({ debtors, onSelectDebtor, isLoading, formatCurrency }: C
           </table>
         </div>
         
-        <div className="flex items-center justify-end pt-3 flex-shrink-0 border-t border-gray-100 mt-3">
+        <div className="flex items-center justify-end pt-3 flex-shrink-0 border-t border-border mt-3">
           {matrix.length > 0 && (
-            <div className="flex items-center gap-4 text-[12px] text-gray-500">
+            <div className="flex items-center gap-4 text-[12px] text-muted-foreground">
               <div className="flex items-center gap-2">
-                <span className="text-gray-400">Rows:</span>
+                <span className="text-muted-foreground/60">Rows:</span>
                 <select
                   value={itemsPerPage}
                   onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                  className="bg-white border border-gray-200 rounded-lg px-2 py-1 text-[12px] text-gray-600 cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                  className="bg-background border border-border rounded-lg px-2 py-1 text-[12px] text-muted-foreground cursor-pointer hover:border-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                 >
                   {PAGE_SIZE_OPTIONS.map(size => (
                     <option key={size} value={size}>{size}</option>
@@ -1690,7 +1691,7 @@ function CashboardTab2({ debtors, onSelectDebtor, isLoading, formatCurrency }: C
                   <button
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className="p-1 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="p-1 rounded-lg hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
@@ -1698,7 +1699,7 @@ function CashboardTab2({ debtors, onSelectDebtor, isLoading, formatCurrency }: C
                   <button
                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                     disabled={currentPage === totalPages}
-                    className="p-1 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="p-1 rounded-lg hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>
@@ -1721,7 +1722,7 @@ interface ForecastTab2Props {
 const CONFIDENCE_DOT: Record<string, string> = {
   high: 'bg-[#4FAD80]',
   medium: 'bg-[#E8A23B]',
-  low: 'bg-gray-300',
+  low: 'bg-muted-foreground/20',
 };
 
 function ForecastTab2({ debtors, onSelectDebtor, isLoading }: ForecastTab2Props) {
@@ -1777,9 +1778,9 @@ function ForecastTab2({ debtors, onSelectDebtor, isLoading }: ForecastTab2Props)
   if (isLoading) {
     return (
       <div className="space-y-1">
-        <div className="h-10 bg-gray-50 animate-pulse rounded" />
+        <div className="h-10 bg-muted animate-pulse rounded" />
         {[...Array(6)].map((_, i) => (
-          <div key={i} className="h-12 bg-gray-50 animate-pulse rounded" />
+          <div key={i} className="h-12 bg-muted animate-pulse rounded" />
         ))}
       </div>
     );
@@ -1788,7 +1789,7 @@ function ForecastTab2({ debtors, onSelectDebtor, isLoading }: ForecastTab2Props)
   if (debtors.length === 0) {
     return (
       <div className="py-20 text-center">
-        <p className="text-gray-400 text-[13px]">No customers to display</p>
+        <p className="text-muted-foreground/60 text-[13px]">No customers to display</p>
       </div>
     );
   }
@@ -1804,18 +1805,18 @@ function ForecastTab2({ debtors, onSelectDebtor, isLoading }: ForecastTab2Props)
                   <col key={bucket.weekCommencing} style={{ width: `${82 / weekBuckets.length}%` }} />
                 ))}
               </colgroup>
-              <thead className="sticky top-0 z-20 bg-white">
-                <tr className="border-b border-gray-100">
-                  <th className="py-2 px-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider sticky left-0 bg-white z-30 align-bottom">
+              <thead className="sticky top-0 z-20 bg-background">
+                <tr className="border-b border-border">
+                  <th className="py-2 px-3 text-left text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider sticky left-0 bg-background z-30 align-bottom">
                     Customer
                   </th>
                   {weekBuckets.map((bucket, idx) => (
                     <th 
                       key={bucket.weekCommencing} 
-                      className={`py-2 text-right px-2 bg-white align-bottom ${idx > 0 ? 'border-l border-gray-100' : ''}`}
+                      className={`py-2 text-right px-2 bg-background align-bottom ${idx > 0 ? 'border-l border-border' : ''}`}
                     >
-                      <div className="text-[11px] font-medium text-gray-400 uppercase tracking-wider">{bucket.weekCommencing}</div>
-                      <div className="font-semibold text-gray-900 text-[13px] mt-0.5 tabular-nums">
+                      <div className="text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider">{bucket.weekCommencing}</div>
+                      <div className="font-semibold text-foreground text-[13px] mt-0.5 tabular-nums">
                         {formatCurrencyCompact(weekTotals[bucket.weekCommencing])}
                       </div>
                     </th>
@@ -1825,7 +1826,7 @@ function ForecastTab2({ debtors, onSelectDebtor, isLoading }: ForecastTab2Props)
               <tbody>
                 {debtorsWithForecast.length === 0 ? (
                   <tr>
-                    <td colSpan={weekBuckets.length + 1} className="py-16 text-center text-gray-400 text-[13px]">
+                    <td colSpan={weekBuckets.length + 1} className="py-16 text-center text-muted-foreground/60 text-[13px]">
                       No forecasted payments. Customers with promises to pay will appear here.
                     </td>
                   </tr>
@@ -1837,17 +1838,17 @@ function ForecastTab2({ debtors, onSelectDebtor, isLoading }: ForecastTab2Props)
                     return (
                       <tr 
                         key={debtor.id} 
-                        className={`group hover:bg-gray-50 transition-colors ${!isLast ? 'border-b border-gray-50' : ''}`}
+                        className={`group hover:bg-muted transition-colors ${!isLast ? 'border-b border-border' : ''}`}
                       >
-                        <td className="py-2.5 px-3 sticky left-0 bg-white group-hover:bg-gray-50 z-10 transition-colors">
+                        <td className="py-2.5 px-3 sticky left-0 bg-background group-hover:bg-muted z-10 transition-colors">
                           <button
                             onClick={() => onSelectDebtor(debtor.id)}
                             className="text-left w-full group"
                           >
-                            <div className="text-[13px] font-medium text-gray-900 truncate max-w-[180px] group-hover:text-gray-700">
+                            <div className="text-[13px] font-medium text-foreground truncate max-w-[180px] group-hover:text-foreground">
                               {debtor.name}
                             </div>
-                            <div className="text-[12px] text-gray-400 tabular-nums">
+                            <div className="text-[12px] text-muted-foreground/60 tabular-nums">
                               {formatCurrencyCompact(debtor.totalOutstanding)} outstanding
                             </div>
                           </button>
@@ -1855,12 +1856,12 @@ function ForecastTab2({ debtors, onSelectDebtor, isLoading }: ForecastTab2Props)
                         {weekBuckets.map((bucket, idx) => {
                           const bucketDateStr = `${bucket.startDate.getFullYear()}-${String(bucket.startDate.getMonth() + 1).padStart(2, '0')}-${String(bucket.startDate.getDate()).padStart(2, '0')}`;
                           const cell = cells.find(c => c.weekStartISO === bucketDateStr);
-                          const borderClass = idx > 0 ? 'border-l border-gray-100' : '';
+                          const borderClass = idx > 0 ? 'border-l border-border' : '';
                           
                           if (!cell) {
                             return (
                               <td key={bucket.weekCommencing} className={`text-right py-2.5 px-2 ${borderClass}`}>
-                                <span className="text-gray-200">—</span>
+                                <span className="text-muted-foreground/20">—</span>
                               </td>
                             );
                           }
@@ -1875,7 +1876,7 @@ function ForecastTab2({ debtors, onSelectDebtor, isLoading }: ForecastTab2Props)
                                 <TooltipTrigger asChild>
                                   <div className="flex items-center justify-end gap-1.5">
                                     <span className={`w-1.5 h-1.5 rounded-full ${CONFIDENCE_DOT[cell.confidence]}`} />
-                                    <span className="tabular-nums text-gray-900 font-medium text-[13px]">
+                                    <span className="tabular-nums text-foreground font-medium text-[13px]">
                                       {formatCurrencyCompact(cell.expectedAmount)}
                                     </span>
                                   </div>
@@ -1883,10 +1884,10 @@ function ForecastTab2({ debtors, onSelectDebtor, isLoading }: ForecastTab2Props)
                                 <TooltipContent side="top" className="max-w-xs">
                                   <div className="text-xs space-y-1">
                                     <div className="font-medium">{formatCurrencyCompact(cell.expectedAmount)} expected</div>
-                                    <div className="text-gray-400">
+                                    <div className="text-muted-foreground/60">
                                       Confidence: <span className="capitalize">{cell.confidence}</span>
                                     </div>
-                                    <div className="text-gray-400">
+                                    <div className="text-muted-foreground/60">
                                       Source: <span className="uppercase">{cell.source}</span>
                                     </div>
                                     {cell.ptpDate && (
@@ -1895,7 +1896,7 @@ function ForecastTab2({ debtors, onSelectDebtor, isLoading }: ForecastTab2Props)
                                       </div>
                                     )}
                                     {cell.invoiceCount && (
-                                      <div className="text-gray-400">{cell.invoiceCount} invoices</div>
+                                      <div className="text-muted-foreground/60">{cell.invoiceCount} invoices</div>
                                     )}
                                   </div>
                                 </TooltipContent>
@@ -1911,8 +1912,8 @@ function ForecastTab2({ debtors, onSelectDebtor, isLoading }: ForecastTab2Props)
             </table>
         </div>
         
-        <div className="flex items-center justify-between py-3 flex-shrink-0 border-t border-gray-100">
-          <div className="flex items-center gap-5 text-[11px] text-gray-400">
+        <div className="flex items-center justify-between py-3 flex-shrink-0 border-t border-border">
+          <div className="flex items-center gap-5 text-[11px] text-muted-foreground/60">
             <div className="flex items-center gap-1.5">
               <span className={`w-1.5 h-1.5 rounded-full ${CONFIDENCE_DOT.high}`} />
               <span>High (PTP)</span>
@@ -1928,13 +1929,13 @@ function ForecastTab2({ debtors, onSelectDebtor, isLoading }: ForecastTab2Props)
           </div>
           
           {debtorsWithForecast.length > 0 && (
-            <div className="flex items-center gap-4 text-[12px] text-gray-500">
+            <div className="flex items-center gap-4 text-[12px] text-muted-foreground">
               <div className="flex items-center gap-2">
-                <span className="text-gray-400">Rows:</span>
+                <span className="text-muted-foreground/60">Rows:</span>
                 <select
                   value={itemsPerPage}
                   onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                  className="bg-white border border-gray-200 rounded px-2 py-1 text-[12px] text-gray-600 cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-300"
+                  className="bg-background border border-border rounded px-2 py-1 text-[12px] text-muted-foreground cursor-pointer hover:border-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-border"
                 >
                   {PAGE_SIZE_OPTIONS.map(size => (
                     <option key={size} value={size}>{size}</option>
@@ -1947,7 +1948,7 @@ function ForecastTab2({ debtors, onSelectDebtor, isLoading }: ForecastTab2Props)
                   <button
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className="p-1 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
@@ -1957,7 +1958,7 @@ function ForecastTab2({ debtors, onSelectDebtor, isLoading }: ForecastTab2Props)
                   <button
                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                     disabled={currentPage === totalPages}
-                    className="p-1 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>
@@ -2028,7 +2029,7 @@ function ActivityTab2({ items, onSelectCustomer, isLoading, search = '' }: Activ
     return (
       <div className="space-y-1">
         {[...Array(6)].map((_, i) => (
-          <div key={i} className="h-12 bg-gray-50 animate-pulse rounded-lg" />
+          <div key={i} className="h-12 bg-muted animate-pulse rounded-lg" />
         ))}
       </div>
     );
@@ -2037,7 +2038,7 @@ function ActivityTab2({ items, onSelectCustomer, isLoading, search = '' }: Activ
   if (filteredItems.length === 0) {
     return (
       <div className="py-16 text-center">
-        <p className="text-gray-400 text-[13px]">No activity found</p>
+        <p className="text-muted-foreground/60 text-[13px]">No activity found</p>
       </div>
     );
   }
@@ -2046,7 +2047,7 @@ function ActivityTab2({ items, onSelectCustomer, isLoading, search = '' }: Activ
     <div className="flex flex-col h-[calc(100vh-260px)]">
       <div className="overflow-auto flex-1 -mx-6">
         <div className="px-6">
-          <div className="flex items-center py-2 border-b border-gray-100 text-[11px] font-medium text-gray-400 uppercase tracking-wider">
+          <div className="flex items-center py-2 border-b border-border text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider">
             <div className="w-[25%] px-3">Customer</div>
             <div className="w-[10%] px-3 text-center">Channel</div>
             <div className="w-[10%] px-3 text-center">Direction</div>
@@ -2058,42 +2059,42 @@ function ActivityTab2({ items, onSelectCustomer, isLoading, search = '' }: Activ
             <div 
               key={item.id}
               onClick={() => onSelectCustomer(item.customerId)}
-              className="flex items-center py-2.5 border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors"
+              className="flex items-center py-2.5 border-b border-border hover:bg-muted cursor-pointer transition-colors"
             >
               <div className="w-[25%] px-3 min-w-0">
-                <div className="text-[13px] font-medium text-gray-900 truncate">{item.customerName}</div>
+                <div className="text-[13px] font-medium text-foreground truncate">{item.customerName}</div>
                 {item.contactName && (
-                  <div className="text-xs text-gray-500 truncate">{item.contactName}</div>
+                  <div className="text-xs text-muted-foreground truncate">{item.contactName}</div>
                 )}
               </div>
-              <div className="w-[10%] px-3 flex justify-center text-gray-400">
+              <div className="w-[10%] px-3 flex justify-center text-muted-foreground/60">
                 {getChannelIcon(item.channel)}
               </div>
               <div className="w-[10%] px-3 text-center">
-                <span className={`text-xs font-medium ${item.direction === 'in' ? 'text-[#4FAD80]' : 'text-gray-500'}`}>
+                <span className={`text-xs font-medium ${item.direction === 'in' ? 'text-[#4FAD80]' : 'text-muted-foreground'}`}>
                   {item.direction === 'in' ? 'In' : 'Out'}
                 </span>
               </div>
               <div className="w-[35%] px-3">
-                <div className="text-[13px] text-gray-600 truncate">{item.purpose}</div>
+                <div className="text-[13px] text-muted-foreground truncate">{item.purpose}</div>
               </div>
               <div className="w-[20%] px-3">
-                <div className="text-[13px] text-gray-900">{item.date}</div>
-                <div className="text-xs text-gray-500">{item.time}</div>
+                <div className="text-[13px] text-foreground">{item.date}</div>
+                <div className="text-xs text-muted-foreground">{item.time}</div>
               </div>
             </div>
           ))}
         </div>
       </div>
       
-      <div className="flex items-center justify-end pt-3 flex-shrink-0 border-t border-gray-100 mt-3">
-        <div className="flex items-center gap-4 text-[12px] text-gray-500">
+      <div className="flex items-center justify-end pt-3 flex-shrink-0 border-t border-border mt-3">
+        <div className="flex items-center gap-4 text-[12px] text-muted-foreground">
           <div className="flex items-center gap-2">
-            <span className="text-gray-400">Rows:</span>
+            <span className="text-muted-foreground/60">Rows:</span>
             <select
               value={itemsPerPage}
               onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-              className="bg-white border border-gray-200 rounded-lg px-2 py-1 text-[12px] text-gray-600 cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+              className="bg-background border border-border rounded-lg px-2 py-1 text-[12px] text-muted-foreground cursor-pointer hover:border-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
             >
               {PAGE_SIZE_OPTIONS.map(size => (
                 <option key={size} value={size}>{size}</option>
@@ -2106,7 +2107,7 @@ function ActivityTab2({ items, onSelectCustomer, isLoading, search = '' }: Activ
               <button
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="p-1 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                className="p-1 rounded-lg hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
@@ -2114,7 +2115,7 @@ function ActivityTab2({ items, onSelectCustomer, isLoading, search = '' }: Activ
               <button
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
-                className="p-1 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                className="p-1 rounded-lg hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>

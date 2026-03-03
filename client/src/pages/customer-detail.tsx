@@ -111,9 +111,9 @@ function DebtorScoreSection({ customerId }: { customerId: string | undefined }) 
   if (isLoading) {
     return (
       <>
-        <Separator className="bg-slate-100" />
+        <Separator className="bg-border" />
         <section>
-          <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-3">Debtor Score</p>
+          <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider mb-3">Debtor Score</p>
           <div className="space-y-2">
             <Skeleton className="h-4 w-32" />
             <Skeleton className="h-4 w-48" />
@@ -129,20 +129,20 @@ function DebtorScoreSection({ customerId }: { customerId: string | undefined }) 
 
   return (
     <>
-      <Separator className="bg-slate-100" />
+      <Separator className="bg-border" />
       <section>
-        <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-3">Debtor Score & Strategy</p>
+        <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider mb-3">Debtor Score & Strategy</p>
         <div className="space-y-4">
           <div className="flex items-center gap-3">
             <span className={`inline-block w-2.5 h-2.5 rounded-full ${getScoreDotColor(snapshot.scoreBand)}`} />
             {snapshot.scoreBand === 'UNKNOWN' ? (
-              <span className="text-sm text-gray-400">Insufficient history</span>
+              <span className="text-sm text-muted-foreground/60">Insufficient history</span>
             ) : (
               <>
                 <span className={`text-2xl font-semibold tabular-nums ${getScoreBandColor(snapshot.scoreBand)}`}>
                   {snapshot.score0To100}
                 </span>
-                <span className="text-sm text-gray-500">{snapshot.scoreBand}</span>
+                <span className="text-sm text-muted-foreground">{snapshot.scoreBand}</span>
               </>
             )}
           </div>
@@ -150,46 +150,46 @@ function DebtorScoreSection({ customerId }: { customerId: string | undefined }) 
           <table className="text-sm w-full max-w-sm">
             <tbody>
               {snapshot.strategyJson?.strategy && (
-                <tr className="border-b border-slate-50">
-                  <td className="py-1.5 text-slate-400 pr-6">Strategy</td>
-                  <td className="py-1.5 text-slate-700 font-medium">{snapshot.strategyJson.strategy}</td>
+                <tr className="border-b border-muted">
+                  <td className="py-1.5 text-muted-foreground/60 pr-6">Strategy</td>
+                  <td className="py-1.5 text-foreground font-medium">{snapshot.strategyJson.strategy}</td>
                 </tr>
               )}
               {snapshot.strategyJson?.cadence && (
-                <tr className="border-b border-slate-50">
-                  <td className="py-1.5 text-slate-400 pr-6">Cadence</td>
-                  <td className="py-1.5 text-slate-700">{snapshot.strategyJson.cadence}</td>
+                <tr className="border-b border-muted">
+                  <td className="py-1.5 text-muted-foreground/60 pr-6">Cadence</td>
+                  <td className="py-1.5 text-foreground">{snapshot.strategyJson.cadence}</td>
                 </tr>
               )}
               {snapshot.onTimeRate !== null && (
-                <tr className="border-b border-slate-50">
-                  <td className="py-1.5 text-slate-400 pr-6">On-time rate</td>
-                  <td className="py-1.5 text-slate-700 tabular-nums">{(parseFloat(snapshot.onTimeRate || '0') * 100).toFixed(0)}%</td>
+                <tr className="border-b border-muted">
+                  <td className="py-1.5 text-muted-foreground/60 pr-6">On-time rate</td>
+                  <td className="py-1.5 text-foreground tabular-nums">{(parseFloat(snapshot.onTimeRate || '0') * 100).toFixed(0)}%</td>
                 </tr>
               )}
               {snapshot.avgDaysLate !== null && (
-                <tr className="border-b border-slate-50">
-                  <td className="py-1.5 text-slate-400 pr-6">Avg days late</td>
-                  <td className="py-1.5 text-slate-700 tabular-nums">{parseFloat(snapshot.avgDaysLate || '0').toFixed(1)}d</td>
+                <tr className="border-b border-muted">
+                  <td className="py-1.5 text-muted-foreground/60 pr-6">Avg days late</td>
+                  <td className="py-1.5 text-foreground tabular-nums">{parseFloat(snapshot.avgDaysLate || '0').toFixed(1)}d</td>
                 </tr>
               )}
               {snapshot.paidInvoiceCount !== null && (
-                <tr className="border-b border-slate-50">
-                  <td className="py-1.5 text-slate-400 pr-6">Paid invoices</td>
-                  <td className="py-1.5 text-slate-700 tabular-nums">{snapshot.paidInvoiceCount}</td>
+                <tr className="border-b border-muted">
+                  <td className="py-1.5 text-muted-foreground/60 pr-6">Paid invoices</td>
+                  <td className="py-1.5 text-foreground tabular-nums">{snapshot.paidInvoiceCount}</td>
                 </tr>
               )}
               {snapshot.strategyReason && (
                 <tr>
-                  <td className="py-1.5 text-slate-400 pr-6">Reason</td>
-                  <td className="py-1.5 text-slate-500 text-xs">{snapshot.strategyReason}</td>
+                  <td className="py-1.5 text-muted-foreground/60 pr-6">Reason</td>
+                  <td className="py-1.5 text-muted-foreground text-xs">{snapshot.strategyReason}</td>
                 </tr>
               )}
             </tbody>
           </table>
 
           {snapshot.lastComputedAt && (
-            <p className="text-[11px] text-slate-300">
+            <p className="text-[11px] text-muted-foreground/60">
               Last scored {new Date(snapshot.lastComputedAt).toLocaleDateString()}
             </p>
           )}
@@ -444,7 +444,7 @@ export default function CustomerDetailPage() {
                   {/* Contacts List */}
                   <div>
                     <div className="flex items-center justify-between mb-3">
-                      <p className="text-[10px] text-slate-400 uppercase tracking-wider">Contacts</p>
+                      <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider">Contacts</p>
                       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                         <DialogTrigger asChild>
                           <Button variant="ghost" size="sm" className="h-7 text-xs text-[#17B6C3] hover:text-[#1396A1]">
@@ -458,7 +458,7 @@ export default function CustomerDetailPage() {
                           </DialogHeader>
                           <div className="space-y-4 py-4">
                             <div>
-                              <label className="text-sm text-slate-600">Name *</label>
+                              <label className="text-sm text-muted-foreground">Name *</label>
                               <Input 
                                 value={newPerson.name}
                                 onChange={(e) => setNewPerson(p => ({ ...p, name: e.target.value }))}
@@ -467,7 +467,7 @@ export default function CustomerDetailPage() {
                               />
                             </div>
                             <div>
-                              <label className="text-sm text-slate-600">Job Title</label>
+                              <label className="text-sm text-muted-foreground">Job Title</label>
                               <Input 
                                 value={newPerson.jobTitle}
                                 onChange={(e) => setNewPerson(p => ({ ...p, jobTitle: e.target.value }))}
@@ -476,7 +476,7 @@ export default function CustomerDetailPage() {
                               />
                             </div>
                             <div>
-                              <label className="text-sm text-slate-600">Email</label>
+                              <label className="text-sm text-muted-foreground">Email</label>
                               <Input 
                                 type="email"
                                 value={newPerson.email}
@@ -486,7 +486,7 @@ export default function CustomerDetailPage() {
                               />
                             </div>
                             <div>
-                              <label className="text-sm text-slate-600">Phone</label>
+                              <label className="text-sm text-muted-foreground">Phone</label>
                               <Input 
                                 value={newPerson.phone}
                                 onChange={(e) => setNewPerson(p => ({ ...p, phone: e.target.value }))}
@@ -495,7 +495,7 @@ export default function CustomerDetailPage() {
                               />
                             </div>
                             <div>
-                              <label className="text-sm text-slate-600">SMS Number</label>
+                              <label className="text-sm text-muted-foreground">SMS Number</label>
                               <Input 
                                 value={newPerson.smsNumber}
                                 onChange={(e) => setNewPerson(p => ({ ...p, smsNumber: e.target.value }))}
@@ -527,7 +527,7 @@ export default function CustomerDetailPage() {
                           </DialogHeader>
                           <div className="space-y-4 py-4">
                             <div>
-                              <label className="text-sm text-slate-600">Name *</label>
+                              <label className="text-sm text-muted-foreground">Name *</label>
                               <Input 
                                 value={editPersonData.name}
                                 onChange={(e) => setEditPersonData(p => ({ ...p, name: e.target.value }))}
@@ -536,7 +536,7 @@ export default function CustomerDetailPage() {
                               />
                             </div>
                             <div>
-                              <label className="text-sm text-slate-600">Job Title</label>
+                              <label className="text-sm text-muted-foreground">Job Title</label>
                               <Input 
                                 value={editPersonData.jobTitle}
                                 onChange={(e) => setEditPersonData(p => ({ ...p, jobTitle: e.target.value }))}
@@ -545,7 +545,7 @@ export default function CustomerDetailPage() {
                               />
                             </div>
                             <div>
-                              <label className="text-sm text-slate-600">Email</label>
+                              <label className="text-sm text-muted-foreground">Email</label>
                               <Input 
                                 type="email"
                                 value={editPersonData.email}
@@ -555,7 +555,7 @@ export default function CustomerDetailPage() {
                               />
                             </div>
                             <div>
-                              <label className="text-sm text-slate-600">Phone</label>
+                              <label className="text-sm text-muted-foreground">Phone</label>
                               <Input 
                                 value={editPersonData.phone}
                                 onChange={(e) => setEditPersonData(p => ({ ...p, phone: e.target.value }))}
@@ -564,7 +564,7 @@ export default function CustomerDetailPage() {
                               />
                             </div>
                             <div>
-                              <label className="text-sm text-slate-600">SMS Number</label>
+                              <label className="text-sm text-muted-foreground">SMS Number</label>
                               <Input 
                                 value={editPersonData.smsNumber}
                                 onChange={(e) => setEditPersonData(p => ({ ...p, smsNumber: e.target.value }))}
@@ -599,21 +599,21 @@ export default function CustomerDetailPage() {
                         {contactPersons.map((person, idx) => (
                           <div 
                             key={person.id}
-                            className={`py-3 ${idx !== contactPersons.length - 1 ? 'border-b border-slate-100' : ''}`}
+                            className={`py-3 ${idx !== contactPersons.length - 1 ? 'border-b border-muted' : ''}`}
                           >
                             <div className="flex items-start justify-between gap-4">
                               <div className="flex items-start gap-3 flex-1 min-w-0">
                                 <div className="min-w-0">
                                   <div className="flex items-center gap-2 flex-wrap">
-                                    <span className="text-sm font-medium text-slate-900">{person.name}</span>
+                                    <span className="text-sm font-medium text-foreground">{person.name}</span>
                                     {person.jobTitle && (
-                                      <span className="text-xs text-slate-400">• {person.jobTitle}</span>
+                                      <span className="text-xs text-muted-foreground/60">• {person.jobTitle}</span>
                                     )}
                                     {person.isFromXero && (
                                       <span className="w-2 h-2 rounded-full bg-blue-500" title="From accounting system" />
                                     )}
                                   </div>
-                                  <div className="flex items-center gap-4 mt-1 text-xs text-slate-500">
+                                  <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
                                     {person.email && (
                                       <span className="flex items-center gap-1">
                                         <Mail className="h-3 w-3" />
@@ -644,7 +644,7 @@ export default function CustomerDetailPage() {
                                   className={`flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors ${
                                     person.isPrimaryCreditControl 
                                       ? 'bg-amber-50 text-amber-700' 
-                                      : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+                                      : 'text-muted-foreground/60 hover:text-foreground hover:bg-muted'
                                   }`}
                                   title="Primary Credit Control Contact"
                                 >
@@ -659,7 +659,7 @@ export default function CustomerDetailPage() {
                                   className={`flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors ${
                                     person.isEscalation 
                                       ? 'bg-red-50 text-red-700' 
-                                      : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+                                      : 'text-muted-foreground/60 hover:text-foreground hover:bg-muted'
                                   }`}
                                   title="Escalation Contact"
                                 >
@@ -670,7 +670,7 @@ export default function CustomerDetailPage() {
                                   <>
                                     <button
                                       onClick={() => handleEditPerson(person)}
-                                      className="text-slate-400 hover:text-[#17B6C3] p-1"
+                                      className="text-muted-foreground/60 hover:text-[#17B6C3] p-1"
                                       title="Edit"
                                     >
                                       <Pencil className="h-3.5 w-3.5" />
@@ -681,7 +681,7 @@ export default function CustomerDetailPage() {
                                           deletePersonMutation.mutate(person.id);
                                         }
                                       }}
-                                      className="text-slate-400 hover:text-red-500 p-1"
+                                      className="text-muted-foreground/60 hover:text-red-500 p-1"
                                       title="Delete"
                                     >
                                       <Trash2 className="h-3.5 w-3.5" />
@@ -694,25 +694,25 @@ export default function CustomerDetailPage() {
                         ))}
                       </div>
                     ) : (
-                      <p className="text-sm text-slate-400 py-2">No contacts added yet</p>
+                      <p className="text-sm text-muted-foreground/60 py-2">No contacts added yet</p>
                     )}
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-slate-400">Customer not found</p>
+                <p className="text-sm text-muted-foreground/60">Customer not found</p>
               )}
             </section>
 
             <DebtorScoreSection customerId={customerId} />
 
-            <Separator className="bg-slate-100" />
+            <Separator className="bg-border" />
 
             {/* Section 2: Preferences */}
             <section>
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">
+              <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider mb-1">
                 Communication Constraints
               </p>
-              <p className="text-xs text-slate-400 mb-4">
+              <p className="text-xs text-muted-foreground/60 mb-4">
                 Qashivo respects these contact preferences when managing communications
               </p>
               
@@ -725,11 +725,11 @@ export default function CustomerDetailPage() {
                 <div className="flex flex-col md:flex-row md:justify-between gap-12">
                   {/* Column 1: Channel Toggles */}
                   <div className="space-y-3">
-                    <p className="text-[11px] text-slate-400 mb-2">Allowed Channels</p>
+                    <p className="text-[11px] text-muted-foreground/60 mb-2">Allowed Channels</p>
                     <div className="flex items-center justify-between py-2 w-32">
                       <div className="flex items-center gap-3">
-                        <Mail className="h-4 w-4 text-slate-400" />
-                        <span className="text-sm text-slate-700">Email</span>
+                        <Mail className="h-4 w-4 text-muted-foreground/60" />
+                        <span className="text-sm text-muted-foreground">Email</span>
                       </div>
                       <Switch 
                         checked={localPrefs.emailEnabled ?? true}
@@ -739,8 +739,8 @@ export default function CustomerDetailPage() {
                     </div>
                     <div className="flex items-center justify-between py-2 w-32">
                       <div className="flex items-center gap-3">
-                        <MessageSquare className="h-4 w-4 text-slate-400" />
-                        <span className="text-sm text-slate-700">SMS</span>
+                        <MessageSquare className="h-4 w-4 text-muted-foreground/60" />
+                        <span className="text-sm text-muted-foreground">SMS</span>
                       </div>
                       <Switch 
                         checked={localPrefs.smsEnabled ?? true}
@@ -750,8 +750,8 @@ export default function CustomerDetailPage() {
                     </div>
                     <div className="flex items-center justify-between py-2 w-32">
                       <div className="flex items-center gap-3">
-                        <Mic className="h-4 w-4 text-slate-400" />
-                        <span className="text-sm text-slate-700">Voice</span>
+                        <Mic className="h-4 w-4 text-muted-foreground/60" />
+                        <span className="text-sm text-muted-foreground">Voice</span>
                       </div>
                       <Switch 
                         checked={localPrefs.voiceEnabled ?? true}
@@ -763,37 +763,37 @@ export default function CustomerDetailPage() {
 
                   {/* Column 2: Best Contact Window */}
                   <div className="space-y-3">
-                    <p className="text-[11px] text-slate-400 mb-2">Best Contact Window</p>
+                    <p className="text-[11px] text-muted-foreground/60 mb-2">Best Contact Window</p>
                     <div className="space-y-4">
                       <div className="flex items-center gap-3">
-                        <Clock className="h-4 w-4 text-slate-400" />
+                        <Clock className="h-4 w-4 text-muted-foreground/60" />
                         <div className="flex items-center gap-2 flex-1">
                           <Select
                             value={localPrefs.bestContactWindowStart || ""}
                             onValueChange={(value) => handleTimeChange("bestContactWindowStart", value === "clear" ? "" : value)}
                             disabled={!canEdit || updatePreferencesMutation.isPending}
                           >
-                            <SelectTrigger className="w-24 h-9 text-sm bg-white/70 border-gray-200/50">
+                            <SelectTrigger className="w-24 h-9 text-sm bg-background border-border">
                               <SelectValue placeholder="Start" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="clear" className="text-slate-400">Clear</SelectItem>
+                              <SelectItem value="clear" className="text-muted-foreground/60">Clear</SelectItem>
                               {TIME_OPTIONS.map((time) => (
                                 <SelectItem key={time} value={time}>{time}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
-                          <span className="text-slate-400 text-sm">to</span>
+                          <span className="text-muted-foreground/60 text-sm">to</span>
                           <Select
                             value={localPrefs.bestContactWindowEnd || ""}
                             onValueChange={(value) => handleTimeChange("bestContactWindowEnd", value === "clear" ? "" : value)}
                             disabled={!canEdit || updatePreferencesMutation.isPending}
                           >
-                            <SelectTrigger className="w-24 h-9 text-sm bg-white/70 border-gray-200/50">
+                            <SelectTrigger className="w-24 h-9 text-sm bg-background border-border">
                               <SelectValue placeholder="End" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="clear" className="text-slate-400">Clear</SelectItem>
+                              <SelectItem value="clear" className="text-muted-foreground/60">Clear</SelectItem>
                               {TIME_OPTIONS.map((time) => (
                                 <SelectItem key={time} value={time}>{time}</SelectItem>
                               ))}
@@ -801,13 +801,13 @@ export default function CustomerDetailPage() {
                           </Select>
                         </div>
                       </div>
-                      <p className="text-xs text-slate-400 pl-7">
+                      <p className="text-xs text-muted-foreground/60 pl-7">
                         Preferred hours for outbound contact
                       </p>
                       
                       {/* Days of Week */}
                       <div className="pt-3">
-                        <p className="text-[11px] text-slate-400 mb-2">Allowed Days</p>
+                        <p className="text-[11px] text-muted-foreground/60 mb-2">Allowed Days</p>
                         <div className="flex flex-wrap gap-2">
                           {DAYS_OF_WEEK.map(({ key, label }) => {
                             const isSelected = (localPrefs.bestContactDays || []).includes(key);
@@ -820,7 +820,7 @@ export default function CustomerDetailPage() {
                                 className={`px-3 py-1.5 text-xs rounded-md border transition-colors ${
                                   isSelected
                                     ? "bg-[#17B6C3] text-white border-[#17B6C3]"
-                                    : "bg-white/70 text-slate-600 border-slate-200 hover:border-slate-300"
+                                    : "bg-background text-muted-foreground border-border hover:border-muted-foreground/60"
                                 } disabled:opacity-50 disabled:cursor-not-allowed`}
                               >
                                 {label}
@@ -834,11 +834,11 @@ export default function CustomerDetailPage() {
 
                   {/* Column 3: Workflow Preference */}
                   <div className="space-y-3">
-                    <p className="text-[11px] text-slate-400 mb-2">Workflow Preference</p>
+                    <p className="text-[11px] text-muted-foreground/60 mb-2">Workflow Preference</p>
                     <div className="flex items-center justify-between py-2 w-44">
                       <div className="flex items-center gap-3">
-                        <Zap className="h-4 w-4 text-slate-400" />
-                        <span className="text-sm text-slate-700">Autonomous</span>
+                        <Zap className="h-4 w-4 text-muted-foreground/60" />
+                        <span className="text-sm text-muted-foreground">Autonomous</span>
                       </div>
                       <Switch 
                         checked={isAutonomous}
@@ -847,7 +847,7 @@ export default function CustomerDetailPage() {
                       />
                     </div>
                     {isAutonomous ? (
-                      <p className="text-xs text-slate-400 py-2">
+                      <p className="text-xs text-muted-foreground/60 py-2">
                         Qashivo AI determines the best collection strategy
                       </p>
                     ) : (
@@ -862,7 +862,7 @@ export default function CustomerDetailPage() {
                           onValueChange={(value) => handleWorkflowChange(value || null)}
                           disabled={!canEdit || updatePreferencesMutation.isPending}
                         >
-                          <SelectTrigger className="w-full h-9 text-sm bg-white/70 border-gray-200/50">
+                          <SelectTrigger className="w-full h-9 text-sm bg-background border-border">
                             <SelectValue placeholder="Select workflow..." />
                           </SelectTrigger>
                           <SelectContent>
@@ -873,7 +873,7 @@ export default function CustomerDetailPage() {
                             ))}
                           </SelectContent>
                         </Select>
-                        <p className="text-xs text-slate-400 mt-2">
+                        <p className="text-xs text-muted-foreground/60 mt-2">
                           Use a specific workflow for this customer
                         </p>
                       </div>
@@ -883,14 +883,14 @@ export default function CustomerDetailPage() {
               )}
             </section>
 
-            <Separator className="bg-slate-100" />
+            <Separator className="bg-border" />
 
             {/* Section 3: Outstanding Invoices */}
             <section>
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">
+              <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider mb-1">
                 Outstanding Invoices ({outstandingInvoices.length})
               </p>
-              <p className="text-xs text-slate-400 mb-4">
+              <p className="text-xs text-muted-foreground/60 mb-4">
                 Invoices with unresolved outcomes
               </p>
               
@@ -908,14 +908,14 @@ export default function CustomerDetailPage() {
                     return (
                       <div 
                         key={invoice.id}
-                        className={`py-3 ${idx !== outstandingInvoices.length - 1 ? 'border-b border-slate-100' : ''}`}
+                        className={`py-3 ${idx !== outstandingInvoices.length - 1 ? 'border-b border-muted' : ''}`}
                       >
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm font-medium text-slate-900">
+                            <p className="text-sm font-medium text-foreground">
                               {invoice.invoiceNumber}
                             </p>
-                            <p className="text-xs text-slate-400">
+                            <p className="text-xs text-muted-foreground/60">
                               Due {formatDate(invoice.dueDate)}
                               {isOverdue && daysOverdue > 0 && (
                                 <span className="text-[#C75C5C] ml-2">
@@ -925,11 +925,11 @@ export default function CustomerDetailPage() {
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className={`text-sm tabular-nums ${isOverdue ? 'text-[#C75C5C]' : 'text-slate-700'}`}>
+                            <p className={`text-sm tabular-nums ${isOverdue ? 'text-[#C75C5C]' : 'text-muted-foreground'}`}>
                               {formatCurrency(Number(invoice.amount) - Number(invoice.amountPaid))}
                             </p>
                             {invoice.amountPaid > 0 && (
-                              <p className="text-xs text-slate-400 tabular-nums">
+                              <p className="text-xs text-muted-foreground/60 tabular-nums">
                                 of {formatCurrency(invoice.amount)}
                               </p>
                             )}
@@ -940,15 +940,15 @@ export default function CustomerDetailPage() {
                   })}
                 </div>
               ) : (
-                <p className="text-sm text-slate-400">No outstanding invoices</p>
+                <p className="text-sm text-muted-foreground/60">No outstanding invoices</p>
               )}
             </section>
 
-            <Separator className="bg-slate-100" />
+            <Separator className="bg-border" />
 
             {/* Section 4: Timeline */}
             <section>
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-4">
+              <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider mb-4">
                 Activity Timeline
               </p>
               {customerId && (
@@ -956,14 +956,14 @@ export default function CustomerDetailPage() {
               )}
             </section>
 
-            <Separator className="bg-slate-100" />
+            <Separator className="bg-border" />
 
             {/* Section 5: Payment Details (Placeholder) */}
             <section>
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-4">
+              <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider mb-4">
                 Payment Details
               </p>
-              <div className="py-8 text-center text-sm text-slate-400 border border-dashed border-slate-200 rounded-lg">
+              <div className="py-8 text-center text-sm text-muted-foreground/60 border border-dashed border-border rounded-lg">
                 Stripe payment integration coming soon
               </div>
             </section>

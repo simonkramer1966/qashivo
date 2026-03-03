@@ -7,7 +7,7 @@
 @layer base {
   :root {
     /* Apple-inspired Clean Design System */
-    --background: 195 60% 97%; /* CANARY - pale teal test */
+    --background: 0 0% 100%; /* Pure white */
     --foreground: 215 16% 20%; /* Dark grey text */
     
     /* Cards - clean white with subtle shadows */
@@ -80,7 +80,7 @@
   }
   
   body {
-    @apply bg-[#FAFAFA] text-foreground font-sans antialiased;
+    @apply bg-background text-foreground font-sans antialiased;
     font-feature-settings: "cv11", "ss01";
     font-weight: 500;
     -webkit-font-smoothing: antialiased;
