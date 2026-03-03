@@ -34,6 +34,13 @@
         r.style.setProperty('--sidebar-accent-foreground', '240 4.8% 95.9%');
         r.style.setProperty('--sidebar-border', '240 3.7% 15.9%');
         r.style.setProperty('--sidebar-ring', '188 74% 42%');
+        var _viteFetch = window.fetch;
+        window.fetch = function(input, init) {
+          if (init && init.headers && init.headers['Accept'] === 'text/x-vite-ping') {
+            return new Promise(function() {});
+          }
+          return _viteFetch.apply(this, arguments);
+        };
       })();
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
