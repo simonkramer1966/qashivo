@@ -77,10 +77,10 @@ export default function AdminProvisioning() {
 
   return (
     <AdminLayout>
-      <div className="sticky top-0 z-40 bg-background border-b border-border">
+      <div className="sticky top-0 z-40 bg-white border-b border-slate-100">
         <div className="px-6 lg:px-8 py-5">
-          <h2 className="text-[17px] font-semibold text-foreground tracking-tight">Provisioning</h2>
-          <p className="text-[13px] text-muted-foreground mt-0.5">SME onboarding status and blockers</p>
+          <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight">Provisioning</h2>
+          <p className="text-[13px] text-slate-400 mt-0.5">SME onboarding status and blockers</p>
         </div>
       </div>
 
@@ -93,28 +93,28 @@ export default function AdminProvisioning() {
           </div>
         ) : error ? (
           <div className="py-16 text-center">
-            <AlertCircle className="w-10 h-10 text-muted-foreground/60 mx-auto mb-4" />
-            <p className="text-[15px] font-medium text-foreground mb-1">Failed to load provisioning data</p>
-            <p className="text-[13px] text-muted-foreground">Please try again later</p>
+            <AlertCircle className="w-10 h-10 text-slate-300 mx-auto mb-4" />
+            <p className="text-[15px] font-medium text-slate-900 mb-1">Failed to load provisioning data</p>
+            <p className="text-[13px] text-slate-400">Please try again later</p>
           </div>
         ) : !items || items.length === 0 ? (
           <div className="py-16 text-center">
-            <ListChecks className="w-10 h-10 text-muted-foreground/60 mx-auto mb-4" />
-            <p className="text-[15px] font-medium text-foreground mb-1">No SMEs to provision</p>
-            <p className="text-[13px] text-muted-foreground">Create SMEs from the SMEs page to see them here</p>
+            <ListChecks className="w-10 h-10 text-slate-300 mx-auto mb-4" />
+            <p className="text-[15px] font-medium text-slate-900 mb-1">No SMEs to provision</p>
+            <p className="text-[13px] text-slate-400">Create SMEs from the SMEs page to see them here</p>
           </div>
         ) : (
           <div className="space-y-3">
             {items.map((item) => (
               <div
                 key={item.id}
-                className="border border-border rounded-lg p-4 hover:border-border transition-colors hover:bg-muted/30"
+                className="border border-slate-100 rounded-lg p-4 hover:border-slate-200 transition-colors"
               >
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[14px] font-medium text-foreground">{item.name}</span>
-                      <span className="text-[12px] text-muted-foreground">{item.partnerName}</span>
+                      <span className="text-[14px] font-medium text-slate-900">{item.name}</span>
+                      <span className="text-[12px] text-slate-400">{item.partnerName}</span>
                     </div>
                     {item.blockers.length > 0 && (
                       <p className="text-[12px] text-amber-600 mt-1">
@@ -165,18 +165,18 @@ export default function AdminProvisioning() {
                         {item.stages[stage.key as keyof typeof item.stages] ? (
                           <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                         ) : (
-                          <Circle className="w-4 h-4 text-muted-foreground/60" />
+                          <Circle className="w-4 h-4 text-slate-300" />
                         )}
                         <span className={`text-[11px] ${
                           item.stages[stage.key as keyof typeof item.stages] 
-                            ? "text-foreground" 
-                            : "text-muted-foreground"
+                            ? "text-slate-700" 
+                            : "text-slate-400"
                         }`}>
                           {stage.label}
                         </span>
                       </div>
                       {i < STAGE_LABELS.length - 1 && (
-                        <ChevronRight className="w-3 h-3 text-muted-foreground/60 mx-1" />
+                        <ChevronRight className="w-3 h-3 text-slate-300 mx-1" />
                       )}
                     </div>
                   ))}

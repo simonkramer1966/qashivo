@@ -53,8 +53,8 @@ export default function BottomNav() {
               className={`bottom-nav-item ${active ? "active" : ""}`}
               data-testid={`nav-${item.label.toLowerCase()}`}
             >
-              <Icon className={`h-6 w-6 mb-1 ${active ? "text-[#17B6C3]" : "text-muted-foreground"}`} />
-              <span className={`text-xs font-medium ${active ? "text-[#17B6C3]" : "text-muted-foreground"}`}>
+              <Icon className={`h-6 w-6 mb-1 ${active ? "text-[#17B6C3]" : "text-slate-600"}`} />
+              <span className={`text-xs font-medium ${active ? "text-[#17B6C3]" : "text-slate-600"}`}>
                 {item.label}
               </span>
             </Link>

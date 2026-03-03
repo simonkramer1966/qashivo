@@ -199,15 +199,15 @@ export default function InboxPage() {
           <div className="px-6 lg:px-8 py-5 border-b border-gray-100">
             <div className="hidden lg:flex items-center justify-between">
               <div>
-                <h2 className="text-[17px] font-semibold text-foreground tracking-tight">Inbox</h2>
-                <p className="text-[13px] text-muted-foreground mt-0.5">Review detected outcomes from customer replies</p>
+                <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight">Inbox</h2>
+                <p className="text-[13px] text-slate-400 mt-0.5">Review detected outcomes from customer replies</p>
               </div>
               <div className="flex items-center gap-3">
                 {activeTab === "unmatched" && (
                   <button
                     onClick={() => pollMutation.mutate()}
                     disabled={pollMutation.isPending}
-                    className="h-7 px-2.5 text-[12px] text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                    className="h-7 px-2.5 text-[12px] text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded transition-colors flex items-center gap-1.5 disabled:opacity-50"
                   >
                     <RefreshCw className={`h-3 w-3 ${pollMutation.isPending ? 'animate-spin' : ''}`} />
                     {pollMutation.isPending ? "Syncing…" : "Sync"}
@@ -216,31 +216,31 @@ export default function InboxPage() {
               </div>
             </div>
             <div className="lg:hidden">
-              <h2 className="text-[17px] font-semibold text-foreground tracking-tight">Inbox</h2>
+              <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight">Inbox</h2>
             </div>
           </div>
 
-          <div className="px-6 lg:px-8 border-b border-border">
+          <div className="px-6 lg:px-8 border-b border-gray-100">
             <div className="flex gap-0">
               <button
                 onClick={() => setActiveTab("outcomes")}
                 className={`px-3 py-2.5 text-[13px] font-medium border-b-2 transition-colors ${
                   activeTab === "outcomes"
-                    ? "text-foreground border-[#17B6C3]"
-                    : "text-muted-foreground/60 border-transparent hover:text-muted-foreground"
+                    ? "text-slate-900 border-[#17B6C3]"
+                    : "text-gray-400 border-transparent hover:text-gray-600"
                 }`}
               >
                 Outcomes
                 {outcomesCount > 0 && (
-                  <span className="ml-1.5 text-[11px] tabular-nums text-muted-foreground/60">{outcomesCount}</span>
+                  <span className="ml-1.5 text-[11px] tabular-nums text-gray-400">{outcomesCount}</span>
                 )}
               </button>
               <button
                 onClick={() => setActiveTab("unmatched")}
                 className={`px-3 py-2.5 text-[13px] font-medium border-b-2 transition-colors ${
                   activeTab === "unmatched"
-                    ? "text-foreground border-[#17B6C3]"
-                    : "text-muted-foreground/60 border-transparent hover:text-muted-foreground"
+                    ? "text-slate-900 border-[#17B6C3]"
+                    : "text-gray-400 border-transparent hover:text-gray-600"
                 }`}
               >
                 Unmatched
@@ -255,14 +255,14 @@ export default function InboxPage() {
         <div className="flex-1 overflow-y-auto">
           {activeTab === "outcomes" && (
             <div className="flex flex-col lg:flex-row min-h-0 h-full">
-              <div className="lg:w-[340px] lg:border-r border-border flex-shrink-0">
-                <div className="divide-y divide-border">
+              <div className="lg:w-[340px] lg:border-r border-gray-100 flex-shrink-0">
+                <div className="divide-y divide-gray-100">
                   {isLoading ? (
                     <div className="space-y-0">
                       {[1, 2, 3].map((i) => (
                         <div key={i} className="px-6 py-3">
-                          <div className="h-3 bg-muted rounded w-3/4 mb-2 animate-pulse" />
-                          <div className="h-2.5 bg-muted/50 rounded w-1/2 animate-pulse" />
+                          <div className="h-3 bg-gray-100 rounded w-3/4 mb-2 animate-pulse" />
+                          <div className="h-2.5 bg-gray-50 rounded w-1/2 animate-pulse" />
                         </div>
                       ))}
                     </div>
@@ -275,32 +275,32 @@ export default function InboxPage() {
                         <button
                           key={item.outcome.id}
                           onClick={() => handleSelectItem(item)}
-                          className={`w-full text-left px-6 py-3 hover:bg-muted transition-colors relative ${
-                            isSelected ? "bg-muted" : ""
+                          className={`w-full text-left px-6 py-3 hover:bg-gray-50 transition-colors relative ${
+                            isSelected ? "bg-gray-50" : ""
                           }`}
                         >
                           {isSelected && (
                             <span className="absolute left-0 top-1 bottom-1 w-0.5 bg-[#17B6C3] rounded-full" />
                           )}
                           <div className="flex items-center justify-between gap-2 mb-0.5">
-                            <p className="text-[13px] font-medium text-foreground truncate">
+                            <p className="text-[13px] font-medium text-gray-900 truncate">
                               {item.contact?.name || item.contact?.companyName || "Unknown"}
                             </p>
-                            <span className={`text-[11px] px-1.5 py-0.5 rounded ${OUTCOME_COLORS[item.outcome.outcomeType] || "bg-muted text-muted-foreground"}`}>
+                            <span className={`text-[11px] px-1.5 py-0.5 rounded ${OUTCOME_COLORS[item.outcome.outcomeType] || "bg-gray-100 text-gray-600"}`}>
                               {OUTCOME_LABELS[item.outcome.outcomeType] || item.outcome.outcomeType}
                             </span>
                           </div>
-                          <p className="text-[12px] text-muted-foreground truncate mb-1">
+                          <p className="text-[12px] text-gray-500 truncate mb-1">
                             {item.email?.inboundFromEmail || "No email"}
                           </p>
-                          <p className="text-[12px] text-muted-foreground/60 line-clamp-1">
+                          <p className="text-[12px] text-gray-400 line-clamp-1">
                             {item.outcome.extractedText || item.email?.inboundSubject || "No content"}
                           </p>
                           <div className="flex items-center justify-between mt-1.5 text-[11px]">
                             <span className={`flex items-center gap-1 ${conf.color}`}>
                               {Math.round(item.outcome.confidence * 100)}% {conf.label}
                             </span>
-                            <span className="text-muted-foreground/60 tabular-nums">
+                            <span className="text-gray-400 tabular-nums">
                               {format(new Date(item.outcome.createdAt), "d MMM, HH:mm")}
                             </span>
                           </div>
@@ -309,9 +309,9 @@ export default function InboxPage() {
                     })
                   ) : (
                     <div className="px-6 py-10 text-center">
-                      <Check className="h-5 w-5 text-muted-foreground/60 mx-auto mb-2" />
-                      <p className="text-[13px] text-muted-foreground">All caught up</p>
-                      <p className="text-[11px] text-muted-foreground/60 mt-0.5">No outcomes need review</p>
+                      <Check className="h-5 w-5 text-gray-300 mx-auto mb-2" />
+                      <p className="text-[13px] text-gray-500">All caught up</p>
+                      <p className="text-[11px] text-gray-400 mt-0.5">No outcomes need review</p>
                     </div>
                   )}
                 </div>
@@ -322,35 +322,35 @@ export default function InboxPage() {
                   <div className="px-6 lg:px-8 py-6 space-y-5">
                     <div className="flex items-start justify-between">
                       <div>
-                        <h3 className="text-[15px] font-semibold text-foreground">
+                        <h3 className="text-[15px] font-semibold text-gray-900">
                           {selectedItem.contact?.name || selectedItem.contact?.companyName || "Unknown Contact"}
                         </h3>
-                        <p className="text-[12px] text-muted-foreground/60 mt-0.5">{selectedItem.email?.inboundFromEmail}</p>
+                        <p className="text-[12px] text-gray-400 mt-0.5">{selectedItem.email?.inboundFromEmail}</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className={`text-[11px] px-1.5 py-0.5 rounded ${OUTCOME_COLORS[selectedItem.outcome.outcomeType] || "bg-muted"}`}>
+                        <span className={`text-[11px] px-1.5 py-0.5 rounded ${OUTCOME_COLORS[selectedItem.outcome.outcomeType] || "bg-gray-100"}`}>
                           {OUTCOME_LABELS[selectedItem.outcome.outcomeType] || selectedItem.outcome.outcomeType}
                         </span>
                         <button
                           onClick={() => setSelectedItem(null)}
-                          className="p-1 hover:bg-muted rounded transition-colors"
+                          className="p-1 hover:bg-gray-100 rounded transition-colors"
                         >
-                          <X className="h-3.5 w-3.5 text-muted-foreground/60" />
+                          <X className="h-3.5 w-3.5 text-gray-400" />
                         </button>
                       </div>
                     </div>
 
-                    <div className="border border-border rounded-lg">
-                      <div className="px-4 py-2 border-b border-border">
-                        <span className="text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider">Original Message</span>
+                    <div className="border border-gray-100 rounded-lg">
+                      <div className="px-4 py-2 border-b border-gray-100">
+                        <span className="text-[11px] font-medium text-gray-400 uppercase tracking-wider">Original Message</span>
                       </div>
                       <div className="px-4 py-3">
                         {selectedItem.email?.inboundSubject && (
-                          <p className="text-[13px] font-medium text-foreground mb-2">
+                          <p className="text-[13px] font-medium text-gray-700 mb-2">
                             {selectedItem.email.inboundSubject}
                           </p>
                         )}
-                        <p className="text-[13px] text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                        <p className="text-[13px] text-gray-600 whitespace-pre-wrap leading-relaxed">
                           {selectedItem.email?.inboundText || "No message content available"}
                         </p>
                       </div>
@@ -362,9 +362,9 @@ export default function InboxPage() {
                           <span className="text-[11px] font-medium text-[#17B6C3] uppercase tracking-wider">Detected Intent</span>
                         </div>
                         <div className="px-4 py-3">
-                          <p className="text-[13px] text-foreground">{selectedItem.outcome.extractedText}</p>
+                          <p className="text-[13px] text-gray-700">{selectedItem.outcome.extractedText}</p>
                           {selectedItem.outcome.rawPatternMatch && (
-                            <p className="text-[11px] text-muted-foreground/60 mt-1.5 italic">
+                            <p className="text-[11px] text-gray-400 mt-1.5 italic">
                               Pattern: "{selectedItem.outcome.rawPatternMatch}"
                             </p>
                           )}
@@ -372,12 +372,12 @@ export default function InboxPage() {
                       </div>
                     )}
 
-                    <div className="pt-3 border-t border-border space-y-3">
-                      <p className="text-[13px] font-medium text-foreground">Confirm or edit</p>
+                    <div className="pt-3 border-t border-gray-100 space-y-3">
+                      <p className="text-[13px] font-medium text-gray-700">Confirm or edit</p>
                       
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1">
-                          <Label className="text-[12px] text-muted-foreground">Type</Label>
+                          <Label className="text-[12px] text-gray-500">Type</Label>
                           <Select
                             value={editForm.outcomeType}
                             onValueChange={(value) => setEditForm((prev) => ({ ...prev, outcomeType: value }))}
@@ -396,7 +396,7 @@ export default function InboxPage() {
                         {(editForm.outcomeType === "PROMISE_TO_PAY" || selectedItem.outcome.outcomeType === "PROMISE_TO_PAY") && (
                           <>
                             <div className="space-y-1">
-                              <Label className="text-[12px] text-muted-foreground">Promise Date</Label>
+                              <Label className="text-[12px] text-gray-500">Promise Date</Label>
                               <Input
                                 type="date"
                                 value={editForm.promiseDate}
@@ -405,7 +405,7 @@ export default function InboxPage() {
                               />
                             </div>
                             <div className="space-y-1">
-                              <Label className="text-[12px] text-muted-foreground">Amount (£)</Label>
+                              <Label className="text-[12px] text-gray-500">Amount (£)</Label>
                               <Input
                                 type="text"
                                 value={editForm.amount}
@@ -419,7 +419,7 @@ export default function InboxPage() {
                       </div>
                       
                       <div className="space-y-1">
-                        <Label className="text-[12px] text-muted-foreground">Notes</Label>
+                        <Label className="text-[12px] text-gray-500">Notes</Label>
                         <Textarea
                           value={editForm.notes}
                           onChange={(e) => setEditForm((prev) => ({ ...prev, notes: e.target.value }))}
@@ -441,7 +441,7 @@ export default function InboxPage() {
                         <button
                           onClick={() => setSelectedItem(null)}
                           disabled={confirmMutation.isPending}
-                          className="h-8 px-3 text-[13px] text-muted-foreground hover:bg-muted rounded transition-colors"
+                          className="h-8 px-3 text-[13px] text-gray-500 hover:bg-gray-50 rounded transition-colors"
                         >
                           Cancel
                         </button>
@@ -451,7 +451,7 @@ export default function InboxPage() {
                 ) : (
                   <div className="flex items-center justify-center h-full text-center">
                     <div>
-                      <p className="text-[13px] text-muted-foreground/60">Select an item to review</p>
+                      <p className="text-[13px] text-gray-400">Select an item to review</p>
                     </div>
                   </div>
                 )}
@@ -461,32 +461,32 @@ export default function InboxPage() {
 
           {activeTab === "unmatched" && (
             <div className="max-w-7xl mx-auto w-full">
-              <div className="px-6 lg:px-8 py-3 border-b border-border">
-                <p className="text-[12px] text-muted-foreground/60">
+              <div className="px-6 lg:px-8 py-3 border-b border-gray-100">
+                <p className="text-[12px] text-gray-400">
                   Emails that couldn't be auto-matched to a customer. Assign to link future emails from the same sender.
                 </p>
               </div>
 
               {unmatchedLoading ? (
-                <div className="divide-y divide-border">
+                <div className="divide-y divide-gray-100">
                   {[1, 2, 3].map((i) => (
                     <div key={i} className="px-6 lg:px-8 py-3">
-                      <div className="h-3 bg-muted rounded w-2/3 mb-2 animate-pulse" />
-                      <div className="h-2.5 bg-muted/50 rounded w-1/3 animate-pulse" />
+                      <div className="h-3 bg-gray-100 rounded w-2/3 mb-2 animate-pulse" />
+                      <div className="h-2.5 bg-gray-50 rounded w-1/3 animate-pulse" />
                     </div>
                   ))}
                 </div>
               ) : unmatchedEmails && unmatchedEmails.length > 0 ? (
-                <div className="divide-y divide-border">
+                <div className="divide-y divide-gray-100">
                   {unmatchedEmails.map((email) => (
                     <div key={email.id} className="px-6 lg:px-8 py-3 flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-medium text-foreground truncate">{email.from}</p>
+                        <p className="text-[13px] font-medium text-gray-900 truncate">{email.from}</p>
                         {email.subject && (
-                          <p className="text-[12px] text-muted-foreground truncate mt-0.5">{email.subject}</p>
+                          <p className="text-[12px] text-gray-600 truncate mt-0.5">{email.subject}</p>
                         )}
-                        <p className="text-[11px] text-muted-foreground/60 line-clamp-1 mt-0.5">{email.contentPreview}</p>
-                        <p className="text-[11px] text-muted-foreground/60 mt-1 tabular-nums">
+                        <p className="text-[11px] text-gray-400 line-clamp-1 mt-0.5">{email.contentPreview}</p>
+                        <p className="text-[11px] text-gray-400 mt-1 tabular-nums">
                           {format(new Date(email.createdAt), "d MMM yyyy, HH:mm")}
                         </p>
                       </div>
@@ -504,80 +504,80 @@ export default function InboxPage() {
                             Assign
                           </button>
                         </DialogTrigger>
-                          <DialogContent className="sm:max-w-md">
-                            <DialogHeader>
-                              <DialogTitle className="text-[15px]">Assign to Customer</DialogTitle>
-                            </DialogHeader>
-                            <div className="space-y-3">
-                              <div className="bg-muted rounded px-3 py-2">
-                                <p className="text-[11px] text-muted-foreground/60">From</p>
-                                <p className="text-[13px] font-medium text-foreground">{email.from}</p>
-                                {email.subject && (
-                                  <>
-                                    <p className="text-[11px] text-muted-foreground/60 mt-1.5">Subject</p>
-                                    <p className="text-[13px] text-muted-foreground">{email.subject}</p>
-                                  </>
+                        <DialogContent className="sm:max-w-md">
+                          <DialogHeader>
+                            <DialogTitle className="text-[15px]">Assign to Customer</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-3">
+                            <div className="bg-gray-50 rounded px-3 py-2">
+                              <p className="text-[11px] text-gray-400">From</p>
+                              <p className="text-[13px] font-medium text-gray-900">{email.from}</p>
+                              {email.subject && (
+                                <>
+                                  <p className="text-[11px] text-gray-400 mt-1.5">Subject</p>
+                                  <p className="text-[13px] text-gray-700">{email.subject}</p>
+                                </>
+                              )}
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-[12px] text-gray-500">Search customers</Label>
+                              <div className="relative">
+                                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-300" />
+                                <Input
+                                  value={contactSearch}
+                                  onChange={(e) => setContactSearch(e.target.value)}
+                                  placeholder="Type to search…"
+                                  className="pl-8 h-8 text-[13px]"
+                                />
+                              </div>
+                            </div>
+                            <ScrollArea className="h-[260px]">
+                              <div className="divide-y divide-gray-100">
+                                {contactsList
+                                  ?.filter((c) => {
+                                    if (!contactSearch) return true;
+                                    const search = contactSearch.toLowerCase();
+                                    return (
+                                      c.name?.toLowerCase().includes(search) ||
+                                      c.email?.toLowerCase().includes(search) ||
+                                      c.companyName?.toLowerCase().includes(search)
+                                    );
+                                  })
+                                  .slice(0, 50)
+                                  .map((contact) => (
+                                    <button
+                                      key={contact.id}
+                                      onClick={() => assignMutation.mutate({ inboundMessageId: email.id, contactId: contact.id })}
+                                      disabled={assignMutation.isPending}
+                                      className="w-full text-left px-3 py-2 hover:bg-gray-50 transition-colors"
+                                    >
+                                      <p className="text-[13px] font-medium text-gray-900">{contact.name}</p>
+                                      <div className="flex items-center gap-2 mt-0.5">
+                                        {contact.companyName && (
+                                          <span className="text-[11px] text-gray-500">{contact.companyName}</span>
+                                        )}
+                                        {contact.email && (
+                                          <span className="text-[11px] text-gray-400">{contact.email}</span>
+                                        )}
+                                      </div>
+                                    </button>
+                                  ))}
+                                {contactsList?.length === 0 && (
+                                  <p className="text-[13px] text-gray-400 text-center py-6">No customers found</p>
                                 )}
                               </div>
-                              <div className="space-y-1">
-                                <Label className="text-[12px] text-muted-foreground">Search customers</Label>
-                                <div className="relative">
-                                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/60" />
-                                  <Input
-                                    value={contactSearch}
-                                    onChange={(e) => setContactSearch(e.target.value)}
-                                    placeholder="Type to search…"
-                                    className="pl-8 h-8 text-[13px]"
-                                  />
-                                </div>
-                              </div>
-                              <ScrollArea className="h-[260px]">
-                                <div className="divide-y divide-border">
-                                  {contactsList
-                                    ?.filter((c) => {
-                                      if (!contactSearch) return true;
-                                      const search = contactSearch.toLowerCase();
-                                      return (
-                                        c.name?.toLowerCase().includes(search) ||
-                                        c.email?.toLowerCase().includes(search) ||
-                                        c.companyName?.toLowerCase().includes(search)
-                                      );
-                                    })
-                                    .slice(0, 50)
-                                    .map((contact) => (
-                                      <button
-                                        key={contact.id}
-                                        onClick={() => assignMutation.mutate({ inboundMessageId: email.id, contactId: contact.id })}
-                                        disabled={assignMutation.isPending}
-                                        className="w-full text-left px-3 py-2 hover:bg-muted transition-colors"
-                                      >
-                                        <p className="text-[13px] font-medium text-foreground">{contact.name}</p>
-                                        <div className="flex items-center gap-2 mt-0.5">
-                                          {contact.companyName && (
-                                            <span className="text-[11px] text-muted-foreground">{contact.companyName}</span>
-                                          )}
-                                          {contact.email && (
-                                            <span className="text-[11px] text-muted-foreground/60">{contact.email}</span>
-                                          )}
-                                        </div>
-                                      </button>
-                                    ))}
-                                  {contactsList?.length === 0 && (
-                                    <p className="text-[13px] text-muted-foreground/60 text-center py-6">No customers found</p>
-                                  )}
-                                </div>
-                              </ScrollArea>
-                            </div>
-                          </DialogContent>
+                            </ScrollArea>
+                          </div>
+                        </DialogContent>
                       </Dialog>
                     </div>
                   ))}
                 </div>
               ) : (
                 <div className="px-6 py-10 text-center">
-                  <Check className="h-5 w-5 text-muted-foreground/60 mx-auto mb-2" />
-                  <p className="text-[13px] text-muted-foreground">All emails matched</p>
-                  <p className="text-[11px] text-muted-foreground/60 mt-0.5">No unmatched emails in your inbox</p>
+                  <Check className="h-5 w-5 text-gray-300 mx-auto mb-2" />
+                  <p className="text-[13px] text-gray-500">All emails matched</p>
+                  <p className="text-[11px] text-gray-400 mt-0.5">No unmatched emails in your inbox</p>
                 </div>
               )}
             </div>

@@ -123,7 +123,7 @@ export default function Automation() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen bg-background">
+      <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
         <NewSidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <Header title="Automation" subtitle="AI Policy Settings" />
@@ -136,7 +136,7 @@ export default function Automation() {
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
       <NewSidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <Header title="Automation" subtitle="AI Policy Settings" />
@@ -164,7 +164,7 @@ export default function Automation() {
               </div>
             )}
 
-            <Card className="bg-background/80 backdrop-blur-sm border-border/50 shadow-lg">
+            <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
               <CardHeader>
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
@@ -180,7 +180,7 @@ export default function Automation() {
                 <div className="flex items-center justify-between">
                   <div>
                     <Label className="font-medium">Enable AI Collections</Label>
-                    <p className="text-sm text-muted-foreground">Allow AI to generate and execute collection actions</p>
+                    <p className="text-sm text-slate-500">Allow AI to generate and execute collection actions</p>
                   </div>
                   <Switch 
                     checked={localSettings.collectionsAutomationEnabled ?? true}
@@ -221,7 +221,7 @@ export default function Automation() {
                       </SelectItem>
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-slate-500">
                     {localSettings.approvalMode === 'manual' && 'You review and approve every AI-recommended action before execution.'}
                     {localSettings.approvalMode === 'auto_after_timeout' && 'Actions auto-approve if you don\'t review them within the timeout period.'}
                     {localSettings.approvalMode === 'full_auto' && 'AI executes actions automatically. Exceptions still require review.'}
@@ -241,7 +241,7 @@ export default function Automation() {
                         max={48}
                         data-testid="input-timeout-hours"
                       />
-                      <span className="text-sm text-muted-foreground">hours</span>
+                      <span className="text-sm text-slate-500">hours</span>
                     </div>
                   </div>
                 )}
@@ -257,12 +257,12 @@ export default function Automation() {
                     className="w-32"
                     data-testid="input-execution-time"
                   />
-                  <p className="text-xs text-muted-foreground">AI generates the daily plan overnight and executes at this time</p>
+                  <p className="text-xs text-slate-500">AI generates the daily plan overnight and executes at this time</p>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-background/80 backdrop-blur-sm border-border/50 shadow-lg">
+            <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
               <CardHeader>
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
@@ -276,14 +276,14 @@ export default function Automation() {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
+                  <div className="space-y-4 p-4 bg-blue-50/50 rounded-lg">
                     <div className="flex items-center gap-2">
                       <Mail className="h-4 w-4 text-blue-600" />
                       <Label className="font-medium">Email</Label>
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Daily limit</span>
+                        <span className="text-slate-500">Daily limit</span>
                         <span className="font-medium">{localSettings.dailyLimits?.email || 100}</span>
                       </div>
                       <Slider 
@@ -296,7 +296,7 @@ export default function Automation() {
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Cooldown</span>
+                        <span className="text-slate-500">Cooldown</span>
                         <span className="font-medium">{localSettings.channelCooldowns?.email || 3} days</span>
                       </div>
                       <Slider 
@@ -310,14 +310,14 @@ export default function Automation() {
                     </div>
                   </div>
 
-                  <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
+                  <div className="space-y-4 p-4 bg-green-50/50 rounded-lg">
                     <div className="flex items-center gap-2">
                       <MessageSquare className="h-4 w-4 text-green-600" />
                       <Label className="font-medium">SMS</Label>
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Daily limit</span>
+                        <span className="text-slate-500">Daily limit</span>
                         <span className="font-medium">{localSettings.dailyLimits?.sms || 50}</span>
                       </div>
                       <Slider 
@@ -330,7 +330,7 @@ export default function Automation() {
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Cooldown</span>
+                        <span className="text-slate-500">Cooldown</span>
                         <span className="font-medium">{localSettings.channelCooldowns?.sms || 5} days</span>
                       </div>
                       <Slider 
@@ -344,14 +344,14 @@ export default function Automation() {
                     </div>
                   </div>
 
-                  <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
+                  <div className="space-y-4 p-4 bg-purple-50/50 rounded-lg">
                     <div className="flex items-center gap-2">
                       <Phone className="h-4 w-4 text-purple-600" />
                       <Label className="font-medium">Voice</Label>
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Daily limit</span>
+                        <span className="text-slate-500">Daily limit</span>
                         <span className="font-medium">{localSettings.dailyLimits?.voice || 20}</span>
                       </div>
                       <Slider 
@@ -364,7 +364,7 @@ export default function Automation() {
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Cooldown</span>
+                        <span className="text-slate-500">Cooldown</span>
                         <span className="font-medium">{localSettings.channelCooldowns?.voice || 7} days</span>
                       </div>
                       <Slider 
@@ -385,7 +385,7 @@ export default function Automation() {
                   <Label className="font-medium">Business Hours (for Voice Calls)</Label>
                   <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2">
-                      <Label className="text-sm text-muted-foreground">From</Label>
+                      <Label className="text-sm text-slate-500">From</Label>
                       <Input 
                         type="time"
                         value={localSettings.businessHoursStart || '08:00'}
@@ -395,7 +395,7 @@ export default function Automation() {
                       />
                     </div>
                     <div className="flex items-center gap-2">
-                      <Label className="text-sm text-muted-foreground">To</Label>
+                      <Label className="text-sm text-slate-500">To</Label>
                       <Input 
                         type="time"
                         value={localSettings.businessHoursEnd || '18:00'}
@@ -405,13 +405,13 @@ export default function Automation() {
                       />
                     </div>
                   </div>
-                  <p className="text-xs text-muted-foreground">Voice calls will only be scheduled within these hours</p>
+                  <p className="text-xs text-slate-500">Voice calls will only be scheduled within these hours</p>
                 </div>
 
                 <div className="space-y-3">
                   <Label className="font-medium">Contact Frequency</Label>
                   <div className="flex items-center gap-4">
-                    <span className="text-sm text-muted-foreground">Max</span>
+                    <span className="text-sm text-slate-500">Max</span>
                     <Input 
                       type="number"
                       value={localSettings.maxTouchesPerWindow || 3}
@@ -421,7 +421,7 @@ export default function Automation() {
                       max={10}
                       data-testid="input-max-touches"
                     />
-                    <span className="text-sm text-muted-foreground">contacts per</span>
+                    <span className="text-sm text-slate-500">contacts per</span>
                     <Input 
                       type="number"
                       value={localSettings.contactWindowDays || 14}
@@ -431,13 +431,13 @@ export default function Automation() {
                       max={30}
                       data-testid="input-contact-window"
                     />
-                    <span className="text-sm text-muted-foreground">days</span>
+                    <span className="text-sm text-slate-500">days</span>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-background/80 backdrop-blur-sm border-border/50 shadow-lg">
+            <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
               <CardHeader>
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-amber-100 rounded-lg">
@@ -453,7 +453,7 @@ export default function Automation() {
                 <div className="flex items-center justify-between py-2">
                   <div>
                     <Label className="font-medium">Flag first contact</Label>
-                    <p className="text-sm text-muted-foreground">Review before contacting a debtor for the first time</p>
+                    <p className="text-sm text-slate-500">Review before contacting a debtor for the first time</p>
                   </div>
                   <Switch 
                     checked={localSettings.exceptionRules?.flagFirstContact ?? true}
@@ -470,10 +470,10 @@ export default function Automation() {
                 <div className="flex items-center justify-between py-2">
                   <div className="flex-1">
                     <Label className="font-medium">Flag high-value invoices</Label>
-                    <p className="text-sm text-muted-foreground">Review invoices above this threshold</p>
+                    <p className="text-sm text-slate-500">Review invoices above this threshold</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">£</span>
+                    <span className="text-sm text-slate-500">£</span>
                     <Input 
                       type="number"
                       value={localSettings.exceptionRules?.flagHighValue || 10000}
@@ -494,7 +494,7 @@ export default function Automation() {
                 <div className="flex items-center justify-between py-2">
                   <div>
                     <Label className="font-medium">Flag dispute indicators</Label>
-                    <p className="text-sm text-muted-foreground">Review when AI detects dispute keywords in responses</p>
+                    <p className="text-sm text-slate-500">Review when AI detects dispute keywords in responses</p>
                   </div>
                   <Switch 
                     checked={localSettings.exceptionRules?.flagDisputeKeywords ?? true}
@@ -511,7 +511,7 @@ export default function Automation() {
                 <div className="flex items-center justify-between py-2">
                   <div>
                     <Label className="font-medium">Flag VIP customers</Label>
-                    <p className="text-sm text-muted-foreground">Always review before contacting VIP-flagged customers</p>
+                    <p className="text-sm text-slate-500">Always review before contacting VIP-flagged customers</p>
                   </div>
                   <Switch 
                     checked={localSettings.exceptionRules?.flagVipCustomers ?? true}
@@ -525,7 +525,7 @@ export default function Automation() {
               </CardContent>
             </Card>
 
-            <Card className="bg-background/80 backdrop-blur-sm border-border/50 shadow-lg">
+            <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
               <CardHeader>
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-[#17B6C3]/10 rounded-lg">

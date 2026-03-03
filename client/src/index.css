@@ -6,71 +6,70 @@
 
 @layer base {
   :root {
-    /* shadcn Zinc theme — Qashivo teal primary */
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-
+    /* Apple-inspired Clean Design System */
+    --background: 0 0% 100%; /* Pure white */
+    --foreground: 215 16% 20%; /* Dark grey text */
+    
+    /* Cards - clean white with subtle shadows */
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-
+    --card-foreground: 215 16% 20%;
+    
+    /* Popovers */
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-
-    --primary: 188 74% 42%;
+    --popover-foreground: 215 16% 20%;
+    
+    /* Primary accent - Deep Blue or Teal */
+    --primary: 188 74% 42%; /* Keep Nexus teal #17B6C3 */
     --primary-foreground: 0 0% 100%;
-
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
+    
+    /* Muted backgrounds */
+    --secondary: 210 40% 98%;
+    --secondary-foreground: 215 16% 20%;
+    
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 20% 45%;
+    
+    --accent: 210 40% 98%;
+    --accent-foreground: 215 16% 20%;
+    
+    /* Destructive */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    
+    /* Borders and inputs */
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
     --ring: 188 74% 42%;
-
-    --radius: 0.5rem;
-
+    
+    /* Border radius - Apple style */
+    --radius: 1rem; /* 16px - rounded-2xl by default */
+    
     /* Status colors - Desaturated Fintech Palette */
-    --success: 156 38% 50%;
-    --warning: 38 75% 57%;
-    --error: 0 48% 58%;
-    --critical: 0 48% 58%;
+    --success: 156 38% 50%; /* #4FAD80 - muted teal green */
+    --warning: 38 75% 57%; /* #E8A23B - softer amber */
+    --error: 0 48% 58%; /* #C75C5C - muted red */
+    --critical: 0 48% 58%; /* #C75C5C - same as error for critical status */
   }
 
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 98%;
     --primary: 188 74% 42%;
     --primary-foreground: 0 0% 100%;
-
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
     --ring: 188 74% 42%;
   }
 }
@@ -79,218 +78,226 @@
   * {
     @apply border-border;
   }
-
+  
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply bg-[#FAFAFA] text-foreground font-sans antialiased;
     font-feature-settings: "cv11", "ss01";
-    font-weight: 500;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
-
+  
+  /* Typography - Mobile-first large and readable */
   h1 {
     @apply text-2xl font-bold tracking-tight;
     @apply sm:text-3xl lg:text-4xl;
     font-family: 'Archivo', sans-serif;
   }
-
+  
   h2 {
     @apply text-xl font-bold tracking-tight;
     @apply sm:text-2xl lg:text-3xl;
     font-family: 'Archivo', sans-serif;
   }
-
+  
   h3 {
     @apply text-lg font-semibold tracking-tight;
     @apply sm:text-xl lg:text-2xl;
     font-family: 'Archivo', sans-serif;
   }
-
+  
   h4 {
     @apply text-base font-semibold;
     @apply sm:text-lg;
     font-family: 'Archivo', sans-serif;
   }
-
+  
+  /* Body text */
   p {
-    @apply text-base leading-relaxed text-muted-foreground;
+    @apply text-base leading-relaxed;
+    @apply text-slate-600 dark:text-slate-400;
   }
 }
 
 @layer components {
-  /* ========== CARD SYSTEM ========== */
-
+  /* ========== MOBILE-FIRST CARD SYSTEM ========== */
+  
   .card-apple {
-    @apply bg-background rounded-lg shadow-sm border border-border;
+    @apply bg-white rounded-2xl shadow-sm border border-slate-200;
     @apply transition-all duration-200;
   }
-
+  
   .card-apple-hover {
-    @apply bg-background rounded-lg shadow-sm border border-border;
+    @apply bg-white rounded-2xl shadow-sm border border-slate-200;
     @apply transition-all duration-200 hover:shadow-md active:scale-[0.99];
   }
-
+  
   /* ========== GLASSMORPHISM CARD SYSTEM ========== */
-
+  
   .glass-card {
-    @apply bg-white/90 backdrop-blur-md rounded-lg shadow-lg border border-white/50;
+    @apply bg-white/90 backdrop-blur-md rounded-2xl shadow-lg border border-white/50;
     @apply transition-all duration-200;
   }
-
+  
   .glass-card-light {
-    @apply bg-white/70 backdrop-blur-sm rounded-lg shadow-sm border border-white/40;
+    @apply bg-white/70 backdrop-blur-sm rounded-2xl shadow-sm border border-white/40;
     @apply transition-all duration-200;
   }
-
+  
   .glass-card-strong {
     background: linear-gradient(135deg, #F0F4F5 0%, #E5ECEE 100%);
-    @apply backdrop-blur-lg rounded-lg shadow-xl border border-white/30;
+    @apply backdrop-blur-lg rounded-2xl shadow-xl border border-white/30;
     @apply transition-all duration-200;
   }
-
+  
   /* ========== BUTTON SYSTEM ========== */
-
+  
+  /* Primary button - full width on mobile */
   .btn-apple-primary {
     @apply w-full sm:w-auto bg-[#17B6C3] text-white font-semibold;
-    @apply px-6 py-3 rounded-md shadow-sm;
+    @apply px-6 py-3 rounded-2xl shadow-sm;
     @apply transition-all duration-200 hover:bg-[#1396A1] active:scale-[0.98];
     @apply min-h-[44px] flex items-center justify-center;
   }
-
+  
+  /* Secondary button */
   .btn-apple-secondary {
-    @apply w-full sm:w-auto bg-muted text-foreground font-medium;
-    @apply px-6 py-3 rounded-md;
-    @apply transition-all duration-200 hover:bg-muted/80 active:scale-[0.98];
+    @apply w-full sm:w-auto bg-slate-100 text-slate-900 font-medium;
+    @apply px-6 py-3 rounded-2xl;
+    @apply transition-all duration-200 hover:bg-slate-200 active:scale-[0.98];
     @apply min-h-[44px] flex items-center justify-center;
   }
-
+  
+  /* Ghost button */
   .btn-apple-ghost {
-    @apply w-full sm:w-auto text-muted-foreground font-medium;
-    @apply px-4 py-2 rounded-md;
-    @apply transition-all duration-200 hover:bg-muted active:scale-[0.98];
+    @apply w-full sm:w-auto text-slate-600 font-medium;
+    @apply px-4 py-2 rounded-xl;
+    @apply transition-all duration-200 hover:bg-slate-100 active:scale-[0.98];
     @apply min-h-[44px] flex items-center justify-center;
   }
-
+  
   /* ========== INPUT SYSTEM ========== */
-
+  
   .input-apple {
-    @apply w-full bg-background border border-border rounded-md;
+    @apply w-full bg-white border border-slate-200 rounded-xl;
     @apply px-4 py-3 text-base;
     @apply transition-all duration-200;
     @apply focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3];
-    @apply placeholder:text-muted-foreground/50;
+    @apply placeholder:text-slate-400;
     @apply min-h-[44px];
   }
-
-  /* ========== BADGE SYSTEM ========== */
-
+  
+  /* ========== BADGE SYSTEM - Desaturated Fintech Palette ========== */
+  
   .badge-success {
     @apply inline-flex items-center px-2.5 py-1 rounded-full;
     @apply bg-[#4FAD80]/10 text-[#4FAD80] text-sm font-medium;
   }
-
+  
   .badge-warning {
     @apply inline-flex items-center px-2.5 py-1 rounded-full;
     @apply bg-[#E8A23B]/10 text-[#E8A23B] text-sm font-medium;
   }
-
+  
   .badge-error {
     @apply inline-flex items-center px-2.5 py-1 rounded-full;
     @apply bg-[#C75C5C]/10 text-[#C75C5C] text-sm font-medium;
   }
-
+  
   .badge-info {
     @apply inline-flex items-center px-2.5 py-1 rounded-full;
     @apply bg-blue-500/10 text-blue-600 text-sm font-medium;
   }
-
+  
   /* ========== MOBILE NAVIGATION ========== */
-
+  
   .bottom-nav {
     @apply fixed bottom-0 left-0 right-0 z-50;
-    @apply bg-background border-t border-border;
+    @apply bg-white border-t border-slate-200;
     @apply lg:hidden;
     @apply safe-area-inset-bottom;
   }
-
+  
   .bottom-nav-item {
     @apply flex flex-col items-center justify-center;
-    @apply py-2 px-3 text-muted-foreground;
+    @apply py-2 px-3 text-slate-600;
     @apply transition-colors duration-200;
     @apply min-h-[60px];
   }
-
+  
   .bottom-nav-item.active {
     @apply text-[#17B6C3];
   }
-
+  
   /* ========== LAYOUT UTILITIES ========== */
-
+  
+  /* Container - mobile padding */
   .container-apple {
     @apply w-full px-4 sm:px-6 lg:px-8;
     @apply max-w-7xl mx-auto;
   }
-
+  
+  /* Stack on mobile, grid on desktop */
   .grid-apple {
     @apply grid gap-4;
     @apply grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
   }
-
+  
+  /* Main content with bottom nav spacing */
   .main-with-bottom-nav {
     @apply pb-20 lg:pb-0;
   }
-
-  /* ========== STATUS INDICATORS ========== */
-
+  
+  /* ========== STATUS INDICATORS - Desaturated Fintech Palette ========== */
+  
   .status-dot-success {
     @apply w-2 h-2 rounded-full bg-[#4FAD80];
   }
-
+  
   .status-dot-warning {
     @apply w-2 h-2 rounded-full bg-[#E8A23B];
   }
-
+  
   .status-dot-error {
     @apply w-2 h-2 rounded-full bg-[#C75C5C];
   }
-
-  /* ========== SHADOWS ========== */
-
+  
+  /* ========== SHADOWS - Apple style ========== */
+  
   .shadow-apple-sm {
     box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   }
-
+  
   .shadow-apple {
     box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
   }
-
+  
   .shadow-apple-lg {
     box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   }
-
+  
   /* ========== TOUCH TARGETS ========== */
-
+  
   .touch-target {
     @apply min-h-[44px] min-w-[44px];
   }
-
+  
   /* ========== SWIPE ACTIONS ========== */
-
+  
   .swipe-action {
     @apply absolute inset-y-0 right-0;
     @apply flex items-center justify-center;
     @apply px-4 text-white font-medium;
     @apply transition-all duration-200;
   }
-
+  
   .swipe-action-success {
     @apply bg-[#4FAD80];
   }
-
+  
   .swipe-action-warning {
     @apply bg-[#E8A23B];
   }
-
+  
   .swipe-action-error {
     @apply bg-[#C75C5C];
   }
@@ -314,6 +321,7 @@
   }
 }
 
+/* Focus visible for keyboard navigation */
 .focus-apple {
   @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-[#17B6C3] focus-visible:ring-offset-2;
 }
@@ -321,7 +329,7 @@
 /* ========== SCROLLBAR STYLING ========== */
 .scrollbar-apple {
   scrollbar-width: thin;
-  scrollbar-color: hsl(var(--border)) transparent;
+  scrollbar-color: rgb(203 213 225) transparent;
 }
 
 .scrollbar-apple::-webkit-scrollbar {
@@ -334,15 +342,15 @@
 }
 
 .scrollbar-apple::-webkit-scrollbar-thumb {
-  background: hsl(var(--border));
+  background: rgb(203 213 225);
   border-radius: 3px;
 }
 
 .scrollbar-apple::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground) / 0.4);
+  background: rgb(148 163 184);
 }
 
-/* ========== ANIMATIONS ========== */
+/* ========== SPLASH SCREEN ANIMATIONS ========== */
 @keyframes fadeIn {
   from {
     opacity: 0;

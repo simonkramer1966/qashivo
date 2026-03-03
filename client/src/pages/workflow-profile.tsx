@@ -233,25 +233,25 @@ export default function WorkflowProfilePage() {
 
   if (!tenantId) {
     return (
-      <div className="flex h-screen bg-background items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground/60" />
+      <div className="flex h-screen bg-white items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-white">
       <div className="hidden lg:block">
         <NewSidebar />
       </div>
       
       <main className="flex-1 overflow-y-auto main-with-bottom-nav">
-        <div className="sticky top-0 z-40 bg-background">
-          <div className="px-6 lg:px-8 py-5 border-b border-border">
+        <div className="sticky top-0 z-40 bg-white">
+          <div className="px-6 lg:px-8 py-5 border-b border-slate-100">
             <div className="hidden lg:flex items-center justify-between">
               <div>
-                <h2 className="text-[17px] font-semibold text-foreground tracking-tight">Workflow Settings</h2>
-                <p className="text-[13px] text-muted-foreground/60 mt-0.5">
+                <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight">Workflow Settings</h2>
+                <p className="text-[13px] text-slate-400 mt-0.5">
                   Configure your collections policy, messaging, and automation
                 </p>
               </div>
@@ -274,7 +274,7 @@ export default function WorkflowProfilePage() {
                     size="sm"
                     onClick={() => approveMutation.mutate()}
                     disabled={approveMutation.isPending}
-                    className="text-[13px] h-8 bg-foreground text-background hover:bg-foreground/90"
+                    className="text-[13px] h-8 bg-slate-900 hover:bg-slate-800"
                   >
                     {approveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
                     Activate Workflow
@@ -283,11 +283,11 @@ export default function WorkflowProfilePage() {
               </div>
             </div>
             <div className="lg:hidden text-center">
-              <h2 className="text-xl font-semibold text-foreground">Workflow Settings</h2>
+              <h2 className="text-xl font-semibold text-slate-900">Workflow Settings</h2>
             </div>
           </div>
           
-          <div className="bg-background border-b border-border px-6 lg:px-8">
+          <div className="bg-white border-b border-slate-100 px-6 lg:px-8">
             <div className="flex items-center gap-2">
               {TABS.map(tab => (
                 <button
@@ -295,14 +295,14 @@ export default function WorkflowProfilePage() {
                   onClick={() => setActiveTab(tab.id)}
                   className={`px-4 py-3 text-[13px] font-medium transition-colors relative flex items-center gap-1.5 ${
                     activeTab === tab.id
-                      ? 'text-foreground'
-                      : 'text-muted-foreground/60 hover:text-muted-foreground'
+                      ? 'text-slate-900'
+                      : 'text-slate-400 hover:text-slate-600'
                   }`}
                 >
                   <tab.icon className="h-4 w-4" />
                   {tab.label}
                   {activeTab === tab.id && (
-                    <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-foreground rounded-full" />
+                    <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-slate-900 rounded-full" />
                   )}
                 </button>
               ))}
@@ -310,7 +310,7 @@ export default function WorkflowProfilePage() {
           </div>
         </div>
 
-        <div className="p-6 lg:p-8 space-y-6 bg-background min-h-[calc(100vh-140px)]">
+        <div className="p-6 lg:p-8 space-y-6 bg-white min-h-[calc(100vh-140px)]">
           {activeTab === 'policy' && (
             <PolicySection
               policy={policy}
@@ -382,11 +382,11 @@ function PolicySection({
 }) {
   return (
     <div className="space-y-8">
-      <div className="bg-muted rounded-lg p-6">
-        <h3 className="text-[15px] font-semibold text-foreground mb-4">Payment Terms</h3>
+      <div className="bg-slate-50 rounded-lg p-6">
+        <h3 className="text-[15px] font-semibold text-slate-900 mb-4">Payment Terms</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
-            <Label className="text-[13px] text-muted-foreground">Typical payment terms (days)</Label>
+            <Label className="text-[13px] text-slate-600">Typical payment terms (days)</Label>
             <Input
               type="number"
               value={policy.typicalPaymentTerms || 30}
@@ -395,7 +395,7 @@ function PolicySection({
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-[13px] text-muted-foreground">Start chasing</Label>
+            <Label className="text-[13px] text-slate-600">Start chasing</Label>
             <Select
               value={policy.chasingStart || 'on_due'}
               onValueChange={(v) => onUpdatePolicy('chasingStart', v)}
@@ -413,11 +413,11 @@ function PolicySection({
         </div>
       </div>
 
-      <div className="bg-muted rounded-lg p-6">
-        <h3 className="text-[15px] font-semibold text-foreground mb-4">Communication Limits</h3>
+      <div className="bg-slate-50 rounded-lg p-6">
+        <h3 className="text-[15px] font-semibold text-slate-900 mb-4">Communication Limits</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
-            <Label className="text-[13px] text-muted-foreground">Maximum touches per week</Label>
+            <Label className="text-[13px] text-slate-600">Maximum touches per week</Label>
             <Input
               type="number"
               value={policy.maxTouchesPerWeek || 3}
@@ -428,7 +428,7 @@ function PolicySection({
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-[13px] text-muted-foreground">Escalation cadence</Label>
+            <Label className="text-[13px] text-slate-600">Escalation cadence</Label>
             <Select
               value={policy.escalationCadence || 'standard'}
               onValueChange={(v) => onUpdatePolicy('escalationCadence', v)}
@@ -446,9 +446,9 @@ function PolicySection({
         </div>
       </div>
 
-      <div className="bg-muted rounded-lg p-6">
-        <h3 className="text-[15px] font-semibold text-foreground mb-4">Message Tone</h3>
-        <p className="text-[13px] text-muted-foreground/60 mb-4">
+      <div className="bg-slate-50 rounded-lg p-6">
+        <h3 className="text-[15px] font-semibold text-slate-900 mb-4">Message Tone</h3>
+        <p className="text-[13px] text-slate-500 mb-4">
           Set the overall tone for your collection messages
         </p>
         <div className="space-y-4">
@@ -460,9 +460,9 @@ function PolicySection({
             step={1}
             className="w-full"
           />
-          <div className="flex justify-between text-[12px] text-muted-foreground/60">
+          <div className="flex justify-between text-[12px] text-slate-500">
             {TONE_LABELS.map((label, i) => (
-              <span key={i} className={tone === i + 1 ? 'text-foreground font-medium' : ''}>
+              <span key={i} className={tone === i + 1 ? 'text-slate-900 font-medium' : ''}>
                 {label}
               </span>
             ))}
@@ -470,14 +470,14 @@ function PolicySection({
         </div>
       </div>
 
-      <div className="bg-muted rounded-lg p-6">
-        <h3 className="text-[15px] font-semibold text-foreground mb-4">Message Footer</h3>
-        <p className="text-[13px] text-muted-foreground/60 mb-4">
+      <div className="bg-slate-50 rounded-lg p-6">
+        <h3 className="text-[15px] font-semibold text-slate-900 mb-4">Message Footer</h3>
+        <p className="text-[13px] text-slate-500 mb-4">
           Information included at the end of all messages
         </p>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label className="text-[13px] text-muted-foreground">Payment link</Label>
+            <Label className="text-[13px] text-slate-600">Payment link</Label>
             <Input
               value={footer.paymentLink || ''}
               onChange={(e) => onUpdateFooter('paymentLink', e.target.value)}
@@ -486,7 +486,7 @@ function PolicySection({
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-[13px] text-muted-foreground">Contact email</Label>
+            <Label className="text-[13px] text-slate-600">Contact email</Label>
             <Input
               type="email"
               value={footer.contactEmail || ''}
@@ -496,7 +496,7 @@ function PolicySection({
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-[13px] text-muted-foreground">Dispute guidance text</Label>
+            <Label className="text-[13px] text-slate-600">Dispute guidance text</Label>
             <Textarea
               value={footer.disputeGuidance || ''}
               onChange={(e) => onUpdateFooter('disputeGuidance', e.target.value)}
@@ -519,21 +519,21 @@ function ChannelsSection({
 }) {
   return (
     <div className="space-y-6">
-      <div className="bg-muted rounded-lg p-6">
-        <h3 className="text-[15px] font-semibold text-foreground mb-4">Enabled Channels</h3>
-        <p className="text-[13px] text-muted-foreground/60 mb-6">
+      <div className="bg-slate-50 rounded-lg p-6">
+        <h3 className="text-[15px] font-semibold text-slate-900 mb-4">Enabled Channels</h3>
+        <p className="text-[13px] text-slate-500 mb-6">
           Select which communication channels to use for collections
         </p>
         
         <div className="space-y-4">
-          <div className="flex items-center justify-between p-4 bg-background rounded-lg border border-border">
+          <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-100">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-blue-50 rounded-lg">
                 <Mail className="h-5 w-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-[14px] font-medium text-foreground">Email</p>
-                <p className="text-[12px] text-muted-foreground/60">Send collection emails to customers</p>
+                <p className="text-[14px] font-medium text-slate-900">Email</p>
+                <p className="text-[12px] text-slate-500">Send collection emails to customers</p>
               </div>
             </div>
             <Switch
@@ -542,14 +542,14 @@ function ChannelsSection({
             />
           </div>
 
-          <div className="flex items-center justify-between p-4 bg-background rounded-lg border border-border">
+          <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-100">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-green-50 rounded-lg">
                 <MessageSquare className="h-5 w-5 text-green-600" />
               </div>
               <div>
-                <p className="text-[14px] font-medium text-foreground">SMS</p>
-                <p className="text-[12px] text-muted-foreground/60">Send text message reminders</p>
+                <p className="text-[14px] font-medium text-slate-900">SMS</p>
+                <p className="text-[12px] text-slate-500">Send text message reminders</p>
               </div>
             </div>
             <Switch
@@ -558,14 +558,14 @@ function ChannelsSection({
             />
           </div>
 
-          <div className="flex items-center justify-between p-4 bg-background rounded-lg border border-border">
+          <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-100">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-purple-50 rounded-lg">
                 <Phone className="h-5 w-5 text-purple-600" />
               </div>
               <div>
-                <p className="text-[14px] font-medium text-foreground">Voice Calls</p>
-                <p className="text-[12px] text-muted-foreground/60">AI-powered collection calls</p>
+                <p className="text-[14px] font-medium text-slate-900">Voice Calls</p>
+                <p className="text-[12px] text-slate-500">AI-powered collection calls</p>
               </div>
             </div>
             <Switch
@@ -592,14 +592,14 @@ function OutcomesSection({
 
   return (
     <div className="space-y-6">
-      <div className="bg-muted rounded-lg p-6">
-        <h3 className="text-[15px] font-semibold text-foreground mb-4">Promise to Pay</h3>
-        <p className="text-[13px] text-muted-foreground/60 mb-4">
+      <div className="bg-slate-50 rounded-lg p-6">
+        <h3 className="text-[15px] font-semibold text-slate-900 mb-4">Promise to Pay</h3>
+        <p className="text-[13px] text-slate-500 mb-4">
           When a customer commits to pay by a specific date
         </p>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label className="text-[13px] text-muted-foreground">Action</Label>
+            <Label className="text-[13px] text-slate-600">Action</Label>
             <Select
               value={ptp.action || 'pause_until_date'}
               onValueChange={(v) => onUpdate({
@@ -624,19 +624,19 @@ function OutcomesSection({
                 promiseToPay: { ...ptp, followUpNextDay: v },
               })}
             />
-            <Label className="text-[13px] text-muted-foreground">Follow up next day if payment not received</Label>
+            <Label className="text-[13px] text-slate-600">Follow up next day if payment not received</Label>
           </div>
         </div>
       </div>
 
-      <div className="bg-muted rounded-lg p-6">
-        <h3 className="text-[15px] font-semibold text-foreground mb-4">Request for More Time</h3>
-        <p className="text-[13px] text-muted-foreground/60 mb-4">
+      <div className="bg-slate-50 rounded-lg p-6">
+        <h3 className="text-[15px] font-semibold text-slate-900 mb-4">Request for More Time</h3>
+        <p className="text-[13px] text-slate-500 mb-4">
           When a customer asks for an extension without a specific date
         </p>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label className="text-[13px] text-muted-foreground">Action</Label>
+            <Label className="text-[13px] text-slate-600">Action</Label>
             <Select
               value={moreTime.action || 'flag_for_approval'}
               onValueChange={(v) => onUpdate({
@@ -656,14 +656,14 @@ function OutcomesSection({
         </div>
       </div>
 
-      <div className="bg-muted rounded-lg p-6">
-        <h3 className="text-[15px] font-semibold text-foreground mb-4">Dispute</h3>
-        <p className="text-[13px] text-muted-foreground/60 mb-4">
+      <div className="bg-slate-50 rounded-lg p-6">
+        <h3 className="text-[15px] font-semibold text-slate-900 mb-4">Dispute</h3>
+        <p className="text-[13px] text-slate-500 mb-4">
           When a customer disputes the invoice
         </p>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label className="text-[13px] text-muted-foreground">Action</Label>
+            <Label className="text-[13px] text-slate-600">Action</Label>
             <Select
               value={dispute.action || 'stop_chasing'}
               onValueChange={(v) => onUpdate({
@@ -688,7 +688,7 @@ function OutcomesSection({
                 dispute: { ...dispute, createException: v },
               })}
             />
-            <Label className="text-[13px] text-muted-foreground">Create exception item for review</Label>
+            <Label className="text-[13px] text-slate-600">Create exception item for review</Label>
           </div>
         </div>
       </div>
@@ -718,8 +718,8 @@ function MessagesSection({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-[15px] font-semibold text-foreground">Message Templates</h3>
-          <p className="text-[13px] text-muted-foreground/60 mt-1">
+          <h3 className="text-[15px] font-semibold text-slate-900">Message Templates</h3>
+          <p className="text-[13px] text-slate-500 mt-1">
             Customize the messages sent at each stage of the collection process
           </p>
         </div>
@@ -741,7 +741,7 @@ function MessagesSection({
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-1 space-y-2">
-          <Label className="text-[12px] text-muted-foreground/60 uppercase tracking-wide">Stage</Label>
+          <Label className="text-[12px] text-slate-500 uppercase tracking-wide">Stage</Label>
           <div className="space-y-1">
             {MESSAGE_KEYS.map((mk) => {
               const hasMessage = messages.some(m => m.key === mk.key);
@@ -751,8 +751,8 @@ function MessagesSection({
                   onClick={() => setSelectedKey(mk.key)}
                   className={`w-full text-left px-3 py-2 rounded text-[13px] transition-colors flex items-center justify-between ${
                     selectedKey === mk.key
-                      ? 'bg-foreground text-background'
-                      : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                      ? 'bg-slate-900 text-white'
+                      : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
                   }`}
                 >
                   {mk.label}
@@ -765,7 +765,7 @@ function MessagesSection({
           </div>
 
           <div className="pt-4">
-            <Label className="text-[12px] text-muted-foreground/60 uppercase tracking-wide">Channel</Label>
+            <Label className="text-[12px] text-slate-500 uppercase tracking-wide">Channel</Label>
             <div className="flex gap-2 mt-2">
               <button
                 onClick={() => setSelectedChannel('EMAIL')}
@@ -773,7 +773,7 @@ function MessagesSection({
                 className={`flex-1 px-3 py-2 rounded text-[13px] transition-colors ${
                   selectedChannel === 'EMAIL'
                     ? 'bg-blue-600 text-white'
-                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                 } disabled:opacity-50`}
               >
                 Email
@@ -784,7 +784,7 @@ function MessagesSection({
                 className={`flex-1 px-3 py-2 rounded text-[13px] transition-colors ${
                   selectedChannel === 'SMS'
                     ? 'bg-green-600 text-white'
-                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                 } disabled:opacity-50`}
               >
                 SMS
@@ -793,9 +793,9 @@ function MessagesSection({
           </div>
         </div>
 
-        <div className="lg:col-span-3 bg-muted rounded-lg p-6">
+        <div className="lg:col-span-3 bg-slate-50 rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
-            <h4 className="text-[14px] font-medium text-foreground">
+            <h4 className="text-[14px] font-medium text-slate-900">
               {MESSAGE_KEYS.find(mk => mk.key === selectedKey)?.label} - {selectedChannel}
             </h4>
             {currentMessage?.isEdited && (
@@ -808,7 +808,7 @@ function MessagesSection({
           <div className="space-y-4">
             {selectedChannel === 'EMAIL' && (
               <div className="space-y-2">
-                <Label className="text-[13px] text-muted-foreground">Subject</Label>
+                <Label className="text-[13px] text-slate-600">Subject</Label>
                 <Input
                   value={currentMessage?.subject || ''}
                   onChange={(e) => onUpdateMessage(selectedKey, selectedChannel, 'subject', e.target.value)}
@@ -819,7 +819,7 @@ function MessagesSection({
             )}
 
             <div className="space-y-2">
-              <Label className="text-[13px] text-muted-foreground">
+              <Label className="text-[13px] text-slate-600">
                 {selectedChannel === 'SMS' ? 'Message' : 'Body'}
               </Label>
               <Textarea
@@ -830,15 +830,15 @@ function MessagesSection({
                 maxLength={selectedChannel === 'SMS' ? 160 : undefined}
               />
               {selectedChannel === 'SMS' && (
-                <p className="text-[11px] text-muted-foreground/60">
+                <p className="text-[11px] text-slate-400">
                   {(currentMessage?.body || '').length}/160 characters
                 </p>
               )}
             </div>
 
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-lg p-3">
-              <p className="text-[12px] text-blue-700 dark:text-blue-300 font-medium mb-1">Available Variables</p>
-              <p className="text-[11px] text-blue-600 dark:text-blue-400 font-mono">
+            <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
+              <p className="text-[12px] text-blue-700 font-medium mb-1">Available Variables</p>
+              <p className="text-[11px] text-blue-600 font-mono">
                 {'{{customer_name}}'} {'{{invoice_number}}'} {'{{amount}}'} {'{{due_date}}'} {'{{company_name}}'}
               </p>
             </div>
@@ -868,45 +868,45 @@ function ApprovalSection({
 
   return (
     <div className="space-y-6">
-      <div className="bg-muted rounded-lg p-6">
-        <h3 className="text-[15px] font-semibold text-foreground mb-4">Workflow Summary</h3>
+      <div className="bg-slate-50 rounded-lg p-6">
+        <h3 className="text-[15px] font-semibold text-slate-900 mb-4">Workflow Summary</h3>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-background rounded-lg p-4 border border-border">
-            <p className="text-[12px] text-muted-foreground/60 mb-1">Version</p>
-            <p className="text-[20px] font-semibold text-foreground">
+          <div className="bg-white rounded-lg p-4 border border-slate-100">
+            <p className="text-[12px] text-slate-500 mb-1">Version</p>
+            <p className="text-[20px] font-semibold text-slate-900">
               {draftProfile.version || 1}
             </p>
           </div>
-          <div className="bg-background rounded-lg p-4 border border-border">
-            <p className="text-[12px] text-muted-foreground/60 mb-1">Status</p>
+          <div className="bg-white rounded-lg p-4 border border-slate-100">
+            <p className="text-[12px] text-slate-500 mb-1">Status</p>
             <Badge className={isDraft ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}>
               {draftProfile.status || 'DRAFT'}
             </Badge>
           </div>
-          <div className="bg-background rounded-lg p-4 border border-border">
-            <p className="text-[12px] text-muted-foreground/60 mb-1">Message Templates</p>
-            <p className="text-[20px] font-semibold text-foreground">
+          <div className="bg-white rounded-lg p-4 border border-slate-100">
+            <p className="text-[12px] text-slate-500 mb-1">Message Templates</p>
+            <p className="text-[20px] font-semibold text-slate-900">
               {messageCount}
             </p>
           </div>
         </div>
 
         <div className="space-y-3">
-          <div className="flex items-center justify-between py-2 border-b border-border">
-            <span className="text-[13px] text-muted-foreground">Payment terms</span>
-            <span className="text-[13px] text-foreground font-medium">
+          <div className="flex items-center justify-between py-2 border-b border-slate-100">
+            <span className="text-[13px] text-slate-600">Payment terms</span>
+            <span className="text-[13px] text-slate-900 font-medium">
               {policy.typicalPaymentTerms || 30} days
             </span>
           </div>
-          <div className="flex items-center justify-between py-2 border-b border-border">
-            <span className="text-[13px] text-muted-foreground">Max touches per week</span>
-            <span className="text-[13px] text-foreground font-medium">
+          <div className="flex items-center justify-between py-2 border-b border-slate-100">
+            <span className="text-[13px] text-slate-600">Max touches per week</span>
+            <span className="text-[13px] text-slate-900 font-medium">
               {policy.maxTouchesPerWeek || 3}
             </span>
           </div>
-          <div className="flex items-center justify-between py-2 border-b border-border">
-            <span className="text-[13px] text-muted-foreground">Enabled channels</span>
+          <div className="flex items-center justify-between py-2 border-b border-slate-100">
+            <span className="text-[13px] text-slate-600">Enabled channels</span>
             <div className="flex items-center gap-2">
               {channels.emailEnabled !== false && (
                 <Badge variant="outline" className="text-[11px]">Email</Badge>
@@ -920,8 +920,8 @@ function ApprovalSection({
             </div>
           </div>
           <div className="flex items-center justify-between py-2">
-            <span className="text-[13px] text-muted-foreground">Message tone</span>
-            <span className="text-[13px] text-foreground font-medium">
+            <span className="text-[13px] text-slate-600">Message tone</span>
+            <span className="text-[13px] text-slate-900 font-medium">
               {TONE_LABELS[(draftProfile.tone || 3) - 1]}
             </span>
           </div>
@@ -929,15 +929,15 @@ function ApprovalSection({
       </div>
 
       {activeProfile && (
-        <div className="bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800 rounded-lg p-4">
+        <div className="bg-green-50 border border-green-100 rounded-lg p-4">
           <div className="flex items-center gap-2">
-            <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
-            <p className="text-[13px] text-green-700 dark:text-green-300 font-medium">
+            <Check className="h-4 w-4 text-green-600" />
+            <p className="text-[13px] text-green-700 font-medium">
               Active workflow: Version {activeProfile.version}
             </p>
           </div>
           {activeProfile.approvedAt && (
-            <p className="text-[12px] text-green-600 dark:text-green-400 mt-1 ml-6">
+            <p className="text-[12px] text-green-600 mt-1 ml-6">
               Approved on {new Date(activeProfile.approvedAt).toLocaleDateString()}
             </p>
           )}
@@ -945,22 +945,22 @@ function ApprovalSection({
       )}
 
       {isDraft && (
-        <div className="bg-background border border-border rounded-lg p-6">
+        <div className="bg-white border border-slate-200 rounded-lg p-6">
           <div className="flex items-start gap-4">
-            <div className="p-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
-              <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+            <div className="p-2 bg-amber-50 rounded-lg">
+              <AlertCircle className="h-5 w-5 text-amber-600" />
             </div>
             <div className="flex-1">
-              <h4 className="text-[14px] font-medium text-foreground mb-1">
+              <h4 className="text-[14px] font-medium text-slate-900 mb-1">
                 Ready to activate this workflow?
               </h4>
-              <p className="text-[13px] text-muted-foreground mb-4">
+              <p className="text-[13px] text-slate-500 mb-4">
                 This will replace your current active workflow and start using the new settings for all future collection actions.
               </p>
               <Button
                 onClick={onApprove}
                 disabled={isApproving}
-                className="bg-foreground text-background hover:bg-foreground/90 text-[13px]"
+                className="bg-slate-900 hover:bg-slate-800 text-[13px]"
               >
                 {isApproving ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-1" />

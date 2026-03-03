@@ -201,7 +201,7 @@ export default function Invoices() {
     const colors = {
       high: 'bg-emerald-50 text-emerald-700 border-emerald-200',
       medium: 'bg-amber-50 text-amber-700 border-amber-200',
-      low: 'bg-muted text-muted-foreground border-border',
+      low: 'bg-slate-50 text-slate-500 border-slate-200',
     };
     return (
       <TooltipProvider delayDuration={200}>
@@ -238,7 +238,7 @@ export default function Invoices() {
   };
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-white">
       <div className="hidden lg:block">
         <NewSidebar />
       </div>
@@ -249,13 +249,13 @@ export default function Invoices() {
           subtitle="Qashivo manages collections automatically. Review is only needed when something is flagged."
           action={
             <div className="relative w-[280px]">
-              <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/60" />
+              <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-slate-300" />
               <input
                 type="text"
                 placeholder="Find an invoice…"
                 value={search}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                className="w-full pl-8 pr-3 h-8 text-[12px] text-muted-foreground placeholder:text-muted-foreground/60 bg-transparent border border-border rounded focus:outline-none focus:border-muted-foreground/60 transition-colors"
+                className="w-full pl-8 pr-3 h-8 text-[12px] text-slate-600 placeholder:text-slate-300 bg-transparent border border-slate-200/60 rounded focus:outline-none focus:border-slate-300 transition-colors"
                 data-testid="input-search-invoices"
               />
             </div>
@@ -266,115 +266,115 @@ export default function Invoices() {
           <div className="container-apple py-4 sm:py-6 flex-1 flex flex-col min-h-0">
 
             <section className="mb-6 flex-shrink-0">
-              <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider mb-4">Ageing Analysis</p>
+              <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-4">Ageing Analysis</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4 sm:gap-6">
                 <div 
-                  className={`cursor-pointer rounded-md p-2 -m-2 transition-colors ${ageingFilter === 'all' ? 'bg-muted ring-1 ring-border' : 'hover:bg-muted'}`}
+                  className={`cursor-pointer rounded-md p-2 -m-2 transition-colors ${ageingFilter === 'all' ? 'bg-slate-100 ring-1 ring-slate-200' : 'hover:bg-slate-50'}`}
                   onClick={() => setAgeingFilter('all')}
                 >
-                  <p className="text-[12px] text-muted-foreground mb-1 flex items-center gap-2">
-                    <span className="inline-block w-2.5 h-2.5 rounded-full border border-border bg-white" />
+                  <p className="text-[12px] text-slate-500 mb-1 flex items-center gap-2">
+                    <span className="inline-block w-2.5 h-2.5 rounded-full border border-slate-300 bg-white" />
                     Total
                   </p>
-                  <p className="text-[20px] font-semibold text-foreground tabular-nums">
+                  <p className="text-[20px] font-semibold text-slate-900 tabular-nums">
                     {formatCurrency(agingBuckets['total'].amount)}
-                    <span className="text-[12px] font-normal text-muted-foreground/60 ml-1">({agingBuckets['total'].count})</span>
+                    <span className="text-[12px] font-normal text-slate-400 ml-1">({agingBuckets['total'].count})</span>
                   </p>
                 </div>
                 <div 
-                  className={`cursor-pointer rounded-md p-2 -m-2 transition-colors ${ageingFilter === 'due' ? 'bg-blue-50 ring-1 ring-blue-200' : 'hover:bg-muted'}`}
+                  className={`cursor-pointer rounded-md p-2 -m-2 transition-colors ${ageingFilter === 'due' ? 'bg-blue-50 ring-1 ring-blue-200' : 'hover:bg-slate-50'}`}
                   onClick={() => handleAgeingFilter('due')}
                 >
-                  <p className="text-[12px] text-muted-foreground mb-1 flex items-center gap-2">
+                  <p className="text-[12px] text-slate-500 mb-1 flex items-center gap-2">
                     <span className="inline-block w-2.5 h-2.5 rounded-full bg-blue-500" />
                     Due
                   </p>
-                  <p className="text-[20px] font-semibold text-foreground tabular-nums">
+                  <p className="text-[20px] font-semibold text-slate-900 tabular-nums">
                     {formatCurrency(agingBuckets['due'].amount)}
-                    <span className="text-[12px] font-normal text-muted-foreground/60 ml-1">({agingBuckets['due'].count})</span>
+                    <span className="text-[12px] font-normal text-slate-400 ml-1">({agingBuckets['due'].count})</span>
                   </p>
                 </div>
                 <div 
-                  className={`cursor-pointer rounded-md p-2 -m-2 transition-colors ${ageingFilter === 'overdue' ? 'bg-amber-50 ring-1 ring-amber-200' : 'hover:bg-muted'}`}
+                  className={`cursor-pointer rounded-md p-2 -m-2 transition-colors ${ageingFilter === 'overdue' ? 'bg-amber-50 ring-1 ring-amber-200' : 'hover:bg-slate-50'}`}
                   onClick={() => handleAgeingFilter('overdue')}
                 >
-                  <p className="text-[12px] text-muted-foreground mb-1 flex items-center gap-2">
+                  <p className="text-[12px] text-slate-500 mb-1 flex items-center gap-2">
                     <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-500" />
                     Overdue
                   </p>
-                  <p className="text-[20px] font-semibold text-foreground tabular-nums">
+                  <p className="text-[20px] font-semibold text-slate-900 tabular-nums">
                     {formatCurrency(agingBuckets['overdue'].amount)}
-                    <span className="text-[12px] font-normal text-muted-foreground/60 ml-1">({agingBuckets['overdue'].count})</span>
+                    <span className="text-[12px] font-normal text-slate-400 ml-1">({agingBuckets['overdue'].count})</span>
                   </p>
                 </div>
                 <div 
-                  className={`cursor-pointer rounded-md p-2 -m-2 transition-colors ${ageingFilter === '1-30' ? 'bg-amber-50 ring-1 ring-amber-200' : 'hover:bg-muted'}`}
+                  className={`cursor-pointer rounded-md p-2 -m-2 transition-colors ${ageingFilter === '1-30' ? 'bg-amber-50 ring-1 ring-amber-200' : 'hover:bg-slate-50'}`}
                   onClick={() => handleAgeingFilter('1-30')}
                 >
-                  <p className="text-[12px] text-muted-foreground mb-1 flex items-center gap-2">
+                  <p className="text-[12px] text-slate-500 mb-1 flex items-center gap-2">
                     <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-500" />
                     1-30
                   </p>
-                  <p className="text-[20px] font-semibold text-foreground tabular-nums">
+                  <p className="text-[20px] font-semibold text-slate-900 tabular-nums">
                     {formatCurrency(agingBuckets['1-30'].amount)}
-                    <span className="text-[12px] font-normal text-muted-foreground/60 ml-1">({agingBuckets['1-30'].count})</span>
+                    <span className="text-[12px] font-normal text-slate-400 ml-1">({agingBuckets['1-30'].count})</span>
                   </p>
                 </div>
                 <div 
-                  className={`cursor-pointer rounded-md p-2 -m-2 transition-colors ${ageingFilter === '31-60' ? 'bg-orange-50 ring-1 ring-orange-200' : 'hover:bg-muted'}`}
+                  className={`cursor-pointer rounded-md p-2 -m-2 transition-colors ${ageingFilter === '31-60' ? 'bg-orange-50 ring-1 ring-orange-200' : 'hover:bg-slate-50'}`}
                   onClick={() => handleAgeingFilter('31-60')}
                 >
-                  <p className="text-[12px] text-muted-foreground mb-1 flex items-center gap-2">
+                  <p className="text-[12px] text-slate-500 mb-1 flex items-center gap-2">
                     <span className="inline-block w-2.5 h-2.5 rounded-full bg-orange-500" />
                     31-60
                   </p>
-                  <p className="text-[20px] font-semibold text-foreground tabular-nums">
+                  <p className="text-[20px] font-semibold text-slate-900 tabular-nums">
                     {formatCurrency(agingBuckets['31-60'].amount)}
-                    <span className="text-[12px] font-normal text-muted-foreground/60 ml-1">({agingBuckets['31-60'].count})</span>
+                    <span className="text-[12px] font-normal text-slate-400 ml-1">({agingBuckets['31-60'].count})</span>
                   </p>
                 </div>
                 <div 
-                  className={`cursor-pointer rounded-md p-2 -m-2 transition-colors ${ageingFilter === '61-90' ? 'bg-rose-50 ring-1 ring-rose-200' : 'hover:bg-muted'}`}
+                  className={`cursor-pointer rounded-md p-2 -m-2 transition-colors ${ageingFilter === '61-90' ? 'bg-rose-50 ring-1 ring-rose-200' : 'hover:bg-slate-50'}`}
                   onClick={() => handleAgeingFilter('61-90')}
                 >
-                  <p className="text-[12px] text-muted-foreground mb-1 flex items-center gap-2">
+                  <p className="text-[12px] text-slate-500 mb-1 flex items-center gap-2">
                     <span className="inline-block w-2.5 h-2.5 rounded-full bg-rose-500" />
                     61-90
                   </p>
-                  <p className="text-[20px] font-semibold text-foreground tabular-nums">
+                  <p className="text-[20px] font-semibold text-slate-900 tabular-nums">
                     {formatCurrency(agingBuckets['61-90'].amount)}
-                    <span className="text-[12px] font-normal text-muted-foreground/60 ml-1">({agingBuckets['61-90'].count})</span>
+                    <span className="text-[12px] font-normal text-slate-400 ml-1">({agingBuckets['61-90'].count})</span>
                   </p>
                 </div>
                 <div 
-                  className={`cursor-pointer rounded-md p-2 -m-2 transition-colors ${ageingFilter === '90+' ? 'bg-red-50 ring-1 ring-red-200' : 'hover:bg-muted'}`}
+                  className={`cursor-pointer rounded-md p-2 -m-2 transition-colors ${ageingFilter === '90+' ? 'bg-red-50 ring-1 ring-red-200' : 'hover:bg-slate-50'}`}
                   onClick={() => handleAgeingFilter('90+')}
                 >
-                  <p className="text-[12px] text-muted-foreground mb-1 flex items-center gap-2">
+                  <p className="text-[12px] text-slate-500 mb-1 flex items-center gap-2">
                     <span className="inline-block w-2.5 h-2.5 rounded-full bg-red-700" />
                     90+
                   </p>
-                  <p className="text-[20px] font-semibold text-foreground tabular-nums">
+                  <p className="text-[20px] font-semibold text-slate-900 tabular-nums">
                     {formatCurrency(agingBuckets['90+'].amount)}
-                    <span className="text-[12px] font-normal text-muted-foreground/60 ml-1">({agingBuckets['90+'].count})</span>
+                    <span className="text-[12px] font-normal text-slate-400 ml-1">({agingBuckets['90+'].count})</span>
                   </p>
                 </div>
               </div>
             </section>
 
-            <div className="border-t border-border/80 mb-4 flex-shrink-0" />
+            <div className="border-t border-slate-100/80 mb-4 flex-shrink-0" />
 
             <div className="space-y-0 sm:hidden flex-1">
               {isLoading ? (
                 [...Array(5)].map((_, i) => (
-                  <div key={i} className="py-4 border-b border-border">
-                    <div className="h-12 bg-muted animate-pulse rounded"></div>
+                  <div key={i} className="py-4 border-b border-slate-100">
+                    <div className="h-12 bg-slate-100 animate-pulse rounded"></div>
                   </div>
                 ))
               ) : invoices.length === 0 ? (
                 <div className="py-12 text-center">
-                  <FileText className="h-10 w-10 mx-auto mb-3 text-muted-foreground/60" />
-                  <p className="text-[13px] text-muted-foreground">No invoices found</p>
+                  <FileText className="h-10 w-10 mx-auto mb-3 text-slate-300" />
+                  <p className="text-[13px] text-slate-500">No invoices found</p>
                 </div>
               ) : (
                 invoices.map((invoice, idx) => {
@@ -384,25 +384,25 @@ export default function Invoices() {
                   return (
                     <div 
                       key={invoice.id} 
-                      className={`py-3 cursor-pointer hover:bg-muted transition-colors ${idx !== invoices.length - 1 ? 'border-b border-border' : ''}`}
+                      className={`py-3 cursor-pointer hover:bg-slate-100 transition-colors ${idx !== invoices.length - 1 ? 'border-b border-slate-100' : ''}`}
                       onClick={() => setSelectedInvoice(invoice)}
                       data-testid={`invoice-item-${invoice.id}`}
                     >
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex-1 min-w-0">
-                          <p className="text-[14px] font-medium text-foreground truncate">
+                          <p className="text-[14px] font-medium text-slate-900 truncate">
                             {invoice.invoiceNumber}
                           </p>
-                          <p className="text-[12px] text-muted-foreground truncate mt-1">
+                          <p className="text-[12px] text-slate-500 truncate mt-1">
                             {invoice.contact?.companyName || invoice.contact?.name || 'Unknown'}
                           </p>
-                          <p className="text-[11px] text-muted-foreground/60 truncate">
+                          <p className="text-[11px] text-slate-400 truncate">
                             {invoice.primaryCreditContact?.name || invoice.contact?.name}
                             {(invoice.primaryCreditContact?.phone || invoice.contact?.phone) && (
                               <span className="ml-2">{invoice.primaryCreditContact?.phone || invoice.contact?.phone}</span>
                             )}
                           </p>
-                          <div className="flex items-center gap-4 mt-1 text-[12px] text-muted-foreground">
+                          <div className="flex items-center gap-4 mt-1 text-[12px] text-slate-500">
                             <span className="tabular-nums">{formatCurrency(outstanding)}</span>
                             {daysOverdue > 0 && (
                               <span className="text-rose-500 tabular-nums">{daysOverdue} days overdue</span>
@@ -415,7 +415,7 @@ export default function Invoices() {
                             )}
                           </div>
                         </div>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground/60 flex-shrink-0" />
+                        <ChevronRight className="h-4 w-4 text-slate-300 flex-shrink-0" />
                       </div>
                     </div>
                   );
@@ -425,61 +425,61 @@ export default function Invoices() {
 
             <div className="hidden sm:block flex-1">
               {isLoading ? (
-                <div className="border-t border-border">
+                <div className="border-t border-slate-100">
                   {[...Array(8)].map((_, i) => (
-                    <div key={i} className="py-3 border-b border-border">
-                      <div className="h-5 bg-muted animate-pulse rounded w-3/4"></div>
+                    <div key={i} className="py-3 border-b border-slate-100">
+                      <div className="h-5 bg-slate-100 animate-pulse rounded w-3/4"></div>
                     </div>
                   ))}
                 </div>
               ) : invoices.length === 0 ? (
-                <div className="py-16 text-center border-t border-border">
-                  <FileText className="h-10 w-10 mx-auto mb-3 text-muted-foreground/60" />
-                  <p className="text-[13px] text-muted-foreground">No invoices found</p>
+                <div className="py-16 text-center border-t border-slate-100">
+                  <FileText className="h-10 w-10 mx-auto mb-3 text-slate-300" />
+                  <p className="text-[13px] text-slate-500">No invoices found</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead className="bg-muted sticky top-0 z-10">
-                      <tr className="border-b border-border h-16">
+                    <thead className="bg-slate-50 sticky top-0 z-10">
+                      <tr className="border-b border-slate-200 h-16">
                         <th 
-                          className="text-left px-4 text-[11px] font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground select-none"
+                          className="text-left px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 select-none"
                           onClick={() => handleSort('date')}
                         >
                           Date{getSortIcon('date')}
                         </th>
                         <th 
-                          className="text-left px-4 text-[11px] font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground select-none"
+                          className="text-left px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 select-none"
                           onClick={() => handleSort('invoiceNumber')}
                         >
                           Invoice ID{getSortIcon('invoiceNumber')}
                         </th>
                         <th 
-                          className="text-left px-4 text-[11px] font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground select-none"
+                          className="text-left px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 select-none"
                           onClick={() => handleSort('customer')}
                         >
                           Customer{getSortIcon('customer')}
                         </th>
                         <th 
-                          className="text-right px-4 text-[11px] font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground select-none"
+                          className="text-right px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 select-none"
                           onClick={() => handleSort('daysOverdue')}
                         >
                           Days Overdue{getSortIcon('daysOverdue')}
                         </th>
                         <th 
-                          className="text-right px-4 text-[11px] font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground select-none"
+                          className="text-right px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 select-none"
                           onClick={() => handleSort('invoiceAge')}
                         >
                           Inv. Age{getSortIcon('invoiceAge')}
                         </th>
                         <th 
-                          className="text-right px-4 text-[11px] font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground select-none"
+                          className="text-right px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 select-none"
                           onClick={() => handleSort('amount')}
                         >
                           Amount{getSortIcon('amount')}
                         </th>
                         <th 
-                          className="text-left px-4 text-[11px] font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground select-none"
+                          className="text-left px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 select-none"
                           onClick={() => handleSort('epd')}
                         >
                           EPD{getSortIcon('epd')}
@@ -494,30 +494,30 @@ export default function Invoices() {
                         return (
                           <tr
                             key={invoice.id}
-                            className="border-b border-border hover:bg-muted cursor-pointer transition-colors"
+                            className="border-b border-slate-100 hover:bg-slate-100 cursor-pointer transition-colors"
                             onClick={() => setSelectedInvoice(invoice)}
                             data-testid={`invoice-item-${invoice.id}`}
                           >
                             <td className="py-[5px] px-3">
-                              <span className="text-[13px] text-foreground tabular-nums">
+                              <span className="text-[13px] text-slate-700 tabular-nums">
                                 {formatDateShort(invoice.issueDate)}
                               </span>
                             </td>
 
                             <td className="py-[5px] px-3">
-                              <span className="text-[13px] font-medium text-foreground">
+                              <span className="text-[13px] font-medium text-slate-900">
                                 {invoice.invoiceNumber}
                               </span>
                             </td>
 
                             <td className="py-[5px] px-3">
-                              <p className="text-[13px] font-medium text-foreground truncate">
+                              <p className="text-[13px] font-medium text-slate-900 truncate">
                                 {invoice.contact?.companyName || invoice.contact?.name || 'Unknown'}
                               </p>
-                              <p className="text-[11px] text-muted-foreground/60 truncate">
+                              <p className="text-[11px] text-slate-400 truncate">
                                 {invoice.primaryCreditContact?.name || invoice.contact?.name}
                                 {(invoice.primaryCreditContact?.phone || invoice.contact?.phone) && (
-                                  <span className="ml-2 text-muted-foreground">
+                                  <span className="ml-2 text-slate-500">
                                     {invoice.primaryCreditContact?.phone || invoice.contact?.phone}
                                   </span>
                                 )}
@@ -526,24 +526,24 @@ export default function Invoices() {
 
                             <td className="py-[5px] px-3 text-right">
                               {invoice.status === 'paid' ? (
-                                <span className="text-[13px] text-muted-foreground/60">-</span>
+                                <span className="text-[13px] text-slate-400">-</span>
                               ) : daysOverdue > 0 ? (
-                                <span className={`text-[13px] tabular-nums ${daysOverdue > 60 ? 'text-rose-600 font-medium' : 'text-foreground'}`}>
+                                <span className={`text-[13px] tabular-nums ${daysOverdue > 60 ? 'text-rose-600 font-medium' : 'text-slate-700'}`}>
                                   {daysOverdue}
                                 </span>
                               ) : (
-                                <span className="text-[13px] text-muted-foreground/60">-</span>
+                                <span className="text-[13px] text-slate-400">-</span>
                               )}
                             </td>
 
                             <td className="py-[5px] px-3 text-right">
-                              <span className="text-[13px] text-muted-foreground tabular-nums">
+                              <span className="text-[13px] text-slate-500 tabular-nums">
                                 {invoice.invoiceAge ?? getInvoiceAge(invoice.issueDate)}
                               </span>
                             </td>
 
                             <td className="py-[5px] px-3 text-right">
-                              <span className="text-[13px] text-foreground tabular-nums font-medium">
+                              <span className="text-[13px] text-slate-700 tabular-nums font-medium">
                                 {formatCurrency(invoice.status === 'paid' ? invoice.amount : outstanding)}
                               </span>
                             </td>
@@ -551,13 +551,13 @@ export default function Invoices() {
                             <td className="py-[5px] px-3">
                               {invoice.epd ? (
                                 <div className="flex items-center gap-1.5">
-                                  <span className="text-[13px] text-foreground tabular-nums">
+                                  <span className="text-[13px] text-slate-700 tabular-nums">
                                     {formatEpdDate(invoice.epd.date)}
                                   </span>
                                   {getConfidenceChip(invoice.epd.confidence, invoice.epd.sourceLabel)}
                                 </div>
                               ) : (
-                                <span className="text-[13px] text-muted-foreground/60">-</span>
+                                <span className="text-[13px] text-slate-400">-</span>
                               )}
                             </td>
                           </tr>
@@ -570,27 +570,27 @@ export default function Invoices() {
             </div>
 
             {pagination.totalPages > 1 && (
-              <div className="flex items-center justify-between pt-4 border-t border-border mt-4 flex-shrink-0">
-                <p className="text-[12px] text-muted-foreground">
+              <div className="flex items-center justify-between pt-4 border-t border-slate-100 mt-4 flex-shrink-0">
+                <p className="text-[12px] text-slate-500">
                   Showing {((pagination.page - 1) * pagination.limit) + 1} - {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total}
                 </p>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setPage(Math.max(1, page - 1))}
                     disabled={page === 1}
-                    className="p-1.5 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="p-1.5 rounded hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   >
-                    <ChevronLeft className="h-4 w-4 text-muted-foreground" />
+                    <ChevronLeft className="h-4 w-4 text-slate-600" />
                   </button>
-                  <span className="text-[12px] text-muted-foreground tabular-nums">
+                  <span className="text-[12px] text-slate-600 tabular-nums">
                     Page {page} of {pagination.totalPages}
                   </span>
                   <button
                     onClick={() => setPage(Math.min(pagination.totalPages, page + 1))}
                     disabled={page === pagination.totalPages}
-                    className="p-1.5 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="p-1.5 rounded hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   >
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    <ChevronRight className="h-4 w-4 text-slate-600" />
                   </button>
                 </div>
               </div>

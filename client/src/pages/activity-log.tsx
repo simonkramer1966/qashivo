@@ -177,7 +177,7 @@ export default function ActivityLogPage() {
       success: { color: "bg-green-500/10 text-green-600 border-green-500/20", icon: CheckCircle2 },
       failure: { color: "bg-red-500/10 text-red-600 border-red-500/20", icon: XCircle },
       pending: { color: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20", icon: Clock },
-      skipped: { color: "bg-muted-foreground/10 text-muted-foreground border-border/20", icon: AlertCircle },
+      skipped: { color: "bg-gray-500/10 text-gray-600 border-gray-500/20", icon: AlertCircle },
     };
     const variant = variants[result] || variants.pending;
     const Icon = variant.icon;
@@ -195,7 +195,7 @@ export default function ActivityLogPage() {
       communication: "bg-blue-500/10 text-blue-600 border-blue-500/20",
       learning: "bg-purple-500/10 text-purple-600 border-purple-500/20",
       automation: "bg-[#17B6C3]/10 text-[#17B6C3] border-[#17B6C3]/20",
-      system: "bg-muted-foreground/10 text-muted-foreground border-border/20",
+      system: "bg-gray-500/10 text-gray-600 border-gray-500/20",
     };
     return colors[category] || colors.system;
   };
@@ -217,7 +217,7 @@ export default function ActivityLogPage() {
   });
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-muted via-blue-50 to-teal-50">
+    <div className="flex h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
       <NewSidebar />
       
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -230,7 +230,7 @@ export default function ActivityLogPage() {
           {/* Communication Mode Selector */}
           <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
             <CardHeader 
-              className="cursor-pointer hover:bg-muted/50 transition-colors"
+              className="cursor-pointer hover:bg-gray-50/50 transition-colors"
               onClick={() => setIsCommModeExpanded(!isCommModeExpanded)}
             >
               <div className="flex items-center justify-between">
@@ -239,9 +239,9 @@ export default function ActivityLogPage() {
                   <CardDescription>Control how the system handles outbound communications</CardDescription>
                 </div>
                 {isCommModeExpanded ? (
-                  <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                  <ChevronUp className="h-5 w-5 text-gray-500" />
                 ) : (
-                  <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                  <ChevronDown className="h-5 w-5 text-gray-500" />
                 )}
               </div>
             </CardHeader>
@@ -253,7 +253,7 @@ export default function ActivityLogPage() {
                   className={`h-auto flex-col items-start p-4 ${
                     commMode?.mode === 'off' 
                       ? 'bg-[#17B6C3] hover:bg-[#1396A1] text-white' 
-                      : 'hover:bg-muted'
+                      : 'hover:bg-gray-50'
                   }`}
                   onClick={() => updateModeMutation.mutate('off')}
                   disabled={updateModeMutation.isPending}
@@ -336,7 +336,7 @@ export default function ActivityLogPage() {
                   </p>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div>
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Name</label>
+                      <label className="text-xs font-medium text-gray-700 mb-1 block">Name</label>
                       <Input
                         placeholder="Test Contact Name"
                         value={testContact.name}
@@ -346,7 +346,7 @@ export default function ActivityLogPage() {
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Email</label>
+                      <label className="text-xs font-medium text-gray-700 mb-1 block">Email</label>
                       <Input
                         type="email"
                         placeholder="test@example.com"
@@ -357,7 +357,7 @@ export default function ActivityLogPage() {
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Phone</label>
+                      <label className="text-xs font-medium text-gray-700 mb-1 block">Phone</label>
                       <Input
                         type="tel"
                         placeholder="+44 7700 900000"
@@ -399,8 +399,8 @@ export default function ActivityLogPage() {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Total Activities</p>
-                    <p className="text-3xl font-bold text-foreground" data-testid="text-total-activities">
+                    <p className="text-sm font-medium text-gray-600">Total Activities</p>
+                    <p className="text-3xl font-bold text-gray-900" data-testid="text-total-activities">
                       {stats?.totalActivities || 0}
                     </p>
                   </div>
@@ -415,7 +415,7 @@ export default function ActivityLogPage() {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Successful</p>
+                    <p className="text-sm font-medium text-gray-600">Successful</p>
                     <p className="text-3xl font-bold text-green-600" data-testid="text-success-count">
                       {stats?.successCount || 0}
                     </p>
@@ -431,7 +431,7 @@ export default function ActivityLogPage() {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Failed</p>
+                    <p className="text-sm font-medium text-gray-600">Failed</p>
                     <p className="text-3xl font-bold text-red-600" data-testid="text-failure-count">
                       {stats?.failureCount || 0}
                     </p>
@@ -447,7 +447,7 @@ export default function ActivityLogPage() {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Success Rate</p>
+                    <p className="text-sm font-medium text-gray-600">Success Rate</p>
                     <p className="text-3xl font-bold text-[#17B6C3]" data-testid="text-success-rate">
                       {stats && stats.totalActivities > 0 
                         ? Math.round((stats.successCount / stats.totalActivities) * 100) 
@@ -484,7 +484,7 @@ export default function ActivityLogPage() {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
                 <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground/60" />
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
                     placeholder="Search activities..."
                     value={filters.search}
@@ -573,7 +573,7 @@ export default function ActivityLogPage() {
               {/* Activity Log List */}
               <div className="space-y-3">
                 {logsLoading ? (
-                  <div className="text-center py-12 text-muted-foreground">
+                  <div className="text-center py-12 text-gray-500">
                     <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-2" />
                     Loading activities...
                   </div>
@@ -581,7 +581,7 @@ export default function ActivityLogPage() {
                   filteredLogs.map((log) => (
                     <Card 
                       key={log.id} 
-                      className="bg-white/50 border border-border/50 shadow-sm hover:shadow-md transition-shadow"
+                      className="bg-white/50 border border-gray-200/50 shadow-sm hover:shadow-md transition-shadow"
                       data-testid={`activity-log-${log.id}`}
                     >
                       <CardContent className="p-4">
@@ -595,18 +595,18 @@ export default function ActivityLogPage() {
                                 <Badge variant="outline" className={getCategoryColor(log.category)}>
                                   {log.category}
                                 </Badge>
-                                <Badge variant="outline" className="bg-muted text-muted-foreground border-border">
+                                <Badge variant="outline" className="bg-gray-100 text-gray-600 border-gray-200">
                                   {getActivityLabel(log.activityType)}
                                 </Badge>
                                 {getResultBadge(log.result)}
                                 {log.duration && (
-                                  <span className="text-xs text-muted-foreground flex items-center">
+                                  <span className="text-xs text-gray-500 flex items-center">
                                     <Clock className="h-3 w-3 mr-1" />
                                     {log.duration}ms
                                   </span>
                                 )}
                               </div>
-                              <p className="text-sm font-medium text-foreground mb-1">
+                              <p className="text-sm font-medium text-gray-900 mb-1">
                                 {log.description}
                               </p>
                               {log.errorMessage && (
@@ -616,10 +616,10 @@ export default function ActivityLogPage() {
                               )}
                               {log.metadata && Object.keys(log.metadata).length > 0 && (
                                 <details className="mt-2">
-                                  <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
+                                  <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700">
                                     View metadata
                                   </summary>
-                                  <pre className="text-xs text-muted-foreground bg-muted p-2 rounded mt-1 overflow-x-auto">
+                                  <pre className="text-xs text-gray-600 bg-gray-50 p-2 rounded mt-1 overflow-x-auto">
                                     {JSON.stringify(log.metadata, null, 2)}
                                   </pre>
                                 </details>
@@ -627,11 +627,11 @@ export default function ActivityLogPage() {
                             </div>
                           </div>
                           <div className="text-right ml-4">
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-xs text-gray-500">
                               {formatDistanceToNow(new Date(log.createdAt), { addSuffix: true })}
                             </p>
                             {log.entityType && log.entityId && (
-                              <p className="text-xs text-muted-foreground/60 mt-1">
+                              <p className="text-xs text-gray-400 mt-1">
                                 {log.entityType}: {log.entityId.slice(0, 8)}...
                               </p>
                             )}
@@ -641,7 +641,7 @@ export default function ActivityLogPage() {
                     </Card>
                   ))
                 ) : (
-                  <div className="text-center py-12 text-muted-foreground">
+                  <div className="text-center py-12 text-gray-500">
                     <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p className="text-lg font-medium mb-1">No activities found</p>
                     <p className="text-sm">Try adjusting your filters or check back later</p>

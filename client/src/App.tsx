@@ -67,7 +67,6 @@ const PartnerPractice = lazy(() => import("@/pages/partner-practice"));
 const PartnerClients = lazy(() => import("@/pages/partner-clients"));
 const PartnerClientDetail = lazy(() => import("@/pages/partner-client-detail"));
 const AcceptInvite = lazy(() => import("@/pages/accept-invite"));
-const UiPreview = lazy(() => import("@/pages/ui-preview"));
 const AcceptUserInvite = lazy(() => import("@/pages/accept-user-invite"));
 const SmeOnboarding = lazy(() => import("@/pages/sme-onboarding"));
 const Inbox = lazy(() => import("@/pages/inbox"));
@@ -176,7 +175,6 @@ function Router() {
           <Route path="/design-partner/thank-you" component={DesignPartnerThankYou} />
           <Route path="/design-partner" component={DesignPartner} />
           <Route path="/partner-scorecard" component={PartnerScorecard} />
-          <Route path="/ui-preview" component={UiPreview} />
           <Route path="/product" component={Product} />
           <Route path="/homepage" component={Homepage} />
           <Route path="/demo" component={InvestorDemo} />
@@ -227,7 +225,6 @@ function Router() {
           <Route path="/design-partner/thank-you" component={DesignPartnerThankYou} />
           <Route path="/design-partner" component={DesignPartner} />
           <Route path="/partner-scorecard" component={PartnerScorecard} />
-          <Route path="/ui-preview" component={UiPreview} />
           <Route path="/product" component={Product} />
           <Route path="/homepage" component={Homepage} />
           <Route path="/demo" component={InvestorDemo} />

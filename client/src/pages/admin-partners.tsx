@@ -93,9 +93,9 @@ export default function AdminPartners() {
       case "ACTIVE":
         return <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50">Active</Badge>;
       case "PAUSED":
-        return <Badge variant="outline" className="text-muted-foreground border-border bg-muted">Paused</Badge>;
+        return <Badge variant="outline" className="text-slate-500 border-slate-200 bg-slate-50">Paused</Badge>;
       default:
-        return <Badge variant="outline" className="text-muted-foreground/60">Unknown</Badge>;
+        return <Badge variant="outline" className="text-slate-400">Unknown</Badge>;
     }
   };
 
@@ -111,12 +111,12 @@ export default function AdminPartners() {
   if (partnerId) {
     return (
       <AdminLayout>
-        <div className="sticky top-0 z-40 bg-background border-b border-border">
+        <div className="sticky top-0 z-40 bg-white border-b border-slate-100">
           <div className="px-6 lg:px-8 py-5">
             <Button
               variant="ghost"
               onClick={() => setLocation("/admin/partners")}
-              className="h-8 px-2 text-[13px] font-medium text-muted-foreground hover:text-foreground -ml-2 mb-2"
+              className="h-8 px-2 text-[13px] font-medium text-slate-500 hover:text-slate-900 -ml-2 mb-2"
             >
               <ChevronLeft className="w-4 h-4 mr-1" />
               Back to Partners
@@ -125,11 +125,11 @@ export default function AdminPartners() {
               <Skeleton className="h-6 w-48" />
             ) : (
               <div>
-                <h2 className="text-[17px] font-semibold text-foreground tracking-tight">
+                <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight">
                   {partnerDetail?.name || "Partner"}
                 </h2>
                 {partnerDetail?.brandName && (
-                  <p className="text-[13px] text-muted-foreground/60 mt-0.5">{partnerDetail.brandName}</p>
+                  <p className="text-[13px] text-slate-400 mt-0.5">{partnerDetail.brandName}</p>
                 )}
               </div>
             )}
@@ -143,12 +143,12 @@ export default function AdminPartners() {
             </div>
           ) : !partnerDetail ? (
             <div className="py-16 text-center">
-              <AlertCircle className="w-10 h-10 text-muted/60 mx-auto mb-4" />
-              <p className="text-[15px] font-medium text-foreground mb-1">Partner not found</p>
-              <p className="text-[13px] text-muted-foreground/60 mb-6">This partner may have been deleted</p>
+              <AlertCircle className="w-10 h-10 text-slate-300 mx-auto mb-4" />
+              <p className="text-[15px] font-medium text-slate-900 mb-1">Partner not found</p>
+              <p className="text-[13px] text-slate-400 mb-6">This partner may have been deleted</p>
               <Button
                 onClick={() => setLocation("/admin/partners")}
-                className="h-8 px-4 text-[13px] font-medium bg-foreground hover:bg-foreground/90 text-background"
+                className="h-8 px-4 text-[13px] font-medium bg-slate-900 hover:bg-slate-800 text-white"
               >
                 Back to Partners
               </Button>
@@ -156,43 +156,43 @@ export default function AdminPartners() {
           ) : (
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-muted rounded-lg p-4">
-                  <p className="text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider mb-1">Status</p>
+                <div className="bg-slate-50 rounded-lg p-4">
+                  <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">Status</p>
                   {getStatusBadge(partnerDetail.status)}
                 </div>
-                <div className="bg-muted rounded-lg p-4">
-                  <p className="text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider mb-1">SMEs</p>
-                  <p className="text-[20px] font-semibold text-foreground tabular-nums">{partnerDetail.smeCount || 0}</p>
+                <div className="bg-slate-50 rounded-lg p-4">
+                  <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">SMEs</p>
+                  <p className="text-[20px] font-semibold text-slate-900 tabular-nums">{partnerDetail.smeCount || 0}</p>
                 </div>
-                <div className="bg-muted rounded-lg p-4">
-                  <p className="text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider mb-1">Users</p>
-                  <p className="text-[20px] font-semibold text-foreground tabular-nums">{partnerDetail.userCount || 0}</p>
+                <div className="bg-slate-50 rounded-lg p-4">
+                  <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">Users</p>
+                  <p className="text-[20px] font-semibold text-slate-900 tabular-nums">{partnerDetail.userCount || 0}</p>
                 </div>
               </div>
-              <div className="bg-background rounded-lg border border-border p-6">
-                <h3 className="text-[15px] font-semibold text-foreground mb-4">Partner Details</h3>
+              <div className="bg-white rounded-lg border border-slate-100 p-6">
+                <h3 className="text-[15px] font-semibold text-slate-900 mb-4">Partner Details</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-[14px]">
                   <div>
-                    <p className="text-muted-foreground/60 mb-1">Email</p>
-                    <p className="text-foreground">{partnerDetail.email || "—"}</p>
+                    <p className="text-slate-400 mb-1">Email</p>
+                    <p className="text-slate-900">{partnerDetail.email || "—"}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground/60 mb-1">Created</p>
-                    <p className="text-foreground">{formatDate(partnerDetail.createdAt)}</p>
+                    <p className="text-slate-400 mb-1">Created</p>
+                    <p className="text-slate-900">{formatDate(partnerDetail.createdAt)}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground/60 mb-1">Default Execution Time</p>
-                    <p className="text-foreground">{partnerDetail.defaultExecutionTime || "09:00"}</p>
+                    <p className="text-slate-400 mb-1">Default Execution Time</p>
+                    <p className="text-slate-900">{partnerDetail.defaultExecutionTime || "09:00"}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground/60 mb-1">Whitelabel</p>
-                    <p className="text-foreground">{partnerDetail.whitelabelEnabled ? "Enabled" : "Disabled"}</p>
+                    <p className="text-slate-400 mb-1">Whitelabel</p>
+                    <p className="text-slate-900">{partnerDetail.whitelabelEnabled ? "Enabled" : "Disabled"}</p>
                   </div>
                 </div>
                 {partnerDetail.notes && (
-                  <div className="mt-4 pt-4 border-t border-border">
-                    <p className="text-muted-foreground/60 mb-1">Notes</p>
-                    <p className="text-foreground">{partnerDetail.notes}</p>
+                  <div className="mt-4 pt-4 border-t border-slate-100">
+                    <p className="text-slate-400 mb-1">Notes</p>
+                    <p className="text-slate-900">{partnerDetail.notes}</p>
                   </div>
                 )}
               </div>
@@ -205,15 +205,15 @@ export default function AdminPartners() {
 
   return (
     <AdminLayout>
-      <div className="sticky top-0 z-40 bg-background border-b border-border">
+      <div className="sticky top-0 z-40 bg-white border-b border-slate-100">
         <div className="px-6 lg:px-8 py-5 flex items-center justify-between">
           <div>
-            <h2 className="text-[17px] font-semibold text-foreground tracking-tight">Partners</h2>
-            <p className="text-[13px] text-muted-foreground/60 mt-0.5">Accounting firms and practices</p>
+            <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight">Partners</h2>
+            <p className="text-[13px] text-slate-400 mt-0.5">Accounting firms and practices</p>
           </div>
           <Button
             onClick={() => setIsCreateOpen(true)}
-            className="h-8 px-4 text-[13px] font-medium bg-foreground hover:bg-foreground/90 text-background"
+            className="h-8 px-4 text-[13px] font-medium bg-slate-900 hover:bg-slate-800 text-white"
           >
             <Plus className="w-4 h-4 mr-1" />
             Create Partner
@@ -230,18 +230,18 @@ export default function AdminPartners() {
           </div>
         ) : error ? (
           <div className="py-16 text-center">
-            <AlertCircle className="w-10 h-10 text-muted/60 mx-auto mb-4" />
-            <p className="text-[15px] font-medium text-foreground mb-1">Failed to load partners</p>
-            <p className="text-[13px] text-muted-foreground">Please try again later</p>
+            <AlertCircle className="w-10 h-10 text-slate-300 mx-auto mb-4" />
+            <p className="text-[15px] font-medium text-slate-900 mb-1">Failed to load partners</p>
+            <p className="text-[13px] text-slate-400">Please try again later</p>
           </div>
         ) : !partners || partners.length === 0 ? (
           <div className="py-16 text-center">
-            <Building2 className="w-10 h-10 text-muted/60 mx-auto mb-4" />
-            <p className="text-[15px] font-medium text-foreground mb-1">No partners yet</p>
-            <p className="text-[13px] text-muted-foreground mb-6">Create your first partner to get started</p>
+            <Building2 className="w-10 h-10 text-slate-300 mx-auto mb-4" />
+            <p className="text-[15px] font-medium text-slate-900 mb-1">No partners yet</p>
+            <p className="text-[13px] text-slate-400 mb-6">Create your first partner to get started</p>
             <Button
               onClick={() => setIsCreateOpen(true)}
-              className="h-8 px-4 text-[13px] font-medium bg-foreground hover:bg-foreground/90 text-background"
+              className="h-8 px-4 text-[13px] font-medium bg-slate-900 hover:bg-slate-800 text-white"
             >
               <Plus className="w-4 h-4 mr-1" />
               Create Partner
@@ -251,12 +251,12 @@ export default function AdminPartners() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider py-3 pr-4">Partner</th>
-                  <th className="text-left text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider py-3 px-4">Status</th>
-                  <th className="text-right text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider py-3 px-4">SMEs</th>
-                  <th className="text-right text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider py-3 px-4">Users</th>
-                  <th className="text-left text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider py-3 pl-4">Created</th>
+                <tr className="border-b border-slate-100">
+                  <th className="text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider py-3 pr-4">Partner</th>
+                  <th className="text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider py-3 px-4">Status</th>
+                  <th className="text-right text-[11px] font-medium text-slate-400 uppercase tracking-wider py-3 px-4">SMEs</th>
+                  <th className="text-right text-[11px] font-medium text-slate-400 uppercase tracking-wider py-3 px-4">Users</th>
+                  <th className="text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider py-3 pl-4">Created</th>
                 </tr>
               </thead>
               <tbody>
@@ -264,18 +264,18 @@ export default function AdminPartners() {
                   <tr
                     key={partner.id}
                     onClick={() => setLocation(`/admin/partners/${partner.id}`)}
-                    className="border-b border-muted/50 hover:bg-muted/50 cursor-pointer transition-colors"
+                    className="border-b border-slate-50 hover:bg-slate-50/50 cursor-pointer transition-colors"
                   >
                     <td className="py-3 pr-4">
-                      <span className="text-[14px] font-medium text-foreground">{partner.name}</span>
+                      <span className="text-[14px] font-medium text-slate-900">{partner.name}</span>
                       {partner.brandName && (
-                        <span className="text-[12px] text-muted-foreground/60 ml-2">({partner.brandName})</span>
+                        <span className="text-[12px] text-slate-400 ml-2">({partner.brandName})</span>
                       )}
                     </td>
                     <td className="py-3 px-4">{getStatusBadge(partner.status)}</td>
-                    <td className="py-3 px-4 text-right text-[14px] text-muted-foreground tabular-nums">{partner.smeCount || 0}</td>
-                    <td className="py-3 px-4 text-right text-[14px] text-muted-foreground tabular-nums">{partner.userCount || 0}</td>
-                    <td className="py-3 pl-4 text-[13px] text-muted-foreground/60">{formatDate(partner.createdAt)}</td>
+                    <td className="py-3 px-4 text-right text-[14px] text-slate-600 tabular-nums">{partner.smeCount || 0}</td>
+                    <td className="py-3 px-4 text-right text-[14px] text-slate-600 tabular-nums">{partner.userCount || 0}</td>
+                    <td className="py-3 pl-4 text-[13px] text-slate-400">{formatDate(partner.createdAt)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -291,7 +291,7 @@ export default function AdminPartners() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
-              <Label className="text-[13px] font-medium text-muted-foreground">Partner name *</Label>
+              <Label className="text-[13px] font-medium text-slate-700">Partner name *</Label>
               <Input
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -300,7 +300,7 @@ export default function AdminPartners() {
               />
             </div>
             <div>
-              <Label className="text-[13px] font-medium text-muted-foreground">Brand name (optional)</Label>
+              <Label className="text-[13px] font-medium text-slate-700">Brand name (optional)</Label>
               <Input
                 value={formData.brandName}
                 onChange={(e) => setFormData({ ...formData, brandName: e.target.value })}
@@ -309,7 +309,7 @@ export default function AdminPartners() {
               />
             </div>
             <div>
-              <Label className="text-[13px] font-medium text-muted-foreground">Email *</Label>
+              <Label className="text-[13px] font-medium text-slate-700">Email *</Label>
               <Input
                 type="email"
                 value={formData.email}
@@ -319,7 +319,7 @@ export default function AdminPartners() {
               />
             </div>
             <div>
-              <Label className="text-[13px] font-medium text-muted-foreground">Status</Label>
+              <Label className="text-[13px] font-medium text-slate-700">Status</Label>
               <Select
                 value={formData.status}
                 onValueChange={(value) => setFormData({ ...formData, status: value })}
@@ -335,7 +335,7 @@ export default function AdminPartners() {
               </Select>
             </div>
             <div>
-              <Label className="text-[13px] font-medium text-muted-foreground">Default execution time</Label>
+              <Label className="text-[13px] font-medium text-slate-700">Default execution time</Label>
               <Input
                 type="time"
                 value={formData.defaultExecutionTime}
@@ -344,7 +344,7 @@ export default function AdminPartners() {
               />
             </div>
             <div>
-              <Label className="text-[13px] font-medium text-muted-foreground">Notes</Label>
+              <Label className="text-[13px] font-medium text-slate-700">Notes</Label>
               <Input
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
@@ -360,7 +360,7 @@ export default function AdminPartners() {
             <Button
               onClick={() => createMutation.mutate(formData)}
               disabled={!formData.name.trim() || !formData.email.trim() || createMutation.isPending}
-              className="bg-foreground hover:bg-foreground/90 text-background text-[13px]"
+              className="bg-slate-900 hover:bg-slate-800 text-white text-[13px]"
             >
               {createMutation.isPending ? "Creating..." : "Create Partner"}
             </Button>

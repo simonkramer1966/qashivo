@@ -43,7 +43,7 @@ export default function AdminAnalytics() {
   });
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-background via-blue-50/50 to-teal-50/50">
+    <div className="flex h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
       {/* Desktop Sidebar */}
       <div className="hidden md:block">
         <NewSidebar />
@@ -57,10 +57,10 @@ export default function AdminAnalytics() {
             {/* Page Header */}
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-bold text-foreground" data-testid="text-page-title">
+                <h1 className="text-2xl font-bold text-slate-900" data-testid="text-page-title">
                   Channel Effectiveness Analytics
                 </h1>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-sm text-slate-600 mt-1">
                   Response rates and A/B test performance across communication channels
                 </p>
               </div>
@@ -188,9 +188,9 @@ export default function AdminAnalytics() {
             {!isLoading && !analytics && (
               <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
                 <CardContent className="p-12 text-center">
-                  <BarChart3 className="h-12 w-12 text-muted/60 mx-auto mb-4" />
-                  <p className="text-muted-foreground">No analytics data available yet</p>
-                  <p className="text-sm text-muted-foreground/60 mt-2">
+                  <BarChart3 className="h-12 w-12 text-slate-300 mx-auto mb-4" />
+                  <p className="text-slate-600">No analytics data available yet</p>
+                  <p className="text-sm text-slate-400 mt-2">
                     Data will appear once contact outcomes are collected
                   </p>
                 </CardContent>
@@ -236,10 +236,10 @@ function ChannelCard({
           <Skeleton className="h-8 w-20" />
         ) : (
           <>
-            <p className="text-3xl font-bold text-foreground" data-testid={`text-${channel.toLowerCase()}-response-rate`}>
+            <p className="text-3xl font-bold text-slate-900" data-testid={`text-${channel.toLowerCase()}-response-rate`}>
               {responseRate.toFixed(1)}%
             </p>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-xs text-slate-600 mt-1">
               {totalSent} contacts sent
             </p>
           </>
@@ -263,26 +263,26 @@ function ABTestVariantCard({
   baseline?: boolean;
 }) {
   return (
-    <div className={`p-4 rounded-lg border ${baseline ? 'bg-muted border-border' : 'bg-[#17B6C3]/5 border-[#17B6C3]/20'}`}>
+    <div className={`p-4 rounded-lg border ${baseline ? 'bg-slate-50 border-slate-200' : 'bg-[#17B6C3]/5 border-[#17B6C3]/20'}`}>
       <div className="flex items-center justify-between mb-3">
-        <h4 className="font-semibold text-foreground">{variant} Scheduler</h4>
-        {baseline && <Badge className="bg-muted text-foreground text-xs">Baseline</Badge>}
+        <h4 className="font-semibold text-slate-900">{variant} Scheduler</h4>
+        {baseline && <Badge className="bg-slate-200 text-slate-700 text-xs">Baseline</Badge>}
       </div>
       <div className="space-y-2">
         <div>
-          <p className="text-2xl font-bold text-foreground" data-testid={`text-${variant.toLowerCase()}-response`}>
+          <p className="text-2xl font-bold text-slate-900" data-testid={`text-${variant.toLowerCase()}-response`}>
             {responseRate.toFixed(1)}%
           </p>
-          <p className="text-xs text-muted-foreground">Response Rate</p>
+          <p className="text-xs text-slate-600">Response Rate</p>
         </div>
         <div className="grid grid-cols-2 gap-2 text-sm">
           <div>
-            <p className="font-semibold text-foreground">{totalActions}</p>
-            <p className="text-xs text-muted-foreground">Actions</p>
+            <p className="font-semibold text-slate-900">{totalActions}</p>
+            <p className="text-xs text-slate-600">Actions</p>
           </div>
           <div>
-            <p className="font-semibold text-foreground">{avgDaysToPayment.toFixed(1)}</p>
-            <p className="text-xs text-muted-foreground">Avg Days</p>
+            <p className="font-semibold text-slate-900">{avgDaysToPayment.toFixed(1)}</p>
+            <p className="text-xs text-slate-600">Avg Days</p>
           </div>
         </div>
       </div>
@@ -294,17 +294,17 @@ function OverdueBandRow({ label, responseRate, count }: { label: string; respons
   return (
     <div className="flex items-center justify-between">
       <div className="flex-1">
-        <p className="text-sm font-medium text-foreground">{label}</p>
-        <p className="text-xs text-muted-foreground">{count} invoices</p>
+        <p className="text-sm font-medium text-slate-900">{label}</p>
+        <p className="text-xs text-slate-600">{count} invoices</p>
       </div>
       <div className="flex items-center gap-3">
-        <div className="w-32 bg-muted rounded-full h-2">
+        <div className="w-32 bg-slate-200 rounded-full h-2">
           <div 
             className="bg-[#17B6C3] h-2 rounded-full" 
             style={{ width: `${Math.min(responseRate, 100)}%` }}
           />
         </div>
-        <p className="text-sm font-semibold text-foreground w-12 text-right">
+        <p className="text-sm font-semibold text-slate-900 w-12 text-right">
           {responseRate.toFixed(0)}%
         </p>
       </div>

@@ -67,7 +67,7 @@ export default function AdminSmes() {
 
   const getXeroStatus = (client: ClientListItem) => {
     if (!client.xeroTenantId) {
-      return <Badge variant="outline" className="text-muted-foreground/60 border-border">Not connected</Badge>;
+      return <Badge variant="outline" className="text-slate-400 border-slate-200">Not connected</Badge>;
     }
     return <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50">Connected</Badge>;
   };
@@ -75,7 +75,7 @@ export default function AdminSmes() {
   const getCommModeLabel = (mode: string | null) => {
     switch (mode) {
       case "off":
-        return <span className="text-muted-foreground/60">Off</span>;
+        return <span className="text-slate-400">Off</span>;
       case "testing":
         return <span className="text-amber-600">Testing</span>;
       case "soft_live":
@@ -83,7 +83,7 @@ export default function AdminSmes() {
       case "live":
         return <span className="text-emerald-600">Live</span>;
       default:
-        return <span className="text-muted-foreground/60">—</span>;
+        return <span className="text-slate-400">—</span>;
     }
   };
 
@@ -109,11 +109,11 @@ export default function AdminSmes() {
 
   return (
     <AdminLayout>
-      <div className="sticky top-0 z-40 bg-background border-b border-border">
+      <div className="sticky top-0 z-40 bg-white border-b border-slate-100">
         <div className="px-6 lg:px-8 py-5 flex items-center justify-between">
           <div>
-            <h2 className="text-[17px] font-semibold text-foreground tracking-tight">Clients</h2>
-            <p className="text-[13px] text-muted-foreground mt-0.5">All tenant businesses on the platform</p>
+            <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight">Clients</h2>
+            <p className="text-[13px] text-slate-400 mt-0.5">All tenant businesses on the platform</p>
           </div>
         </div>
       </div>
@@ -127,57 +127,57 @@ export default function AdminSmes() {
           </div>
         ) : error ? (
           <div className="py-16 text-center">
-            <AlertCircle className="w-10 h-10 text-muted-foreground/60 mx-auto mb-4" />
-            <p className="text-[15px] font-medium text-foreground mb-1">Failed to load clients</p>
-            <p className="text-[13px] text-muted-foreground">Please try again later</p>
+            <AlertCircle className="w-10 h-10 text-slate-300 mx-auto mb-4" />
+            <p className="text-[15px] font-medium text-slate-900 mb-1">Failed to load clients</p>
+            <p className="text-[13px] text-slate-400">Please try again later</p>
           </div>
         ) : !clients || clients.length === 0 ? (
           <div className="py-16 text-center">
-            <Factory className="w-10 h-10 text-muted-foreground/60 mx-auto mb-4" />
-            <p className="text-[15px] font-medium text-foreground mb-1">No clients yet</p>
-            <p className="text-[13px] text-muted-foreground">Clients will appear here when they connect</p>
+            <Factory className="w-10 h-10 text-slate-300 mx-auto mb-4" />
+            <p className="text-[15px] font-medium text-slate-900 mb-1">No clients yet</p>
+            <p className="text-[13px] text-slate-400">Clients will appear here when they connect</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left text-[11px] font-medium text-muted-foreground uppercase tracking-wider py-3 pr-4">Client</th>
-                  <th className="text-left text-[11px] font-medium text-muted-foreground uppercase tracking-wider py-3 px-4">Xero</th>
-                  <th className="text-left text-[11px] font-medium text-muted-foreground uppercase tracking-wider py-3 px-4">Last sync</th>
-                  <th className="text-left text-[11px] font-medium text-muted-foreground uppercase tracking-wider py-3 px-4">Comms</th>
-                  <th className="text-center text-[11px] font-medium text-muted-foreground uppercase tracking-wider py-3 px-4">Actions</th>
-                  <th className="text-left text-[11px] font-medium text-muted-foreground uppercase tracking-wider py-3 px-4">Created</th>
-                  <th className="text-center text-[11px] font-medium text-muted-foreground uppercase tracking-wider py-3 pl-4 w-10"></th>
+                <tr className="border-b border-slate-100">
+                  <th className="text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider py-3 pr-4">Client</th>
+                  <th className="text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider py-3 px-4">Xero</th>
+                  <th className="text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider py-3 px-4">Last sync</th>
+                  <th className="text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider py-3 px-4">Comms</th>
+                  <th className="text-center text-[11px] font-medium text-slate-400 uppercase tracking-wider py-3 px-4">Actions</th>
+                  <th className="text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider py-3 px-4">Created</th>
+                  <th className="text-center text-[11px] font-medium text-slate-400 uppercase tracking-wider py-3 pl-4 w-10"></th>
                 </tr>
               </thead>
               <tbody>
                 {clients.map((client) => (
                   <tr
                     key={client.id}
-                    className="border-b border-border hover:bg-muted/50 transition-colors"
+                    className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors"
                   >
                     <td className="py-3 pr-4">
-                      <span className="text-[14px] font-medium text-foreground">{client.name}</span>
+                      <span className="text-[14px] font-medium text-slate-900">{client.name}</span>
                       {client.xeroOrganisationName && client.xeroOrganisationName !== client.name && (
-                        <span className="text-[12px] text-muted-foreground ml-2">({client.xeroOrganisationName})</span>
+                        <span className="text-[12px] text-slate-400 ml-2">({client.xeroOrganisationName})</span>
                       )}
                     </td>
                     <td className="py-3 px-4">{getXeroStatus(client)}</td>
-                    <td className="py-3 px-4 text-[13px] text-muted-foreground">{formatDateTime(client.xeroLastSyncAt)}</td>
+                    <td className="py-3 px-4 text-[13px] text-slate-400">{formatDateTime(client.xeroLastSyncAt)}</td>
                     <td className="py-3 px-4 text-[13px]">{getCommModeLabel(client.communicationMode)}</td>
                     <td className="py-3 px-4 text-center">
                       {client.collectionsAutomationEnabled ? (
                         <CheckCircle2 className="w-4 h-4 text-emerald-500 inline" />
                       ) : (
-                        <XCircle className="w-4 h-4 text-muted-foreground/60 inline" />
+                        <XCircle className="w-4 h-4 text-slate-300 inline" />
                       )}
                     </td>
-                    <td className="py-3 px-4 text-[13px] text-muted-foreground">{formatDate(client.createdAt)}</td>
+                    <td className="py-3 px-4 text-[13px] text-slate-400">{formatDate(client.createdAt)}</td>
                     <td className="py-3 pl-4 text-center">
                       <button
                         onClick={() => openDeleteDialog(client)}
-                        className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground/60 hover:text-destructive transition-colors"
+                        className="p-1.5 rounded hover:bg-red-50 text-slate-300 hover:text-red-500 transition-colors"
                         title="Delete tenant"
                       >
                         <Trash2 className="w-4 h-4" />

@@ -75,7 +75,7 @@ export default function Customers() {
 
   const getBehaviourDot = (riskBand?: string | null, riskScore?: number | null) => {
     const { label } = getBehaviourLabel(riskBand, riskScore);
-    let dotColor = 'bg-muted-foreground/30';
+    let dotColor = 'bg-slate-300';
     
     if (label === 'Pays on time') {
       dotColor = 'bg-emerald-500';
@@ -93,7 +93,7 @@ export default function Customers() {
   };
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-white">
       {/* Desktop Sidebar */}
       <div className="hidden lg:block">
         <NewSidebar />
@@ -106,13 +106,13 @@ export default function Customers() {
           subtitle="Qashivo manages collections automatically. Review is only needed when something is flagged."
           action={
             <div className="relative w-[280px]">
-              <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/60" />
+              <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-slate-300" />
               <input
                 type="text"
                 placeholder="Find a customer…"
                 value={search}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                className="w-full pl-8 pr-3 h-8 text-[12px] text-foreground placeholder:text-muted-foreground/60 bg-transparent border border-border/60 rounded focus:outline-none focus:border-border transition-colors"
+                className="w-full pl-8 pr-3 h-8 text-[12px] text-slate-600 placeholder:text-slate-300 bg-transparent border border-slate-200/60 rounded focus:outline-none focus:border-slate-300 transition-colors"
                 data-testid="input-search-customers"
               />
             </div>
@@ -125,60 +125,60 @@ export default function Customers() {
 
             {/* Debtor Behaviour Profiles - KPI Section */}
             <section className="mb-6 flex-shrink-0">
-              <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider mb-4">Debtor Behaviour Profiles</p>
+              <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-4">Debtor Behaviour Profiles</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-8">
                 <div>
-                  <p className="text-[12px] text-muted-foreground mb-1 flex items-center gap-2">
+                  <p className="text-[12px] text-slate-500 mb-1 flex items-center gap-2">
                     <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500" />
                     Usually pay on time
                   </p>
-                  <p className="text-[20px] font-semibold text-foreground tabular-nums">38%</p>
+                  <p className="text-[20px] font-semibold text-slate-900 tabular-nums">38%</p>
                 </div>
                 <div>
-                  <p className="text-[12px] text-muted-foreground mb-1 flex items-center gap-2">
+                  <p className="text-[12px] text-slate-500 mb-1 flex items-center gap-2">
                     <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-500" />
                     Pay late but reliably
                   </p>
-                  <p className="text-[20px] font-semibold text-foreground tabular-nums">44%</p>
+                  <p className="text-[20px] font-semibold text-slate-900 tabular-nums">44%</p>
                 </div>
                 <div>
-                  <p className="text-[12px] text-muted-foreground mb-1 flex items-center gap-2">
+                  <p className="text-[12px] text-slate-500 mb-1 flex items-center gap-2">
                     <span className="inline-block w-2.5 h-2.5 rounded-full bg-rose-500" />
                     Inconsistent
                   </p>
-                  <p className="text-[20px] font-semibold text-foreground tabular-nums">12%</p>
+                  <p className="text-[20px] font-semibold text-slate-900 tabular-nums">12%</p>
                 </div>
                 <div>
-                  <p className="text-[12px] text-muted-foreground mb-1 flex items-center gap-2">
-                    <span className="inline-block w-2.5 h-2.5 rounded-full bg-muted-foreground/30" />
+                  <p className="text-[12px] text-slate-500 mb-1 flex items-center gap-2">
+                    <span className="inline-block w-2.5 h-2.5 rounded-full bg-slate-300" />
                     Unknown
                   </p>
-                  <p className="text-[20px] font-semibold text-muted-foreground tabular-nums">6%</p>
+                  <p className="text-[20px] font-semibold text-slate-500 tabular-nums">6%</p>
                 </div>
               </div>
             </section>
 
             {/* Divider */}
-            <div className="border-t border-border/80 mb-4 flex-shrink-0" />
+            <div className="border-t border-slate-100/80 mb-4 flex-shrink-0" />
 
             {/* Mobile View - Clean List */}
             <div className="space-y-0 sm:hidden flex-1">
               {isLoading ? (
                 [...Array(5)].map((_, i) => (
-                  <div key={i} className="py-4 border-b border-border">
-                    <div className="h-12 bg-muted animate-pulse rounded"></div>
+                  <div key={i} className="py-4 border-b border-slate-100">
+                    <div className="h-12 bg-slate-100 animate-pulse rounded"></div>
                   </div>
                 ))
               ) : contacts.length === 0 ? (
                 <div className="py-12 text-center">
-                  <User className="h-10 w-10 mx-auto mb-3 text-muted-foreground/60" />
-                  <p className="text-[13px] text-muted-foreground">No customers found</p>
+                  <User className="h-10 w-10 mx-auto mb-3 text-slate-300" />
+                  <p className="text-[13px] text-slate-500">No customers found</p>
                 </div>
               ) : (
                 contacts.map((contact, idx) => (
                   <div 
                     key={contact.id} 
-                    className={`py-3 cursor-pointer hover:bg-muted transition-colors ${idx !== contacts.length - 1 ? 'border-b border-border' : ''}`}
+                    className={`py-3 cursor-pointer hover:bg-slate-100 transition-colors ${idx !== contacts.length - 1 ? 'border-b border-slate-100' : ''}`}
                     onClick={() => {
                       setSelectedContactId(contact.id);
                       setShowPreviewDrawer(true);
@@ -187,17 +187,17 @@ export default function Customers() {
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex-1 min-w-0">
-                        <p className="text-[14px] font-medium text-foreground truncate">
+                        <p className="text-[14px] font-medium text-slate-900 truncate">
                           {getCustomerCompanyName(contact)}
                         </p>
-                        <div className="flex items-center gap-4 mt-1 text-[12px] text-muted-foreground">
+                        <div className="flex items-center gap-4 mt-1 text-[12px] text-slate-500">
                           <span className="tabular-nums">{formatCurrency(contact.outstandingAmount)}</span>
                           {contact.overdueAmount > 0 && (
                             <span className="text-[#C75C5C] tabular-nums">{formatCurrency(contact.overdueAmount)} overdue</span>
                           )}
                         </div>
                       </div>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground/60 flex-shrink-0" />
+                      <ChevronRight className="h-4 w-4 text-slate-300 flex-shrink-0" />
                     </div>
                   </div>
                 ))
@@ -207,36 +207,36 @@ export default function Customers() {
             {/* Desktop View - Tufte-style Table */}
             <div className="hidden sm:block flex-1">
               {isLoading ? (
-                <div className="border-t border-border">
+                <div className="border-t border-slate-100">
                   {[...Array(8)].map((_, i) => (
-                    <div key={i} className="py-3 border-b border-border">
-                      <div className="h-5 bg-muted animate-pulse rounded w-3/4"></div>
+                    <div key={i} className="py-3 border-b border-slate-100">
+                      <div className="h-5 bg-slate-100 animate-pulse rounded w-3/4"></div>
                     </div>
                   ))}
                 </div>
               ) : contacts.length === 0 ? (
-                <div className="py-16 text-center border-t border-border">
-                  <User className="h-10 w-10 mx-auto mb-3 text-muted-foreground/60" />
-                  <p className="text-[13px] text-muted-foreground">No customers found</p>
+                <div className="py-16 text-center border-t border-slate-100">
+                  <User className="h-10 w-10 mx-auto mb-3 text-slate-300" />
+                  <p className="text-[13px] text-slate-500">No customers found</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead className="bg-muted/50 sticky top-0 z-10">
-                      <tr className="border-b border-border h-16">
-                        <th className="text-left px-4 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Customer</th>
-                        <th className="text-right px-4 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Outstanding</th>
-                        <th className="text-right px-4 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Overdue</th>
-                        <th className="text-right px-4 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">ADPD</th>
-                        <th className="text-right px-4 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Last Payment</th>
-                        <th className="text-right px-4 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Behaviour</th>
+                    <thead className="bg-slate-50 sticky top-0 z-10">
+                      <tr className="border-b border-slate-200 h-16">
+                        <th className="text-left px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider">Customer</th>
+                        <th className="text-right px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider">Outstanding</th>
+                        <th className="text-right px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider">Overdue</th>
+                        <th className="text-right px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider">ADPD</th>
+                        <th className="text-right px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider">Last Payment</th>
+                        <th className="text-right px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider">Behaviour</th>
                       </tr>
                     </thead>
                     <tbody>
                       {contacts.map((contact, idx) => (
                         <tr
                           key={contact.id}
-                          className="border-b border-border hover:bg-muted cursor-pointer transition-colors"
+                          className="border-b border-slate-100 hover:bg-slate-100 cursor-pointer transition-colors"
                           onClick={() => {
                             setSelectedContactId(contact.id);
                             setShowPreviewDrawer(true);
@@ -245,23 +245,23 @@ export default function Customers() {
                         >
                           {/* Customer */}
                           <td className="py-[5px] px-3">
-                            <p className="text-[13px] font-medium text-foreground truncate">
+                            <p className="text-[13px] font-medium text-slate-900 truncate">
                               {getCustomerCompanyName(contact)}
                             </p>
-                            <p className="text-[11px] text-muted-foreground/60 truncate">
+                            <p className="text-[11px] text-slate-400 truncate">
                               {getCustomerDisplayName(contact)}
                               {contact.phone && (
-                                <span className="ml-2 text-muted-foreground">{contact.phone}</span>
+                                <span className="ml-2 text-slate-500">{contact.phone}</span>
                               )}
                             </p>
                           </td>
 
                           {/* Outstanding */}
                           <td className="py-[5px] px-3 text-right">
-                            <span className="text-[13px] text-foreground/80 tabular-nums">
+                            <span className="text-[13px] text-slate-700 tabular-nums">
                               {formatCurrency(contact.outstandingAmount)}
                             </span>
-                            <span className="text-[11px] text-muted-foreground/60 ml-1">({contact.invoiceCount})</span>
+                            <span className="text-[11px] text-slate-400 ml-1">({contact.invoiceCount})</span>
                           </td>
 
                           {/* Overdue */}
@@ -271,27 +271,27 @@ export default function Customers() {
                                 <span className="text-[13px] text-[#C75C5C] tabular-nums">
                                   {formatCurrency(contact.overdueAmount)}
                                 </span>
-                                <span className="text-[11px] text-muted-foreground/60 ml-1">({contact.overdueCount})</span>
+                                <span className="text-[11px] text-slate-400 ml-1">({contact.overdueCount})</span>
                               </>
                             ) : (
-                              <span className="text-[13px] text-muted-foreground/60">-</span>
+                              <span className="text-[13px] text-slate-400">-</span>
                             )}
                           </td>
 
                           {/* ADPD */}
                           <td className="py-[5px] px-3 text-right">
                             {contact.averageDaysPastDue > 0 ? (
-                              <span className="text-[13px] text-foreground/80 tabular-nums">
+                              <span className="text-[13px] text-slate-700 tabular-nums">
                                 {contact.averageDaysPastDue}
                               </span>
                             ) : (
-                              <span className="text-[13px] text-muted-foreground/60">-</span>
+                              <span className="text-[13px] text-slate-400">-</span>
                             )}
                           </td>
 
                           {/* Last Payment */}
                           <td className="py-[5px] px-3 text-right">
-                            <span className="text-[13px] text-muted-foreground tabular-nums">
+                            <span className="text-[13px] text-slate-500 tabular-nums">
                               {formatDateShort(contact.lastPaymentDate)}
                             </span>
                           </td>
@@ -309,9 +309,9 @@ export default function Customers() {
             </div>
 
             {/* Footer Pagination - Action Centre style */}
-            <div className="sticky bottom-0 flex items-center justify-end gap-4 h-16 px-4 border-t border-border bg-background shrink-0">
+            <div className="sticky bottom-0 flex items-center justify-end gap-4 h-16 px-4 border-t border-slate-200 bg-white shrink-0">
               <div className="flex items-center gap-2">
-                <span className="text-[12px] text-muted-foreground">
+                <span className="text-[12px] text-slate-500">
                   {pagination.total} customer{pagination.total !== 1 ? 's' : ''}
                 </span>
               </div>
@@ -323,7 +323,7 @@ export default function Customers() {
                     setLimit(Number(e.target.value));
                     setPage(1);
                   }}
-                  className="text-[12px] text-muted-foreground bg-background border border-border rounded px-2 py-1 focus:outline-none focus:border-border/80"
+                  className="text-[12px] text-slate-600 bg-white border border-slate-200 rounded px-2 py-1 focus:outline-none focus:border-slate-300"
                   data-testid="select-page-size"
                 >
                   <option value={10}>10</option>
@@ -334,24 +334,24 @@ export default function Customers() {
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="text-[12px] text-muted-foreground">
+                <span className="text-[12px] text-slate-500">
                   {page} of {pagination.totalPages}
                 </span>
                 <button
                   onClick={() => setPage(Math.max(1, page - 1))}
                   disabled={page === 1}
-                  className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed"
                   data-testid="button-previous-page"
                 >
-                  <ChevronLeft className="h-4 w-4 text-muted-foreground" />
+                  <ChevronLeft className="h-4 w-4 text-slate-600" />
                 </button>
                 <button
                   onClick={() => setPage(Math.min(pagination.totalPages, page + 1))}
                   disabled={page === pagination.totalPages}
-                  className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed"
                   data-testid="button-next-page"
                 >
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  <ChevronRight className="h-4 w-4 text-slate-600" />
                 </button>
               </div>
             </div>
