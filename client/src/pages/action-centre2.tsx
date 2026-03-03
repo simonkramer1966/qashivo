@@ -411,7 +411,7 @@ export default function ActionCentre2() {
   };
 
   return (
-    <div className="flex h-screen bg-white">
+    <div className="flex h-screen bg-background">
       <div className="hidden lg:block">
         <NewSidebar />
       </div>
@@ -1288,7 +1288,7 @@ const EXCEPTION_CONFIG: Record<ExceptionType, { label: string; icon: any; color:
   dispute: { label: 'Dispute', icon: AlertTriangle, color: 'text-[#C75C5C]' },
   query: { label: 'Query', icon: HelpCircle, color: 'text-[#E8A23B]' },
   contact_issue: { label: 'Contact', icon: Phone, color: 'text-[#E8A23B]' },
-  no_response: { label: 'No Response', icon: MessageSquare, color: 'text-gray-500' },
+  no_response: { label: 'No Response', icon: MessageSquare, color: 'text-muted-foreground' },
   high_value_ageing: { label: 'High Value', icon: TrendingUp, color: 'text-[#C75C5C]' },
 };
 

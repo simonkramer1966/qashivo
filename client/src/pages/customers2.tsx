@@ -164,7 +164,7 @@ export default function Customers2() {
     const profile = contact.debtorProfile;
     if (!profile || profile.score0To100 === null || profile.score0To100 === undefined) {
       const { label } = getBehaviourLabel(contact.riskBand, contact.riskScore);
-      let dotColor = 'bg-slate-300';
+      let dotColor = 'bg-muted-foreground/30';
       if (label === 'Pays on time') dotColor = 'bg-[#4FAD80]';
       else if (label === 'Pays late but reliable') dotColor = 'bg-[#E8A23B]';
       else if (label === 'Inconsistent') dotColor = 'bg-[#C75C5C]';
@@ -177,19 +177,19 @@ export default function Customers2() {
 
     const score = profile.score0To100;
     const band = profile.scoreBand;
-    let dotColor = 'bg-gray-400';
+    let dotColor = 'bg-muted-foreground/30';
     if (band === 'EXCELLENT' || band === 'GOOD') dotColor = 'bg-[#22c55e]';
     else if (band === 'OK') dotColor = 'bg-[#f59e0b]';
     else if (band === 'RISKY') dotColor = 'bg-[#ef4444]';
-    else if (band === 'UNKNOWN') dotColor = 'bg-gray-400';
+    else if (band === 'UNKNOWN') dotColor = 'bg-muted-foreground/30';
 
     return (
       <div className="flex items-center justify-end gap-1.5">
         <span className={`inline-block w-2 h-2 rounded-full ${dotColor}`} />
         {band === 'UNKNOWN' ? (
-          <span className="text-[11px] text-gray-400">insufficient history</span>
+          <span className="text-[11px] text-muted-foreground/60">insufficient history</span>
         ) : (
-          <span className="text-[12px] text-gray-600 tabular-nums font-medium">{score}</span>
+          <span className="text-[12px] text-muted-foreground tabular-nums font-medium">{score}</span>
         )}
       </div>
     );
@@ -247,7 +247,7 @@ export default function Customers2() {
                 <span className="text-sm font-semibold text-foreground tabular-nums ml-1">{aggregates.inconsistentPercent ?? 0}%</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="inline-block w-2 h-2 rounded-full bg-slate-300" />
+                <span className="inline-block w-2 h-2 rounded-full bg-muted-foreground/30" />
                 <span className="text-sm text-muted-foreground">Unknown</span>
                 <span className="text-sm font-semibold text-muted-foreground tabular-nums ml-1">{aggregates.unknownPercent ?? 0}%</span>
               </div>

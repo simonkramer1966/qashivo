@@ -176,10 +176,10 @@ export default function Overview2() {
     const day = parts[1] || '';
     return (
       <g transform={`translate(${x},${y})`}>
-        <text x={0} y={0} dy={12} textAnchor="middle" fill="#9ca3af" fontSize={11} fontWeight={500}>
+        <text x={0} y={0} dy={12} textAnchor="middle" fill="hsl(var(--muted-foreground))" fontSize={11} fontWeight={500}>
           {day}
         </text>
-        <text x={0} y={0} dy={26} textAnchor="middle" fill="#9ca3af" fontSize={10}>
+        <text x={0} y={0} dy={26} textAnchor="middle" fill="hsl(var(--muted-foreground))" fontSize={10}>
           {month}
         </text>
       </g>
@@ -203,29 +203,29 @@ export default function Overview2() {
   };
 
   return (
-    <div className="flex h-screen bg-white">
+    <div className="flex h-screen bg-background">
       <div className="hidden lg:block">
         <NewSidebar />
       </div>
 
       <main className="flex-1 flex flex-col min-h-0 main-with-bottom-nav">
         {/* Desktop Header - Cardless v2.0 */}
-        <div className="hidden lg:block max-w-7xl mx-auto w-full px-6 py-5 border-b border-gray-100">
-          <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight">Overview</h2>
-          <p className="text-[13px] text-slate-400 mt-0.5">
+        <div className="hidden lg:block max-w-7xl mx-auto w-full px-6 py-5 border-b border-border">
+          <h2 className="text-[17px] font-semibold text-foreground tracking-tight">Overview</h2>
+          <p className="text-[13px] text-muted-foreground mt-0.5">
             Qashivo manages collections automatically. Review only when flagged.
           </p>
         </div>
 
         {/* Mobile Header - Cardless v3.0: Compact, no subtitle */}
-        <div className="lg:hidden px-4 py-4 border-b border-gray-100">
-          <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight">Overview</h2>
+        <div className="lg:hidden px-4 py-4 border-b border-border">
+          <h2 className="text-[17px] font-semibold text-foreground tracking-tight">Overview</h2>
         </div>
 
         {isScoringRunning && (
           <div className="max-w-7xl mx-auto w-full px-6">
             <div className="my-3 py-2.5 px-4 border-l-2 border-[#f59e0b] bg-[#f59e0b]/10 rounded-r">
-              <p className="text-[13px] text-gray-700">
+              <p className="text-[13px] text-foreground/80">
                 Debtor scoring in progress — scores and strategies will appear shortly
               </p>
             </div>
@@ -235,31 +235,31 @@ export default function Overview2() {
         <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
           {/* Desktop Top Metrics - 4 column grid above chart */}
           <div className="hidden lg:block max-w-7xl mx-auto w-full px-6">
-            <div className="py-5 border-b border-gray-100 grid grid-cols-4 gap-6">
+            <div className="py-5 border-b border-border grid grid-cols-4 gap-6">
               <div className="text-center">
-                <span className="text-xs text-gray-500 uppercase tracking-wider">Outstanding</span>
+                <span className="text-xs text-muted-foreground uppercase tracking-wider">Outstanding</span>
                 {metricsLoading ? (
-                  <div className="h-7 w-28 bg-gray-100 animate-pulse rounded mt-1 mx-auto"></div>
+                  <div className="h-7 w-28 bg-muted animate-pulse rounded mt-1 mx-auto"></div>
                 ) : (
-                  <p className="text-lg font-semibold text-gray-900 tabular-nums mt-1">
-                    {formatCurrency(totalOutstanding)} <span className="text-sm font-normal text-gray-400">({totalInvoiceCount})</span>
+                  <p className="text-lg font-semibold text-foreground tabular-nums mt-1">
+                    {formatCurrency(totalOutstanding)} <span className="text-sm font-normal text-muted-foreground/60">({totalInvoiceCount})</span>
                   </p>
                 )}
               </div>
               <div className="text-center">
-                <span className="text-xs text-gray-500 uppercase tracking-wider">Overdue</span>
+                <span className="text-xs text-muted-foreground uppercase tracking-wider">Overdue</span>
                 {metricsLoading ? (
-                  <div className="h-7 w-28 bg-gray-100 animate-pulse rounded mt-1 mx-auto"></div>
+                  <div className="h-7 w-28 bg-muted animate-pulse rounded mt-1 mx-auto"></div>
                 ) : (
-                  <p className="text-lg font-semibold text-gray-900 tabular-nums mt-1">
-                    {formatCurrency(overdueAmount)} <span className="text-sm font-normal text-gray-400">({overdueCount})</span>
+                  <p className="text-lg font-semibold text-foreground tabular-nums mt-1">
+                    {formatCurrency(overdueAmount)} <span className="text-sm font-normal text-muted-foreground/60">({overdueCount})</span>
                   </p>
                 )}
               </div>
               <div className="text-center">
-                <span className="text-xs text-gray-500 uppercase tracking-wider">Collected (Month)</span>
+                <span className="text-xs text-muted-foreground uppercase tracking-wider">Collected (Month)</span>
                 {metricsLoading ? (
-                  <div className="h-7 w-24 bg-gray-100 animate-pulse rounded mt-1 mx-auto"></div>
+                  <div className="h-7 w-24 bg-muted animate-pulse rounded mt-1 mx-auto"></div>
                 ) : (
                   <p className="text-lg font-semibold text-[#4FAD80] tabular-nums mt-1">
                     {formatCurrency(metrics?.collectedThisMonth || 0)}
@@ -267,9 +267,9 @@ export default function Overview2() {
                 )}
               </div>
               <div className="text-center">
-                <span className="text-xs text-gray-500 uppercase tracking-wider">Collected (Week)</span>
+                <span className="text-xs text-muted-foreground uppercase tracking-wider">Collected (Week)</span>
                 {metricsLoading ? (
-                  <div className="h-7 w-24 bg-gray-100 animate-pulse rounded mt-1 mx-auto"></div>
+                  <div className="h-7 w-24 bg-muted animate-pulse rounded mt-1 mx-auto"></div>
                 ) : (
                   <p className="text-lg font-semibold text-[#4FAD80] tabular-nums mt-1">
                     {formatCurrency(metrics?.collectedThisWeek || 0)}
@@ -282,43 +282,43 @@ export default function Overview2() {
           {/* Mobile Metrics - Cardless v3.0: Hero card + 2-column grid */}
           <div className="lg:hidden px-4 py-4 space-y-4">
             {/* Hero Metric Card - Outstanding */}
-            <div className="bg-gray-50 rounded-xl p-4">
-              <span className="text-sm text-gray-500">Total Outstanding</span>
+            <div className="bg-muted rounded-xl p-4">
+              <span className="text-sm text-muted-foreground">Total Outstanding</span>
               {metricsLoading ? (
-                <div className="h-8 w-32 bg-gray-200 animate-pulse rounded mt-1"></div>
+                <div className="h-8 w-32 bg-muted-foreground/20 animate-pulse rounded mt-1"></div>
               ) : (
-                <p className="text-2xl font-bold text-gray-900 tabular-nums mt-1">
+                <p className="text-2xl font-bold text-foreground tabular-nums mt-1">
                   {formatCurrency(totalOutstanding)}
                 </p>
               )}
-              <p className="text-sm text-gray-500 mt-0.5">{totalInvoiceCount} invoices</p>
+              <p className="text-sm text-muted-foreground mt-0.5">{totalInvoiceCount} invoices</p>
             </div>
 
             {/* Secondary Metrics - 2 Column Grid */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="bg-gray-50 rounded-xl p-4">
-                <span className="text-sm text-gray-500">Overdue</span>
+              <div className="bg-muted rounded-xl p-4">
+                <span className="text-sm text-muted-foreground">Overdue</span>
                 {metricsLoading ? (
-                  <div className="h-6 w-20 bg-gray-200 animate-pulse rounded mt-1"></div>
+                  <div className="h-6 w-20 bg-muted-foreground/20 animate-pulse rounded mt-1"></div>
                 ) : (
                   <>
-                    <p className="text-lg font-semibold text-gray-900 tabular-nums mt-1">
+                    <p className="text-lg font-semibold text-foreground tabular-nums mt-1">
                       {formatCurrency(overdueAmount)}
                     </p>
-                    <p className="text-sm text-gray-400">{overdueCount} invoices</p>
+                    <p className="text-sm text-muted-foreground/60">{overdueCount} invoices</p>
                   </>
                 )}
               </div>
-              <div className="bg-gray-50 rounded-xl p-4">
-                <span className="text-sm text-gray-500">Collected</span>
+              <div className="bg-muted rounded-xl p-4">
+                <span className="text-sm text-muted-foreground">Collected</span>
                 {metricsLoading ? (
-                  <div className="h-6 w-20 bg-gray-200 animate-pulse rounded mt-1"></div>
+                  <div className="h-6 w-20 bg-muted-foreground/20 animate-pulse rounded mt-1"></div>
                 ) : (
                   <>
                     <p className="text-lg font-semibold text-[#4FAD80] tabular-nums mt-1">
                       {formatCurrency(metrics?.collectedThisMonth || 0)}
                     </p>
-                    <p className="text-sm text-gray-400">this month</p>
+                    <p className="text-sm text-muted-foreground/60">this month</p>
                   </>
                 )}
               </div>
@@ -327,7 +327,7 @@ export default function Overview2() {
             {/* Expandable Additional Metrics */}
             <button 
               onClick={() => setShowAllMetrics(!showAllMetrics)}
-              className="flex items-center justify-center gap-2 w-full h-11 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+              className="flex items-center justify-center gap-2 w-full h-11 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               {showAllMetrics ? "Hide details" : "View all metrics"}
               {showAllMetrics ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -335,48 +335,48 @@ export default function Overview2() {
 
             {showAllMetrics && (
               <div className="grid grid-cols-2 gap-3 animate-in slide-in-from-top-2 duration-200">
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <span className="text-sm text-gray-500">Collected (Week)</span>
+                <div className="bg-muted rounded-xl p-4">
+                  <span className="text-sm text-muted-foreground">Collected (Week)</span>
                   {metricsLoading ? (
-                    <div className="h-6 w-20 bg-gray-200 animate-pulse rounded mt-1"></div>
+                    <div className="h-6 w-20 bg-muted-foreground/20 animate-pulse rounded mt-1"></div>
                   ) : (
                     <p className="text-lg font-semibold text-[#4FAD80] tabular-nums mt-1">
                       {formatCurrency(metrics?.collectedThisWeek || 0)}
                     </p>
                   )}
                 </div>
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <span className="text-sm text-gray-500">Avg Days Late</span>
+                <div className="bg-muted rounded-xl p-4">
+                  <span className="text-sm text-muted-foreground">Avg Days Late</span>
                   {metricsLoading ? (
-                    <div className="h-6 w-16 bg-gray-200 animate-pulse rounded mt-1"></div>
+                    <div className="h-6 w-16 bg-muted-foreground/20 animate-pulse rounded mt-1"></div>
                   ) : (
-                    <p className="text-lg font-semibold text-gray-900 tabular-nums mt-1">
+                    <p className="text-lg font-semibold text-foreground tabular-nums mt-1">
                       {Math.abs(avgDaysOverdue).toFixed(0)} days
                     </p>
                   )}
                 </div>
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <span className="text-sm text-gray-500">Avg Days to Pay</span>
+                <div className="bg-muted rounded-xl p-4">
+                  <span className="text-sm text-muted-foreground">Avg Days to Pay</span>
                   {metricsLoading ? (
-                    <div className="h-6 w-16 bg-gray-200 animate-pulse rounded mt-1"></div>
+                    <div className="h-6 w-16 bg-muted-foreground/20 animate-pulse rounded mt-1"></div>
                   ) : (
-                    <p className="text-lg font-semibold text-gray-900 tabular-nums mt-1">
+                    <p className="text-lg font-semibold text-foreground tabular-nums mt-1">
                       {avgDaysToPay.toFixed(0)} days
                     </p>
                   )}
                 </div>
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <span className="text-sm text-gray-500">On-time Rate</span>
+                <div className="bg-muted rounded-xl p-4">
+                  <span className="text-sm text-muted-foreground">On-time Rate</span>
                   {metricsLoading ? (
-                    <div className="h-6 w-16 bg-gray-200 animate-pulse rounded mt-1"></div>
+                    <div className="h-6 w-16 bg-muted-foreground/20 animate-pulse rounded mt-1"></div>
                   ) : (
                     <p className="text-lg font-semibold text-[#4FAD80] tabular-nums mt-1">{(metrics?.onTimePaymentRate || 0).toFixed(0)}%</p>
                   )}
                 </div>
-                <div className="bg-gray-50 rounded-xl p-4 col-span-2">
-                  <span className="text-sm text-gray-500">Promises Kept</span>
+                <div className="bg-muted rounded-xl p-4 col-span-2">
+                  <span className="text-sm text-muted-foreground">Promises Kept</span>
                   {metricsLoading ? (
-                    <div className="h-6 w-16 bg-gray-200 animate-pulse rounded mt-1"></div>
+                    <div className="h-6 w-16 bg-muted-foreground/20 animate-pulse rounded mt-1"></div>
                   ) : (
                     <p className="text-lg font-semibold text-[#4FAD80] tabular-nums mt-1">{(metrics?.promisesKeptRate ?? 0).toFixed(0)}%</p>
                   )}
@@ -387,15 +387,15 @@ export default function Overview2() {
 
           {/* Chart Section - Responsive */}
           <div className="max-w-7xl mx-auto w-full px-4 lg:px-6 flex-1 flex flex-col min-h-0">
-            <section className="flex-1 flex flex-col min-h-0 py-4 lg:py-5 border-t lg:border-t-0 lg:border-b border-gray-100" data-testid="card-cashflow-chart">
+            <section className="flex-1 flex flex-col min-h-0 py-4 lg:py-5 border-t lg:border-t-0 lg:border-b border-border" data-testid="card-cashflow-chart">
               {/* Chart Header & Controls */}
               <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 lg:mb-3 gap-3 flex-shrink-0">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-sm lg:text-[11px] font-medium text-gray-500 lg:text-gray-400 lg:uppercase lg:tracking-wider">{getForecastTitle()}</h3>
+                  <h3 className="text-sm lg:text-[11px] font-medium text-muted-foreground lg:text-muted-foreground/60 lg:uppercase lg:tracking-wider">{getForecastTitle()}</h3>
                   <button
                     onClick={handleManualRefresh}
                     disabled={isRefreshing || cashInflowLoading}
-                    className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50 transition-colors"
+                    className="p-1 text-muted-foreground/60 hover:text-muted-foreground disabled:opacity-50 transition-colors"
                     title="Refresh data"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -404,15 +404,15 @@ export default function Overview2() {
                 
                 {/* Mobile Controls - 44px (h-11) touch targets, segmented control style */}
                 <div className="lg:hidden flex items-center gap-2" data-testid="radio-forecast-period">
-                  <div className="flex items-center bg-gray-100 rounded-xl p-1">
+                  <div className="flex items-center bg-muted rounded-xl p-1">
                     {([30, 60, 90] as const).map((range) => (
                       <button
                         key={range}
                         onClick={() => setForecastRange(range)}
                         className={`h-11 px-4 text-sm font-medium transition-colors rounded-lg ${
                           forecastRange === range 
-                            ? "text-gray-900 bg-white shadow-sm" 
-                            : "text-gray-500"
+                            ? "text-foreground bg-background shadow-sm" 
+                            : "text-muted-foreground"
                         }`}
                         data-testid={`radio-range-${range}`}
                       >
@@ -420,15 +420,15 @@ export default function Overview2() {
                       </button>
                     ))}
                   </div>
-                  <div className="flex items-center bg-gray-100 rounded-xl p-1">
+                  <div className="flex items-center bg-muted rounded-xl p-1">
                     {(["day", "week"] as const).map((b) => (
                       <button
                         key={b}
                         onClick={() => setForecastBucket(b)}
                         className={`h-11 px-4 text-sm font-medium transition-colors rounded-lg ${
                           forecastBucket === b 
-                            ? "text-gray-900 bg-white shadow-sm" 
-                            : "text-gray-500"
+                            ? "text-foreground bg-background shadow-sm" 
+                            : "text-muted-foreground"
                         }`}
                         data-testid={`radio-bucket-${b}`}
                       >
@@ -447,8 +447,8 @@ export default function Overview2() {
                         onClick={() => setForecastRange(range)}
                         className={`px-2.5 py-1 text-[11px] transition-colors rounded ${
                           forecastRange === range 
-                            ? "text-gray-900 font-medium bg-gray-100" 
-                            : "text-gray-400 hover:text-gray-600"
+                            ? "text-foreground font-medium bg-muted" 
+                            : "text-muted-foreground/60 hover:text-muted-foreground"
                         }`}
                         data-testid={`radio-range-${range}-desktop`}
                       >
@@ -456,7 +456,7 @@ export default function Overview2() {
                       </button>
                     ))}
                   </div>
-                  <div className="w-px h-4 bg-gray-200" />
+                  <div className="w-px h-4 bg-border" />
                   <div className="flex items-center gap-0.5">
                     {(["day", "week"] as const).map((b) => (
                       <button
@@ -464,8 +464,8 @@ export default function Overview2() {
                         onClick={() => setForecastBucket(b)}
                         className={`px-2.5 py-1 text-[11px] transition-colors rounded ${
                           forecastBucket === b 
-                            ? "text-gray-900 font-medium bg-gray-100" 
-                            : "text-gray-400 hover:text-gray-600"
+                            ? "text-foreground font-medium bg-muted" 
+                            : "text-muted-foreground/60 hover:text-muted-foreground"
                         }`}
                         data-testid={`radio-bucket-${b}-desktop`}
                       >
@@ -480,7 +480,7 @@ export default function Overview2() {
               <div className="flex-1 min-h-[250px] max-h-[500px]">
                 {cashInflowLoading ? (
                   <div className="h-full flex items-center justify-center">
-                    <div className="text-gray-400 text-sm">Loading chart...</div>
+                    <div className="text-muted-foreground text-sm">Loading chart...</div>
                   </div>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
@@ -494,7 +494,7 @@ export default function Overview2() {
                         interval={getXAxisInterval()}
                       />
                       <YAxis 
-                        tick={{ fontSize: 11, fill: '#9ca3af' }}
+                        tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
                         tickLine={false}
                         axisLine={false}
                         tickFormatter={(value) => formatCompactCurrency(value)}
@@ -506,33 +506,33 @@ export default function Overview2() {
                           const data = payload[0]?.payload;
                           if (!data) return null;
                           return (
-                            <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm text-[13px]">
-                              <p className="font-medium text-gray-900 mb-2">{label}</p>
+                            <div className="bg-background border border-border rounded-lg p-3 shadow-sm text-[13px]">
+                              <p className="font-medium text-foreground mb-2">{label}</p>
                               <div className="space-y-1">
                                 <div className="flex justify-between gap-4">
-                                  <span className="text-gray-500">Total Expected</span>
-                                  <span className="font-medium tabular-nums">{formatCurrency(data.expectedAmount)}</span>
+                                  <span className="text-muted-foreground">Total Expected</span>
+                                  <span className="font-medium tabular-nums text-foreground">{formatCurrency(data.expectedAmount)}</span>
                                 </div>
                                 <div className="flex justify-between gap-4">
-                                  <span className="text-gray-500">Confidence-Weighted</span>
-                                  <span className="font-medium tabular-nums text-gray-700">{formatCurrency(data.confidenceWeightedAmount)}</span>
+                                  <span className="text-muted-foreground">Confidence-Weighted</span>
+                                  <span className="font-medium tabular-nums text-foreground/80">{formatCurrency(data.confidenceWeightedAmount)}</span>
                                 </div>
-                                <div className="border-t border-gray-100 my-2 pt-2">
-                                  <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">By Confidence</p>
+                                <div className="border-t border-border my-2 pt-2">
+                                  <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider mb-1">By Confidence</p>
                                   <div className="flex justify-between gap-4">
                                     <span className="text-[#17B6C3]">High</span>
-                                    <span className="tabular-nums">{formatCurrency(data.highConfidence)}</span>
+                                    <span className="tabular-nums text-foreground">{formatCurrency(data.highConfidence)}</span>
                                   </div>
                                   <div className="flex justify-between gap-4">
                                     <span className="text-[#E8A23B]">Medium</span>
-                                    <span className="tabular-nums">{formatCurrency(data.mediumConfidence)}</span>
+                                    <span className="tabular-nums text-foreground">{formatCurrency(data.mediumConfidence)}</span>
                                   </div>
                                   <div className="flex justify-between gap-4">
-                                    <span className="text-gray-400">Low</span>
-                                    <span className="tabular-nums">{formatCurrency(data.lowConfidence)}</span>
+                                    <span className="text-muted-foreground/60">Low</span>
+                                    <span className="tabular-nums text-foreground">{formatCurrency(data.lowConfidence)}</span>
                                   </div>
                                 </div>
-                                <div className="text-gray-400 text-[10px]">
+                                <div className="text-muted-foreground/60 text-[10px]">
                                   {data.invoiceCount} invoice{data.invoiceCount !== 1 ? 's' : ''}
                                 </div>
                               </div>
@@ -551,7 +551,7 @@ export default function Overview2() {
                       <Line 
                         type="monotone"
                         dataKey="confidenceWeightedAmount" 
-                        stroke="#4B5563"
+                        stroke="#71717a"
                         strokeWidth={2}
                         dot={false}
                         animationDuration={600}
@@ -565,40 +565,40 @@ export default function Overview2() {
             </section>
 
             {/* Desktop Bottom Metrics - 4 column grid below chart */}
-            <div className="hidden lg:block py-5 mb-5 border-t border-gray-100 flex-shrink-0">
+            <div className="hidden lg:block py-5 mb-5 border-t border-border flex-shrink-0">
               <div className="grid grid-cols-4 gap-6">
                 <div className="text-center">
-                  <span className="text-xs text-gray-500 uppercase tracking-wider">Avg Days Late</span>
+                  <span className="text-xs text-muted-foreground uppercase tracking-wider">Avg Days Late</span>
                   {metricsLoading ? (
-                    <div className="h-7 w-20 bg-gray-100 animate-pulse rounded mt-1 mx-auto"></div>
+                    <div className="h-7 w-20 bg-muted animate-pulse rounded mt-1 mx-auto"></div>
                   ) : (
-                    <p className="text-lg font-semibold text-gray-900 tabular-nums mt-1">
-                      {Math.abs(avgDaysOverdue).toFixed(0)} <span className="text-sm font-normal text-gray-400">days</span>
+                    <p className="text-lg font-semibold text-foreground tabular-nums mt-1">
+                      {Math.abs(avgDaysOverdue).toFixed(0)} <span className="text-sm font-normal text-muted-foreground/60">days</span>
                     </p>
                   )}
                 </div>
                 <div className="text-center">
-                  <span className="text-xs text-gray-500 uppercase tracking-wider">Avg Days to Pay</span>
+                  <span className="text-xs text-muted-foreground uppercase tracking-wider">Avg Days to Pay</span>
                   {metricsLoading ? (
-                    <div className="h-7 w-20 bg-gray-100 animate-pulse rounded mt-1 mx-auto"></div>
+                    <div className="h-7 w-20 bg-muted animate-pulse rounded mt-1 mx-auto"></div>
                   ) : (
-                    <p className="text-lg font-semibold text-gray-900 tabular-nums mt-1">
-                      {avgDaysToPay.toFixed(0)} <span className="text-sm font-normal text-gray-400">days</span>
+                    <p className="text-lg font-semibold text-foreground tabular-nums mt-1">
+                      {avgDaysToPay.toFixed(0)} <span className="text-sm font-normal text-muted-foreground/60">days</span>
                     </p>
                   )}
                 </div>
                 <div className="text-center">
-                  <span className="text-xs text-gray-500 uppercase tracking-wider">On-time Rate</span>
+                  <span className="text-xs text-muted-foreground uppercase tracking-wider">On-time Rate</span>
                   {metricsLoading ? (
-                    <div className="h-7 w-16 bg-gray-100 animate-pulse rounded mt-1 mx-auto"></div>
+                    <div className="h-7 w-16 bg-muted animate-pulse rounded mt-1 mx-auto"></div>
                   ) : (
                     <p className="text-lg font-semibold text-[#4FAD80] tabular-nums mt-1">{(metrics?.onTimePaymentRate || 0).toFixed(0)}%</p>
                   )}
                 </div>
                 <div className="text-center">
-                  <span className="text-xs text-gray-500 uppercase tracking-wider">Promises Kept</span>
+                  <span className="text-xs text-muted-foreground uppercase tracking-wider">Promises Kept</span>
                   {metricsLoading ? (
-                    <div className="h-7 w-16 bg-gray-100 animate-pulse rounded mt-1 mx-auto"></div>
+                    <div className="h-7 w-16 bg-muted animate-pulse rounded mt-1 mx-auto"></div>
                   ) : (
                     <p className="text-lg font-semibold text-[#4FAD80] tabular-nums mt-1">{(metrics?.promisesKeptRate ?? 0).toFixed(0)}%</p>
                   )}
