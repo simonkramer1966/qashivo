@@ -1,0 +1,1016 @@
+    calculateIrregularBufferForForecast,
+    getRecommendedBeta
+  } = await import('./services/irregularBufferService.js');
+
+  /**
+   * GET /api/forecast/ard
+   * Get latest ARD (Average Receivable Days) for tenant
+   */
+  app.get('/api/forecast/ard', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const ard = await getLatestARD(user.tenantId);
+      
+      res.json({ averageReceivableDays: ard });
+    } catch (error) {
+      console.error('Error fetching ARD:', error);
+      res.status(500).json({ message: "Failed to fetch ARD" });
+    }
+  });
+
+  /**
+   * POST /api/forecast/ard/calculate
+   * Manually trigger ARD calculation
+   */
+  app.post('/api/forecast/ard/calculate', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const options = req.body || {};
+      const result = await calculateAndStoreARD(user.tenantId, options);
+      
+      res.json(result);
+    } catch (error) {
+      console.error('Error calculating ARD:', error);
+      res.status(500).json({ message: "Failed to calculate ARD" });
+    }
+  });
+
+  /**
+   * GET /api/forecast/ard/history
+   * Get ARD calculation history
+   */
+  app.get('/api/forecast/ard/history', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 30;
+      const history = await getARDHistory(user.tenantId, limit);
+      
+      res.json(history);
+    } catch (error) {
+      console.error('Error fetching ARD history:', error);
+      res.status(500).json({ message: "Failed to fetch ARD history" });
+    }
+  });
+
+  /**
+   * GET /api/forecast/ard/trend
+   * Get ARD trend (improving/stable/deteriorating)
+   */
+  app.get('/api/forecast/ard/trend', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const trend = await getARDTrend(user.tenantId);
+      
+      res.json(trend);
+    } catch (error) {
+      console.error('Error fetching ARD trend:', error);
+      res.status(500).json({ message: "Failed to fetch ARD trend" });
+    }
+  });
+
+  /**
+   * GET /api/forecast/sales
+   * Get sales forecasts for a date range
+   */
+  app.get('/api/forecast/sales', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { fromMonth, toMonth } = req.query;
+      
+      if (!fromMonth) {
+        return res.status(400).json({ message: "fromMonth is required (format: YYYY-MM)" });
+      }
+
+      const forecasts = await getSalesForecasts(
+        user.tenantId,
+        fromMonth as string,
+        toMonth as string | undefined
+      );
+      
+      res.json(forecasts);
+    } catch (error) {
+      console.error('Error fetching sales forecasts:', error);
+      res.status(500).json({ message: "Failed to fetch sales forecasts" });
+    }
+  });
+
+  /**
+   * POST /api/forecast/sales
+   * Create or update sales forecast for a month
+   */
+  app.post('/api/forecast/sales', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { forecastMonth, ...data } = req.body;
+      
+      if (!forecastMonth) {
+        return res.status(400).json({ message: "forecastMonth is required (format: YYYY-MM)" });
+      }
+
+      const forecast = await upsertSalesForecast(
+        user.tenantId,
+        forecastMonth,
+        data,
+        user.id
+      );
+      
+      res.json(forecast);
+    } catch (error) {
+      console.error('Error upserting sales forecast:', error);
+      res.status(500).json({ message: "Failed to save sales forecast" });
+    }
+  });
+
+  /**
+   * POST /api/forecast/sales/batch
+   * Batch update sales forecasts
+   */
+  app.post('/api/forecast/sales/batch', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { forecasts } = req.body;
+      
+      if (!Array.isArray(forecasts)) {
+        return res.status(400).json({ message: "forecasts must be an array" });
+      }
+
+      const results = await Promise.all(
+        forecasts.map(({ forecastMonth, ...data }) =>
+          upsertSalesForecast(user.tenantId!, forecastMonth, data, user.id)
+        )
+      );
+      
+      res.json({ updated: results.length, forecasts: results });
+    } catch (error) {
+      console.error('Error batch updating sales forecasts:', error);
+      res.status(500).json({ message: "Failed to batch update sales forecasts" });
+    }
+  });
+
+  /**
+   * GET /api/forecast/sales/cash-inflows
+   * Convert sales forecasts to expected cash inflows (ARD-adjusted)
+   */
+  app.get('/api/forecast/sales/cash-inflows', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const monthsAhead = req.query.months ? parseInt(req.query.months as string) : 6;
+      
+      const cashInflows = await getSalesForecastCashInflows(user.tenantId, monthsAhead);
+      
+      res.json(cashInflows);
+    } catch (error) {
+      console.error('Error fetching sales cash inflows:', error);
+      res.status(500).json({ message: "Failed to fetch sales cash inflows" });
+    }
+  });
+
+  /**
+   * POST /api/forecast/sales/generate-defaults
+   * Generate default (zero) forecasts for next 12 months
+   */
+  app.post('/api/forecast/sales/generate-defaults', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const forecasts = await generateDefaultForecasts(user.tenantId, user.id);
+      
+      res.json({ generated: forecasts.length, forecasts });
+    } catch (error) {
+      console.error('Error generating default forecasts:', error);
+      res.status(500).json({ message: "Failed to generate default forecasts" });
+    }
+  });
+
+  /**
+   * GET /api/forecast/irregular-buffer
+   * Get irregular buffer calculation for one-off expenses
+   */
+  app.get('/api/forecast/irregular-buffer', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const forecastDays = req.query.days ? parseInt(req.query.days as string) : 91;
+      const beta = req.query.beta ? parseFloat(req.query.beta as string) : undefined;
+
+      const buffer = await calculateIrregularBufferForForecast(
+        user.tenantId,
+        forecastDays,
+        beta ? { beta } : {}
+      );
+      
+      res.json(buffer);
+    } catch (error) {
+      console.error('Error calculating irregular buffer:', error);
+      res.status(500).json({ message: "Failed to calculate irregular buffer" });
+    }
+  });
+
+  /**
+   * GET /api/forecast/irregular-buffer/recommended-beta
+   * Get recommended beta coefficient based on expense volatility
+   */
+  app.get('/api/forecast/irregular-buffer/recommended-beta', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const beta = await getRecommendedBeta(user.tenantId);
+      
+      res.json({ recommendedBeta: beta });
+    } catch (error) {
+      console.error('Error calculating recommended beta:', error);
+      res.status(500).json({ message: "Failed to calculate recommended beta" });
+    }
+  });
+
+  // ==================== END INTELLIGENT FORECAST API ====================
+
+  // ==================== RBAC MANAGEMENT API ====================
+
+  // RBAC middleware imported at top of file; import PermissionService for role management
+  const { PermissionService } = await import("./services/permissionService");
+
+  // Get all users in tenant with their roles and permissions
+  app.get("/api/rbac/users", ...withPermission('admin:users'), async (req: any, res) => {
+    try {
+      const { tenantId } = req.rbac;
+      
+      const users = await storage.getUsersInTenant(tenantId);
+      const usersWithPermissions = await Promise.all(
+        users.map(async (user) => {
+          const permissions = await PermissionService.getUserPermissions(user.id, tenantId);
+          return {
+            ...user,
+            permissions: permissions.map(p => PermissionService.getPermissionInfo(p))
+          };
+        })
+      );
+
+      res.json(usersWithPermissions);
+    } catch (error) {
+      console.error("Error fetching tenant users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  // Assign or change user role  
+  app.put("/api/rbac/users/:userId/role", ...withPermission('admin:users'), canManageUser(), async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const { role } = req.body;
+      const { userId: actorId, userRole: actorRole } = req.rbac;
+
+      if (!role) {
+        return res.status(400).json({ message: "Role is required" });
+      }
+
+      // Validate that the actor can assign this role
+      const assignableRoles = storage.getAssignableRoles(actorRole);
+      if (!assignableRoles.includes(role)) {
+        return res.status(403).json({ 
+          message: "Cannot assign this role",
+          assignableRoles
+        });
+      }
+
+      // Assign the role
+      const updatedUser = await storage.assignUserRole(userId, role, actorId);
+      
+      await PermissionService.logPermissionChange(
+        actorId, 
+        userId, 
+        req.rbac.tenantId, 
+        'role_change',
+        `Role changed from ${req.targetUser.role} to ${role}`
+      );
+
+      const { ipAddress, userAgent } = extractClientInfo(req);
+      logSecurityEvent({ eventType: 'role_change', userId: actorId, tenantId: req.rbac.tenantId, ipAddress, userAgent, metadata: { targetUserId: userId, oldRole: req.targetUser.role, newRole: role } });
+
+      res.json({
+        user: updatedUser ? stripSensitiveUserFields(updatedUser) : updatedUser,
+        message: `User role updated to ${role}`
+      });
+    } catch (error) {
+      console.error("Error updating user role:", error);
+      res.status(500).json({ message: "Failed to update user role" });
+    }
+  });
+
+  // Get all available permissions organized by category
+  app.get("/api/rbac/permissions", ...withPermission('admin:users'), async (req: any, res) => {
+    try {
+      const permissionsByCategory = PermissionService.getPermissionsByCategory();
+      res.json(permissionsByCategory);
+    } catch (error) {
+      console.error("Error fetching permissions:", error);
+      res.status(500).json({ message: "Failed to fetch permissions" });
+    }
+  });
+
+  // Get permissions for a specific role
+  app.get("/api/rbac/roles/:role/permissions", ...withPermission('admin:users'), async (req: any, res) => {
+    try {
+      const { role } = req.params;
+      
+      if (!PermissionService.isValidRole(role)) {
+        return res.status(400).json({ message: "Invalid role" });
+      }
+
+      const permissions = PermissionService.getRolePermissions(role);
+      const permissionDetails = permissions.map(p => PermissionService.getPermissionInfo(p));
+      
+      res.json({
+        role,
+        permissions: permissionDetails,
+        permissionCount: permissions.length
+      });
+    } catch (error) {
+      console.error("Error fetching role permissions:", error);
+      res.status(500).json({ message: "Failed to fetch role permissions" });
+    }
+  });
+
+  // Get all available roles with their details
+  app.get("/api/rbac/roles", ...withPermission('admin:users'), async (req: any, res) => {
+    try {
+      const roles = PermissionService.getAvailableRoles();
+      res.json(roles);
+    } catch (error) {
+      console.error("Error fetching roles:", error);
+      res.status(500).json({ message: "Failed to fetch roles" });
+    }
+  });
+
+  // Create user invitation
+  app.post("/api/rbac/invitations", ...withPermission('admin:users'), async (req: any, res) => {
+    try {
+      const { email, role } = req.body;
+      const { userId: invitedBy, tenantId, userRole: inviterRole } = req.rbac;
+
+      if (!email || !role) {
+        return res.status(400).json({ message: "Email and role are required" });
+      }
+
+      // Validate that the inviter can assign this role
+      const assignableRoles = storage.getAssignableRoles(inviterRole);
+      if (!assignableRoles.includes(role)) {
+        return res.status(403).json({ 
+          message: "Cannot invite users to this role",
+          assignableRoles
+        });
+      }
+
+      // Check if user already exists in this tenant
+      const existingUsers = await storage.getUsersInTenant(tenantId);
+      const existingUser = existingUsers.find(u => u.email === email);
+      if (existingUser) {
+        return res.status(400).json({ message: "User already exists in this tenant" });
+      }
+
+      // Create invitation
+      const invitation = await storage.createUserInvitation({
+        email,
+        role,
+        tenantId,
+        invitedBy
+      });
+
+      // Send invitation email via SendGrid
+      try {
+        const tenant = await storage.getTenant(tenantId);
+        const inviter = await storage.getUser(invitedBy);
+        const { sendUserInvitationEmail } = await import("./services/email/SendGridEmailService");
+        await sendUserInvitationEmail({
+          email,
+          inviteToken: invitation.inviteToken,
+          role,
+          tenantName: tenant?.name || 'your organisation',
+          inviterName: inviter ? `${inviter.firstName || ''} ${inviter.lastName || ''}`.trim() || inviter.email : undefined,
+        });
+        console.log(`📧 Invitation email sent to ${email} for tenant ${tenantId}`);
+      } catch (emailErr: any) {
+        console.error(`⚠️ Invitation created but email failed to send:`, emailErr.message);
+      }
+
+      res.status(201).json({
+        success: true,
+        invitationId: invitation.id,
+        message: `Invitation sent to ${email} for role ${role}`,
+      });
+    } catch (error) {
+      console.error("Error creating user invitation:", error);
+      res.status(500).json({ message: "Failed to create invitation" });
+    }
+  });
+
+  // Get pending invitations for tenant
+  app.get("/api/rbac/invitations", ...withPermission('admin:users'), async (req: any, res) => {
+    try {
+      const { tenantId } = req.rbac;
+      const invitations = await storage.getPendingInvitations(tenantId);
+      res.json(invitations);
+    } catch (error) {
+      console.error("Error fetching invitations:", error);
+      res.status(500).json({ message: "Failed to fetch invitations" });
+    }
+  });
+
+  // Revoke user invitation
+  app.delete("/api/rbac/invitations/:invitationId", ...withPermission('admin:users'), async (req: any, res) => {
+    try {
+      const { invitationId } = req.params;
+      await storage.revokeUserInvitation(invitationId);
+      
+      res.json({
+        success: true,
+        message: "Invitation revoked successfully"
+      });
+    } catch (error) {
+      console.error("Error revoking invitation:", error);
+      res.status(500).json({ message: "Failed to revoke invitation" });
+    }
+  });
+
+  // Verify user invitation token (public endpoint)
+  app.get("/api/rbac/invitations/verify", async (req, res) => {
+    try {
+      const { token } = req.query;
+      if (!token || typeof token !== 'string') {
+        return res.status(400).json({ valid: false, message: "Token is required" });
+      }
+
+      const allTenants = await storage.getAllTenants();
+      for (const tenant of allTenants) {
+        const settings = tenant.settings as any || {};
+        const invitations = settings.invitations || [];
+        const invitation = invitations.find((inv: any) => inv.inviteToken === token && inv.status === 'pending');
+        if (invitation) {
+          return res.json({
+            valid: true,
+            email: invitation.email,
+            role: invitation.role,
+            tenantName: tenant.name,
+          });
+        }
+      }
+
+      return res.json({ valid: false, message: "Invalid or expired invitation" });
+    } catch (error) {
+      console.error("Error verifying invitation:", error);
+      res.status(500).json({ valid: false, message: "Failed to verify invitation" });
+    }
+  });
+
+  // Accept user invitation (public endpoint - no auth required)
+  app.post("/api/rbac/invitations/accept", async (req, res) => {
+    try {
+      const { inviteToken, firstName, lastName, password } = req.body;
+      
+      if (!inviteToken) {
+        return res.status(400).json({ message: "Invite token is required" });
+      }
+
+      if (!password) {
+        return res.status(400).json({ message: "Password is required" });
+      }
+
+      const strengthErrors = [];
+      if (password.length < 10) strengthErrors.push("at least 10 characters");
+      if (!/[A-Z]/.test(password)) strengthErrors.push("one uppercase letter");
+      if (!/[a-z]/.test(password)) strengthErrors.push("one lowercase letter");
+      if (!/[0-9]/.test(password)) strengthErrors.push("one number");
+      if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(password)) strengthErrors.push("one special character");
+      if (strengthErrors.length > 0) {
+        return res.status(400).json({ message: `Password must include ${strengthErrors.join(", ")}` });
+      }
+
+      if (!firstName) {
+        return res.status(400).json({ message: "First name is required" });
+      }
+
+      const bcrypt = await import("bcryptjs");
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      const user = await storage.acceptUserInvitation(inviteToken, {
+        firstName,
+        lastName,
+        password: hashedPassword,
+      });
+
+      const { ipAddress, userAgent } = extractClientInfo(req);
+      logSecurityEvent({ eventType: 'invite_accepted', userId: user.id, tenantId: user.tenantId, ipAddress, userAgent, metadata: { email: user.email, role: user.role } });
+
+      regenerateSessionOnLogin(req, user as any, (err) => {
+        if (err) {
+          console.error("Auto-login after invite accept failed:", err);
+          return res.json({
+            success: true,
+            user: {
+              id: user.id,
+              email: user.email,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              role: user.role
+            },
+            message: "Account created successfully. Please sign in.",
+            redirect: "/login"
+          });
+        }
+
+        return res.json({
+          success: true,
+          user: {
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            role: user.role
+          },
+          message: "Welcome! Your account is ready.",
+          redirect: "/"
+        });
+      });
+    } catch (error) {
+      console.error("Error accepting invitation:", error);
+      if (error instanceof Error && error.message.includes('Invalid or expired')) {
+        return res.status(400).json({ message: error.message });
+      }
+      res.status(500).json({ message: "Failed to accept invitation" });
+    }
+  });
+
+  // Check user permissions (utility endpoint)
+  app.post("/api/rbac/check-permission", isAuthenticated, withRBACContext, async (req: any, res) => {
+    try {
+      const { permission } = req.body;
+      const { userId, tenantId } = req.rbac;
+      
+      if (!permission) {
+        return res.status(400).json({ message: "Permission is required" });
+      }
+
+      const hasPermission = await PermissionService.hasPermission(userId, tenantId, permission);
+      
+      res.json({
+        hasPermission,
+        permission,
+        userId,
+        tenantId
+      });
+    } catch (error) {
+      console.error("Error checking permission:", error);
+      res.status(500).json({ message: "Failed to check permission" });
+    }
+  });
+
+  // Get current user's permissions
+  app.get("/api/rbac/my-permissions", isAuthenticated, withRBACContext, async (req: any, res) => {
+    try {
+      const { userId, tenantId, userRole, permissions } = req.rbac;
+      
+      res.json({
+        userId,
+        tenantId,
+        role: userRole,
+        permissions: permissions.map(p => PermissionService.getPermissionInfo(p)),
+        permissionCount: permissions.length
+      });
+    } catch (error) {
+      console.error("Error fetching user permissions:", error);
+      res.status(500).json({ message: "Failed to fetch user permissions" });
+    }
+  });
+
+  // Remove user from tenant (only owners can do this)
+  app.delete("/api/rbac/users/:userId", ...withRole('owner'), canManageUser(), async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const { userId: actorId, tenantId } = req.rbac;
+      
+      // Cannot remove yourself
+      if (userId === actorId) {
+        return res.status(400).json({ message: "Cannot remove yourself from the tenant" });
+      }
+
+      // Set user's tenantId to null to remove them from the tenant
+      await storage.updateUser(userId, { tenantId: null });
+      
+      // Log the removal
+      await PermissionService.logPermissionChange(
+        actorId,
+        userId,
+        tenantId,
+        'role_change',
+        'User removed from tenant'
+      );
+
+      res.json({
+        success: true,
+        message: "User removed from tenant successfully"
+      });
+    } catch (error) {
+      console.error("Error removing user:", error);
+      res.status(500).json({ message: "Failed to remove user" });
+    }
+  });
+
+  // Get role hierarchy information
+  app.get("/api/rbac/role-hierarchy", ...withPermission('admin:users'), async (req: any, res) => {
+    try {
+      const { userRole } = req.rbac;
+      
+      const availableRoles = PermissionService.getAvailableRoles();
+      const assignableRoles = storage.getAssignableRoles(userRole);
+      
+      res.json({
+        availableRoles,
+        assignableRoles,
+        userRole,
+        hierarchy: ['readonly', 'credit_controller', 'manager', 'accountant', 'admin', 'owner']
+      });
+    } catch (error) {
+      console.error("Error fetching role hierarchy:", error);
+      res.status(500).json({ message: "Failed to fetch role hierarchy" });
+    }
+  });
+
+  // ==================== END RBAC MANAGEMENT API ====================
+
+  // ==================== PARTNER-CLIENT SYSTEM API ====================
+
+  // Get subscription plans (for partner dashboard)
+  app.get("/api/partner/subscription-plans", isAuthenticated, async (req: any, res) => {
+    try {
+      const { type } = req.query;
+      const plans = await storage.getSubscriptionPlans(type);
+      res.json(plans);
+    } catch (error) {
+      console.error("Error fetching subscription plans:", error);
+      res.status(500).json({ message: "Failed to fetch subscription plans" });
+    }
+  });
+
+  // Get partner's client relationships
+  app.get("/api/partner/clients", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Users with a partnerId can access their partner's clients
+      if (!user.partnerId) {
+        return res.status(403).json({ message: "Access denied. You are not associated with a partner organization." });
+      }
+
+      // Get SME clients for this partner
+      const clients = await db
+        .select()
+        .from(smeClients)
+        .where(eq(smeClients.partnerId, user.partnerId));
+      
+      res.json(clients);
+    } catch (error) {
+      console.error("Error fetching partner clients:", error);
+      res.status(500).json({ message: "Failed to fetch client relationships" });
+    }
+  });
+
+  // Get client's partner relationships (for client dashboard)
+  app.get("/api/client/partners", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const relationships = await storage.getClientPartnerRelationships(user.tenantId);
+      res.json(relationships);
+    } catch (error) {
+      console.error("Error fetching client partners:", error);
+      res.status(500).json({ message: "Failed to fetch partner relationships" });
+    }
+  });
+
+  // Terminate partner-client relationship
+  app.delete("/api/partner/clients/:relationshipId", isAuthenticated, async (req: any, res) => {
+    try {
+      const { relationshipId } = req.params;
+      const { reason } = req.body;
+      const user = await storage.getUser(req.user.id);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Only partners or tenant owners can terminate relationships
+      if (user.role !== 'partner' && user.role !== 'owner') {
+        return res.status(403).json({ message: "Access denied. Partner or owner role required." });
+      }
+
+      const relationship = await storage.terminatePartnerClientRelationship(
+        relationshipId, 
+        user.id, 
+        reason
+      );
+      
+      console.log(`🔗 Partnership terminated: ${user.id} terminated relationship ${relationshipId}`);
+      res.json({
+        success: true,
+        relationship,
+        message: "Partnership terminated successfully"
+      });
+    } catch (error) {
+      console.error("Error terminating partnership:", error);
+      res.status(500).json({ message: "Failed to terminate partnership" });
+    }
+  });
+
+  // ==================== TENANT INVITATION SYSTEM ====================
+
+  // Create tenant invitation (client invites partner)
+  app.post("/api/invitations/create", ...withPermission('admin:users'), async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // Only owners and admins can create invitations
+      if (!['owner', 'admin'].includes(user.role || '')) {
+        return res.status(403).json({ message: "Access denied. Owner or admin role required." });
+      }
+
+      const invitationSchema = z.object({
+        partnerEmail: z.string().email("Valid email address required"),
+        accessLevel: z.enum(['read_only', 'read_write', 'full_access']).default('read_write'),
+        permissions: z.array(z.string()).default([]),
+        customMessage: z.string().optional(),
+        expiresAt: z.string().optional()
+      });
+
+      const validated = invitationSchema.parse(req.body);
+      
+      // Create the invitation
+      const invitation = await storage.createTenantInvitation({
+        clientTenantId: user.tenantId,
+        partnerEmail: validated.partnerEmail,
+        invitedByUserId: user.id,
+        accessLevel: validated.accessLevel,
+        permissions: validated.permissions,
+        customMessage: validated.customMessage,
+        status: 'pending',
+        expiresAt: validated.expiresAt ? new Date(validated.expiresAt) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days default
+      });
+
+      console.log(`📧 Invitation created: ${user.email} invited ${validated.partnerEmail} as partner`);
+      
+      // TODO: Send email notification to partner
+      // await emailService.sendPartnerInvitation(validated.partnerEmail, invitation);
+      
+      res.json({
+        success: true,
+        invitation,
+        message: "Invitation sent successfully"
+      });
+    } catch (error) {
+      console.error("Error creating invitation:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid request data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create invitation" });
+    }
+  });
+
+  // Get tenant invitations for current tenant
+  app.get("/api/invitations/outgoing", ...withPermission('admin:users'), async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const invitations = await storage.getTenantInvitations(user.tenantId);
+      res.json(invitations);
+    } catch (error) {
+      console.error("Error fetching outgoing invitations:", error);
+      res.status(500).json({ message: "Failed to fetch invitations" });
+    }
+  });
+
+  // Get incoming invitations for partner (by email)
+  app.get("/api/invitations/incoming", ...withPermission('admin:users'), async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.email) {
+        return res.status(400).json({ message: "User email not found" });
+      }
+
+      const invitations = await storage.getTenantInvitationsByPartner(user.email);
+      res.json(invitations);
+    } catch (error) {
+      console.error("Error fetching incoming invitations:", error);
+      res.status(500).json({ message: "Failed to fetch invitations" });
+    }
+  });
+
+  // Accept tenant invitation
+  app.post("/api/invitations/:invitationId/accept", ...withPermission('admin:users'), async (req: any, res) => {
+    try {
+      const { invitationId } = req.params;
+      const { responseMessage } = req.body;
+      const user = await storage.getUser(req.user.id);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Get the invitation to verify the partner email matches
+      const invitation = await storage.getTenantInvitation(invitationId);
+      if (!invitation) {
+        return res.status(404).json({ message: "Invitation not found" });
+      }
+
+      if (invitation.partnerEmail !== user.email) {
+        return res.status(403).json({ message: "This invitation is not for your email address" });
+      }
+
+      if (invitation.status !== 'pending') {
+        return res.status(400).json({ message: "Invitation is no longer pending" });
+      }
+
+      if (invitation.expiresAt && new Date() > invitation.expiresAt) {
+        return res.status(400).json({ message: "Invitation has expired" });
+      }
+
+      const result = await storage.acceptTenantInvitation(invitationId, user.id, responseMessage);
+      
+      console.log(`🤝 Partnership established: ${user.email} accepted invitation from ${invitation.clientTenant.name}`);
+      
+      res.json({
+        success: true,
+        invitation: result.invitation,
+        relationship: result.relationship,
+        message: "Invitation accepted and partnership established"
+      });
+    } catch (error) {
+      console.error("Error accepting invitation:", error);
+      res.status(500).json({ message: "Failed to accept invitation" });
+    }
+  });
+
+  // Decline tenant invitation
+  app.post("/api/invitations/:invitationId/decline", ...withPermission('admin:users'), async (req: any, res) => {
+    try {
+      const { invitationId } = req.params;
+      const { responseMessage } = req.body;
+      const user = await storage.getUser(req.user.id);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Get the invitation to verify the partner email matches
+      const invitation = await storage.getTenantInvitation(invitationId);
+      if (!invitation) {
+        return res.status(404).json({ message: "Invitation not found" });
+      }
+
+      if (invitation.partnerEmail !== user.email) {
+        return res.status(403).json({ message: "This invitation is not for your email address" });
+      }
+
+      if (invitation.status !== 'pending') {
+        return res.status(400).json({ message: "Invitation is no longer pending" });
+      }
+
+      const declinedInvitation = await storage.declineTenantInvitation(invitationId, responseMessage);
+      
+      console.log(`❌ Partnership declined: ${user.email} declined invitation from ${invitation.clientTenant.name}`);
+      
+      res.json({
+        success: true,
+        invitation: declinedInvitation,
+        message: "Invitation declined"
+      });
+    } catch (error) {
+      console.error("Error declining invitation:", error);
+      res.status(500).json({ message: "Failed to decline invitation" });
+    }
+  });
+
+  // Get tenant metadata (subscription info, etc.)
+  app.get("/api/tenant/metadata", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const metadata = await storage.getTenantMetadata(user.tenantId);
+      res.json(metadata || { tenantId: user.tenantId });
+    } catch (error) {
+      console.error("Error fetching tenant metadata:", error);
+      res.status(500).json({ message: "Failed to fetch tenant metadata" });
+    }
+  });
+
+  // Update tenant metadata
+  app.put("/api/tenant/metadata", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // Only owners can update metadata
+      if (user.role !== 'owner') {
+        return res.status(403).json({ message: "Access denied. Owner role required." });
+      }
+
+      const metadataSchema = z.object({
+        subscriptionPlanId: z.string().optional(),
+        billingEmail: z.string().email().optional(),
+        maxClientConnections: z.number().int().min(0).optional(),
+        features: z.array(z.string()).optional(),
+        settings: z.record(z.any()).optional()
+      });
+
+      const validated = metadataSchema.parse(req.body);
+      
+      // Check if metadata exists
+      let metadata = await storage.getTenantMetadata(user.tenantId);
+      
+      if (metadata) {
+        // Update existing metadata
+        metadata = await storage.updateTenantMetadata(user.tenantId, validated);
+      } else {
+        // Create new metadata
+        metadata = await storage.createTenantMetadata({
+          tenantId: user.tenantId,
+          ...validated
+        });
+      }
+      
+      res.json(metadata);
+    } catch (error) {
+      console.error("Error updating tenant metadata:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid request data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update tenant metadata" });
+    }
+  });
+
+  // ==================== SUBSCRIPTION MANAGEMENT API ====================
+
+  // GET /api/subscription/plans - Get available plans by type
+  app.get("/api/subscription/plans", isAuthenticated, async (req: any, res) => {
+    try {
+      const typeFilter = req.query.type as 'partner' | 'client' | undefined;
+      const plans = await storage.getSubscriptionPlans(typeFilter);
+      res.json(plans);
+    } catch (error) {
+      console.error("Error fetching subscription plans:", error);

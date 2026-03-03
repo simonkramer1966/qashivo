@@ -145,6 +145,18 @@ app.use((req, res, next) => {
   next();
 });
 
+// ─── Process-level error guards ───────────────────────────────────────────────
+process.on('uncaughtException', (err) => {
+  console.error(`[FATAL] uncaughtException — pid ${process.pid}:`, err);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error(`[FATAL] unhandledRejection — pid ${process.pid}:`, reason);
+  process.exit(1);
+});
+// ──────────────────────────────────────────────────────────────────────────────
+
 (async () => {
   const server = await registerRoutes(app);
   
@@ -153,6 +165,27 @@ app.use((req, res, next) => {
   
   // Register partner operating layer routes
   registerPartnerRoutes(app);
+
+  // ─── Graceful shutdown ──────────────────────────────────────────────────────
+  function shutdown(signal: string) {
+    console.log(`[SHUTDOWN] Received ${signal} — closing server (pid ${process.pid})`);
+    server.close((err) => {
+      if (err) {
+        console.error('[SHUTDOWN] Error during close:', err);
+        process.exit(1);
+      }
+      console.log('[SHUTDOWN] Server closed cleanly — exiting 0');
+      process.exit(0);
+    });
+    // Force-exit after 10 s if server.close() hangs
+    setTimeout(() => {
+      console.error('[SHUTDOWN] Forced exit after timeout');
+      process.exit(1);
+    }, 10_000).unref();
+  }
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT',  () => shutdown('SIGINT'));
+  // ───────────────────────────────────────────────────────────────────────────
 
   if (process.env.NODE_ENV !== 'test') {
     await startAll();
@@ -362,11 +395,21 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
+
+  server.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`[FATAL] Port ${port} is already in use (EADDRINUSE) — pid ${process.pid}. Exiting.`);
+    } else {
+      console.error(`[FATAL] Server error — pid ${process.pid}:`, err);
+    }
+    process.exit(1);
+  });
+
   server.listen({
     port,
     host: "0.0.0.0",
     reusePort: true,
   }, () => {
-    log(`serving on port ${port}`);
+    log(`serving on port ${port} — pid ${process.pid}`);
   });
 })();

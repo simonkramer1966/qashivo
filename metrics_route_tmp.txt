@@ -1,0 +1,13 @@
+  // Dashboard Metrics Endpoint (Sprint 3)
+  app.get('/api/metrics', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.id);
+      if (!user || !user.tenantId) {
+        return res.status(404).json({ message: 'User or tenant not found' });
+      }
+
+      const metrics = await getDashboardMetrics(user.tenantId);
+      res.json(metrics);
+    } catch (error) {
+      console.error('Failed to get dashboard metrics:', error);
+      res.status(500).json({ message: 'Failed to retrieve metrics' });

@@ -1,0 +1,400 @@
+
+  // Recent Activity endpoint
+  app.get("/api/dashboard/recent-activity", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // Helper function to get time ago
+      const getTimeAgo = (date: Date | null): string => {
+        if (!date) return 'unknown';
+        
+        const now = new Date();
+        const diffInMs = now.getTime() - new Date(date).getTime();
+        const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+        const diffInDays = Math.floor(diffInHours / 24);
+
+        if (diffInDays === 0) {
+          if (diffInHours === 0) return 'just now';
+          return `${diffInHours} hour${diffInHours === 1 ? '' : 's'}`;
+        } else if (diffInDays === 1) {
+          return '1 day';
+        } else {
+          return `${diffInDays} days`;
+        }
+      };
+
+      // Helper function to map action types
+      const mapActionType = (actionType: string | null): string => {
+        const typeMapping: { [key: string]: string } = {
+          'email': 'reminder',
+          'call': 'call',
+          'sms': 'reminder', 
+          'reminder': 'reminder',
+          'dispute': 'dispute',
+          'follow_up': 'reminder',
+          'escalation': 'overdue'
+        };
+        
+        return typeMapping[actionType || ''] || 'activity';
+      };
+
+      // Get recent actions (last 30 days)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const recentActions = await db
+        .select({
+          id: actions.id,
+          type: actions.type,
+          status: actions.status,
+          createdAt: actions.createdAt,
+          contactName: contacts.name,
+          invoiceNumber: invoices.invoiceNumber,
+          invoiceAmount: invoices.amount,
+        })
+        .from(actions)
+        .leftJoin(contacts, eq(actions.contactId, contacts.id))
+        .leftJoin(invoices, eq(actions.invoiceId, invoices.id))
+        .where(
+          and(
+            eq(actions.tenantId, user.tenantId),
+            gte(actions.createdAt, thirtyDaysAgo)
+          )
+        )
+        .orderBy(desc(actions.createdAt))
+        .limit(10);
+
+      // Get recent bank transactions (payments, last 30 days)
+      const recentPayments = await db
+        .select({
+          id: bankTransactions.id,
+          amount: bankTransactions.amount,
+          description: bankTransactions.description,
+          createdAt: bankTransactions.createdAt,
+          contactName: contacts.name,
+          type: bankTransactions.type,
+        })
+        .from(bankTransactions)
+        .leftJoin(contacts, eq(bankTransactions.contactId, contacts.id))
+        .where(
+          and(
+            eq(bankTransactions.tenantId, user.tenantId),
+            gte(bankTransactions.createdAt, thirtyDaysAgo)
+          )
+        )
+        .orderBy(desc(bankTransactions.createdAt))
+        .limit(10);
+
+      // Define activity type
+      interface Activity {
+        id: string;
+        type: string;
+        customer: string;
+        amount: number;
+        time: string;
+        timestamp: Date | null;
+        source: 'action' | 'payment';
+      }
+
+      // Combine and format the activities
+      const activities: Activity[] = [];
+
+      // Add collection actions
+      recentActions.forEach(action => {
+        const timeAgo = getTimeAgo(action.createdAt);
+        activities.push({
+          id: action.id,
+          type: mapActionType(action.type),
+          customer: action.contactName || 'Unknown Contact',
+          amount: action.invoiceAmount || 0,
+          time: timeAgo,
+          timestamp: action.createdAt,
+          source: 'action'
+        });
+      });
+
+      // Add payments
+      recentPayments.forEach(payment => {
+        const timeAgo = getTimeAgo(payment.createdAt);
+        activities.push({
+          id: payment.id,
+          type: 'payment',
+          customer: payment.contactName || 'Unknown Contact',
+          amount: Math.abs(payment.amount || 0),
+          time: timeAgo,
+          timestamp: payment.createdAt,
+          source: 'payment'
+        });
+      });
+
+      // Sort by timestamp (most recent first) and limit to 8
+      activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      const recentActivities = activities.slice(0, 8);
+
+      res.json(recentActivities);
+    } catch (error) {
+      console.error("Error fetching recent activity:", error);
+      res.status(500).json({ message: "Failed to fetch recent activity" });
+    }
+  });
+
+  // Top Debtors endpoint
+  app.get("/api/dashboard/top-debtors", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // Get top debtors by outstanding amount
+      const topDebtors = await db
+        .select({
+          id: contacts.id,
+          company: contacts.name,
+          totalOutstanding: sql<number>`SUM(CAST(${invoices.amount} AS DECIMAL) - CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL))`,
+          invoiceCount: sql<number>`COUNT(${invoices.id})`,
+          oldestInvoiceDate: sql<Date>`MIN(${invoices.dueDate})`,
+          contactEmail: contacts.email,
+          contactPhone: contacts.phone,
+        })
+        .from(contacts)
+        .leftJoin(invoices, and(
+          eq(invoices.contactId, contacts.id),
+          eq(invoices.tenantId, user.tenantId),
+          sql`CAST(${invoices.amount} AS DECIMAL) > CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL)` // Only unpaid invoices
+        ))
+        .where(eq(contacts.tenantId, user.tenantId))
+        .groupBy(contacts.id, contacts.name, contacts.email, contacts.phone)
+        .having(sql`SUM(CAST(${invoices.amount} AS DECIMAL) - CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL)) > 0`)
+        .orderBy(sql`SUM(CAST(${invoices.amount} AS DECIMAL) - CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL)) DESC`)
+        .limit(10);
+
+      // Format the response
+      const formattedDebtors = topDebtors.map((debtor, index) => ({
+        id: debtor.id,
+        rank: index + 1,
+        company: debtor.company || 'Unknown Company',
+        amount: Number(debtor.totalOutstanding) || 0,
+        invoiceCount: Number(debtor.invoiceCount) || 0,
+        oldestInvoiceDate: debtor.oldestInvoiceDate,
+        email: debtor.contactEmail,
+        phone: debtor.contactPhone,
+      }));
+
+      res.json(formattedDebtors);
+    } catch (error) {
+      console.error("Error fetching top debtors:", error);
+      res.status(500).json({ message: "Failed to fetch top debtors" });
+    }
+  });
+
+  // Dashboard metrics
+  app.get("/api/dashboard/metrics", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      console.log(`📊 Dashboard metrics - tenantId: ${user.tenantId}`);
+      
+      const [metrics, debtRecoveryMetrics, ptpStats] = await Promise.all([
+        storage.getInvoiceMetrics(user.tenantId),
+        storage.getDebtRecoveryMetrics(user.tenantId),
+        storage.getPromisesKeptRate(user.tenantId)
+      ]);
+      
+      console.log(`📊 Dashboard metrics result - collectedThisMonth: ${metrics.collectedThisMonth}, collectedThisWeek: ${metrics.collectedThisWeek}`);
+      
+      res.json({
+        ...metrics,
+        ...debtRecoveryMetrics,
+        promisesKeptRate: ptpStats.rate
+      });
+    } catch (error) {
+      console.error("Error fetching dashboard metrics:", error);
+      res.status(500).json({ message: "Failed to fetch metrics" });
+    }
+  });
+
+  // Dashboard cash inflow forecast (real data from invoices + outcomes)
+  app.get("/api/dashboard/cash-inflow", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const range = parseInt(req.query.range as string) || 60;
+      const bucket = (req.query.bucket as "day" | "week") || "week";
+      
+      const validRanges = [30, 60, 90];
+      const rangeDays = validRanges.includes(range) ? range : 60;
+      const bucketType = bucket === "day" ? "day" : "week";
+
+      const result = await computeCashInflow(user.tenantId, rangeDays, bucketType);
+      res.json(result);
+    } catch (error) {
+      console.error("Error computing cash inflow forecast:", error);
+      res.status(500).json({ message: "Failed to compute cash inflow forecast" });
+    }
+  });
+
+  // Dashboard leaderboards - Best/Worst Payers and Top Outstanding
+  app.get("/api/dashboard/leaderboards", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // Get all invoices for the tenant
+      const allInvoices = await storage.getInvoices(user.tenantId);
+      
+      // Calculate payment behavior per contact
+      const contactPaymentMap = new Map<string, {
+        contactId: string;
+        contactName: string;
+        totalPaid: number;
+        paidCount: number;
+        totalDaysToPay: number;
+        avgDaysToPay: number;
+        outstanding: number;
+        overdueCount: number;
+      }>();
+
+      for (const invoice of allInvoices) {
+        if (!contactPaymentMap.has(invoice.contactId)) {
+          const contact = await storage.getContact(invoice.contactId, user.tenantId);
+          contactPaymentMap.set(invoice.contactId, {
+            contactId: invoice.contactId,
+            contactName: contact?.companyName || contact?.name || 'Unknown',
+            totalPaid: 0,
+            paidCount: 0,
+            totalDaysToPay: 0,
+            avgDaysToPay: 0,
+            outstanding: 0,
+            overdueCount: 0
+          });
+        }
+
+        const contactData = contactPaymentMap.get(invoice.contactId)!;
+        
+        // Calculate for paid invoices
+        if (invoice.status === 'paid' && invoice.paidDate && invoice.issueDate) {
+          const daysToPay = Math.floor((new Date(invoice.paidDate).getTime() - new Date(invoice.issueDate).getTime()) / (1000 * 3600 * 24));
+          contactData.paidCount++;
+          contactData.totalDaysToPay += daysToPay;
+          contactData.totalPaid += parseFloat(invoice.amount);
+        }
+        
+        // Calculate outstanding
+        if (invoice.status === 'overdue' || invoice.status === 'pending') {
+          const outstanding = parseFloat(invoice.amount) - parseFloat(invoice.amountPaid || '0');
+          contactData.outstanding += outstanding;
+          
+          if (invoice.status === 'overdue') {
+            contactData.overdueCount++;
+          }
+        }
+      }
+
+      // Calculate average days to pay
+      contactPaymentMap.forEach(data => {
+        if (data.paidCount > 0) {
+          data.avgDaysToPay = Math.round(data.totalDaysToPay / data.paidCount);
+        }
+      });
+
+      // Filter contacts with at least one paid invoice
+      const contactsWithPayments = Array.from(contactPaymentMap.values())
+        .filter(c => c.paidCount > 0);
+
+      // Best payers (lowest avg days to pay)
+      const bestPayers = contactsWithPayments
+        .sort((a, b) => a.avgDaysToPay - b.avgDaysToPay)
+        .slice(0, 10)
+        .map((c, idx) => ({
+          rank: idx + 1,
+          contactId: c.contactId,
+          contactName: c.contactName,
+          avgDaysToPay: c.avgDaysToPay,
+          paidCount: c.paidCount,
+          totalPaid: c.totalPaid
+        }));
+
+      // Worst payers (highest avg days to pay)
+      const worstPayers = contactsWithPayments
+        .sort((a, b) => b.avgDaysToPay - a.avgDaysToPay)
+        .slice(0, 10)
+        .map((c, idx) => ({
+          rank: idx + 1,
+          contactId: c.contactId,
+          contactName: c.contactName,
+          avgDaysToPay: c.avgDaysToPay,
+          paidCount: c.paidCount,
+          totalPaid: c.totalPaid
+        }));
+
+      // Top outstanding (highest current outstanding balance)
+      const topOutstanding = Array.from(contactPaymentMap.values())
+        .filter(c => c.outstanding > 0)
+        .sort((a, b) => b.outstanding - a.outstanding)
+        .slice(0, 10)
+        .map((c, idx) => ({
+          rank: idx + 1,
+          contactId: c.contactId,
+          contactName: c.contactName,
+          outstanding: c.outstanding,
+          overdueCount: c.overdueCount
+        }));
+
+      // Calculate interest summary for the metrics card
+      const overdueInvoices = allInvoices.filter(inv => inv.status === 'overdue');
+      const tenant = await storage.getTenant(user.tenantId);
+      
+      let interestSummary = {
+        totalInterest: 0,
+        totalPrincipal: 0,
+        totalWithInterest: 0,
+        combinedRate: parseFloat(tenant?.boeBaseRate || '5.00') + parseFloat(tenant?.interestMarkup || '8.00'),
+        gracePeriod: tenant?.interestGracePeriod || 30
+      };
+
+      if (overdueInvoices.length > 0 && tenant) {
+        overdueInvoices.forEach(invoice => {
+          const principal = parseFloat(invoice.amount) - parseFloat(invoice.amountPaid || '0');
+          const result = calculateLatePaymentInterest({
+            principalAmount: principal,
+            dueDate: new Date(invoice.dueDate),
+            currentDate: new Date(),
+            boeBaseRate: parseFloat(tenant.boeBaseRate || '5.00'),
+            interestMarkup: parseFloat(tenant.interestMarkup || '8.00'),
+            gracePeriod: tenant.interestGracePeriod || 30
+          });
+          
+          interestSummary.totalInterest += result.interestAmount;
+          interestSummary.totalPrincipal += principal;
+          interestSummary.totalWithInterest += result.totalAmountDue;
+        });
+        
+        // Round to 2 decimal places
+        interestSummary.totalInterest = Math.round(interestSummary.totalInterest * 100) / 100;
+        interestSummary.totalPrincipal = Math.round(interestSummary.totalPrincipal * 100) / 100;
+        interestSummary.totalWithInterest = Math.round(interestSummary.totalWithInterest * 100) / 100;
+      }
+
+      res.json({
+        bestPayers,
+        worstPayers,
+        topOutstanding,
+        summary: interestSummary
+      });
+    } catch (error) {
+      console.error("Error fetching dashboard leaderboards:", error);
+      res.status(500).json({ message: "Failed to fetch leaderboards" });
+    }
+  });
