@@ -1,0 +1,187 @@
+Here’s a tightened, execution-ready one-week rebuild plan that matches your objectives, with daily goals (Mar 3 → Mar 10 demo), acceptance checks, and a few gotchas to prevent demo-day surprises.
+
+Calendar plan (Europe/London)
+Day 1 — Tue Mar 3: Server stability (T001)
+
+Goal: server never “mysteriously dies”, and restarts never get stuck on a port.
+
+Do:
+
+Add server.on('error', ...) handling for EADDRINUSE with loud logging + process.exit(1)
+
+Add graceful shutdown on SIGTERM + SIGINT that server.close() then exits
+
+Add uncaughtException + unhandledRejection guards (log + shutdown)
+
+Acceptance checks (do these locally + on deployed env):
+
+Restart loop: start → stop → start 10 times, no EADDRINUSE
+
+Kill test: kill -TERM <pid> and Ctrl+C both log clean shutdown and exit 0/1 predictably
+
+Forced error: throw from a request handler → see log + shutdown (no silent hang)
+
+Demo-risk reducer: ensure you log which PID and which port at startup and shutdown.
+
+Days 2–4 — Wed Mar 4 to Fri Mar 6: Backend refactor (T002–T013)
+
+Goal: split routes without changing any behavior.
+
+Golden rule: no API changes, no path changes, no auth changes, no response shape changes.
+
+Practical extraction order (minimize merges/conflicts)
+
+T002 contacts
+
+T003 invoices
+
+T006 integrations (Xero)
+
+T005 communications (email/SMS/voice/retell)
+
+T004 collections/actions (biggest)
+
+T007 settings/RBAC
+
+T008 dashboard/analytics
+
+T009 banking/cashflow
+
+T010 outcomes/payment plans
+
+T011 onboarding/demo-data
+
+T012 inbox/inbound
+
+T013 remainder cleanup + diff audit
+
+Acceptance checks after each extraction
+
+“Register count” check: number of routes in the module matches what you moved
+
+Smoke calls: hit a small set of endpoints per module (200 + correct JSON shape)
+
+Build + typecheck + server boot
+
+Diff audit at the end: every old route appears exactly once across new modules
+
+Tip: When you move routes, keep them as a single exported function:
+
+export function registerContactRoutes(app: Express) { ... }
+so server/index.ts becomes a clean “route registrar”.
+
+Day 5 — Sat Mar 7: Demo flow hardening (T014–T018)
+
+Goal: “rock-solid” flows, not just “works once”.
+
+T014 Collections
+
+Acceptance:
+
+Action centre loads with demo data
+
+Create → execute → complete loop works
+
+Workflow triggers fire reliably (and are visible somewhere: logs + UI state)
+
+T015 Xero
+
+Acceptance:
+
+Connect flow works end-to-end (auth → callback → token persisted)
+
+Manual sync works for both contacts + invoices
+
+Settings shows “health” consistently (and handles disconnected state cleanly)
+
+T016 AI voice (Retell)
+
+Acceptance:
+
+Initiate call from action centre
+
+Call status updates reliably (polling/webhook whichever you use)
+
+Transcript/outcome stored + visible
+
+Follow-up email generation happens (or is stubbed but deterministic)
+
+T017 Debtor portal
+
+Acceptance:
+
+Magic link generation + delivery works
+
+OTP auth works first try
+
+Invoice view, dispute, promise-to-pay, Stripe payment all succeed on demo data
+
+T018 Partner view
+
+Acceptance:
+
+Partner login → practice dashboard → client list (with DSO) → client detail works
+
+No “empty screen” states; all have loading/empty/error UX that looks intentional
+
+KPIs look believable and stable with demo seed data
+
+Demo-risk reducer: every flow needs a “happy path script” and a “demo-safe failure mode” (e.g., Xero disconnected shows clear CTA instead of stack trace).
+
+Day 6 — Sun Mar 8: CSS Zinc pass (T019)
+
+Goal: consistent theme across all pages, no random slate/gray.
+
+Acceptance:
+
+Grep shows near-zero slate- / gray- leftovers (except intentional)
+
+5 demo flows visually consistent in deployed build
+
+Partner pages get extra love (they’re the easiest to visually “feel unfinished”)
+
+Demo-risk reducer: fix the worst 10% of visual inconsistencies first (buttons, cards, headers, tables) rather than chasing every single class.
+
+Day 7 — Mon Mar 9: Deploy + smoke + script rehearsal (T020–T021)
+
+Goal: live build is stable, tested, and rehearsed.
+
+Acceptance:
+
+Full demo script run on qashivo.com without dev tools open
+
+Demo data is loaded and predictable (same outputs each run)
+
+No server startup issues, no EADDRINUSE, no missing env vars
+
+All 5 flows verified on production domain
+
+Demo-risk reducer: record a 3–5 minute backup screen recording of the demo flows on production (only as a last resort safety net).
+
+Highest-risk items (handle early)
+
+Retell call flow reliability (webhooks/polling timing + UI state)
+
+Xero OAuth callback + token persistence (env/config + redirect URIs)
+
+Debtor portal auth (magic link + OTP edge cases)
+
+Collections/actions routes extraction (largest surface area)
+
+Theme consistency across partner pages (perceived quality)
+
+Quick “definition of done” for the rebuild
+
+routes.ts < 200 lines and only exports a clean registrar
+
+Server shutdown/restart is deterministic and logged
+
+All demo flows have:
+
+happy path
+
+stable demo data
+
+“safe failure mode” (no blank/stack traces)
+
+Production smoke test is repeatable
