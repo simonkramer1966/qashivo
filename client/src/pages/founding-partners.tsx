@@ -619,7 +619,8 @@ export default function FoundingPartners() {
           <h2 className="text-2xl font-bold text-gray-900 mb-5">A quick note from the founder</h2>
           <p className="text-gray-600 text-lg leading-relaxed mb-6">
             I'm building Qashivo with a small group of accounting firms first, so we get the workflow right and the outcomes are real.
-            If you want to offer credit control that scales, without adding headcount, I'd love to have you in the founding team.
+            <br /><br />
+            If you want to offer credit control that scales and automated cashflow without adding headcount, I'd love to have you on the founding team.
           </p>
           <p className="text-lg font-semibold text-gray-900">Simon</p>
           <p className="text-sm text-gray-400 mt-1">Founder, Qashivo</p>
