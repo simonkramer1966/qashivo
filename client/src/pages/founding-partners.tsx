@@ -242,7 +242,7 @@ export default function FoundingPartners() {
                 SMEs don't have an invoice problem. They have a follow-up and outcomes problem. Promises to pay, requests for more time, and disputes live in messy inbox threads, so cash stays uncertain.
               </p>
               <p className="text-lg text-gray-600 leading-relaxed">
-                For accounting firms, credit control is hard to scale because it's manual, inconsistent, and outcome-blind. Qashivo captures intent as structured outcomes so the next action is obvious, and the forecast updates immediately.
+                For accounting firms, credit control is hard to scale because it's manual, inconsistent, and outcome-blind. Qashivo captures intent as structured outcomes so the next action is obvious, and the cashflow forecast updates immediately.
               </p>
             </div>
           </div>
