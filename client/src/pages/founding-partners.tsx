@@ -641,7 +641,7 @@ export default function FoundingPartners() {
       {/* Founder Signature */}
       <section className="py-20">
         <div className="max-w-2xl mx-auto px-6 text-center">
-          <div className="w-16 h-16 rounded-full mx-auto mb-6 overflow-hidden">
+          <div className="w-48 h-48 rounded-full mx-auto mb-6 overflow-hidden">
             <img src={simonPic} alt="Simon" className="w-full h-full object-cover" />
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-5">A quick note from the founder</h2>
