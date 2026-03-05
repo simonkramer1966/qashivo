@@ -114,7 +114,7 @@ export default function FoundingPartners() {
       {/* Hero */}
       <section className="py-20 md:py-28 border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+          <div className="grid lg:grid-cols-2 gap-0 items-center">
             {/* Left: Copy */}
             <div>
               <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest mb-5 px-3 py-1 rounded-full border border-gray-200 text-gray-500">
@@ -161,17 +161,15 @@ export default function FoundingPartners() {
             </div>
 
             {/* Right: Hero video */}
-            <div className="flex items-center justify-center">
-              <div className="w-full rounded-xl shadow-lg overflow-hidden">
-                <video
-                  src={heroVideo}
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  className="w-full h-auto"
-                />
-              </div>
+            <div className="aspect-square overflow-hidden">
+              <video
+                src={heroVideo}
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="w-full h-full object-cover"
+              />
             </div>
           </div>
         </div>
