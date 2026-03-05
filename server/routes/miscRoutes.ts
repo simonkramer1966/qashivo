@@ -19,7 +19,7 @@ import {
   inboundMessages, smsMessages, investorLeads, onboardingProgress, messageDrafts,
   tenants, paymentPromises, promisesToPay, smeClients, contactNotes, timelineEvents,
   attentionItems, outcomes, activityLogs, collectionPolicies, paymentPlans,
-  emailMessages, customerContactPersons, scheduledReports,
+  emailMessages, customerContactPersons, scheduledReports, partnerWaitlist,
 } from "@shared/schema";
 import { computeNextRunAt } from "../services/reportScheduler";
 import { REPORT_TYPE_LABELS, type ReportType } from "../services/reportGenerator";
@@ -1621,6 +1621,54 @@ export function registerMiscRoutes(app: Express): void {
     } catch (error) {
       console.error("Error seeding subscription plans:", error);
       res.status(500).json({ message: "Failed to seed subscription plans", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
+  app.post("/api/public/partner-waitlist", async (req, res) => {
+    try {
+      const bodySchema = z.object({
+        fullName: z.string().min(1),
+        email: z.string().email(),
+        firmName: z.string().min(1),
+        mobile: z.string().min(1),
+        q1: z.string().min(1),
+        q2: z.string().min(1),
+        q3: z.string().min(1),
+        q4: z.string().min(1),
+        q5: z.string().min(1),
+        otherText: z.string().optional(),
+        sourcePath: z.string().optional(),
+        website: z.string().optional(),
+      });
+
+      const data = bodySchema.parse(req.body);
+
+      if (data.website && data.website.trim() !== "") {
+        return res.status(400).json({ error: "Bot detected" });
+      }
+
+      await db.insert(partnerWaitlist).values({
+        fullName: data.fullName,
+        email: data.email,
+        firmName: data.firmName,
+        mobile: data.mobile,
+        q1: data.q1,
+        q2: data.q2,
+        q3: data.q3,
+        q4: data.q4,
+        q5: data.q5,
+        otherText: data.otherText || null,
+        sourcePath: data.sourcePath || "/founding-partners",
+      });
+
+      console.log(`[waitlist] new application: ${data.email} — ${data.firmName}`);
+      res.json({ success: true });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid form data", issues: error.errors });
+      }
+      console.error("[waitlist] Error saving application:", error);
+      res.status(500).json({ error: "Failed to save application" });
     }
   });
 }

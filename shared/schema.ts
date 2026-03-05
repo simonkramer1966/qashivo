@@ -8,6 +8,7 @@ import {
   varchar,
   text,
   integer,
+  serial,
   decimal,
   boolean,
   unique,
@@ -5323,6 +5324,32 @@ export const insertScheduledReportSchema = createInsertSchema(scheduledReports).
 });
 export type InsertScheduledReport = z.infer<typeof insertScheduledReportSchema>;
 export type ScheduledReport = typeof scheduledReports.$inferSelect;
+
+// ============================================================
+// PARTNER WAITLIST - FOUNDING COHORT APPLICATIONS
+// ============================================================
+export const partnerWaitlist = pgTable("partner_waitlist", {
+  id: serial("id").primaryKey(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  fullName: text("full_name").notNull(),
+  email: text("email").notNull(),
+  firmName: text("firm_name").notNull(),
+  mobile: text("mobile").notNull(),
+  q1: text("q1").notNull(),
+  q2: text("q2").notNull(),
+  q3: text("q3").notNull(),
+  q4: text("q4").notNull(),
+  q5: text("q5").notNull(),
+  otherText: text("other_text"),
+  sourcePath: text("source_path").default("/founding-partners").notNull(),
+});
+
+export const insertPartnerWaitlistSchema = createInsertSchema(partnerWaitlist).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertPartnerWaitlist = z.infer<typeof insertPartnerWaitlistSchema>;
+export type PartnerWaitlist = typeof partnerWaitlist.$inferSelect;
 
 // ============================================================
 // DEBTOR PACK ROW - UI PROJECTION FOR LOOP LEFT PANE
