@@ -161,15 +161,17 @@ export default function FoundingPartners() {
             </div>
 
             {/* Right: Hero video */}
-            <div className="flex items-center justify-center min-h-[340px] lg:min-h-[440px]">
-              <video
-                src={heroVideo}
-                autoPlay
-                loop
-                muted
-                playsInline
-                className="w-full rounded-2xl object-cover"
-              />
+            <div className="flex items-center justify-center">
+              <div className="w-full rounded-xl shadow-lg overflow-hidden">
+                <video
+                  src={heroVideo}
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  className="w-full h-auto"
+                />
+              </div>
             </div>
           </div>
         </div>
