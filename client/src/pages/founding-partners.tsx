@@ -11,7 +11,7 @@ import officeImg from "@assets/image_1772706665154.png";
 import smeOwnerImg from "@assets/image_1772706996989.png";
 import {
   Check, ChevronRight, Database, Calendar, UserCheck, Play, BarChart2,
-  RefreshCw, Shield, FileText, Lock, AlertCircle, Users, Clock,
+  RefreshCw, Shield, FileText, Lock, Users, Clock,
   Building, Link, TrendingUp, MessageSquare, Mail,
 } from "lucide-react";
 
@@ -89,13 +89,6 @@ export default function FoundingPartners() {
     { icon: Play, label: "Execute" },
     { icon: BarChart2, label: "Capture Outcomes" },
     { icon: RefreshCw, label: "Adjust" },
-  ];
-
-  const trustItems = [
-    { icon: UserCheck, label: "Human approval required" },
-    { icon: FileText, label: "Full audit trail" },
-    { icon: Lock, label: "Data minimised" },
-    { icon: AlertCircle, label: "Exceptions-first workflow" },
   ];
 
   return (
@@ -248,68 +241,6 @@ export default function FoundingPartners() {
                 {i < steps.length - 1 && (
                   <ChevronRight className="h-5 w-5 text-gray-300 hidden sm:block shrink-0" />
                 )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-      {/* Selection Criteria */}
-      <section className="py-20 border-b border-gray-100">
-        <div className="max-w-6xl mx-auto px-6">
-          <h2 className="text-3xl font-bold text-gray-900 mb-10">Who we're choosing first</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-10">
-            <div>
-              <h3 className="text-lg font-semibold mb-5" style={{ color: TEAL }}>This is a fit if you're:</h3>
-              <ul className="space-y-3">
-                {[
-                  "An accounting firm serving SMEs where late payment is a recurring issue",
-                  "Either already offering credit control or ready to launch it as a packaged service",
-                  "Comfortable giving feedback as we iterate",
-                  "Serious about trust and process (approval layer, audit trail)",
-                ].map((item) => (
-                  <li key={item} className="flex items-start gap-3 text-gray-700">
-                    <Check className="h-5 w-5 mt-0.5 shrink-0" style={{ color: TEAL }} />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-red-500 mb-5">This probably isn't a fit if you want:</h3>
-              <ul className="space-y-3">
-                {[
-                  "Fully autonomous chasing with no approval",
-                  "A generic reminder tool",
-                  "A 'set and forget' approach with no learning loop",
-                ].map((item) => (
-                  <li key={item} className="flex items-start gap-3 text-gray-600">
-                    <span className="mt-1 shrink-0 text-red-400 font-bold leading-none">✕</span>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-          <p className="text-lg text-gray-600 mb-8 text-center">
-            If you're building a modern accounting firm where outcomes matter, you'll feel at home here.
-          </p>
-          <div className="rounded-xl border-l-4 bg-gray-50 px-6 py-5" style={{ borderLeftColor: TEAL }}>
-            <p className="font-semibold text-gray-900 italic text-[18px] text-center">
-              "You're not joining a list. You're joining the inner circle that builds the new standard for credit control."
-            </p>
-          </div>
-        </div>
-      </section>
-      {/* Trust & Controls */}
-      <section className="py-16 border-b border-gray-100 bg-gray-50">
-        <div className="max-w-4xl mx-auto px-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {trustItems.map(({ icon: Icon, label }) => (
-              <div key={label} className="flex flex-col items-center text-center gap-3 p-4">
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${TEAL}15` }}>
-                  <Icon className="h-6 w-6" style={{ color: TEAL }} />
-                </div>
-                <span className="text-sm font-medium text-gray-700 leading-tight">{label}</span>
               </div>
             ))}
           </div>
