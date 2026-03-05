@@ -189,7 +189,7 @@ export default function FoundingPartners() {
               { icon: FileText, label: "Full Audit Trail" },
               { icon: MessageSquare, label: "Outcome Capture (Intent)" },
               { icon: TrendingUp, label: "Cash-in Confidence" },
-              { icon: Mail, label: "Email + SMS + Voice (MVP)" },
+              { icon: Mail, label: "Email + SMS + Voice" },
               { icon: Link, label: "Xero / QuickBooks" },
               { icon: Building, label: "Open Banking" },
             ].map(({ icon: Icon, label }) => (
