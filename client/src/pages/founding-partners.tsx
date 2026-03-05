@@ -126,7 +126,7 @@ export default function FoundingPartners() {
                 Launching — Founding Cohort (UK Accounting Firms)
               </div>
               <h1 className="text-4xl md:text-5xl font-bold leading-tight text-gray-900 mb-5">
-                We're launching Qashivo — partner-led credit control that scales.
+                Hi, we're launching Qashivo
               </h1>
               <p className="text-lg font-semibold text-gray-800 mb-6">
                 Helping clients get paid faster — without adding headcount.
