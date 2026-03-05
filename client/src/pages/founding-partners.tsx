@@ -8,6 +8,7 @@ import heroVideo from "@assets/Hero-Animation-Feb-25-10-10-55_1772704261589.mp4"
 import logo from "@assets/Main_Nexus_Logo_copy_1768893717341.png";
 import simonPic from "@assets/Simon_Pic_1772705100283.avif";
 import officeImg from "@assets/image_1772706665154.png";
+import smeOwnerImg from "@assets/image_1772706996989.png";
 import {
   Check, ChevronRight, Database, Calendar, UserCheck, Play, BarChart2,
   RefreshCw, Shield, FileText, Lock, AlertCircle, Users, Clock,
@@ -236,8 +237,8 @@ export default function FoundingPartners() {
       <section className="py-20 border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="rounded-xl border border-gray-200 bg-gray-100 aspect-[4/3] flex items-center justify-center order-2 lg:order-1">
-              <span className="text-sm text-gray-400 font-medium">Image placeholder</span>
+            <div className="rounded-xl overflow-hidden aspect-[4/3] order-2 lg:order-1">
+              <img src={smeOwnerImg} alt="SME owner reviewing invoices" className="w-full h-full object-cover" />
             </div>
             <div className="order-1 lg:order-2">
               <h2 className="text-3xl font-bold text-gray-900 mb-5">The problems we're solving</h2>
