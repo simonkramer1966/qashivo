@@ -657,7 +657,7 @@ export default function FoundingPartners() {
       {/* Footer */}
       <footer className="py-6 border-t border-gray-100 text-center">
         <p className="text-xs text-gray-400">
-          © {new Date().getFullYear()} Qashivo Ltd · <a href="/privacy" className="hover:underline">Privacy</a> · <a href="/terms" className="hover:underline">Terms</a>
+          © {new Date().getFullYear()} Nexus KPI Limited · <a href="/privacy" className="hover:underline">Privacy</a> · <a href="/terms" className="hover:underline">Terms</a>
         </p>
       </footer>
     </div>
