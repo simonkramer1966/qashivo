@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import heroVideo from "@assets/Hero-Animation-Feb-25-10-10-55_1772704261589.mp4";
 import logo from "@assets/Main_Nexus_Logo_copy_1768893717341.png";
+import simonPic from "@assets/Simon_Pic_1772705100283.avif";
 import {
   Check, ChevronRight, Database, Calendar, UserCheck, Play, BarChart2,
   RefreshCw, Shield, FileText, Lock, AlertCircle, Users, Clock,
@@ -640,8 +641,8 @@ export default function FoundingPartners() {
       {/* Founder Signature */}
       <section className="py-20">
         <div className="max-w-2xl mx-auto px-6 text-center">
-          <div className="w-16 h-16 rounded-full bg-gray-200 mx-auto mb-6 flex items-center justify-center">
-            <span className="text-2xl text-gray-400 font-bold">S</span>
+          <div className="w-16 h-16 rounded-full mx-auto mb-6 overflow-hidden">
+            <img src={simonPic} alt="Simon" className="w-full h-full object-cover" />
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-5">A quick note from the founder</h2>
           <p className="text-gray-600 text-lg leading-relaxed mb-6">
