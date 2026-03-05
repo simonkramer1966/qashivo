@@ -367,7 +367,7 @@ export default function FoundingPartners() {
                 messages: [
                   { side: "right", text: "Debtors often ask for more time, how do you handle that?" },
                   { side: "left",  text: "We detect the delay request, propose next steps, and adjust the plan automatically." },
-                  { side: "right", text: "That's exactly what we need." },
+                  { side: "right", text: "That's exactly what we need!!!" },
                 ],
               },
               {
