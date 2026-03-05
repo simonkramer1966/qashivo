@@ -190,20 +190,15 @@ export default function FoundingPartners() {
               { icon: MessageSquare, label: "Outcome Capture (Intent)" },
               { icon: TrendingUp, label: "Cash-in Confidence" },
               { icon: Mail, label: "Email + SMS + Voice (MVP)" },
-              { icon: Link, label: "Xero / QuickBooks", comingSoon: true },
-              { icon: Building, label: "Open Banking", comingSoon: true },
-            ].map(({ icon: Icon, label, comingSoon }) => (
+              { icon: Link, label: "Xero / QuickBooks" },
+              { icon: Building, label: "Open Banking" },
+            ].map(({ icon: Icon, label }) => (
               <div
                 key={label}
                 className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600"
               >
                 <Icon className="h-3.5 w-3.5 shrink-0 text-gray-400" />
                 <span className="text-xs font-medium whitespace-nowrap">{label}</span>
-                {comingSoon && (
-                  <span className="text-[10px] font-medium text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                    Coming soon
-                  </span>
-                )}
               </div>
             ))}
           </div>
