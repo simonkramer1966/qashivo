@@ -308,7 +308,7 @@ export default function FoundingPartners() {
               </ul>
             </div>
           </div>
-          <p className="text-lg text-gray-600 mb-8">
+          <p className="text-lg text-gray-600 mb-8 text-center">
             If you're building a modern accounting firm where outcomes matter, you'll feel at home here.
           </p>
           <div className="rounded-xl border-l-4 bg-gray-50 px-6 py-5" style={{ borderLeftColor: TEAL }}>
