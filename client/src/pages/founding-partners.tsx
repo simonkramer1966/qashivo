@@ -462,7 +462,7 @@ export default function FoundingPartners() {
                 </div>
 
                 <div className="pt-2 border-t border-gray-200">
-                  <p className="text-sm font-semibold text-gray-700 mb-4">5 qualification questions</p>
+                  <p className="text-sm font-semibold text-gray-700 mb-4">Tell us a bit more about you ...</p>
 
                   {/* Q1 */}
                   <div className="mb-4">
