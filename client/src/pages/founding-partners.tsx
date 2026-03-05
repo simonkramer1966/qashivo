@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import heroVideo from "@assets/Hero-Animation-Feb-25-10-10-55_1772704261589.mp4";
+import logo from "@assets/Main_Nexus_Logo_copy_1768893717341.png";
 import {
   Check, ChevronRight, Database, Calendar, UserCheck, Play, BarChart2,
   RefreshCw, Shield, FileText, Lock, AlertCircle, Users, Clock,
@@ -99,7 +100,10 @@ export default function FoundingPartners() {
       {/* Sticky Nav */}
       <nav className="sticky top-0 z-50 bg-white border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-6 flex justify-between items-center h-16">
-          <span className="text-xl font-bold tracking-tight text-gray-900">Qashivo</span>
+          <a href="/home" className="flex items-center gap-2">
+              <img src={logo} alt="Qashivo" className="h-8 w-8" />
+              <span className="font-semibold text-[#0B0F17] tracking-tight text-[22px]">Qashivo</span>
+            </a>
           <div className="flex items-center gap-4">
             <a href="/signin" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Sign in</a>
             <a href="/demo">
