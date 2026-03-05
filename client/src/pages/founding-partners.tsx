@@ -612,7 +612,7 @@ export default function FoundingPartners() {
                       <Clock className="h-4 w-4 animate-spin" /> Submitting...
                     </span>
                   ) : (
-                    "Submit application"
+                    "Join the Founding Team Waitlist"
                   )}
                 </Button>
               </form>
