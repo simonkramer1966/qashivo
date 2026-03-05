@@ -279,53 +279,6 @@ export default function FoundingPartners() {
         </div>
       </section>
 
-      {/* Founding Cohort Rules */}
-      <section className="py-20 border-b border-gray-100">
-        <div className="max-w-3xl mx-auto px-6">
-          <h2 className="text-3xl font-bold text-gray-900 mb-3">The Founding Cohort Rules</h2>
-          <p className="text-gray-600 mb-8">To keep this valuable and focused:</p>
-          <ol className="space-y-5">
-            {[
-              "One voice per firm inside the WhatsApp group (so it stays signal, not noise)",
-              "Pilot with 1–3 SMEs first (we prove the loop, then scale)",
-              "Human approval stays in place (nothing sends without sign-off — always)",
-              "We share what works (templates, sequences, and outcomes — anonymised where needed)",
-              "Founding members get the best commercial terms (lifetime discount stays attached to your firm)",
-            ].map((rule, i) => (
-              <li key={i} className="flex items-start gap-4">
-                <span className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold text-white" style={{ backgroundColor: TEAL }}>
-                  {i + 1}
-                </span>
-                <span className="text-gray-700 leading-relaxed pt-0.5">{rule}</span>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </section>
-
-      {/* Product Screenshots */}
-      <section className="py-20 border-b border-gray-100 bg-gray-50">
-        <div className="max-w-6xl mx-auto px-6">
-          <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">The platform</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[
-              { caption: "Daily Plan & Approvals" },
-              { caption: "Conversations + AI Outcome Capture" },
-              { caption: "Cash-in Forecast + Confidence" },
-            ].map(({ caption }) => (
-              <div key={caption} className="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm">
-                <div className="h-48 bg-gray-100 flex items-center justify-center">
-                  <span className="text-xs text-gray-400 font-medium">Screenshot placeholder</span>
-                </div>
-                <div className="px-4 py-3 border-t border-gray-100">
-                  <p className="text-sm font-medium text-gray-800">{caption}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Selection Criteria */}
       <section className="py-20 border-b border-gray-100">
         <div className="max-w-4xl mx-auto px-6">
