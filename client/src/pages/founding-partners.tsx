@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import heroVideo from "@assets/Hero-Animation-Feb-25-10-10-55_1772704261589.mp4";
 import {
   Check, ChevronRight, Database, Calendar, UserCheck, Play, BarChart2,
   RefreshCw, Shield, FileText, Lock, AlertCircle, Users, Clock,
@@ -159,17 +160,16 @@ export default function FoundingPartners() {
               </p>
             </div>
 
-            {/* Right: Animation slot */}
+            {/* Right: Hero video */}
             <div className="flex items-center justify-center min-h-[340px] lg:min-h-[440px]">
-              <div className="w-full h-full min-h-[340px] rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50 flex items-center justify-center">
-                <div className="text-center text-gray-400">
-                  <div className="w-14 h-14 rounded-full bg-gray-200 mx-auto mb-3 flex items-center justify-center">
-                    <Play className="h-6 w-6 text-gray-400" />
-                  </div>
-                  <p className="text-sm font-medium">Animation slot</p>
-                  <p className="text-xs mt-1">SVG / Lottie / Canvas</p>
-                </div>
-              </div>
+              <video
+                src={heroVideo}
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="w-full rounded-2xl object-cover"
+              />
             </div>
           </div>
         </div>
