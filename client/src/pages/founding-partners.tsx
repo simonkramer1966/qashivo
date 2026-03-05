@@ -359,7 +359,7 @@ export default function FoundingPartners() {
                 messages: [
                   { side: "right", text: "And if they raise a dispute or issue?" },
                   { side: "left",  text: "We classify it as a dispute, pause chasing, and flag it for your review." },
-                  { side: "right", text: "Perfect thanks." },
+                  { side: "right", text: "Perfect thanks. 👍" },
                 ],
               },
               {
