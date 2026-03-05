@@ -253,9 +253,6 @@ export default function FoundingPartners() {
               </li>
             ))}
           </ul>
-          <p className="text-lg font-semibold text-gray-900">
-            We're selecting up to 10 firms for the first cohort.
-          </p>
         </div>
       </section>
 
