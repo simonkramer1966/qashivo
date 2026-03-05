@@ -351,7 +351,7 @@ export default function FoundingPartners() {
                 messages: [
                   { side: "right", text: "What happens when a debtor replies with a promise to pay?" },
                   { side: "left",  text: "We capture the payment date, update expected cash, and schedule the right follow-up." },
-                  { side: "right", text: "Great, that's the part that kills our time." },
+                  { side: "right", text: "Great, that's the part that kills our time. 👏" },
                 ],
               },
               {
