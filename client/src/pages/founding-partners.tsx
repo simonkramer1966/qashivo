@@ -384,7 +384,7 @@ export default function FoundingPartners() {
                   <div className="w-7 h-7 rounded-full bg-green-500 flex items-center justify-center shrink-0">
                     <Users className="h-3.5 w-3.5 text-white" />
                   </div>
-                  <p className="font-semibold text-gray-700 text-[14px]">Qashivo Founding Team</p>
+                  <p className="font-semibold text-gray-700 text-[15px]">Qashivo Founding Team</p>
                 </div>
                 <div className="px-3 py-3 space-y-2 flex-1">
                   {chat.messages.map((msg, i) => (
