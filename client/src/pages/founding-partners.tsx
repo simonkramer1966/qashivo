@@ -107,14 +107,6 @@ export default function FoundingPartners() {
               <img src={logo} alt="Qashivo" className="h-8 w-8" />
               <span className="font-semibold text-[#0B0F17] tracking-tight text-[22px]">Qashivo</span>
             </a>
-          <div className="flex items-center gap-4">
-            <a href="/signin" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Sign in</a>
-            <a href="/demo">
-              <Button size="sm" style={{ backgroundColor: TEAL }} className="text-white hover:opacity-90">
-                Book a demo
-              </Button>
-            </a>
-          </div>
         </div>
       </nav>
       {/* Hero */}
