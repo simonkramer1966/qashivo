@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import heroVideo from "@assets/Hero-Animation-Feb-25-10-10-55_1772704261589.mp4";
 import logo from "@assets/Main_Nexus_Logo_copy_1768893717341.png";
 import simonPic from "@assets/Simon_Pic_1772705100283.avif";
+import officeImg from "@assets/image_1772706665154.png";
 import {
   Check, ChevronRight, Database, Calendar, UserCheck, Play, BarChart2,
   RefreshCw, Shield, FileText, Lock, AlertCircle, Users, Clock,
@@ -229,8 +230,8 @@ export default function FoundingPartners() {
                 ))}
               </ul>
             </div>
-            <div className="rounded-xl border border-gray-200 bg-gray-100 aspect-[4/3] flex items-center justify-center">
-              <span className="text-sm text-gray-400 font-medium">Image placeholder</span>
+            <div className="rounded-xl overflow-hidden aspect-[4/3]">
+              <img src={officeImg} alt="Accounting team at work" className="w-full h-full object-cover" />
             </div>
           </div>
         </div>
