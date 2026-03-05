@@ -281,7 +281,6 @@ export default function FoundingPartners() {
                 {[
                   "An accounting firm serving SMEs where late payment is a recurring issue",
                   "Either already offering credit control or ready to launch it as a packaged service",
-                  "Willing to pilot quickly (1–3 clients)",
                   "Comfortable giving feedback as we iterate",
                   "Serious about trust and process (approval layer, audit trail)",
                 ].map((item) => (
