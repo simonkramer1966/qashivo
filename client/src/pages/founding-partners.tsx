@@ -347,7 +347,7 @@ export default function FoundingPartners() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
               {
-                label: "Core promise (simple + powerful)",
+                key: "promise",
                 messages: [
                   { side: "right", text: "What happens when a debtor replies with a promise to pay?" },
                   { side: "left",  text: "We capture the payment date, update expected cash, and schedule the right follow-up." },
@@ -355,7 +355,7 @@ export default function FoundingPartners() {
                 ],
               },
               {
-                label: "Disputes (trust + control)",
+                key: "disputes",
                 messages: [
                   { side: "right", text: "And if they raise a dispute or issue?" },
                   { side: "left",  text: "We classify it as a dispute, pause chasing, and flag it for your review." },
@@ -363,7 +363,7 @@ export default function FoundingPartners() {
                 ],
               },
               {
-                label: "Need more time (common real-life)",
+                key: "moretime",
                 messages: [
                   { side: "right", text: "Debtors often ask for more time — how do you handle that?" },
                   { side: "left",  text: "We detect the delay request, propose next steps, and adjust the plan automatically." },
@@ -371,7 +371,7 @@ export default function FoundingPartners() {
                 ],
               },
               {
-                label: "Payment plans (high value)",
+                key: "plans",
                 messages: [
                   { side: "right", text: "Can Qashivo manage payment plans from replies?" },
                   { side: "left",  text: "Yes — we capture the agreed schedule and keep follow-ups on track." },
@@ -379,12 +379,12 @@ export default function FoundingPartners() {
                 ],
               },
             ].map((chat) => (
-              <div key={chat.label} className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden flex flex-col">
+              <div key={chat.key} className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden flex flex-col">
                 <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
                   <div className="w-7 h-7 rounded-full bg-green-500 flex items-center justify-center shrink-0">
                     <Users className="h-3.5 w-3.5 text-white" />
                   </div>
-                  <p className="text-xs font-semibold text-gray-700">{chat.label}</p>
+                  <p className="text-xs font-semibold text-gray-700">Qashivo Founding Team</p>
                 </div>
                 <div className="px-3 py-3 space-y-2 flex-1">
                   {chat.messages.map((msg, i) => (
