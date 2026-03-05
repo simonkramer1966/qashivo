@@ -278,43 +278,43 @@ export default function FoundingPartners() {
 
       {/* Selection Criteria */}
       <section className="py-20 border-b border-gray-100">
-        <div className="max-w-4xl mx-auto px-6">
+        <div className="max-w-6xl mx-auto px-6">
           <h2 className="text-3xl font-bold text-gray-900 mb-10">Who we're choosing first</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-10">
             <div>
-              <h3 className="font-semibold text-gray-900 mb-4" style={{ color: TEAL }}>This is a fit if you're:</h3>
+              <h3 className="text-lg font-semibold mb-5" style={{ color: TEAL }}>This is a fit if you're:</h3>
               <ul className="space-y-3">
                 {[
                   "An accounting firm serving SMEs where late payment is a recurring issue",
                   "Either already offering credit control or ready to launch it as a packaged service",
                   "Willing to pilot quickly (1–3 clients)",
                   "Comfortable giving feedback as we iterate",
-                  "Serious about trust + process (approval layer, audit trail)",
+                  "Serious about trust and process (approval layer, audit trail)",
                 ].map((item) => (
-                  <li key={item} className="flex items-start gap-3 text-gray-700 text-sm">
-                    <Check className="h-4 w-4 mt-0.5 shrink-0" style={{ color: TEAL }} />
+                  <li key={item} className="flex items-start gap-3 text-gray-700">
+                    <Check className="h-5 w-5 mt-0.5 shrink-0" style={{ color: TEAL }} />
                     <span>{item}</span>
                   </li>
                 ))}
               </ul>
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900 mb-4 text-red-500">This probably isn't a fit if you want:</h3>
+              <h3 className="text-lg font-semibold text-red-500 mb-5">This probably isn't a fit if you want:</h3>
               <ul className="space-y-3">
                 {[
-                  "fully autonomous chasing with no approval",
-                  "a generic reminder tool",
-                  "or a 'set and forget' approach with no learning loop",
+                  "Fully autonomous chasing with no approval",
+                  "A generic reminder tool",
+                  "A 'set and forget' approach with no learning loop",
                 ].map((item) => (
-                  <li key={item} className="flex items-start gap-3 text-gray-500 text-sm">
-                    <span className="mt-0.5 shrink-0 text-red-400">✕</span>
+                  <li key={item} className="flex items-start gap-3 text-gray-600">
+                    <span className="mt-1 shrink-0 text-red-400 font-bold leading-none">✕</span>
                     <span>{item}</span>
                   </li>
                 ))}
               </ul>
             </div>
           </div>
-          <p className="text-gray-600 mb-8 text-base">
+          <p className="text-lg text-gray-600 mb-8">
             If you're building a modern firm where outcomes matter, you'll feel at home here.
           </p>
           <div className="rounded-xl border-l-4 bg-gray-50 px-6 py-5" style={{ borderLeftColor: TEAL }}>
