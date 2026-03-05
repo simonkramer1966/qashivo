@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { db } from "../db";
-import { partners, smeClients, users, importJobs, activityLogs, tenants } from "@shared/schema";
+import { partners, smeClients, users, importJobs, activityLogs, tenants, partnerWaitlist } from "@shared/schema";
 import { eq, desc, sql, and, or, ilike, ne } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
@@ -903,6 +903,19 @@ router.get("/audit", requireAdminAuth, async (req, res) => {
     res.json(result);
   } catch (error: any) {
     console.error("Failed to fetch audit log:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get("/waitlist", requireAdminAuth, async (req, res) => {
+  try {
+    const entries = await db
+      .select()
+      .from(partnerWaitlist)
+      .orderBy(desc(partnerWaitlist.createdAt));
+    res.json(entries);
+  } catch (error: any) {
+    console.error("Failed to fetch partner waitlist:", error);
     res.status(500).json({ error: error.message });
   }
 });

@@ -7,6 +7,7 @@ import {
   ListChecks, 
   FileDown, 
   ScrollText,
+  ClipboardList,
   LogOut
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -25,6 +26,7 @@ const navItems = [
   { path: "/admin/provisioning", label: "Provisioning", icon: ListChecks },
   { path: "/admin/imports", label: "Imports & Sync", icon: FileDown },
   { path: "/admin/audit", label: "Audit Log", icon: ScrollText },
+  { path: "/admin/waitlist", label: "Waitlist", icon: ClipboardList },
 ];
 
 export default function AdminLayout({ children }: AdminLayoutProps) {

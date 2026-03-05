@@ -11,6 +11,7 @@ const AdminUsers = lazy(() => import("@/pages/admin-users"));
 const AdminProvisioning = lazy(() => import("@/pages/admin-provisioning"));
 const AdminImports = lazy(() => import("@/pages/admin-imports"));
 const AdminAudit = lazy(() => import("@/pages/admin-audit"));
+const AdminWaitlist = lazy(() => import("@/pages/admin-waitlist"));
 
 function LoadingSpinner() {
   return (
@@ -56,6 +57,7 @@ export default function AdminShell() {
         <Route path="/admin/provisioning" component={AdminProvisioning} />
         <Route path="/admin/imports" component={AdminImports} />
         <Route path="/admin/audit" component={AdminAudit} />
+        <Route path="/admin/waitlist" component={AdminWaitlist} />
         <Route path="/admin" component={AdminPartners} />
       </Switch>
     </Suspense>
