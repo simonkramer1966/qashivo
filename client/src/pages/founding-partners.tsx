@@ -209,36 +209,50 @@ export default function FoundingPartners() {
 
       {/* Built for accounting partners */}
       <section className="py-16 border-b border-gray-100">
-        <div className="max-w-3xl mx-auto px-6">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">Built for accounting partners</h2>
-          <p className="text-lg text-gray-600 mb-6 leading-relaxed">
-            Whether you already offer credit control or want to add it, Qashivo helps you deliver it consistently, at scale, with minimal extra resource.
-          </p>
-          <ul className="space-y-3">
-            {[
-              "Add a packaged credit control service without hiring",
-              "Standardise the workflow across your client portfolio",
-              "Offer something clients actually value: cash-in confidence",
-            ].map((item) => (
-              <li key={item} className="flex items-start gap-3 text-gray-700">
-                <Check className="h-5 w-5 mt-0.5 shrink-0" style={{ color: TEAL }} />
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">Built for accounting partners</h2>
+              <p className="text-lg text-gray-600 mb-6 leading-relaxed">
+                Whether you already offer credit control or want to add it, Qashivo helps you deliver it consistently, at scale, with minimal extra resource.
+              </p>
+              <ul className="space-y-3">
+                {[
+                  "Add a packaged credit control service without hiring",
+                  "Standardise the workflow across your client portfolio",
+                  "Offer something clients actually value: cash-in confidence",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-3 text-gray-700">
+                    <Check className="h-5 w-5 mt-0.5 shrink-0" style={{ color: TEAL }} />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="rounded-xl border border-gray-200 bg-gray-100 aspect-[4/3] flex items-center justify-center">
+              <span className="text-sm text-gray-400 font-medium">Image placeholder</span>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* Problems we're solving */}
       <section className="py-20 border-b border-gray-100">
-        <div className="max-w-3xl mx-auto px-6 text-center">
-          <h2 className="text-3xl font-bold text-gray-900 mb-5">The problems we're solving</h2>
-          <p className="text-lg text-gray-600 mb-4 leading-relaxed">
-            SMEs don't have an invoice problem — they have a follow-up and outcomes problem. Promises to pay, requests for more time, and disputes live in messy inbox threads, so cash stays uncertain.
-          </p>
-          <p className="text-lg text-gray-600 mb-6 leading-relaxed">
-            For accounting firms, credit control is hard to scale because it's manual, inconsistent, and outcome-blind. Qashivo captures intent as structured outcomes so the next action is obvious — and the forecast updates immediately.
-          </p>
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div className="rounded-xl border border-gray-200 bg-gray-100 aspect-[4/3] flex items-center justify-center order-2 lg:order-1">
+              <span className="text-sm text-gray-400 font-medium">Image placeholder</span>
+            </div>
+            <div className="order-1 lg:order-2">
+              <h2 className="text-3xl font-bold text-gray-900 mb-5">The problems we're solving</h2>
+              <p className="text-lg text-gray-600 mb-4 leading-relaxed">
+                SMEs don't have an invoice problem — they have a follow-up and outcomes problem. Promises to pay, requests for more time, and disputes live in messy inbox threads, so cash stays uncertain.
+              </p>
+              <p className="text-lg text-gray-600 leading-relaxed">
+                For accounting firms, credit control is hard to scale because it's manual, inconsistent, and outcome-blind. Qashivo captures intent as structured outcomes so the next action is obvious — and the forecast updates immediately.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
