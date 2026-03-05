@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Check, ChevronRight, Database, Calendar, UserCheck, Play, BarChart2,
   RefreshCw, Shield, FileText, Lock, AlertCircle, Users, Clock,
+  Building, Link, TrendingUp, MessageSquare, Mail,
 } from "lucide-react";
 
 interface WaitlistFormData {
@@ -174,15 +175,32 @@ export default function FoundingPartners() {
         </div>
       </section>
 
-      {/* Social Proof Logo Strip */}
-      <section className="py-8 border-b border-gray-100 bg-gray-50">
+      {/* Credibility Badges */}
+      <section className="py-6 border-b border-gray-100 bg-gray-50">
         <div className="max-w-6xl mx-auto px-6">
-          <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 text-center mb-5">
-            Pilot firms / Partners
-          </p>
-          <div className="flex justify-center gap-4 flex-wrap">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="w-28 h-10 bg-gray-200 rounded-md animate-pulse" />
+          <div className="flex flex-wrap justify-center gap-3">
+            {[
+              { icon: Users, label: "Built for Accountants" },
+              { icon: UserCheck, label: "Human Approval Layer" },
+              { icon: FileText, label: "Full Audit Trail" },
+              { icon: MessageSquare, label: "Outcome Capture (Intent)" },
+              { icon: TrendingUp, label: "Cash-in Confidence" },
+              { icon: Mail, label: "Email + SMS + Voice (MVP)" },
+              { icon: Link, label: "Xero / QuickBooks", comingSoon: true },
+              { icon: Building, label: "Open Banking", comingSoon: true },
+            ].map(({ icon: Icon, label, comingSoon }) => (
+              <div
+                key={label}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600"
+              >
+                <Icon className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                <span className="text-xs font-medium whitespace-nowrap">{label}</span>
+                {comingSoon && (
+                  <span className="text-[10px] font-medium text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                    Coming soon
+                  </span>
+                )}
+              </div>
             ))}
           </div>
         </div>
