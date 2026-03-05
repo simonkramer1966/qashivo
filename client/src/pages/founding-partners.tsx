@@ -179,7 +179,7 @@ export default function FoundingPartners() {
       {/* Credibility Badges */}
       <section className="py-6 border-b border-gray-100 bg-gray-50">
         <div className="max-w-6xl mx-auto px-6">
-          <div className="flex flex-wrap justify-center gap-3">
+          <div className="grid grid-cols-4 gap-3">
             {[
               { icon: Users, label: "Built for Accountants" },
               { icon: UserCheck, label: "Human Approval Layer" },
