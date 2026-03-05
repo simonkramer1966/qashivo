@@ -123,21 +123,20 @@ export default function FoundingPartners() {
             {/* Left: Copy */}
             <div>
               <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest mb-5 px-3 py-1 rounded-full border border-gray-200 text-gray-500">
-                Limited Cohort — UK Accounting Firms
+                Launching — Founding Cohort (UK Accounting Firms)
               </div>
               <h1 className="text-4xl md:text-5xl font-bold leading-tight text-gray-900 mb-5">
-                Become a Founding Accounting Partner
-                <span className="block text-3xl md:text-4xl font-semibold mt-1" style={{ color: TEAL }}>
-                  (Limited Cohort)
-                </span>
+                We're launching Qashivo — partner-led credit control that scales.
               </h1>
-              <p className="text-lg text-gray-600 mb-6 leading-relaxed">
-                We're opening Qashivo to a small group of UK accounting firms who want to be known for one thing:<br />
-                <span className="font-semibold text-gray-800">Helping clients get paid faster — without adding headcount.</span>
+              <p className="text-lg text-gray-600 mb-3 leading-relaxed">
+                Built for accounting firms who want to help SME clients get paid faster without adding headcount — using a supervised loop: Plan → Approve → Send → Capture outcomes → Update forecast.
+              </p>
+              <p className="text-lg font-semibold text-gray-800 mb-6">
+                Helping clients get paid faster — without adding headcount.
               </p>
               <ul className="space-y-3 mb-8">
                 {[
-                  "First access to the Partner MVP",
+                  "Early access to the Partner platform",
                   "Direct input into what we build next (your workflow becomes the blueprint)",
                   "Private Founding Cohort WhatsApp group",
                   "Lifetime founding discount (locked in)",
@@ -191,27 +190,57 @@ export default function FoundingPartners() {
               { icon: MessageSquare, label: "Outcome Capture (Intent)" },
               { icon: TrendingUp, label: "Cash-in Confidence" },
               { icon: Mail, label: "Email + SMS + Voice" },
-              { icon: Link, label: "Xero / QuickBooks" },
-              { icon: Building, label: "Open Banking" },
-            ].map(({ icon: Icon, label }) => (
+              { icon: Link, label: "Xero / QuickBooks", comingSoon: true },
+              { icon: Building, label: "Open Banking", comingSoon: true },
+            ].map(({ icon: Icon, label, comingSoon }) => (
               <div
                 key={label}
                 className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600"
               >
                 <Icon className="h-3.5 w-3.5 shrink-0 text-gray-400" />
                 <span className="text-xs font-medium whitespace-nowrap">{label}</span>
+                {comingSoon && (
+                  <span className="text-[10px] font-medium text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                    Coming soon
+                  </span>
+                )}
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Scarcity */}
+      {/* Built for accounting partners */}
+      <section className="py-16 border-b border-gray-100">
+        <div className="max-w-3xl mx-auto px-6">
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">Built for accounting partners</h2>
+          <p className="text-lg text-gray-600 mb-6 leading-relaxed">
+            Whether you already offer credit control or want to add it, Qashivo helps you deliver it consistently, at scale, with minimal extra resource.
+          </p>
+          <ul className="space-y-3">
+            {[
+              "Add a packaged credit control service without hiring",
+              "Standardise the workflow across your client portfolio",
+              "Offer something clients actually value: cash-in confidence",
+            ].map((item) => (
+              <li key={item} className="flex items-start gap-3 text-gray-700">
+                <Check className="h-5 w-5 mt-0.5 shrink-0" style={{ color: TEAL }} />
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      {/* Problems we're solving */}
       <section className="py-20 border-b border-gray-100">
         <div className="max-w-3xl mx-auto px-6 text-center">
-          <h2 className="text-3xl font-bold text-gray-900 mb-5">Why we're keeping this small</h2>
+          <h2 className="text-3xl font-bold text-gray-900 mb-5">The problems we're solving</h2>
+          <p className="text-lg text-gray-600 mb-4 leading-relaxed">
+            SMEs don't have an invoice problem — they have a follow-up and outcomes problem. Promises to pay, requests for more time, and disputes live in messy inbox threads, so cash stays uncertain.
+          </p>
           <p className="text-lg text-gray-600 mb-6 leading-relaxed">
-            We're not "launching" to everyone. We're building the category standard with a handful of firms first — because credit control is a trust workflow.
+            For accounting firms, credit control is hard to scale because it's manual, inconsistent, and outcome-blind. Qashivo captures intent as structured outcomes so the next action is obvious — and the forecast updates immediately.
           </p>
           <p className="text-base text-gray-700 font-medium mb-4">A small cohort means:</p>
           <ul className="space-y-2 text-left max-w-sm mx-auto mb-8">
@@ -365,6 +394,16 @@ export default function FoundingPartners() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Join and get exclusive access */}
+      <section className="py-16 border-b border-gray-100">
+        <div className="max-w-3xl mx-auto px-6 text-center">
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">Join and get exclusive access</h2>
+          <p className="text-lg text-gray-600 leading-relaxed">
+            Founding Cohort members get early access, the private WhatsApp group, weekly playbooks, and a lifetime founding discount — locked to your firm.
+          </p>
         </div>
       </section>
 

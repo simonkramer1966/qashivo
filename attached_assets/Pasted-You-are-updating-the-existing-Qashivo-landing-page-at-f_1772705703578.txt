@@ -1,0 +1,99 @@
+You are updating the existing Qashivo landing page at /founding-partners to align the narrative to this 4-point spine:
+
+1) We’re launching a new business that does XYZ
+2) For this person (Accounting partner)
+3) For these problems (SMEs with AR issues + partners who want scalable credit control)
+4) Join and get exclusive access
+
+IMPORTANT
+- Do NOT redesign the page. Keep the current layout, styling, components, spacing, and hero 2-column structure.
+- Keep the hero right-side animation area exactly as-is (reserved space).
+- This is a copy + section order refinement with minimal structural changes.
+
+TASKS (DO THESE IN ORDER)
+
+A) HERO: MAKE “WE’RE LAUNCHING…” EXPLICIT (POINT #1)
+- Keep the existing hero layout.
+- Replace the hero eyebrow and headline/subhead with the following:
+
+Eyebrow (small pill):
+LAUNCHING — FOUNDING COHORT (UK ACCOUNTING FIRMS)
+
+H1:
+We’re launching Qashivo — partner-led credit control that scales.
+
+Subhead:
+Built for accounting firms who want to help SME clients get paid faster without adding headcount — using a supervised loop: Plan → Approve → Send → Capture outcomes → Update forecast.
+
+- Keep the existing bold emphasis line (or add it if missing) directly under the subhead:
+Helping clients get paid faster — without adding headcount.
+
+- Keep the current hero bullet list and CTA styling. Update bullet #1 ONLY to:
+Early access to the Partner platform
+(Leave the other bullets as they are.)
+
+B) ADD A NEW SECTION DIRECTLY BELOW THE BADGE STRIP (POINT #2)
+Insert a new section beneath the credibility badge strip (the row of badges). Do not remove the badges.
+
+Section heading:
+Built for accounting partners
+
+Body:
+Whether you already offer credit control or want to add it, Qashivo helps you deliver it consistently, at scale, with minimal extra resource.
+
+Bullets:
+- Add a packaged credit control service without hiring
+- Standardise the workflow across your client portfolio
+- Offer something clients actually value: cash-in confidence
+
+C) RENAME AND REWRITE THE “WHY WE’RE KEEPING THIS SMALL” SECTION (POINT #3 + SCARCITY)
+- Keep the section in the same place in the page (no redesign), but change the heading and intro copy.
+- New section heading:
+The problems we’re solving
+
+Replace the existing intro paragraph(s) with:
+
+SMEs don’t have an invoice problem — they have a follow-up and outcomes problem. Promises to pay, requests for more time, and disputes live in messy inbox threads, so cash stays uncertain.
+
+For accounting firms, credit control is hard to scale because it’s manual, inconsistent, and outcome-blind. Qashivo captures intent as structured outcomes so the next action is obvious — and the forecast updates immediately.
+
+- Keep the existing bullet list under “A small cohort means:” exactly as-is.
+- Keep the closing line exactly as-is:
+We’re selecting up to 10 firms for the first cohort.
+
+D) ADD A NEW HEADING ABOVE THE WHATSAPP VISUAL (POINT #4)
+Above the WhatsApp cohort visual placeholder/card (currently just above the form), add:
+
+Heading:
+Join and get exclusive access
+
+Body:
+Founding Cohort members get early access, the private WhatsApp group, weekly playbooks, and a lifetime founding discount — locked to your firm.
+
+- Keep the WhatsApp visual placeholder itself unchanged.
+
+E) BADGE STRIP: ENSURE “COMING SOON” IS CLEAR
+- In the credibility badge strip, add a visible “Coming soon” pill/tag for:
+Xero / QuickBooks
+Open Banking
+- Do NOT imply these are live. No “Trusted by” / “Pilots with” / partner logo language anywhere.
+
+F) DO NOT CHANGE THESE SECTIONS (LEAVE AS-IS)
+- How it works loop section
+- Founding Cohort Rules
+- Platform screenshot placeholders
+- Selection Criteria (fit / not fit)
+- Trust markers row (Human approval / audit / data minimised / exceptions-first)
+- Waitlist form fields and submission behaviour
+- Founder signature block
+
+ACCEPTANCE CRITERIA
+- The story reads in this order:
+  Launching (hero) → Built for partners (new section) → Problems we solve (renamed section) → Exclusive access (new heading) → Apply (form)
+- No layout breakage; page remains clean on desktop and mobile.
+- Right-side hero animation space remains reserved and aligned.
+- “Coming soon” is visible on the relevant badges.
+- No claims of existing pilot firms or customers.
+
+DELIVERABLE
+Commit the changes to the /founding-partners route/page so it’s ready to publish immediately.
