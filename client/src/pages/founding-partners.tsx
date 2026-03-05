@@ -347,7 +347,7 @@ export default function FoundingPartners() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
               {
-                label: "Promise to pay",
+                label: "Core promise (simple + powerful)",
                 messages: [
                   { side: "right", text: "What happens when a debtor replies with a promise to pay?" },
                   { side: "left",  text: "We capture the payment date, update expected cash, and schedule the right follow-up." },
@@ -355,7 +355,7 @@ export default function FoundingPartners() {
                 ],
               },
               {
-                label: "Disputes",
+                label: "Disputes (trust + control)",
                 messages: [
                   { side: "right", text: "And if they raise a dispute or issue?" },
                   { side: "left",  text: "We classify it as a dispute, pause chasing, and flag it for your review." },
@@ -363,7 +363,7 @@ export default function FoundingPartners() {
                 ],
               },
               {
-                label: "Need more time",
+                label: "Need more time (common real-life)",
                 messages: [
                   { side: "right", text: "Debtors often ask for more time — how do you handle that?" },
                   { side: "left",  text: "We detect the delay request, propose next steps, and adjust the plan automatically." },
@@ -371,7 +371,7 @@ export default function FoundingPartners() {
                 ],
               },
               {
-                label: "Payment plans",
+                label: "Payment plans (high value)",
                 messages: [
                   { side: "right", text: "Can Qashivo manage payment plans from replies?" },
                   { side: "left",  text: "Yes — we capture the agreed schedule and keep follow-ups on track." },
