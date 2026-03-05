@@ -100,15 +100,6 @@ export default function FoundingPartners() {
 
   return (
     <div className="min-h-screen bg-white font-sans">
-      {/* Sticky Nav */}
-      <nav className="sticky top-0 z-50 bg-white border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-6 flex justify-between items-center h-16">
-          <a href="/home" className="flex items-center gap-2">
-              <img src={logo} alt="Qashivo" className="h-8 w-8" />
-              <span className="font-semibold text-[#0B0F17] tracking-tight text-[22px]">Qashivo</span>
-            </a>
-        </div>
-      </nav>
       {/* Hero */}
       <section className="py-20 md:py-28 border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-6">
