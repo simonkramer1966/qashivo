@@ -135,7 +135,7 @@ export default function FoundingPartners() {
                 {[
                   "Early access to the Partner platform",
                   "Direct input into what we build next (your workflow becomes the blueprint)",
-                  "Private Founding Cohort WhatsApp group",
+                  "Private Founding Team WhatsApp group",
                   "Lifetime founding discount (locked in)",
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-3 text-gray-700">
