@@ -147,7 +147,7 @@ export default function FoundingPartners() {
               <div className="flex flex-col sm:flex-row gap-3 items-start">
                 <a href="#apply">
                   <Button size="lg" style={{ backgroundColor: TEAL }} className="text-white hover:opacity-90 font-semibold px-6">
-                    Apply to Join the Founding Cohort Waitlist
+                    Join the Founding Team Waitlist
                   </Button>
                 </a>
                 <a href="#how-it-works">
