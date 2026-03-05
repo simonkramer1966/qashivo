@@ -341,30 +341,68 @@ export default function FoundingPartners() {
           </p>
         </div>
       </section>
-      {/* WhatsApp Cohort Placeholder */}
+      {/* WhatsApp Chat Examples */}
       <section className="py-12 border-b border-gray-100">
-        <div className="max-w-sm mx-auto px-6">
-          <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
-                <Users className="h-4 w-4 text-white" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-gray-900">Founding Team WhatsApp Group</p>
-                <p className="text-xs text-gray-500">10 members max</p>
-              </div>
-            </div>
-            <div className="px-4 py-4 space-y-3">
-              {[
-                { side: "right", width: "w-48", color: "bg-green-100" },
-                { side: "left", width: "w-40", color: "bg-gray-100" },
-                { side: "right", width: "w-36", color: "bg-green-100" },
-              ].map((bubble, i) => (
-                <div key={i} className={`flex ${bubble.side === "right" ? "justify-end" : "justify-start"}`}>
-                  <div className={`${bubble.width} h-8 rounded-xl ${bubble.color}`} />
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              {
+                label: "Promise to pay",
+                messages: [
+                  { side: "right", text: "What happens when a debtor replies with a promise to pay?" },
+                  { side: "left",  text: "We capture the payment date, update expected cash, and schedule the right follow-up." },
+                  { side: "right", text: "Great — that's the part that kills our time." },
+                ],
+              },
+              {
+                label: "Disputes",
+                messages: [
+                  { side: "right", text: "And if they raise a dispute or issue?" },
+                  { side: "left",  text: "We classify it as a dispute, pause chasing, and flag it for your review." },
+                  { side: "right", text: "Perfect. Safe and accountant-grade." },
+                ],
+              },
+              {
+                label: "Need more time",
+                messages: [
+                  { side: "right", text: "Debtors often ask for more time — how do you handle that?" },
+                  { side: "left",  text: "We detect the delay request, propose next steps, and adjust the plan automatically." },
+                  { side: "right", text: "That's exactly what we need." },
+                ],
+              },
+              {
+                label: "Payment plans",
+                messages: [
+                  { side: "right", text: "Can Qashivo manage payment plans from replies?" },
+                  { side: "left",  text: "Yes — we capture the agreed schedule and keep follow-ups on track." },
+                  { side: "right", text: "Amazing. That's usually a manual mess." },
+                ],
+              },
+            ].map((chat) => (
+              <div key={chat.label} className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden flex flex-col">
+                <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-full bg-green-500 flex items-center justify-center shrink-0">
+                    <Users className="h-3.5 w-3.5 text-white" />
+                  </div>
+                  <p className="text-xs font-semibold text-gray-700">{chat.label}</p>
                 </div>
-              ))}
-            </div>
+                <div className="px-3 py-3 space-y-2 flex-1">
+                  {chat.messages.map((msg, i) => (
+                    <div key={i} className={`flex ${msg.side === "right" ? "justify-end" : "justify-start"}`}>
+                      <div
+                        className={`max-w-[85%] px-3 py-2 rounded-xl text-xs leading-snug ${
+                          msg.side === "right"
+                            ? "bg-green-100 text-gray-800 rounded-br-sm"
+                            : "bg-gray-100 text-gray-700 rounded-bl-sm"
+                        }`}
+                      >
+                        {msg.text}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
