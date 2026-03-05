@@ -375,7 +375,7 @@ export default function FoundingPartners() {
                 messages: [
                   { side: "right", text: "Can Qashivo manage payment plans from replies?" },
                   { side: "left",  text: "Yes — we capture the agreed schedule and keep follow-ups on track." },
-                  { side: "right", text: "Amazing. That's usually a manual mess." },
+                  { side: "right", text: "Amazing. That's usually a manual mess. 😊" },
                 ],
               },
             ].map((chat) => (
