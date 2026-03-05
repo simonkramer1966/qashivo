@@ -117,7 +117,6 @@ export default function FoundingPartners() {
           </div>
         </div>
       </nav>
-
       {/* Hero */}
       <section className="py-20 md:py-28 border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-6">
@@ -177,7 +176,6 @@ export default function FoundingPartners() {
           </div>
         </div>
       </section>
-
       {/* Credibility Badges */}
       <section className="py-6 border-b border-gray-100 bg-gray-50">
         <div className="max-w-6xl mx-auto px-6">
@@ -203,7 +201,6 @@ export default function FoundingPartners() {
           </div>
         </div>
       </section>
-
       {/* Built for accounting partners */}
       <section className="py-16 border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-6">
@@ -232,7 +229,6 @@ export default function FoundingPartners() {
           </div>
         </div>
       </section>
-
       {/* Problems we're solving */}
       <section className="py-20 border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-6">
@@ -252,7 +248,6 @@ export default function FoundingPartners() {
           </div>
         </div>
       </section>
-
       {/* How It Works */}
       <section id="how-it-works" className="py-20 border-b border-gray-100 bg-gray-50">
         <div className="max-w-6xl mx-auto px-6">
@@ -275,7 +270,6 @@ export default function FoundingPartners() {
           </div>
         </div>
       </section>
-
       {/* Selection Criteria */}
       <section className="py-20 border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-6">
@@ -324,7 +318,6 @@ export default function FoundingPartners() {
           </div>
         </div>
       </section>
-
       {/* Trust & Controls */}
       <section className="py-16 border-b border-gray-100 bg-gray-50">
         <div className="max-w-4xl mx-auto px-6">
@@ -340,7 +333,6 @@ export default function FoundingPartners() {
           </div>
         </div>
       </section>
-
       {/* Join and get exclusive access */}
       <section className="py-16 border-b border-gray-100">
         <div className="max-w-3xl mx-auto px-6 text-center">
@@ -350,7 +342,6 @@ export default function FoundingPartners() {
           </p>
         </div>
       </section>
-
       {/* WhatsApp Cohort Placeholder */}
       <section className="py-12 border-b border-gray-100">
         <div className="max-w-sm mx-auto px-6">
@@ -378,7 +369,6 @@ export default function FoundingPartners() {
           </div>
         </div>
       </section>
-
       {/* Waitlist Form */}
       <section id="apply" className="py-20 border-b border-gray-100 bg-gray-50">
         <div className="max-w-xl mx-auto px-6">
@@ -462,7 +452,7 @@ export default function FoundingPartners() {
                 </div>
 
                 <div className="pt-2 border-t border-gray-200">
-                  <p className="text-sm font-semibold text-gray-700 mb-4">Tell us a bit more about you ...</p>
+                  <p className="font-semibold text-gray-700 mb-4 text-[16px]">Tell us a bit more about you ...</p>
 
                   {/* Q1 */}
                   <div className="mb-4">
@@ -620,7 +610,6 @@ export default function FoundingPartners() {
           )}
         </div>
       </section>
-
       {/* Founder Signature */}
       <section className="py-20">
         <div className="max-w-2xl mx-auto px-6 text-center">
@@ -636,7 +625,6 @@ export default function FoundingPartners() {
           <p className="text-sm text-gray-400 mt-1">Founder, Qashivo</p>
         </div>
       </section>
-
       {/* Footer */}
       <footer className="py-6 border-t border-gray-100 text-center">
         <p className="text-xs text-gray-400">
