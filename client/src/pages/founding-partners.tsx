@@ -128,9 +128,6 @@ export default function FoundingPartners() {
               <h1 className="text-4xl md:text-5xl font-bold leading-tight text-gray-900 mb-5">
                 We're launching Qashivo — partner-led credit control that scales.
               </h1>
-              <p className="text-lg text-gray-600 mb-3 leading-relaxed">
-                Built for accounting firms who want to help SME clients get paid faster without adding headcount — using a supervised loop: Plan → Approve → Send → Capture outcomes → Update forecast.
-              </p>
               <p className="text-lg font-semibold text-gray-800 mb-6">
                 Helping clients get paid faster — without adding headcount.
               </p>
