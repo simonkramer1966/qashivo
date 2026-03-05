@@ -1,0 +1,220 @@
+You are building a single high-converting landing page for Qashivo to recruit UK accounting partner firms onto a Founding Cohort waitlist.
+
+CONTEXT
+- Qashivo is an AI-powered, supervised-autonomy credit control + cash-in forecasting platform for accountants and SMEs.
+- Visual reference: the hero section must be a 2-column layout with text on the LEFT and a reserved area on the RIGHT for an animation (do not fill with text). The animation container should be a clean box/slot that can later hold an SVG/Lottie/canvas.
+- This page is for accounting firms (UK) who want to offer credit control with very little additional resource, or already offer it and want to do it more efficiently.
+
+GOAL
+Create a landing page route (e.g. /founding-partners or /partners-waitlist) with:
+1) Hero section (left copy + right animation placeholder)
+2) Social proof logo strip placeholder (below hero)
+3) CTA section (Priestley-style)
+4) Scarcity section
+5) “How it works” visual placeholder (simple supervised loop diagram)
+6) Founding Cohort Rules
+7) Product screenshots placeholder section (2–3 screenshots)
+8) Selection Criteria
+9) Trust & controls icon row (auditability + human approval etc.)
+10) WhatsApp cohort visual placeholder (above the form)
+11) Waitlist form with exactly 5 qualification questions
+12) Founder signature block (bottom)
+13) Confirmation state after submit
+
+DESIGN REQUIREMENTS
+- Keep styling consistent with modern B2B SaaS: whitespace, strong headline, short paragraphs, clean bullets.
+- Use a max-width container and readable typography.
+- Hero: two columns on desktop. Left column is copy + primary CTA button + secondary link. Right column is a reserved animation slot aligned with hero content.
+- Mobile: stack columns with animation placeholder below the copy.
+- Add subtle section separators (spacing or light borders) but do not over-design.
+- Add a sticky top nav if the project already has one; otherwise include a simple top bar with Qashivo logo/text and “Sign in” + “Book a demo” button.
+- Primary CTA button label: “Apply to Join the Founding Cohort Waitlist”
+- Secondary hero link: “See how it works”
+- Include microcopy under CTAs.
+
+IMAGE PLACEHOLDERS (MUST INCLUDE)
+A) Social proof logo strip placeholder:
+- A thin horizontal strip with 6–8 logo placeholders (grey boxes) labelled “Pilot firms / Partners”.
+- Keep it subtle (monochrome look), not dominant.
+
+B) “How it works” visual placeholder:
+- Insert a simple diagram placeholder (or lightweight SVG) showing the loop:
+  Receivables Data → Daily Plan → Human Approves → Execute → Capture Outcomes → Adjust
+- If you can render it as a clean row of steps with icons, do that. Otherwise, use a placeholder box titled “Supervised Autonomy Loop Diagram”.
+
+C) Product screenshots placeholder section:
+- 2–3 screenshot cards with image placeholders + captions:
+  1) “Daily Plan & Approvals”
+  2) “Conversations + AI Outcome Capture”
+  3) “Cash-in Forecast + Confidence”
+- Use consistent card styling and spacing.
+
+D) Trust & controls icon row:
+- A row of 4 icon+label items (SVG icons are fine), no external assets required:
+  - “Human approval required”
+  - “Full audit trail”
+  - “Data minimised”
+  - “Exceptions-first workflow”
+- Keep it clean and accountant-grade.
+
+E) WhatsApp cohort visual placeholder:
+- A small card/visual placeholder above the form titled “Founding Cohort WhatsApp Group”
+- Include 2–3 fake chat bubbles as placeholders (no real names), or simple skeleton blocks.
+
+F) Founder signature block:
+- Bottom section with a small circular headshot placeholder (grey circle) + short founder note + name line “Simon”.
+- Keep it calm, credible, and concise.
+
+CONTENT (USE THIS COPY VERBATIM)
+NAV (if needed)
+Left: Qashivo logo/text
+Right: Sign in (link) + Book a demo (button)
+
+HERO
+Headline:
+Become a Founding Accounting Partner (Limited Cohort)
+
+Sub-head:
+We’re opening Qashivo to a small group of UK accounting firms who want to be known for one thing:
+Helping clients get paid faster — without adding headcount.
+
+Bullets (or short list):
+- First access to the Partner MVP
+- Direct input into what we build next (your workflow becomes the blueprint)
+- Private Founding Cohort WhatsApp group
+- Lifetime founding discount (locked in)
+
+Primary CTA button:
+Apply to Join the Founding Cohort Waitlist
+
+Secondary link:
+See how it works
+
+Microcopy under button:
+Applications are reviewed weekly. If you’re a fit, you’ll get an invite to the WhatsApp group + next steps.
+
+SCARCITY SECTION
+Headline:
+Why we’re keeping this small
+
+Body:
+We’re not “launching” to everyone. We’re building the category standard with a handful of firms first — because credit control is a trust workflow.
+
+A small cohort means:
+- tighter feedback loops
+- faster shipping
+- better outcomes data
+- and a partner experience that’s accountant-grade from day one
+
+Closing line:
+We’re selecting up to 10 firms for the first cohort.
+
+FOUNDING COHORT RULES
+Headline:
+The Founding Cohort Rules
+
+Intro:
+To keep this valuable and focused:
+
+Rules:
+1) One voice per firm inside the WhatsApp group (so it stays signal, not noise)
+2) Pilot with 1–3 SMEs first (we prove the loop, then scale)
+3) Human approval stays in place (nothing sends without sign-off — always)
+4) We share what works (templates, sequences, and outcomes — anonymised where needed)
+5) Founding members get the best commercial terms (lifetime discount stays attached to your firm)
+
+SELECTION CRITERIA
+Headline:
+Who we’re choosing first
+
+This is a fit if you’re:
+- An accounting firm serving SMEs where late payment is a recurring issue
+- Either already offering credit control or ready to launch it as a packaged service
+- Willing to pilot quickly (1–3 clients)
+- Comfortable giving feedback as we iterate
+- Serious about trust + process (approval layer, audit trail)
+
+This probably isn’t a fit if you want:
+- fully autonomous chasing with no approval
+- a generic reminder tool
+- or a “set and forget” approach with no learning loop
+
+Closing line:
+If you’re building a modern firm — where outcomes matter — you’ll feel at home here.
+
+Identity hook (include as a highlighted callout):
+You’re not joining a list. You’re joining the inner circle that builds the new standard for credit control.
+
+WAITLIST FORM
+Section headline:
+Apply to Join the Founding Cohort
+
+Short form intro:
+Answer 5 quick questions so we can confirm fit. If accepted, you’ll receive a WhatsApp invite and next steps.
+
+Contact fields (required):
+- Full name
+- Work email
+- Firm name
+- Mobile number (for WhatsApp)
+
+Form questions (exactly these 5):
+1) How many SME clients do you currently support?
+Options: 1–25, 26–100, 101–300, 301–1,000, 1,000+
+
+2) Do you currently offer a credit control / debtor chasing service?
+Options: Yes (core service), Yes (ad-hoc), Not yet but planning to, No
+
+3) Roughly how many of your clients struggle with late payment each month?
+Options: A few, Around half, Most, Nearly all
+
+4) What’s your current credit control setup today?
+Options: Spreadsheet + inbox, Reminder tool, Dedicated internal team, Outsourced service, Other (if Other show a short text field)
+
+5) If Qashivo worked as described, how quickly could you pilot with 1–3 clients?
+Options: Immediately (this month), Next 30 days, Next 60–90 days, Not sure yet
+
+Submission button:
+Submit application
+
+Confirmation state after submit:
+Headline: Application received
+Body: Thanks — we review applications weekly. If you’re a fit, you’ll receive an invite to the Founding Cohort WhatsApp group and next steps.
+Secondary CTA: Book a demo (link to existing demo route if available)
+
+FOUNDER SIGNATURE BLOCK (bottom)
+Headline:
+A quick note from the founder
+
+Body (keep as 2–3 short sentences):
+I’m building Qashivo with a small group of accounting firms first, so we get the workflow right and the outcomes are real.
+If you want to offer credit control that scales — without adding headcount — I’d love to have you in the founding cohort.
+
+Signature line:
+Simon
+
+TECH REQUIREMENTS
+- Implement as a single page component with clean subcomponents if the codebase uses them.
+- Form handling:
+  - If there is already a backend, POST to /api/waitlist (create if missing).
+  - Store submissions to the existing database if present; otherwise create a simple storage (SQLite/Postgres depending on project) with a table named partner_waitlist.
+  - Fields to store: createdAt, fullName, email, firmName, mobile, q1..q5, otherText (nullable), sourcePath (the landing path).
+  - Add basic validation and show friendly inline errors.
+- Include spam prevention:
+  - Add a hidden honeypot field (e.g. “website”) and reject if filled.
+- Add a success toast or confirmation panel.
+- Log each new submission server-side with a single-line summary (no sensitive details beyond email + firm).
+
+ACCEPTANCE CRITERIA
+- The page looks good on desktop and mobile.
+- The hero has a clear empty/right placeholder area labelled “Animation slot” without breaking layout.
+- All provided copy matches exactly.
+- All image placeholders are present in the correct sections.
+- Form submits successfully and shows confirmation.
+- Data is stored server-side and can be viewed in logs at minimum.
+
+DELIVERABLES
+- New route + page
+- Any API route + DB table migration/model needed
+- Clean UI with consistent spacing and typography
+- Ready to deploy/publish on Replit
