@@ -642,7 +642,7 @@ export default function FoundingPartners() {
       <section className="py-20">
         <div className="max-w-2xl mx-auto px-6 text-center">
           <div className="w-48 h-48 rounded-full mx-auto mb-6 overflow-hidden">
-            <img src={simonPic} alt="Simon" className="w-full h-full object-cover" />
+            <img src={simonPic} alt="Simon" className="w-full h-full object-cover object-top" />
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-5">A quick note from the founder</h2>
           <p className="text-gray-600 text-lg leading-relaxed mb-6">
