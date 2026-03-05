@@ -309,7 +309,7 @@ export default function FoundingPartners() {
             </div>
           </div>
           <p className="text-lg text-gray-600 mb-8">
-            If you're building a modern firm where outcomes matter, you'll feel at home here.
+            If you're building a modern accounting firm where outcomes matter, you'll feel at home here.
           </p>
           <div className="rounded-xl border-l-4 bg-gray-50 px-6 py-5" style={{ borderLeftColor: TEAL }}>
             <p className="text-base font-semibold text-gray-900 italic">
