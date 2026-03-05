@@ -400,7 +400,7 @@ export default function FoundingPartners() {
           ) : (
             <>
               <div className="mb-8">
-                <h2 className="text-3xl font-bold text-gray-900 mb-3">Apply to Join the Founding Team</h2>
+                <h2 className="text-3xl font-bold text-gray-900 mb-3">Join the Founding Team</h2>
                 <p className="text-gray-600">
                   Answer 5 quick questions so we can confirm fit. If accepted, you'll receive a WhatsApp invite and next steps.
                 </p>
