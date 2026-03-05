@@ -312,7 +312,7 @@ export default function FoundingPartners() {
             If you're building a modern accounting firm where outcomes matter, you'll feel at home here.
           </p>
           <div className="rounded-xl border-l-4 bg-gray-50 px-6 py-5" style={{ borderLeftColor: TEAL }}>
-            <p className="text-base font-semibold text-gray-900 italic">
+            <p className="font-semibold text-gray-900 italic text-[18px] text-center">
               "You're not joining a list. You're joining the inner circle that builds the new standard for credit control."
             </p>
           </div>
