@@ -239,20 +239,6 @@ export default function FoundingPartners() {
           <p className="text-lg text-gray-600 mb-6 leading-relaxed">
             For accounting firms, credit control is hard to scale because it's manual, inconsistent, and outcome-blind. Qashivo captures intent as structured outcomes so the next action is obvious — and the forecast updates immediately.
           </p>
-          <p className="text-base text-gray-700 font-medium mb-4">A small cohort means:</p>
-          <ul className="space-y-2 text-left max-w-sm mx-auto mb-8">
-            {[
-              "tighter feedback loops",
-              "faster shipping",
-              "better outcomes data",
-              "and a partner experience that's accountant-grade from day one",
-            ].map((item) => (
-              <li key={item} className="flex items-start gap-2 text-gray-700">
-                <Check className="h-4 w-4 mt-0.5 shrink-0" style={{ color: TEAL }} />
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
         </div>
       </section>
 
