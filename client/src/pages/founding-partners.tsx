@@ -125,13 +125,13 @@ export default function FoundingPartners() {
             {/* Left: Copy */}
             <div>
               <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest mb-5 px-3 py-1 rounded-full border border-gray-200 text-gray-500">
-                Launching — Founding Cohort (UK Accounting Firms)
+                Launching: Founding Team (UK Accounting Firms)
               </div>
               <h1 className="text-4xl md:text-5xl font-bold leading-tight text-gray-900 mb-5">
                 Hi, we're launching Qashivo
               </h1>
               <p className="text-lg font-semibold text-gray-800 mb-6">
-                Helping clients get paid faster — without adding headcount.
+                Helping clients get paid faster, without adding headcount.
               </p>
               <ul className="space-y-3 mb-8">
                 {[
@@ -243,10 +243,10 @@ export default function FoundingPartners() {
             <div className="order-1 lg:order-2">
               <h2 className="text-3xl font-bold text-gray-900 mb-5">The problems we're solving</h2>
               <p className="text-lg text-gray-600 mb-4 leading-relaxed">
-                SMEs don't have an invoice problem — they have a follow-up and outcomes problem. Promises to pay, requests for more time, and disputes live in messy inbox threads, so cash stays uncertain.
+                SMEs don't have an invoice problem. They have a follow-up and outcomes problem. Promises to pay, requests for more time, and disputes live in messy inbox threads, so cash stays uncertain.
               </p>
               <p className="text-lg text-gray-600 leading-relaxed">
-                For accounting firms, credit control is hard to scale because it's manual, inconsistent, and outcome-blind. Qashivo captures intent as structured outcomes so the next action is obvious — and the forecast updates immediately.
+                For accounting firms, credit control is hard to scale because it's manual, inconsistent, and outcome-blind. Qashivo captures intent as structured outcomes so the next action is obvious, and the forecast updates immediately.
               </p>
             </div>
           </div>
@@ -315,7 +315,7 @@ export default function FoundingPartners() {
             </div>
           </div>
           <p className="text-gray-600 mb-8 text-base">
-            If you're building a modern firm — where outcomes matter — you'll feel at home here.
+            If you're building a modern firm where outcomes matter, you'll feel at home here.
           </p>
           <div className="rounded-xl border-l-4 bg-gray-50 px-6 py-5" style={{ borderLeftColor: TEAL }}>
             <p className="text-base font-semibold text-gray-900 italic">
@@ -346,7 +346,7 @@ export default function FoundingPartners() {
         <div className="max-w-3xl mx-auto px-6 text-center">
           <h2 className="text-3xl font-bold text-gray-900 mb-4">Join and get exclusive access</h2>
           <p className="text-lg text-gray-600 leading-relaxed">
-            Founding Cohort members get early access, the private WhatsApp group, weekly playbooks, and a lifetime founding discount — locked to your firm.
+            Founding Team members get early access, the private WhatsApp group, weekly playbooks, and a lifetime founding discount, locked to your firm.
           </p>
         </div>
       </section>
@@ -360,7 +360,7 @@ export default function FoundingPartners() {
                 <Users className="h-4 w-4 text-white" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-gray-900">Founding Cohort WhatsApp Group</p>
+                <p className="text-sm font-semibold text-gray-900">Founding Team WhatsApp Group</p>
                 <p className="text-xs text-gray-500">10 members max</p>
               </div>
             </div>
@@ -389,7 +389,7 @@ export default function FoundingPartners() {
               </div>
               <h2 className="text-3xl font-bold text-gray-900 mb-4">Application received</h2>
               <p className="text-gray-600 text-lg mb-8 leading-relaxed">
-                Thanks — we review applications weekly. If you're a fit, you'll receive an invite to the Founding Cohort WhatsApp group and next steps.
+                Thanks. We review applications weekly. If you're a fit, you'll receive an invite to the Founding Team WhatsApp group and next steps.
               </p>
               <a href="/demo">
                 <Button size="lg" style={{ backgroundColor: TEAL }} className="text-white hover:opacity-90 font-semibold">
@@ -630,7 +630,7 @@ export default function FoundingPartners() {
           <h2 className="text-2xl font-bold text-gray-900 mb-5">A quick note from the founder</h2>
           <p className="text-gray-600 text-lg leading-relaxed mb-6">
             I'm building Qashivo with a small group of accounting firms first, so we get the workflow right and the outcomes are real.
-            If you want to offer credit control that scales — without adding headcount — I'd love to have you in the founding cohort.
+            If you want to offer credit control that scales, without adding headcount, I'd love to have you in the founding team.
           </p>
           <p className="text-lg font-semibold text-gray-900">Simon</p>
           <p className="text-sm text-gray-400 mt-1">Founder, Qashivo</p>
