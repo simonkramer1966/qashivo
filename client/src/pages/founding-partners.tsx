@@ -117,9 +117,6 @@ export default function FoundingPartners() {
                   </Button>
                 </a>
               </div>
-              <p className="text-sm text-gray-400 mt-3">
-                Applications are reviewed weekly. If you're a fit, you'll get an invite to the WhatsApp group + next steps.
-              </p>
             </div>
 
             {/* Right: Hero video */}
