@@ -18,7 +18,6 @@ interface WaitlistFormData {
   fullName: string;
   email: string;
   firmName: string;
-  mobile: string;
   website: string;
 }
 
@@ -43,7 +42,6 @@ export default function FoundingPartners() {
         fullName: data.fullName,
         email: data.email,
         firmName: data.firmName,
-        mobile: data.mobile,
         website: data.website,
         sourcePath: "/founding-partners",
       };
@@ -371,16 +369,6 @@ export default function FoundingPartners() {
                     {errors.firmName && <p className="text-xs text-red-500 mt-1">{errors.firmName.message}</p>}
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Mobile number (for WhatsApp) <span className="text-red-500">*</span></label>
-                    <Input
-                      type="tel"
-                      {...register("mobile", { required: "Mobile number is required" })}
-                      placeholder="+44 7700 900000"
-                      className={errors.mobile ? "border-red-400" : ""}
-                    />
-                    {errors.mobile && <p className="text-xs text-red-500 mt-1">{errors.mobile.message}</p>}
-                  </div>
                 </div>
 
                 <Button
