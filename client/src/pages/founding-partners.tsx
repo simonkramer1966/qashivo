@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import heroVideo from "@assets/Hero-Animation-Feb-25-10-10-55_1772704261589.mp4";
 import logo from "@assets/Main_Nexus_Logo_copy_1768893717341.png";
@@ -20,12 +19,6 @@ interface WaitlistFormData {
   email: string;
   firmName: string;
   mobile: string;
-  q1: string;
-  q2: string;
-  q3: string;
-  q4: string;
-  q4other: string;
-  q5: string;
   website: string;
 }
 
@@ -39,12 +32,8 @@ export default function FoundingPartners() {
   const {
     register,
     handleSubmit,
-    control,
-    watch,
     formState: { errors },
-  } = useForm<WaitlistFormData>({ defaultValues: { q4other: "", website: "" } });
-
-  const q4Value = watch("q4");
+  } = useForm<WaitlistFormData>({ defaultValues: { website: "" } });
 
   const onSubmit = async (data: WaitlistFormData) => {
     if (data.website) return;
@@ -55,11 +44,6 @@ export default function FoundingPartners() {
         email: data.email,
         firmName: data.firmName,
         mobile: data.mobile,
-        q1: data.q1,
-        q2: data.q2,
-        q3: data.q3,
-        q4: data.q4 === "Other" && data.q4other ? `Other: ${data.q4other}` : data.q4,
-        q5: data.q5,
         website: data.website,
         sourcePath: "/founding-partners",
       };
@@ -343,7 +327,7 @@ export default function FoundingPartners() {
               <div className="mb-8">
                 <h2 className="text-3xl font-bold text-gray-900 mb-3">Join the Founding Team</h2>
                 <p className="text-gray-600">
-                  Answer 5 quick questions and you'll receive a WhatsApp invite and next steps.
+                  Fill in your details and you'll receive a WhatsApp invite and next steps.
                 </p>
               </div>
 
@@ -399,145 +383,6 @@ export default function FoundingPartners() {
                       className={errors.mobile ? "border-red-400" : ""}
                     />
                     {errors.mobile && <p className="text-xs text-red-500 mt-1">{errors.mobile.message}</p>}
-                  </div>
-                </div>
-
-                <div className="pt-6 border-t border-gray-200">
-                  <p className="font-semibold text-gray-700 mb-4 text-[16px]">Tell us a bit more about you ...</p>
-
-                  {/* Q1 */}
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      1. How many SME clients do you currently support? <span className="text-red-500">*</span>
-                    </label>
-                    <Controller
-                      name="q1"
-                      control={control}
-                      rules={{ required: "Please select an answer" }}
-                      render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <SelectTrigger className={errors.q1 ? "border-red-400" : ""}>
-                            <SelectValue placeholder="Select..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {["1–25", "26–100", "101–300", "301–1,000", "1,000+"].map(o => (
-                              <SelectItem key={o} value={o}>{o}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                    {errors.q1 && <p className="text-xs text-red-500 mt-1">{errors.q1.message}</p>}
-                  </div>
-
-                  {/* Q2 */}
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      2. Do you currently offer a credit control / debtor chasing service? <span className="text-red-500">*</span>
-                    </label>
-                    <Controller
-                      name="q2"
-                      control={control}
-                      rules={{ required: "Please select an answer" }}
-                      render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <SelectTrigger className={errors.q2 ? "border-red-400" : ""}>
-                            <SelectValue placeholder="Select..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {["Yes (core service)", "Yes (ad-hoc)", "Not yet but planning to", "No"].map(o => (
-                              <SelectItem key={o} value={o}>{o}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                    {errors.q2 && <p className="text-xs text-red-500 mt-1">{errors.q2.message}</p>}
-                  </div>
-
-                  {/* Q3 */}
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      3. Roughly how many of your clients struggle with late payment each month? <span className="text-red-500">*</span>
-                    </label>
-                    <Controller
-                      name="q3"
-                      control={control}
-                      rules={{ required: "Please select an answer" }}
-                      render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <SelectTrigger className={errors.q3 ? "border-red-400" : ""}>
-                            <SelectValue placeholder="Select..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {["A few", "Around half", "Most", "Nearly all"].map(o => (
-                              <SelectItem key={o} value={o}>{o}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                    {errors.q3 && <p className="text-xs text-red-500 mt-1">{errors.q3.message}</p>}
-                  </div>
-
-                  {/* Q4 */}
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      4. What's your current credit control setup today? <span className="text-red-500">*</span>
-                    </label>
-                    <Controller
-                      name="q4"
-                      control={control}
-                      rules={{ required: "Please select an answer" }}
-                      render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <SelectTrigger className={errors.q4 ? "border-red-400" : ""}>
-                            <SelectValue placeholder="Select..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {["Spreadsheet + inbox", "Reminder tool", "Dedicated internal team", "Outsourced service", "Other"].map(o => (
-                              <SelectItem key={o} value={o}>{o}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                    {errors.q4 && <p className="text-xs text-red-500 mt-1">{errors.q4.message}</p>}
-                    {q4Value === "Other" && (
-                      <div className="mt-2">
-                        <Input
-                          {...register("q4other", { required: q4Value === "Other" ? "Please describe your setup" : false })}
-                          placeholder="Please describe..."
-                          className={errors.q4other ? "border-red-400" : ""}
-                        />
-                        {errors.q4other && <p className="text-xs text-red-500 mt-1">{errors.q4other.message}</p>}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Q5 */}
-                  <div className="mb-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      5. If Qashivo worked as described, how quickly could you pilot with 1–3 clients? <span className="text-red-500">*</span>
-                    </label>
-                    <Controller
-                      name="q5"
-                      control={control}
-                      rules={{ required: "Please select an answer" }}
-                      render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <SelectTrigger className={errors.q5 ? "border-red-400" : ""}>
-                            <SelectValue placeholder="Select..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {["Immediately (this month)", "Next 30 days", "Next 60–90 days", "Not sure yet"].map(o => (
-                              <SelectItem key={o} value={o}>{o}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                    {errors.q5 && <p className="text-xs text-red-500 mt-1">{errors.q5.message}</p>}
                   </div>
                 </div>
 
