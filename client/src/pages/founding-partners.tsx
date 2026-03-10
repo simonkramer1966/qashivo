@@ -194,7 +194,7 @@ export default function FoundingPartners() {
               <img src={smeOwnerImg} alt="SME owner reviewing invoices" className="w-full h-full object-cover" />
             </div>
             <div className="order-1 lg:order-2">
-              <h2 className="text-3xl font-bold text-gray-900 mb-5">The problems we're solving</h2>
+              <h2 className="text-3xl font-bold text-gray-900 mb-5">The real problem is not invoices. It's cash uncertainty.</h2>
               <p className="text-lg text-gray-600 mb-4 leading-relaxed">
                 SMEs don't have an invoice problem. They have a follow-up and outcomes problem. Promises to pay, requests for more time, and disputes live in messy inbox threads, so cash stays uncertain.
               </p>
