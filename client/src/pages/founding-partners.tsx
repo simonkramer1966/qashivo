@@ -388,6 +388,7 @@ export default function FoundingPartners() {
                     "Join the Founding Partners Waitlist"
                   )}
                 </Button>
+                <p className="text-xs text-gray-400 text-center mt-2">This is for accounting firms who want to offer managed receivables, cashflow advisory, or a broader working capital support service to SME clients.</p>
               </form>
             </>
           )}
