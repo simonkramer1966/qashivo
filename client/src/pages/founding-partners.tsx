@@ -106,7 +106,7 @@ export default function FoundingPartners() {
               <div className="flex flex-col sm:flex-row gap-3 items-start">
                 <a href="#apply">
                   <Button size="lg" style={{ backgroundColor: TEAL }} className="text-white hover:opacity-90 font-semibold px-6">
-                    Join the Founding Team Waitlist
+                    Join the Founding Partners Waitlist
                   </Button>
                 </a>
                 <a href="#how-it-works">
@@ -383,7 +383,7 @@ export default function FoundingPartners() {
                       <Clock className="h-4 w-4 animate-spin" /> Submitting...
                     </span>
                   ) : (
-                    "Join the Founding Team Waitlist"
+                    "Join the Founding Partners Waitlist"
                   )}
                 </Button>
               </form>
