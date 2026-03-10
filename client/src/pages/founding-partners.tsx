@@ -322,7 +322,7 @@ export default function FoundingPartners() {
           ) : (
             <>
               <div className="mb-8">
-                <h2 className="text-3xl font-bold text-gray-900 mb-3">Join the Founding Team</h2>
+                <h2 className="text-3xl font-bold text-gray-900 mb-3">Join the Founding Partners team</h2>
                 <p className="text-gray-600">
                   Fill in your details and you'll receive a WhatsApp invite and next steps.
                 </p>
