@@ -165,7 +165,7 @@ export default function FoundingPartners() {
             <div>
               <h2 className="text-3xl font-bold text-gray-900 mb-4">Built for accounting partners</h2>
               <p className="text-lg text-gray-600 mb-6 leading-relaxed">
-                Whether you already offer credit control or want to add it, Qashivo helps you deliver it consistently, at scale, with minimal extra resource.
+                Built for firms that want to offer more than compliance.
               </p>
               <ul className="space-y-3">
                 {[
