@@ -88,7 +88,7 @@ export default function FoundingPartners() {
                 Turn cashflow advisory into a scalable service
               </h1>
               <p className="text-lg font-semibold text-gray-800 mb-6">
-                Helping clients get paid faster, without adding headcount.
+                Qashivo helps accounting firms become the working capital partner for SME clients — combining managed receivables, payment-intent capture, and live cashflow visibility in one accountant-led workflow.
               </p>
               <ul className="space-y-3 mb-8">
                 {[
