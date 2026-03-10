@@ -230,7 +230,7 @@ export default function FoundingPartners() {
       {/* Join and get exclusive access */}
       <section className="py-16 border-b border-gray-100">
         <div className="max-w-3xl mx-auto px-6 text-center">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">Join and get exclusive access</h2>
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">Launch a new service line for your firm</h2>
           <p className="text-lg text-gray-600 leading-relaxed">
             Founding Team members get early access, the private WhatsApp group, weekly playbooks, and a lifetime founding discount, locked to your firm.
           </p>
