@@ -169,9 +169,9 @@ export default function FoundingPartners() {
               </p>
               <ul className="space-y-3">
                 {[
-                  "Add a packaged credit control service without hiring",
-                  "Standardise the workflow across your client portfolio",
-                  "Offer something clients actually value: cash-in confidence",
+                  "Add a cashflow advisory service without building a credit control team",
+                  "Standardise receivables workflows across your client portfolio",
+                  "Give clients something they truly value: more confidence in when cash will land",
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-3 text-gray-700">
                     <Check className="h-5 w-5 mt-0.5 shrink-0" style={{ color: TEAL }} />
