@@ -87,6 +87,7 @@ const InvestorsRoadmap = lazy(() => import("@/pages/investors/roadmap"));
 const InvestorsWhy = lazy(() => import("@/pages/investors/why"));
 const InvestorsVoiceDemo = lazy(() => import("@/pages/investors/voice-demo"));
 const InvestorsContact = lazy(() => import("@/pages/investors/contact"));
+const InvestorsMetrics = lazy(() => import("@/pages/investors/metrics"));
 
 function PermissionGuard({ permission, children }: { permission: string; children: React.ReactNode }) {
   const { hasPermission, isLoadingPermissions } = usePermissions();
@@ -209,6 +210,7 @@ function Router() {
           <Route path="/investors/why" component={InvestorsWhy} />
           <Route path="/investors/voice-demo" component={InvestorsVoiceDemo} />
           <Route path="/investors/contact" component={InvestorsContact} />
+          <Route path="/investors/metrics" component={InvestorsMetrics} />
           <Route path="/privacy" component={Privacy} />
           <Route path="/terms" component={Terms} />
           <Route path="/" component={Home} />
@@ -287,6 +289,7 @@ function Router() {
           <Route path="/investors/why" component={InvestorsWhy} />
           <Route path="/investors/voice-demo" component={InvestorsVoiceDemo} />
           <Route path="/investors/contact" component={InvestorsContact} />
+          <Route path="/investors/metrics" component={InvestorsMetrics} />
           <Route path="/privacy" component={Privacy} />
           <Route path="/terms" component={Terms} />
           <Route path="/" component={Overview2} />
