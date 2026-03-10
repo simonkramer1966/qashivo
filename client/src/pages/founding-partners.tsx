@@ -92,10 +92,10 @@ export default function FoundingPartners() {
               </p>
               <ul className="space-y-3 mb-8">
                 {[
-                  "Early access to the Partner platform",
-                  "Direct input into what we build next (your workflow becomes the blueprint)",
-                  "Private Founding Team WhatsApp group",
-                  "Lifetime founding discount (locked in)",
+                  "Launch a new cashflow advisory service without adding headcount",
+                  "Manage receivables and client cash visibility in one partner workspace",
+                  "Turn debtor responses into structured outcomes that improve forecasts",
+                  "Join early and help shape the accountant-led working capital model",
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-3 text-gray-700">
                     <Check className="h-5 w-5 mt-0.5 shrink-0" style={{ color: TEAL }} />
