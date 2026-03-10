@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState, useMemo } from "react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Download } from "lucide-react";
+import { Download, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import type { PartnerWaitlist } from "@shared/schema";
 
 const Q_LABELS = [
@@ -12,6 +13,44 @@ const Q_LABELS = [
   "Current setup",
   "Pilot timeline",
 ];
+
+type SortKey = "createdAt" | "fullName" | "firmName" | "email";
+type SortDir = "asc" | "desc";
+
+function SortableHeader({
+  label,
+  sortKey,
+  active,
+  dir,
+  onClick,
+}: {
+  label: string;
+  sortKey: SortKey;
+  active: SortKey;
+  dir: SortDir;
+  onClick: (k: SortKey) => void;
+}) {
+  const isActive = active === sortKey;
+  return (
+    <th
+      className="text-left px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap cursor-pointer select-none hover:text-foreground"
+      onClick={() => onClick(sortKey)}
+    >
+      <span className="inline-flex items-center gap-1">
+        {label}
+        {isActive ? (
+          dir === "asc" ? (
+            <ChevronUp className="w-3.5 h-3.5" />
+          ) : (
+            <ChevronDown className="w-3.5 h-3.5" />
+          )
+        ) : (
+          <ChevronsUpDown className="w-3.5 h-3.5 opacity-40" />
+        )}
+      </span>
+    </th>
+  );
+}
 
 function downloadCsv(entries: PartnerWaitlist[]) {
   const headers = [
@@ -57,6 +96,36 @@ export default function AdminWaitlist() {
     queryKey: ["/api/admin/waitlist"],
   });
 
+  const [sortKey, setSortKey] = useState<SortKey>("createdAt");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  function handleSort(key: SortKey) {
+    if (key === sortKey) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  }
+
+  const sorted = useMemo(() => {
+    if (!entries) return [];
+    return [...entries].sort((a, b) => {
+      let av: string | number = "";
+      let bv: string | number = "";
+      if (sortKey === "createdAt") {
+        av = new Date(a.createdAt).getTime();
+        bv = new Date(b.createdAt).getTime();
+      } else {
+        av = (a[sortKey] ?? "").toLowerCase();
+        bv = (b[sortKey] ?? "").toLowerCase();
+      }
+      if (av < bv) return sortDir === "asc" ? -1 : 1;
+      if (av > bv) return sortDir === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [entries, sortKey, sortDir]);
+
   return (
     <AdminLayout>
       <div className="p-8">
@@ -94,10 +163,10 @@ export default function AdminWaitlist() {
             <table className="w-full text-[13px]">
               <thead>
                 <tr className="border-b border-border bg-muted/40">
-                  <th className="text-left px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">Date</th>
-                  <th className="text-left px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">Name</th>
-                  <th className="text-left px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">Firm</th>
-                  <th className="text-left px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">Email</th>
+                  <SortableHeader label="Date" sortKey="createdAt" active={sortKey} dir={sortDir} onClick={handleSort} />
+                  <SortableHeader label="Name" sortKey="fullName" active={sortKey} dir={sortDir} onClick={handleSort} />
+                  <SortableHeader label="Firm" sortKey="firmName" active={sortKey} dir={sortDir} onClick={handleSort} />
+                  <SortableHeader label="Email" sortKey="email" active={sortKey} dir={sortDir} onClick={handleSort} />
                   <th className="text-left px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">Mobile</th>
                   {Q_LABELS.map((l) => (
                     <th key={l} className="text-left px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">{l}</th>
@@ -106,7 +175,7 @@ export default function AdminWaitlist() {
                 </tr>
               </thead>
               <tbody>
-                {entries.map((e, i) => (
+                {sorted.map((e, i) => (
                   <tr
                     key={e.id}
                     className={`border-b border-border last:border-0 ${i % 2 === 0 ? "bg-white" : "bg-muted/20"}`}
