@@ -208,7 +208,7 @@ export default function FoundingPartners() {
       {/* How It Works */}
       <section id="how-it-works" className="py-20 border-b border-gray-100 bg-gray-50">
         <div className="max-w-6xl mx-auto px-6">
-          <h2 className="text-3xl font-bold text-gray-900 text-center mb-3">How it works</h2>
+          <h2 className="text-3xl font-bold text-gray-900 text-center mb-3">How accountant-led working capital management works</h2>
           <p className="text-center text-gray-500 mb-12 text-base">How accountant-led working capital management works.</p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-0 flex-wrap">
             {steps.map((step, i) => (
