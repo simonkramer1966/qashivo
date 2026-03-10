@@ -11,7 +11,7 @@ import smeOwnerImg from "@assets/image_1772706996989.png";
 import {
   Check, ChevronRight, Database, Calendar, UserCheck, Play, BarChart2,
   RefreshCw, Shield, FileText, Lock, Users, Clock,
-  Building, Link, TrendingUp, MessageSquare, Mail,
+  Building, Link, TrendingUp, MessageSquare, Mail, LayoutDashboard,
 } from "lucide-react";
 
 interface WaitlistFormData {
@@ -134,17 +134,19 @@ export default function FoundingPartners() {
       {/* Credibility Badges */}
       <section className="py-6 border-b border-gray-100 bg-gray-50">
         <div className="max-w-6xl mx-auto px-6">
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-5 gap-3">
             {[
-              { icon: Users, label: "Built for Accountants" },
-              { icon: UserCheck, label: "Human Approval Layer" },
+              { icon: Users, label: "Built for Accounting Firms" },
+              { icon: UserCheck, label: "Accountant-Led Advisory" },
+              { icon: Shield, label: "Human Approval Layer" },
               { icon: FileText, label: "Full Audit Trail" },
-              { icon: MessageSquare, label: "Outcome Capture (Intent)" },
-              { icon: TrendingUp, label: "Cash-in Confidence" },
+              { icon: MessageSquare, label: "Outcome Capture" },
+              { icon: TrendingUp, label: "Live Cashflow Visibility" },
               { icon: Mail, label: "Email + SMS + Voice" },
-              { icon: Link, label: "Xero / QuickBooks", comingSoon: true },
-              { icon: Building, label: "Open Banking", comingSoon: true },
-            ].map(({ icon: Icon, label, comingSoon }) => (
+              { icon: Link, label: "Xero / QuickBooks" },
+              { icon: Building, label: "Open Banking Ready" },
+              { icon: LayoutDashboard, label: "Multi-Client Workspace" },
+            ].map(({ icon: Icon, label }) => (
               <div
                 key={label}
                 className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600"
