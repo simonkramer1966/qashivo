@@ -163,7 +163,7 @@ export default function FoundingPartners() {
         <div className="max-w-6xl mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">Built for accounting partners</h2>
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">Built for firms that want to offer more than compliance</h2>
               <p className="text-lg text-gray-600 mb-6 leading-relaxed">
                 Qashivo gives your firm the infrastructure to offer accountant-led working capital support to SME clients. Whether you already provide credit control support or want to launch a packaged cashflow advisory service, Qashivo helps you deliver it consistently, clearly, and at scale.
               </p>
