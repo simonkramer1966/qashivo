@@ -65,12 +65,12 @@ export default function FoundingPartners() {
   };
 
   const steps = [
-    { icon: Database, label: "Receivables Data" },
-    { icon: Calendar, label: "Daily Plan" },
+    { icon: Database, label: "Import Receivables" },
+    { icon: Calendar, label: "Create Daily Plan" },
     { icon: UserCheck, label: "Human Approves" },
-    { icon: Play, label: "Execute" },
+    { icon: Play, label: "Execute Outreach" },
     { icon: BarChart2, label: "Capture Outcomes" },
-    { icon: RefreshCw, label: "Adjust" },
+    { icon: RefreshCw, label: "Update Cash View" },
   ];
 
   return (
