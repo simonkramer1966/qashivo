@@ -268,9 +268,9 @@ export default function FoundingPartners() {
               {
                 key: "plans",
                 messages: [
-                  { side: "right", text: "Can Qashivo manage payment plans from replies?" },
-                  { side: "left",  text: "Yes — we capture the agreed schedule and keep follow-ups on track." },
-                  { side: "right", text: "Amazing. That's usually a manual mess. 😊" },
+                  { side: "right", text: "How does this help with cashflow advisory?" },
+                  { side: "left",  text: "Every captured outcome improves visibility on what is likely to be paid, when, and with what level of confidence." },
+                  { side: "right", text: "That makes the forecast far more useful in client conversations." },
                 ],
               },
             ].map((chat) => (
