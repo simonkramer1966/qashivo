@@ -232,7 +232,7 @@ export default function FoundingPartners() {
         <div className="max-w-3xl mx-auto px-6 text-center">
           <h2 className="text-3xl font-bold text-gray-900 mb-4">Launch a new service line for your firm</h2>
           <p className="text-lg text-gray-600 leading-relaxed">
-            Founding Team members get early access, the private WhatsApp group, weekly playbooks, and a lifetime founding discount, locked to your firm.
+            Qashivo is designed to help firms move beyond reporting on cashflow and start actively improving it. Founding Partners will be first to shape a platform that enables managed receivables, intent-aware follow-up, and live client cashflow visibility all under firm control.
           </p>
         </div>
       </section>
