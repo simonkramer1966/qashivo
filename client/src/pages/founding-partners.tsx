@@ -244,9 +244,9 @@ export default function FoundingPartners() {
               {
                 key: "promise",
                 messages: [
-                  { side: "right", text: "What happens when a debtor replies with a promise to pay?" },
-                  { side: "left",  text: "We capture the payment date, update expected cash, and schedule the right follow-up." },
-                  { side: "right", text: "Great, that's the part that kills our time. 👏" },
+                  { side: "right", text: "What happens when a debtor promises to pay on a specific date?" },
+                  { side: "left",  text: "We capture the payment date, pause unnecessary chasing, update expected cash, and schedule the right follow-up automatically." },
+                  { side: "right", text: "That's exactly the kind of signal clients ask us for." },
                 ],
               },
               {
