@@ -196,7 +196,10 @@ export default function FoundingPartners() {
             <div className="order-1 lg:order-2">
               <h2 className="text-3xl font-bold text-gray-900 mb-5">The real problem is not invoices. It's cash uncertainty.</h2>
               <p className="text-lg text-gray-600 mb-4 leading-relaxed">
-                SMEs don't have an invoice problem. They have a follow-up and outcomes problem. Promises to pay, requests for more time, and disputes live in messy inbox threads, so cash stays uncertain.
+                SMEs rarely struggle because they cannot issue invoices. They struggle because follow-up is inconsistent, debtor intent is hidden inside inboxes and calls, and cashflow forecasts are built on assumptions instead of real outcomes.
+              </p>
+              <p className="text-lg text-gray-600 leading-relaxed">
+                Accounting firms see this every day, but delivering help has historically been too manual to scale. Qashivo changes that. We capture what debtors actually say — promises to pay, requests for more time, disputes, and silence — and turn those signals into structured workflow outcomes that update the next action and expected cash position.
               </p>
             </div>
           </div>
