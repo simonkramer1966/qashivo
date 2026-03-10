@@ -252,9 +252,9 @@ export default function FoundingPartners() {
               {
                 key: "disputes",
                 messages: [
-                  { side: "right", text: "And if they raise a dispute or issue?" },
-                  { side: "left",  text: "We classify it as a dispute, pause chasing, and flag it for your review." },
-                  { side: "right", text: "Perfect thanks. 👍" },
+                  { side: "right", text: "What if the debtor raises a dispute or invoice issue?" },
+                  { side: "left",  text: "We classify it as a dispute, remove it from the chase flow, and surface it for your team to review." },
+                  { side: "right", text: "That saves a lot of manual inbox checking." },
                 ],
               },
               {
