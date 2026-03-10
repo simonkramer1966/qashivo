@@ -85,7 +85,7 @@ export default function FoundingPartners() {
                 Launching: Founding Team (UK Accounting Firms)
               </div>
               <h1 className="text-4xl md:text-5xl font-bold leading-tight text-gray-900 mb-5">
-                Hi, we're launching Qashivo
+                Turn cashflow advisory into a scalable service
               </h1>
               <p className="text-lg font-semibold text-gray-800 mb-6">
                 Helping clients get paid faster, without adding headcount.
