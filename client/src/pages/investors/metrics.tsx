@@ -56,7 +56,7 @@ function Sparkline({ data, color = TEAL, gradId }: { data: { m: string; v: numbe
   );
 }
 
-function MiniBar({ data, color = TEAL, gradId }: { data: { m: string; v: number }[]; color?: string; gradId: string }) {
+function MiniBar({ data, color = TEAL }: { data: { m: string; v: number }[]; color?: string; gradId: string }) {
   return (
     <ResponsiveContainer width="100%" height={52}>
       <BarChart data={data} margin={{ top: 4, right: 2, bottom: 0, left: 2 }} barSize={10}>
@@ -126,42 +126,44 @@ export default function InvestorsMetrics() {
       <InvestorNav />
 
       {/* ── HERO ── */}
-      <section style={{ backgroundColor: DARK }} className="pt-24 pb-20">
+      <section className="pt-24 pb-20 bg-[#F7F8FA] border-b border-[#E6E8EC]">
         <div className="max-w-[1200px] mx-auto px-6">
           <div className="flex items-center gap-4 mb-10">
-            <span className="flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] font-semibold text-green-300 border border-green-500/40 bg-green-500/10">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+            <span className="flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] font-semibold text-green-700 border border-green-200 bg-green-50">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
               LIVE BETA
             </span>
             <span className="text-[#556070] text-[14px]">Updated March 2026 · Founding Partner Cohort</span>
           </div>
 
-          <h1 className="text-[52px] md:text-[72px] font-bold text-white leading-[1.0] tracking-[-0.03em] mb-4">
+          <h1 className="text-[52px] md:text-[72px] font-bold leading-[1.0] tracking-[-0.03em] mb-4" style={{ color: DARK }}>
             Platform Metrics
           </h1>
-          <p className="text-[18px] text-[#8A9AB0] mb-16 max-w-2xl leading-relaxed">
+          <p className="text-[18px] text-[#556070] mb-16 max-w-2xl leading-relaxed">
             Live activity across founding accounting partner firms and their SME client portfolios.
             All data reflects real beta usage, not projections.
           </p>
 
           {/* 4 hero stats */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-px rounded-2xl overflow-hidden" style={{ backgroundColor: "#1E2430" }}>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {[
               { label: "Firms Activated", value: "7", change: "+2 this month", data: firmsData, icon: Building2 },
               { label: "SMEs Onboarded", value: "34", change: "+7 this month", data: smesData, icon: Users },
               { label: "Total Messages Sent", value: "2,847", change: "+627 in March", data: messagesData, icon: MessageSquare },
               { label: "Debtor Reply Rate", value: "68%", change: "+2pp vs prior month", data: replyRateData, icon: TrendingUp },
             ].map(({ label, value, change, data, icon: Icon }, i) => (
-              <div key={label} style={{ backgroundColor: DARK }} className="p-8 flex flex-col gap-5">
+              <div key={label} className="bg-white rounded-2xl border border-[#E6E8EC] p-6 flex flex-col gap-4">
                 <div className="flex items-center justify-between">
-                  <Icon className="h-5 w-5 opacity-60" style={{ color: TEAL }} />
-                  <span className="text-[11px] text-green-400 font-medium">{change}</span>
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${TEAL}15` }}>
+                    <Icon className="h-4 w-4" style={{ color: TEAL }} />
+                  </div>
+                  <span className="text-[11px] text-green-600 font-semibold bg-green-50 px-2 py-0.5 rounded-full">{change}</span>
                 </div>
                 <div>
-                  <div className="text-[52px] md:text-[60px] font-bold text-white leading-none tracking-tight tabular-nums">{value}</div>
-                  <div className="text-[13px] text-[#8A9AB0] mt-2">{label}</div>
+                  <div className="text-[44px] md:text-[52px] font-bold leading-none tracking-tight tabular-nums" style={{ color: DARK }}>{value}</div>
+                  <div className="text-[13px] text-[#556070] mt-2">{label}</div>
                 </div>
-                <div className="-mx-2 opacity-70">
+                <div className="-mx-2">
                   <Sparkline data={data} color={TEAL} gradId={`hero-${i}`} />
                 </div>
               </div>
@@ -171,14 +173,14 @@ export default function InvestorsMetrics() {
       </section>
 
       {/* ── KPI GRID ── */}
-      <section className="py-20 bg-[#F7F8FA]">
+      <section className="py-20 bg-white">
         <div className="max-w-[1200px] mx-auto px-6">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-12">
             <div>
               <h2 className="text-[32px] font-bold tracking-tight" style={{ color: DARK }}>Traction Detail</h2>
               <p className="text-[16px] text-[#556070] mt-1.5">Oct 2025 – Mar 2026 · 6-month founding cohort window</p>
             </div>
-            <span className="self-start sm:self-auto text-[12px] text-[#8A9AB0] font-medium px-3 py-1.5 rounded-full bg-white border border-[#E6E8EC]">
+            <span className="self-start sm:self-auto text-[12px] text-[#8A9AB0] font-medium px-3 py-1.5 rounded-full bg-[#F7F8FA] border border-[#E6E8EC]">
               Cumulative unless stated
             </span>
           </div>
@@ -256,23 +258,23 @@ export default function InvestorsMetrics() {
       </section>
 
       {/* ── IMPACT STRIP ── */}
-      <section style={{ backgroundColor: DARK }} className="py-20">
+      <section className="py-20 bg-[#F7F8FA] border-t border-[#E6E8EC]">
         <div className="max-w-[1200px] mx-auto px-6">
-          <h2 className="text-[28px] font-bold text-white mb-3 text-center">Measurable Operator Impact</h2>
-          <p className="text-[16px] text-[#8A9AB0] text-center mb-14 max-w-xl mx-auto">
+          <h2 className="text-[28px] font-bold mb-3 text-center" style={{ color: DARK }}>Measurable Operator Impact</h2>
+          <p className="text-[16px] text-[#556070] text-center mb-14 max-w-xl mx-auto">
             Metrics from credit controllers and accounting firms actively using the platform in closed beta.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Time saved */}
-            <div className="rounded-2xl p-8 flex flex-col gap-4" style={{ backgroundColor: "#111827", border: "1px solid #1E2430" }}>
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${TEAL}20` }}>
+            <div className="bg-white rounded-2xl border border-[#E6E8EC] p-8 flex flex-col gap-4">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${TEAL}15` }}>
                 <Clock className="h-5 w-5" style={{ color: TEAL }} />
               </div>
               <div>
-                <div className="text-[52px] font-bold text-white leading-none tracking-tight">4.2</div>
+                <div className="text-[52px] font-bold leading-none tracking-tight" style={{ color: DARK }}>4.2</div>
                 <div className="text-[18px] font-medium mt-1" style={{ color: TEAL }}>hrs/week saved</div>
-                <div className="text-[13px] text-[#8A9AB0] mt-2 leading-relaxed">
+                <div className="text-[13px] text-[#556070] mt-2 leading-relaxed">
                   Per credit controller, per firm. Time reclaimed from manual chasing, inbox triage, and follow-up scheduling.
                 </div>
               </div>
@@ -282,14 +284,14 @@ export default function InvestorsMetrics() {
             </div>
 
             {/* Forecast improvement */}
-            <div className="rounded-2xl p-8 flex flex-col gap-4" style={{ backgroundColor: "#111827", border: "1px solid #1E2430" }}>
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: "#8B5CF620" }}>
+            <div className="bg-white rounded-2xl border border-[#E6E8EC] p-8 flex flex-col gap-4">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: "#8B5CF615" }}>
                 <TrendingDown className="h-5 w-5" style={{ color: "#8B5CF6" }} />
               </div>
               <div>
-                <div className="text-[52px] font-bold text-white leading-none tracking-tight">−43%</div>
+                <div className="text-[52px] font-bold leading-none tracking-tight" style={{ color: DARK }}>−43%</div>
                 <div className="text-[18px] font-medium mt-1" style={{ color: "#8B5CF6" }}>forecast variance</div>
-                <div className="text-[13px] text-[#8A9AB0] mt-2 leading-relaxed">
+                <div className="text-[13px] text-[#556070] mt-2 leading-relaxed">
                   Reduction in cash-in forecast error. Promise-to-pay capture gives firms a structured, reliable view of incoming cash.
                 </div>
               </div>
@@ -298,23 +300,23 @@ export default function InvestorsMetrics() {
               </div>
             </div>
 
-            {/* Plans approved */}
-            <div className="rounded-2xl p-8 flex flex-col gap-4" style={{ backgroundColor: "#111827", border: "1px solid #1E2430" }}>
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${GREEN}20` }}>
+            {/* Human in the loop */}
+            <div className="bg-white rounded-2xl border border-[#E6E8EC] p-8 flex flex-col gap-4">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${GREEN}15` }}>
                 <CheckCircle2 className="h-5 w-5" style={{ color: GREEN }} />
               </div>
               <div>
-                <div className="text-[52px] font-bold text-white leading-none tracking-tight">100%</div>
+                <div className="text-[52px] font-bold leading-none tracking-tight" style={{ color: DARK }}>100%</div>
                 <div className="text-[18px] font-medium mt-1" style={{ color: GREEN }}>human-in-the-loop</div>
-                <div className="text-[13px] text-[#8A9AB0] mt-2 leading-relaxed">
+                <div className="text-[13px] text-[#556070] mt-2 leading-relaxed">
                   Every outbound action is approved by a human before sending. Supervised autonomy, not black-box automation.
                 </div>
               </div>
               <div className="flex items-center gap-2 mt-2">
-                <div className="h-2 flex-1 rounded-full bg-[#1E2430]">
+                <div className="h-2 flex-1 rounded-full bg-[#E6E8EC]">
                   <div className="h-2 rounded-full" style={{ width: "100%", backgroundColor: GREEN }} />
                 </div>
-                <span className="text-[11px] text-[#556070]">142 / 142 approved</span>
+                <span className="text-[11px] text-[#8A9AB0]">142 / 142 approved</span>
               </div>
             </div>
           </div>
@@ -322,7 +324,7 @@ export default function InvestorsMetrics() {
       </section>
 
       {/* ── DISCLAIMER ── */}
-      <section className="py-10 bg-[#F7F8FA] border-t border-[#E6E8EC]">
+      <section className="py-10 bg-white border-t border-[#E6E8EC]">
         <div className="max-w-[1200px] mx-auto px-6 text-center">
           <p className="text-[13px] text-[#8A9AB0] leading-relaxed max-w-2xl mx-auto">
             All metrics reflect live activity from the Qashivo closed beta, conducted with founding accounting partner firms across their SME client portfolios. Data is illustrative of early-stage traction and should not be taken as a forward-looking projection.
