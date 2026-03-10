@@ -404,7 +404,7 @@ export default function FoundingPartners() {
           <p className="text-gray-600 text-lg leading-relaxed mb-6">
             I'm building Qashivo with a small group of accounting firms first, so we get the workflow right and the outcomes are real.
             <br /><br />
-            If you want to offer credit control that scales and automated cashflow without adding headcount, I'd love to have you on the founding team.
+            SMEs do not just need bookkeeping and reports. They need help getting paid and understanding when cash is likely to arrive. Qashivo helps accounting firms deliver that support in a scalable, controlled, and commercially viable way.
           </p>
           <p className="text-lg font-semibold text-gray-900">Simon</p>
           <p className="text-sm text-gray-400 mt-1">Founder, Qashivo</p>
