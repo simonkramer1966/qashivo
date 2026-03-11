@@ -25,7 +25,10 @@ export async function startAll(): Promise<void> {
 
   // Phase 1 — API providers
   try {
-    const domain = process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000';
+    const domain = process.env.REPLIT_DOMAINS?.split(',')[0]
+      || process.env.RAILWAY_PUBLIC_DOMAIN
+      || process.env.APP_DOMAIN
+      || 'localhost:5000';
     const protocol = domain.includes('localhost') ? 'http' : 'https';
     const baseUrl = `${protocol}://${domain}`;
 

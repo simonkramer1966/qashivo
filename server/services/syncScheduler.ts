@@ -29,20 +29,20 @@ class SyncScheduler {
 
     console.log('📅 Starting sync scheduler...');
     
-    // Run API middleware syncs immediately
-    this.runScheduledSyncs();
-    
+    // Run API middleware syncs immediately (catch to prevent unhandled rejection)
+    this.runScheduledSyncs().catch(err => console.error('[syncScheduler] initial scheduled sync error:', err));
+
     // Schedule API middleware syncs to run every hour
     this.intervalId = setInterval(() => {
-      this.runScheduledSyncs();
+      this.runScheduledSyncs().catch(err => console.error('[syncScheduler] scheduled sync error:', err));
     }, 60 * 60 * 1000); // 1 hour
 
     // Start Xero background sync (every 4 hours)
-    console.log('🔄 Starting Xero background sync scheduler...');
-    this.runXeroSyncs(); // Run immediately
-    
+    console.log('Starting Xero background sync scheduler...');
+    this.runXeroSyncs().catch(err => console.error('[syncScheduler] initial Xero sync error:', err));
+
     this.xeroIntervalId = setInterval(() => {
-      this.runXeroSyncs();
+      this.runXeroSyncs().catch(err => console.error('[syncScheduler] Xero sync error:', err));
     }, 4 * 60 * 60 * 1000); // 4 hours
 
     this.isRunning = true;
@@ -96,8 +96,8 @@ class SyncScheduler {
       console.log(`Found ${tenantsToSync.length} tenants with Xero auto-sync enabled`);
 
       for (const tenant of tenantsToSync) {
-        if (!tenant.xeroAccessToken) {
-          console.log(`⏭️ Skipping tenant ${tenant.name} - no Xero connection`);
+        if (!tenant.xeroAccessToken || !tenant.xeroRefreshToken || !tenant.xeroTenantId) {
+          console.log(`Skipping tenant ${tenant.name} - incomplete Xero credentials`);
           continue;
         }
 
@@ -150,10 +150,5 @@ class SyncScheduler {
   }
 }
 
-// Export singleton instance
+// Export singleton instance (started from server/startup/orchestrator.ts)
 export const syncScheduler = new SyncScheduler();
-
-// Auto-start scheduler in production
-if (process.env.NODE_ENV === 'production') {
-  syncScheduler.start();
-}

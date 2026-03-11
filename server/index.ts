@@ -152,8 +152,8 @@ process.on('uncaughtException', (err) => {
 });
 
 process.on('unhandledRejection', (reason) => {
-  console.error(`[FATAL] unhandledRejection — pid ${process.pid}:`, reason);
-  process.exit(1);
+  console.error(`[WARN] unhandledRejection — pid ${process.pid}:`, reason);
+  // Log but do not exit — background tasks may produce non-fatal rejections
 });
 // ──────────────────────────────────────────────────────────────────────────────
 
@@ -237,149 +237,156 @@ process.on('unhandledRejection', (reason) => {
   app.use('/attached_assets', express.static(attachedAssetsPath));
   
   // Custom route to serve video from object storage with Range request support
-  // Always set up Object Storage SDK routes (works in both dev and production)
-  console.log(`📦 Initializing Object Storage video streaming at /media`);
-  const { Client } = await import('@replit/object-storage');
-  const objectStorageClient = new Client();
-  
-  // OPTIONS preflight handler for CORS (Safari requires this)
-  app.options('/media/:filename', (req, res) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type');
-    res.setHeader('Access-Control-Max-Age', '86400');
-    res.status(204).end();
-  });
-  
-  // HEAD request support for video preflight checks
-  app.head('/media/:filename', async (req, res) => {
-    try {
-      const filename = req.params.filename;
-      const result = await objectStorageClient.downloadAsBytes(`public/${filename}`);
-      
-      if (result.error) {
-        return res.status(404).end();
-      }
-      
-      const fileBuffer = result.value[0];
-      
-      // CORS headers for Safari compatibility
+  // Only initialise Replit Object Storage when running inside Replit (token present)
+  if (process.env.REPLIT_OBJECT_STORAGE_TOKEN) {
+    console.log(`Initializing Object Storage video streaming at /media`);
+    const { Client } = await import('@replit/object-storage');
+    const objectStorageClient = new Client();
+
+    // OPTIONS preflight handler for CORS (Safari requires this)
+    app.options('/media/:filename', (req, res) => {
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
-      res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
-      
-      res.setHeader('Content-Type', 'video/mp4');
-      res.setHeader('Accept-Ranges', 'bytes');
-      res.setHeader('Content-Length', fileBuffer.length);
-      res.setHeader('Cache-Control', 'public, max-age=86400');
-      res.status(200).end();
-    } catch (error) {
-      console.error('HEAD request error:', error);
-      res.status(500).end();
-    }
-  });
-  
-  // GET request with Range support for video streaming
-  app.get('/media/:filename', async (req, res) => {
-    try {
-      const filename = req.params.filename;
-      const range = req.headers.range;
-      
-      console.log(`📹 Video request for ${filename} from ${req.headers['user-agent']?.substring(0, 50)}`);
-      console.log(`📹 Range header: ${range || 'none'}`);
-      
-      // Download file from object storage with error handling
-      let result;
+      res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type');
+      res.setHeader('Access-Control-Max-Age', '86400');
+      res.status(204).end();
+    });
+
+    // HEAD request support for video preflight checks
+    app.head('/media/:filename', async (req, res) => {
       try {
-        result = await objectStorageClient.downloadAsBytes(`public/${filename}`);
-      } catch (downloadError) {
-        console.error('❌ Object Storage download failed:', downloadError);
-        return res.status(500).send('Failed to download from object storage');
-      }
-      
-      if (result.error) {
-        console.error('❌ Object Storage error:', result.error);
-        return res.status(404).send('File not found in object storage');
-      }
-      
-      if (!result.value || !result.value[0]) {
-        console.error('❌ Empty response from Object Storage');
-        return res.status(500).send('Invalid response from object storage');
-      }
-      
-      const fileBuffer = result.value[0];
-      const fileSize = fileBuffer.length;
-      
-      console.log(`✅ File loaded: ${fileSize} bytes`);
-      
-      // CORS headers for Safari compatibility
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
-      res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
-      
-      // Set common headers (Safari-compatible)
-      res.setHeader('Content-Type', 'video/mp4');
-      res.setHeader('Accept-Ranges', 'bytes');
-      res.setHeader('Cache-Control', 'public, max-age=86400');
-      
-      // Handle Range requests (required for video seeking, especially Safari)
-      if (range) {
-        // Safari-compatible range parsing
-        const match = range.match(/bytes=(\d+)-(\d*)/);
-        if (!match) {
-          console.error('❌ Invalid range format:', range);
-          res.setHeader('Content-Range', `bytes */${fileSize}`);
-          return res.status(416).send('Range Not Satisfiable');
+        const filename = req.params.filename;
+        const result = await objectStorageClient.downloadAsBytes(`public/${filename}`);
+
+        if (result.error) {
+          return res.status(404).end();
         }
-        
-        const start = parseInt(match[1], 10);
-        let end = match[2] ? parseInt(match[2], 10) : fileSize - 1;
-        
-        // Validate range values
-        if (isNaN(start) || start < 0 || start >= fileSize) {
-          console.error('❌ Invalid start position:', start);
-          res.setHeader('Content-Range', `bytes */${fileSize}`);
-          return res.status(416).send('Range Not Satisfiable');
-        }
-        
-        // Ensure end is within bounds
-        end = Math.min(end, fileSize - 1);
-        
-        // Safari fix: If no end specified or end too far, limit chunk size for initial requests
-        if (!match[2] || (end - start) > 10 * 1024 * 1024) {
-          end = Math.min(start + 10 * 1024 * 1024 - 1, fileSize - 1); // 10MB max chunks
-        }
-        
-        const chunkSize = (end - start) + 1;
-        
-        if (chunkSize <= 0) {
-          console.error('❌ Invalid chunk size:', chunkSize);
-          res.setHeader('Content-Range', `bytes */${fileSize}`);
-          return res.status(416).send('Range Not Satisfiable');
-        }
-        
-        console.log(`📤 Sending bytes ${start}-${end}/${fileSize} (${chunkSize} bytes)`);
-        
-        const chunk = fileBuffer.subarray(start, end + 1);
-        
-        res.status(206);
-        res.setHeader('Content-Range', `bytes ${start}-${end}/${fileSize}`);
-        res.setHeader('Content-Length', chunkSize.toString());
-        res.send(chunk);
-      } else {
-        // No range requested - Safari sometimes does this first
-        console.log(`📤 Sending full file (${fileSize} bytes)`);
-        res.setHeader('Content-Length', fileSize.toString());
-        res.status(200).send(fileBuffer);
+
+        const fileBuffer = result.value[0];
+
+        // CORS headers for Safari compatibility
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+        res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
+
+        res.setHeader('Content-Type', 'video/mp4');
+        res.setHeader('Accept-Ranges', 'bytes');
+        res.setHeader('Content-Length', fileBuffer.length);
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        res.status(200).end();
+      } catch (error) {
+        console.error('HEAD request error:', error);
+        res.status(500).end();
       }
-    } catch (error: any) {
-      console.error('❌ Fatal error serving media:', error.message || error);
-      console.error(error.stack);
-      if (!res.headersSent) {
-        res.status(500).send('Internal server error');
+    });
+
+    // GET request with Range support for video streaming
+    app.get('/media/:filename', async (req, res) => {
+      try {
+        const filename = req.params.filename;
+        const range = req.headers.range;
+
+        console.log(`Video request for ${filename} from ${req.headers['user-agent']?.substring(0, 50)}`);
+        console.log(`Range header: ${range || 'none'}`);
+
+        // Download file from object storage with error handling
+        let result;
+        try {
+          result = await objectStorageClient.downloadAsBytes(`public/${filename}`);
+        } catch (downloadError) {
+          console.error('Object Storage download failed:', downloadError);
+          return res.status(500).send('Failed to download from object storage');
+        }
+
+        if (result.error) {
+          console.error('Object Storage error:', result.error);
+          return res.status(404).send('File not found in object storage');
+        }
+
+        if (!result.value || !result.value[0]) {
+          console.error('Empty response from Object Storage');
+          return res.status(500).send('Invalid response from object storage');
+        }
+
+        const fileBuffer = result.value[0];
+        const fileSize = fileBuffer.length;
+
+        console.log(`File loaded: ${fileSize} bytes`);
+
+        // CORS headers for Safari compatibility
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+        res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
+
+        // Set common headers (Safari-compatible)
+        res.setHeader('Content-Type', 'video/mp4');
+        res.setHeader('Accept-Ranges', 'bytes');
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+
+        // Handle Range requests (required for video seeking, especially Safari)
+        if (range) {
+          // Safari-compatible range parsing
+          const match = range.match(/bytes=(\d+)-(\d*)/);
+          if (!match) {
+            console.error('Invalid range format:', range);
+            res.setHeader('Content-Range', `bytes */${fileSize}`);
+            return res.status(416).send('Range Not Satisfiable');
+          }
+
+          const start = parseInt(match[1], 10);
+          let end = match[2] ? parseInt(match[2], 10) : fileSize - 1;
+
+          // Validate range values
+          if (isNaN(start) || start < 0 || start >= fileSize) {
+            console.error('Invalid start position:', start);
+            res.setHeader('Content-Range', `bytes */${fileSize}`);
+            return res.status(416).send('Range Not Satisfiable');
+          }
+
+          // Ensure end is within bounds
+          end = Math.min(end, fileSize - 1);
+
+          // Safari fix: If no end specified or end too far, limit chunk size for initial requests
+          if (!match[2] || (end - start) > 10 * 1024 * 1024) {
+            end = Math.min(start + 10 * 1024 * 1024 - 1, fileSize - 1); // 10MB max chunks
+          }
+
+          const chunkSize = (end - start) + 1;
+
+          if (chunkSize <= 0) {
+            console.error('Invalid chunk size:', chunkSize);
+            res.setHeader('Content-Range', `bytes */${fileSize}`);
+            return res.status(416).send('Range Not Satisfiable');
+          }
+
+          console.log(`Sending bytes ${start}-${end}/${fileSize} (${chunkSize} bytes)`);
+
+          const chunk = fileBuffer.subarray(start, end + 1);
+
+          res.status(206);
+          res.setHeader('Content-Range', `bytes ${start}-${end}/${fileSize}`);
+          res.setHeader('Content-Length', chunkSize.toString());
+          res.send(chunk);
+        } else {
+          // No range requested - Safari sometimes does this first
+          console.log(`Sending full file (${fileSize} bytes)`);
+          res.setHeader('Content-Length', fileSize.toString());
+          res.status(200).send(fileBuffer);
+        }
+      } catch (error: any) {
+        console.error('Fatal error serving media:', error.message || error);
+        console.error(error.stack);
+        if (!res.headersSent) {
+          res.status(500).send('Internal server error');
+        }
       }
-    }
-  });
+    });
+  } else {
+    console.log('[startup] Replit Object Storage not available — /media routes disabled');
+    app.all('/media/:filename', (_req, res) => {
+      res.status(503).json({ error: 'Object storage not configured' });
+    });
+  }
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
@@ -405,11 +412,7 @@ process.on('unhandledRejection', (reason) => {
     process.exit(1);
   });
 
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
+  server.listen(port, "0.0.0.0", () => {
     log(`serving on port ${port} — pid ${process.pid}`);
   });
 })();
