@@ -13,6 +13,7 @@ import { startReportScheduler } from "../services/reportScheduler";
 import { startDebtorScoringWorker } from "../jobs/debtorScoringJob";
 import { workflowTimerProcessor } from "../jobs/workflow-timer-processor";
 import { portfolioController } from "../services/portfolioController";
+import { startDsoSnapshotJob } from "../jobs/dsoSnapshotJob";
 
 export async function startAll(): Promise<void> {
   // Phase 0 — Bootstrap
@@ -159,5 +160,12 @@ export async function startAll(): Promise<void> {
     console.log("[startup] portfolio controller started");
   } catch (error) {
     console.error("[startup] portfolio controller failed:", error);
+  }
+
+  try {
+    startDsoSnapshotJob();
+    console.log("[startup] DSO snapshot job started");
+  } catch (error) {
+    console.error("[startup] DSO snapshot job failed:", error);
   }
 }

@@ -19,7 +19,7 @@ import {
   inboundMessages, smsMessages, investorLeads, onboardingProgress, messageDrafts,
   tenants, paymentPromises, promisesToPay, smeClients, contactNotes, timelineEvents,
   attentionItems, outcomes, activityLogs, collectionPolicies, paymentPlans,
-  emailMessages, customerContactPersons, scheduledReports,
+  emailMessages, customerContactPersons, scheduledReports, complianceChecks,
 } from "@shared/schema";
 import { computeNextRunAt } from "../services/reportScheduler";
 import { REPORT_TYPE_LABELS, type ReportType } from "../services/reportGenerator";
@@ -2029,11 +2029,272 @@ export function registerDashboardRoutes(app: Express): void {
       }
 
       const beta = await getRecommendedBeta(user.tenantId);
-      
+
       res.json({ recommendedBeta: beta });
     } catch (error) {
       console.error('Error calculating recommended beta:', error);
       res.status(500).json({ message: "Failed to calculate recommended beta" });
+    }
+  });
+
+  // ── Sprint 3.1: Qollections Dashboard Summary (AR cards + ageing buckets) ──
+  app.get("/api/qollections/summary", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const result = await db.execute(sql`
+        WITH outstanding AS (
+          SELECT
+            COALESCE(SUM(amount - amount_paid), 0) as total_outstanding,
+            COUNT(*) as total_invoices
+          FROM invoices
+          WHERE tenant_id = ${user.tenantId}
+            AND LOWER(status) NOT IN ('paid', 'void', 'voided', 'deleted')
+        ),
+        overdue AS (
+          SELECT
+            COALESCE(SUM(amount - amount_paid), 0) as total_overdue,
+            COUNT(*) as overdue_count
+          FROM invoices
+          WHERE tenant_id = ${user.tenantId}
+            AND LOWER(status) NOT IN ('paid', 'void', 'voided', 'deleted')
+            AND due_date < CURRENT_DATE
+        ),
+        dso_calc AS (
+          SELECT
+            COALESCE(AVG(EXTRACT(DAY FROM AGE(paid_date, issue_date))), 0) as dso
+          FROM invoices
+          WHERE tenant_id = ${user.tenantId}
+            AND status = 'paid'
+            AND paid_date >= NOW() - INTERVAL '90 days'
+        ),
+        debtor_count AS (
+          SELECT COUNT(DISTINCT contact_id) as total
+          FROM invoices
+          WHERE tenant_id = ${user.tenantId}
+            AND LOWER(status) NOT IN ('paid', 'void', 'voided', 'deleted')
+            AND (amount - amount_paid) > 0
+        ),
+        ageing AS (
+          SELECT
+            CASE
+              WHEN due_date >= CURRENT_DATE THEN 'current'
+              WHEN EXTRACT(DAY FROM AGE(CURRENT_DATE, due_date)) BETWEEN 1 AND 30 THEN '1-30'
+              WHEN EXTRACT(DAY FROM AGE(CURRENT_DATE, due_date)) BETWEEN 31 AND 60 THEN '31-60'
+              WHEN EXTRACT(DAY FROM AGE(CURRENT_DATE, due_date)) BETWEEN 61 AND 90 THEN '61-90'
+              ELSE '90+'
+            END as bucket,
+            COALESCE(SUM(amount - amount_paid), 0) as amount,
+            COUNT(*) as invoice_count
+          FROM invoices
+          WHERE tenant_id = ${user.tenantId}
+            AND LOWER(status) NOT IN ('paid', 'void', 'voided', 'deleted')
+            AND (amount - amount_paid) > 0
+          GROUP BY bucket
+        )
+        SELECT
+          (SELECT total_outstanding FROM outstanding) as total_outstanding,
+          (SELECT total_invoices FROM outstanding) as total_invoices,
+          (SELECT total_overdue FROM overdue) as total_overdue,
+          (SELECT overdue_count FROM overdue) as overdue_count,
+          (SELECT dso FROM dso_calc) as dso,
+          (SELECT total FROM debtor_count) as total_debtors,
+          (SELECT json_agg(json_build_object('bucket', bucket, 'amount', amount, 'count', invoice_count)) FROM ageing) as ageing_buckets
+      `);
+
+      const row = (result as any).rows?.[0] || (result as any)[0] || {};
+
+      const bucketOrder = ['current', '1-30', '31-60', '61-90', '90+'];
+      const rawBuckets = row.ageing_buckets || [];
+      const ageingBuckets = bucketOrder.map((key) => {
+        const found = rawBuckets.find((b: any) => b.bucket === key);
+        return {
+          bucket: key,
+          amount: Math.round(Number(found?.amount || 0)),
+          count: Number(found?.count || 0),
+        };
+      });
+
+      res.json({
+        totalOutstanding: Math.round(Number(row.total_outstanding || 0)),
+        totalOverdue: Math.round(Number(row.total_overdue || 0)),
+        overdueCount: Number(row.overdue_count || 0),
+        dso: Math.round(Number(row.dso || 0)),
+        totalDebtors: Number(row.total_debtors || 0),
+        totalInvoices: Number(row.total_invoices || 0),
+        ageingBuckets,
+      });
+    } catch (error) {
+      console.error("Error fetching qollections summary:", error);
+      res.status(500).json({ message: "Failed to fetch qollections summary" });
+    }
+  });
+
+  // ── Sprint 3.1: Agent Activity Feed (last 20 actions with compliance) ──
+  app.get("/api/qollections/activity", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const recentActions = await db
+        .select({
+          id: actions.id,
+          type: actions.type,
+          status: actions.status,
+          subject: actions.subject,
+          aiGenerated: actions.aiGenerated,
+          confidenceScore: actions.confidenceScore,
+          exceptionReason: actions.exceptionReason,
+          createdAt: actions.createdAt,
+          contactName: contacts.name,
+          companyName: contacts.companyName,
+          invoiceNumber: invoices.invoiceNumber,
+          invoiceAmount: invoices.amount,
+          invoiceCurrency: invoices.currency,
+        })
+        .from(actions)
+        .leftJoin(contacts, and(eq(actions.contactId, contacts.id), eq(contacts.tenantId, user.tenantId)))
+        .leftJoin(invoices, and(eq(actions.invoiceId, invoices.id), eq(invoices.tenantId, user.tenantId)))
+        .where(eq(actions.tenantId, user.tenantId))
+        .orderBy(desc(actions.createdAt))
+        .limit(20);
+
+      // Batch-fetch compliance checks for these actions
+      const actionIds = recentActions.map((a) => a.id);
+      let complianceMap = new Map<string, { checkResult: string; violations: string[] }>();
+
+      if (actionIds.length > 0) {
+        const checks = await db
+          .select({
+            actionId: complianceChecks.actionId,
+            checkResult: complianceChecks.checkResult,
+            violations: complianceChecks.violations,
+          })
+          .from(complianceChecks)
+          .where(
+            and(
+              inArray(complianceChecks.actionId, actionIds),
+              eq(complianceChecks.tenantId, user.tenantId),
+            ),
+          );
+
+        for (const c of checks) {
+          if (c.actionId && !complianceMap.has(c.actionId)) {
+            complianceMap.set(c.actionId, {
+              checkResult: c.checkResult,
+              violations: (c.violations as string[]) || [],
+            });
+          }
+        }
+      }
+
+      const enriched = recentActions.map((a) => ({
+        id: a.id,
+        type: a.type,
+        status: a.status,
+        subject: a.subject,
+        aiGenerated: a.aiGenerated,
+        confidenceScore: a.confidenceScore,
+        exceptionReason: a.exceptionReason,
+        createdAt: a.createdAt,
+        contactName: a.contactName || a.companyName || "Unknown",
+        invoiceNumber: a.invoiceNumber,
+        invoiceAmount: a.invoiceAmount,
+        invoiceCurrency: a.invoiceCurrency || "GBP",
+        compliance: complianceMap.get(a.id) || null,
+      }));
+
+      res.json(enriched);
+    } catch (error) {
+      console.error("Error fetching qollections activity:", error);
+      res.status(500).json({ message: "Failed to fetch activity feed" });
+    }
+  });
+
+  // ── Sprint 3.1: Debtor List (contacts with invoice aggregates) ──
+  app.get("/api/qollections/debtors", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const debtors = await db
+        .select({
+          id: contacts.id,
+          name: contacts.name,
+          companyName: contacts.companyName,
+          email: contacts.email,
+          totalOutstanding: sql<number>`COALESCE(SUM(CASE WHEN LOWER(${invoices.status}) NOT IN ('paid', 'void', 'voided', 'deleted') THEN ${invoices.amount} - ${invoices.amountPaid} ELSE 0 END), 0)`,
+          overdueAmount: sql<number>`COALESCE(SUM(CASE WHEN LOWER(${invoices.status}) NOT IN ('paid', 'void', 'voided', 'deleted') AND ${invoices.dueDate} < CURRENT_DATE THEN ${invoices.amount} - ${invoices.amountPaid} ELSE 0 END), 0)`,
+          invoiceCount: sql<number>`COUNT(CASE WHEN LOWER(${invoices.status}) NOT IN ('paid', 'void', 'voided', 'deleted') AND (${invoices.amount} - ${invoices.amountPaid}) > 0 THEN 1 END)`,
+          oldestOverdueDays: sql<number>`COALESCE(MAX(CASE WHEN LOWER(${invoices.status}) NOT IN ('paid', 'void', 'voided', 'deleted') AND ${invoices.dueDate} < CURRENT_DATE THEN EXTRACT(DAY FROM AGE(CURRENT_DATE, ${invoices.dueDate})) END), 0)`,
+          lastContactDate: sql<Date>`(SELECT MAX(a.created_at) FROM actions a WHERE a.contact_id = ${contacts.id} AND a.tenant_id = ${user.tenantId})`,
+          nextActionDate: sql<Date>`(SELECT MIN(a.scheduled_for) FROM actions a WHERE a.contact_id = ${contacts.id} AND a.tenant_id = ${user.tenantId} AND a.status IN ('pending', 'pending_approval', 'scheduled'))`,
+          isActive: contacts.isActive,
+        })
+        .from(contacts)
+        .leftJoin(
+          invoices,
+          and(eq(invoices.contactId, contacts.id), eq(invoices.tenantId, user.tenantId)),
+        )
+        .where(and(eq(contacts.tenantId, user.tenantId), eq(contacts.isActive, true)))
+        .groupBy(contacts.id, contacts.name, contacts.companyName, contacts.email, contacts.isActive)
+        .having(
+          sql`SUM(CASE WHEN LOWER(${invoices.status}) NOT IN ('paid', 'void', 'voided', 'deleted') THEN ${invoices.amount} - ${invoices.amountPaid} ELSE 0 END) > 0`,
+        )
+        .orderBy(
+          sql`SUM(CASE WHEN LOWER(${invoices.status}) NOT IN ('paid', 'void', 'voided', 'deleted') THEN ${invoices.amount} - ${invoices.amountPaid} ELSE 0 END) DESC`,
+        );
+
+      const formatted = debtors.map((d) => ({
+        id: d.id,
+        name: d.companyName || d.name || "Unknown",
+        email: d.email,
+        totalOutstanding: Math.round(Number(d.totalOutstanding || 0)),
+        overdueAmount: Math.round(Number(d.overdueAmount || 0)),
+        invoiceCount: Number(d.invoiceCount || 0),
+        oldestOverdueDays: Math.round(Number(d.oldestOverdueDays || 0)),
+        lastContactDate: d.lastContactDate,
+        nextActionDate: d.nextActionDate,
+        status: d.isActive ? "active" : "inactive",
+      }));
+
+      res.json(formatted);
+    } catch (error) {
+      console.error("Error fetching qollections debtors:", error);
+      res.status(500).json({ message: "Failed to fetch debtor list" });
+    }
+  });
+
+  // ── Sprint 3.2: DSO Trend (last 90 days) ──
+  app.get("/api/qollections/dso-trend", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const days = Math.min(parseInt(req.query.days as string) || 90, 365);
+      const snapshots = await storage.getDsoSnapshots(user.tenantId, days);
+
+      const trend = snapshots.map((s) => ({
+        date: s.snapshotDate,
+        dso: Number(s.dsoValue),
+        totalReceivables: Number(s.totalReceivables),
+        overdueAmount: Number(s.overdueAmount),
+        overduePercentage: Number(s.overduePercentage),
+      }));
+
+      res.json(trend);
+    } catch (error) {
+      console.error("Error fetching DSO trend:", error);
+      res.status(500).json({ message: "Failed to fetch DSO trend" });
     }
   });
 }

@@ -157,6 +157,9 @@ import {
   complianceChecks,
   type ComplianceCheck,
   type InsertComplianceCheck,
+  dsoSnapshots,
+  type DsoSnapshot,
+  type InsertDsoSnapshot,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc, sql, count, sum, ne, isNotNull, isNull, gte, lte, lt, or, ilike, inArray } from "drizzle-orm";
@@ -611,6 +614,10 @@ export interface IStorage {
   getComplianceCheck(id: string, tenantId: string): Promise<ComplianceCheck | undefined>;
   createComplianceCheck(check: InsertComplianceCheck): Promise<ComplianceCheck>;
   updateComplianceCheck(id: string, updates: Partial<InsertComplianceCheck>): Promise<ComplianceCheck | undefined>;
+
+  // DSO Snapshot operations
+  createDsoSnapshot(snapshot: InsertDsoSnapshot): Promise<DsoSnapshot>;
+  getDsoSnapshots(tenantId: string, days?: number): Promise<DsoSnapshot[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -5601,6 +5608,22 @@ export class DatabaseStorage implements IStorage {
       .where(eq(complianceChecks.id, id))
       .returning();
     return updated;
+  }
+
+  // ── Sprint 3.2: DSO Snapshots ──
+  async createDsoSnapshot(snapshot: InsertDsoSnapshot): Promise<DsoSnapshot> {
+    const [created] = await db.insert(dsoSnapshots).values(snapshot).returning();
+    return created;
+  }
+
+  async getDsoSnapshots(tenantId: string, days = 90): Promise<DsoSnapshot[]> {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+    return db
+      .select()
+      .from(dsoSnapshots)
+      .where(and(eq(dsoSnapshots.tenantId, tenantId), gte(dsoSnapshots.snapshotDate, cutoff)))
+      .orderBy(asc(dsoSnapshots.snapshotDate));
   }
 }
 

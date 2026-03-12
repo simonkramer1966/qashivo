@@ -5485,3 +5485,33 @@ export const insertComplianceCheckSchema = createInsertSchema(complianceChecks).
 
 export type ComplianceCheck = typeof complianceChecks.$inferSelect;
 export type InsertComplianceCheck = z.infer<typeof insertComplianceCheckSchema>;
+
+// ── Sprint 3.2: DSO Snapshots ──────────────────────────────
+export const dsoSnapshots = pgTable("dso_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  snapshotDate: timestamp("snapshot_date").notNull(),
+  dsoValue: decimal("dso_value").notNull(),
+  totalReceivables: decimal("total_receivables").notNull(),
+  totalRevenue90d: decimal("total_revenue_90d").notNull(),
+  overdueAmount: decimal("overdue_amount").notNull(),
+  overduePercentage: decimal("overdue_percentage").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_dso_snapshots_tenant_date").on(table.tenantId, table.snapshotDate),
+]);
+
+export const dsoSnapshotsRelations = relations(dsoSnapshots, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [dsoSnapshots.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
+export const insertDsoSnapshotSchema = createInsertSchema(dsoSnapshots).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type DsoSnapshot = typeof dsoSnapshots.$inferSelect;
+export type InsertDsoSnapshot = z.infer<typeof insertDsoSnapshotSchema>;
