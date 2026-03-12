@@ -6,10 +6,11 @@ import { useToast } from "@/hooks/use-toast";
 import { Check, Loader2 } from "lucide-react";
 import Step1CompanyDetails from "./onboarding/Step1CompanyDetails";
 import Step2ConnectXero from "./onboarding/Step2ConnectXero";
-import Step3ConnectEmail from "./onboarding/Step3ConnectEmail";
-import Step4ConnectBank from "./onboarding/Step4ConnectBank";
-import Step5DebtorScoring from "./onboarding/Step5DebtorScoring";
+import Step3OpenBanking from "./onboarding/Step3OpenBanking";
+import Step4AgentPersona from "./onboarding/Step4AgentPersona";
+import Step5CommPrefs from "./onboarding/Step5CommPrefs";
 import Step6ContactAnalysis from "./onboarding/Step6ContactAnalysis";
+import Step7GoLive from "./onboarding/Step7GoLive";
 
 type StepStatus = "NOT_STARTED" | "COMPLETED" | "SKIPPED" | "RUNNING";
 
@@ -43,18 +44,24 @@ export interface OnboardingStatus {
   emailConnectedAddress: string | null;
 }
 
+// 7 user-facing steps mapped to 6 DB step status fields + Go Live
 const STEPS = [
-  { number: 1, label: "Company Details", required: true },
-  { number: 2, label: "Connect Xero", required: false },
-  { number: 3, label: "Connect Email", required: false },
-  { number: 4, label: "Connect Bank", required: false },
-  { number: 5, label: "Debtor Scoring", required: false },
-  { number: 6, label: "Contact Data", required: false },
+  { number: 1, label: "Welcome", dbStep: 1, required: true },
+  { number: 2, label: "Connect Xero", dbStep: 2, required: false },
+  { number: 3, label: "Open Banking", dbStep: 3, required: false },
+  { number: 4, label: "Agent Persona", dbStep: 4, required: false },
+  { number: 5, label: "Preferences", dbStep: 5, required: false },
+  { number: 6, label: "Review Debtors", dbStep: 6, required: false },
+  { number: 7, label: "Go Live", dbStep: 0, required: false },
 ];
 
-function getStepStatus(status: OnboardingStatus | undefined, step: number): StepStatus {
+function getStepStatus(status: OnboardingStatus | undefined, uiStep: number): StepStatus {
   if (!status) return "NOT_STARTED";
-  const key = `step${step}Status` as keyof OnboardingStatus;
+  if (uiStep === 7) {
+    return status.onboardingCompleted ? "COMPLETED" : "NOT_STARTED";
+  }
+  const dbStep = STEPS.find((s) => s.number === uiStep)?.dbStep || uiStep;
+  const key = `step${dbStep}Status` as keyof OnboardingStatus;
   return (status[key] as StepStatus) || "NOT_STARTED";
 }
 
@@ -120,21 +127,6 @@ export function OnboardingWizard() {
     refetchInterval: 10000,
   });
 
-  const completeAllMutation = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/onboarding/complete-all");
-      return res.json();
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/onboarding/full-status"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/onboarding/status"] });
-      if (data.completed) {
-        toast({ title: "Onboarding complete", description: "Welcome to Qashivo." });
-        setLocation("/overview2");
-      }
-    },
-  });
-
   const stepMutation = useMutation({
     mutationFn: async ({ step, stepStatus }: { step: number; stepStatus: "COMPLETED" | "SKIPPED" }) => {
       const res = await apiRequest("POST", "/api/onboarding/step", { step, status: stepStatus });
@@ -145,29 +137,39 @@ export function OnboardingWizard() {
     },
   });
 
+  // Auto-advance to first incomplete step
   useEffect(() => {
     if (!status) return;
-    for (let i = 1; i <= 6; i++) {
+    for (let i = 1; i <= 7; i++) {
       const s = getStepStatus(status, i);
       if (s === "NOT_STARTED" || s === "RUNNING") {
         setActiveStep(i);
         return;
       }
     }
-    setActiveStep(6);
-  }, [status?.step1Status, status?.step2Status, status?.step3Status, status?.step4Status, status?.step5Status, status?.step6Status, status?.onboardingCompleted]);
+    setActiveStep(7);
+  }, [
+    status?.step1Status,
+    status?.step2Status,
+    status?.step3Status,
+    status?.step4Status,
+    status?.step5Status,
+    status?.step6Status,
+    status?.onboardingCompleted,
+  ]);
 
   const handleNext = () => {
-    if (activeStep < 6) {
+    if (activeStep < 7) {
       setActiveStep(activeStep + 1);
-    } else {
-      completeAllMutation.mutate();
     }
   };
 
   const handleSkip = async () => {
     if (activeStep === 1) return;
-    await stepMutation.mutateAsync({ step: activeStep, stepStatus: "SKIPPED" });
+    const dbStep = STEPS.find((s) => s.number === activeStep)?.dbStep;
+    if (dbStep && dbStep > 0) {
+      await stepMutation.mutateAsync({ step: dbStep, stepStatus: "SKIPPED" });
+    }
     handleNext();
   };
 
@@ -179,13 +181,6 @@ export function OnboardingWizard() {
     queryClient.invalidateQueries({ queryKey: ["/api/onboarding/full-status"] });
     handleNext();
   };
-
-  const allDone = status
-    ? [1, 2, 3, 4, 5, 6].every((i) => {
-        const s = getStepStatus(status, i);
-        return s === "COMPLETED" || s === "SKIPPED" || s === "RUNNING";
-      })
-    : false;
 
   if (isLoading) {
     return (
@@ -200,7 +195,7 @@ export function OnboardingWizard() {
       <div className="mb-8">
         <h1 className="text-lg font-semibold text-gray-900">Set up your account</h1>
         <p className="text-[13px] text-gray-500 mt-1">
-          Complete the steps below to get started with Qashivo.
+          Complete the steps below to get your AI collections agent up and running.
         </p>
       </div>
 
@@ -244,7 +239,7 @@ export function OnboardingWizard() {
           />
         )}
         {activeStep === 3 && (
-          <Step3ConnectEmail
+          <Step3OpenBanking
             status={status}
             onComplete={handleStepComplete}
             onSkip={handleSkip}
@@ -252,7 +247,7 @@ export function OnboardingWizard() {
           />
         )}
         {activeStep === 4 && (
-          <Step4ConnectBank
+          <Step4AgentPersona
             status={status}
             onComplete={handleStepComplete}
             onSkip={handleSkip}
@@ -260,7 +255,7 @@ export function OnboardingWizard() {
           />
         )}
         {activeStep === 5 && (
-          <Step5DebtorScoring
+          <Step5CommPrefs
             status={status}
             onComplete={handleStepComplete}
             onSkip={handleSkip}
@@ -275,19 +270,13 @@ export function OnboardingWizard() {
             onBack={handleBack}
           />
         )}
+        {activeStep === 7 && (
+          <Step7GoLive
+            status={status}
+            onBack={handleBack}
+          />
+        )}
       </div>
-
-      {allDone && activeStep === 6 && (
-        <div className="mt-8 pt-6 border-t border-[#e5e7eb]">
-          <button
-            onClick={() => completeAllMutation.mutate()}
-            disabled={completeAllMutation.isPending}
-            className="w-full py-2.5 rounded-lg bg-[#14b8a6] text-white text-[13px] font-medium hover:bg-[#0d9488] disabled:opacity-50 transition-colors"
-          >
-            {completeAllMutation.isPending ? "Finishing..." : "Finish setup & go to dashboard"}
-          </button>
-        </div>
-      )}
     </div>
   );
 }

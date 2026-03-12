@@ -124,7 +124,7 @@ function PermissionGuard({ permission, children }: { permission: string; childre
 
 function isOnboardingComplete(status: OnboardingStatus | undefined): boolean {
   if (!status) return false;
-  return status.step1Status === "COMPLETED";
+  return status.onboardingCompleted === true;
 }
 
 function useOnboardingStatus() {

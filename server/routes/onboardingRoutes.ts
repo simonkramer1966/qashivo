@@ -552,6 +552,112 @@ export function registerOnboardingRoutes(app: Express): void {
     }
   });
 
+  // ── Sprint 2.3: Create agent persona during onboarding ──
+  app.post('/api/onboarding/agent-persona', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      const tenantId = user?.tenantId || req.session?.activeTenantId;
+      if (!tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const { agentPersonas } = await import("@shared/schema");
+
+      const personaSchema = z.object({
+        personaName: z.string().min(1),
+        jobTitle: z.string().min(1),
+        emailSignatureName: z.string().min(1),
+        emailSignatureTitle: z.string().min(1),
+        emailSignatureCompany: z.string().min(1),
+        emailSignaturePhone: z.string().optional(),
+        toneDefault: z.enum(["friendly", "professional", "firm"]).default("professional"),
+        companyContext: z.string().optional(),
+        sectorContext: z.string().optional(),
+      });
+
+      const data = personaSchema.parse(req.body);
+
+      const [persona] = await db.insert(agentPersonas).values({
+        tenantId,
+        ...data,
+        isActive: true,
+      }).returning();
+
+      // Mark step 4 as completed
+      await onboardingService.updateStepStatus(tenantId, 4, "COMPLETED");
+
+      res.json({ success: true, persona });
+    } catch (error: any) {
+      console.error("Error creating onboarding persona:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid persona data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create agent persona" });
+    }
+  });
+
+  // ── Sprint 2.3: Set communication preferences during onboarding ──
+  app.post('/api/onboarding/communication-preferences', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      const tenantId = user?.tenantId || req.session?.activeTenantId;
+      if (!tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const prefsSchema = z.object({
+        approvalMode: z.enum(["manual", "auto_after_timeout", "full_auto"]).default("manual"),
+        approvalTimeoutHours: z.number().min(1).max(48).default(12),
+        businessHoursStart: z.string().regex(/^\d{2}:\d{2}$/).default("08:00"),
+        businessHoursEnd: z.string().regex(/^\d{2}:\d{2}$/).default("18:00"),
+        maxTouchesPerWindow: z.number().min(1).max(10).default(3),
+        contactWindowDays: z.number().min(7).max(60).default(14),
+      });
+
+      const data = prefsSchema.parse(req.body);
+
+      await storage.updateTenant(tenantId, data);
+
+      // Mark step 5 as completed
+      await onboardingService.updateStepStatus(tenantId, 5, "COMPLETED");
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error saving communication preferences:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid preferences", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to save communication preferences" });
+    }
+  });
+
+  // ── Sprint 2.3: Go Live — flip onboardingCompleted ──
+  app.post('/api/onboarding/go-live', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      const tenantId = user?.tenantId || req.session?.activeTenantId;
+      if (!tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      await storage.updateTenant(tenantId, {
+        onboardingCompleted: true,
+        onboardingCompletedAt: new Date(),
+      });
+
+      // Mark step 6 as completed
+      await onboardingService.updateStepStatus(tenantId, 6, "COMPLETED");
+
+      await storage.createActivityLog({
+        tenantId,
+        userId: user?.id,
+        activityType: "onboarding_completed",
+        category: "audit",
+        description: "Onboarding completed — agent is live",
+        metadata: {},
+      });
+
+      res.json({ success: true, completed: true });
+    } catch (error) {
+      console.error("Error going live:", error);
+      res.status(500).json({ message: "Failed to go live" });
+    }
+  });
+
   app.post('/api/onboarding/complete-all', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
