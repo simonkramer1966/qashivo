@@ -74,6 +74,24 @@ const InvestorInterest = lazy(() => import("@/pages/investor-interest"));
 const Overview2 = lazy(() => import("@/pages/overview2"));
 const Privacy = lazy(() => import("@/pages/Privacy"));
 const Terms = lazy(() => import("@/pages/Terms"));
+
+// Pillar pages — Qollections
+const QollectionsDashboard = lazy(() => import("@/pages/qollections/dashboard"));
+const QollectionsDebtors = lazy(() => import("@/pages/qollections/debtors"));
+const QollectionsInvoices = lazy(() => import("@/pages/qollections/invoices"));
+const QollectionsAgentActivity = lazy(() => import("@/pages/qollections/agent-activity"));
+const QollectionsDisputes = lazy(() => import("@/pages/qollections/disputes"));
+const QollectionsReports = lazy(() => import("@/pages/qollections/reports"));
+// Pillar pages — Qashflow, Qapital, Agent Team
+const QashflowPage = lazy(() => import("@/pages/qashflow/index"));
+const QapitalPage = lazy(() => import("@/pages/qapital/index"));
+const AgentTeamPage = lazy(() => import("@/pages/agent-team/index"));
+// Pillar pages — Settings
+const SettingsAgentPersonas = lazy(() => import("@/pages/settings/agent-personas"));
+const SettingsAutonomyRules = lazy(() => import("@/pages/settings/autonomy-rules"));
+const SettingsIntegrations = lazy(() => import("@/pages/settings/integrations"));
+const SettingsUsersRoles = lazy(() => import("@/pages/settings/users-roles"));
+const SettingsBilling = lazy(() => import("@/pages/settings/billing"));
 const InvestorsHome = lazy(() => import("@/pages/investors/index"));
 const InvestorsHowItWorks = lazy(() => import("@/pages/investors/how-it-works"));
 const InvestorsDemoPage = lazy(() => import("@/pages/investors/demo"));
@@ -95,7 +113,7 @@ function PermissionGuard({ permission, children }: { permission: string; childre
 
   useEffect(() => {
     if (checked && !allowed) {
-      setLocation("/overview2");
+      setLocation("/qollections");
     }
   }, [checked, allowed, setLocation]);
 
@@ -311,7 +329,25 @@ function Router() {
           <Route path="/investors/metrics" component={InvestorsMetrics} />
           <Route path="/privacy" component={Privacy} />
           <Route path="/terms" component={Terms} />
-          <Route path="/" component={Overview2} />
+          {/* Pillar routes — Qollections */}
+          <Route path="/qollections/debtors" component={QollectionsDebtors} />
+          <Route path="/qollections/invoices" component={QollectionsInvoices} />
+          <Route path="/qollections/agent-activity" component={QollectionsAgentActivity} />
+          <Route path="/qollections/disputes" component={QollectionsDisputes} />
+          <Route path="/qollections/reports" component={QollectionsReports} />
+          <Route path="/qollections" component={QollectionsDashboard} />
+          {/* Pillar routes — Qashflow, Qapital, Agent Team */}
+          <Route path="/qashflow" component={QashflowPage} />
+          <Route path="/qapital" component={QapitalPage} />
+          <Route path="/agent-team" component={AgentTeamPage} />
+          {/* Pillar routes — Settings */}
+          <Route path="/settings/agent-personas" component={SettingsAgentPersonas} />
+          <Route path="/settings/autonomy-rules" component={SettingsAutonomyRules} />
+          <Route path="/settings/integrations" component={SettingsIntegrations} />
+          <Route path="/settings/users-roles" component={SettingsUsersRoles} />
+          <Route path="/settings/billing" component={SettingsBilling} />
+          {/* Home → Qollections Dashboard for all roles in v1 */}
+          <Route path="/" component={QollectionsDashboard} />
           <Route path="/:rest*" component={NotFound} />
         </Switch>
         </OnboardingGuard>

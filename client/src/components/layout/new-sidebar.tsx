@@ -7,12 +7,13 @@ import { apiRequest } from "@/lib/queryClient";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useSplash } from "@/contexts/SplashContext";
-import { 
+import {
   LogOut,
   User,
   Building2,
   Menu,
   ChevronDown,
+  ChevronRight,
   Check,
   RefreshCw,
   Plus,
@@ -33,7 +34,17 @@ import {
   BookOpen,
   Inbox,
   Mail,
-  Minimize2
+  Minimize2,
+  Home,
+  ClipboardList,
+  BarChart3,
+  Landmark,
+  AlertTriangle,
+  Activity,
+  UserCog,
+  Link,
+  Receipt,
+  Sliders,
 } from "lucide-react";
 function SimpleAvatar({ src, fallback, className, "data-testid": dataTestId }: { src?: string; fallback: string; className?: string; "data-testid"?: string }) {
   const [imgError, setImgError] = useState(false);
@@ -186,32 +197,76 @@ import {
 import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
 import UserProfileDialog from "./UserProfileDialog";
 
-// Navigation structure with 3 sections: ACTION, REFERENCE, SYSTEM
-// Icons only for ACTION items (Overview + Action Centre)
-// permission: if set, the item is only shown to users with that permission
+// Pillar-based navigation structure per Section 8B of QASHIVO_CONTEXT.md
+interface NavItemDef {
+  name: string;
+  href: string;
+  icon: any;
+  permission?: string;
+}
+interface NavPillar {
+  label: string;
+  icon: any;
+  href?: string; // top-level link (no children)
+  children?: NavItemDef[];
+}
+
+const navigationPillars: NavPillar[] = [
+  {
+    label: "Home",
+    icon: Home,
+    href: "/",
+  },
+  {
+    label: "Qollections",
+    icon: ClipboardList,
+    children: [
+      { name: "Dashboard", href: "/qollections", icon: Gauge },
+      { name: "Debtors", href: "/qollections/debtors", icon: Users },
+      { name: "Invoices", href: "/qollections/invoices", icon: FileText },
+      { name: "Agent Activity", href: "/qollections/agent-activity", icon: Activity },
+      { name: "Disputes", href: "/qollections/disputes", icon: AlertTriangle },
+      { name: "Reports", href: "/qollections/reports", icon: BarChart3 },
+    ],
+  },
+  {
+    label: "Qashflow",
+    icon: TrendingUp,
+    href: "/qashflow",
+  },
+  {
+    label: "Qapital",
+    icon: Landmark,
+    href: "/qapital",
+  },
+  {
+    label: "Agent Team",
+    icon: Bot,
+    href: "/agent-team",
+  },
+  {
+    label: "Settings",
+    icon: Settings,
+    children: [
+      { name: "Agent Personas", href: "/settings/agent-personas", icon: UserCog },
+      { name: "Autonomy & Rules", href: "/settings/autonomy-rules", icon: Sliders },
+      { name: "Integrations", href: "/settings/integrations", icon: Link },
+      { name: "Users & Roles", href: "/settings/users-roles", icon: Users },
+      { name: "Billing", href: "/settings/billing", icon: Receipt },
+    ],
+  },
+];
+
+// Legacy flat sections kept for partner/admin contexts
 const navigationSections = [
   {
-    label: "ACTION",
+    label: "QOLLECTIONS",
     items: [
-      { name: "Overview", href: "/overview2", icon: Gauge },
-      { name: "Inbox", href: "/inbox", icon: Mail },
-      { name: "Action Centre", href: "/action-centre2", icon: Inbox },
-      { name: "Cash Flow", href: "/cash-flow", icon: TrendingUp, permission: "finance:cashflow" as const },
+      { name: "Dashboard", href: "/qollections", icon: Gauge },
+      { name: "Debtors", href: "/qollections/debtors", icon: Users },
+      { name: "Invoices", href: "/qollections/invoices", icon: FileText },
     ]
   },
-  {
-    label: "REFERENCE",
-    items: [
-      { name: "Customers", href: "/customers2", icon: Users },
-      { name: "Invoices", href: "/invoices", icon: FileText },
-    ]
-  },
-  {
-    label: "SYSTEM",
-    items: [
-      { name: "Workflows", href: "/workflow-settings", icon: Workflow },
-    ]
-  }
 ];
 
 // Partner-specific sidebar navigation (for accounting firms managing multiple clients)
@@ -469,48 +524,45 @@ export default function NewSidebar() {
     return location === href || location.startsWith(href + "/") || location.startsWith(href + "?");
   };
 
-  // Get navigation sections based on current context
+  // Expanded pillar sections (multiple can be open)
+  const [expandedPillars, setExpandedPillars] = useState<Set<string>>(() => {
+    // Auto-expand the section containing the current path
+    const initial = new Set<string>();
+    for (const pillar of navigationPillars) {
+      if (pillar.children?.some(c => location.startsWith(c.href))) {
+        initial.add(pillar.label);
+      }
+    }
+    // Default: expand Qollections
+    if (initial.size === 0) initial.add("Qollections");
+    return initial;
+  });
+
+  const togglePillar = (label: string) => {
+    setExpandedPillars(prev => {
+      const next = new Set(prev);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      return next;
+    });
+  };
+
+  // Use pillar-based nav by default; fall back to flat sections for special contexts
+  const usesPillarNav = useMemo(() => {
+    if (location.startsWith('/partner') || location.startsWith('/qashivo-admin') || location.startsWith('/business-dashboard')) {
+      return false;
+    }
+    return true;
+  }, [location]);
+
+  // Legacy flat section getter for partner/admin contexts
   const currentNavigationSections = useMemo(() => {
-    // Business dashboard
-    if (location === '/business-dashboard' || location.startsWith('/business-dashboard')) {
-      return [
-        {
-          label: "DASHBOARD",
-          items: [
-            { name: "Dashboard", href: "/business-dashboard", icon: Gauge },
-          ]
-        },
-        {
-          label: "MANAGE",
-          items: [
-            { name: "Clients", href: "/business-dashboard/clients", icon: null },
-            { name: "Partners", href: "/business-dashboard/partners", icon: null },
-            { name: "Prices & Plans", href: "/business-dashboard/pricing", icon: null },
-            { name: "Payment Processing", href: "/business-dashboard/payments", icon: null },
-            { name: "Accounting", href: "/business-dashboard/accounting", icon: null }
-          ]
-        }
-      ];
-    }
-    
-    // Platform admin
     if (location === '/qashivo-admin' || location.startsWith('/qashivo-admin')) {
-      return [
-        {
-          label: "ADMIN",
-          items: [
-            { name: "Platform Admin", href: "/qashivo-admin", icon: Shield },
-          ]
-        }
-      ];
+      return [{ label: "ADMIN", items: [{ name: "Platform Admin", href: "/qashivo-admin", icon: Shield }] }];
     }
-    
-    // Partner portal
     if (location === '/partner' || location.startsWith('/partner/')) {
       return partnerNavigationSections;
     }
-    
-    // Default: Regular Qashivo operational sidebar
     return navigationSections;
   }, [location]);
 
@@ -734,55 +786,160 @@ export default function NewSidebar() {
           </div>
         )}
         
-        {/* Navigation - Clean sections with typography hierarchy */}
+        {/* Navigation */}
         <nav className={cn("flex-1 overflow-y-auto", isCollapsed ? "px-2" : "px-3")}>
           <TooltipProvider delayDuration={0}>
-            {currentNavigationSections.map((section) => {
-              const filteredItems = section.items.filter((item: any) => {
-                if (!item.permission) return true;
-                return hasPermission(item.permission);
-              });
-              if (filteredItems.length === 0) return null;
-              const hasIconItems = filteredItems.some((item: any) => item.icon);
-              
-              return (
-              <NavSection 
-                key={section.label} 
-                label={section.label}
-                isCollapsed={isCollapsed}
-                hideWhenCollapsed={!hasIconItems}
-              >
-                {filteredItems.map((item) => {
-                  const navContent = (
-                    <NavItem
-                      key={item.name}
-                      name={item.name}
-                      href={item.href}
-                      icon={item.icon}
-                      isActive={isActivePath(item.href)}
-                      onClick={() => handleNavigation(item.href)}
-                      isCollapsed={isCollapsed}
-                    />
-                  );
-                  
-                  if (isCollapsed) {
-                    return (
-                      <Tooltip key={item.name}>
-                        <TooltipTrigger asChild>
-                          <div>{navContent}</div>
-                        </TooltipTrigger>
-                        <TooltipContent side="right" className="text-sm">
-                          {item.name}
-                        </TooltipContent>
-                      </Tooltip>
+            {usesPillarNav ? (
+              /* Pillar-based navigation */
+              <ul className="space-y-1">
+                {navigationPillars.map((pillar) => {
+                  const PillarIcon = pillar.icon;
+                  const isExpanded = expandedPillars.has(pillar.label);
+                  const isPillarActive = pillar.href
+                    ? isActivePath(pillar.href)
+                    : pillar.children?.some(c => isActivePath(c.href)) || false;
+
+                  // Simple top-level link (no children)
+                  if (pillar.href) {
+                    const item = (
+                      <li key={pillar.label}>
+                        <NavItem
+                          name={pillar.label}
+                          href={pillar.href}
+                          icon={PillarIcon}
+                          isActive={isPillarActive}
+                          onClick={() => handleNavigation(pillar.href!)}
+                          isCollapsed={isCollapsed}
+                        />
+                      </li>
                     );
+                    if (isCollapsed) {
+                      return (
+                        <Tooltip key={pillar.label}>
+                          <TooltipTrigger asChild><div>{item}</div></TooltipTrigger>
+                          <TooltipContent side="right" className="text-sm">{pillar.label}</TooltipContent>
+                        </Tooltip>
+                      );
+                    }
+                    return item;
                   }
-                  
-                  return navContent;
+
+                  // Collapsible pillar with children
+                  const filteredChildren = (pillar.children || []).filter(c =>
+                    !c.permission || hasPermission(c.permission)
+                  );
+                  if (filteredChildren.length === 0) return null;
+
+                  return (
+                    <li key={pillar.label}>
+                      {/* Pillar header — click to expand/collapse */}
+                      {isCollapsed ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={() => {
+                                // Navigate to first child when collapsed
+                                handleNavigation(filteredChildren[0].href);
+                              }}
+                              className={cn(
+                                "w-full flex items-center justify-center px-2 py-2 transition-colors duration-150 relative",
+                                isPillarActive
+                                  ? "text-foreground font-medium"
+                                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                              )}
+                              data-testid={`nav-pillar-${pillar.label.toLowerCase().replace(/\s+/g, '-')}`}
+                            >
+                              {isPillarActive && (
+                                <span className="absolute left-0 top-1 bottom-1 w-0.5 bg-[#17B6C3] rounded-full" />
+                              )}
+                              <PillarIcon className={cn("w-4 h-4", isPillarActive ? "text-[#17B6C3]" : "text-muted-foreground/60")} />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="right" className="text-sm">{pillar.label}</TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        <button
+                          onClick={() => togglePillar(pillar.label)}
+                          className={cn(
+                            "w-full flex items-center px-3 py-2 text-[14px] transition-colors duration-150 relative",
+                            isPillarActive
+                              ? "text-foreground font-medium"
+                              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                          )}
+                          data-testid={`nav-pillar-${pillar.label.toLowerCase().replace(/\s+/g, '-')}`}
+                        >
+                          {isPillarActive && (
+                            <span className="absolute left-0 top-1 bottom-1 w-0.5 bg-[#17B6C3] rounded-full" />
+                          )}
+                          <PillarIcon className={cn("w-4 h-4 mr-3 flex-shrink-0", isPillarActive ? "text-[#17B6C3]" : "text-muted-foreground/60")} />
+                          <span className="flex-1 text-left">{pillar.label}</span>
+                          {isExpanded ? (
+                            <ChevronDown className="w-3.5 h-3.5 text-muted-foreground/60" />
+                          ) : (
+                            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/60" />
+                          )}
+                        </button>
+                      )}
+
+                      {/* Children — shown when expanded (and not collapsed) */}
+                      {!isCollapsed && isExpanded && (
+                        <ul className="ml-4 mt-0.5 space-y-0.5 border-l border-border/50 pl-2">
+                          {filteredChildren.map((child) => (
+                            <NavItem
+                              key={child.name}
+                              name={child.name}
+                              href={child.href}
+                              icon={child.icon}
+                              isActive={isActivePath(child.href)}
+                              onClick={() => handleNavigation(child.href)}
+                              isCollapsed={false}
+                            />
+                          ))}
+                        </ul>
+                      )}
+                    </li>
+                  );
                 })}
-              </NavSection>
-            );
-            })}
+              </ul>
+            ) : (
+              /* Legacy flat sections for partner/admin */
+              currentNavigationSections.map((section) => {
+                const filteredItems = section.items.filter((item: any) =>
+                  !item.permission || hasPermission(item.permission)
+                );
+                if (filteredItems.length === 0) return null;
+                return (
+                  <NavSection
+                    key={section.label}
+                    label={section.label}
+                    isCollapsed={isCollapsed}
+                  >
+                    {filteredItems.map((item) => {
+                      const navContent = (
+                        <NavItem
+                          key={item.name}
+                          name={item.name}
+                          href={item.href}
+                          icon={item.icon}
+                          isActive={isActivePath(item.href)}
+                          onClick={() => handleNavigation(item.href)}
+                          isCollapsed={isCollapsed}
+                        />
+                      );
+                      if (isCollapsed) {
+                        return (
+                          <Tooltip key={item.name}>
+                            <TooltipTrigger asChild><div>{navContent}</div></TooltipTrigger>
+                            <TooltipContent side="right" className="text-sm">{item.name}</TooltipContent>
+                          </Tooltip>
+                        );
+                      }
+                      return navContent;
+                    })}
+                  </NavSection>
+                );
+              })
+            )}
           </TooltipProvider>
         </nav>
 
