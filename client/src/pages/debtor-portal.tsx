@@ -19,6 +19,22 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { format } from "date-fns";
+import { User } from "lucide-react";
+
+interface PortalConfig {
+  branding: {
+    companyName: string | null;
+    logoUrl: string | null;
+    primaryColor: string;
+    secondaryColor: string;
+  };
+  persona: {
+    name: string;
+    title: string;
+    company: string;
+    phone: string | null;
+  } | null;
+}
 
 interface Invoice {
   id: string;
@@ -88,6 +104,15 @@ export default function DebtorPortal() {
     enabled: authStatus?.authenticated,
   });
   const disputes = disputesData || [];
+
+  // Get portal config (persona + branding)
+  const { data: portalConfig } = useQuery<PortalConfig>({
+    queryKey: ["/api/debtor/portal-config"],
+    enabled: authStatus?.authenticated,
+  });
+
+  const brandColor = portalConfig?.branding?.primaryColor || "#17B6C3";
+  const brandColorHover = portalConfig?.branding?.secondaryColor || "#1396A1";
 
   // Get all promises to pay
   const { data: promisesData, isLoading: promisesLoading } = useQuery<PromiseToPay[]>({
@@ -265,41 +290,82 @@ export default function DebtorPortal() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
       <div className="container mx-auto p-4 md:p-8 max-w-6xl">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Payment Portal</h1>
-            <p className="text-gray-600">
-              Welcome, {authStatus.contact?.companyName || authStatus.contact?.firstName}
-            </p>
+        {/* Header with branding */}
+        <div className="mb-8">
+          <div className="flex justify-between items-start">
+            <div className="flex items-center gap-4">
+              {portalConfig?.branding?.logoUrl && (
+                <img
+                  src={portalConfig.branding.logoUrl}
+                  alt={portalConfig.branding.companyName || "Company logo"}
+                  className="h-12 w-auto object-contain"
+                />
+              )}
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Payment Portal</h1>
+                <p className="text-gray-600">
+                  Welcome, {authStatus.contact?.companyName || authStatus.contact?.firstName}
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => logoutMutation.mutate()}
+              disabled={logoutMutation.isPending}
+              className="bg-white/70"
+              data-testid="button-logout"
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
+            </Button>
           </div>
-          <Button
-            variant="outline"
-            onClick={() => logoutMutation.mutate()}
-            disabled={logoutMutation.isPending}
-            className="bg-white/70"
-            data-testid="button-logout"
-          >
-            <LogOut className="h-4 w-4 mr-2" />
-            Logout
-          </Button>
+
+          {/* Agent persona banner */}
+          {portalConfig?.persona && (
+            <div
+              className="mt-4 rounded-lg px-4 py-3 flex items-center gap-3"
+              style={{ backgroundColor: `${brandColor}10`, borderLeft: `3px solid ${brandColor}` }}
+            >
+              <div
+                className="h-8 w-8 rounded-full flex items-center justify-center text-white"
+                style={{ backgroundColor: brandColor }}
+              >
+                <User className="h-4 w-4" />
+              </div>
+              <p className="text-sm text-gray-700">
+                Your account is managed by{" "}
+                <span className="font-semibold">{portalConfig.persona.name}</span>,{" "}
+                {portalConfig.persona.title} at{" "}
+                <span className="font-semibold">{portalConfig.persona.company}</span>
+                {portalConfig.persona.phone && (
+                  <span className="text-gray-500"> — {portalConfig.persona.phone}</span>
+                )}
+              </p>
+            </div>
+          )}
         </div>
 
-        {/* Tabs */}
+        {/* Tabs with dynamic brand color */}
+        <style>{`
+          [data-brand-tab][data-state="active"] {
+            background-color: ${brandColor} !important;
+            color: white !important;
+          }
+        `}</style>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="bg-white/70 backdrop-blur-md border-0 shadow-xl p-1">
-            <TabsTrigger value="overview" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-overview">
+            <TabsTrigger value="overview" data-brand-tab data-testid="tab-overview">
               <FileText className="h-4 w-4 mr-2" />
               Overview
             </TabsTrigger>
-            <TabsTrigger value="disputes" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-disputes">
+            <TabsTrigger value="disputes" data-brand-tab data-testid="tab-disputes">
               <AlertCircle className="h-4 w-4 mr-2" />
               Disputes
               {disputes.length > 0 && (
                 <Badge variant="secondary" className="ml-2">{disputes.length}</Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="promises" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-promises">
+            <TabsTrigger value="promises" data-brand-tab data-testid="tab-promises">
               <Calendar className="h-4 w-4 mr-2" />
               Payment Plans
               {promises.length > 0 && (
@@ -310,24 +376,26 @@ export default function DebtorPortal() {
 
           {/* Overview Tab */}
           <TabsContent value="overview">
-            <OverviewTab invoices={invoices} isLoading={invoicesLoading} />
+            <OverviewTab invoices={invoices} isLoading={invoicesLoading} brandColor={brandColor} />
           </TabsContent>
 
           {/* Disputes Tab */}
           <TabsContent value="disputes">
-            <DisputesTab 
-              disputes={disputes} 
+            <DisputesTab
+              disputes={disputes}
               invoices={invoices}
-              isLoading={disputesLoading} 
+              isLoading={disputesLoading}
+              brandColor={brandColor}
             />
           </TabsContent>
 
           {/* Promises Tab */}
           <TabsContent value="promises">
-            <PromisesTab 
-              promises={promises} 
+            <PromisesTab
+              promises={promises}
               invoices={invoices}
-              isLoading={promisesLoading} 
+              isLoading={promisesLoading}
+              brandColor={brandColor}
             />
           </TabsContent>
         </Tabs>
@@ -337,7 +405,7 @@ export default function DebtorPortal() {
 }
 
 // Overview Tab Component
-function OverviewTab({ invoices, isLoading }: { invoices: Invoice[]; isLoading: boolean }) {
+function OverviewTab({ invoices, isLoading, brandColor = "#17B6C3" }: { invoices: Invoice[]; isLoading: boolean; brandColor?: string }) {
   const { toast } = useToast();
 
   const checkoutMutation = useMutation({
@@ -404,7 +472,7 @@ function OverviewTab({ invoices, isLoading }: { invoices: Invoice[]; isLoading: 
               </div>
               <div className="bg-white/70 backdrop-blur-md border-0 shadow-xl p-4 rounded-lg">
                 <p className="text-sm text-gray-600">Interest ({invoice.interest.effectiveRate}%)</p>
-                <p className="text-2xl font-bold text-[#17B6C3]" data-testid={`text-interest-${invoice.id}`}>
+                <p className="text-2xl font-bold" style={{ color: brandColor }} data-testid={`text-interest-${invoice.id}`}>
                   {invoice.currency} {invoice.interest.interestAmount.toFixed(2)}
                 </p>
               </div>
@@ -426,7 +494,8 @@ function OverviewTab({ invoices, isLoading }: { invoices: Invoice[]; isLoading: 
               <Button
                 onClick={() => checkoutMutation.mutate(invoice.id)}
                 disabled={checkoutMutation.isPending}
-                className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                className="w-full text-white"
+                style={{ backgroundColor: brandColor }}
                 data-testid={`button-pay-${invoice.id}`}
               >
                 <CreditCard className="h-4 w-4 mr-2" />
@@ -441,14 +510,16 @@ function OverviewTab({ invoices, isLoading }: { invoices: Invoice[]; isLoading: 
 }
 
 // Disputes Tab Component
-function DisputesTab({ 
-  disputes, 
+function DisputesTab({
+  disputes,
   invoices,
-  isLoading 
-}: { 
-  disputes: Dispute[]; 
+  isLoading,
+  brandColor = "#17B6C3",
+}: {
+  disputes: Dispute[];
   invoices: Invoice[];
   isLoading: boolean;
+  brandColor?: string;
 }) {
   const { toast } = useToast();
   const [showNewDispute, setShowNewDispute] = useState(false);
@@ -513,7 +584,8 @@ function DisputesTab({
           <CardContent className="py-4">
             <Button
               onClick={() => setShowNewDispute(true)}
-              className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+              className="w-full text-white"
+              style={{ backgroundColor: brandColor }}
               data-testid="button-new-dispute"
             >
               <MessageSquare className="h-4 w-4 mr-2" />
@@ -575,7 +647,8 @@ function DisputesTab({
                 <Button
                   type="submit"
                   disabled={createDisputeMutation.isPending}
-                  className="flex-1 bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                  className="flex-1 text-white"
+                  style={{ backgroundColor: brandColor }}
                   data-testid="button-submit-dispute"
                 >
                   {createDisputeMutation.isPending ? "Submitting..." : "Submit Dispute"}
@@ -637,14 +710,16 @@ function DisputesTab({
 }
 
 // Promises Tab Component
-function PromisesTab({ 
-  promises, 
+function PromisesTab({
+  promises,
   invoices,
-  isLoading 
-}: { 
-  promises: PromiseToPay[]; 
+  isLoading,
+  brandColor = "#17B6C3",
+}: {
+  promises: PromiseToPay[];
   invoices: Invoice[];
   isLoading: boolean;
+  brandColor?: string;
 }) {
   const { toast } = useToast();
   const [showNewPromise, setShowNewPromise] = useState(false);
@@ -710,7 +785,8 @@ function PromisesTab({
           <CardContent className="py-4">
             <Button
               onClick={() => setShowNewPromise(true)}
-              className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+              className="w-full text-white"
+              style={{ backgroundColor: brandColor }}
               data-testid="button-new-promise"
             >
               <Calendar className="h-4 w-4 mr-2" />
@@ -791,7 +867,8 @@ function PromisesTab({
                 <Button
                   type="submit"
                   disabled={createPromiseMutation.isPending}
-                  className="flex-1 bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                  className="flex-1 text-white"
+                  style={{ backgroundColor: brandColor }}
                   data-testid="button-submit-promise"
                 >
                   {createPromiseMutation.isPending ? "Creating..." : "Create Plan"}
@@ -833,7 +910,7 @@ function PromisesTab({
                 </div>
                 <Badge
                   variant={promise.status === "kept" ? "secondary" : promise.status === "breached" ? "destructive" : "default"}
-                  className={promise.status === "active" ? "bg-[#17B6C3]" : ""}
+                  style={promise.status === "active" ? { backgroundColor: brandColor } : undefined}
                 >
                   {promise.status}
                 </Badge>

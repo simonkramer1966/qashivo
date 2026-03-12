@@ -1,13 +1,19 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { storage } from "./storage";
 import crypto from "crypto";
-import { 
-  insertMagicLinkTokenSchema, 
-  insertDisputeSchema, 
+import {
+  insertMagicLinkTokenSchema,
+  insertDisputeSchema,
   insertPromiseToPaySchema,
-  insertDebtorPaymentSchema 
+  insertDebtorPaymentSchema,
+  contactOutcomes,
+  customerBehaviorSignals,
+  agentPersonas,
+  tenants,
 } from "@shared/schema";
 import { z } from "zod";
+import { eq, and } from "drizzle-orm";
+import { db } from "./db";
 import { InterestCalculator } from "./services/interest-calculator";
 import Stripe from "stripe";
 
@@ -267,6 +273,120 @@ router.post("/api/debtor-auth/dev-bypass", async (req, res) => {
   }
 });
 
+// ── Helper: Log portal action to contactOutcomes + update customerBehaviorSignals ──
+
+async function logPortalSignal(opts: {
+  tenantId: string;
+  contactId: string;
+  invoiceId?: string;
+  eventType: string;
+  outcome: string;
+  payload: Record<string, any>;
+}) {
+  const idempotencyKey = `portal_${opts.eventType}_${opts.contactId}_${opts.invoiceId || "none"}_${Date.now()}`;
+
+  try {
+    await db.insert(contactOutcomes).values({
+      tenantId: opts.tenantId,
+      contactId: opts.contactId,
+      invoiceId: opts.invoiceId || null,
+      idempotencyKey,
+      eventType: opts.eventType,
+      channel: "portal",
+      outcome: opts.outcome,
+      payload: opts.payload,
+      eventTimestamp: new Date(),
+    });
+  } catch (err) {
+    console.warn("[Portal] Failed to log contactOutcome:", err);
+  }
+
+  // Update behavior signal counters
+  try {
+    const [existing] = await db
+      .select()
+      .from(customerBehaviorSignals)
+      .where(eq(customerBehaviorSignals.contactId, opts.contactId))
+      .limit(1);
+
+    if (existing) {
+      const updates: Record<string, any> = { updatedAt: new Date() };
+      if (opts.eventType === "dispute.submitted") {
+        updates.disputeCount = (existing.disputeCount || 0) + 1;
+      }
+      if (opts.eventType === "payment.recorded") {
+        updates.lastPaymentDate = new Date();
+      }
+      await db
+        .update(customerBehaviorSignals)
+        .set(updates)
+        .where(eq(customerBehaviorSignals.contactId, opts.contactId));
+    } else {
+      // Create initial signal record
+      await db.insert(customerBehaviorSignals).values({
+        contactId: opts.contactId,
+        tenantId: opts.tenantId,
+        disputeCount: opts.eventType === "dispute.submitted" ? 1 : 0,
+        lastPaymentDate: opts.eventType === "payment.recorded" ? new Date() : null,
+      });
+    }
+  } catch (err) {
+    console.warn("[Portal] Failed to update behaviorSignal:", err);
+  }
+}
+
+// ── Portal config: agent persona + tenant branding ──
+
+router.get("/api/debtor/portal-config", requireDebtorAuth, async (req, res) => {
+  try {
+    const { tenantId } = req.session.debtorAuth!;
+
+    // Get tenant branding
+    const [tenant] = await db
+      .select({
+        name: tenants.name,
+        companyLogoUrl: tenants.companyLogoUrl,
+        brandPrimaryColor: tenants.brandPrimaryColor,
+        brandSecondaryColor: tenants.brandSecondaryColor,
+      })
+      .from(tenants)
+      .where(eq(tenants.id, tenantId))
+      .limit(1);
+
+    // Get active agent persona
+    const [persona] = await db
+      .select({
+        personaName: agentPersonas.personaName,
+        jobTitle: agentPersonas.jobTitle,
+        emailSignatureCompany: agentPersonas.emailSignatureCompany,
+        emailSignaturePhone: agentPersonas.emailSignaturePhone,
+      })
+      .from(agentPersonas)
+      .where(and(eq(agentPersonas.tenantId, tenantId), eq(agentPersonas.isActive, true)))
+      .limit(1);
+
+    return res.json({
+      branding: {
+        companyName: tenant?.name || null,
+        logoUrl: tenant?.companyLogoUrl || null,
+        primaryColor: tenant?.brandPrimaryColor || "#17B6C3",
+        secondaryColor: tenant?.brandSecondaryColor || "#1396A1",
+      },
+      persona: persona
+        ? {
+            name: persona.personaName,
+            title: persona.jobTitle,
+            company: persona.emailSignatureCompany,
+            phone: persona.emailSignaturePhone,
+          }
+        : null,
+    });
+  } catch (error) {
+    console.error("Error fetching portal config:", error);
+    return res.status(500).json({ error: "Failed to load portal configuration" });
+  }
+});
+
 // ==================== DEBTOR PORTAL API ====================
 
 // Get debtor overview (all invoices with live interest calculations)
@@ -355,6 +475,16 @@ router.post("/api/debtor/disputes", requireDebtorAuth, async (req, res) => {
 
     const dispute = await storage.createDispute(disputeData);
 
+    // Log portal signal
+    logPortalSignal({
+      tenantId,
+      contactId,
+      invoiceId: disputeData.invoiceId,
+      eventType: "dispute.submitted",
+      outcome: "dispute_raised",
+      payload: { disputeId: dispute.id, reason: disputeData.summary, source: "debtor_portal" },
+    });
+
     return res.json(dispute);
   } catch (error) {
     console.error("Error creating dispute:", error);
@@ -411,6 +541,21 @@ router.post("/api/debtor/promises", requireDebtorAuth, async (req, res) => {
     }
 
     const promise = await storage.createPromiseToPay(promiseData);
+
+    // Log portal signal
+    logPortalSignal({
+      tenantId,
+      contactId,
+      invoiceId: promiseData.invoiceId,
+      eventType: "promise.created",
+      outcome: "ptp_obtained",
+      payload: {
+        promiseId: promise.id,
+        amount: promiseData.amount,
+        promiseDate: promiseData.promisedDate,
+        source: "debtor_portal",
+      },
+    });
 
     return res.json(promise);
   } catch (error) {
@@ -469,6 +614,21 @@ router.post("/api/debtor/payment/checkout", requireDebtorAuth, async (req, res) 
         principalAmount: interestCalc.principalAmount.toString(),
         interestAmount: interestCalc.interestAmount.toString(),
         totalAmount: interestCalc.totalAmount.toString(),
+      },
+    });
+
+    // Log portal signal for payment initiation
+    logPortalSignal({
+      tenantId,
+      contactId,
+      invoiceId,
+      eventType: "payment.recorded",
+      outcome: "paid",
+      payload: {
+        stripeSessionId: session.id,
+        totalAmount: interestCalc.totalAmount,
+        currency: invoice.currency,
+        source: "debtor_portal",
       },
     });
 
