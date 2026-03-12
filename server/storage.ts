@@ -154,6 +154,9 @@ import {
   agentPersonas,
   type AgentPersona,
   type InsertAgentPersona,
+  complianceChecks,
+  type ComplianceCheck,
+  type InsertComplianceCheck,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc, sql, count, sum, ne, isNotNull, isNull, gte, lte, lt, or, ilike, inArray } from "drizzle-orm";
@@ -602,6 +605,12 @@ export interface IStorage {
   createAgentPersona(persona: InsertAgentPersona): Promise<AgentPersona>;
   updateAgentPersona(id: string, tenantId: string, updates: Partial<InsertAgentPersona>): Promise<AgentPersona | undefined>;
   deleteAgentPersona(id: string, tenantId: string): Promise<void>;
+
+  // Compliance Check operations
+  getComplianceChecks(tenantId: string, filters?: { actionId?: string; contactId?: string }): Promise<ComplianceCheck[]>;
+  getComplianceCheck(id: string, tenantId: string): Promise<ComplianceCheck | undefined>;
+  createComplianceCheck(check: InsertComplianceCheck): Promise<ComplianceCheck>;
+  updateComplianceCheck(id: string, updates: Partial<InsertComplianceCheck>): Promise<ComplianceCheck | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -5563,6 +5572,35 @@ export class DatabaseStorage implements IStorage {
   async deleteAgentPersona(id: string, tenantId: string): Promise<void> {
     await db.delete(agentPersonas)
       .where(and(eq(agentPersonas.id, id), eq(agentPersonas.tenantId, tenantId)));
+  }
+
+  // Compliance Check operations
+  async getComplianceChecks(tenantId: string, filters?: { actionId?: string; contactId?: string }): Promise<ComplianceCheck[]> {
+    const conditions = [eq(complianceChecks.tenantId, tenantId)];
+    if (filters?.actionId) conditions.push(eq(complianceChecks.actionId, filters.actionId));
+    if (filters?.contactId) conditions.push(eq(complianceChecks.contactId, filters.contactId));
+    return db.select().from(complianceChecks)
+      .where(and(...conditions))
+      .orderBy(desc(complianceChecks.createdAt));
+  }
+
+  async getComplianceCheck(id: string, tenantId: string): Promise<ComplianceCheck | undefined> {
+    const [check] = await db.select().from(complianceChecks)
+      .where(and(eq(complianceChecks.id, id), eq(complianceChecks.tenantId, tenantId)));
+    return check;
+  }
+
+  async createComplianceCheck(check: InsertComplianceCheck): Promise<ComplianceCheck> {
+    const [created] = await db.insert(complianceChecks).values(check).returning();
+    return created;
+  }
+
+  async updateComplianceCheck(id: string, updates: Partial<InsertComplianceCheck>): Promise<ComplianceCheck | undefined> {
+    const [updated] = await db.update(complianceChecks)
+      .set(updates)
+      .where(eq(complianceChecks.id, id))
+      .returning();
+    return updated;
   }
 }
 

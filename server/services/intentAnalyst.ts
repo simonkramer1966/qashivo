@@ -4,6 +4,7 @@ import { inboundMessages, actions, contacts, invoices, paymentPlans, paymentPlan
 import { eq, and, desc, inArray, asc, sql } from "drizzle-orm";
 import { getPromiseReliabilityService } from "./promiseReliabilityService.js";
 import { emailClarificationService } from "./emailClarificationService.js";
+import { processInboundReply } from "./inboundReplyPipeline";
 
 // Outcome types that map to CharlieIntentType
 type OutcomeType = 
@@ -22,9 +23,11 @@ const INTENT_TO_OUTCOME_TYPE: Record<CharlieIntentType, OutcomeType> = {
   'payment_plan': 'PAYMENT_PLAN',
   'dispute': 'DISPUTE',
   'payment_confirmation': 'PAYMENT_CONFIRMATION',
+  'acknowledge': 'QUERY',
   'callback_request': 'CALLBACK_REQUEST',
   'admin_issue': 'ADMIN_BLOCKER',
   'general_query': 'QUERY',
+  'unclear': 'UNKNOWN',
   'unknown': 'UNKNOWN'
 };
 
@@ -44,15 +47,17 @@ const OUTCOME_FORECAST_EFFECTS: Record<OutcomeType, ForecastEffect> = {
 // Claude LLM via server/services/llm/claude.ts
 
 // Charlie-aligned intent types for B2B credit control
-type CharlieIntentType = 
+type CharlieIntentType =
   | 'payment_plan'        // Customer wants to negotiate payment plan
   | 'dispute'             // Customer disputes the invoice
   | 'promise_to_pay'      // Customer commits to paying by specific date
   | 'payment_confirmation'// Customer confirms payment has been made
+  | 'acknowledge'         // Customer acknowledges receipt / will look into it (no firm commitment)
   | 'callback_request'    // Customer requests a phone call back
   | 'general_query'       // General questions about invoice/payment
   | 'admin_issue'         // Missing PO, wrong address, not received, etc.
-  | 'unknown';            // Intent unclear
+  | 'unclear'             // Intent genuinely unclear — needs human review
+  | 'unknown';            // Fallback
 
 // Ambiguity types for clarification requests
 type AmbiguityType = 'invoice_reference' | 'payment_amount' | 'payment_date' | 'multiple_invoices' | 'none';
@@ -113,17 +118,21 @@ Intent Types (in priority order):
 - dispute: Customer disputes the invoice (quality, delivery, pricing, scope issues)
 - promise_to_pay: Customer commits to paying by a specific date/timeframe
 - payment_confirmation: Customer confirms payment has already been made or is in process
+- acknowledge: Customer acknowledges receipt or says they will look into it, but makes no firm payment commitment (e.g., "thanks, I'll check this", "noted", "I'll get back to you")
 - callback_request: Customer explicitly asks to be called back or prefers phone communication
 - admin_issue: Missing PO, wrong billing address, invoice not received, supplier setup issues
 - payment_plan: Customer wants to negotiate installments or staged payments
 - general_query: General questions about invoice, payment process, or account
-- unknown: Intent is genuinely unclear
+- unclear: Intent is genuinely unclear or the message is too brief/vague to classify
+- unknown: Fallback when nothing else matches
 
 Critical Rules:
 1. Look for admin blockers (missing PO, wrong address) - these are common in B2B
 2. Extract invoice/PO references when mentioned
 3. Note preferred contact methods
-4. Consider B2B context: professional tone expected, process-driven issues common`,
+4. Consider B2B context: professional tone expected, process-driven issues common
+5. Use "acknowledge" when the debtor confirms receipt but doesn't commit to payment — do NOT classify as promise_to_pay
+6. Use "unclear" when the message is too short or vague to determine intent with any confidence`,
         prompt,
         model: "fast",
         temperature: 0.3,
@@ -205,7 +214,7 @@ Critical Rules:
 
     prompt += `Respond with JSON:
 {
-  "intentType": "dispute" | "promise_to_pay" | "payment_confirmation" | "callback_request" | "admin_issue" | "payment_plan" | "general_query" | "unknown",
+  "intentType": "dispute" | "promise_to_pay" | "payment_confirmation" | "acknowledge" | "callback_request" | "admin_issue" | "payment_plan" | "general_query" | "unclear" | "unknown",
   "confidence": 0.0 to 1.0,
   "sentiment": "positive" | "neutral" | "negative",
   "extractedEntities": {
@@ -423,10 +432,30 @@ CRITICAL EXCEPTIONS - do NOT flag ambiguity when:
         console.log(`⚠️  Low confidence (${(analysis.confidence * 100).toFixed(0)}%) - flagged for manual review`);
         // Still create action for low confidence - route to Queries tab
         await this.createActionFromIntent(message, analysis);
-        
+
         // Create outcome even for low confidence - marked for manual review
         if (message.contactId) {
           await this.createOutcomeFromIntent(message, analysis, context);
+        }
+      }
+
+      // Trigger Collections Agent reply pipeline for email responses
+      // This generates a contextual LLM reply and routes through compliance → approval → delivery
+      if (message.channel === 'email' && message.contactId) {
+        // Find the emailMessages record for this inbound message
+        const rawPayload = message.rawPayload as any;
+        const emailMessageId = rawPayload?.emailMessageId || rawPayload?.normalized?.emailMessageId;
+
+        if (emailMessageId) {
+          processInboundReply({
+            tenantId: message.tenantId,
+            contactId: message.contactId,
+            inboundEmailMessageId: emailMessageId,
+            inboundText: message.content || '',
+            inboundSubject: message.subject || null,
+            intentType: analysis.intentType,
+            invoiceId: message.invoiceId,
+          }).catch(err => console.error('❌ Inbound reply pipeline error:', err));
         }
       }
 
@@ -572,15 +601,17 @@ CRITICAL EXCEPTIONS - do NOT flag ambiguity when:
         dispute: 'high',
         promise_to_pay: 'medium',
         payment_confirmation: 'low',
+        acknowledge: 'low',
         callback_request: 'high',
         admin_issue: 'medium',
         payment_plan: 'medium',
         general_query: 'low',
+        unclear: 'low',
         unknown: 'low'
       };
 
-      // Route low-confidence or unknown to "exception" status for Queries tab
-      const actionStatus = analysis.requiresHumanReview || analysis.intentType === 'unknown' || analysis.confidence < this.CONFIDENCE_THRESHOLD
+      // Route low-confidence, unknown, or unclear to "exception" status for Queries tab
+      const actionStatus = analysis.requiresHumanReview || analysis.intentType === 'unknown' || analysis.intentType === 'unclear' || analysis.confidence < this.CONFIDENCE_THRESHOLD
         ? 'exception'  // Will appear in Exceptions/Queries queue
         : 'pending';
 
@@ -836,10 +867,12 @@ CRITICAL EXCEPTIONS - do NOT flag ambiguity when:
       dispute: '⚠️ Invoice Dispute',
       promise_to_pay: '✅ Payment Promise Received',
       payment_confirmation: '💳 Payment Confirmation',
+      acknowledge: '👋 Acknowledgement Received',
       callback_request: '📞 Callback Requested',
       admin_issue: '📋 Admin Blocker (PO/Address/Setup)',
       payment_plan: '💰 Payment Plan Request',
       general_query: '❓ Customer Query',
+      unclear: '🔍 Unclear Intent - Review Required',
       unknown: '📩 Inbound Message - Review Required'
     };
     return subjects[analysis.intentType] || subjects.unknown;

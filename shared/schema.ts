@@ -5438,3 +5438,50 @@ export const insertAgentPersonaSchema = createInsertSchema(agentPersonas).omit({
 
 export type AgentPersona = typeof agentPersonas.$inferSelect;
 export type InsertAgentPersona = z.infer<typeof insertAgentPersonaSchema>;
+
+// ============================================================
+// Compliance Checks — Sprint 1.3
+// ============================================================
+export const complianceChecks = pgTable("compliance_checks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  actionId: varchar("action_id").references(() => actions.id),
+  contactId: varchar("contact_id").references(() => contacts.id),
+  checkResult: varchar("check_result").notNull(), // "approved" | "blocked" | "regenerated" | "queued"
+  rulesChecked: jsonb("rules_checked").notNull(), // list of rules evaluated
+  violations: jsonb("violations"), // any violations found
+  agentReasoning: text("agent_reasoning"), // why agent generated this content
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_compliance_checks_tenant_id").on(table.tenantId),
+  index("idx_compliance_checks_action_id").on(table.actionId),
+]);
+
+export const complianceChecksRelations = relations(complianceChecks, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [complianceChecks.tenantId],
+    references: [tenants.id],
+  }),
+  action: one(actions, {
+    fields: [complianceChecks.actionId],
+    references: [actions.id],
+  }),
+  contact: one(contacts, {
+    fields: [complianceChecks.contactId],
+    references: [contacts.id],
+  }),
+  reviewer: one(users, {
+    fields: [complianceChecks.reviewedBy],
+    references: [users.id],
+  }),
+}));
+
+export const insertComplianceCheckSchema = createInsertSchema(complianceChecks).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type ComplianceCheck = typeof complianceChecks.$inferSelect;
+export type InsertComplianceCheck = z.infer<typeof insertComplianceCheckSchema>;

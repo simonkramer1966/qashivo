@@ -7,6 +7,7 @@ import { charlieDecisionEngine } from "./charlieDecisionEngine";
 import type { CharlieDecision, DailyPlan } from "./playbookEngine";
 import { charliePlaybook, prepareMessageFromDecision } from "./charliePlaybook";
 import { prepareMessageFromWorkflowProfile } from "./workflowProfileMessageService";
+import { processCollectionEmail } from "./collectionsPipeline";
 
 export interface InvoiceSummary {
   id: string;
@@ -501,6 +502,37 @@ async function generateDailyPlanWithCharlie(
       source: 'automated',
     }).returning();
     
+    // Run LLM pipeline for email actions (generates content + compliance check)
+    if (channel === 'email') {
+      try {
+        const pipelineResult = await processCollectionEmail(
+          tenantId,
+          contactId,
+          primaryDecision,
+          newAction.id,
+        );
+        console.log(`[Pipeline] Email action ${newAction.id}: ${pipelineResult.status}`);
+
+        // Update action fields from pipeline result if content was generated
+        if (pipelineResult.subject || pipelineResult.body) {
+          // Re-read action to get pipeline updates
+          const [updatedAction] = await db
+            .select()
+            .from(actions)
+            .where(eq(actions.id, newAction.id))
+            .limit(1);
+          if (updatedAction) {
+            newAction.subject = updatedAction.subject;
+            newAction.content = updatedAction.content;
+            newAction.status = updatedAction.status;
+          }
+        }
+      } catch (pipelineErr: any) {
+        console.warn(`[Pipeline] LLM pipeline failed for action ${newAction.id}, keeping template content: ${pipelineErr.message}`);
+        // Falls back to template content already set on the action
+      }
+    }
+
     // Build invoices array for drawer display
     const invoicesSummary: InvoiceSummary[] = contactDecisions.map(d => ({
       id: d.invoiceId,
