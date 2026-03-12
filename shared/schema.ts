@@ -5399,3 +5399,42 @@ export interface DebtorPackRow {
   // UI helpers
   isBatchSelectable: boolean;
 }
+
+// ============================================================
+// Agent Personas — Sprint 1.1
+// ============================================================
+export const agentPersonas = pgTable("agent_personas", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  personaName: varchar("persona_name").notNull(),
+  jobTitle: varchar("job_title").notNull(),
+  emailSignatureName: varchar("email_signature_name").notNull(),
+  emailSignatureTitle: varchar("email_signature_title").notNull(),
+  emailSignatureCompany: varchar("email_signature_company").notNull(),
+  emailSignaturePhone: varchar("email_signature_phone"),
+  toneDefault: varchar("tone_default").notNull().default("professional"), // friendly | professional | firm
+  voiceCharacteristics: jsonb("voice_characteristics"), // MVP v3: gender, accent, pace
+  companyContext: text("company_context"), // what the agent "knows" about the company
+  sectorContext: varchar("sector_context").default("general"), // recruitment | manufacturing | general | ...
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_agent_personas_tenant_id").on(table.tenantId),
+]);
+
+export const agentPersonasRelations = relations(agentPersonas, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [agentPersonas.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
+export const insertAgentPersonaSchema = createInsertSchema(agentPersonas).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type AgentPersona = typeof agentPersonas.$inferSelect;
+export type InsertAgentPersona = z.infer<typeof insertAgentPersonaSchema>;

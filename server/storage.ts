@@ -151,6 +151,9 @@ import {
   scheduledReports,
   type ScheduledReport,
   type InsertScheduledReport,
+  agentPersonas,
+  type AgentPersona,
+  type InsertAgentPersona,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc, sql, count, sum, ne, isNotNull, isNull, gte, lte, lt, or, ilike, inArray } from "drizzle-orm";
@@ -591,6 +594,14 @@ export interface IStorage {
   createScheduledReport(report: InsertScheduledReport): Promise<ScheduledReport>;
   updateScheduledReport(id: string, updates: Partial<InsertScheduledReport>): Promise<ScheduledReport | undefined>;
   deleteScheduledReport(id: string): Promise<void>;
+
+  // Agent Persona operations
+  getAgentPersonas(tenantId: string): Promise<AgentPersona[]>;
+  getAgentPersona(id: string, tenantId: string): Promise<AgentPersona | undefined>;
+  getActiveAgentPersona(tenantId: string): Promise<AgentPersona | undefined>;
+  createAgentPersona(persona: InsertAgentPersona): Promise<AgentPersona>;
+  updateAgentPersona(id: string, tenantId: string, updates: Partial<InsertAgentPersona>): Promise<AgentPersona | undefined>;
+  deleteAgentPersona(id: string, tenantId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -5514,6 +5525,44 @@ export class DatabaseStorage implements IStorage {
 
   async deleteScheduledReport(id: string): Promise<void> {
     await db.delete(scheduledReports).where(eq(scheduledReports.id, id));
+  }
+
+  // Agent Persona operations
+  async getAgentPersonas(tenantId: string): Promise<AgentPersona[]> {
+    return db.select().from(agentPersonas)
+      .where(eq(agentPersonas.tenantId, tenantId))
+      .orderBy(desc(agentPersonas.createdAt));
+  }
+
+  async getAgentPersona(id: string, tenantId: string): Promise<AgentPersona | undefined> {
+    const [persona] = await db.select().from(agentPersonas)
+      .where(and(eq(agentPersonas.id, id), eq(agentPersonas.tenantId, tenantId)));
+    return persona;
+  }
+
+  async getActiveAgentPersona(tenantId: string): Promise<AgentPersona | undefined> {
+    const [persona] = await db.select().from(agentPersonas)
+      .where(and(eq(agentPersonas.tenantId, tenantId), eq(agentPersonas.isActive, true)))
+      .limit(1);
+    return persona;
+  }
+
+  async createAgentPersona(persona: InsertAgentPersona): Promise<AgentPersona> {
+    const [created] = await db.insert(agentPersonas).values(persona).returning();
+    return created;
+  }
+
+  async updateAgentPersona(id: string, tenantId: string, updates: Partial<InsertAgentPersona>): Promise<AgentPersona | undefined> {
+    const [updated] = await db.update(agentPersonas)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(agentPersonas.id, id), eq(agentPersonas.tenantId, tenantId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteAgentPersona(id: string, tenantId: string): Promise<void> {
+    await db.delete(agentPersonas)
+      .where(and(eq(agentPersonas.id, id), eq(agentPersonas.tenantId, tenantId)));
   }
 }
 
