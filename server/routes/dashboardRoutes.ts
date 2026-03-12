@@ -2297,4 +2297,148 @@ export function registerDashboardRoutes(app: Express): void {
       res.status(500).json({ message: "Failed to fetch DSO trend" });
     }
   });
+
+  // ── Sprint 3.4: Full Agent Activity (filterable, paginated) ──
+  app.get("/api/qollections/agent-activity", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const {
+        type,
+        status,
+        contactId,
+        search,
+        from: fromDate,
+        to: toDate,
+        page = "1",
+        limit: limitParam = "50",
+      } = req.query;
+
+      const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
+      const pageSize = Math.min(100, Math.max(1, parseInt(limitParam as string, 10) || 50));
+      const offset = (pageNum - 1) * pageSize;
+
+      // Build filter conditions
+      const conditions: any[] = [eq(actions.tenantId, user.tenantId)];
+
+      if (type) conditions.push(eq(actions.type, type as string));
+      if (status) conditions.push(eq(actions.status, status as string));
+      if (contactId) conditions.push(eq(actions.contactId, contactId as string));
+      if (fromDate) conditions.push(gte(actions.createdAt, new Date(fromDate as string)));
+      if (toDate) {
+        const end = new Date(toDate as string);
+        end.setHours(23, 59, 59, 999);
+        conditions.push(lte(actions.createdAt, end));
+      }
+
+      // Count total for pagination
+      const [{ total }] = await db
+        .select({ total: count() })
+        .from(actions)
+        .leftJoin(contacts, and(eq(actions.contactId, contacts.id), eq(contacts.tenantId, user.tenantId)))
+        .where(
+          search
+            ? and(...conditions, sql`(${contacts.name} ILIKE ${'%' + search + '%'} OR ${actions.subject} ILIKE ${'%' + search + '%'})`)
+            : and(...conditions),
+        );
+
+      // Fetch page
+      const rows = await db
+        .select({
+          id: actions.id,
+          type: actions.type,
+          status: actions.status,
+          subject: actions.subject,
+          content: actions.content,
+          aiGenerated: actions.aiGenerated,
+          confidenceScore: actions.confidenceScore,
+          exceptionReason: actions.exceptionReason,
+          createdAt: actions.createdAt,
+          completedAt: actions.completedAt,
+          contactId: actions.contactId,
+          contactName: contacts.name,
+          companyName: contacts.companyName,
+          invoiceNumber: invoices.invoiceNumber,
+          invoiceAmount: invoices.amount,
+          invoiceCurrency: invoices.currency,
+        })
+        .from(actions)
+        .leftJoin(contacts, and(eq(actions.contactId, contacts.id), eq(contacts.tenantId, user.tenantId)))
+        .leftJoin(invoices, and(eq(actions.invoiceId, invoices.id), eq(invoices.tenantId, user.tenantId)))
+        .where(
+          search
+            ? and(...conditions, sql`(${contacts.name} ILIKE ${'%' + search + '%'} OR ${actions.subject} ILIKE ${'%' + search + '%'})`)
+            : and(...conditions),
+        )
+        .orderBy(desc(actions.createdAt))
+        .limit(pageSize)
+        .offset(offset);
+
+      // Batch-fetch compliance checks
+      const actionIds = rows.map((a) => a.id);
+      const complianceMap = new Map<string, { checkResult: string; violations: any[]; agentReasoning: string | null }>();
+
+      if (actionIds.length > 0) {
+        const checks = await db
+          .select({
+            actionId: complianceChecks.actionId,
+            checkResult: complianceChecks.checkResult,
+            violations: complianceChecks.violations,
+            agentReasoning: complianceChecks.agentReasoning,
+          })
+          .from(complianceChecks)
+          .where(
+            and(
+              inArray(complianceChecks.actionId, actionIds),
+              eq(complianceChecks.tenantId, user.tenantId),
+            ),
+          );
+
+        for (const c of checks) {
+          if (c.actionId && !complianceMap.has(c.actionId)) {
+            complianceMap.set(c.actionId, {
+              checkResult: c.checkResult,
+              violations: (c.violations as any[]) || [],
+              agentReasoning: c.agentReasoning,
+            });
+          }
+        }
+      }
+
+      const enriched = rows.map((a) => ({
+        id: a.id,
+        type: a.type,
+        status: a.status,
+        subject: a.subject,
+        content: a.content,
+        aiGenerated: a.aiGenerated,
+        confidenceScore: a.confidenceScore,
+        exceptionReason: a.exceptionReason,
+        createdAt: a.createdAt,
+        completedAt: a.completedAt,
+        contactId: a.contactId,
+        contactName: a.contactName || a.companyName || "Unknown",
+        invoiceNumber: a.invoiceNumber,
+        invoiceAmount: a.invoiceAmount,
+        invoiceCurrency: a.invoiceCurrency || "GBP",
+        compliance: complianceMap.get(a.id) || null,
+      }));
+
+      res.json({
+        data: enriched,
+        pagination: {
+          page: pageNum,
+          limit: pageSize,
+          total,
+          totalPages: Math.ceil(total / pageSize),
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching agent activity:", error);
+      res.status(500).json({ message: "Failed to fetch agent activity" });
+    }
+  });
 }
