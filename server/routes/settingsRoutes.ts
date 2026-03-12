@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { storage } from "../storage";
-import { isAuthenticated, isOwner } from "../auth";
+import { isAuthenticated, isOwner, regenerateSessionOnLogin } from "../auth";
 import { logSecurityEvent, extractClientInfo } from "../services/securityAuditService";
 import { sanitizeObject, stripSensitiveUserFields, stripSensitiveTenantFields, stripSensitiveFields } from "../utils/sanitize";
 import { withPermission, withRole, withMinimumRole, canManageUser, withRBACContext, requireTenantAdmin } from "../middleware/rbac";

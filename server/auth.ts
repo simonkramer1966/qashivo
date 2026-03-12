@@ -1,46 +1,16 @@
-import passport from "passport";
-import { Strategy as LocalStrategy } from "passport-local";
 import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import connectPg from "connect-pg-simple";
-import bcrypt from "bcryptjs";
 import { storage } from "./storage";
 import crypto from "crypto";
 import rateLimit from "express-rate-limit";
 import { logSecurityEvent, extractClientInfo } from "./services/securityAuditService";
+import { db } from "./db";
+import { users } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
-function validatePasswordStrength(password: string): string | null {
-  if (password.length < 10) return "Password must be at least 10 characters";
-  if (!/[A-Z]/.test(password)) return "Password must include at least one uppercase letter";
-  if (!/[a-z]/.test(password)) return "Password must include at least one lowercase letter";
-  if (!/[0-9]/.test(password)) return "Password must include at least one number";
-  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(password)) return "Password must include at least one special character";
-  return null;
-}
-
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 5,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { message: "Too many login attempts. Please try again in 15 minutes." },
-});
-
-const signupLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 3,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { message: "Too many signup attempts. Please try again later." },
-});
-
-const passwordResetLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 3,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { message: "Too many password reset requests. Please try again later." },
-});
+// Re-export Clerk-based auth guards so all existing imports keep working
+export { isAuthenticated, isOwner } from "./middleware/clerkAuth";
 
 const SESSION_ABSOLUTE_TTL = 24 * 60 * 60 * 1000; // 24 hours absolute max
 const SESSION_IDLE_TIMEOUT = 30 * 60 * 1000; // 30 minutes idle timeout
@@ -53,9 +23,7 @@ export function getSession() {
     ttl: Math.floor(SESSION_ABSOLUTE_TTL / 1000),
     tableName: "sessions",
   });
-  
-  console.log("✅ Using PostgreSQL session store with 24h absolute / 30min idle timeout");
-  
+
   return session({
     secret: process.env.SESSION_SECRET || "qashivo-secret-key-change-in-production",
     store: sessionStore,
@@ -73,18 +41,17 @@ export function getSession() {
 
 export function sessionIdleTimeout(): RequestHandler {
   return (req: any, res, next) => {
-    if (!req.session || !req.isAuthenticated || !req.isAuthenticated()) {
+    if (!req.session || !req.user) {
       return next();
     }
 
     const now = Date.now();
-
     const isApiRequest = req.path.startsWith('/api/');
 
     if (req.session.lastActivity) {
       const idleTime = now - req.session.lastActivity;
       if (idleTime > SESSION_IDLE_TIMEOUT) {
-        const user = req.user as any;
+        const user = (req as any).user as any;
         const { ipAddress, userAgent } = extractClientInfo(req);
         logSecurityEvent({ eventType: 'session_expired_idle', userId: user?.id, tenantId: user?.tenantId, ipAddress, userAgent });
         return req.session.destroy((err: any) => {
@@ -103,7 +70,7 @@ export function sessionIdleTimeout(): RequestHandler {
     } else {
       const sessionAge = now - req.session.createdAt;
       if (sessionAge > SESSION_ABSOLUTE_TTL) {
-        const user = req.user as any;
+        const user = (req as any).user as any;
         const { ipAddress, userAgent } = extractClientInfo(req);
         logSecurityEvent({ eventType: 'session_expired_absolute', userId: user?.id, tenantId: user?.tenantId, ipAddress, userAgent });
         return req.session.destroy((err: any) => {
@@ -122,205 +89,95 @@ export function sessionIdleTimeout(): RequestHandler {
   };
 }
 
+// Kept for legacy compatibility — no longer used for login
 export function regenerateSessionOnLogin(req: any, user: any, callback: (err: any) => void) {
-  const oldSession = req.session;
-  req.session.regenerate((err: any) => {
-    if (err) return callback(err);
-    
-    if (oldSession.activeTenantId) {
-      req.session.activeTenantId = oldSession.activeTenantId;
-    }
-    
-    req.session.createdAt = Date.now();
-    req.session.lastActivity = Date.now();
-    
-    req.login(user, callback);
-  });
+  callback(null);
 }
 
 export async function setupAuth(app: Express) {
   app.set("trust proxy", 1);
   app.use(getSession());
-  app.use(passport.initialize());
-  app.use(passport.session());
   app.use(sessionIdleTimeout());
 
-  passport.use(new LocalStrategy(
-    {
-      usernameField: 'email',
-      passwordField: 'password'
-    },
-    async (email, password, done) => {
-      try {
-        const user = await storage.getUserByEmail(email);
-        
-        if (!user) {
-          return done(null, false, { message: 'Invalid email or password' });
-        }
-        
-        const isValidPassword = await bcrypt.compare(password, user.password);
-        
-        if (!isValidPassword) {
-          return done(null, false, { message: 'Invalid email or password' });
-        }
-        
-        return done(null, user as any);
-      } catch (error) {
-        return done(error);
-      }
-    }
-  ));
-
-  passport.serializeUser((user: any, done) => {
-    done(null, user.id);
-  });
-
-  passport.deserializeUser(async (id: string, done) => {
+  // Clerk webhook: provision users on sign-up
+  app.post("/api/clerk/webhook", async (req, res) => {
     try {
-      const user = await storage.getUser(id);
-      // Format user to match expected RBAC structure (claims.sub pattern from Replit Auth)
-      const formattedUser = {
-        ...user,
-        claims: {
-          sub: user?.id || id
-        }
-      };
-      done(null, formattedUser as any);
-    } catch (error) {
-      done(error);
-    }
-  });
+      const event = req.body;
 
-  app.post("/api/signup", signupLimiter, async (req, res) => {
-    try {
-      const { email, password, firstName, lastName, companyName } = req.body;
-      
-      if (!email || !password) {
-        return res.status(400).json({ message: "Email and password are required" });
-      }
-      
-      const passwordError = validatePasswordStrength(password);
-      if (passwordError) {
-        return res.status(400).json({ message: passwordError });
-      }
-      
-      const existingUser = await storage.getUserByEmail(email);
-      if (existingUser) {
-        return res.status(400).json({ message: "Email already registered" });
-      }
-      
-      const hashedPassword = await bcrypt.hash(password, 10);
-      
-      const tenant = await storage.createTenant({
-        name: companyName || email,
-        subdomain: `tenant-${crypto.randomBytes(8).toString('hex')}`,
-      });
-      
-      const allUsers = await storage.getAllUsers();
-      const isFirstUser = allUsers.length === 0;
-      
-      const user = await storage.createUser({
-        email,
-        password: hashedPassword,
-        firstName: firstName || null,
-        lastName: lastName || null,
-        tenantId: tenant.id,
-        role: "owner",
-        tenantRole: "owner",
-        platformAdmin: isFirstUser,
-      } as any);
-      
-      const { ipAddress, userAgent } = extractClientInfo(req);
-      logSecurityEvent({ eventType: 'signup', userId: user.id, tenantId: tenant.id, ipAddress, userAgent, metadata: { email } });
-      
-      regenerateSessionOnLogin(req, user, (err) => {
-        if (err) {
-          return res.status(500).json({ message: "Signup successful but login failed" });
+      if (event.type === "user.created" || event.type === "user.updated") {
+        const clerkUser = event.data;
+        const email = clerkUser.email_addresses?.[0]?.email_address;
+        if (!email) {
+          return res.status(400).json({ message: "No email on Clerk user" });
         }
-        
-        return res.json({ 
-          user: {
-            id: user.id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            role: user.role,
-            tenantRole: user.tenantRole,
-            tenantId: user.tenantId,
-            platformAdmin: user.platformAdmin,
-          }
+
+        // Check if user already exists by clerkId
+        const [existing] = await db.select().from(users).where(eq(users.clerkId, clerkUser.id));
+        if (existing) {
+          // Update existing user
+          await db.update(users).set({
+            email,
+            firstName: clerkUser.first_name || existing.firstName,
+            lastName: clerkUser.last_name || existing.lastName,
+            profileImageUrl: clerkUser.image_url || existing.profileImageUrl,
+            updatedAt: new Date(),
+          }).where(eq(users.clerkId, clerkUser.id));
+          return res.json({ message: "User updated" });
+        }
+
+        // Check if user exists by email (migration from legacy auth)
+        const [existingByEmail] = await db.select().from(users).where(eq(users.email, email));
+        if (existingByEmail) {
+          // Link existing user to Clerk
+          await db.update(users).set({
+            clerkId: clerkUser.id,
+            firstName: clerkUser.first_name || existingByEmail.firstName,
+            lastName: clerkUser.last_name || existingByEmail.lastName,
+            profileImageUrl: clerkUser.image_url || existingByEmail.profileImageUrl,
+            updatedAt: new Date(),
+          }).where(eq(users.id, existingByEmail.id));
+          return res.json({ message: "User linked to Clerk" });
+        }
+
+        // New user — create tenant + user
+        const tenant = await storage.createTenant({
+          name: `${clerkUser.first_name || ""} ${clerkUser.last_name || ""}`.trim() || email,
+          subdomain: `tenant-${crypto.randomBytes(8).toString('hex')}`,
         });
-      });
+
+        await storage.createUser({
+          clerkId: clerkUser.id,
+          email,
+          password: "clerk-managed", // Placeholder — Clerk handles auth
+          firstName: clerkUser.first_name || null,
+          lastName: clerkUser.last_name || null,
+          profileImageUrl: clerkUser.image_url || null,
+          tenantId: tenant.id,
+          role: "owner",
+          tenantRole: "owner",
+        } as any);
+
+        const { ipAddress, userAgent } = extractClientInfo(req);
+        logSecurityEvent({ eventType: 'signup', userId: clerkUser.id, tenantId: tenant.id, ipAddress, userAgent, metadata: { email, source: 'clerk' } });
+
+        return res.json({ message: "User provisioned" });
+      }
+
+      return res.json({ message: "Event ignored" });
     } catch (error) {
-      console.error("Signup error:", error);
-      res.status(500).json({ message: "Failed to create account" });
+      console.error("[clerk webhook] Error:", error);
+      return res.status(500).json({ message: "Webhook processing failed" });
     }
   });
 
-  app.post("/api/login", loginLimiter, (req, res, next) => {
-    const { ipAddress, userAgent } = extractClientInfo(req);
-    passport.authenticate("local", (err: any, user: any, info: any) => {
-      if (err) {
-        return res.status(500).json({ message: "Login failed" });
-      }
-      
-      if (!user) {
-        logSecurityEvent({ eventType: 'login_failed', ipAddress, userAgent, result: 'failure', metadata: { email: req.body?.email } });
-        return res.status(401).json({ message: info?.message || "Invalid credentials" });
-      }
-      
-      regenerateSessionOnLogin(req, user, (loginErr) => {
-        if (loginErr) {
-          return res.status(500).json({ message: "Login failed" });
-        }
-        
-        logSecurityEvent({ eventType: 'login_success', userId: user.id, tenantId: user.tenantId, ipAddress, userAgent });
-        
-        return res.json({
-          user: {
-            id: user.id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            role: user.role,
-            tenantRole: user.tenantRole,
-            tenantId: user.tenantId,
-            platformAdmin: user.platformAdmin,
-            partnerId: user.partnerId,
-          }
-        });
-      });
-    })(req, res, next);
-  });
-
-  app.post("/api/logout", (req, res) => {
-    const user = req.user as any;
-    const { ipAddress, userAgent } = extractClientInfo(req);
-    if (user?.id) {
-      logSecurityEvent({ eventType: 'logout', userId: user.id, tenantId: user.tenantId, ipAddress, userAgent });
-    }
-    req.logout((err) => {
-      if (err) {
-        return res.status(500).json({ message: "Logout failed" });
-      }
-      
-      req.session.destroy((destroyErr) => {
-        if (destroyErr) {
-          console.error('Session destruction error:', destroyErr);
-        }
-        
-        res.clearCookie('connect.sid');
-        res.json({ message: "Logged out successfully" });
-      });
-    });
-  });
-
-  app.get("/api/user", (req, res) => {
-    if (!req.isAuthenticated() || !req.user) {
+  // GET /api/user — returns the authenticated user's profile
+  // Works with both Clerk JWT auth and legacy session auth
+  app.get("/api/user", async (req, res) => {
+    const user = (req as any).user as any;
+    if (!user) {
       return res.status(401).json({ message: "Not authenticated" });
     }
-    
-    const user = req.user as any;
+
     return res.json({
       user: {
         id: user.id,
@@ -336,89 +193,21 @@ export async function setupAuth(app: Express) {
     });
   });
 
-  app.post("/api/password-reset/request", passwordResetLimiter, async (req, res) => {
-    try {
-      const { email } = req.body;
-      const { ipAddress, userAgent } = extractClientInfo(req);
-      
-      if (!email) {
-        return res.status(400).json({ message: "Email is required" });
-      }
-      
-      const user = await storage.getUserByEmail(email);
-      
-      if (!user) {
-        logSecurityEvent({ eventType: 'password_reset_request', ipAddress, userAgent, result: 'failure', metadata: { email, reason: 'user_not_found' } });
-        return res.json({ message: "If an account exists, a reset link has been sent" });
-      }
-      
-      const resetToken = crypto.randomBytes(32).toString('hex');
-      const resetTokenExpiry = new Date(Date.now() + 3600000);
-      
-      await storage.updateUserResetToken(user.id, resetToken, resetTokenExpiry);
-      
-      const { sendPasswordResetEmail } = await import("./services/email/SendGridEmailService");
-      await sendPasswordResetEmail(email, resetToken);
-      
-      logSecurityEvent({ eventType: 'password_reset_request', userId: user.id, tenantId: user.tenantId, ipAddress, userAgent });
-      
-      return res.json({ message: "If an account exists, a reset link has been sent" });
-    } catch (error) {
-      console.error("Password reset request error:", error);
-      return res.json({ message: "If an account exists, a reset link has been sent" });
+  // POST /api/logout — clear session (Clerk handles token revocation client-side)
+  app.post("/api/logout", (req, res) => {
+    const user = (req as any).user as any;
+    const { ipAddress, userAgent } = extractClientInfo(req);
+    if (user?.id) {
+      logSecurityEvent({ eventType: 'logout', userId: user.id, tenantId: user.tenantId, ipAddress, userAgent });
     }
-  });
-
-  app.post("/api/password-reset/confirm", passwordResetLimiter, async (req, res) => {
-    try {
-      const { token, newPassword } = req.body;
-      const { ipAddress, userAgent } = extractClientInfo(req);
-      
-      if (!token || !newPassword) {
-        return res.status(400).json({ message: "Token and new password are required" });
-      }
-      
-      const passwordError = validatePasswordStrength(newPassword);
-      if (passwordError) {
-        return res.status(400).json({ message: passwordError });
-      }
-      
-      const user = await storage.getUserByResetToken(token);
-      
-      if (!user || !user.resetTokenExpiry || user.resetTokenExpiry < new Date()) {
-        return res.status(400).json({ message: "Invalid or expired reset token" });
-      }
-      
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
-      await storage.updateUserPassword(user.id, hashedPassword);
-      
-      logSecurityEvent({ eventType: 'password_reset_confirm', userId: user.id, tenantId: user.tenantId, ipAddress, userAgent });
-      
-      return res.json({ message: "Password reset successfully" });
-    } catch (error) {
-      console.error("Password reset confirm error:", error);
-      return res.status(500).json({ message: "Failed to reset password" });
+    if (req.session) {
+      req.session.destroy((err) => {
+        if (err) console.error('Session destruction error:', err);
+        res.clearCookie('connect.sid');
+        res.json({ message: "Logged out successfully" });
+      });
+    } else {
+      res.json({ message: "Logged out successfully" });
     }
   });
 }
-
-export const isAuthenticated: RequestHandler = async (req, res, next) => {
-  if (!req.isAuthenticated() || !req.user) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-  return next();
-};
-
-export const isOwner: RequestHandler = async (req, res, next) => {
-  if (!req.isAuthenticated() || !req.user) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-  
-  const user = req.user as any;
-  
-  if (user.role !== "owner") {
-    return res.status(403).json({ message: "Owner access required" });
-  }
-  
-  return next();
-};

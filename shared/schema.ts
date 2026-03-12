@@ -30,8 +30,9 @@ export const sessions = pgTable(
 // User storage table.
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clerkId: varchar("clerk_id").unique(), // Clerk external user ID
   email: varchar("email").unique().notNull(),
-  password: varchar("password").notNull(), // Hashed password
+  password: varchar("password").notNull(), // Hashed password (kept for migration; Clerk handles auth)
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),

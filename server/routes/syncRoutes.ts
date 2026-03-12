@@ -2,7 +2,7 @@ import type { Express } from "express";
 import express from "express";
 import { syncService } from "../services/syncService";
 import { webhookHandler } from "../services/webhookHandler";
-import { isAuthenticated } from "../replitAuth";
+import { isAuthenticated } from "../middleware/clerkAuth";
 import { storage } from "../storage";
 
 /**

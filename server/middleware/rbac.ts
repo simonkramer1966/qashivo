@@ -1,9 +1,9 @@
 import { RequestHandler } from 'express';
 import { PermissionService, Permission } from '../services/permissionService';
 import { storage } from '../storage';
-import { isAuthenticated } from '../auth';
+import { isAuthenticated } from './clerkAuth';
 
-// Extend Express Request interface to include RBAC context
+// Extend Express Request interface to include user (from Clerk auth) and RBAC context
 declare global {
   namespace Express {
     interface User {
@@ -17,6 +17,7 @@ declare global {
     }
 
     interface Request {
+      user?: User;
       rbac?: {
         userId: string;
         tenantId: string;

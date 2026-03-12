@@ -8,7 +8,8 @@ import {
   type CreditSignals,
   type TradingProfile,
 } from "./services/dynamicRiskScoringService";
-import { setupAuth, isAuthenticated, isOwner, regenerateSessionOnLogin } from "./auth";
+import { setupAuth, regenerateSessionOnLogin } from "./auth";
+import { isAuthenticated, isOwner } from "./middleware/clerkAuth";
 import { logSecurityEvent, extractClientInfo } from "./services/securityAuditService";
 import { sanitizeObject, stripSensitiveUserFields, stripSensitiveTenantFields, stripSensitiveFields } from "./utils/sanitize";
 import { withPermission, withRole, withMinimumRole, canManageUser } from "./middleware/rbac";
