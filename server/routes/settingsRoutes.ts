@@ -1002,6 +1002,79 @@ export async function registerSettingsRoutes(app: Express): Promise<void> {
     }
   });
 
+  // ============================================================
+  // Agent Persona endpoints
+  // ============================================================
+
+  app.get("/api/agent-persona", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const persona = await storage.getActiveAgentPersona(user.tenantId);
+      res.json(persona || null);
+    } catch (error: any) {
+      console.error("Error fetching active persona:", error);
+      res.status(500).json({ message: "Failed to fetch agent persona" });
+    }
+  });
+
+  app.patch("/api/agent-persona", ...withPermission('admin:settings'), async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const updateSchema = z.object({
+        personaName: z.string().min(1).optional(),
+        jobTitle: z.string().min(1).optional(),
+        emailSignatureName: z.string().min(1).optional(),
+        emailSignatureTitle: z.string().optional(),
+        emailSignatureCompany: z.string().optional(),
+        emailSignaturePhone: z.string().optional(),
+        toneDefault: z.enum(["friendly", "professional", "firm"]).optional(),
+        companyContext: z.string().optional(),
+        sectorContext: z.string().optional(),
+      });
+
+      const parsed = updateSchema.parse(req.body);
+
+      // Check if a persona already exists
+      const existing = await storage.getActiveAgentPersona(user.tenantId);
+
+      if (existing) {
+        const updated = await storage.updateAgentPersona(existing.id, user.tenantId, parsed);
+        return res.json(updated);
+      }
+
+      // Create new persona with defaults merged with provided values
+      const newPersona = await storage.createAgentPersona({
+        tenantId: user.tenantId,
+        personaName: parsed.personaName || "Charlie",
+        jobTitle: parsed.jobTitle || "Credit Controller",
+        emailSignatureName: parsed.emailSignatureName || "Charlie",
+        emailSignatureTitle: parsed.emailSignatureTitle || "Credit Controller",
+        emailSignatureCompany: parsed.emailSignatureCompany || "",
+        emailSignaturePhone: parsed.emailSignaturePhone || undefined,
+        toneDefault: parsed.toneDefault || "professional",
+        companyContext: parsed.companyContext || undefined,
+        sectorContext: parsed.sectorContext || "recruitment",
+        isActive: true,
+      });
+
+      res.status(201).json(newPersona);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid input", errors: error.errors });
+      }
+      console.error("Error updating agent persona:", error);
+      res.status(500).json({ message: "Failed to update agent persona" });
+    }
+  });
+
   app.get("/api/tenant/metadata", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);

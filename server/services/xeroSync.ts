@@ -3,6 +3,7 @@ import { tenants, cachedXeroInvoices, bills, contacts, bankAccounts, bankTransac
 import { eq, and } from "drizzle-orm";
 import { xeroService } from "./xero";
 import { attentionItemService } from "./attentionItemService";
+import { assignContactToDefaultSchedule } from "./strategySeeder";
 
 export class XeroSyncService {
   constructor() {
@@ -264,6 +265,13 @@ export class XeroSyncService {
               })
               .returning();
             contact = newContact;
+
+            // Auto-assign new contact to default collection schedule
+            try {
+              await assignContactToDefaultSchedule(tenantId, newContact.id);
+            } catch (seedErr) {
+              console.warn(`[xero-sync] Failed to assign schedule for contact ${newContact.id}:`, seedErr);
+            }
           }
 
           // Map status correctly: unpaid/partial → pending or overdue based on due date
