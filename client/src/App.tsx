@@ -1,7 +1,8 @@
-import { Switch, Route, useLocation } from "wouter";
+import { Switch, Route, useLocation, Redirect } from "wouter";
 import { Suspense, lazy, useEffect } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
+import { SignIn } from "@clerk/clerk-react";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
@@ -28,7 +29,6 @@ const Documentation = lazy(() => import("@/pages/documentation"));
 const DocumentationReview = lazy(() => import("@/pages/documentation-review"));
 const PartnerRegistration = lazy(() => import("@/pages/partner-registration"));
 const ClientRegistration = lazy(() => import("@/pages/client-registration"));
-const SignIn = lazy(() => import("@/pages/signin"));
 const InvestorDemo = lazy(() => import("@/pages/demo"));
 const InvestorDemoQashivo = lazy(() => import("@/pages/investor-demo-qashivo"));
 const InvestorDetail = lazy(() => import("@/pages/investor-detail"));
@@ -51,10 +51,8 @@ const DesignPartner = lazy(() => import("@/pages/design-partner"));
 const DesignPartnerThankYou = lazy(() => import("@/pages/design-partner-thank-you"));
 const FoundingPartners = lazy(() => import("@/pages/founding-partners"));
 const PartnerScorecard = lazy(() => import("@/pages/PartnerScorecard"));
-const Login = lazy(() => import("@/pages/Login"));
-const Signup = lazy(() => import("@/pages/Signup"));
-const ForgotPassword = lazy(() => import("@/pages/ForgotPassword"));
-const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
+// Login/Signup handled by Clerk components (ClerkSignInPage, ClerkSignUpPage)
+// ForgotPassword/ResetPassword handled by Clerk
 const UserOnboarding = lazy(() => import("@/pages/UserOnboarding"));
 const ConnectionError = lazy(() => import("@/pages/connection-error"));
 const CashFlow = lazy(() => import("@/pages/cash-flow"));
@@ -135,6 +133,29 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function ClerkSignInPage() {
+  return (
+    <div className="min-h-screen bg-white flex items-center justify-center">
+      <SignIn routing="path" path="/login" signUpUrl="/signup" />
+    </div>
+  );
+}
+
+function ClerkSignUpPage() {
+  return (
+    <div className="min-h-screen bg-white flex items-center justify-center">
+      <SignIn routing="path" path="/signup" />
+    </div>
+  );
+}
+
+function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
+  const { isAuthenticated, isLoading } = useAuth();
+  if (isLoading) return <PageLoader />;
+  if (!isAuthenticated) return <Redirect to="/login" />;
+  return <Component />;
+}
+
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
   const { showSplash, setShowSplash } = useSplash();
@@ -188,11 +209,9 @@ function Router() {
           <Route path="/partner/register" component={PartnerRegistration} />
           <Route path="/client/register" component={ClientRegistration} />
           <Route path="/connection-error" component={ConnectionError} />
-          <Route path="/login" component={Login} />
-          <Route path="/signup" component={Signup} />
-          <Route path="/forgot-password" component={ForgotPassword} />
-          <Route path="/reset-password" component={ResetPassword} />
-          <Route path="/signin" component={SignIn} />
+          <Route path="/login" component={ClerkSignInPage} />
+          <Route path="/signup" component={ClerkSignUpPage} />
+          <Route path="/signin" component={ClerkSignInPage} />
           <Route path="/admin" component={AdminShell} />
           <Route path="/admin/:rest*" component={AdminShell} />
           <Route path="/accept-invite" component={AcceptInvite} />
@@ -240,9 +259,9 @@ function Router() {
           <Route path="/investor-crm" component={InvestorCRM} />
           <Route path="/docs-download" component={DocsDownload} />
           <Route path="/qashivo-admin" component={QashivoAdminDashboard} />
-          <Route path="/login" component={Cashboard} />
-          <Route path="/signup" component={Cashboard} />
-          <Route path="/signin" component={Cashboard} />
+          <Route path="/login">{() => <Redirect to="/" />}</Route>
+          <Route path="/signup">{() => <Redirect to="/" />}</Route>
+          <Route path="/signin">{() => <Redirect to="/" />}</Route>
           <Route path="/admin" component={AdminShell} />
           <Route path="/admin/:rest*" component={AdminShell} />
           <Route path="/partner" component={PartnerDashboard} />

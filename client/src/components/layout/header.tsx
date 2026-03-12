@@ -1,9 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { UserButton } from "@clerk/clerk-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { LogOut, User, Settings, AlertCircle, Power, ListTodo, AlertTriangle, RefreshCw } from "lucide-react";
+import { AlertCircle, Power, ListTodo, AlertTriangle, RefreshCw } from "lucide-react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -159,43 +158,7 @@ export default function Header({ title, subtitle, systemMessage, action, noBorde
     },
   });
 
-  const handleLogout = () => {
-    window.location.href = "/api/logout";
-  };
-
-  const handleProfileClick = () => {
-    setLocation("/profile");
-  };
-
-  const handleSettingsClick = () => {
-    setLocation("/settings");
-  };
-
-  const getUserInitials = () => {
-    if (!user) return "U";
-    const firstName = (user as any)?.firstName || "";
-    const lastName = (user as any)?.lastName || "";
-    if (firstName && lastName) {
-      return `${firstName.charAt(0)}${lastName.charAt(0)}`;
-    }
-    if ((user as any)?.email) {
-      return (user as any).email.charAt(0).toUpperCase();
-    }
-    return "U";
-  };
-
-  const getDisplayName = () => {
-    if (!user) return "User";
-    const firstName = (user as any)?.firstName;
-    const lastName = (user as any)?.lastName;
-    if (firstName && lastName) {
-      return `${firstName} ${lastName}`;
-    }
-    if ((user as any)?.email) {
-      return (user as any).email;
-    }
-    return "User";
-  };
+  // Clerk <UserButton /> handles profile, settings, and logout
 
   // Check if accounting software is connected
   const isAccountingSoftwareConnected = xeroHealth?.connectionStatus === 'connected';
@@ -270,6 +233,7 @@ export default function Header({ title, subtitle, systemMessage, action, noBorde
                 <span className="text-xs font-medium">Connect</span>
               </Button>
             )}
+            <UserButton afterSignOutUrl="/login" />
           </div>
         </div>
         {tenant?.name && (
@@ -303,9 +267,9 @@ export default function Header({ title, subtitle, systemMessage, action, noBorde
             </p>
           )}
         </div>
-        <div className="flex items-center gap-2">
-
+        <div className="flex items-center gap-3">
           {action}
+          <UserButton afterSignOutUrl="/login" />
         </div>
       </div>
       </div>
