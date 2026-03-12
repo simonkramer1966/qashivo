@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { generateJSON } from "../services/llm/claude";
 import { storage } from "../storage";
 import { isAuthenticated } from "../auth";
 import { 
@@ -314,13 +315,10 @@ router.post("/tenants/:tenantId/workflow/generate", isAuthenticated, async (req,
       return res.status(404).json({ error: "Tenant not found" });
     }
     
-    // Generate messages using OpenAI
-    const OpenAI = (await import("openai")).default;
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    
+    // Generate messages using Claude
     const toneLabel = tone <= 2 ? "gentle and friendly" : tone >= 4 ? "firm but professional" : "professional and courteous";
     const escalationCadence = policyJson?.escalationCadence || "standard";
-    
+
     const prompt = `Generate collection email and SMS message templates for a UK business. The tone should be ${toneLabel}.
 
 Business context:
@@ -346,30 +344,15 @@ Rules:
 - No legal claims or threats
 - No mention of AI or automation
 - Use {{customer_name}}, {{invoice_number}}, {{amount}}, {{due_date}}, {{company_name}} as variables
-- Keep SMS concise (under 160 characters)
+- Keep SMS concise (under 160 characters)`;
 
-Return JSON in this exact format:
-{
-  "variants": [
-    {"key": "PRE_DUE_REMINDER", "channel": "EMAIL", "subject": "...", "body": "..."},
-    {"key": "PRE_DUE_REMINDER", "channel": "SMS", "body": "..."},
-    ...
-  ]
-}`;
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [{ role: "user", content: prompt }],
-      response_format: { type: "json_object" },
+    const result = await generateJSON<{ variants: any[] }>({
+      system: "You are an expert UK credit controller generating professional collection message templates.",
+      prompt,
+      model: "standard",
       temperature: 0.7,
+      schemaHint: `{ "variants": [{"key": "...", "channel": "EMAIL"|"SMS", "subject?": "...", "body": "..."}] }`,
     });
-    
-    const content = completion.choices[0]?.message?.content;
-    if (!content) {
-      throw new Error("No response from OpenAI");
-    }
-    
-    const result = JSON.parse(content);
     
     // Get or create draft profile
     let draft = await storage.getDraftWorkflowProfile(tenantId);

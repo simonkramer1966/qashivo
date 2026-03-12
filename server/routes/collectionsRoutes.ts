@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import { generateText } from "../services/llm/claude";
 import { storage } from "../storage";
 import { isAuthenticated, isOwner } from "../auth";
 import { logSecurityEvent, extractClientInfo } from "../services/securityAuditService";
@@ -352,9 +353,7 @@ export function registerCollectionsRoutes(app: Express): void {
         return res.status(404).json({ message: "Contact not found" });
       }
 
-      // Use OpenAI to generate outbound content
-      const OpenAI = (await import('openai')).default;
-      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      // Use Claude to generate outbound content
 
       const invoiceList = invoices.map((inv: any) => 
         `${inv.invoiceNumber} - £${inv.amount} (Due: ${new Date(inv.dueDate).toLocaleDateString()})`
@@ -424,17 +423,13 @@ Guidelines:
         userPrompt = `Create a ${stage.replace('_', ' ')} collection call script.`;
       }
 
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt }
-        ],
+      const draftContent = await generateText({
+        system: systemPrompt,
+        prompt: userPrompt,
+        model: "fast",
         temperature: 0.7,
-        max_tokens: actionType === 'sms' ? 100 : 500,
+        maxTokens: actionType === 'sms' ? 100 : 500,
       });
-
-      const draftContent = completion.choices[0].message.content || "";
 
       res.json({ draftContent });
     } catch (error) {

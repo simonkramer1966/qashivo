@@ -1,22 +1,13 @@
-import OpenAI from "openai";
+import { generateJSON } from "./llm/claude";
 import { storage } from "../storage";
 import { jobQueue } from "./jobQueue";
 import crypto from "crypto";
-import { 
-  InvoiceHealthScore, 
+import {
+  InvoiceHealthScore,
   InsertInvoiceHealthScore,
   HealthAnalyticsSnapshot,
-  InsertHealthAnalyticsSnapshot 
+  InsertHealthAnalyticsSnapshot
 } from "../../shared/schema";
-
-// Secure OpenAI initialization with proper error handling
-if (!process.env.OPENAI_API_KEY) {
-  console.error("❌ OPENAI_API_KEY is required for AI features");
-}
-
-const openai = new OpenAI({ 
-  apiKey: process.env.OPENAI_API_KEY 
-});
 
 interface InvoiceAnalysisData {
   invoice: {
@@ -442,29 +433,13 @@ Provide analysis in JSON format:
 }
       `;
 
-      // Skip AI processing if no API key available
-      if (!process.env.OPENAI_API_KEY) {
-        return this.getFallbackInsights(scores);
-      }
-
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini", // Faster model
-        messages: [
-          {
-            role: "system",
-            content: "Expert AR analyst. Return JSON with payment prediction."
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        response_format: { type: "json_object" },
-        max_tokens: 300, // Limit response size
-        temperature: 0.2, // More deterministic
+      const result = await generateJSON<any>({
+        system: "Expert AR analyst. Return JSON with payment prediction.",
+        prompt,
+        model: "fast",
+        temperature: 0.2,
+        maxTokens: 300,
       });
-
-      const result = JSON.parse(response.choices[0].message.content || '{}');
       
       return {
         paymentProbability: result.paymentProbability || 0.5,

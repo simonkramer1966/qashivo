@@ -15,7 +15,7 @@ import {
 import { sendEmail } from "./sendgrid";
 import { generateReplyToEmail, findOrCreateConversation, updateConversationStats } from "./emailCommunications";
 import { v4 as uuidv4 } from "uuid";
-import OpenAI from "openai";
+import { generateJSON } from "./llm/claude";
 
 const EMAIL_REPLY_DOMAIN = process.env.EMAIL_REPLY_DOMAIN || "in.qashivo.com";
 const SENDGRID_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || "cc@qashivo.com";
@@ -705,8 +705,6 @@ This email was sent on behalf of ${tenantName} via Qashivo credit control.`;
    */
   async shouldEscalate(tenantId: string, contactId: string, latestMessage: string, conversationHistory: string): Promise<EscalationResult> {
     try {
-      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
       const exchangeCountResult = await db.select({ count: sql<number>`count(*)::int` })
         .from(emailMessages)
         .where(and(
@@ -716,7 +714,7 @@ This email was sent on behalf of ${tenantName} via Qashivo credit control.`;
         ));
       const recentExchangeCount = exchangeCountResult[0]?.count || 0;
 
-      const prompt = `You are an AI credit control assistant deciding whether to continue handling a debtor conversation autonomously, escalate fully to a human, or do a PARTIAL ESCALATION (reply to what you can, but flag a question for human follow-up).
+      const systemPrompt = `You are an AI credit control assistant deciding whether to continue handling a debtor conversation autonomously, escalate fully to a human, or do a PARTIAL ESCALATION (reply to what you can, but flag a question for human follow-up).
 
 CONVERSATION HISTORY:
 ${conversationHistory}
@@ -771,17 +769,12 @@ Return a JSON object:
   "debtorQuestion": "The specific question the debtor asked that needs human follow-up (only for partial escalation)"
 }`;
 
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: prompt },
-          { role: "user", content: "Analyse and decide." }
-        ],
-        response_format: { type: "json_object" },
+      const result = await generateJSON<any>({
+        system: systemPrompt,
+        prompt: "Analyse and decide.",
+        model: "fast",
         temperature: 0.2,
       });
-
-      const result = JSON.parse(completion.choices[0].message.content || '{}');
       return {
         shouldEscalate: result.shouldEscalate === true,
         partialEscalation: result.partialEscalation === true,
@@ -890,7 +883,6 @@ ${escalation.suggestedHandoff ? `SUGGESTED FOCUS:\n${escalation.suggestedHandoff
     conversationHistory: string,
     partialEscalation?: { debtorQuestion?: string; suggestedHandoff?: string },
   ): Promise<{ subject: string; htmlContent: string; textContent: string; timelineSummary: string }> {
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const currentDate = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
     const partialEscalationInstructions = partialEscalation ? `
@@ -904,7 +896,7 @@ The debtor's message contains a question that needs to be answered by a human co
 - The handoff should feel seamless and reassuring, not like you're dodging the question
 ` : '';
 
-    const prompt = `You are a professional credit control assistant replying to a debtor's email. You are continuing an active conversation — respond naturally as if you are a human accounts team member.
+    const systemPrompt = `You are a professional credit control assistant replying to a debtor's email. You are continuing an active conversation — respond naturally as if you are a human accounts team member.
 
 TODAY'S DATE: ${currentDate}
 TENANT (creditor) NAME: ${context.tenantName}
@@ -938,17 +930,12 @@ Return a JSON object with exactly these fields:
 - "body_html": The same email wrapped in clean, minimal HTML (use inline styles, no external CSS)
 - "timeline_summary": A one-line summary for the activity timeline (e.g. "AI replied to debtor query about INV-1234")`;
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: prompt },
-        { role: "user", content: "Generate the reply email." }
-      ],
-      response_format: { type: "json_object" },
+    const result = await generateJSON<any>({
+      system: systemPrompt,
+      prompt: "Generate the reply email.",
+      model: "fast",
       temperature: 0.4,
     });
-
-    const result = JSON.parse(completion.choices[0].message.content || '{}');
 
     const subject = result.subject || `Re: ${context.inboundSubject || 'Your account'}`;
     const textContent = result.body_text || '';
@@ -1343,7 +1330,6 @@ NOTE: The AI has already sent a reply acknowledging the question and letting the
    * the call disposition, transcript, debtor context, and next steps.
    */
   private async generateFollowUpWithAI(context: VoiceFollowUpContext, debtorContext: string): Promise<{ subject: string; htmlContent: string; textContent: string }> {
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const currentDate = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
     let dispositionDescription: string;
@@ -1380,7 +1366,7 @@ NOTE: The AI has already sent a reply acknowledging the question and letting the
         ? `\nTRANSCRIPT EXCERPT: ${context.transcript.substring(0, 800)}`
         : '');
 
-    const prompt = `You are a professional credit control assistant writing a follow-up email after a phone call attempt to a debtor.
+    const systemPrompt = `You are a professional credit control assistant writing a follow-up email after a phone call attempt to a debtor.
 
 TODAY'S DATE: ${currentDate}
 TENANT (creditor) NAME: ${context.tenantName}
@@ -1412,17 +1398,12 @@ Return a JSON object with exactly these fields:
 - "email_type": One of: "confirmation", "clarification", "missed_call", "voicemail_followup", "busy_followup", "wrong_number", "general_summary"
 - "timeline_summary": A one-line summary for the activity timeline (e.g. "Post-call confirmation sent — PTP £5,000 by 28 Feb 2026")`;
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: prompt },
-        { role: "user", content: "Generate the follow-up email based on the context provided." }
-      ],
-      response_format: { type: "json_object" },
+    const result = await generateJSON<any>({
+      system: systemPrompt,
+      prompt: "Generate the follow-up email based on the context provided.",
+      model: "fast",
       temperature: 0.4,
     });
-
-    const result = JSON.parse(completion.choices[0].message.content || '{}');
 
     const subject = result.subject || `Following up on our call — ${context.tenantName}`;
     const textContent = result.body_text || '';

@@ -9,13 +9,9 @@
  * - Invoice details (amount, days overdue)
  */
 
-import OpenAI from "openai";
+import { generateJSON } from "./llm/claude";
 import { ToneProfile, PlaybookStage, ReasonCode, TemplateId } from "./playbookEngine";
 import { cleanEmailContent, cleanSmsContent } from "./messagePostProcessor";
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 export interface InvoiceDetail {
   invoiceNumber: string;
@@ -67,8 +63,6 @@ export interface GeneratedMessage {
 }
 
 class AIMessageGenerator {
-  private readonly MODEL = "gpt-4o-mini";
-
   /**
    * Generate a personalized email message
    */
@@ -76,23 +70,18 @@ class AIMessageGenerator {
     context: MessageContext,
     toneSettings: ToneSettings
   ): Promise<GeneratedMessage> {
-    const hasMultipleInvoices = (context.invoiceCount && context.invoiceCount > 1) || 
+    const hasMultipleInvoices = (context.invoiceCount && context.invoiceCount > 1) ||
                                  (context.invoiceDetails && context.invoiceDetails.length > 1);
     const systemPrompt = this.buildEmailSystemPrompt(toneSettings, hasMultipleInvoices);
     const userPrompt = this.buildEmailUserPrompt(context, toneSettings);
 
     try {
-      const response = await openai.chat.completions.create({
-        model: this.MODEL,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt }
-        ],
+      const result = await generateJSON<any>({
+        system: systemPrompt,
+        prompt: userPrompt,
+        model: "fast",
         temperature: 0.7,
-        response_format: { type: "json_object" }
       });
-
-      const result = JSON.parse(response.choices[0].message.content || '{}');
       
       // Post-process to ensure proper HTML paragraph formatting
       const rawBody = result.body || this.getDefaultEmailBody(context, toneSettings);
@@ -123,18 +112,13 @@ class AIMessageGenerator {
     const userPrompt = this.buildSMSUserPrompt(context, toneSettings);
 
     try {
-      const response = await openai.chat.completions.create({
-        model: this.MODEL,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt }
-        ],
+      const result = await generateJSON<any>({
+        system: systemPrompt,
+        prompt: userPrompt,
+        model: "fast",
         temperature: 0.7,
-        response_format: { type: "json_object" }
       });
 
-      const result = JSON.parse(response.choices[0].message.content || '{}');
-      
       // Post-process to ensure proper line break formatting
       const rawBody = result.body || this.getDefaultSMSBody(context, toneSettings);
       
@@ -161,18 +145,13 @@ class AIMessageGenerator {
     const userPrompt = this.buildVoiceUserPrompt(context, toneSettings);
 
     try {
-      const response = await openai.chat.completions.create({
-        model: this.MODEL,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt }
-        ],
+      const result = await generateJSON<any>({
+        system: systemPrompt,
+        prompt: userPrompt,
+        model: "fast",
         temperature: 0.7,
-        response_format: { type: "json_object" }
       });
 
-      const result = JSON.parse(response.choices[0].message.content || '{}');
-      
       return {
         voiceScript: result.voiceScript || this.getDefaultVoiceScript(context, toneSettings),
         body: result.voiceScript || ''

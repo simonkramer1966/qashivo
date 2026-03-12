@@ -1,8 +1,4 @@
-import OpenAI from "openai";
-
-const openai = new OpenAI({ 
-  apiKey: process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY_ENV_VAR || "default_key" 
-});
+import { generateJSON, generateText } from "./llm/claude";
 
 interface CollectionSuggestion {
   type: 'opportunity' | 'risk' | 'strategy';
@@ -51,22 +47,11 @@ export async function generateCollectionSuggestions(
     }
     `;
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-5", // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
-      messages: [
-        {
-          role: "system",
-          content: "You are an expert debt collection advisor with 20+ years of experience. Provide practical, professional advice."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      response_format: { type: "json_object" },
+    const result = await generateJSON<{ suggestions: CollectionSuggestion[] }>({
+      system: "You are an expert debt collection advisor with 20+ years of experience. Provide practical, professional advice.",
+      prompt,
+      model: "fast",
     });
-
-    const result = JSON.parse(response.choices[0].message.content || '{"suggestions": []}');
     return result.suggestions || [];
   } catch (error) {
     console.error("Error generating collection suggestions:", error);
@@ -105,22 +90,11 @@ export async function generateEmailDraft(
     Make the email professional, empathetic, and action-oriented. Include payment options and next steps.
     `;
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-5", // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
-      messages: [
-        {
-          role: "system",
-          content: "You are a professional accounts receivable specialist. Generate courteous but effective collection emails."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      response_format: { type: "json_object" },
+    const result = await generateJSON<any>({
+      system: "You are a professional accounts receivable specialist. Generate courteous but effective collection emails.",
+      prompt,
+      model: "fast",
     });
-
-    const result = JSON.parse(response.choices[0].message.content || '{}');
     return {
       subject: result.subject || `Payment Reminder - Invoice ${context.invoiceNumber}`,
       content: result.content || `Dear ${context.contactName},\n\nWe hope this message finds you well. We wanted to remind you that Invoice ${context.invoiceNumber} for $${context.amount} is now ${context.daysPastDue} days past due.\n\nPlease let us know if you have any questions or concerns.\n\nBest regards`,
@@ -164,22 +138,11 @@ export async function analyzePaymentPatterns(
     }
     `;
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-5", // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
-      messages: [
-        {
-          role: "system",
-          content: "You are a credit risk analyst. Analyze payment patterns and provide actionable insights."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      response_format: { type: "json_object" },
+    const result = await generateJSON<any>({
+      system: "You are a credit risk analyst. Analyze payment patterns and provide actionable insights.",
+      prompt,
+      model: "fast",
     });
-
-    const result = JSON.parse(response.choices[0].message.content || '{}');
     return {
       averagePaymentTime: result.averagePaymentTime || 30,
       paymentTrend: result.paymentTrend || 'stable',
@@ -246,22 +209,11 @@ export async function detectSmsIntent(
     }
     `;
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-5",
-      messages: [
-        {
-          role: "system",
-          content: "You are an expert at analyzing customer communications in debt collection. Accurately classify customer intent and sentiment."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      response_format: { type: "json_object" },
+    const result = await generateJSON<any>({
+      system: "You are an expert at analyzing customer communications in debt collection. Accurately classify customer intent and sentiment.",
+      prompt,
+      model: "fast",
     });
-
-    const result = JSON.parse(response.choices[0].message.content || '{}');
     
     return {
       intentType: result.intentType || 'general_query',
@@ -326,12 +278,7 @@ export async function generateAiCfoResponse(
   try {
     console.log("🤖 AI CFO: Starting response generation for:", userMessage.substring(0, 50) + "...");
     
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: `You are an experienced CFO providing financial advice on accounts receivable. 
+    const systemPrompt = `You are an experienced CFO providing financial advice on accounts receivable.
 
 CRITICAL UNDERSTANDING - "OWE" vs "INVOICED" DISTINCTION:
 When users ask "How much does [Customer] owe us?" they want OUTSTANDING/UNPAID amounts, NOT total invoice amounts.
@@ -343,13 +290,13 @@ IMPORTANT: You have COMPLETE ACCESS to detailed invoice and customer data. You c
 
 CURRENT AR DATA:
 • Total Outstanding: $${arContext.totalOutstanding?.toLocaleString() || '0'}
-• Overdue Amount: $${arContext.overdueAmount?.toLocaleString() || '0'} 
+• Overdue Amount: $${arContext.overdueAmount?.toLocaleString() || '0'}
 • Collection Rate: ${arContext.collectionRate || 85}%
 • Active Outstanding Invoices: ${arContext.activeContacts || 0}
 
 ${arContext.knowledgeBase && arContext.knowledgeBase.length > 0 ? `
 KNOWLEDGE BASE (Use this for accurate industry data and best practices):
-${arContext.knowledgeBase.map((fact: any, index: number) => 
+${arContext.knowledgeBase.map((fact: any, index: number) =>
 `${index + 1}. **${fact.title}** (${fact.category})
    ${fact.content}
    Source: ${fact.source || 'Internal'}`
@@ -365,7 +312,7 @@ SPECIFIC CUSTOMER FOUND: ${specificCustomerData.customerName}
 • Outstanding Amount: $${specificCustomerData.outstandingAmount.toLocaleString()}
 
 DETAILED INVOICE BREAKDOWN:
-${specificCustomerData.invoiceDetails.map(inv => 
+${specificCustomerData.invoiceDetails.map(inv =>
   `• Invoice ${inv.invoiceNumber}: $${inv.amount.toLocaleString()} (${inv.daysPastDue} days past due, ${inv.status})`
 ).join('\n')}
 
@@ -375,14 +322,14 @@ COMPLETE CUSTOMER DATABASE ACCESS:
 You have access to ALL customer invoices. When asked about specific customers, I'll search for their exact details.
 
 SAMPLE CUSTOMERS (Top 5 by amount):
-${arContext.recentInvoices?.map(inv => 
+${arContext.recentInvoices?.map(inv =>
   `• ${inv.customerName}: $${inv.amount.toLocaleString()} (${inv.daysPastDue} days past due, Status: ${inv.status})`
 ).join('\n') || '• No recent invoice data available'}
 `}
 
 CAPABILITIES:
 - Answer specific questions about individual customers and their balances
-- Provide detailed aging analysis and payment recommendations  
+- Provide detailed aging analysis and payment recommendations
 - Access complete invoice history and payment patterns
 - Give precise financial advice based on actual data
 - Reference knowledge base for industry benchmarks and compliance requirements
@@ -393,19 +340,18 @@ FORMATTING INSTRUCTIONS:
 - Use line breaks to separate sections
 - Keep paragraphs concise (2-3 sentences max)
 - When asked about specific customers, search through the available data and provide exact details
-- When referencing knowledge base facts, mention the source for credibility`
-        },
-        {
-          role: "user", 
-          content: userMessage
-        }
-      ],
+- When referencing knowledge base facts, mention the source for credibility`;
+
+    const responseText = await generateText({
+      system: systemPrompt,
+      prompt: userMessage,
+      model: "standard",
       temperature: 0.7,
-      max_tokens: 500,
+      maxTokens: 500,
     });
 
     console.log("🤖 AI CFO: Response received successfully");
-    return response.choices[0].message.content || "I apologize, but I'm having trouble processing your request right now. Please try asking again.";
+    return responseText || "I apologize, but I'm having trouble processing your request right now. Please try asking again.";
   } catch (error: any) {
     console.error("❌ AI CFO Error:", error.message || error);
     if (error.status) {
@@ -555,22 +501,11 @@ Guidelines:
 - Sign off appropriately for the tone
 `;
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content: "You are an experienced UK credit controller writing professional collection emails. You balance firmness with maintaining positive customer relationships. Always use British English and £ currency formatting. CRITICAL: Always refer to the balance as 'overdue balance' (past due date), NEVER use 'outstanding balance' as that term includes invoices not yet due."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      response_format: { type: "json_object" },
+    const result = await generateJSON<any>({
+      system: "You are an experienced UK credit controller writing professional collection emails. You balance firmness with maintaining positive customer relationships. Always use British English and £ currency formatting. CRITICAL: Always refer to the balance as 'overdue balance' (past due date), NEVER use 'outstanding balance' as that term includes invoices not yet due.",
+      prompt,
+      model: "fast",
     });
-
-    const result = JSON.parse(response.choices[0].message.content || '{}');
     
     return {
       subject: result.subject || getDefaultSubject(templateType, context),
@@ -683,22 +618,11 @@ Guidelines:
 - Do NOT include greetings like "Dear" - start directly with the message
 `;
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content: "You are a UK credit controller writing concise SMS collection messages. Keep messages under 160 characters when possible. Be direct, professional, and clear."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      response_format: { type: "json_object" },
+    const result = await generateJSON<any>({
+      system: "You are a UK credit controller writing concise SMS collection messages. Keep messages under 160 characters when possible. Be direct, professional, and clear.",
+      prompt,
+      model: "fast",
     });
-
-    const result = JSON.parse(response.choices[0].message.content || '{}');
     
     return {
       body: result.body || getDefaultSmsBody(templateType, context),

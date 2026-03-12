@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import { generateJSON } from "./llm/claude";
 import { db } from "../db";
 import { inboundMessages, actions, contacts, invoices, paymentPlans, paymentPlanInvoices, users, outcomes, emailClarifications, tenants, emailMessages, customerContactPersons } from "@shared/schema";
 import { eq, and, desc, inArray, asc, sql } from "drizzle-orm";
@@ -41,9 +41,7 @@ const OUTCOME_FORECAST_EFFECTS: Record<OutcomeType, ForecastEffect> = {
   'UNKNOWN': 'MANUAL_REVIEW'
 };
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Claude LLM via server/services/llm/claude.ts
 
 // Charlie-aligned intent types for B2B credit control
 type CharlieIntentType = 
@@ -106,13 +104,9 @@ class IntentAnalyst {
   }): Promise<IntentAnalysisResult> {
     try {
       const prompt = this.buildAnalysisPrompt(messageContent, context);
-      
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: `You are Charlie, an expert B2B credit control AI analyzing inbound customer communications.
+
+      const result = await generateJSON<any>({
+        system: `You are Charlie, an expert B2B credit control AI analyzing inbound customer communications.
 Your role is to detect intent, extract actionable information, and recommend next steps.
 
 Intent Types (in priority order):
@@ -129,20 +123,11 @@ Critical Rules:
 1. Look for admin blockers (missing PO, wrong address) - these are common in B2B
 2. Extract invoice/PO references when mentioned
 3. Note preferred contact methods
-4. Consider B2B context: professional tone expected, process-driven issues common
-
-Respond with valid JSON only, no markdown formatting.`
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
+4. Consider B2B context: professional tone expected, process-driven issues common`,
+        prompt,
+        model: "fast",
         temperature: 0.3,
-        response_format: { type: "json_object" }
       });
-
-      const result = JSON.parse(response.choices[0].message.content || '{}');
       const intentType = result.intentType || 'unknown';
       
       // Determine if human review is required
@@ -1486,17 +1471,13 @@ Return JSON:
 
 CRITICAL: Each payment tranche on a DIFFERENT date MUST be a SEPARATE entry in the installments array. Do NOT merge payments on different dates into one entry.`;
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: prompt },
-        { role: "user", content: "Extract the payment arrangement from this conversation." }
-      ],
-      response_format: { type: "json_object" },
+    const result = await generateJSON<any>({
+      system: prompt,
+      prompt: "Extract the payment arrangement from this conversation.",
+      model: "fast",
       temperature: 0.2,
+      schemaHint: `{ intentType, confidence, installments: [{ date, amount, description }], totalAmount, invoiceAllocation, reasoning }`,
     });
-
-    const result = JSON.parse(completion.choices[0].message.content || '{}');
 
     return {
       intentType: result.intentType === 'payment_plan' ? 'payment_plan' : 'promise_to_pay',

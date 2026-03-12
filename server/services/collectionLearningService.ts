@@ -14,7 +14,6 @@ import {
   type CollectionABTest,
 } from '@shared/schema';
 import { CollectionAction } from './collectionsAutomation';
-import OpenAI from 'openai';
 
 export interface ActionOutcome {
   actionId: string;
@@ -54,13 +53,6 @@ export interface LearningInsights {
 }
 
 export class CollectionLearningService {
-  private openai: OpenAI;
-
-  constructor() {
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
-  }
 
   /**
    * Get or create a customer learning profile

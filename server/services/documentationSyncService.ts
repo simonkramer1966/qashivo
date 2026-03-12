@@ -2,7 +2,7 @@ import { readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import OpenAI from 'openai';
+import { generateJSON } from './llm/claude';
 
 const execAsync = promisify(exec);
 
@@ -62,16 +62,10 @@ interface AIUpdateSuggestion {
 export class DocumentationSyncService {
   private manifestPath: string;
   private contentPath: string;
-  private openai: OpenAI;
 
   constructor() {
     this.manifestPath = join(process.cwd(), 'docs', 'documentation-manifest.json');
     this.contentPath = join(process.cwd(), 'docs', 'documentation-content.json');
-    
-    // Initialize OpenAI with existing API key
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
   }
 
   /**
@@ -244,14 +238,12 @@ Respond in JSON format:
 }`;
 
         try {
-          const response = await this.openai.chat.completions.create({
-            model: 'gpt-4o',
-            messages: [{ role: 'user', content: prompt }],
+          const aiResponse = await generateJSON<any>({
+            system: "You are a technical documentation expert.",
+            prompt,
+            model: "standard",
             temperature: 0.3,
-            response_format: { type: 'json_object' }
           });
-
-          const aiResponse = JSON.parse(response.choices[0].message.content || '{}');
           
           if (aiResponse.update_needed && aiResponse.suggested_value) {
             suggestions.push({

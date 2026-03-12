@@ -1,4 +1,5 @@
 import type { Express, Request, Response } from "express";
+import { generateJSON } from "../services/llm/claude";
 import { db } from "../db";
 import { inboundMessages, contacts, emailMessages, actions, invoices, timelineEvents, outcomes, conversations, tenants } from "@shared/schema";
 import { intentAnalyst } from "../services/intentAnalyst";
@@ -1544,19 +1545,13 @@ export function registerWebhookRoutes(app: Express) {
             .where(eq(outcomes.id, existingOutcome.id));
         }
 
-        // Run intent extraction with OpenAI
-        const OpenAI = (await import('openai')).default;
-        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
+        // Run intent extraction with Claude
         const contentToAnalyze = transcriptText || summaryText;
         const currentDate = new Date().toISOString().split('T')[0];
         const currentYear = new Date().getFullYear();
 
-        const completion = await openai.chat.completions.create({
-          model: "gpt-4o-mini",
-          messages: [{
-            role: "system",
-            content: `Today's date is ${currentDate}. When interpreting dates mentioned in the call (like "28th February" or "next month"), use the current year ${currentYear} or the next appropriate future date.
+        const analysis = await generateJSON<any>({
+          system: `Today's date is ${currentDate}. When interpreting dates mentioned in the call (like "28th February" or "next month"), use the current year ${currentYear} or the next appropriate future date.
 
 Analyze this debt collection AI call and extract the outcome. Use these EXACT outcome types:
 - PROMISE_TO_PAY: Debtor commits to pay on a specific date
@@ -1569,26 +1564,11 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
 - BANK_DETAILS_CHANGE_REQUEST: Debtor wants to change bank details (ALWAYS flag for review)
 - OUT_OF_OFFICE: Contact is away/on leave
 - NO_RESPONSE: Debtor acknowledged but gave no commitment
-- CONFIRMATION: Simple acknowledgment without commitment
-
-Return JSON with:
-- type: One of the outcome types above
-- confidence: 0-100 (how confident are you)
-- promisedPaymentDate: ISO date string if PTP mentioned
-- promisedPaymentAmount: number if amount mentioned
-- disputeCategory: PRICING|DELIVERY|QUALITY|OTHER if dispute
-- docsRequested: array of INVOICE_COPY|STATEMENT|REMITTANCE|PO if docs requested
-- sentiment: One of: cooperative, neutral, frustrated, hostile
-- intent: Brief label of the debtor's primary intent (e.g. "will_pay", "needs_time", "disputes_amount", "avoiding")
-- summary: Brief 1-2 sentence summary`
-          }, {
-            role: "user",
-            content: contentToAnalyze
-          }],
-          response_format: { type: "json_object" }
+- CONFIRMATION: Simple acknowledgment without commitment`,
+          prompt: contentToAnalyze,
+          model: "fast",
+          schemaHint: `{ type, confidence, promisedPaymentDate?, promisedPaymentAmount?, disputeCategory?, docsRequested?, sentiment, intent, summary }`,
         });
-
-        const analysis = JSON.parse(completion.choices[0].message.content || '{}');
         const outcomeType = analysis.type || 'NO_RESPONSE';
         const confidenceScore = (analysis.confidence || 70) / 100;
         const confidenceBand = confidenceScore >= 0.85 ? 'HIGH' : confidenceScore >= 0.65 ? 'MEDIUM' : 'LOW';

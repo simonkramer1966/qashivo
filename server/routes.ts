@@ -2,6 +2,7 @@ import type { Express} from "express";
 import express from "express";
 import { createServer, type Server } from "http";
 import crypto from "crypto";
+import { generateJSON, generateText } from "./services/llm/claude";
 import { storage } from "./storage";
 import {
   generateCreditRecommendation,
@@ -1881,11 +1882,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Query not found" });
       }
 
-      // Use OpenAI to generate response
-      const OpenAI = (await import('openai')).default;
-      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-      const systemPrompt = `You are a professional accounts receivable specialist helping to draft responses to customer queries. 
+      // Use Claude to generate response
+      const systemPrompt = `You are a professional accounts receivable specialist helping to draft responses to customer queries.
 Generate a polite, professional, and helpful response that addresses the customer's message.
 
 Context:
@@ -1902,17 +1900,13 @@ Guidelines:
 - For email responses, DO NOT include a subject line, only the body
 `;
 
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: `Customer message:\n${message}` }
-        ],
+      const draftResponse = await generateText({
+        system: systemPrompt,
+        prompt: `Customer message:\n${message}`,
+        model: "fast",
         temperature: 0.7,
-        max_tokens: 500,
+        maxTokens: 500,
       });
-
-      const draftResponse = completion.choices[0].message.content || "";
 
       res.json({ draftResponse });
     } catch (error) {
@@ -4859,33 +4853,29 @@ Payment required immediately to avoid collection action. Contact us NOW.`
   // Send Invoice PDF by Email - Direct API endpoint for testing
   // AI Facts endpoints - Knowledge base for AI CFO
   // AI CFO Conversation endpoint
-  // Simple OpenAI test endpoint
+  // Simple LLM test endpoint
   app.post('/api/test-openai', async (req, res) => {
     try {
-      console.log("🧪 Testing OpenAI connection...");
-      
-      const { default: OpenAI } = await import('openai');
-      const openai = new OpenAI({ 
-        apiKey: process.env.OPENAI_API_KEY 
+      console.log("🧪 Testing Claude connection...");
+
+      const response = await generateText({
+        system: "You are a helpful assistant.",
+        prompt: "Say hello in exactly 5 words.",
+        model: "fast",
+        maxTokens: 50,
       });
 
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [{ role: "user", content: "Say hello in exactly 5 words." }],
-        max_tokens: 50,
-      });
-
-      console.log("✅ OpenAI test successful");
-      res.json({ 
-        success: true, 
-        response: response.choices[0].message.content 
+      console.log("✅ Claude test successful");
+      res.json({
+        success: true,
+        response
       });
     } catch (error: any) {
-      console.error("❌ OpenAI test failed:", error.message);
-      res.status(500).json({ 
-        success: false, 
+      console.error("❌ Claude test failed:", error.message);
+      res.status(500).json({
+        success: false,
         error: error.message,
-        status: error.status 
+        status: error.status
       });
     }
   });
@@ -6448,32 +6438,20 @@ Payment required immediately to avoid collection action. Contact us NOW.`
           console.log(`📞 [CALL-STATUS] Processing completed call for lead: ${leadId}`);
           
           // Process the call - same logic as webhook
-          const OpenAI = (await import('openai')).default;
-          const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-          
           const transcriptText = callData.transcript || 'No transcript available';
-          
-          const completion = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
-            messages: [{
-              role: "system",
-              content: `Analyze this debt collection AI call transcript and extract detailed insights:
+
+          const analysis = await generateJSON<any>({
+            system: `Analyze this debt collection AI call transcript and extract detailed insights:
 1) Primary Intent: payment_plan, dispute, promise_to_pay, general_query, or unknown
 2) Sentiment: positive, neutral, negative, cooperative, or hostile
 3) Confidence Score: 0-100 (how confident are you in the intent detection)
 4) Key Insights: Array of 2-3 key findings from the conversation
 5) Action Items: Array of recommended next steps
-6) Summary: 1-2 sentence summary of the call outcome
-
-Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionItems, summary`
-            }, {
-              role: "user",
-              content: transcriptText
-            }],
-            response_format: { type: "json_object" }
+6) Summary: 1-2 sentence summary of the call outcome`,
+            prompt: transcriptText,
+            model: "fast",
+            schemaHint: `{ intent, sentiment, confidence, keyInsights, actionItems, summary }`,
           });
-          
-          const analysis = JSON.parse(completion.choices[0].message.content || '{}');
           
           // Check if call was terminated by customer
           const terminatedByCustomer = callData.disconnection_reason === 'user_hangup' || 
@@ -6547,33 +6525,21 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
         return res.json({ success: true });
       }
       
-      // Extract intent and sentiment using OpenAI
-      const OpenAI = (await import('openai')).default;
-      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-      
+      // Extract intent and sentiment using Claude
       const transcriptText = transcript || call?.transcript || 'No transcript available';
-      
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [{
-          role: "system",
-          content: `Analyze this debt collection AI call transcript and extract detailed insights:
+
+      const analysis = await generateJSON<any>({
+        system: `Analyze this debt collection AI call transcript and extract detailed insights:
 1) Primary Intent: payment_plan, dispute, promise_to_pay, general_query, or unknown
 2) Sentiment: positive, neutral, negative, cooperative, or hostile
 3) Confidence Score: 0-100 (how confident are you in the intent detection)
 4) Key Insights: Array of 2-3 key findings from the conversation
 5) Action Items: Array of recommended next steps
-6) Summary: 1-2 sentence summary of the call outcome
-
-Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionItems, summary`
-        }, {
-          role: "user",
-          content: transcriptText
-        }],
-        response_format: { type: "json_object" }
+6) Summary: 1-2 sentence summary of the call outcome`,
+        prompt: transcriptText,
+        model: "fast",
+        schemaHint: `{ intent, sentiment, confidence, keyInsights, actionItems, summary }`,
       });
-      
-      const analysis = JSON.parse(completion.choices[0].message.content || '{}');
       
       // Update lead with voice demo results
       const updatedLead = await storage.updateInvestorLead(leadId, {
@@ -6631,23 +6597,13 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
         return res.json({ success: true });
       }
       
-      // Extract intent and sentiment using OpenAI
-      const OpenAI = (await import('openai')).default;
-      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-      
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [{
-          role: "system",
-          content: "Analyze this SMS response and extract: 1) Intent (payment_plan, dispute, promise_to_pay, paid, general_query, unknown), 2) Sentiment (positive, neutral, negative, cooperative, hostile), 3) Confidence score (0-100). Return JSON only."
-        }, {
-          role: "user",
-          content: text
-        }],
-        response_format: { type: "json_object" }
+      // Extract intent and sentiment using Claude
+      const analysis = await generateJSON<any>({
+        system: "Analyze this SMS response and extract: 1) Intent (payment_plan, dispute, promise_to_pay, paid, general_query, unknown), 2) Sentiment (positive, neutral, negative, cooperative, hostile), 3) Confidence score (0-100).",
+        prompt: text,
+        model: "fast",
+        schemaHint: `{ intent, sentiment, confidence }`,
       });
-      
-      const analysis = JSON.parse(completion.choices[0].message.content || '{}');
       
       // Update lead with SMS demo results
       const updatedLead = await storage.updateInvestorLead(lead.id, {
