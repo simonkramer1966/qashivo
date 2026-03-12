@@ -280,7 +280,7 @@ export const invoices = pgTable("invoices", {
   dueDate: timestamp("due_date").notNull(),
   paidDate: timestamp("paid_date"),
   description: text("description"),
-  currency: varchar("currency").default("USD"),
+  currency: varchar("currency").default("GBP"),
   workflowId: varchar("workflow_id"),
   lastReminderSent: timestamp("last_reminder_sent"),
   reminderCount: integer("reminder_count").default(0),
@@ -421,7 +421,7 @@ export const cachedXeroInvoices = pgTable("cached_xero_invoices", {
   dueDate: timestamp("due_date").notNull(),
   paidDate: timestamp("paid_date"),
   description: text("description"),
-  currency: varchar("currency").default("USD"),
+  currency: varchar("currency").default("GBP"),
   contact: jsonb("contact"), // Store contact data from Xero
   paymentDetails: jsonb("payment_details"), // Store payment tracking info
   metadata: jsonb("metadata"), // Additional Xero data
@@ -447,7 +447,7 @@ export const bills = pgTable("bills", {
   dueDate: timestamp("due_date").notNull(),
   paidDate: timestamp("paid_date"),
   description: text("description"),
-  currency: varchar("currency").default("USD"),
+  currency: varchar("currency").default("GBP"),
   reference: varchar("reference"), // Vendor's reference number
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -466,7 +466,7 @@ export const billPayments = pgTable("bill_payments", {
   paymentDate: timestamp("payment_date").notNull(),
   paymentMethod: varchar("payment_method").notNull(), // bank_transfer, credit_card, check, cash
   reference: varchar("reference"), // Payment reference number
-  currency: varchar("currency").default("USD"),
+  currency: varchar("currency").default("GBP"),
   exchangeRate: decimal("exchange_rate", { precision: 10, scale: 6 }).default("1"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -482,7 +482,7 @@ export const bankAccounts = pgTable("bank_accounts", {
   name: varchar("name").notNull(),
   accountNumber: varchar("account_number"),
   accountType: varchar("account_type").notNull(), // checking, savings, credit_card, cash
-  currency: varchar("currency").default("USD"),
+  currency: varchar("currency").default("GBP"),
   currentBalance: decimal("current_balance", { precision: 12, scale: 2 }).default("0"),
   isActive: boolean("is_active").default(true),
   bankName: varchar("bank_name"),
@@ -524,7 +524,7 @@ export const budgets = pgTable("budgets", {
   budgetType: varchar("budget_type").notNull(), // annual, monthly, quarterly, project
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date").notNull(),
-  currency: varchar("currency").default("USD"),
+  currency: varchar("currency").default("GBP"),
   status: varchar("status").notNull().default("draft"), // draft, active, completed, cancelled
   totalBudgetAmount: decimal("total_budget_amount", { precision: 12, scale: 2 }).default("0"),
   totalActualAmount: decimal("total_actual_amount", { precision: 12, scale: 2 }).default("0"),
@@ -3434,7 +3434,7 @@ export const subscriptionPlans = pgTable("subscription_plans", {
   // Pricing
   monthlyPrice: decimal("monthly_price", { precision: 10, scale: 2 }).notNull(),
   yearlyPrice: decimal("yearly_price", { precision: 10, scale: 2 }),
-  currency: varchar("currency").default("USD"),
+  currency: varchar("currency").default("GBP"),
   
   // Limits and features
   maxClientTenants: integer("max_client_tenants").default(0), // 0 = unlimited for partners
