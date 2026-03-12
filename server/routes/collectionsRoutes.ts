@@ -21,6 +21,7 @@ import {
   tenants, paymentPromises, promisesToPay, smeClients, contactNotes, timelineEvents,
   attentionItems, outcomes, activityLogs, collectionPolicies, paymentPlans,
   emailMessages, customerContactPersons, scheduledReports,
+  complianceChecks,
 } from "@shared/schema";
 import { computeNextRunAt } from "../services/reportScheduler";
 import { REPORT_TYPE_LABELS, type ReportType } from "../services/reportGenerator";
@@ -3917,6 +3918,265 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     } catch (error) {
       console.error("Error updating automation status:", error);
       res.status(500).json({ message: "Failed to update automation status" });
+    }
+  });
+
+  // ── Sprint 2.1: Single-action approve (triggers SendGrid delivery) ──
+  app.post("/api/actions/:actionId/approve", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { actionId } = req.params;
+      const { editedSubject, editedBody } = req.body;
+
+      // Verify action belongs to tenant and is pending_approval
+      const [action] = await db
+        .select()
+        .from(actions)
+        .where(and(eq(actions.id, actionId), eq(actions.tenantId, user.tenantId)))
+        .limit(1);
+
+      if (!action) {
+        return res.status(404).json({ message: "Action not found" });
+      }
+      if (action.status !== "pending_approval") {
+        return res.status(400).json({ message: `Action is ${action.status}, not pending_approval` });
+      }
+
+      // If edited content provided, update the action first
+      if (editedSubject || editedBody) {
+        await db
+          .update(actions)
+          .set({
+            subject: editedSubject || action.subject,
+            content: editedBody || action.content,
+            updatedAt: new Date(),
+          })
+          .where(eq(actions.id, actionId));
+      }
+
+      // Trigger delivery via collections pipeline
+      const { approveAndSend } = await import("../services/collectionsPipeline");
+      const result = await approveAndSend(actionId, user.id);
+
+      res.json({
+        message: "Action approved and delivery initiated",
+        result,
+      });
+    } catch (error: any) {
+      console.error("Error approving action:", error);
+      res.status(500).json({ message: `Failed to approve action: ${error.message}` });
+    }
+  });
+
+  // ── Sprint 2.1: Reject action with reason ──
+  app.post("/api/actions/:actionId/reject", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { actionId } = req.params;
+      const { reason } = req.body;
+
+      const result = await db
+        .update(actions)
+        .set({
+          status: "cancelled",
+          metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({
+            rejectedBy: user.id,
+            rejectedAt: new Date().toISOString(),
+            rejectionReason: reason || "Rejected by user",
+          })}::jsonb`,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(actions.id, actionId),
+            eq(actions.tenantId, user.tenantId),
+            eq(actions.status, "pending_approval"),
+          ),
+        )
+        .returning();
+
+      if (result.length === 0) {
+        return res.status(404).json({ message: "Action not found or not pending approval" });
+      }
+
+      res.json({ message: "Action rejected", actionId });
+    } catch (error: any) {
+      console.error("Error rejecting action:", error);
+      res.status(500).json({ message: `Failed to reject action: ${error.message}` });
+    }
+  });
+
+  // ── Sprint 2.1: Snooze action ──
+  app.post("/api/actions/:actionId/snooze", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { actionId } = req.params;
+      const { hours = 24 } = req.body;
+
+      const snoozeUntil = new Date();
+      snoozeUntil.setHours(snoozeUntil.getHours() + hours);
+
+      const result = await db
+        .update(actions)
+        .set({
+          status: "snoozed",
+          metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({
+            snoozedBy: user.id,
+            snoozedAt: new Date().toISOString(),
+            snoozeUntil: snoozeUntil.toISOString(),
+          })}::jsonb`,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(actions.id, actionId),
+            eq(actions.tenantId, user.tenantId),
+            eq(actions.status, "pending_approval"),
+          ),
+        )
+        .returning();
+
+      if (result.length === 0) {
+        return res.status(404).json({ message: "Action not found or not pending approval" });
+      }
+
+      res.json({ message: "Action snoozed", actionId, snoozeUntil: snoozeUntil.toISOString() });
+    } catch (error: any) {
+      console.error("Error snoozing action:", error);
+      res.status(500).json({ message: `Failed to snooze action: ${error.message}` });
+    }
+  });
+
+  // ── Sprint 2.1: Get compliance check for an action ──
+  app.get("/api/actions/:actionId/compliance", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { actionId } = req.params;
+      const checks = await db
+        .select()
+        .from(complianceChecks)
+        .where(
+          and(
+            eq(complianceChecks.actionId, actionId),
+            eq(complianceChecks.tenantId, user.tenantId),
+          ),
+        )
+        .orderBy(desc(complianceChecks.createdAt))
+        .limit(1);
+
+      res.json(checks[0] || null);
+    } catch (error: any) {
+      console.error("Error fetching compliance check:", error);
+      res.status(500).json({ message: "Failed to fetch compliance check" });
+    }
+  });
+
+  // ── Sprint 2.1: Get pending approval actions with compliance data ──
+  app.get("/api/actions/pending-queue", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // Get all pending_approval actions
+      const pendingActions = await db
+        .select({
+          action: actions,
+          contact: contacts,
+        })
+        .from(actions)
+        .leftJoin(contacts, and(eq(actions.contactId, contacts.id), eq(contacts.tenantId, user.tenantId)))
+        .where(
+          and(
+            eq(actions.tenantId, user.tenantId),
+            eq(actions.status, "pending_approval"),
+          ),
+        )
+        .orderBy(desc(actions.createdAt));
+
+      // Enrich with invoice and compliance data
+      const enriched = await Promise.all(
+        pendingActions.map(async ({ action, contact }) => {
+          // Get invoice info
+          let invoice = null;
+          if (action.invoiceId) {
+            const [inv] = await db
+              .select()
+              .from(invoices)
+              .where(and(eq(invoices.id, action.invoiceId), eq(invoices.tenantId, user.tenantId)))
+              .limit(1);
+            invoice = inv || null;
+          }
+
+          // Get compliance check
+          const [compliance] = await db
+            .select()
+            .from(complianceChecks)
+            .where(
+              and(
+                eq(complianceChecks.actionId, action.id),
+                eq(complianceChecks.tenantId, user.tenantId),
+              ),
+            )
+            .orderBy(desc(complianceChecks.createdAt))
+            .limit(1);
+
+          return {
+            id: action.id,
+            type: action.type,
+            status: action.status,
+            subject: action.subject,
+            content: action.content,
+            aiGenerated: action.aiGenerated,
+            confidenceScore: action.confidenceScore,
+            exceptionReason: action.exceptionReason,
+            createdAt: action.createdAt,
+            metadata: action.metadata,
+            contactId: action.contactId,
+            contactName: contact?.name || null,
+            companyName: contact?.companyName || null,
+            arContactName: (contact as any)?.arContactName || null,
+            invoiceId: action.invoiceId,
+            invoiceNumber: invoice?.invoiceNumber || null,
+            invoiceAmount: invoice?.amount || null,
+            invoiceCurrency: invoice?.currency || "GBP",
+            invoiceDueDate: invoice?.dueDate || null,
+            invoiceStatus: invoice?.status || null,
+            compliance: compliance
+              ? {
+                  id: compliance.id,
+                  checkResult: compliance.checkResult,
+                  rulesChecked: compliance.rulesChecked,
+                  violations: compliance.violations,
+                  agentReasoning: compliance.agentReasoning,
+                  createdAt: compliance.createdAt,
+                }
+              : null,
+          };
+        }),
+      );
+
+      res.json(enriched);
+    } catch (error: any) {
+      console.error("Error fetching pending queue:", error);
+      res.status(500).json({ message: "Failed to fetch pending queue" });
     }
   });
 
