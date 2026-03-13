@@ -23,10 +23,13 @@ const INTENT_TO_OUTCOME_TYPE: Record<CharlieIntentType, OutcomeType> = {
   'payment_plan': 'PAYMENT_PLAN',
   'dispute': 'DISPUTE',
   'payment_confirmation': 'PAYMENT_CONFIRMATION',
+  'payment_notification': 'PAYMENT_CONFIRMATION',
   'acknowledge': 'QUERY',
   'callback_request': 'CALLBACK_REQUEST',
   'admin_issue': 'ADMIN_BLOCKER',
   'general_query': 'QUERY',
+  'payment_query': 'QUERY',
+  'general': 'QUERY',
   'unclear': 'UNKNOWN',
   'unknown': 'UNKNOWN'
 };
@@ -48,16 +51,19 @@ const OUTCOME_FORECAST_EFFECTS: Record<OutcomeType, ForecastEffect> = {
 
 // Charlie-aligned intent types for B2B credit control
 type CharlieIntentType =
-  | 'payment_plan'        // Customer wants to negotiate payment plan
-  | 'dispute'             // Customer disputes the invoice
-  | 'promise_to_pay'      // Customer commits to paying by specific date
-  | 'payment_confirmation'// Customer confirms payment has been made
-  | 'acknowledge'         // Customer acknowledges receipt / will look into it (no firm commitment)
-  | 'callback_request'    // Customer requests a phone call back
-  | 'general_query'       // General questions about invoice/payment
-  | 'admin_issue'         // Missing PO, wrong address, not received, etc.
-  | 'unclear'             // Intent genuinely unclear — needs human review
-  | 'unknown';            // Fallback
+  | 'promise_to_pay'        // Customer commits to paying by specific date
+  | 'acknowledge'           // Customer acknowledges receipt / will look into it (no firm commitment)
+  | 'dispute'               // Customer disputes the invoice
+  | 'payment_notification'  // Customer confirms payment has been made or is in process
+  | 'payment_query'         // Questions about invoice, payment process, amounts
+  | 'payment_plan'          // Customer wants to negotiate payment plan
+  | 'payment_confirmation'  // LEGACY alias — kept for backward compat, maps to payment_notification
+  | 'callback_request'      // Customer requests a phone call back
+  | 'admin_issue'           // Missing PO, wrong address, not received, etc.
+  | 'general_query'         // LEGACY alias — kept for backward compat, maps to payment_query
+  | 'general'               // General non-payment communication
+  | 'unclear'               // Intent genuinely unclear — needs human review
+  | 'unknown';              // Fallback
 
 // Ambiguity types for clarification requests
 type AmbiguityType = 'invoice_reference' | 'payment_amount' | 'payment_date' | 'multiple_invoices' | 'none';
@@ -77,14 +83,18 @@ interface AmbiguityInfo {
 interface IntentAnalysisResult {
   intentType: CharlieIntentType;
   confidence: number; // 0.00 to 1.00
-  sentiment: 'positive' | 'neutral' | 'negative';
+  sentiment: 'positive' | 'neutral' | 'negative' | 'frustrated';
   extractedEntities: {
     amounts?: string[];
     dates?: string[];
+    resolvedDates?: string[];      // ISO dates resolved from relative expressions
     promises?: string[];
     reasons?: string[];
     invoiceReferences?: string[];  // Invoice numbers, PO numbers
     contactPreferences?: string[]; // Phone, email preferences
+    disputeReason?: string;        // Specific dispute reason
+    affectedInvoices?: string[];   // Which invoices the dispute covers
+    suggestedApproach?: string;    // Brief guidance for the Collections Agent's reply
   };
   reasoning: string;
   requiresHumanReview: boolean;    // Flag for edge cases
@@ -100,51 +110,74 @@ class IntentAnalyst {
   private readonly CONFIDENCE_THRESHOLD = 0.6;
   
   /**
-   * Analyze an inbound message using OpenAI
+   * Analyse an inbound message using Claude
    */
   async analyzeIntent(messageContent: string, context?: {
     contactName?: string;
+    companyName?: string;
     invoiceAmount?: number;
+    invoiceNumbers?: string[];
     daysPastDue?: number;
+    conversationContext?: string;
   }): Promise<IntentAnalysisResult> {
     try {
       const prompt = this.buildAnalysisPrompt(messageContent, context);
 
       const result = await generateJSON<any>({
-        system: `You are Charlie, an expert B2B credit control AI analyzing inbound customer communications.
-Your role is to detect intent, extract actionable information, and recommend next steps.
+        system: `You are Charlie, an expert B2B credit control AI analysing inbound debtor communications.
+Your role is to detect intent, extract actionable information, and recommend the Collections Agent's response approach.
 
 Intent Types (in priority order):
-- dispute: Customer disputes the invoice (quality, delivery, pricing, scope issues)
-- promise_to_pay: Customer commits to paying by a specific date/timeframe
-- payment_confirmation: Customer confirms payment has already been made or is in process
-- acknowledge: Customer acknowledges receipt or says they will look into it, but makes no firm payment commitment (e.g., "thanks, I'll check this", "noted", "I'll get back to you")
-- callback_request: Customer explicitly asks to be called back or prefers phone communication
-- admin_issue: Missing PO, wrong billing address, invoice not received, supplier setup issues
-- payment_plan: Customer wants to negotiate installments or staged payments
-- general_query: General questions about invoice, payment process, or account
-- unclear: Intent is genuinely unclear or the message is too brief/vague to classify
-- unknown: Fallback when nothing else matches
+- promise_to_pay: Debtor commits to paying by a specific date or timeframe. MUST extract the date.
+  Date extraction rules:
+  • "end of month" → last day of current month (resolve to ISO date)
+  • "next Friday" → the coming Friday (resolve to ISO date)
+  • "15th March" → 2026-03-15 (resolve to ISO date)
+  • "within 7 days" → today + 7 days (resolve to ISO date)
+  • "by close of play tomorrow" → tomorrow's date
+  • Always resolve relative dates to absolute ISO dates in resolvedDates.
+- acknowledge: Debtor acknowledges receipt or says they'll look into it but makes NO firm payment commitment (e.g., "thanks, I'll check this", "noted", "I'll get back to you"). Do NOT classify as promise_to_pay.
+- dispute: Debtor disputes the invoice — extract the dispute_reason (quality, delivery, pricing, scope, wrong amount, not received) and which invoice(s) are affected in affectedInvoices.
+- payment_notification: Debtor confirms payment has already been made or is in process (e.g., "payment sent", "BACS submitted today", "already paid this").
+- payment_query: Questions about invoice amounts, payment details, bank details, or how to pay.
+- payment_plan: Debtor wants to negotiate instalments or staged payments.
+- callback_request: Debtor explicitly asks to be called back or prefers phone.
+- admin_issue: Missing PO, wrong billing address, invoice not received, supplier setup issues.
+- general: General non-payment communication that doesn't fit other categories.
+- unclear: Intent is genuinely unclear or the message is too brief/vague to classify.
+
+Sentiment: Assess the debtor's emotional state:
+- positive: Cooperative, willing to pay, friendly
+- neutral: Business-like, factual, no strong emotion
+- negative: Unhappy, complaining, pushing back
+- frustrated: Angry, repeated chasing complaints, threatens escalation, hostile language
+
+Suggested Approach: Provide brief guidance for the Collections Agent's reply — e.g., "Acknowledge PTP and confirm date", "Empathise with dispute, request specifics", "Thank for payment notification, confirm receipt when cleared".
 
 Critical Rules:
-1. Look for admin blockers (missing PO, wrong address) - these are common in B2B
+1. Look for admin blockers (missing PO, wrong address) — common in B2B recruitment sector
 2. Extract invoice/PO references when mentioned
 3. Note preferred contact methods
 4. Consider B2B context: professional tone expected, process-driven issues common
-5. Use "acknowledge" when the debtor confirms receipt but doesn't commit to payment — do NOT classify as promise_to_pay
-6. Use "unclear" when the message is too short or vague to determine intent with any confidence`,
+5. Use "acknowledge" when the debtor confirms receipt but doesn't commit to payment
+6. Use "unclear" when the message is too short or vague to determine intent
+7. For disputes: ALWAYS extract disputeReason and affectedInvoices
+8. For promise_to_pay: ALWAYS resolve dates to ISO format in resolvedDates`,
         prompt,
         model: "fast",
         temperature: 0.3,
       });
-      const intentType = result.intentType || 'unknown';
-      
+      // Normalise legacy intent types from LLM output
+      let intentType: CharlieIntentType = result.intentType || 'unknown';
+      if (intentType === 'payment_confirmation') intentType = 'payment_notification';
+      if (intentType === 'general_query') intentType = 'payment_query';
+
       // Determine if human review is required
-      const requiresHumanReview = 
+      const requiresHumanReview =
         intentType === 'dispute' ||
         (result.confidence || 0) < this.CONFIDENCE_THRESHOLD ||
         result.requiresHumanReview === true;
-      
+
       // Parse ambiguity info
       const ambiguity: AmbiguityInfo = result.ambiguity ? {
         hasAmbiguity: result.ambiguity.hasAmbiguity || false,
@@ -161,12 +194,21 @@ Critical Rules:
         types: [],
         details: {}
       };
-      
+
+      // Build enriched extracted entities
+      const entities = result.extractedEntities || {};
+
       return {
         intentType,
         confidence: Math.min(Math.max(result.confidence || 0, 0), 1),
         sentiment: result.sentiment || 'neutral',
-        extractedEntities: result.extractedEntities || {},
+        extractedEntities: {
+          ...entities,
+          resolvedDates: entities.resolvedDates || [],
+          disputeReason: entities.disputeReason || undefined,
+          affectedInvoices: entities.affectedInvoices || undefined,
+          suggestedApproach: entities.suggestedApproach || result.suggestedApproach || undefined,
+        },
         reasoning: result.reasoning || '',
         requiresHumanReview,
         suggestedNextAction: result.suggestedNextAction,
@@ -191,43 +233,63 @@ Critical Rules:
    */
   private buildAnalysisPrompt(message: string, context?: {
     contactName?: string;
+    companyName?: string;
     invoiceAmount?: number;
+    invoiceNumbers?: string[];
     daysPastDue?: number;
+    conversationContext?: string;
   }): string {
-    let prompt = `Analyze this B2B customer message:\n\n"${message}"\n\n`;
-    
-    if (context) {
-      prompt += `Context:\n`;
-      if (context.contactName) prompt += `- Customer: ${context.contactName}\n`;
-      if (context.invoiceAmount) prompt += `- Invoice Amount: £${context.invoiceAmount.toFixed(2)}\n`;
-      if (context.daysPastDue !== undefined) {
-        if (context.daysPastDue > 0) {
-          prompt += `- Days Overdue: ${context.daysPastDue}\n`;
-        } else if (context.daysPastDue === 0) {
-          prompt += `- Status: Due today\n`;
-        } else {
-          prompt += `- Days until due: ${Math.abs(context.daysPastDue)}\n`;
-        }
-      }
+    let prompt = `Analyse this debtor email reply and extract structured intent:\n\n`;
+
+    if (context?.contactName || context?.companyName) {
+      prompt += `DEBTOR: ${context.contactName || 'Unknown'}`;
+      if (context.companyName) prompt += ` at ${context.companyName}`;
       prompt += '\n';
     }
+    if (context?.invoiceNumbers?.length || context?.invoiceAmount) {
+      prompt += `REGARDING: `;
+      if (context.invoiceNumbers?.length) prompt += `Invoice(s) ${context.invoiceNumbers.join(', ')}`;
+      if (context.invoiceAmount) prompt += ` totalling £${context.invoiceAmount.toFixed(2)}`;
+      prompt += '\n';
+    }
+    if (context?.daysPastDue !== undefined) {
+      if (context.daysPastDue > 0) {
+        prompt += `STATUS: ${context.daysPastDue} days overdue\n`;
+      } else if (context.daysPastDue === 0) {
+        prompt += `STATUS: Due today\n`;
+      } else {
+        prompt += `STATUS: ${Math.abs(context.daysPastDue)} days until due\n`;
+      }
+    }
 
-    prompt += `Respond with JSON:
+    prompt += `THEIR REPLY:\n"${message}"\n\n`;
+
+    if (context?.conversationContext) {
+      prompt += `CONVERSATION CONTEXT (last exchanges):\n${context.conversationContext}\n\n`;
+    }
+
+    prompt += `Today's date: ${new Date().toISOString().split('T')[0]}
+
+Respond with JSON:
 {
-  "intentType": "dispute" | "promise_to_pay" | "payment_confirmation" | "acknowledge" | "callback_request" | "admin_issue" | "payment_plan" | "general_query" | "unclear" | "unknown",
+  "intentType": "promise_to_pay" | "acknowledge" | "dispute" | "payment_notification" | "payment_query" | "payment_plan" | "callback_request" | "admin_issue" | "general" | "unclear",
   "confidence": 0.0 to 1.0,
-  "sentiment": "positive" | "neutral" | "negative",
+  "sentiment": "positive" | "neutral" | "negative" | "frustrated",
   "extractedEntities": {
     "amounts": ["any monetary amounts mentioned"],
-    "dates": ["any dates or timeframes mentioned (e.g., 'Friday', 'next week', '15th January')"],
+    "dates": ["any dates or timeframes as written (e.g., 'next Friday', 'end of month', '15th March')"],
+    "resolvedDates": ["resolved ISO dates, e.g., '2026-03-31' for 'end of month'"],
     "promises": ["any payment commitments or undertakings"],
     "reasons": ["reasons for dispute, delay, or non-payment"],
     "invoiceReferences": ["any invoice numbers, PO numbers, or references mentioned"],
-    "contactPreferences": ["preferred contact methods or times mentioned"]
+    "contactPreferences": ["preferred contact methods or times mentioned"],
+    "disputeReason": "specific reason if dispute (quality, delivery, pricing, scope, wrong amount, not received, or custom)",
+    "affectedInvoices": ["which invoice numbers the dispute covers"],
+    "suggestedApproach": "brief guidance for the Collections Agent's reply (e.g., 'Acknowledge PTP, confirm date, express thanks', 'Empathise, request supporting documentation for dispute')"
   },
   "reasoning": "brief explanation of your classification",
   "requiresHumanReview": true/false,
-  "suggestedNextAction": "what Charlie recommends as next step (e.g., 'Schedule callback', 'Resend invoice with PO', 'Record PTP and monitor')",
+  "suggestedNextAction": "what Charlie recommends as next step (e.g., 'Record PTP for 2026-03-31 and schedule follow-up', 'Resend invoice with PO', 'Route dispute to manager')",
   "ambiguity": {
     "hasAmbiguity": true/false,
     "types": ["invoice_reference" | "payment_amount" | "payment_date" | "multiple_invoices"],
@@ -236,23 +298,29 @@ Critical Rules:
       "unclearAmount": true/false,
       "unclearDate": true/false,
       "multipleInvoices": true/false,
-      "clarificationQuestions": ["specific polite questions to ask the debtor to clarify the ambiguity"]
+      "clarificationQuestions": ["specific polite questions to ask the debtor to clarify"]
     }
   }
 }
 
-IMPORTANT for ambiguity detection:
-- If the customer mentions payment but doesn't specify WHICH invoice or invoices, set unclearInvoices: true
-- If the customer promises to pay but the amount is vague or doesn't match known invoice amounts, set unclearAmount: true  
-- If the customer promises to pay but gives no specific date (just "soon", "next week" without a day), set unclearDate: true
-- If the customer has multiple outstanding invoices and it's unclear which they're referring to, set multipleInvoices: true
-- Generate 1-3 polite, professional clarification questions to resolve the ambiguity
-- hasAmbiguity should be true if ANY of the above are unclear for promise_to_pay or payment_plan intents
+DATE RESOLUTION RULES:
+- "end of month" → last day of current month as ISO date
+- "next Friday" → the coming Friday as ISO date
+- "15th March" → 2026-03-15
+- "within 7 days" → today + 7 days as ISO date
+- "by close of play tomorrow" → tomorrow's date
+- Always populate both dates (as written) and resolvedDates (as ISO)
 
-CRITICAL EXCEPTIONS - do NOT flag ambiguity when:
-- The customer says "full payment", "pay everything", "pay all", "settle the full balance", "pay the lot", "clear the account", "pay in full", or similar language indicating ALL outstanding invoices. This is NOT ambiguous - it means every open invoice. Set hasAmbiguity: false.
-- A specific date AND "full/all/everything" language is used together - this is a clear, unambiguous promise to pay. Set hasAmbiguity: false.
-- When the language clearly covers all invoices, do NOT set unclearInvoices, multipleInvoices, or invoice_reference ambiguity types.`;
+AMBIGUITY RULES:
+- If the debtor mentions payment but doesn't specify WHICH invoice, set unclearInvoices: true
+- If the debtor promises to pay but the amount is vague, set unclearAmount: true
+- If the debtor promises to pay but gives no specific date (just "soon"), set unclearDate: true
+- If the debtor has multiple outstanding invoices and it's unclear which, set multipleInvoices: true
+- hasAmbiguity should be true if ANY of the above are unclear for promise_to_pay or payment_plan
+
+CRITICAL EXCEPTIONS — do NOT flag ambiguity when:
+- The debtor says "full payment", "pay everything", "pay all", "settle the full balance", "pay in full" or similar — this means ALL invoices. Set hasAmbiguity: false.
+- A specific date AND "full/all/everything" language is used together — clear, unambiguous PTP.`;
 
     return prompt;
   }
@@ -600,12 +668,15 @@ CRITICAL EXCEPTIONS - do NOT flag ambiguity when:
       const priorityMap: Record<CharlieIntentType, string> = {
         dispute: 'high',
         promise_to_pay: 'medium',
+        payment_notification: 'low',
         payment_confirmation: 'low',
         acknowledge: 'low',
         callback_request: 'high',
         admin_issue: 'medium',
         payment_plan: 'medium',
+        payment_query: 'low',
         general_query: 'low',
+        general: 'low',
         unclear: 'low',
         unknown: 'low'
       };
@@ -754,7 +825,7 @@ CRITICAL EXCEPTIONS - do NOT flag ambiguity when:
     const entities = analysis.extractedEntities;
 
     // Extract promise to pay date
-    if (analysis.intentType === 'promise_to_pay' || analysis.intentType === 'payment_confirmation') {
+    if (analysis.intentType === 'promise_to_pay' || analysis.intentType === 'payment_notification' || analysis.intentType === 'payment_confirmation') {
       if (entities.dates?.length) {
         const parsedDate = this.parsePromisedDate(entities.dates[0]);
         if (parsedDate) {
@@ -866,12 +937,15 @@ CRITICAL EXCEPTIONS - do NOT flag ambiguity when:
     const subjects: Record<CharlieIntentType, string> = {
       dispute: '⚠️ Invoice Dispute',
       promise_to_pay: '✅ Payment Promise Received',
+      payment_notification: '💳 Payment Notification',
       payment_confirmation: '💳 Payment Confirmation',
       acknowledge: '👋 Acknowledgement Received',
       callback_request: '📞 Callback Requested',
       admin_issue: '📋 Admin Blocker (PO/Address/Setup)',
       payment_plan: '💰 Payment Plan Request',
+      payment_query: '❓ Payment Query',
       general_query: '❓ Customer Query',
+      general: '📩 General Communication',
       unclear: '🔍 Unclear Intent - Review Required',
       unknown: '📩 Inbound Message - Review Required'
     };
