@@ -194,10 +194,18 @@ export function buildUserPrompt(
   }
   sections.push("");
 
-  // Action context
+  // Action context with tone guidance
+  const toneGuidance: Record<string, string> = {
+    friendly: "Warm, approachable, relationship-focused. Use phrases like 'just a friendly reminder', 'we hope all is well'. No urgency.",
+    professional: "Balanced, business-like, respectful. Clear payment request without pressure. Ask if there are any issues.",
+    firm: "Direct and assertive. Emphasise overdue balance and request immediate attention. Mention prior correspondence. Offer to discuss payment arrangements.",
+    formal: "Formal business language. Reference accumulated correspondence. Warn of potential escalation. Set clear deadlines. Mention consequences.",
+  };
+
   sections.push(`CURRENT ACTION:`);
   sections.push(`- Action type: ${action.actionType.replace(/_/g, " ")}`);
   sections.push(`- Tone level: ${action.toneLevel}`);
+  sections.push(`- Tone guidance: ${toneGuidance[action.toneLevel] || toneGuidance.professional}`);
   sections.push(`- Days since last contact: ${action.daysSinceLastContact}`);
   sections.push(`- Touch count for this debtor: ${action.touchCount}`);
   sections.push("");

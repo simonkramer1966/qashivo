@@ -25,6 +25,7 @@ import { storage } from "../storage";
 import { approveAndSendReply } from "./inboundReplyPipeline";
 import type { ActionContext } from "../agents/prompts/collectionEmail";
 import type { CharlieDecision } from "./playbookEngine";
+import { determineTone, mapToneToActionContext } from "./toneEscalationEngine";
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -54,7 +55,7 @@ export async function processCollectionEmail(
 ): Promise<PipelineResult> {
   try {
     // 1. Map Charlie decision → agent action context
-    const actionContext = mapDecisionToActionContext(decision);
+    const actionContext = await mapDecisionToActionContext(decision);
 
     // 2. Generate email via Collections Agent (LLM)
     console.log(`[Pipeline] Generating LLM email for contact ${contactId}`);
@@ -458,7 +459,11 @@ async function deliverEmail(
 
 // ── Helpers ─────────────────────────────────────────────────
 
-function mapDecisionToActionContext(decision: CharlieDecision): ActionContext {
+/**
+ * Map a CharlieDecision to an ActionContext, using the tone escalation engine
+ * to determine the correct tone based on multiple signals.
+ */
+async function mapDecisionToActionContext(decision: CharlieDecision): Promise<ActionContext> {
   // Map Charlie state → action type
   let actionType: ActionContext["actionType"];
   if (decision.charlieState === "due_soon" || decision.charlieState === "due") {
@@ -471,23 +476,38 @@ function mapDecisionToActionContext(decision: CharlieDecision): ActionContext {
     actionType = "follow_up";
   }
 
-  // Map tone profile → tone level
+  // Use tone escalation engine for signal-based tone determination
   let toneLevel: ActionContext["toneLevel"];
-  const tp = String(decision.toneProfile || "");
-  if (tp.includes("FRIENDLY")) {
-    toneLevel = "friendly";
-  } else if (tp.includes("FIRM")) {
-    toneLevel = "firm";
-  } else if (tp.includes("FORMAL") || tp.includes("RECOVERY")) {
-    toneLevel = "formal";
-  } else {
-    toneLevel = "professional";
+  try {
+    const toneResult = await determineTone({
+      tenantId: decision.tenantId,
+      contactId: decision.contactId,
+      daysOverdue: decision.invoice.daysOverdue,
+      touchCount: decision.contact.daysSinceLastContact != null
+        ? Math.max(1, Math.floor(decision.invoice.daysOverdue / 7))
+        : 0,
+    });
+    toneLevel = mapToneToActionContext(toneResult.toneLevel);
+    console.log(`[Pipeline] Tone escalation: ${toneResult.toneLevel} for contact ${decision.contactId} (${toneResult.reasoning})`);
+  } catch (err) {
+    // Fallback to static mapping if engine fails
+    console.warn("[Pipeline] Tone escalation engine failed, falling back to static:", err);
+    const tp = String(decision.toneProfile || "");
+    if (tp.includes("FRIENDLY")) {
+      toneLevel = "friendly";
+    } else if (tp.includes("FIRM")) {
+      toneLevel = "firm";
+    } else if (tp.includes("FORMAL") || tp.includes("RECOVERY")) {
+      toneLevel = "formal";
+    } else {
+      toneLevel = "professional";
+    }
   }
 
   return {
     actionType,
     toneLevel,
     daysSinceLastContact: decision.contact.daysSinceLastContact ?? 0,
-    touchCount: decision.invoice.daysOverdue > 0 ? 1 : 0, // Will be refined with actual touch count
+    touchCount: decision.invoice.daysOverdue > 0 ? 1 : 0,
   };
 }
