@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import Header from "@/components/layout/header";
-import NewSidebar from "@/components/layout/new-sidebar";
+import AppShell from "@/components/layout/app-shell";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Loader2,
   Search,
   Mail,
   MessageSquare,
@@ -207,12 +206,8 @@ export default function QollectionsAgentActivity() {
   const hasFilters = typeFilter || statusFilter || search || fromDate || toDate;
 
   return (
-    <div className="flex h-screen bg-background">
-      <NewSidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Header title="Agent Activity" subtitle="Monitor agent actions and outcomes" />
-        <main className="flex-1 overflow-y-auto p-6 lg:p-8">
-          <div className="space-y-4">
+    <AppShell title="Agent Activity" subtitle="Monitor agent actions and outcomes">
+      <div className="space-y-4">
             {/* Filters */}
             <Card>
               <CardContent className="pt-4 pb-4">
@@ -276,8 +271,18 @@ export default function QollectionsAgentActivity() {
             <Card>
               <CardContent className="p-0">
                 {isLoading ? (
-                  <div className="flex items-center justify-center py-20">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  <div className="p-4 space-y-3">
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <div key={i} className="flex items-center gap-4">
+                        <Skeleton className="h-4 w-[100px]" />
+                        <Skeleton className="h-4 w-[140px]" />
+                        <Skeleton className="h-4 w-[70px]" />
+                        <Skeleton className="h-4 flex-1" />
+                        <Skeleton className="h-6 w-[90px] rounded-full" />
+                        <Skeleton className="h-6 w-[80px] rounded-full" />
+                        <Skeleton className="h-4 w-[50px]" />
+                      </div>
+                    ))}
                   </div>
                 ) : items.length === 0 ? (
                   <div className="text-center py-20">
@@ -455,9 +460,7 @@ export default function QollectionsAgentActivity() {
                 )}
               </CardContent>
             </Card>
-          </div>
-        </main>
       </div>
-    </div>
+    </AppShell>
   );
 }

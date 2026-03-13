@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import Header from "@/components/layout/header";
-import NewSidebar from "@/components/layout/new-sidebar";
+import AppShell from "@/components/layout/app-shell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -125,25 +124,17 @@ export default function SettingsAgentPersonas() {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen bg-background">
-        <NewSidebar />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <Header title="Agent Personas" subtitle="Configure agent personalities and behaviour" />
-          <main className="flex-1 flex items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </main>
+      <AppShell title="Agent Personas" subtitle="Configure agent personalities and behaviour">
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
-      </div>
+      </AppShell>
     );
   }
 
   return (
-    <div className="flex h-screen bg-background">
-      <NewSidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Header title="Agent Personas" subtitle="Configure agent personalities and behaviour" />
-        <main className="flex-1 overflow-y-auto p-6 lg:p-8">
-          <div className="max-w-4xl mx-auto space-y-6">
+    <AppShell title="Agent Personas" subtitle="Configure agent personalities and behaviour">
+      <div className="max-w-4xl mx-auto space-y-6">
             {/* Identity */}
             <Card>
               <CardHeader>
@@ -347,9 +338,7 @@ export default function SettingsAgentPersonas() {
                 Save Persona
               </Button>
             </div>
-          </div>
-        </main>
       </div>
-    </div>
+    </AppShell>
   );
 }

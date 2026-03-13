@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import Header from "@/components/layout/header";
-import NewSidebar from "@/components/layout/new-sidebar";
+import AppShell from "@/components/layout/app-shell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -112,43 +111,36 @@ export default function SettingsAutonomyRules() {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen bg-background">
-        <NewSidebar />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <Header title="Autonomy & Rules" subtitle="Set agent decision boundaries and escalation rules" />
-          <main className="flex-1 flex items-center justify-center">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </main>
+      <AppShell title="Autonomy & Rules" subtitle="Set agent decision boundaries and escalation rules">
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
-      </div>
+      </AppShell>
     );
   }
 
   return (
-    <div className="flex h-screen bg-background">
-      <NewSidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Header
-          title="Autonomy & Rules"
-          subtitle="Set agent decision boundaries and escalation rules"
-          action={
-            hasChanges ? (
-              <Button
-                onClick={() => saveMutation.mutate()}
-                disabled={saveMutation.isPending}
-                className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
-              >
-                {saveMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Save className="h-4 w-4 mr-2" />
-                )}
-                Save Changes
-              </Button>
-            ) : undefined
-          }
-        />
-        <main className="flex-1 overflow-y-auto p-6 lg:p-8 space-y-6">
+    <AppShell
+      title="Autonomy & Rules"
+      subtitle="Set agent decision boundaries and escalation rules"
+      action={
+        hasChanges ? (
+          <Button
+            onClick={() => saveMutation.mutate()}
+            disabled={saveMutation.isPending}
+            className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+          >
+            {saveMutation.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
+            Save Changes
+          </Button>
+        ) : undefined
+      }
+    >
+      <div className="space-y-6">
           {/* Autonomy Mode Selection */}
           <Card>
             <CardHeader>
@@ -327,8 +319,7 @@ export default function SettingsAutonomyRules() {
               </div>
             </CardContent>
           </Card>
-        </main>
       </div>
-    </div>
+    </AppShell>
   );
 }

@@ -1,16 +1,12 @@
-import Header from "@/components/layout/header";
-import NewSidebar from "@/components/layout/new-sidebar";
+import AppShell from "@/components/layout/app-shell";
 
 export default function SettingsBilling() {
   return (
-    <div className="flex h-screen bg-background">
-      <NewSidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Header title="Billing" subtitle="Subscription and payment management" />
-        <main className="flex-1 overflow-y-auto p-6 lg:p-8">
-          <div className="text-muted-foreground">Billing — coming soon</div>
-        </main>
+    <AppShell title="Billing" subtitle="Subscription and payment management">
+      <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+        <p className="text-lg font-medium">Coming Soon</p>
+        <p className="text-sm mt-1">This feature is under development.</p>
       </div>
-    </div>
+    </AppShell>
   );
 }

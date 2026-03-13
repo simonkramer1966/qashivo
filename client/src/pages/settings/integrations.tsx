@@ -1,7 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import Header from "@/components/layout/header";
-import NewSidebar from "@/components/layout/new-sidebar";
+import AppShell from "@/components/layout/app-shell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -71,13 +70,9 @@ export default function SettingsIntegrations() {
   const connected = xeroHealth?.connected === true;
 
   return (
-    <div className="flex h-screen bg-background">
-      <NewSidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Header title="Integrations" subtitle="Connect Xero, Open Banking, and other services" />
-        <main className="flex-1 overflow-y-auto p-6 lg:p-8">
-          <div className="max-w-3xl mx-auto space-y-6">
-            {/* Xero */}
+    <AppShell title="Integrations" subtitle="Connect Xero, Open Banking, and other services">
+      <div className="max-w-3xl mx-auto space-y-6">
+        {/* Xero */}
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -198,9 +193,7 @@ export default function SettingsIntegrations() {
                 </p>
               </CardContent>
             </Card>
-          </div>
-        </main>
       </div>
-    </div>
+    </AppShell>
   );
 }
