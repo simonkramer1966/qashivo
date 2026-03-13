@@ -1,18 +1,42 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import AppShell from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
-import { Loader2, UserPlus, Building2, Mail, Phone, MapPin, CreditCard, CheckCircle2, AlertCircle, Sparkles } from "lucide-react";
-import { Textarea } from "@/components/ui/textarea";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import NewSidebar from "@/components/layout/new-sidebar";
-import BottomNav from "@/components/layout/bottom-nav";
-import Header from "@/components/layout/header";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Loader2,
+  Building2,
+  Mail,
+  Phone,
+  MapPin,
+  CreditCard,
+  CheckCircle2,
+  AlertCircle,
+  Sparkles,
+  ArrowRight,
+  ArrowLeft,
+  UserPlus,
+  Hash,
+  Calendar,
+  PoundSterling,
+  FileText,
+  Bot,
+} from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 type CreditCheckResult = {
   score: number;
@@ -23,6 +47,68 @@ type CreditCheckResult = {
 };
 
 type OnboardingStep = "details" | "credit-check" | "complete";
+
+const STEPS = [
+  { key: "details" as const, label: "Customer Details", number: 1 },
+  { key: "credit-check" as const, label: "Credit Assessment", number: 2 },
+  { key: "complete" as const, label: "Complete", number: 3 },
+];
+
+function StepIndicator({ currentStep }: { currentStep: OnboardingStep }) {
+  const currentIndex = STEPS.findIndex((s) => s.key === currentStep);
+
+  return (
+    <div className="flex items-center justify-center gap-0">
+      {STEPS.map((step, i) => {
+        const isActive = i === currentIndex;
+        const isComplete = i < currentIndex;
+
+        return (
+          <div key={step.key} className="flex items-center">
+            <div className="flex flex-col items-center">
+              <div
+                className={cn(
+                  "w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300",
+                  isComplete
+                    ? "bg-primary text-primary-foreground"
+                    : isActive
+                      ? "bg-primary text-primary-foreground ring-4 ring-primary/20"
+                      : "bg-muted text-muted-foreground"
+                )}
+              >
+                {isComplete ? (
+                  <CheckCircle2 className="h-5 w-5" />
+                ) : (
+                  step.number
+                )}
+              </div>
+              <span
+                className={cn(
+                  "text-xs mt-1.5 font-medium whitespace-nowrap",
+                  isActive
+                    ? "text-primary"
+                    : isComplete
+                      ? "text-foreground"
+                      : "text-muted-foreground"
+                )}
+              >
+                {step.label}
+              </span>
+            </div>
+            {i < STEPS.length - 1 && (
+              <div
+                className={cn(
+                  "w-16 sm:w-24 h-0.5 mx-2 mb-5 transition-colors duration-300",
+                  i < currentIndex ? "bg-primary" : "bg-border"
+                )}
+              />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function Onboarding() {
   const { toast } = useToast();
@@ -36,49 +122,50 @@ export default function Onboarding() {
     businessRegistrationNumber: "",
     annualRevenue: "",
     yearsInBusiness: "",
-    notes: ""
+    notes: "",
   });
-  const [creditCheckResult, setCreditCheckResult] = useState<CreditCheckResult | null>(null);
+  const [creditCheckResult, setCreditCheckResult] =
+    useState<CreditCheckResult | null>(null);
   const [isCheckingCredit, setIsCheckingCredit] = useState(false);
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const performCreditCheck = async () => {
     setIsCheckingCredit(true);
-    
+
     try {
-      // Simulate AI-powered credit check
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Mock credit check result - in production this would call a real API
-      const mockScore = Math.floor(Math.random() * 300) + 550; // 550-850
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      const mockScore = Math.floor(Math.random() * 300) + 550;
       const mockResult: CreditCheckResult = {
         score: mockScore,
-        rating: mockScore >= 750 ? "Excellent" : mockScore >= 650 ? "Good" : "Fair",
+        rating:
+          mockScore >= 750 ? "Excellent" : mockScore >= 650 ? "Good" : "Fair",
         recommendedLimit: Math.floor(mockScore * 100),
-        riskLevel: mockScore >= 750 ? "Low" : mockScore >= 650 ? "Medium" : "High",
+        riskLevel:
+          mockScore >= 750 ? "Low" : mockScore >= 650 ? "Medium" : "High",
         factors: [
           `${formData.yearsInBusiness || "0"} years in business`,
           `Annual revenue: £${formData.annualRevenue || "0"}`,
           "Payment history analysis",
-          "Industry risk assessment"
-        ]
+          "Industry risk assessment",
+        ],
       };
-      
+
       setCreditCheckResult(mockResult);
       setCurrentStep("credit-check");
-      
+
       toast({
         title: "Credit check complete",
         description: `Credit score: ${mockResult.score} (${mockResult.rating})`,
       });
-    } catch (error) {
+    } catch {
       toast({
         title: "Credit check failed",
         description: "Unable to complete credit check. Please try again.",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setIsCheckingCredit(false);
@@ -93,7 +180,7 @@ export default function Onboarding() {
         phone: formData.phone,
         address: formData.address,
         creditLimit: creditCheckResult?.recommendedLimit || 0,
-        notes: `${formData.notes}\n\nCredit Score: ${creditCheckResult?.score || "N/A"}\nRisk Level: ${creditCheckResult?.riskLevel || "N/A"}\nBusiness Registration: ${formData.businessRegistrationNumber}\nYears in Business: ${formData.yearsInBusiness}\nAnnual Revenue: £${formData.annualRevenue}`
+        notes: `${formData.notes}\n\nCredit Score: ${creditCheckResult?.score || "N/A"}\nRisk Level: ${creditCheckResult?.riskLevel || "N/A"}\nBusiness Registration: ${formData.businessRegistrationNumber}\nYears in Business: ${formData.yearsInBusiness}\nAnnual Revenue: £${formData.annualRevenue}`,
       });
       return response;
     },
@@ -109,9 +196,9 @@ export default function Onboarding() {
       toast({
         title: "Failed to create customer",
         description: error.message,
-        variant: "destructive"
+        variant: "destructive",
       });
-    }
+    },
   });
 
   const handleComplete = () => {
@@ -128,339 +215,404 @@ export default function Onboarding() {
       businessRegistrationNumber: "",
       annualRevenue: "",
       yearsInBusiness: "",
-      notes: ""
+      notes: "",
     });
     setCreditCheckResult(null);
     setCurrentStep("details");
   };
 
-  const getStepProgress = () => {
-    if (currentStep === "details") return 33;
-    if (currentStep === "credit-check") return 66;
-    return 100;
-  };
+  const canProceed =
+    formData.companyName && formData.contactName && formData.email;
 
   return (
-    <div className="flex h-screen bg-background">
-      {/* Desktop Sidebar */}
-      <div className="hidden lg:block">
-        <NewSidebar />
-      </div>
+    <AppShell
+      title="Customer Onboarding"
+      subtitle="Add new customers with AI-powered credit assessment"
+    >
+      <div className="max-w-3xl mx-auto">
+        {/* Step Indicator */}
+        <div className="mb-8 pt-2">
+          <StepIndicator currentStep={currentStep} />
+        </div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
-        <Header 
-          title="Customer Onboarding" 
-          subtitle="Add new customers with AI-powered credit assessment"
-        />
-        
-        <main className="flex-1 overflow-y-auto bg-background pb-20 lg:pb-8">
-          <div className="max-w-4xl mx-auto p-4 md:p-8">
-            {/* Header */}
-            <div className="mb-8">
-              <h1 className="text-3xl font-bold text-foreground mb-2 flex items-center gap-2">
-                <UserPlus className="w-8 h-8 text-[#17B6C3]" />
-                Customer Onboarding
-              </h1>
-              <p className="text-muted-foreground">Add new customers with AI-powered credit assessment</p>
-              
-              {/* Progress bar */}
-              <div className="mt-4">
-                <Progress value={getStepProgress()} className="h-2" />
-                <div className="flex justify-between mt-2 text-sm text-muted-foreground">
-                  <span className={currentStep === "details" ? "font-semibold text-[#17B6C3]" : ""}>Customer Details</span>
-                  <span className={currentStep === "credit-check" ? "font-semibold text-[#17B6C3]" : ""}>Credit Check</span>
-                  <span className={currentStep === "complete" ? "font-semibold text-[#17B6C3]" : ""}>Complete</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Step 1: Customer Details */}
-            {currentStep === "details" && (
-          <Card className="glass-card-light">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building2 className="w-5 h-5 text-[#17B6C3]" />
-                Customer Information
-              </CardTitle>
-              <CardDescription>Enter the new customer's details</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="companyName">Company Name *</Label>
-                  <Input
-                    id="companyName"
-                    value={formData.companyName}
-                    onChange={(e) => handleInputChange("companyName", e.target.value)}
-                    placeholder="Acme Corporation Ltd"
-                    className="bg-background/70"
-                    data-testid="input-company-name"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="contactName">Contact Name *</Label>
-                  <Input
-                    id="contactName"
-                    value={formData.contactName}
-                    onChange={(e) => handleInputChange("contactName", e.target.value)}
-                    placeholder="John Smith"
-                    className="bg-background/70"
-                    data-testid="input-contact-name"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email Address *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => handleInputChange("email", e.target.value)}
-                    placeholder="john@acme.com"
-                    className="bg-background/70"
-                    data-testid="input-email"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) => handleInputChange("phone", e.target.value)}
-                    placeholder="+44 20 1234 5678"
-                    className="bg-background/70"
-                    data-testid="input-phone"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="address">Business Address</Label>
-                <Input
-                  id="address"
-                  value={formData.address}
-                  onChange={(e) => handleInputChange("address", e.target.value)}
-                  placeholder="123 High Street, London, UK"
-                  className="bg-background/70"
-                  data-testid="input-address"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="registrationNumber">Registration Number</Label>
-                  <Input
-                    id="registrationNumber"
-                    value={formData.businessRegistrationNumber}
-                    onChange={(e) => handleInputChange("businessRegistrationNumber", e.target.value)}
-                    placeholder="12345678"
-                    className="bg-background/70"
-                    data-testid="input-registration-number"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="yearsInBusiness">Years in Business</Label>
-                  <Input
-                    id="yearsInBusiness"
-                    type="number"
-                    value={formData.yearsInBusiness}
-                    onChange={(e) => handleInputChange("yearsInBusiness", e.target.value)}
-                    placeholder="5"
-                    className="bg-background/70"
-                    data-testid="input-years-business"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="annualRevenue">Annual Revenue (£)</Label>
-                  <Input
-                    id="annualRevenue"
-                    type="number"
-                    value={formData.annualRevenue}
-                    onChange={(e) => handleInputChange("annualRevenue", e.target.value)}
-                    placeholder="500000"
-                    className="bg-background/70"
-                    data-testid="input-annual-revenue"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notes">Additional Notes</Label>
-                <Textarea
-                  id="notes"
-                  value={formData.notes}
-                  onChange={(e) => handleInputChange("notes", e.target.value)}
-                  placeholder="Any additional information about this customer..."
-                  className="bg-background/70"
-                  rows={3}
-                  data-testid="input-notes"
-                />
-              </div>
-
-              <div className="flex justify-end gap-3">
-                <Button
-                  onClick={performCreditCheck}
-                  disabled={!formData.companyName || !formData.contactName || !formData.email || isCheckingCredit}
-                  className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
-                  data-testid="button-credit-check"
-                >
-                  {isCheckingCredit ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Checking...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4 mr-2" />
-                      AI Credit Check
-                    </>
-                  )}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-            {/* Step 2: Credit Check Results */}
-            {currentStep === "credit-check" && creditCheckResult && (
-              <div className="space-y-6">
-            <Card className="glass-card-light">
+        {/* Step 1: Customer Details */}
+        {currentStep === "details" && (
+          <div className="space-y-6">
+            <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CreditCard className="w-5 h-5 text-[#17B6C3]" />
-                  Credit Assessment
-                </CardTitle>
-                <CardDescription>AI-powered credit analysis for {formData.companyName}</CardDescription>
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-primary" />
+                  <CardTitle>Company Information</CardTitle>
+                </div>
+                <CardDescription>
+                  Enter the new customer's business details
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Credit Score */}
-                <div className="text-center p-6 bg-muted rounded-xl">
-                  <div className="text-5xl font-bold text-foreground mb-2">
-                    {creditCheckResult.score}
-                  </div>
-                  <Badge variant={creditCheckResult.rating === "Excellent" ? "default" : "secondary"} className="text-lg px-4 py-1">
-                    {creditCheckResult.rating}
-                  </Badge>
-                  <p className="text-sm text-muted-foreground mt-2">Credit Score</p>
-                </div>
-
-                {/* Risk Level */}
+              <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-4 bg-background/70 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      {creditCheckResult.riskLevel === "Low" ? (
-                        <CheckCircle2 className="w-5 h-5 text-green-600" />
-                      ) : (
-                        <AlertCircle className="w-5 h-5 text-amber-600" />
-                      )}
-                      <span className="font-semibold text-foreground">Risk Level</span>
-                    </div>
-                    <p className="text-2xl font-bold text-foreground">{creditCheckResult.riskLevel}</p>
+                  <div className="space-y-2">
+                    <Label htmlFor="companyName">Company Name *</Label>
+                    <Input
+                      id="companyName"
+                      value={formData.companyName}
+                      onChange={(e) =>
+                        handleInputChange("companyName", e.target.value)
+                      }
+                      placeholder="Acme Corporation Ltd"
+                    />
                   </div>
-
-                  <div className="p-4 bg-background/70 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <CreditCard className="w-5 h-5 text-[#17B6C3]" />
-                      <span className="font-semibold text-foreground">Recommended Limit</span>
-                    </div>
-                    <p className="text-2xl font-bold text-foreground">£{creditCheckResult.recommendedLimit.toLocaleString()}</p>
+                  <div className="space-y-2">
+                    <Label htmlFor="contactName">Contact Name *</Label>
+                    <Input
+                      id="contactName"
+                      value={formData.contactName}
+                      onChange={(e) =>
+                        handleInputChange("contactName", e.target.value)
+                      }
+                      placeholder="John Smith"
+                    />
                   </div>
                 </div>
 
-                {/* Key Factors */}
-                <div>
-                  <h4 className="font-semibold text-foreground mb-3 flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-[#17B6C3]" />
-                    AI Analysis Factors
-                  </h4>
-                  <ul className="space-y-2">
-                    {creditCheckResult.factors.map((factor, index) => (
-                      <li key={index} className="flex items-start gap-2 text-muted-foreground">
-                        <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5" />
-                        <span>{factor}</span>
-                      </li>
-                    ))}
-                  </ul>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">
+                      <Mail className="inline h-3.5 w-3.5 mr-1" />
+                      Email Address *
+                    </Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) =>
+                        handleInputChange("email", e.target.value)
+                      }
+                      placeholder="john@acme.com"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">
+                      <Phone className="inline h-3.5 w-3.5 mr-1" />
+                      Phone Number
+                    </Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) =>
+                        handleInputChange("phone", e.target.value)
+                      }
+                      placeholder="+44 20 1234 5678"
+                    />
+                  </div>
                 </div>
 
-                <div className="flex justify-between gap-3 pt-4 border-t">
-                  <Button
-                    variant="outline"
-                    onClick={() => setCurrentStep("details")}
-                    data-testid="button-back"
-                  >
-                    Back to Details
-                  </Button>
-                  <Button
-                    onClick={handleComplete}
-                    disabled={createCustomerMutation.isPending}
-                    className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
-                    data-testid="button-complete-onboarding"
-                  >
-                    {createCustomerMutation.isPending ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Creating...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="w-4 h-4 mr-2" />
-                        Complete Onboarding
-                      </>
-                    )}
-                  </Button>
+                <div className="space-y-2">
+                  <Label htmlFor="address">
+                    <MapPin className="inline h-3.5 w-3.5 mr-1" />
+                    Business Address
+                  </Label>
+                  <Input
+                    id="address"
+                    value={formData.address}
+                    onChange={(e) =>
+                      handleInputChange("address", e.target.value)
+                    }
+                    placeholder="123 High Street, London, UK"
+                  />
                 </div>
               </CardContent>
             </Card>
-              </div>
-            )}
 
-            {/* Step 3: Complete */}
-            {currentStep === "complete" && (
-              <Card className="glass-card-light text-center">
-            <CardContent className="py-12">
-              <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400" />
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5 text-primary" />
+                  <CardTitle>Financial Details</CardTitle>
+                </div>
+                <CardDescription>
+                  Used for AI credit assessment — the more data, the better the
+                  score
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="registrationNumber">
+                      <Hash className="inline h-3.5 w-3.5 mr-1" />
+                      Registration No.
+                    </Label>
+                    <Input
+                      id="registrationNumber"
+                      value={formData.businessRegistrationNumber}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "businessRegistrationNumber",
+                          e.target.value
+                        )
+                      }
+                      placeholder="12345678"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="yearsInBusiness">
+                      <Calendar className="inline h-3.5 w-3.5 mr-1" />
+                      Years in Business
+                    </Label>
+                    <Input
+                      id="yearsInBusiness"
+                      type="number"
+                      value={formData.yearsInBusiness}
+                      onChange={(e) =>
+                        handleInputChange("yearsInBusiness", e.target.value)
+                      }
+                      placeholder="5"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="annualRevenue">
+                      <PoundSterling className="inline h-3.5 w-3.5 mr-1" />
+                      Annual Revenue
+                    </Label>
+                    <Input
+                      id="annualRevenue"
+                      type="number"
+                      value={formData.annualRevenue}
+                      onChange={(e) =>
+                        handleInputChange("annualRevenue", e.target.value)
+                      }
+                      placeholder="500000"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="notes">
+                    <FileText className="inline h-3.5 w-3.5 mr-1" />
+                    Additional Notes
+                  </Label>
+                  <Textarea
+                    id="notes"
+                    value={formData.notes}
+                    onChange={(e) => handleInputChange("notes", e.target.value)}
+                    placeholder="Any additional information about this customer..."
+                    rows={3}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Agent Preview Card */}
+            <Card className="border-dashed">
+              <CardContent className="py-5">
+                <div className="flex items-start gap-4">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <Bot className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground">
+                      Your AI agent will handle collections for this customer
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      After onboarding, the agent will use your configured
+                      persona, tone settings, and autonomy rules to manage
+                      communications automatically.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="flex justify-end">
+              <Button
+                onClick={performCreditCheck}
+                disabled={!canProceed || isCheckingCredit}
+                size="lg"
+              >
+                {isCheckingCredit ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Running Credit Check...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Run AI Credit Check
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 2: Credit Check Results */}
+        {currentStep === "credit-check" && creditCheckResult && (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  <CardTitle>Credit Assessment</CardTitle>
+                </div>
+                <CardDescription>
+                  AI-powered analysis for {formData.companyName}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Score Display */}
+                <div className="text-center py-8 rounded-lg bg-muted/50">
+                  <div className="text-5xl font-bold text-foreground mb-3 tracking-tight">
+                    {creditCheckResult.score}
+                  </div>
+                  <Badge
+                    className={cn(
+                      "text-sm px-3 py-1",
+                      creditCheckResult.rating === "Excellent"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : creditCheckResult.rating === "Good"
+                          ? "bg-blue-100 text-blue-700"
+                          : "bg-amber-100 text-amber-700"
+                    )}
+                  >
+                    {creditCheckResult.rating}
+                  </Badge>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Credit Score
+                  </p>
+                </div>
+
+                {/* Metrics Grid */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="rounded-lg border p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      {creditCheckResult.riskLevel === "Low" ? (
+                        <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                      ) : (
+                        <AlertCircle className="h-4 w-4 text-amber-600" />
+                      )}
+                      <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
+                        Risk Level
+                      </span>
+                    </div>
+                    <p className="text-xl font-semibold text-foreground">
+                      {creditCheckResult.riskLevel}
+                    </p>
+                  </div>
+
+                  <div className="rounded-lg border p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <CreditCard className="h-4 w-4 text-primary" />
+                      <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
+                        Recommended Limit
+                      </span>
+                    </div>
+                    <p className="text-xl font-semibold text-foreground">
+                      £{creditCheckResult.recommendedLimit.toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Analysis Factors */}
+                <div>
+                  <h4 className="text-sm font-medium text-foreground mb-3">
+                    Analysis Factors
+                  </h4>
+                  <div className="space-y-2.5">
+                    {creditCheckResult.factors.map((factor, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-2.5 text-sm text-muted-foreground"
+                      >
+                        <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                        <span>{factor}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Agent Preview */}
+            <Card className="border-dashed">
+              <CardContent className="py-5">
+                <div className="flex items-start gap-4">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <Bot className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground">
+                      Agent will adapt to this customer's risk profile
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {creditCheckResult.riskLevel === "Low"
+                        ? "Low-risk customer — the agent will use a friendly, relationship-focused tone."
+                        : creditCheckResult.riskLevel === "Medium"
+                          ? "Medium-risk customer — the agent will use a professional, balanced approach."
+                          : "High-risk customer — the agent will use firmer language with shorter follow-up intervals."}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="flex justify-between">
+              <Button variant="outline" onClick={() => setCurrentStep("details")}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
+              </Button>
+              <Button
+                onClick={handleComplete}
+                disabled={createCustomerMutation.isPending}
+                size="lg"
+              >
+                {createCustomerMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Creating Customer...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    Complete Onboarding
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 3: Complete */}
+        {currentStep === "complete" && (
+          <Card>
+            <CardContent className="py-16 text-center">
+              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-5">
+                <CheckCircle2 className="h-8 w-8 text-emerald-600" />
               </div>
-              <h2 className="text-2xl font-bold text-foreground mb-2">Onboarding Complete!</h2>
-              <p className="text-muted-foreground mb-6">
-                {formData.companyName} has been successfully added to your customer list.
+              <h2 className="text-xl font-semibold text-foreground mb-2">
+                Onboarding Complete
+              </h2>
+              <p className="text-sm text-muted-foreground mb-8 max-w-sm mx-auto">
+                {formData.companyName} has been added to your customer list.
+                Your AI agent will begin collections when invoices become overdue.
               </p>
               <div className="flex justify-center gap-3">
-                <Button
-                  variant="outline"
-                  onClick={handleReset}
-                  data-testid="button-onboard-another"
-                >
-                  Onboard Another Customer
+                <Button variant="outline" onClick={handleReset}>
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Onboard Another
                 </Button>
                 <Button
-                  onClick={() => window.location.href = "/contacts"}
-                  className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
-                  data-testid="button-view-customers"
+                  onClick={() => (window.location.href = "/qollections/debtors")}
                 >
                   View All Customers
                 </Button>
               </div>
             </CardContent>
-              </Card>
-            )}
-          </div>
-        </main>
+          </Card>
+        )}
       </div>
-
-      {/* Mobile Bottom Nav */}
-      <div className="lg:hidden">
-        <BottomNav />
-      </div>
-    </div>
+    </AppShell>
   );
 }

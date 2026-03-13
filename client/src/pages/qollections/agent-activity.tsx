@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import { useQuery } from "@tanstack/react-query";
 import AppShell from "@/components/layout/app-shell";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -208,6 +208,36 @@ export default function QollectionsAgentActivity() {
   return (
     <AppShell title="Agent Activity" subtitle="Monitor agent actions and outcomes">
       <div className="space-y-4">
+            {/* KPI Summary */}
+            {!isLoading && items.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <Card>
+                  <CardContent className="pt-4 pb-4">
+                    <p className="text-xs text-muted-foreground uppercase">Total Actions</p>
+                    <p className="text-lg font-semibold">{pagination?.total ?? items.length}</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-4 pb-4">
+                    <p className="text-xs text-muted-foreground uppercase">AI Generated</p>
+                    <p className="text-lg font-semibold">{items.filter((i) => i.aiGenerated).length}</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-4 pb-4">
+                    <p className="text-xs text-muted-foreground uppercase">Pending Approval</p>
+                    <p className="text-lg font-semibold">{items.filter((i) => i.status === "pending_approval").length}</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-4 pb-4">
+                    <p className="text-xs text-muted-foreground uppercase">Compliance Blocked</p>
+                    <p className="text-lg font-semibold">{items.filter((i) => i.compliance?.checkResult === "blocked").length}</p>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
             {/* Filters */}
             <Card>
               <CardContent className="pt-4 pb-4">
@@ -289,7 +319,7 @@ export default function QollectionsAgentActivity() {
                     <Bot className="h-12 w-12 text-muted-foreground/40 mx-auto mb-3" />
                     <p className="text-muted-foreground">No agent activity found</p>
                     {hasFilters && (
-                      <Button variant="link" className="mt-2 text-[#17B6C3]" onClick={clearFilters}>
+                      <Button variant="link" className="mt-2 text-primary" onClick={clearFilters}>
                         Clear filters
                       </Button>
                     )}
@@ -311,9 +341,8 @@ export default function QollectionsAgentActivity() {
                       </TableHeader>
                       <TableBody>
                         {items.map((item) => (
-                          <>
+                          <Fragment key={item.id}>
                             <TableRow
-                              key={item.id}
                               className="cursor-pointer hover:bg-muted/30"
                               onClick={() => setExpandedId(expandedId === item.id ? null : item.id)}
                             >
@@ -367,46 +396,48 @@ export default function QollectionsAgentActivity() {
                             {expandedId === item.id && (
                               <TableRow key={`${item.id}-detail`}>
                                 <TableCell colSpan={8} className="bg-muted/20 p-4">
-                                  <div className="space-y-3 text-sm">
-                                    {item.aiGenerated && (
-                                      <div className="flex items-center gap-2">
-                                        <Bot className="h-4 w-4 text-[#17B6C3]" />
-                                        <span className="font-medium">AI Generated</span>
-                                        {item.confidenceScore && (
-                                          <Badge className="bg-[#17B6C3]/10 text-[#17B6C3]">
-                                            Confidence: {Math.round(parseFloat(item.confidenceScore) * 100)}%
-                                          </Badge>
-                                        )}
-                                      </div>
-                                    )}
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                    <div className="space-y-3">
+                                      {item.aiGenerated && (
+                                        <div className="flex items-center gap-2">
+                                          <Bot className="h-4 w-4 text-primary" />
+                                          <span className="font-medium">AI Generated</span>
+                                          {item.confidenceScore && (
+                                            <Badge className="bg-primary/10 text-primary">
+                                              Confidence: {Math.round(parseFloat(item.confidenceScore) * 100)}%
+                                            </Badge>
+                                          )}
+                                        </div>
+                                      )}
 
-                                    {item.exceptionReason && (
-                                      <div>
-                                        <span className="font-medium text-orange-600">Exception:</span>{" "}
-                                        <span className="text-muted-foreground">{item.exceptionReason}</span>
-                                      </div>
-                                    )}
+                                      {item.exceptionReason && (
+                                        <div>
+                                          <span className="font-medium text-orange-600">Exception:</span>{" "}
+                                          <span className="text-muted-foreground">{item.exceptionReason}</span>
+                                        </div>
+                                      )}
 
-                                    {item.compliance?.agentReasoning && (
-                                      <div>
-                                        <span className="font-medium">Agent Reasoning:</span>{" "}
-                                        <span className="text-muted-foreground">{item.compliance.agentReasoning}</span>
-                                      </div>
-                                    )}
+                                      {item.compliance?.agentReasoning && (
+                                        <div>
+                                          <span className="font-medium">Agent Reasoning:</span>{" "}
+                                          <span className="text-muted-foreground">{item.compliance.agentReasoning}</span>
+                                        </div>
+                                      )}
 
-                                    {item.compliance?.violations && item.compliance.violations.length > 0 && (
-                                      <div>
-                                        <span className="font-medium text-red-600">Violations:</span>
-                                        <ul className="list-disc list-inside text-muted-foreground mt-1">
-                                          {item.compliance.violations.map((v: any, i: number) => (
-                                            <li key={i}>{typeof v === "string" ? v : JSON.stringify(v)}</li>
-                                          ))}
-                                        </ul>
-                                      </div>
-                                    )}
+                                      {item.compliance?.violations && item.compliance.violations.length > 0 && (
+                                        <div>
+                                          <span className="font-medium text-red-600">Violations:</span>
+                                          <ul className="list-disc list-inside text-muted-foreground mt-1">
+                                            {item.compliance.violations.map((v: any, i: number) => (
+                                              <li key={i}>{typeof v === "string" ? v : JSON.stringify(v)}</li>
+                                            ))}
+                                          </ul>
+                                        </div>
+                                      )}
+                                    </div>
 
                                     {item.content && (
-                                      <div>
+                                      <div className="md:col-span-1">
                                         <span className="font-medium">Content Preview:</span>
                                         <div className="mt-1 text-muted-foreground bg-background rounded border p-3 max-h-[200px] overflow-y-auto whitespace-pre-wrap text-xs">
                                           {item.content.substring(0, 1000)}
@@ -418,7 +449,7 @@ export default function QollectionsAgentActivity() {
                                 </TableCell>
                               </TableRow>
                             )}
-                          </>
+                          </Fragment>
                         ))}
                       </TableBody>
                     </Table>

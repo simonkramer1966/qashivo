@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
@@ -207,10 +208,10 @@ export default function DebtorPortal() {
   // Loading state
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-[#17B6C3] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-3">
+          <Skeleton className="h-8 w-32 mx-auto" />
+          <Skeleton className="h-4 w-48 mx-auto" />
         </div>
       </div>
     );
@@ -223,8 +224,8 @@ export default function DebtorPortal() {
 
     if (!hasToken) {
       return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 flex items-center justify-center p-4">
-          <Card className="max-w-md w-full bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+        <div className="min-h-screen bg-background flex items-center justify-center p-4">
+          <Card className="max-w-md w-full">
             <CardHeader>
               <CardTitle className="text-2xl font-bold text-center">Access Required</CardTitle>
               <CardDescription className="text-center">
@@ -250,8 +251,8 @@ export default function DebtorPortal() {
     }
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 flex items-center justify-center p-4">
-        <Card className="max-w-md w-full bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="max-w-md w-full">
           <CardHeader>
             <CardTitle className="text-2xl font-bold text-center">Enter Access Code</CardTitle>
             <CardDescription className="text-center">
@@ -267,13 +268,13 @@ export default function DebtorPortal() {
                   value={otpCode}
                   onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                   maxLength={6}
-                  className="text-center text-2xl tracking-widest font-mono bg-white/70 border-gray-200/30"
+                  className="text-center h-14 text-3xl tracking-widest font-mono"
                   data-testid="input-otp"
                 />
               </div>
               <Button
                 type="submit"
-                className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
                 disabled={verifyMutation.isPending || otpCode.length !== 6}
                 data-testid="button-verify-otp"
               >
@@ -288,11 +289,11 @@ export default function DebtorPortal() {
 
   // Authenticated - show portal
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto p-4 md:p-8 max-w-6xl">
         {/* Header with branding */}
         <div className="mb-8">
-          <div className="flex justify-between items-start">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
             <div className="flex items-center gap-4">
               {portalConfig?.branding?.logoUrl && (
                 <img
@@ -312,7 +313,6 @@ export default function DebtorPortal() {
               variant="outline"
               onClick={() => logoutMutation.mutate()}
               disabled={logoutMutation.isPending}
-              className="bg-white/70"
               data-testid="button-logout"
             >
               <LogOut className="h-4 w-4 mr-2" />
@@ -353,7 +353,7 @@ export default function DebtorPortal() {
           }
         `}</style>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="bg-white/70 backdrop-blur-md border-0 shadow-xl p-1">
+          <TabsList className="bg-muted p-1">
             <TabsTrigger value="overview" data-brand-tab data-testid="tab-overview">
               <FileText className="h-4 w-4 mr-2" />
               Overview
@@ -427,14 +427,22 @@ function OverviewTab({ invoices, isLoading, brandColor = "#17B6C3" }: { invoices
   });
 
   if (isLoading) {
-    return <div className="text-center py-8">Loading invoices...</div>;
+    return (
+      <div className="space-y-4">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Card key={i}><CardContent className="py-6"><div className="space-y-3"><Skeleton className="h-5 w-1/3" /><Skeleton className="h-4 w-1/2" /><div className="grid grid-cols-3 gap-4 mt-4"><Skeleton className="h-16" /><Skeleton className="h-16" /><Skeleton className="h-16" /></div></div></CardContent></Card>
+        ))}
+      </div>
+    );
   }
 
   if (invoices.length === 0) {
     return (
-      <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
-        <CardContent className="py-8 text-center text-gray-600">
-          No outstanding invoices
+      <Card>
+        <CardContent className="py-12 text-center">
+          <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold text-foreground">No outstanding invoices</h3>
+          <p className="text-sm text-muted-foreground mt-1">All your invoices are up to date.</p>
         </CardContent>
       </Card>
     );
@@ -443,7 +451,7 @@ function OverviewTab({ invoices, isLoading, brandColor = "#17B6C3" }: { invoices
   return (
     <div className="grid gap-4">
       {invoices.map((invoice) => (
-        <Card key={invoice.id} className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg" data-testid={`card-invoice-${invoice.id}`}>
+        <Card key={invoice.id} data-testid={`card-invoice-${invoice.id}`}>
           <CardHeader>
             <div className="flex justify-between items-start">
               <div>
@@ -464,19 +472,19 @@ function OverviewTab({ invoices, isLoading, brandColor = "#17B6C3" }: { invoices
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-white/70 backdrop-blur-md border-0 shadow-xl p-4 rounded-lg">
+              <div className="bg-muted/30 border rounded-lg p-4">
                 <p className="text-sm text-gray-600">Principal</p>
                 <p className="text-2xl font-bold text-gray-900" data-testid={`text-principal-${invoice.id}`}>
                   {invoice.currency} {invoice.interest.principalAmount.toFixed(2)}
                 </p>
               </div>
-              <div className="bg-white/70 backdrop-blur-md border-0 shadow-xl p-4 rounded-lg">
+              <div className="bg-muted/30 border rounded-lg p-4">
                 <p className="text-sm text-gray-600">Interest ({invoice.interest.effectiveRate}%)</p>
                 <p className="text-2xl font-bold" style={{ color: brandColor }} data-testid={`text-interest-${invoice.id}`}>
                   {invoice.currency} {invoice.interest.interestAmount.toFixed(2)}
                 </p>
               </div>
-              <div className="bg-white/70 backdrop-blur-md border-0 shadow-xl p-4 rounded-lg">
+              <div className="bg-muted/30 border rounded-lg p-4">
                 <p className="text-sm text-gray-600">Total Amount</p>
                 <p className="text-2xl font-bold text-gray-900" data-testid={`text-total-${invoice.id}`}>
                   {invoice.currency} {invoice.interest.totalAmount.toFixed(2)}
@@ -573,14 +581,20 @@ function DisputesTab({
   const availableInvoices = invoices.filter(inv => !inv.hasActiveDispute && inv.status !== "paid");
 
   if (isLoading) {
-    return <div className="text-center py-8">Loading disputes...</div>;
+    return (
+      <div className="space-y-4">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Card key={i}><CardContent className="py-6"><div className="space-y-3"><Skeleton className="h-5 w-1/3" /><Skeleton className="h-4 w-1/2" /><div className="grid grid-cols-3 gap-4 mt-4"><Skeleton className="h-16" /><Skeleton className="h-16" /><Skeleton className="h-16" /></div></div></CardContent></Card>
+        ))}
+      </div>
+    );
   }
 
   return (
     <div className="space-y-4">
       {/* New Dispute Button */}
       {!showNewDispute && availableInvoices.length > 0 && (
-        <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+        <Card>
           <CardContent className="py-4">
             <Button
               onClick={() => setShowNewDispute(true)}
@@ -597,7 +611,7 @@ function DisputesTab({
 
       {/* New Dispute Form */}
       {showNewDispute && (
-        <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+        <Card>
           <CardHeader>
             <CardTitle className="text-xl font-bold">Submit Dispute</CardTitle>
             <CardDescription>
@@ -611,7 +625,7 @@ function DisputesTab({
                 <select
                   value={selectedInvoiceId}
                   onChange={(e) => setSelectedInvoiceId(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-md bg-white/70 border-gray-200/30"
+                  className="w-full px-3 py-2 border rounded-md"
                   data-testid="select-invoice"
                 >
                   <option value="">Select invoice...</option>
@@ -628,7 +642,6 @@ function DisputesTab({
                   value={disputeReason}
                   onChange={(e) => setDisputeReason(e.target.value)}
                   placeholder="e.g., Incorrect amount, Service not received"
-                  className="bg-white/70 border-gray-200/30"
                   data-testid="input-dispute-reason"
                 />
               </div>
@@ -639,7 +652,6 @@ function DisputesTab({
                   onChange={(e) => setDisputeDescription(e.target.value)}
                   placeholder="Provide detailed information about your dispute..."
                   rows={4}
-                  className="bg-white/70 border-gray-200/30"
                   data-testid="textarea-dispute-description"
                 />
               </div>
@@ -657,7 +669,6 @@ function DisputesTab({
                   type="button"
                   variant="outline"
                   onClick={() => setShowNewDispute(false)}
-                  className="bg-white/70"
                   data-testid="button-cancel-dispute"
                 >
                   Cancel
@@ -670,14 +681,16 @@ function DisputesTab({
 
       {/* Existing Disputes */}
       {disputes.length === 0 ? (
-        <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
-          <CardContent className="py-8 text-center text-gray-600">
-            No disputes submitted
+        <Card>
+          <CardContent className="py-12 text-center">
+            <MessageSquare className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold text-foreground">No disputes submitted</h3>
+            <p className="text-sm text-muted-foreground mt-1">You have not raised any invoice disputes.</p>
           </CardContent>
         </Card>
       ) : (
         disputes.map((dispute) => (
-          <Card key={dispute.id} className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg" data-testid={`card-dispute-${dispute.id}`}>
+          <Card key={dispute.id} data-testid={`card-dispute-${dispute.id}`}>
             <CardHeader>
               <div className="flex justify-between items-start">
                 <div>
@@ -774,14 +787,20 @@ function PromisesTab({
   const availableInvoices = invoices.filter(inv => inv.status !== "paid");
 
   if (isLoading) {
-    return <div className="text-center py-8">Loading payment plans...</div>;
+    return (
+      <div className="space-y-4">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Card key={i}><CardContent className="py-6"><div className="space-y-3"><Skeleton className="h-5 w-1/3" /><Skeleton className="h-4 w-1/2" /><div className="grid grid-cols-3 gap-4 mt-4"><Skeleton className="h-16" /><Skeleton className="h-16" /><Skeleton className="h-16" /></div></div></CardContent></Card>
+        ))}
+      </div>
+    );
   }
 
   return (
     <div className="space-y-4">
       {/* New Promise Button */}
       {!showNewPromise && availableInvoices.length > 0 && (
-        <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+        <Card>
           <CardContent className="py-4">
             <Button
               onClick={() => setShowNewPromise(true)}
@@ -798,7 +817,7 @@ function PromisesTab({
 
       {/* New Promise Form */}
       {showNewPromise && (
-        <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+        <Card>
           <CardHeader>
             <CardTitle className="text-xl font-bold">Create Payment Plan</CardTitle>
             <CardDescription>
@@ -818,7 +837,7 @@ function PromisesTab({
                       setPromiseAmount(invoice.interest.totalAmount.toFixed(2));
                     }
                   }}
-                  className="w-full px-3 py-2 border rounded-md bg-white/70 border-gray-200/30"
+                  className="w-full px-3 py-2 border rounded-md"
                   data-testid="select-promise-invoice"
                 >
                   <option value="">Select invoice...</option>
@@ -837,7 +856,6 @@ function PromisesTab({
                   value={promiseAmount}
                   onChange={(e) => setPromiseAmount(e.target.value)}
                   placeholder="0.00"
-                  className="bg-white/70 border-gray-200/30"
                   data-testid="input-promise-amount"
                 />
               </div>
@@ -848,7 +866,6 @@ function PromisesTab({
                   value={promiseDate}
                   onChange={(e) => setPromiseDate(e.target.value)}
                   min={new Date().toISOString().split('T')[0]}
-                  className="bg-white/70 border-gray-200/30"
                   data-testid="input-promise-date"
                 />
               </div>
@@ -859,7 +876,6 @@ function PromisesTab({
                   onChange={(e) => setPromiseNotes(e.target.value)}
                   placeholder="Add any additional information..."
                   rows={3}
-                  className="bg-white/70 border-gray-200/30"
                   data-testid="textarea-promise-notes"
                 />
               </div>
@@ -877,7 +893,6 @@ function PromisesTab({
                   type="button"
                   variant="outline"
                   onClick={() => setShowNewPromise(false)}
-                  className="bg-white/70"
                   data-testid="button-cancel-promise"
                 >
                   Cancel
@@ -890,14 +905,16 @@ function PromisesTab({
 
       {/* Existing Promises */}
       {promises.length === 0 ? (
-        <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
-          <CardContent className="py-8 text-center text-gray-600">
-            No payment plans created
+        <Card>
+          <CardContent className="py-12 text-center">
+            <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold text-foreground">No payment plans created</h3>
+            <p className="text-sm text-muted-foreground mt-1">Create a payment plan to commit to a payment date.</p>
           </CardContent>
         </Card>
       ) : (
         promises.map((promise) => (
-          <Card key={promise.id} className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg" data-testid={`card-promise-${promise.id}`}>
+          <Card key={promise.id} data-testid={`card-promise-${promise.id}`}>
             <CardHeader>
               <div className="flex justify-between items-start">
                 <div>

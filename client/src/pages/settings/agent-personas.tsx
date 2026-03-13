@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import {
   Bot,
@@ -125,8 +126,100 @@ export default function SettingsAgentPersonas() {
   if (isLoading) {
     return (
       <AppShell title="Agent Personas" subtitle="Configure agent personalities and behaviour">
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <div className="max-w-4xl mx-auto space-y-6">
+          {/* Agent Identity skeleton */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-5 w-5 rounded" />
+                <Skeleton className="h-5 w-32" />
+              </div>
+              <Skeleton className="h-4 w-72 mt-1" />
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-10 w-full rounded-md" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-10 w-full rounded-md" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Default Tone skeleton */}
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-5 w-28" />
+              <Skeleton className="h-4 w-80 mt-1" />
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="p-4 rounded-lg border-2 border-border space-y-2">
+                    <Skeleton className="h-5 w-20 rounded-full" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-3/4" />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Sector & Context skeleton */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-5 w-5 rounded" />
+                <Skeleton className="h-5 w-36" />
+              </div>
+              <Skeleton className="h-4 w-80 mt-1" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-10 w-full rounded-md" />
+              </div>
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-[100px] w-full rounded-md" />
+                <Skeleton className="h-3 w-72" />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Email Signature skeleton */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-5 w-5 rounded" />
+                <Skeleton className="h-5 w-32" />
+              </div>
+              <Skeleton className="h-4 w-64 mt-1" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="space-y-2">
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-10 w-full rounded-md" />
+                  </div>
+                ))}
+              </div>
+              <Separator />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-28" />
+                <div className="rounded-md border bg-muted/30 p-4 space-y-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-3 w-40" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </AppShell>
     );
@@ -139,7 +232,7 @@ export default function SettingsAgentPersonas() {
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-2">
-                  <Bot className="h-5 w-5 text-[#17B6C3]" />
+                  <Bot className="h-5 w-5 text-primary" />
                   <CardTitle>Agent Identity</CardTitle>
                 </div>
                 <CardDescription>
@@ -193,7 +286,7 @@ export default function SettingsAgentPersonas() {
                       onClick={() => updateField("toneDefault", tone.value)}
                       className={`p-4 rounded-lg border-2 text-left transition-all ${
                         form.toneDefault === tone.value
-                          ? "border-[#17B6C3] bg-[#17B6C3]/5"
+                          ? "border-primary bg-primary/5"
                           : "border-border hover:border-muted-foreground/30"
                       }`}
                     >
@@ -209,7 +302,7 @@ export default function SettingsAgentPersonas() {
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-2">
-                  <Building2 className="h-5 w-5 text-[#17B6C3]" />
+                  <Building2 className="h-5 w-5 text-primary" />
                   <CardTitle>Sector & Context</CardTitle>
                 </div>
                 <CardDescription>
@@ -252,7 +345,7 @@ export default function SettingsAgentPersonas() {
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-2">
-                  <Mail className="h-5 w-5 text-[#17B6C3]" />
+                  <Mail className="h-5 w-5 text-primary" />
                   <CardTitle>Email Signature</CardTitle>
                 </div>
                 <CardDescription>
@@ -320,15 +413,64 @@ export default function SettingsAgentPersonas() {
                     )}
                   </div>
                 </div>
+
+                <Separator />
+
+                {/* Email Preview */}
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground">Email Preview</Label>
+                  <div className="rounded-md border bg-background shadow-sm overflow-hidden">
+                    {/* Email header */}
+                    <div className="border-b bg-muted/20 px-4 py-3 space-y-1">
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-muted-foreground">From:</span>
+                        <span className="font-medium">
+                          {form.emailSignatureName || "Agent Name"}{" "}
+                          <span className="text-muted-foreground font-normal">
+                            &lt;{(form.personaName || "agent").toLowerCase().replace(/\s+/g, ".")}@
+                            {(form.emailSignatureCompany || "company").toLowerCase().replace(/\s+/g, "").replace(/ltd|limited|inc/gi, "").trim() || "company"}.co.uk&gt;
+                          </span>
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-muted-foreground">To:</span>
+                        <span className="text-muted-foreground italic">debtor@example.com</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-muted-foreground">Subject:</span>
+                        <span className="font-medium">Friendly Reminder — Invoice #INV-2024-0042 (GBP 3,450.00)</span>
+                      </div>
+                    </div>
+                    {/* Email body */}
+                    <div className="px-4 py-4 text-sm space-y-3">
+                      <p className="text-muted-foreground italic">
+                        [AI-generated email body based on your persona, tone, and company context will appear here]
+                      </p>
+                      <div className="pt-3 border-t border-dashed border-border">
+                        <p className="font-medium">{form.emailSignatureName || "Agent Name"}</p>
+                        <p className="text-muted-foreground text-xs">
+                          {form.emailSignatureTitle || "Title"}
+                        </p>
+                        <p className="text-muted-foreground text-xs">
+                          {form.emailSignatureCompany || "Company"}
+                        </p>
+                        {form.emailSignaturePhone && (
+                          <p className="text-muted-foreground text-xs">{form.emailSignaturePhone}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
             {/* Save Button */}
-            <div className="flex justify-end pb-8">
+            <div className="sticky bottom-0 bg-background pt-4 pb-8 border-t border-border">
+              <div className="flex justify-end">
               <Button
                 onClick={handleSave}
                 disabled={saveMutation.isPending}
-                className="bg-[#17B6C3] hover:bg-[#14a3af] text-white"
+                className="bg-primary hover:bg-primary/90 text-white"
               >
                 {saveMutation.isPending ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -337,6 +479,7 @@ export default function SettingsAgentPersonas() {
                 )}
                 Save Persona
               </Button>
+              </div>
             </div>
       </div>
     </AppShell>

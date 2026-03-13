@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import {
   Loader2,
@@ -16,6 +17,7 @@ import {
   Building2,
   Clock,
   Landmark,
+  Mail,
 } from "lucide-react";
 
 interface XeroHealth {
@@ -73,6 +75,39 @@ export default function SettingsIntegrations() {
     <AppShell title="Integrations" subtitle="Connect Xero, Open Banking, and other services">
       <div className="max-w-3xl mx-auto space-y-6">
         {/* Xero */}
+        {isLoading ? (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-10 w-10 rounded-lg" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-5 w-20" />
+                      <Skeleton className="h-3 w-32" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-5 w-24 rounded-full" />
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="h-4 w-32" />
+                  </div>
+                  <div className="space-y-2">
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="h-4 w-28" />
+                  </div>
+                </div>
+                <Separator />
+                <div className="flex gap-2">
+                  <Skeleton className="h-8 w-24 rounded-md" />
+                  <Skeleton className="h-8 w-28 rounded-md" />
+                </div>
+              </CardContent>
+            </Card>
+        ) : (
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -85,9 +120,7 @@ export default function SettingsIntegrations() {
                       <CardDescription>Accounting &amp; invoicing</CardDescription>
                     </div>
                   </div>
-                  {isLoading ? (
-                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                  ) : connected ? (
+                  {connected ? (
                     <Badge className="bg-emerald-100 text-emerald-700">
                       <CheckCircle2 className="h-3 w-3 mr-1" /> Connected
                     </Badge>
@@ -104,11 +137,13 @@ export default function SettingsIntegrations() {
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
                         <span className="text-muted-foreground">Organisation</span>
-                        <p className="font-medium">{xeroHealth.organisationName || "—"}</p>
+                        <p className="text-xs text-muted-foreground/70">Linked Xero organisation</p>
+                        <p className="font-medium mt-0.5">{xeroHealth.organisationName || "—"}</p>
                       </div>
                       <div>
                         <span className="text-muted-foreground">Last Synced</span>
-                        <p className="font-medium">
+                        <p className="text-xs text-muted-foreground/70">Most recent data pull</p>
+                        <p className="font-medium mt-0.5">
                           {xeroHealth.lastSyncAt
                             ? new Date(xeroHealth.lastSyncAt).toLocaleString("en-GB", {
                                 day: "numeric",
@@ -168,6 +203,7 @@ export default function SettingsIntegrations() {
                 </div>
               </CardContent>
             </Card>
+        )}
 
             {/* Open Banking — placeholder */}
             <Card className="opacity-70">
@@ -190,6 +226,31 @@ export default function SettingsIntegrations() {
               <CardContent>
                 <p className="text-sm text-muted-foreground">
                   Open Banking integration will enable automatic payment matching against outstanding invoices, reducing manual reconciliation.
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Email (SendGrid) — placeholder */}
+            <Card className="opacity-70">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-indigo-100 flex items-center justify-center">
+                      <Mail className="h-5 w-5 text-indigo-600" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg">Email (SendGrid)</CardTitle>
+                      <CardDescription>Transactional emails &amp; inbound parsing</CardDescription>
+                    </div>
+                  </div>
+                  <Badge className="bg-gray-100 text-gray-500">
+                    <Clock className="h-3 w-3 mr-1" /> Coming Soon
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  SendGrid integration will power agent-sent collection emails, delivery tracking, and inbound reply parsing for automated debtor conversations.
                 </p>
               </CardContent>
             </Card>

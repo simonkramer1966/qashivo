@@ -62,7 +62,7 @@ export default function UserProfileDialog({ open, onOpenChange, onLogout }: User
           <div className="flex flex-col items-center space-y-4">
             <Avatar className="h-24 w-24">
               <AvatarImage src={(user as any)?.profileImageUrl || ""} alt={getUserName()} />
-              <AvatarFallback className="bg-[#17B6C3] text-white text-2xl font-semibold">
+              <AvatarFallback className="bg-primary text-white text-2xl font-semibold">
                 {getUserInitials()}
               </AvatarFallback>
             </Avatar>

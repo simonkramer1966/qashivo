@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import {
   Shield,
@@ -112,8 +113,54 @@ export default function SettingsAutonomyRules() {
   if (isLoading) {
     return (
       <AppShell title="Autonomy & Rules" subtitle="Set agent decision boundaries and escalation rules">
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <div className="max-w-3xl mx-auto space-y-6">
+          {/* Autonomy Mode skeleton */}
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="h-4 w-72 mt-1" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="rounded-lg border-2 border-border p-4">
+                  <div className="flex items-start gap-3">
+                    <Skeleton className="h-5 w-5 mt-0.5 rounded" />
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-5 w-16 rounded-full" />
+                      </div>
+                      <Skeleton className="h-3 w-full" />
+                      <Skeleton className="h-3 w-3/4" />
+                    </div>
+                    <Skeleton className="h-4 w-4 rounded-full mt-0.5" />
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* Exception Rules skeleton */}
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-5 w-36" />
+              <Skeleton className="h-4 w-80 mt-1" />
+            </CardHeader>
+            <CardContent className="space-y-5">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i}>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <Skeleton className="h-4 w-48" />
+                      <Skeleton className="h-3 w-64" />
+                    </div>
+                    <Skeleton className="h-5 w-9 rounded-full" />
+                  </div>
+                  {i < 4 && <Separator className="mt-5" />}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
         </div>
       </AppShell>
     );
@@ -128,7 +175,7 @@ export default function SettingsAutonomyRules() {
           <Button
             onClick={() => saveMutation.mutate()}
             disabled={saveMutation.isPending}
-            className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+            className="bg-primary hover:bg-primary/90 text-white"
           >
             {saveMutation.isPending ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -140,12 +187,12 @@ export default function SettingsAutonomyRules() {
         ) : undefined
       }
     >
-      <div className="space-y-6">
+      <div className="max-w-3xl mx-auto space-y-6">
           {/* Autonomy Mode Selection */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5 text-[#17B6C3]" />
+                <Shield className="h-5 w-5 text-primary" />
                 Autonomy Mode
               </CardTitle>
               <CardDescription>
@@ -162,12 +209,12 @@ export default function SettingsAutonomyRules() {
                     onClick={() => setApprovalMode(mode.value)}
                     className={`w-full text-left rounded-lg border-2 p-4 transition-colors ${
                       isSelected
-                        ? "border-[#17B6C3] bg-[#17B6C3]/5"
+                        ? "border-primary bg-primary/5"
                         : "border-border hover:border-muted-foreground/30"
                     }`}
                   >
                     <div className="flex items-start gap-3">
-                      <Icon className={`h-5 w-5 mt-0.5 ${isSelected ? "text-[#17B6C3]" : "text-muted-foreground"}`} />
+                      <Icon className={`h-5 w-5 mt-0.5 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="font-medium text-foreground">{mode.label}</span>
@@ -177,7 +224,7 @@ export default function SettingsAutonomyRules() {
                       </div>
                       <div
                         className={`h-4 w-4 rounded-full border-2 mt-0.5 ${
-                          isSelected ? "border-[#17B6C3] bg-[#17B6C3]" : "border-muted-foreground/40"
+                          isSelected ? "border-primary bg-primary" : "border-muted-foreground/40"
                         }`}
                       >
                         {isSelected && (
@@ -198,7 +245,7 @@ export default function SettingsAutonomyRules() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-[#17B6C3]" />
+                  <Clock className="h-5 w-5 text-primary" />
                   Auto-Approve Timeout
                 </CardTitle>
                 <CardDescription>

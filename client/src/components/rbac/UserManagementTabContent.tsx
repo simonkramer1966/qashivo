@@ -201,7 +201,7 @@ export default function UserManagementTabContent() {
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center mb-1">
-              <Users className="h-5 w-5 text-[#17B6C3] mr-2" />
+              <Users className="h-5 w-5 text-primary mr-2" />
               <h2 className="text-lg font-semibold text-gray-900">User Management</h2>
             </div>
             <p className="text-sm text-gray-500">
@@ -211,7 +211,7 @@ export default function UserManagementTabContent() {
           
           <UserInviteModal
             trigger={
-              <Button className="h-9 rounded-full bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="invite-user-button">
+              <Button className="h-9 rounded-full bg-primary hover:bg-primary/90 text-white" data-testid="invite-user-button">
                 <UserPlus className="h-4 w-4 mr-2" />
                 Invite User
               </Button>
@@ -255,7 +255,7 @@ export default function UserManagementTabContent() {
         <TabsContent value="users" className="mt-6">
           <div className="py-6 border-b border-gray-100">
             <div className="flex items-center mb-1">
-              <Users className="h-5 w-5 text-[#17B6C3] mr-2" />
+              <Users className="h-5 w-5 text-primary mr-2" />
               <h3 className="text-lg font-semibold text-gray-900">Team Members ({tenantUsers.length})</h3>
             </div>
             <p className="text-sm text-gray-500 mb-6">
@@ -271,7 +271,7 @@ export default function UserManagementTabContent() {
                 </p>
                 <UserInviteModal
                   trigger={
-                    <Button className="h-9 rounded-full bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="invite-first-user">
+                    <Button className="h-9 rounded-full bg-primary hover:bg-primary/90 text-white" data-testid="invite-first-user">
                       <UserPlus className="h-4 w-4 mr-2" />
                       Invite Your First User
                     </Button>
@@ -378,7 +378,7 @@ export default function UserManagementTabContent() {
         <TabsContent value="activity" className="mt-6">
           <div className="py-6 border-b border-gray-100">
             <div className="flex items-center mb-1">
-              <Activity className="h-5 w-5 text-[#17B6C3] mr-2" />
+              <Activity className="h-5 w-5 text-primary mr-2" />
               <h3 className="text-lg font-semibold text-gray-900">User Activity Log</h3>
             </div>
             <p className="text-sm text-gray-500 mb-6">
