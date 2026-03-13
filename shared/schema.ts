@@ -678,7 +678,13 @@ export const actions = pgTable("actions", {
   voiceRecordingUrl: varchar("voice_recording_url"),
   voiceLastPolledAt: timestamp("voice_last_polled_at"),
   voiceProcessedAt: timestamp("voice_processed_at"), // Set once outcomes/events created (idempotency)
-  
+
+  // Sprint 4.3: Agent audit trail
+  agentReasoning: text("agent_reasoning"), // Why the agent chose this approach/tone (internal audit only)
+  agentToneLevel: varchar("agent_tone_level"), // friendly | professional | firm | formal | legal
+  agentChannel: varchar("agent_channel"), // email | sms | voice | internal
+  complianceResult: varchar("compliance_result"), // approved | blocked | regenerated | queued
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [

@@ -55,7 +55,7 @@ export async function processCollectionEmail(
 ): Promise<PipelineResult> {
   try {
     // 1. Map Charlie decision → agent action context
-    const actionContext = await mapDecisionToActionContext(decision);
+    let actionContext = await mapDecisionToActionContext(decision);
 
     // 2. Generate email via Collections Agent (LLM)
     console.log(`[Pipeline] Generating LLM email for contact ${contactId}`);
@@ -75,7 +75,7 @@ export async function processCollectionEmail(
 
     // 3. Run compliance check
     console.log(`[Pipeline] Running compliance check for action ${actionId}`);
-    const compliance = await checkCompliance({
+    let compliance = await checkCompliance({
       tenantId,
       contactId,
       actionId,
@@ -138,19 +138,25 @@ export async function processCollectionEmail(
         };
       }
 
-      // Use regenerated content
+      // Use regenerated content and update context to reflect downgraded tone
       emailResult.subject = regenerated.subject;
       emailResult.body = regenerated.body;
       emailResult.agentReasoning = regenerated.agentReasoning;
+      actionContext = lowerContext;
+      compliance = recheck;
     }
 
-    // 5. Update action with generated content
+    // 5. Update action with generated content + metrics
     await db
       .update(actions)
       .set({
         subject: emailResult.subject,
         content: emailResult.body,
         aiGenerated: true,
+        agentReasoning: emailResult.agentReasoning,
+        agentToneLevel: actionContext.toneLevel,
+        agentChannel: "email",
+        complianceResult: compliance.approved ? "approved" : (compliance.action || "blocked"),
         metadata: sql`jsonb_set(
           jsonb_set(COALESCE(${actions.metadata}, '{}'), '{agentReasoning}', ${JSON.stringify(emailResult.agentReasoning)}::jsonb),
           '{generatedBy}', '"collections_agent_llm"'::jsonb
