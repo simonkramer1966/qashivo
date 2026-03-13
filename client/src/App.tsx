@@ -7,73 +7,22 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
-import { SplashProvider, useSplash } from "@/contexts/SplashContext";
-import SplashScreen from "@/components/SplashScreen";
-import { useInactivityTimer } from "@/hooks/useInactivityTimer";
 import PageLoader from "@/components/PageLoader";
 import AdminShell from "@/components/AdminShell";
 import type { OnboardingStatus } from "@/components/OnboardingWizard";
 
-// Lazy-loaded pages for code splitting
+// Lazy-loaded pages
 const NotFound = lazy(() => import("@/pages/not-found"));
-const Cashboard = lazy(() => import("@/pages/cashboard"));
-const Invoices = lazy(() => import("@/pages/invoices"));
-const Contacts = lazy(() => import("@/pages/contacts"));
-const ActionCentre2 = lazy(() => import("@/pages/action-centre2"));
-const ActivityLog = lazy(() => import("@/pages/activity-log"));
-const Settings = lazy(() => import("@/pages/settings"));
-const Account = lazy(() => import("@/pages/account"));
-const PartnerDashboard = lazy(() => import("@/pages/partner"));
-const QashivoAdminDashboard = lazy(() => import("@/pages/qashivo-admin"));
-const Documentation = lazy(() => import("@/pages/documentation"));
-const DocumentationReview = lazy(() => import("@/pages/documentation-review"));
-const PartnerRegistration = lazy(() => import("@/pages/partner-registration"));
-const ClientRegistration = lazy(() => import("@/pages/client-registration"));
-const InvestorDemo = lazy(() => import("@/pages/demo"));
-const InvestorDemoQashivo = lazy(() => import("@/pages/investor-demo-qashivo"));
-const InvestorDetail = lazy(() => import("@/pages/investor-detail"));
-const InvestorCRM = lazy(() => import("@/pages/investor-crm"));
-const DocsDownload = lazy(() => import("@/pages/docs-download"));
 const DebtorPortal = lazy(() => import("@/pages/debtor-portal"));
-const BetaPartner = lazy(() => import("@/pages/beta-partner"));
-const Dashboard = lazy(() => import("@/pages/dashboard"));
-const DashboardExperimental = lazy(() => import("@/pages/dashboard-experimental"));
-const CashboardExperimental = lazy(() => import("@/pages/cashboard-experimental"));
-const Homepage = lazy(() => import("@/pages/homepage"));
-const Home = lazy(() => import("@/pages/Home"));
-const Contact = lazy(() => import("@/pages/Contact"));
-const Integrations = lazy(() => import("@/pages/Integrations"));
-const PricingPage = lazy(() => import("@/pages/Pricing"));
-const Partners = lazy(() => import("@/pages/Partners"));
-const Product = lazy(() => import("@/pages/Product"));
-const PartnerContact = lazy(() => import("@/pages/PartnerContact"));
-const DesignPartner = lazy(() => import("@/pages/design-partner"));
-const DesignPartnerThankYou = lazy(() => import("@/pages/design-partner-thank-you"));
-const FoundingPartners = lazy(() => import("@/pages/founding-partners"));
-const PartnerScorecard = lazy(() => import("@/pages/PartnerScorecard"));
-// Login/Signup handled by Clerk components (ClerkSignInPage, ClerkSignUpPage)
-// ForgotPassword/ResetPassword handled by Clerk
 const UserOnboarding = lazy(() => import("@/pages/UserOnboarding"));
 const ConnectionError = lazy(() => import("@/pages/connection-error"));
-const CashFlow = lazy(() => import("@/pages/cash-flow"));
-const Financing = lazy(() => import("@/pages/financing"));
-const Automation = lazy(() => import("@/pages/automation"));
-const Workflows = lazy(() => import("@/pages/workflows"));
-const WorkflowProfile = lazy(() => import("@/pages/workflow-profile"));
-const CustomerDetail = lazy(() => import("@/pages/customer-detail"));
-const Customers2 = lazy(() => import("@/pages/customers2"));
-const PartnerPractice = lazy(() => import("@/pages/partner-practice"));
-const PartnerClients = lazy(() => import("@/pages/partner-clients"));
-const PartnerClientDetail = lazy(() => import("@/pages/partner-client-detail"));
 const AcceptInvite = lazy(() => import("@/pages/accept-invite"));
 const AcceptUserInvite = lazy(() => import("@/pages/accept-user-invite"));
 const SmeOnboarding = lazy(() => import("@/pages/sme-onboarding"));
-const Inbox = lazy(() => import("@/pages/inbox"));
-const Loop = lazy(() => import("@/pages/loop"));
-const InvestorInterest = lazy(() => import("@/pages/investor-interest"));
-const Overview2 = lazy(() => import("@/pages/overview2"));
 const Privacy = lazy(() => import("@/pages/Privacy"));
 const Terms = lazy(() => import("@/pages/Terms"));
+const QashivoAdminDashboard = lazy(() => import("@/pages/qashivo-admin"));
+const InvestorInterest = lazy(() => import("@/pages/investor-interest"));
 
 // Pillar pages — Qollections
 const QollectionsDashboard = lazy(() => import("@/pages/qollections/dashboard"));
@@ -153,16 +102,16 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
 
 function ClerkSignInPage() {
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center">
-      <SignIn routing="path" path="/login" signUpUrl="/signup" />
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <SignIn routing="path" path="/login" signUpUrl="/signup" forceRedirectUrl="/qollections" />
     </div>
   );
 }
 
 function ClerkSignUpPage() {
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center">
-      <SignIn routing="path" path="/signup" />
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <SignIn routing="path" path="/signup" forceRedirectUrl="/qollections" />
     </div>
   );
 }
@@ -176,24 +125,13 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
-  const { showSplash, setShowSplash } = useSplash();
-  const [location] = useLocation();
 
-  // Inactivity timer disabled - splash screen is now manual only via logo click
-  // const isInvestorDemo = location === '/investor-demo' || location === '/investor-demo-qashivo' || location === '/investor-detail' || location === '/beta-partner';
-  // useInactivityTimer({
-  //   timeout: 60000, // 60 seconds
-  //   onInactive: triggerSplash,
-  //   enabled: isAuthenticated && !showSplash && !isInvestorDemo
-  // });
-
-  // Show loading state while checking authentication
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="w-8 h-8 border-4 border-[#17B6C3] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
@@ -201,41 +139,24 @@ function Router() {
 
   return (
     <>
-      {/* Splash Screen Overlay */}
-      {showSplash && <SplashScreen onEnter={() => setShowSplash(false)} />}
-
       {!isAuthenticated ? (
-        // Unauthenticated routes - only signup and signin pages
+        // Unauthenticated routes — Clerk sign-in + public-only pages
         <Switch>
-          <Route path="/home" component={Home} />
-          <Route path="/contact" component={Contact} />
-          <Route path="/integrations" component={Integrations} />
-          <Route path="/pricing" component={PricingPage} />
-          <Route path="/partners" component={Partners} />
-          <Route path="/partner-contact" component={PartnerContact} />
-          <Route path="/design-partner/thank-you" component={DesignPartnerThankYou} />
-          <Route path="/design-partner" component={DesignPartner} />
-          <Route path="/founding-partners" component={FoundingPartners} />
-          <Route path="/partner-scorecard" component={PartnerScorecard} />
-          <Route path="/product" component={Product} />
-          <Route path="/homepage" component={Homepage} />
-          <Route path="/demo" component={InvestorDemo} />
-          <Route path="/investor-demo-qashivo" component={InvestorDemoQashivo} />
-          <Route path="/investor-detail" component={InvestorDetail} />
-          <Route path="/beta-partner" component={BetaPartner} />
-          <Route path="/debtor-portal" component={DebtorPortal} />
-          <Route path="/partner/register" component={PartnerRegistration} />
-          <Route path="/client/register" component={ClientRegistration} />
-          <Route path="/connection-error" component={ConnectionError} />
+          {/* Auth */}
           <Route path="/login" component={ClerkSignInPage} />
           <Route path="/signup" component={ClerkSignUpPage} />
           <Route path="/signin" component={ClerkSignInPage} />
-          <Route path="/admin" component={AdminShell} />
-          <Route path="/admin/:rest*" component={AdminShell} />
+
+          {/* Public pages that must work without auth */}
+          <Route path="/debtor-portal" component={DebtorPortal} />
           <Route path="/accept-invite" component={AcceptInvite} />
           <Route path="/accept-user-invite" component={AcceptUserInvite} />
           <Route path="/sme-onboarding" component={SmeOnboarding} />
-          <Route path="/investor-interest" component={InvestorInterest} />
+          <Route path="/connection-error" component={ConnectionError} />
+          <Route path="/privacy" component={Privacy} />
+          <Route path="/terms" component={Terms} />
+
+          {/* Investor pages (public) */}
           <Route path="/investors" component={InvestorsHome} />
           <Route path="/investors/how-it-works" component={InvestorsHowItWorks} />
           <Route path="/investors/demo" component={InvestorsDemoPage} />
@@ -248,87 +169,29 @@ function Router() {
           <Route path="/investors/voice-demo" component={InvestorsVoiceDemo} />
           <Route path="/investors/contact" component={InvestorsContact} />
           <Route path="/investors/metrics" component={InvestorsMetrics} />
-          <Route path="/privacy" component={Privacy} />
-          <Route path="/terms" component={Terms} />
-          <Route path="/" component={Home} />
-          <Route path="/:rest*" component={Home} />
+          <Route path="/investor-interest" component={InvestorInterest} />
+
+          {/* Everything else → Clerk sign-in */}
+          <Route path="/">{() => <Redirect to="/login" />}</Route>
+          <Route path="/:rest*">{() => <Redirect to="/login" />}</Route>
         </Switch>
       ) : (
-        // Authenticated routes - main application
+        // Authenticated routes — Sprint pillar pages + essential legacy
         <OnboardingGuard>
         <Switch>
-          <Route path="/home" component={Home} />
-          <Route path="/contact" component={Contact} />
-          <Route path="/integrations" component={Integrations} />
-          <Route path="/pricing" component={PricingPage} />
-          <Route path="/partners" component={Partners} />
-          <Route path="/partner-contact" component={PartnerContact} />
-          <Route path="/design-partner/thank-you" component={DesignPartnerThankYou} />
-          <Route path="/design-partner" component={DesignPartner} />
-          <Route path="/founding-partners" component={FoundingPartners} />
-          <Route path="/partner-scorecard" component={PartnerScorecard} />
-          <Route path="/product" component={Product} />
-          <Route path="/homepage" component={Homepage} />
-          <Route path="/demo" component={InvestorDemo} />
-          <Route path="/investor-demo-qashivo" component={InvestorDemoQashivo} />
-          <Route path="/investor-detail" component={InvestorDetail} />
-          <Route path="/beta-partner" component={BetaPartner} />
-          <Route path="/debtor-portal" component={DebtorPortal} />
-          <Route path="/investor-crm" component={InvestorCRM} />
-          <Route path="/docs-download" component={DocsDownload} />
-          <Route path="/qashivo-admin" component={QashivoAdminDashboard} />
-          <Route path="/login">{() => <Redirect to="/" />}</Route>
-          <Route path="/signup">{() => <Redirect to="/" />}</Route>
-          <Route path="/signin">{() => <Redirect to="/" />}</Route>
-          <Route path="/admin" component={AdminShell} />
-          <Route path="/admin/:rest*" component={AdminShell} />
-          <Route path="/partner" component={PartnerDashboard} />
-          <Route path="/dashboard" component={Dashboard} />
-          <Route path="/dashboard-experimental" component={DashboardExperimental} />
-          <Route path="/onboarding" component={UserOnboarding} />
-          <Route path="/connection-error" component={ConnectionError} />
-          <Route path="/contacts" component={Customers2} />
-          <Route path="/customers" component={Customers2} />
-          <Route path="/customers/:customerId" component={CustomerDetail} />
-          <Route path="/customers2" component={Customers2} />
-          <Route path="/invoices" component={Invoices} />
-          <Route path="/action-centre" component={ActionCentre2} />
-          <Route path="/action-centre2" component={ActionCentre2} />
-          <Route path="/overview2" component={Overview2} />
-          <Route path="/inbox" component={Inbox} />
-          <Route path="/loop" component={Loop} />
-          <Route path="/activity-log" component={ActivityLog} />
-          <Route path="/documentation" component={Documentation} />
-          <Route path="/documentation-review" component={DocumentationReview} />
-          <Route path="/settings">{() => <PermissionGuard permission="admin:settings"><Settings /></PermissionGuard>}</Route>
-          <Route path="/account" component={Account} />
-          <Route path="/cash-flow">{() => <PermissionGuard permission="finance:cashflow"><CashFlow /></PermissionGuard>}</Route>
-          <Route path="/financing">{() => <PermissionGuard permission="finance:invoice_financing"><Financing /></PermissionGuard>}</Route>
-          <Route path="/automation" component={Automation} />
-          <Route path="/workflows" component={Workflows} />
-          <Route path="/workflow-settings" component={WorkflowProfile} />
-          <Route path="/cashboard-experimental">{() => <PermissionGuard permission="finance:cashflow"><CashboardExperimental /></PermissionGuard>}</Route>
-          <Route path="/p/:partnerSlug/practice" component={PartnerPractice} />
-          <Route path="/p/:partnerSlug/clients/:smeClientId" component={PartnerClientDetail} />
-          <Route path="/p/:partnerSlug/clients" component={PartnerClients} />
-          <Route path="/p/:partnerSlug" component={PartnerPractice} />
-          <Route path="/accept-invite" component={AcceptInvite} />
-          <Route path="/sme-onboarding" component={SmeOnboarding} />
-          <Route path="/investor-interest" component={InvestorInterest} />
-          <Route path="/investors" component={InvestorsHome} />
-          <Route path="/investors/how-it-works" component={InvestorsHowItWorks} />
-          <Route path="/investors/demo" component={InvestorsDemoPage} />
-          <Route path="/investors/business-model" component={InvestorsBusinessModel} />
-          <Route path="/investors/invest" component={InvestorsInvest} />
-          <Route path="/investors/financials" component={InvestorsFinancials} />
-          <Route path="/investors/team" component={InvestorsTeam} />
-          <Route path="/investors/roadmap" component={InvestorsRoadmap} />
-          <Route path="/investors/why" component={InvestorsWhy} />
-          <Route path="/investors/voice-demo" component={InvestorsVoiceDemo} />
-          <Route path="/investors/contact" component={InvestorsContact} />
-          <Route path="/investors/metrics" component={InvestorsMetrics} />
-          <Route path="/privacy" component={Privacy} />
-          <Route path="/terms" component={Terms} />
+          {/* Auth redirects — already signed in, go to dashboard */}
+          <Route path="/login">{() => <Redirect to="/qollections" />}</Route>
+          <Route path="/signup">{() => <Redirect to="/qollections" />}</Route>
+          <Route path="/signin">{() => <Redirect to="/qollections" />}</Route>
+          {/* Old marketing paths → redirect to dashboard */}
+          <Route path="/home">{() => <Redirect to="/qollections" />}</Route>
+          <Route path="/homepage">{() => <Redirect to="/qollections" />}</Route>
+          <Route path="/product">{() => <Redirect to="/qollections" />}</Route>
+          <Route path="/pricing">{() => <Redirect to="/qollections" />}</Route>
+          <Route path="/contact">{() => <Redirect to="/qollections" />}</Route>
+          <Route path="/partners">{() => <Redirect to="/qollections" />}</Route>
+          <Route path="/demo">{() => <Redirect to="/qollections" />}</Route>
+
           {/* Pillar routes — Qollections */}
           <Route path="/qollections/debtors" component={QollectionsDebtors} />
           <Route path="/qollections/invoices" component={QollectionsInvoices} />
@@ -336,17 +199,55 @@ function Router() {
           <Route path="/qollections/disputes" component={QollectionsDisputes} />
           <Route path="/qollections/reports" component={QollectionsReports} />
           <Route path="/qollections" component={QollectionsDashboard} />
+
           {/* Pillar routes — Qashflow, Qapital, Agent Team */}
           <Route path="/qashflow" component={QashflowPage} />
           <Route path="/qapital" component={QapitalPage} />
           <Route path="/agent-team" component={AgentTeamPage} />
+
           {/* Pillar routes — Settings */}
           <Route path="/settings/agent-personas" component={SettingsAgentPersonas} />
           <Route path="/settings/autonomy-rules" component={SettingsAutonomyRules} />
           <Route path="/settings/integrations" component={SettingsIntegrations} />
           <Route path="/settings/users-roles" component={SettingsUsersRoles} />
           <Route path="/settings/billing" component={SettingsBilling} />
-          {/* Home → Qollections Dashboard for all roles in v1 */}
+
+          {/* Onboarding */}
+          <Route path="/onboarding" component={UserOnboarding} />
+
+          {/* Public pages that also work when authenticated */}
+          <Route path="/debtor-portal" component={DebtorPortal} />
+          <Route path="/accept-invite" component={AcceptInvite} />
+          <Route path="/connection-error" component={ConnectionError} />
+          <Route path="/privacy" component={Privacy} />
+          <Route path="/terms" component={Terms} />
+
+          {/* Admin */}
+          <Route path="/qashivo-admin" component={QashivoAdminDashboard} />
+          <Route path="/admin" component={AdminShell} />
+          <Route path="/admin/:rest*" component={AdminShell} />
+
+          {/* Investor pages (also accessible when authenticated) */}
+          <Route path="/investors" component={InvestorsHome} />
+          <Route path="/investors/:rest*">{({ rest }: { rest: string }) => {
+            const investorRoutes: Record<string, React.ComponentType> = {
+              "how-it-works": InvestorsHowItWorks,
+              "demo": InvestorsDemoPage,
+              "business-model": InvestorsBusinessModel,
+              "invest": InvestorsInvest,
+              "financials": InvestorsFinancials,
+              "team": InvestorsTeam,
+              "roadmap": InvestorsRoadmap,
+              "why": InvestorsWhy,
+              "voice-demo": InvestorsVoiceDemo,
+              "contact": InvestorsContact,
+              "metrics": InvestorsMetrics,
+            };
+            const Component = investorRoutes[rest];
+            return Component ? <Component /> : <Redirect to="/investors" />;
+          }}</Route>
+
+          {/* Home → Qollections Dashboard */}
           <Route path="/" component={QollectionsDashboard} />
           <Route path="/:rest*" component={NotFound} />
         </Switch>
@@ -359,14 +260,12 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <SplashProvider>
-        <TooltipProvider>
-          <Suspense fallback={<PageLoader />}>
-            <Router />
-            <Toaster />
-          </Suspense>
-        </TooltipProvider>
-      </SplashProvider>
+      <TooltipProvider>
+        <Suspense fallback={<PageLoader />}>
+          <Router />
+          <Toaster />
+        </Suspense>
+      </TooltipProvider>
     </QueryClientProvider>
   );
 }
