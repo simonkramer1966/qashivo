@@ -86,15 +86,18 @@ function useOnboardingStatus() {
 
 function OnboardingGuard({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
-  const { data: status, isLoading } = useOnboardingStatus();
+  const { data: status, isLoading, isError } = useOnboardingStatus();
 
   useEffect(() => {
-    if (!isLoading && status && !isOnboardingComplete(status)) {
+    if (isLoading) return;
+    // If onboarding status errored (no tenant) or onboarding not complete, redirect
+    const needsOnboarding = isError || (status && !isOnboardingComplete(status));
+    if (needsOnboarding) {
       if (location !== "/onboarding" && !location.startsWith("/settings") && !location.startsWith("/account")) {
         setLocation("/onboarding");
       }
     }
-  }, [isLoading, status, location, setLocation]);
+  }, [isLoading, isError, status, location, setLocation]);
 
   if (isLoading) return <PageLoader />;
   return <>{children}</>;

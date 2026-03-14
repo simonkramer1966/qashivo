@@ -175,24 +175,29 @@ export async function setupAuth(app: Express) {
   // GET /api/user — returns the authenticated user's profile
   // Requires Clerk JWT (or legacy session) via isAuthenticated middleware
   app.get("/api/user", isAuthenticated, async (req, res) => {
-    const user = (req as any).user as any;
-    if (!user) {
-      return res.status(401).json({ message: "Not authenticated" });
-    }
-
-    return res.json({
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-        tenantRole: user.tenantRole,
-        tenantId: user.tenantId,
-        platformAdmin: user.platformAdmin,
-        partnerId: user.partnerId,
+    try {
+      const user = (req as any).user as any;
+      if (!user) {
+        return res.status(401).json({ message: "Not authenticated" });
       }
-    });
+
+      return res.json({
+        user: {
+          id: user.id,
+          email: user.email || "",
+          firstName: user.firstName || null,
+          lastName: user.lastName || null,
+          role: user.role || "user",
+          tenantRole: user.tenantRole || null,
+          tenantId: user.tenantId || null,
+          platformAdmin: user.platformAdmin || false,
+          partnerId: user.partnerId || null,
+        }
+      });
+    } catch (error) {
+      console.error("[/api/user] Error:", error);
+      return res.status(500).json({ message: "Failed to load user profile" });
+    }
   });
 
   // POST /api/logout — clear session (Clerk handles token revocation client-side)

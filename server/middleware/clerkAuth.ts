@@ -14,12 +14,73 @@ const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY || "" 
 
 /**
  * Look up a local user by their Clerk ID.
- * On first sign-in the user won't exist yet — the Clerk webhook handler
- * (or a future sync route) is responsible for creating the row.
  */
 async function getUserByClerkId(clerkId: string) {
   const [user] = await db.select().from(users).where(eq(users.clerkId, clerkId));
   return user ?? undefined;
+}
+
+/**
+ * Look up a local user by email.
+ */
+async function getUserByEmail(email: string) {
+  const [user] = await db.select().from(users).where(eq(users.email, email));
+  return user ?? undefined;
+}
+
+/**
+ * Provision a new user from their Clerk profile.
+ * Called when the Clerk webhook hasn't fired yet.
+ */
+async function provisionUserFromClerk(clerkUserId: string): Promise<typeof users.$inferSelect | undefined> {
+  console.log("[clerkAuth] Provisioning user inline for clerkId:", clerkUserId);
+
+  // Fetch user details from Clerk API
+  let clerkUser;
+  try {
+    clerkUser = await clerk.users.getUser(clerkUserId);
+  } catch (err) {
+    console.error("[clerkAuth] Failed to fetch Clerk user:", err);
+    return undefined;
+  }
+
+  const email = clerkUser.emailAddresses?.[0]?.emailAddress;
+  if (!email) {
+    console.error("[clerkAuth] Clerk user has no email address");
+    return undefined;
+  }
+
+  // Check if a legacy user exists with this email (migration case)
+  const existingByEmail = await getUserByEmail(email);
+  if (existingByEmail) {
+    console.log("[clerkAuth] Linking legacy user by email:", email);
+    await db.update(users)
+      .set({ clerkId: clerkUserId, updatedAt: new Date() })
+      .where(eq(users.id, existingByEmail.id));
+    return { ...existingByEmail, clerkId: clerkUserId };
+  }
+
+  // Create new tenant + user
+  console.log("[clerkAuth] Creating new tenant + user for:", email);
+  const tenant = await storage.createTenant({
+    name: `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim() || email,
+    subdomain: `tenant-${crypto.randomBytes(8).toString("hex")}`,
+  });
+
+  const newUser = await storage.createUser({
+    clerkId: clerkUserId,
+    email,
+    password: "clerk-managed",
+    firstName: clerkUser.firstName || null,
+    lastName: clerkUser.lastName || null,
+    profileImageUrl: clerkUser.imageUrl || null,
+    tenantId: tenant.id,
+    role: "owner",
+    tenantRole: "owner",
+  } as any);
+
+  console.log("[clerkAuth] User provisioned:", newUser?.id, "tenant:", tenant.id);
+  return newUser;
 }
 
 /**
@@ -28,12 +89,7 @@ async function getUserByClerkId(clerkId: string) {
  * Reads the Bearer token from the Authorization header, verifies it
  * with Clerk, then maps the Clerk user to the local `users` table.
  *
- * Sets `req.user` in the shape the existing RBAC middleware expects:
- *   req.user.claims.sub  → local user.id  (NOT the Clerk ID)
- *   req.user.claims.email → user email
- *
- * If the Clerk user has no local row yet a 403 is returned — the
- * user must be provisioned first (via Clerk webhook or admin invite).
+ * If the Clerk user has no local row yet, provisions them inline.
  */
 export const clerkAuth: RequestHandler = async (req, res, next) => {
   try {
@@ -44,76 +100,61 @@ export const clerkAuth: RequestHandler = async (req, res, next) => {
 
     const token = authHeader.slice(7);
 
-    // Verify the JWT with Clerk
-    let clerkPayload: { sub: string };
+    // Step 1: Verify the JWT with Clerk
+    let clerkUserId: string;
     try {
       const verifiedToken = await clerk.verifyToken(token);
-      clerkPayload = verifiedToken;
-    } catch {
+      clerkUserId = verifiedToken.sub;
+      if (!clerkUserId) {
+        console.error("[clerkAuth] Token verified but no 'sub' claim");
+        return res.status(401).json({ message: "Invalid token: missing user ID" });
+      }
+    } catch (err) {
+      console.error("[clerkAuth] Token verification failed:", (err as Error).message);
       return res.status(401).json({ message: "Invalid or expired token" });
     }
 
-    const clerkUserId = clerkPayload.sub;
+    // Step 2: Look up local user by Clerk ID
+    let user;
+    try {
+      user = await getUserByClerkId(clerkUserId);
+    } catch (err) {
+      console.error("[clerkAuth] Database lookup by clerkId failed:", err);
+      return res.status(500).json({ message: "Database error during authentication" });
+    }
 
-    // Map Clerk user → local user row
-    let user = await getUserByClerkId(clerkUserId);
-
-    // Inline provisioning: if webhook hasn't fired yet, create user now
+    // Step 3: Inline provisioning if user not found
     if (!user) {
       try {
-        const clerkUser = await clerk.users.getUser(clerkUserId);
-        const email = clerkUser.emailAddresses?.[0]?.emailAddress;
-        if (!email) {
-          return res.status(403).json({ message: "No email on Clerk account" });
-        }
+        user = await provisionUserFromClerk(clerkUserId);
+      } catch (err) {
+        console.error("[clerkAuth] Inline provisioning threw:", err);
+        return res.status(500).json({
+          message: "Failed to provision user account. Please try again.",
+        });
+      }
 
-        // Check if a legacy user exists with this email
-        const [existingByEmail] = await db.select().from(users).where(eq(users.email, email));
-        if (existingByEmail) {
-          // Link legacy user to Clerk
-          await db.update(users).set({ clerkId: clerkUserId, updatedAt: new Date() }).where(eq(users.id, existingByEmail.id));
-          user = { ...existingByEmail, clerkId: clerkUserId };
-        } else {
-          // Create new tenant + user
-          const tenant = await storage.createTenant({
-            name: `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim() || email,
-            subdomain: `tenant-${crypto.randomBytes(8).toString("hex")}`,
-          });
-          const newUser = await storage.createUser({
-            clerkId: clerkUserId,
-            email,
-            password: "clerk-managed",
-            firstName: clerkUser.firstName || null,
-            lastName: clerkUser.lastName || null,
-            profileImageUrl: clerkUser.imageUrl || null,
-            tenantId: tenant.id,
-            role: "owner",
-            tenantRole: "owner",
-          } as any);
-          user = newUser;
-        }
-      } catch (provisionError) {
-        console.error("[clerkAuth] Inline provisioning failed:", provisionError);
+      if (!user) {
         return res.status(403).json({
-          message: "User not provisioned. Complete onboarding or contact your admin.",
+          message: "Unable to create your account. Please contact support.",
         });
       }
     }
 
-    // Set req.user in the shape RBAC middleware expects
+    // Step 4: Set req.user in the shape RBAC middleware expects
     (req as any).user = {
       id: user.id,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      tenantId: user.tenantId,
-      role: user.role,
-      tenantRole: user.tenantRole,
-      platformAdmin: user.platformAdmin,
-      partnerId: user.partnerId,
+      email: user.email || "",
+      firstName: user.firstName || null,
+      lastName: user.lastName || null,
+      tenantId: user.tenantId || null,
+      role: user.role || "user",
+      tenantRole: user.tenantRole || null,
+      platformAdmin: user.platformAdmin || false,
+      partnerId: user.partnerId || null,
       claims: {
         sub: user.id,
-        email: user.email,
+        email: user.email || "",
       },
     };
 
