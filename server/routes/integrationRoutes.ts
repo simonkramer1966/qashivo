@@ -485,85 +485,29 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
         xeroHealthCheckError: null,
       });
       
-      console.log(`✅ Xero connected successfully for app tenant: ${appTenantId}, Xero org: ${xeroOrgName}`);
+      console.log(`[Xero] Connected successfully for tenant: ${appTenantId}, org: ${xeroOrgName}`);
 
-      // Re-establish Passport session after OAuth redirect
-      // Retrieve the user ID that was stored in session during auth-url request
-      const originalUserId = req.session?.oauthUserId;
-      
-      if (!req.user && originalUserId) {
-        // User isn't authenticated after OAuth redirect - re-establish session with the ORIGINAL user
-        console.log(`🔐 Re-establishing Passport session for user ID: ${originalUserId}`);
-        
-        const originalUser = await storage.getUser(originalUserId);
-        if (!originalUser) {
-          console.error(`❌ Could not find user ${originalUserId} to re-establish session`);
-          // Clean up the stored user ID
-          delete req.session.oauthUserId;
-          const errorMsg = encodeURIComponent('Session expired. Please log in and try again.');
-          return res.redirect(`/connection-error?provider=xero&error=${errorMsg}`);
-        }
-        
-        // Re-authenticate with the exact user who initiated the OAuth flow
-        await new Promise<void>((resolve, reject) => {
-          req.login(originalUser, (err) => {
-            if (err) {
-              console.error('❌ Failed to re-establish Passport session:', err);
-              reject(err);
-            } else {
-              console.log(`✅ Passport session re-established successfully for: ${originalUser.email}`);
-              // Clean up the stored user ID now that session is re-established
-              delete req.session.oauthUserId;
-              resolve();
-            }
-          });
-        });
-      } else if (req.user) {
-        console.log(`✅ User already authenticated: ${req.user.email}`);
-        // Clean up stored user ID if it exists
-        if (req.session?.oauthUserId) {
-          delete req.session.oauthUserId;
-        }
-      } else {
-        console.warn(`⚠️ No user authenticated and no oauthUserId in session - possible session loss`);
-        const errorMsg = encodeURIComponent('Authentication session lost. Please log in and try again.');
-        return res.redirect(`/connection-error?provider=xero&error=${errorMsg}`);
-      }
+      // Clean up OAuth session data (no Passport re-auth needed — Clerk handles auth via JWT)
+      if (req.session?.oauthUserId) delete req.session.oauthUserId;
+      if (req.session?.xeroReturnTo) delete req.session.xeroReturnTo;
+      if (req.session?.xeroRedirectUri) delete req.session.xeroRedirectUri;
 
       // Determine redirect: settings (if reconnecting) vs onboarding (if first time)
       let isOnboardingComplete = false;
-      let redirectUrl = '/onboarding';
-      
+      let redirectUrl = '/settings/integrations';
+
       try {
         isOnboardingComplete = await onboardingService.isOnboardingCompleted(appTenantId);
-        
-        // Clean up returnTo from session
-        const rawReturnTo = req.session?.xeroReturnTo;
-        if (req.session?.xeroReturnTo) {
-          delete req.session.xeroReturnTo;
-        }
-        
-        if (isOnboardingComplete) {
-          const allowedRoutes = new Set([
-            '/dashboard', '/settings', '/settings/integrations', '/settings/team',
-            '/settings/billing', '/action-centre', '/contacts', '/invoices',
-            '/workflows', '/analytics', '/profile', '/admin',
-          ]);
-          
-          if (rawReturnTo && typeof rawReturnTo === 'string' && allowedRoutes.has(rawReturnTo)) {
-            redirectUrl = rawReturnTo;
-          } else {
-            redirectUrl = '/dashboard';
-          }
-          console.log(`📍 Onboarding complete - redirecting to: ${redirectUrl}`);
-        } else {
-          // Mark step 2 (Connect Xero) as COMPLETED without touching other steps
+
+        if (!isOnboardingComplete) {
           await onboardingService.updateStepStatus(appTenantId, 2, "COMPLETED");
           redirectUrl = '/onboarding';
-          console.log(`📍 Onboarding incomplete - marked step 2 complete, redirecting to: ${redirectUrl}`);
+          console.log(`[Xero] Onboarding incomplete — marked step 2 complete, redirecting to: ${redirectUrl}`);
+        } else {
+          console.log(`[Xero] Onboarding complete — redirecting to: ${redirectUrl}`);
         }
       } catch (error) {
-        console.error(`⚠️ Failed to check onboarding status:`, error);
+        console.error(`[Xero] Failed to check onboarding status:`, error);
       }
 
       // Trigger automatic comprehensive sync after successful connection
