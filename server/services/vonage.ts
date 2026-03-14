@@ -59,8 +59,38 @@ export async function sendSMS(params: SMSParams & {
     }
 
     const from = params.from || fromNumber;
-    const to = params.to;
-    const text = params.message;
+    let to = params.to;
+    let text = params.message;
+
+    // Safety net: check tenant communication mode for SMS redirection
+    if ((params as any).tenantId) {
+      try {
+        const { db } = await import('../db.js');
+        const { tenants } = await import('../../shared/schema.js');
+        const { eq } = await import('drizzle-orm');
+        const [tenant] = await db.select({
+          communicationMode: tenants.communicationMode,
+          testPhones: tenants.testPhones,
+        }).from(tenants).where(eq(tenants.id, (params as any).tenantId));
+
+        if (tenant?.communicationMode === 'off') {
+          console.log(`🚫 [SmsSafetyNet] Communication mode is OFF — blocking SMS`);
+          return { success: false, error: 'Communication mode is OFF' };
+        }
+
+        if (tenant?.communicationMode === 'testing') {
+          const testPhones = tenant.testPhones as string[] | null;
+          if (testPhones?.length) {
+            const originalTo = to;
+            to = testPhones[0];
+            text = `[TEST] Original recipient: ${originalTo}\n\n${text}`;
+            console.log(`🧪 [SmsSafetyNet] Redirected SMS from ${originalTo} → ${to}`);
+          }
+        }
+      } catch (err) {
+        console.warn('[SmsSafetyNet] Could not check communication mode:', err);
+      }
+    }
 
     console.log(`📤 Sending Vonage SMS from ${from} to ${to}`);
 

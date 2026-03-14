@@ -22,6 +22,11 @@ import {
   Eye,
   Timer,
   Bot,
+  FlaskConical,
+  Radio,
+  Power,
+  Rocket,
+  Send,
 } from "lucide-react";
 
 interface TenantSettings {
@@ -34,6 +39,60 @@ interface TenantSettings {
     flagVipCustomers: boolean;
   };
 }
+
+interface CommModeSettings {
+  mode: string;
+  testContactName: string;
+  testEmails: string[];
+  testPhones: string[];
+}
+
+type CommMode = "off" | "testing" | "soft_live" | "live";
+
+const COMM_MODES: {
+  value: CommMode;
+  label: string;
+  icon: typeof Power;
+  description: string;
+  badge: string;
+  badgeColor: string;
+}[] = [
+  {
+    value: "off",
+    label: "Off",
+    icon: Power,
+    description: "All outbound communications are blocked. No emails, SMS, or calls will be sent.",
+    badge: "Disabled",
+    badgeColor: "bg-gray-100 text-gray-600",
+  },
+  {
+    value: "testing",
+    label: "Testing",
+    icon: FlaskConical,
+    description:
+      "Communications are sent to your test addresses only. Subjects are prefixed with [TEST] and include the original recipient. Use this to verify agent behaviour before going live.",
+    badge: "Default",
+    badgeColor: "bg-amber-100 text-amber-700",
+  },
+  {
+    value: "soft_live",
+    label: "Soft Live",
+    icon: Radio,
+    description:
+      "Communications are sent to real debtors, but only for contacts explicitly opted in. Everything else goes to test addresses.",
+    badge: "Careful",
+    badgeColor: "bg-blue-100 text-blue-700",
+  },
+  {
+    value: "live",
+    label: "Live",
+    icon: Rocket,
+    description:
+      "All communications are sent to real debtors. Only enable this when you are confident in agent performance.",
+    badge: "Production",
+    badgeColor: "bg-emerald-100 text-emerald-700",
+  },
+];
 
 const MODES = [
   {
@@ -72,9 +131,49 @@ export default function SettingsAutonomyRules() {
     queryKey: ["/api/tenant/settings"],
   });
 
+  const { data: commSettings, isLoading: commLoading } = useQuery<CommModeSettings>({
+    queryKey: ["/api/communications/mode"],
+  });
+
   const [approvalMode, setApprovalMode] = useState<string | null>(null);
   const [timeoutHours, setTimeoutHours] = useState<number | null>(null);
   const [exceptionRules, setExceptionRules] = useState<TenantSettings["exceptionRules"] | null>(null);
+
+  // Communication testing state
+  const [commMode, setCommMode] = useState<CommMode | null>(null);
+  const [testContactName, setTestContactName] = useState<string | null>(null);
+  const [testEmailsInput, setTestEmailsInput] = useState<string | null>(null);
+  const [testPhonesInput, setTestPhonesInput] = useState<string | null>(null);
+
+  const currentCommMode = (commMode ?? commSettings?.mode ?? "testing") as CommMode;
+  const currentTestContactName = testContactName ?? commSettings?.testContactName ?? "";
+  const currentTestEmails = testEmailsInput ?? (commSettings?.testEmails?.join(", ") ?? "");
+  const currentTestPhones = testPhonesInput ?? (commSettings?.testPhones?.join(", ") ?? "");
+  const hasCommChanges = commMode !== null || testContactName !== null || testEmailsInput !== null || testPhonesInput !== null;
+
+  const commSaveMutation = useMutation({
+    mutationFn: async () => {
+      const body: Record<string, any> = {
+        mode: currentCommMode,
+        testContactName: currentTestContactName,
+        testEmails: currentTestEmails.split(",").map((e: string) => e.trim()).filter(Boolean),
+        testPhones: currentTestPhones.split(",").map((p: string) => p.trim()).filter(Boolean),
+      };
+      const res = await apiRequest("PUT", "/api/communications/mode", body);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Communication settings saved" });
+      queryClient.invalidateQueries({ queryKey: ["/api/communications/mode"] });
+      setCommMode(null);
+      setTestContactName(null);
+      setTestEmailsInput(null);
+      setTestPhonesInput(null);
+    },
+    onError: (err: Error) => {
+      toast({ title: "Failed to save", description: err.message, variant: "destructive" });
+    },
+  });
 
   // Use local state if set, otherwise fall back to server data
   const currentMode = approvalMode ?? settings?.approvalMode ?? "manual";
@@ -364,6 +463,121 @@ export default function SettingsAutonomyRules() {
                   }
                 />
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Communication Testing */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Send className="h-5 w-5 text-primary" />
+                Communication Testing
+              </CardTitle>
+              <CardDescription>
+                Control whether outbound communications (email, SMS, voice) go to real debtors or are redirected to your test addresses.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              {/* Mode selection */}
+              <div className="space-y-3">
+                {COMM_MODES.map((mode) => {
+                  const Icon = mode.icon;
+                  const isSelected = currentCommMode === mode.value;
+                  return (
+                    <button
+                      key={mode.value}
+                      onClick={() => setCommMode(mode.value)}
+                      className={`w-full text-left rounded-lg border-2 p-4 transition-colors ${
+                        isSelected
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-muted-foreground/30"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <Icon className={`h-5 w-5 mt-0.5 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-medium text-foreground">{mode.label}</span>
+                            <Badge className={mode.badgeColor}>{mode.badge}</Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">{mode.description}</p>
+                        </div>
+                        <div
+                          className={`h-4 w-4 rounded-full border-2 mt-0.5 ${
+                            isSelected ? "border-primary bg-primary" : "border-muted-foreground/40"
+                          }`}
+                        >
+                          {isSelected && (
+                            <div className="h-full w-full flex items-center justify-center">
+                              <div className="h-1.5 w-1.5 rounded-full bg-white" />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Test address fields — shown for testing and soft_live modes */}
+              {(currentCommMode === "testing" || currentCommMode === "soft_live") && (
+                <>
+                  <Separator />
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-sm font-medium">Test contact name</Label>
+                      <p className="text-xs text-muted-foreground mt-0.5 mb-1.5">
+                        Name used in the "To" field of test communications.
+                      </p>
+                      <Input
+                        value={currentTestContactName}
+                        onChange={(e) => setTestContactName(e.target.value)}
+                        placeholder="e.g. Test Debtor"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium">Test email addresses</Label>
+                      <p className="text-xs text-muted-foreground mt-0.5 mb-1.5">
+                        Comma-separated. All outbound emails in testing mode will go here instead of real debtors.
+                      </p>
+                      <Input
+                        value={currentTestEmails}
+                        onChange={(e) => setTestEmailsInput(e.target.value)}
+                        placeholder="e.g. test@yourcompany.com, qa@yourcompany.com"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium">Test phone numbers</Label>
+                      <p className="text-xs text-muted-foreground mt-0.5 mb-1.5">
+                        Comma-separated. All outbound SMS/calls in testing mode will go here instead of real debtors.
+                      </p>
+                      <Input
+                        value={currentTestPhones}
+                        onChange={(e) => setTestPhonesInput(e.target.value)}
+                        placeholder="e.g. +447700900000"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {hasCommChanges && (
+                <>
+                  <Separator />
+                  <Button
+                    onClick={() => commSaveMutation.mutate()}
+                    disabled={commSaveMutation.isPending}
+                    className="w-full"
+                  >
+                    {commSaveMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Save className="h-4 w-4 mr-2" />
+                    )}
+                    Save Communication Settings
+                  </Button>
+                </>
+              )}
             </CardContent>
           </Card>
       </div>

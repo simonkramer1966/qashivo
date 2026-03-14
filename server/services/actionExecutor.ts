@@ -236,19 +236,51 @@ export class ActionExecutor {
   ): Promise<{ success: boolean; data?: any; error?: string }> {
     // Check communication mode
     if (tenant.communicationMode === 'off') {
-      return { 
-        success: false, 
-        error: 'Communication mode is OFF for this tenant' 
+      return {
+        success: false,
+        error: 'Communication mode is OFF for this tenant'
       };
     }
 
-    // In testing mode, log but don't actually send
+    // In testing mode, redirect to test addresses instead of real debtor
     if (tenant.communicationMode === 'testing') {
-      console.log(`🧪 TEST MODE: Would have sent ${action.type} to ${contact.name}`);
-      return { 
-        success: true, 
-        data: { mode: 'testing', message: 'Simulated send' } 
+      const testEmails = tenant.testEmails as string[] | null;
+      const testPhones = tenant.testPhones as string[] | null;
+
+      if (!testEmails?.length && !testPhones?.length) {
+        console.log(`🧪 TEST MODE: No test addresses configured — skipping ${action.type} to ${contact.name}`);
+        return {
+          success: true,
+          data: { mode: 'testing', message: 'No test addresses configured, skipping send' }
+        };
+      }
+
+      // Clone contact with test addresses so the real send methods are used
+      // but deliver to test recipients instead
+      const testContact = {
+        ...contact,
+        _originalEmail: contact.email,
+        _originalPhone: contact.phone,
+        _originalName: contact.name,
+        email: testEmails?.[0] || contact.email,
+        phone: testPhones?.[0] || contact.phone,
       };
+
+      console.log(`🧪 TEST MODE: Redirecting ${action.type} for ${contact.name} → test addresses`);
+
+      switch (action.type) {
+        case 'email':
+          return await this.sendEmailAction(action, testContact, invoice, tenant);
+        case 'sms':
+          return await this.sendSMSAction(action, testContact, invoice, tenant);
+        case 'whatsapp':
+          return await this.sendWhatsAppAction(action, testContact, invoice, tenant);
+        case 'voice':
+        case 'call':
+          return await this.initiateVoiceCall(action, testContact, invoice, tenant);
+        default:
+          return { success: false, error: `Unknown action type: ${action.type}` };
+      }
     }
 
     // Execute based on action type
@@ -381,6 +413,16 @@ export class ActionExecutor {
 
       const fromEmail = process.env.SENDGRID_FROM_EMAIL || 'noreply@qashivo.com';
       const fromName = tenant.name ? `${tenant.name} via Qashivo` : 'Qashivo Credit Control';
+
+      // Testing mode: prefix subject and add original recipient note
+      const isTestMode = !!(contact as any)._originalEmail;
+      const originalEmail = (contact as any)._originalEmail;
+      if (isTestMode) {
+        emailContent.subject = `[TEST] ${emailContent.subject}`;
+        const testBanner = `<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#92400e;"><strong>TEST MODE</strong> — Original recipient: ${originalEmail} (${(contact as any)._originalName || 'Unknown'})</div>`;
+        emailContent.body = testBanner + emailContent.body;
+      }
+
       const textBody = emailContent.body.replace(/<[^>]*>/g, '');
 
       const result = await sendEmail({
@@ -474,6 +516,13 @@ export class ActionExecutor {
           message = generated.body;
           console.log(`✅ AI SMS generated: ${message.substring(0, 50)}...`);
         }
+      }
+
+      // Testing mode: prepend original recipient info
+      const isTestMode = !!(contact as any)._originalPhone;
+      if (isTestMode) {
+        const originalPhone = (contact as any)._originalPhone;
+        message = `[TEST] Original recipient: ${originalPhone} (${(contact as any)._originalName || 'Unknown'})\n\n${message}`;
       }
 
       const result = await sendSMS({

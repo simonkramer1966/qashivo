@@ -81,8 +81,45 @@ export async function sendEmail(params: {
       console.log(`📧 [EmailRouting] No tenantId provided, using SendGrid directly`);
     }
 
+    // Safety net: if tenantId is provided, check communication mode
+    // and redirect to test addresses if in testing mode
+    if (params.tenantId) {
+      try {
+        const { db } = await import('../db.js');
+        const { tenants } = await import('../../shared/schema.js');
+        const { eq } = await import('drizzle-orm');
+        const [tenant] = await db.select({
+          communicationMode: tenants.communicationMode,
+          testEmails: tenants.testEmails,
+          testContactName: tenants.testContactName,
+        }).from(tenants).where(eq(tenants.id, params.tenantId));
+
+        if (tenant?.communicationMode === 'off') {
+          console.log(`🚫 [EmailSafetyNet] Communication mode is OFF for tenant ${params.tenantId} — blocking email`);
+          return { success: false, error: 'Communication mode is OFF' };
+        }
+
+        if (tenant?.communicationMode === 'testing') {
+          const testEmails = tenant.testEmails as string[] | null;
+          if (testEmails?.length && !params.subject.startsWith('[TEST]')) {
+            const originalTo = params.to;
+            params.to = testEmails[0];
+            params.subject = `[TEST] ${params.subject}`;
+            const testBanner = `<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#92400e;"><strong>TEST MODE</strong> — Original recipient: ${originalTo}</div>`;
+            params.html = testBanner + params.html;
+            if (params.text) {
+              params.text = `[TEST MODE] Original recipient: ${originalTo}\n\n${params.text}`;
+            }
+            console.log(`🧪 [EmailSafetyNet] Redirected email from ${originalTo} → ${params.to}`);
+          }
+        }
+      } catch (err) {
+        console.warn('[EmailSafetyNet] Could not check communication mode:', err);
+      }
+    }
+
     console.log(`📧 sendEmail called with replyTo: ${params.replyTo || '(none)'}`);
-    
+
     const message: EmailMessage = {
       to: [{ email: params.to }],
       from: parseEmailAddress(params.from),
