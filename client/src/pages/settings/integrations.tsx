@@ -21,12 +21,14 @@ import {
 } from "lucide-react";
 
 interface XeroHealth {
-  status: string;
   connected: boolean;
+  status: string;
+  isConfigured: boolean;
+  connectionStatus: string;
   organisationName?: string;
   lastSyncAt?: string;
-  tokenExpiresAt?: string;
-  autoSync?: boolean;
+  lastHealthCheck?: string;
+  error?: string;
 }
 
 export default function SettingsIntegrations() {

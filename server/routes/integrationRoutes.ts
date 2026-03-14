@@ -294,9 +294,12 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
       // Check if Xero is configured at all
       const isConfigured = !!(tenant.xeroRefreshToken && tenant.xeroTenantId);
       
+      const connectionStatus = tenant.xeroConnectionStatus || (isConfigured ? 'unknown' : 'not_configured');
       res.json({
+        connected: isConfigured && connectionStatus === 'connected',
+        status: connectionStatus,
         isConfigured,
-        connectionStatus: tenant.xeroConnectionStatus || (isConfigured ? 'unknown' : 'not_configured'),
+        connectionStatus,
         organisationName: tenant.xeroOrganisationName || null,
         lastHealthCheck: tenant.xeroLastHealthCheck,
         lastSyncAt: tenant.xeroLastSyncAt,
