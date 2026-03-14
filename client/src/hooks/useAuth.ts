@@ -10,7 +10,8 @@ export function useAuth() {
   const { data: response, isLoading: isProfileLoading, error, isError } = useQuery<{ user: any } | null>({
     queryKey: ["/api/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
-    retry: false,
+    retry: 2,
+    retryDelay: 1000,
     staleTime: 5 * 60 * 1000,
     enabled: clerkLoaded && !!isSignedIn,
   });

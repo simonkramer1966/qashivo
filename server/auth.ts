@@ -10,7 +10,9 @@ import { users } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
 // Re-export Clerk-based auth guards so all existing imports keep working
-export { isAuthenticated, isOwner } from "./middleware/clerkAuth";
+export { isOwner } from "./middleware/clerkAuth";
+import { isAuthenticated } from "./middleware/clerkAuth";
+export { isAuthenticated };
 
 const SESSION_ABSOLUTE_TTL = 24 * 60 * 60 * 1000; // 24 hours absolute max
 const SESSION_IDLE_TIMEOUT = 30 * 60 * 1000; // 30 minutes idle timeout
@@ -171,8 +173,8 @@ export async function setupAuth(app: Express) {
   });
 
   // GET /api/user — returns the authenticated user's profile
-  // Works with both Clerk JWT auth and legacy session auth
-  app.get("/api/user", async (req, res) => {
+  // Requires Clerk JWT (or legacy session) via isAuthenticated middleware
+  app.get("/api/user", isAuthenticated, async (req, res) => {
     const user = (req as any).user as any;
     if (!user) {
       return res.status(401).json({ message: "Not authenticated" });

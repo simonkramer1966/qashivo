@@ -1,8 +1,10 @@
 import type { RequestHandler } from "express";
 import { createClerkClient } from "@clerk/clerk-sdk-node";
+import crypto from "crypto";
 import { db } from "../db";
 import { users } from "@shared/schema";
 import { eq } from "drizzle-orm";
+import { storage } from "../storage";
 
 if (!process.env.CLERK_SECRET_KEY) {
   console.warn("[clerk] CLERK_SECRET_KEY not set — Clerk auth will reject all requests");
@@ -54,11 +56,48 @@ export const clerkAuth: RequestHandler = async (req, res, next) => {
     const clerkUserId = clerkPayload.sub;
 
     // Map Clerk user → local user row
-    const user = await getUserByClerkId(clerkUserId);
+    let user = await getUserByClerkId(clerkUserId);
+
+    // Inline provisioning: if webhook hasn't fired yet, create user now
     if (!user) {
-      return res.status(403).json({
-        message: "User not provisioned. Complete onboarding or contact your admin.",
-      });
+      try {
+        const clerkUser = await clerk.users.getUser(clerkUserId);
+        const email = clerkUser.emailAddresses?.[0]?.emailAddress;
+        if (!email) {
+          return res.status(403).json({ message: "No email on Clerk account" });
+        }
+
+        // Check if a legacy user exists with this email
+        const [existingByEmail] = await db.select().from(users).where(eq(users.email, email));
+        if (existingByEmail) {
+          // Link legacy user to Clerk
+          await db.update(users).set({ clerkId: clerkUserId, updatedAt: new Date() }).where(eq(users.id, existingByEmail.id));
+          user = { ...existingByEmail, clerkId: clerkUserId };
+        } else {
+          // Create new tenant + user
+          const tenant = await storage.createTenant({
+            name: `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim() || email,
+            subdomain: `tenant-${crypto.randomBytes(8).toString("hex")}`,
+          });
+          const newUser = await storage.createUser({
+            clerkId: clerkUserId,
+            email,
+            password: "clerk-managed",
+            firstName: clerkUser.firstName || null,
+            lastName: clerkUser.lastName || null,
+            profileImageUrl: clerkUser.imageUrl || null,
+            tenantId: tenant.id,
+            role: "owner",
+            tenantRole: "owner",
+          } as any);
+          user = newUser;
+        }
+      } catch (provisionError) {
+        console.error("[clerkAuth] Inline provisioning failed:", provisionError);
+        return res.status(403).json({
+          message: "User not provisioned. Complete onboarding or contact your admin.",
+        });
+      }
     }
 
     // Set req.user in the shape RBAC middleware expects

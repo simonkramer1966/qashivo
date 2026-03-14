@@ -2,16 +2,12 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 /**
  * Retrieve the Clerk session token.
- * We dynamically import Clerk so this module can be loaded before
- * ClerkProvider mounts (e.g. for the QueryClient default config).
+ * Accesses the Clerk instance set on `window.Clerk` by ClerkProvider.
  * Returns undefined when Clerk isn't ready or the user isn't signed in.
  */
 async function getClerkToken(): Promise<string | undefined> {
   try {
-    // Access the Clerk instance from the window (set by ClerkProvider)
-    const clerk = (window as any).__clerk_frontend_api
-      ? (window as any).Clerk
-      : undefined;
+    const clerk = (window as any).Clerk;
     if (clerk?.session) {
       return await clerk.session.getToken();
     }
@@ -102,7 +98,7 @@ export const getQueryFn: <T>(options: {
       cache: "no-store",
     });
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+    if (unauthorizedBehavior === "returnNull" && (res.status === 401 || res.status === 403)) {
       return null;
     }
 
