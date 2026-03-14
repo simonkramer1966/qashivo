@@ -178,7 +178,7 @@ class XeroService {
       clientId: process.env.XERO_CLIENT_ID || "default_client_id",
       clientSecret: process.env.XERO_CLIENT_SECRET || "default_secret",
       redirectUri: `${protocol}://${domain}/api/xero/callback`,
-      scopes: "openid profile email accounting.transactions accounting.contacts accounting.settings offline_access",
+      scopes: "openid profile email accounting.transactions accounting.invoices accounting.contacts accounting.settings offline_access",
     };
 
     // Log configuration status (without secrets)
@@ -238,6 +238,8 @@ class XeroService {
       }
       
       const url = `https://api.xero.com/api.xro/2.0/${endpoint}`;
+      console.log(`🔗 [XeroAPI] ${method} ${url}`);
+
       const response = await fetch(url, {
         method,
         headers: {
@@ -252,12 +254,14 @@ class XeroService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        
+        console.error(`❌ [XeroAPI] ${method} ${url} → ${response.status} ${response.statusText}`);
+        console.error(`❌ [XeroAPI] Response body: ${errorText.substring(0, 2000)}`);
+
         // Handle 401 unauthorized errors specifically
         if (response.status === 401) {
           throw new Error(`XERO_AUTH_ERROR:${response.status}:${errorText}`);
         }
-        
+
         throw new Error(`Xero API error: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
@@ -544,24 +548,23 @@ class XeroService {
     recentActivityMonths?: number;
   }): Promise<XeroInvoice[]> {
     try {
-      let whereClause = 'Type%3D%3D%22ACCREC%22'; // Type=="ACCREC"
-      
+      let whereClause = 'Type=="ACCREC"';
+
       // Apply collection-focused filters
       if (filters?.outstandingOnly) {
-        whereClause += '%20AND%20AmountDue%3E0'; // AmountDue>0
+        whereClause += ' AND AmountDue>0';
       }
-      
+
       if (filters?.collectionRelevantOnly) {
-        // Focus on AUTHORISED and SUBMITTED invoices (exclude PAID, VOIDED, DRAFT)
-        whereClause += '%20AND%20(Status%3D%3D%22AUTHORISED%22%20OR%20Status%3D%3D%22SUBMITTED%22)';
+        whereClause += ' AND (Status=="AUTHORISED" OR Status=="SUBMITTED")';
       }
-      
+
       if (filters?.recentActivityMonths) {
         const recentDate = new Date(Date.now() - (filters.recentActivityMonths * 30 * 24 * 60 * 60 * 1000));
-        whereClause += `%20AND%20Date%3E%3DDateTime(${recentDate.getFullYear()},${recentDate.getMonth()+1},${recentDate.getDate()})`;
+        whereClause += ` AND Date>=DateTime(${recentDate.getFullYear()},${recentDate.getMonth()+1},${recentDate.getDate()})`;
       }
-      
-      let endpoint = `Invoices?where=${whereClause}`;
+
+      let endpoint = `Invoices?where=${encodeURIComponent(whereClause)}`;
       
       // Use If-Modified-Since header instead of ModifiedAfter parameter
       const headers = modifiedSince ? { 'If-Modified-Since': modifiedSince.toUTCString() } : undefined;
@@ -595,32 +598,27 @@ class XeroService {
       const xeroPage = Math.max(1, page);
       
       // Build status-based filter for Xero API
-      let whereClause = 'Type%3D%3D%22ACCREC%22'; // Type=="ACCREC"
-      
+      let whereClause = 'Type=="ACCREC"';
+
       switch (status) {
         case 'unpaid':
-          // Invoices that are authorized but not fully paid
-          whereClause += '%20AND%20Status%3D%3D%22AUTHORISED%22%20AND%20AmountDue%3E0';
+          whereClause += ' AND Status=="AUTHORISED" AND AmountDue>0';
           break;
         case 'partial':
-          // Invoices with some payment but still have amount due
-          whereClause += '%20AND%20AmountPaid%3E0%20AND%20AmountDue%3E0';
+          whereClause += ' AND AmountPaid>0 AND AmountDue>0';
           break;
         case 'paid':
-          // Fully paid invoices
-          whereClause += '%20AND%20Status%3D%3D%22PAID%22';
+          whereClause += ' AND Status=="PAID"';
           break;
         case 'void':
-          // Voided invoices
-          whereClause += '%20AND%20Status%3D%3D%22VOIDED%22';
+          whereClause += ' AND Status=="VOIDED"';
           break;
         case 'all':
         default:
-          // No additional filter - show all ACCREC invoices
           break;
       }
-      
-      const endpoint = `Invoices?where=${whereClause}&page=${xeroPage}`;
+
+      const endpoint = `Invoices?where=${encodeURIComponent(whereClause)}&page=${xeroPage}`;
       
       const response = await this.makeAuthenticatedRequest(tokens, endpoint, 'GET', undefined, tenantIdForDbUpdate);
       const invoices = response.Invoices || [];
@@ -727,27 +725,27 @@ class XeroService {
     limit?: number;
   }, tenantIdForDbUpdate?: string): Promise<XeroBill[]> {
     try {
-      let whereClause = 'Type%3D%3D%22ACCPAY%22'; // Type=="ACCPAY"
-      
+      let whereClause = 'Type=="ACCPAY"';
+
       if (filters?.outstandingOnly) {
-        whereClause += '%20AND%20AmountDue%3E0'; // AmountDue>0
+        whereClause += ' AND AmountDue>0';
       }
-      
+
       if (filters?.status && filters.status !== 'all') {
         switch (filters.status) {
           case 'unpaid':
-            whereClause += '%20AND%20Status%3D%3D%22AUTHORISED%22%20AND%20AmountDue%3E0';
+            whereClause += ' AND Status=="AUTHORISED" AND AmountDue>0';
             break;
           case 'paid':
-            whereClause += '%20AND%20Status%3D%3D%22PAID%22';
+            whereClause += ' AND Status=="PAID"';
             break;
           case 'void':
-            whereClause += '%20AND%20Status%3D%3D%22VOIDED%22';
+            whereClause += ' AND Status=="VOIDED"';
             break;
         }
       }
-      
-      let endpoint = `Invoices?where=${whereClause}`;
+
+      let endpoint = `Invoices?where=${encodeURIComponent(whereClause)}`;
       
       if (filters?.page && filters.page > 1) {
         endpoint += `&page=${filters.page}`;
@@ -793,14 +791,14 @@ class XeroService {
       const whereClauses: string[] = [];
       
       // Filter for bill payments (ACCPAY)
-      whereClauses.push('PaymentType%3D%3D%22ACCPAYPAYMENT%22'); // PaymentType=="ACCPAYPAYMENT"
-      
+      whereClauses.push('PaymentType=="ACCPAYPAYMENT"');
+
       if (filters?.billId) {
-        whereClauses.push(`Invoice.InvoiceID%3Dguid"${filters.billId}"`); // Invoice.InvoiceID=guid"billId"
+        whereClauses.push(`Invoice.InvoiceID=guid"${filters.billId}"`);
       }
-      
+
       if (whereClauses.length > 0) {
-        endpoint += `?where=${whereClauses.join('%20AND%20')}`;
+        endpoint += `?where=${encodeURIComponent(whereClauses.join(' AND '))}`;
       }
       
       // Use If-Modified-Since header instead of ModifiedAfter parameter for bill payments
@@ -837,14 +835,14 @@ class XeroService {
       const whereClauses: string[] = [];
       
       // Filter for bank accounts only
-      whereClauses.push('Type%3D%3D%22BANK%22'); // Type=="BANK"
-      
+      whereClauses.push('Type=="BANK"');
+
       if (filters?.activeOnly !== false) {
-        whereClauses.push('Status%3D%3D%22ACTIVE%22'); // Status=="ACTIVE"
+        whereClauses.push('Status=="ACTIVE"');
       }
-      
+
       if (whereClauses.length > 0) {
-        endpoint += `?where=${whereClauses.join('%20AND%20')}`;
+        endpoint += `?where=${encodeURIComponent(whereClauses.join(' AND '))}`;
       }
       
       // Use If-Modified-Since header instead of ModifiedAfter parameter for bank accounts
@@ -1167,6 +1165,8 @@ class XeroService {
       return "/api/xero/mock-auth";
     }
 
+    console.log(`🔑 [XeroOAuth] Requesting scopes: ${this.config.scopes}`);
+
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: this.config.clientId,
@@ -1175,7 +1175,9 @@ class XeroService {
       state: state || '',
     });
 
-    return `https://login.xero.com/identity/connect/authorize?${params.toString()}`;
+    const authUrl = `https://login.xero.com/identity/connect/authorize?${params.toString()}`;
+    console.log(`🔑 [XeroOAuth] Authorization URL (without state): ${authUrl.split('&state=')[0]}`);
+    return authUrl;
   }
 
   async exchangeCodeForTokens(code: string): Promise<XeroTokens | null> {
