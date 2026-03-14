@@ -522,7 +522,7 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
       // Trigger automatic comprehensive sync after successful connection
       console.log(`🚀 Triggering automatic initial Xero sync for tenant: ${appTenantId}`);
       const syncService = new XeroSyncService();
-      syncService.syncAllDataForTenant(appTenantId)
+      syncService.syncAllDataForTenant(appTenantId, 'initial')
         .then(async (result) => {
           if (result.success) {
             console.log(`✅ Initial Xero sync completed successfully:`, result);
@@ -827,15 +827,23 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      console.log(`🚀 Starting comprehensive filtered Xero sync for tenant: ${user.tenantId}`);
-      const result = await xeroSyncService.syncAllDataForTenant(user.tenantId);
+      // Accept mode from request body: "initial" (clean sweep) or "ongoing" (upsert)
+      // Default to "initial" for now since we're replacing demo data
+      const mode = req.body?.mode === 'ongoing' ? 'ongoing' : 'initial';
+
+      console.log(`🚀 Starting ${mode.toUpperCase()} Xero sync for tenant: ${user.tenantId}`);
+      const result = await xeroSyncService.syncAllDataForTenant(user.tenantId, mode as any);
 
       if (result.success) {
         res.json({
           success: true,
-          message: `Successfully synced ${result.contactsCount} customers and ${result.invoicesCount} collection-relevant invoices (filtered from ~15,000+ total)`,
+          syncMode: result.syncMode,
+          message: `${mode === 'initial' ? 'Initial' : 'Ongoing'} sync complete: ${result.contactsCount} contacts, ${result.invoicesCount} invoices`,
           contactsCount: result.contactsCount,
           invoicesCount: result.invoicesCount,
+          billsCount: result.billsCount,
+          bankAccountsCount: result.bankAccountsCount,
+          bankTransactionsCount: result.bankTransactionsCount,
           filteredCount: result.filteredCount,
           syncedAt: new Date().toISOString(),
         });
@@ -846,10 +854,10 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
         });
       }
     } catch (error) {
-      console.error("Error in comprehensive Xero sync:", error);
-      res.status(500).json({ 
+      console.error("Error in Xero sync:", error);
+      res.status(500).json({
         success: false,
-        message: "Failed to sync Xero data" 
+        message: "Failed to sync Xero data"
       });
     }
   });
