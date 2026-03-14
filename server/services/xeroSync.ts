@@ -153,6 +153,11 @@ export class XeroSyncService {
 
           hasNextPage = response.pagination.hasNextPage;
           currentPage++;
+
+          // Rate limiting: wait 1 second between paginated calls
+          if (hasNextPage) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
         } catch (pageError) {
           console.error(`Error fetching page ${currentPage}:`, pageError);
           hasNextPage = false;
@@ -392,6 +397,11 @@ export class XeroSyncService {
 
           hasNextPage = xeroBills && xeroBills.length === 100;
           currentPage++;
+
+          // Rate limiting: wait 1 second between paginated calls
+          if (hasNextPage) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
         } catch (pageError) {
           console.error(`Error fetching bills page ${currentPage}:`, pageError);
           hasNextPage = false;
@@ -515,6 +525,11 @@ export class XeroSyncService {
 
             hasNextPage = xeroTransactions && xeroTransactions.length === 100;
             currentPage++;
+
+            // Rate limiting: wait 1 second between paginated calls
+            if (hasNextPage) {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
           } catch (pageError) {
             console.error(`Error fetching transactions for account ${account.name}, page ${currentPage}:`, pageError);
             hasNextPage = false;

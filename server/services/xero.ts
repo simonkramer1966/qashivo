@@ -1035,21 +1035,38 @@ class XeroService {
     const results = { synced: 0, errors: [] as string[], filtered: 0 };
 
     try {
-      console.log('🔍 Fetching Xero contacts with collection-focused filters...');
-      
-      // Apply smart filters to only get relevant customers
-      const filterConfig = {
-        hasOutstandingInvoices: true,           // Only customers with outstanding balances
-        activeOnly: true,                       // Only active customers
-        recentActivityMonths: 36,               // Activity within last 36 months (more flexible)
-        minOutstandingAmount: 1                 // Minimum $1 outstanding balance (very flexible)
-      };
-      
-      const xeroContacts = await this.getContacts(tokens, filterConfig, tenantId);
-      results.filtered = xeroContacts.length;
-      
-      console.log(`✅ Filtered contacts: ${xeroContacts.length} relevant customers found (vs ~15,000+ total)`);
-      
+      console.log('📇 Fetching ALL Xero contacts via paginated bulk calls...');
+
+      // Fetch all contacts via pagination — NO per-contact invoice calls
+      const allXeroContacts: XeroContact[] = [];
+      let page = 1;
+      let hasMore = true;
+
+      while (hasMore) {
+        const endpoint = `Contacts?page=${page}`;
+        console.log(`📇 Fetching contacts page ${page}...`);
+        const response = await this.makeAuthenticatedRequest(tokens, endpoint, 'GET', undefined, tenantId);
+        const pageContacts = response.Contacts || [];
+
+        if (pageContacts.length > 0) {
+          // Filter to active contacts only
+          const active = pageContacts.filter((c: any) => c.ContactStatus === 'ACTIVE' || !c.ContactStatus);
+          allXeroContacts.push(...active);
+          console.log(`  → Page ${page}: ${pageContacts.length} contacts (${active.length} active)`);
+        }
+
+        hasMore = pageContacts.length === 100; // Xero returns 100 per page
+        page++;
+
+        // Rate limiting: wait 1 second between paginated calls
+        if (hasMore) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+
+      results.filtered = allXeroContacts.length;
+      console.log(`✅ Fetched ${allXeroContacts.length} active contacts in ${page - 1} pages`);
+
       const { storage } = await import('../storage');
 
       // Get existing contacts to avoid duplicates (upsert by xeroContactId)
@@ -1058,11 +1075,10 @@ class XeroService {
         existingContacts.filter(c => c.xeroContactId).map(c => [c.xeroContactId, c])
       );
 
-      for (const xeroContact of xeroContacts) {
+      for (const xeroContact of allXeroContacts) {
         try {
           const existing = existingByXeroId.get(xeroContact.ContactID);
           if (existing) {
-            // Update existing contact with latest Xero data
             await storage.updateContact(existing.id, tenantId, {
               name: xeroContact.Name,
               email: xeroContact.EmailAddress || null,
@@ -1071,7 +1087,6 @@ class XeroService {
               isActive: xeroContact.IsActive,
             });
           } else {
-            // Create new contact
             await storage.createContact({
               tenantId,
               xeroContactId: xeroContact.ContactID,
