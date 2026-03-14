@@ -7,6 +7,9 @@
  *   - dso_snapshots
  *   - open_banking_connections
  *
+ * Adds columns (if not exists) to users:
+ *   - clerk_id (varchar, unique)
+ *
  * Adds columns (if not exists) to actions:
  *   - agent_reasoning, agent_tone_level, agent_channel, compliance_result
  *
@@ -43,7 +46,7 @@ try {
   const client = await pool.connect();
 
   // ── 1. agent_personas ─────────────────────────────────────
-  console.log("1/5  Creating agent_personas table...");
+  console.log("1/7  Creating agent_personas table...");
   await client.query(`
     CREATE TABLE IF NOT EXISTS agent_personas (
       id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -70,7 +73,7 @@ try {
   console.log("     ✓ agent_personas ready");
 
   // ── 2. compliance_checks ──────────────────────────────────
-  console.log("2/5  Creating compliance_checks table...");
+  console.log("2/7  Creating compliance_checks table...");
   await client.query(`
     CREATE TABLE IF NOT EXISTS compliance_checks (
       id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -97,7 +100,7 @@ try {
   console.log("     ✓ compliance_checks ready");
 
   // ── 3. dso_snapshots ──────────────────────────────────────
-  console.log("3/5  Creating dso_snapshots table...");
+  console.log("3/7  Creating dso_snapshots table...");
   await client.query(`
     CREATE TABLE IF NOT EXISTS dso_snapshots (
       id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -118,7 +121,7 @@ try {
   console.log("     ✓ dso_snapshots ready");
 
   // ── 4. open_banking_connections ────────────────────────────
-  console.log("4/5  Creating open_banking_connections table...");
+  console.log("4/7  Creating open_banking_connections table...");
   await client.query(`
     CREATE TABLE IF NOT EXISTS open_banking_connections (
       id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -139,8 +142,16 @@ try {
   `);
   console.log("     ✓ open_banking_connections ready");
 
-  // ── 5. actions table — add missing columns ────────────────
-  console.log("5/5  Adding missing columns to actions...");
+  // ── 5. users table — add clerk_id column ─────────────────
+  console.log("5/7  Adding clerk_id column to users...");
+  await client.query(`
+    ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS clerk_id VARCHAR UNIQUE;
+  `);
+  console.log("     ✓ users.clerk_id");
+
+  // ── 6. actions table — add missing columns ────────────────
+  console.log("6/7  Adding missing columns to actions...");
   const cols = [
     { name: "agent_reasoning", type: "TEXT" },
     { name: "agent_tone_level", type: "VARCHAR" },
@@ -155,8 +166,8 @@ try {
     console.log(`     ✓ actions.${col.name}`);
   }
 
-  // ── Verify ────────────────────────────────────────────────
-  console.log("\nVerifying...");
+  // ── 7. Verify ──────────────────────────────────────────────
+  console.log("\n7/7  Verifying...");
   const { rows } = await client.query(`
     SELECT table_name
     FROM information_schema.tables
@@ -172,6 +183,16 @@ try {
   console.log(
     `Found ${rows.length}/4 tables:`,
     rows.map((r: any) => r.table_name).join(", ")
+  );
+
+  const { rows: userCols } = await client.query(`
+    SELECT column_name
+    FROM information_schema.columns
+    WHERE table_name = 'users'
+      AND column_name = 'clerk_id'
+  `);
+  console.log(
+    `users.clerk_id: ${userCols.length > 0 ? '✓ exists' : '✗ MISSING'}`
   );
 
   const { rows: actionCols } = await client.query(`
