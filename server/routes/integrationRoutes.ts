@@ -869,21 +869,21 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      console.log(`🔍 Starting filtered contact sync for tenant: ${user.tenantId}`);
-      const result = await xeroSyncService.syncContactsForTenant(user.tenantId);
+      console.log(`🔍 Starting invoice-first sync (contacts + invoices) for tenant: ${user.tenantId}`);
+      const result = await xeroSyncService.syncInvoicesAndContacts(user.tenantId);
 
       if (result.success) {
         res.json({
           success: true,
-          message: `Successfully synced ${result.contactsCount} filtered customers (${result.filteredCount} total found)`,
+          message: `Successfully synced ${result.contactsCount} contacts and ${result.invoicesCount} invoices`,
           contactsCount: result.contactsCount,
-          filteredCount: result.filteredCount,
+          invoicesCount: result.invoicesCount,
           syncedAt: new Date().toISOString(),
         });
       } else {
         res.status(500).json({
           success: false,
-          message: result.error || "Contact sync failed",
+          message: result.error || "Sync failed",
         });
       }
     } catch (error) {
@@ -902,8 +902,8 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      console.log(`📄 Starting filtered invoice sync for tenant: ${user.tenantId}`);
-      const result = await xeroSyncService.syncInvoicesForTenant(user.tenantId);
+      console.log(`📄 Starting invoice-first sync for tenant: ${user.tenantId}`);
+      const result = await xeroSyncService.syncInvoicesAndContacts(user.tenantId);
 
       if (result.success) {
         res.json({

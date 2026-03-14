@@ -257,6 +257,11 @@ class XeroService {
         console.error(`❌ [XeroAPI] ${method} ${url} → ${response.status} ${response.statusText}`);
         console.error(`❌ [XeroAPI] Response body: ${errorText.substring(0, 2000)}`);
 
+        // Handle 429 rate limit — wait and retry
+        if (response.status === 429) {
+          throw new Error(`XERO_RATE_LIMIT:429:${errorText}`);
+        }
+
         // Handle 401 unauthorized errors specifically
         if (response.status === 401) {
           throw new Error(`XERO_AUTH_ERROR:${response.status}:${errorText}`);
@@ -309,10 +314,30 @@ class XeroService {
         }
       }
       
+      // Handle 429 rate limit — wait 60 seconds and retry once
+      if (errorMessage.includes('XERO_RATE_LIMIT:429')) {
+        console.warn('⏳ Xero rate limit hit (429). Waiting 60 seconds before retry...');
+        await new Promise(resolve => setTimeout(resolve, 60000));
+        console.log('🔄 Retrying request after rate limit wait...');
+        return await makeRequest(tokens.accessToken);
+      }
+
       // Re-throw non-auth errors
       console.error('Xero API request failed:', error);
       throw error;
     }
+  }
+
+  // Public wrapper for makeAuthenticatedRequest (used by xeroSync for batch contact fetches)
+  async makeAuthenticatedRequestPublic(
+    tokens: XeroTokens,
+    endpoint: string,
+    method: 'GET' | 'POST' | 'PUT' = 'GET',
+    data?: any,
+    tenantIdForDbUpdate?: string,
+    additionalHeaders?: Record<string, string>
+  ): Promise<any> {
+    return this.makeAuthenticatedRequest(tokens, endpoint, method, data, tenantIdForDbUpdate, additionalHeaders);
   }
 
   private async updateTenantTokens(tenantId: string, tokens: XeroTokens): Promise<void> {
