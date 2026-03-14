@@ -36,6 +36,7 @@ import { formatDate } from "@shared/utils/dateFormatter";
 import { xeroService } from "../services/xero";
 import { onboardingService } from "../services/onboardingService";
 import { XeroSyncService } from "../services/xeroSync";
+const xeroSyncService = new XeroSyncService();
 import { generateMockData } from "../mock-data";
 import { retellService } from "../retell-service";
 import { createRetellClient } from "../mcp/client";
