@@ -64,20 +64,28 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
         return res.status(401).json({ message: "Session required for authentication. Please log in again." });
       }
 
+      // Build the dynamic redirect URI from request headers or env vars
       const ALLOWED_HOSTS = new Set([
         'qashivo.com',
         'www.qashivo.com',
         'qashivo.replit.app',
         ...(process.env.REPLIT_DOMAINS?.split(',').map(d => d.trim()) || []),
+        ...(process.env.RAILWAY_PUBLIC_DOMAIN ? [process.env.RAILWAY_PUBLIC_DOMAIN] : []),
         'localhost:5000',
       ]);
 
       const xeroRedirectUri = (() => {
+        // Prefer SITE_BASE_URL if set (production canonical URL)
+        if (process.env.SITE_BASE_URL) {
+          const base = process.env.SITE_BASE_URL.replace(/\/$/, '');
+          return `${base}/api/xero/callback`;
+        }
+
         const host = req.headers['x-forwarded-host'] as string || req.headers.host || '';
         const cleanHost = host.split(',')[0].trim();
         if (!ALLOWED_HOSTS.has(cleanHost)) {
-          console.warn(`[Xero] Rejected unknown host: ${cleanHost}, falling back to REPLIT_DOMAINS`);
-          const fallbackDomain = process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000';
+          console.warn(`[Xero] Unknown host: ${cleanHost}, using RAILWAY_PUBLIC_DOMAIN or fallback`);
+          const fallbackDomain = process.env.RAILWAY_PUBLIC_DOMAIN || process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000';
           const fallbackProto = fallbackDomain.includes('localhost') ? 'http' : 'https';
           return `${fallbackProto}://${fallbackDomain}/api/xero/callback`;
         }
@@ -181,15 +189,21 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
         'www.qashivo.com',
         'qashivo.replit.app',
         ...(process.env.REPLIT_DOMAINS?.split(',').map(d => d.trim()) || []),
+        ...(process.env.RAILWAY_PUBLIC_DOMAIN ? [process.env.RAILWAY_PUBLIC_DOMAIN] : []),
         'localhost:5000',
       ]);
 
       const xeroRedirectUri = (() => {
+        if (process.env.SITE_BASE_URL) {
+          const base = process.env.SITE_BASE_URL.replace(/\/$/, '');
+          return `${base}/api/xero/callback`;
+        }
+
         const host = req.headers['x-forwarded-host'] as string || req.headers.host || '';
         const cleanHost = host.split(',')[0].trim();
         if (!ALLOWED_XERO_HOSTS.has(cleanHost)) {
-          console.warn(`[Xero] Rejected unknown host: ${cleanHost}, falling back to REPLIT_DOMAINS`);
-          const fallbackDomain = process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000';
+          console.warn(`[Xero] Unknown host: ${cleanHost}, using RAILWAY_PUBLIC_DOMAIN or fallback`);
+          const fallbackDomain = process.env.RAILWAY_PUBLIC_DOMAIN || process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000';
           const fallbackProto = fallbackDomain.includes('localhost') ? 'http' : 'https';
           return `${fallbackProto}://${fallbackDomain}/api/xero/callback`;
         }

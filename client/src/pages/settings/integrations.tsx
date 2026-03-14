@@ -65,8 +65,18 @@ export default function SettingsIntegrations() {
     },
   });
 
-  const handleConnect = () => {
-    window.location.href = "/api/integrations/xero/connect";
+  const handleConnect = async () => {
+    try {
+      const res = await apiRequest("GET", "/api/integrations/xero/connect");
+      const data = await res.json();
+      if (data.authUrl) {
+        window.location.href = data.authUrl;
+      } else {
+        toast({ title: "Connection failed", description: "No authorization URL returned.", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Connection failed", description: "Could not start Xero connection.", variant: "destructive" });
+    }
   };
 
   const connected = xeroHealth?.connected === true;
