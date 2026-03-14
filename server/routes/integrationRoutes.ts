@@ -477,7 +477,7 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
       
       // Save tokens to database and mark connection as healthy
       const xeroOrgName = tokens.tenantName || null;
-      await storage.updateTenant(appTenantId, {
+      const tenantUpdates: Record<string, any> = {
         xeroAccessToken: tokens.accessToken,
         xeroRefreshToken: tokens.refreshToken || null,
         xeroTenantId: xeroTenantId || null,
@@ -486,7 +486,12 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
         xeroConnectionStatus: 'connected',
         xeroLastHealthCheck: new Date(),
         xeroHealthCheckError: null,
-      });
+      };
+      // Update tenant name to match Xero organisation
+      if (xeroOrgName) {
+        tenantUpdates.name = xeroOrgName;
+      }
+      await storage.updateTenant(appTenantId, tenantUpdates);
       
       console.log(`[Xero] Connected successfully for tenant: ${appTenantId}, org: ${xeroOrgName}`);
 
@@ -726,53 +731,16 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
     }
   });
 
-  app.post("/api/xero/sync", isAuthenticated, async (req: any, res) => {
+  app.get("/api/xero/invoices", isAuthenticated, async (req: any, res) => {
     try {
+      // Use the logged in user's tenant for Xero API
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
+      const tenantId = user.tenantId;
 
-      const tenant = await storage.getTenant(user.tenantId);
-      if (!tenant?.xeroAccessToken) {
-        return res.status(400).json({ message: "Xero not connected" });
-      }
-
-      // Use comprehensive sync service that includes invoice processing
-      const result = await xeroSyncService.syncAllDataForTenant(user.tenantId);
-
-      if (!result.success) {
-        return res.status(500).json({ 
-          message: "Sync failed", 
-          error: result.error 
-        });
-      }
-
-      res.json({
-        success: true,
-        contactsCount: result.contactsCount,
-        invoicesCount: result.invoicesCount,
-        billsCount: result.billsCount,
-        bankAccountsCount: result.bankAccountsCount,
-        bankTransactionsCount: result.bankTransactionsCount,
-      });
-    } catch (error) {
-      console.error("Error syncing with Xero:", error);
-      res.status(500).json({ message: "Failed to sync with Xero" });
-    }
-  });
-
-  app.get("/api/xero/invoices", async (req: any, res) => { // Temporarily disabled auth for demo
-    try {
-      // Use the logged in user's tenant for Xero API
-      const tenantId = "9ffa8e58-af89-4f6a-adee-7fe09d956295";
-      
       const tenant = await storage.getTenant(tenantId);
-      console.log("=== DEBUG TENANT DATA ===");
-      console.log("Tenant ID:", tenantId);
-      console.log("Tenant object:", tenant);
-      console.log("xeroAccessToken present:", !!tenant?.xeroAccessToken);
-      console.log("xeroTenantId:", tenant?.xeroTenantId);
       
       if (!tenant?.xeroAccessToken) {
         return res.status(400).json({ message: "Xero not connected" });

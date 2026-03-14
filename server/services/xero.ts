@@ -1054,19 +1054,36 @@ class XeroService {
       
       const { storage } = await import('../storage');
 
+      // Get existing contacts to avoid duplicates (upsert by xeroContactId)
+      const existingContacts = await storage.getContacts(tenantId);
+      const existingByXeroId = new Map(
+        existingContacts.filter(c => c.xeroContactId).map(c => [c.xeroContactId, c])
+      );
+
       for (const xeroContact of xeroContacts) {
         try {
-          const contactData = {
-            tenantId,
-            xeroContactId: xeroContact.ContactID,
-            name: xeroContact.Name,
-            email: xeroContact.EmailAddress || null,
-            phone: xeroContact.Phones?.find(p => p.PhoneType === 'DEFAULT')?.PhoneNumber || null,
-            companyName: xeroContact.Name,
-            isActive: xeroContact.IsActive,
-          };
-
-          await storage.createContact(contactData);
+          const existing = existingByXeroId.get(xeroContact.ContactID);
+          if (existing) {
+            // Update existing contact with latest Xero data
+            await storage.updateContact(existing.id, tenantId, {
+              name: xeroContact.Name,
+              email: xeroContact.EmailAddress || null,
+              phone: xeroContact.Phones?.find((p: any) => p.PhoneType === 'DEFAULT')?.PhoneNumber || null,
+              companyName: xeroContact.Name,
+              isActive: xeroContact.IsActive,
+            });
+          } else {
+            // Create new contact
+            await storage.createContact({
+              tenantId,
+              xeroContactId: xeroContact.ContactID,
+              name: xeroContact.Name,
+              email: xeroContact.EmailAddress || null,
+              phone: xeroContact.Phones?.find((p: any) => p.PhoneType === 'DEFAULT')?.PhoneNumber || null,
+              companyName: xeroContact.Name,
+              isActive: xeroContact.IsActive,
+            });
+          }
           results.synced++;
         } catch (error: any) {
           results.errors.push(`Failed to sync contact ${xeroContact.Name}: ${error.message}`);

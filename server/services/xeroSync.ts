@@ -768,6 +768,15 @@ export class XeroSyncService {
     try {
       console.log(`🚀 Starting comprehensive Xero sync for tenant: ${tenantId}`);
 
+      // Clear all dependent data first to avoid FK constraint errors when contacts are replaced
+      console.log("🧹 Clearing existing data for fresh sync...");
+      await db.delete(invoices).where(eq(invoices.tenantId, tenantId));
+      await db.delete(cachedXeroInvoices).where(eq(cachedXeroInvoices.tenantId, tenantId));
+      await db.delete(bills).where(eq(bills.tenantId, tenantId));
+      await db.delete(bankTransactions).where(eq(bankTransactions.tenantId, tenantId));
+      await db.delete(bankAccounts).where(eq(bankAccounts.tenantId, tenantId));
+      console.log("✅ Existing data cleared");
+
       // Sync contacts first (with filtering)
       const contactResult = await this.syncContactsForTenant(tenantId);
       if (!contactResult.success) {
