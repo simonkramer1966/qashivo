@@ -1,6 +1,6 @@
-import { db } from "../db";
+import { db, pool } from "../db";
 import { tenants, cachedXeroInvoices, bills, contacts, bankAccounts, bankTransactions, invoices } from "@shared/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { xeroService } from "./xero";
 import { attentionItemService } from "./attentionItemService";
 import { assignContactToDefaultSchedule } from "./strategySeeder";
@@ -222,13 +222,6 @@ export class XeroSyncService {
 
       console.log(`🎯 Found ${collectionRelevant.length} collection-relevant invoices (unpaid/partial with amount due)`);
 
-      // Clear existing invoices for this tenant
-      await db
-        .delete(invoices)
-        .where(eq(invoices.tenantId, tenantId));
-
-      console.log(`🗑️  Cleared existing invoices`);
-
       let processedCount = 0;
 
       // Insert collection-relevant invoices into main table
@@ -337,12 +330,6 @@ export class XeroSyncService {
       // Fetch ALL bills from Xero for cashflow analysis
       let totalBillsCount = 0;
 
-      // Clear existing bills for this tenant
-      await db
-        .delete(bills)
-        .where(eq(bills.tenantId, tenantId));
-
-      console.log("Cleared existing bills");
       console.log("🎯 Syncing ALL bills (paid and unpaid) for cashflow forecasting");
 
       // Fetch bills paginated
@@ -474,11 +461,6 @@ export class XeroSyncService {
         tenantId
       );
 
-      // Clear existing bank accounts for this tenant
-      await db
-        .delete(bankAccounts)
-        .where(eq(bankAccounts.tenantId, tenantId));
-
       if (xeroAccounts && xeroAccounts.length > 0) {
         const accountsToInsert = xeroAccounts.map((account: any) => ({
           tenantId,
@@ -543,11 +525,6 @@ export class XeroSyncService {
         .where(eq(bankAccounts.tenantId, tenantId));
 
       let totalTransactionsCount = 0;
-
-      // Clear existing bank transactions for this tenant
-      await db
-        .delete(bankTransactions)
-        .where(eq(bankTransactions.tenantId, tenantId));
 
       console.log(`Fetching transactions for ${accounts.length} bank accounts`);
 
@@ -755,6 +732,109 @@ export class XeroSyncService {
     }
   }
 
+  /**
+   * Delete all tenant data that depends on invoices/contacts in correct FK order,
+   * then sync fresh from Xero. Wrapped in a transaction for atomicity.
+   */
+  private async clearTenantDataForFreshSync(tenantId: string): Promise<void> {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      console.log('🧹 Clearing all tenant data in FK-safe order...');
+
+      // Tables that reference actions (must go first since actions references invoices/contacts)
+      const tables = [
+        // Leaf tables — reference actions, invoices, or contacts but nothing references them
+        'message_drafts',         // FK → actions (CASCADE, but be explicit)
+        'compliance_checks',      // FK → actions, contacts
+        'action_logs',            // FK → action_items
+        'action_items',           // FK → invoices, contacts
+        'attention_items',        // FK → invoices, contacts
+        'activity_logs',          // FK → invoices, contacts (as debtor_id)
+        'outcomes',               // FK → invoices, contacts (as debtor_id)
+        'payment_promises',       // FK → invoices, contacts
+        'invoice_health_scores',  // FK → invoices
+        'wallet_transactions',    // FK → invoices, contacts
+        'finance_advances',       // FK → invoices, contacts
+        'risk_scores',            // FK → contacts
+        'action_effectiveness',   // FK → contacts
+        'customer_learning_profiles', // FK → contacts
+        'customer_schedule_assignments', // FK → contacts
+        'email_domain_mappings',  // FK → contacts
+        'email_sender_mappings',  // FK → contacts
+        'magic_link_tokens',      // FK → contacts
+        'customer_preferences',   // FK → contacts
+        'debtor_profiles',        // FK → contacts (CASCADE)
+        'customer_behavior_signals', // FK → contacts (CASCADE)
+        'user_contact_assignments', // FK → contacts (CASCADE)
+        'customer_contact_persons', // FK → contacts
+        'contact_notes',          // FK → contacts
+
+        // Tables referencing invoices and/or contacts
+        'workflow_timers',        // FK → invoices (CASCADE)
+        'timeline_events',        // FK → invoices, contacts (as customer_id)
+        'email_messages',         // FK → invoices, contacts
+        'email_clarifications',   // FK → contacts
+        'inbound_messages',       // FK → invoices, contacts
+        'contact_outcomes',       // FK → invoices, contacts
+        'policy_decisions',       // FK → invoices, contacts
+        'voice_calls',            // FK → invoices, contacts
+        'sms_messages',           // FK → invoices, contacts
+        'interest_ledger',        // FK → invoices
+        'disputes',               // FK → invoices, contacts
+        'promises_to_pay',        // FK → invoices, contacts
+        'debtor_payments',        // FK → invoices, contacts
+        'conversations',          // FK → contacts
+        'payment_plan_invoices',  // FK → invoices (no tenantId — delete via subquery)
+
+        // actions itself — references invoices + contacts
+        'actions',
+
+        // payment_plans — references contacts
+        'payment_plans',
+
+        // Now safe to delete the core synced data
+        'bank_transactions',      // FK → bank_accounts, invoices, contacts
+        'bank_accounts',          // FK → tenants
+        'bills',                  // FK → contacts (as vendor_id)
+        'cached_xero_invoices',   // No FK deps, just cache
+        'invoices',               // FK → contacts
+        'contacts',               // FK → tenants only
+      ];
+
+      for (const table of tables) {
+        try {
+          if (table === 'payment_plan_invoices') {
+            // No tenantId column — delete via subquery on payment_plans
+            await client.query(
+              `DELETE FROM payment_plan_invoices WHERE payment_plan_id IN (SELECT id FROM payment_plans WHERE tenant_id = $1)`,
+              [tenantId]
+            );
+          } else {
+            const col = (table === 'timeline_events') ? 'tenant_id' : 'tenant_id';
+            await client.query(`DELETE FROM ${table} WHERE tenant_id = $1`, [tenantId]);
+          }
+        } catch (err: any) {
+          // Table might not exist yet (not all tables from schema may be migrated)
+          if (err.code === '42P01') { // undefined_table
+            console.log(`  ⏭️  Table ${table} does not exist, skipping`);
+          } else {
+            console.warn(`  ⚠️  Error clearing ${table}:`, err.message);
+          }
+        }
+      }
+
+      await client.query('COMMIT');
+      console.log('✅ All tenant data cleared successfully');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error('❌ Transaction rolled back:', error);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   async syncAllDataForTenant(tenantId: string): Promise<{
     success: boolean;
     contactsCount: number;
@@ -768,43 +848,37 @@ export class XeroSyncService {
     try {
       console.log(`🚀 Starting comprehensive Xero sync for tenant: ${tenantId}`);
 
-      // Clear all dependent data first to avoid FK constraint errors when contacts are replaced
-      console.log("🧹 Clearing existing data for fresh sync...");
-      await db.delete(invoices).where(eq(invoices.tenantId, tenantId));
-      await db.delete(cachedXeroInvoices).where(eq(cachedXeroInvoices.tenantId, tenantId));
-      await db.delete(bills).where(eq(bills.tenantId, tenantId));
-      await db.delete(bankTransactions).where(eq(bankTransactions.tenantId, tenantId));
-      await db.delete(bankAccounts).where(eq(bankAccounts.tenantId, tenantId));
-      console.log("✅ Existing data cleared");
+      // Step 1: Clean sweep — delete everything in FK-safe order within a transaction
+      await this.clearTenantDataForFreshSync(tenantId);
 
-      // Sync contacts first (with filtering)
+      // Step 2: Sync contacts first (with filtering)
       const contactResult = await this.syncContactsForTenant(tenantId);
       if (!contactResult.success) {
         throw new Error(`Contact sync failed: ${contactResult.error}`);
       }
 
-      // Sync invoices (ALL - paid and unpaid)
+      // Step 3: Sync invoices (ALL - paid and unpaid)
       const invoiceResult = await this.syncInvoicesForTenant(tenantId);
       if (!invoiceResult.success) {
         throw new Error(`Invoice sync failed: ${invoiceResult.error}`);
       }
 
-      // Sync bills (ACCPAY invoices)
+      // Step 4: Sync bills (ACCPAY invoices)
       const billsResult = await this.syncBillsForTenant(tenantId);
       if (!billsResult.success) {
-        console.warn(`Bills sync failed: ${billsResult.error}`); // Don't fail entire sync
+        console.warn(`Bills sync failed: ${billsResult.error}`);
       }
 
-      // Sync bank accounts
+      // Step 5: Sync bank accounts
       const bankAccountsResult = await this.syncBankAccountsForTenant(tenantId);
       if (!bankAccountsResult.success) {
-        console.warn(`Bank accounts sync failed: ${bankAccountsResult.error}`); // Don't fail entire sync
+        console.warn(`Bank accounts sync failed: ${bankAccountsResult.error}`);
       }
 
-      // Sync bank transactions (last year)
+      // Step 6: Sync bank transactions (last year)
       const bankTransactionsResult = await this.syncBankTransactionsForTenant(tenantId);
       if (!bankTransactionsResult.success) {
-        console.warn(`Bank transactions sync failed: ${bankTransactionsResult.error}`); // Don't fail entire sync
+        console.warn(`Bank transactions sync failed: ${bankTransactionsResult.error}`);
       }
 
       console.log(`🎉 Comprehensive sync completed:
