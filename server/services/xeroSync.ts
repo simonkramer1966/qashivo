@@ -1,20 +1,20 @@
 import { db, pool } from "../db";
-import { tenants, cachedXeroInvoices, bills, contacts, bankAccounts, bankTransactions, invoices } from "@shared/schema";
-import { eq, and, sql, notInArray, inArray } from "drizzle-orm";
+import { tenants, cachedXeroInvoices, contacts, invoices } from "@shared/schema";
+import { eq, and, sql, notInArray } from "drizzle-orm";
 import { xeroService } from "./xero";
 import { attentionItemService } from "./attentionItemService";
 import { assignContactToDefaultSchedule } from "./strategySeeder";
 
 export type SyncMode = 'initial' | 'ongoing';
 
-const RATE_LIMIT_DELAY_MS = 1500; // 1.5 seconds between paginated calls
+const RATE_LIMIT_DELAY_MS = 1500; // 1.5 seconds between API calls
 
 export class XeroSyncService {
-  constructor() {
-    // Use the existing xeroService instance
-  }
+  constructor() {}
 
-  // ── Invoice-first sync: fetch all invoices, extract contacts ──────
+  // ══════════════════════════════════════════════════════════════════
+  // Invoice-first sync: date-filtered invoices → extract contacts
+  // ══════════════════════════════════════════════════════════════════
 
   async syncInvoicesAndContacts(tenantId: string, mode: SyncMode = 'initial'): Promise<{
     success: boolean;
@@ -23,7 +23,7 @@ export class XeroSyncService {
     error?: string;
   }> {
     try {
-      console.log(`📄 Starting invoice-first Xero sync for tenant: ${tenantId} (mode: ${mode})`);
+      console.log(`📄 Starting optimised Xero sync for tenant: ${tenantId} (mode: ${mode})`);
 
       const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
       if (!tenant) throw new Error("Tenant not found");
@@ -36,81 +36,87 @@ export class XeroSyncService {
         tenantId: tenant.xeroTenantId!,
       };
 
-      // Step 1: Clear cache and fetch ALL invoices via paginated calls
+      // ── Step 1: Fetch invoices with date filter ────────────────────
+      // Only fetch: invoices from last 24 months OR still open (AUTHORISED/SUBMITTED)
+      // This avoids pulling 10+ years of history
+      const cutoffDate = new Date();
+      cutoffDate.setMonth(cutoffDate.getMonth() - 24);
+      const y = cutoffDate.getFullYear();
+      const m = cutoffDate.getMonth() + 1;
+      const d = cutoffDate.getDate();
+
+      const whereClause = `Type=="ACCREC" AND (Date>=DateTime(${y},${m},${d}) OR Status=="AUTHORISED" OR Status=="SUBMITTED")`;
+
       await db.delete(cachedXeroInvoices).where(eq(cachedXeroInvoices.tenantId, tenantId));
-      console.log("  Cleared cached invoices");
+      console.log(`  Cleared cached invoices`);
+      console.log(`  Where filter: ${whereClause}`);
 
       let totalInvoicesCount = 0;
       let currentPage = 1;
       let hasNextPage = true;
-      const uniqueContactIds = new Map<string, { name: string; email?: string }>();
+      const uniqueContactIds = new Map<string, { name: string }>();
 
       while (hasNextPage) {
         try {
-          const response = await xeroService.getInvoicesPaginated(
-            tokens, currentPage, 100, 'all', tenantId
-          );
+          const endpoint = `Invoices?where=${encodeURIComponent(whereClause)}&page=${currentPage}`;
+          console.log(`  📄 Fetching invoice page ${currentPage}...`);
 
-          if (response.invoices && response.invoices.length > 0) {
+          const response = await xeroService.makeAuthenticatedRequestPublic(
+            tokens, endpoint, 'GET', undefined, tenantId
+          );
+          const pageInvoices = response.Invoices || [];
+
+          if (pageInvoices.length > 0) {
             // Extract unique contact IDs from invoice data
-            for (const invoice of response.invoices) {
+            for (const invoice of pageInvoices) {
               const contact = invoice.Contact as any;
               if (contact?.ContactID) {
                 uniqueContactIds.set(contact.ContactID, {
                   name: contact.Name || 'Unknown',
-                  email: contact.EmailAddress,
                 });
               }
             }
 
-            const invoicesToInsert = response.invoices.map((invoice: any) => {
-              let actualPaidDate: Date | null = null;
-              if (invoice.Status === 'PAID' || (invoice.AmountPaid && invoice.AmountPaid > 0)) {
-                const payments = response.payments.get(invoice.InvoiceID);
-                if (payments && payments.length > 0) {
-                  const sortedPayments = payments.sort((a: any, b: any) =>
-                    new Date(b.Date).getTime() - new Date(a.Date).getTime()
-                  );
-                  actualPaidDate = new Date(sortedPayments[0].Date);
-                }
-              }
-
-              return {
-                tenantId,
-                xeroInvoiceId: invoice.InvoiceID,
-                invoiceNumber: invoice.InvoiceNumber,
-                amount: invoice.Total.toString(),
-                amountPaid: invoice.AmountPaid?.toString() || "0",
-                taxAmount: invoice.TotalTax?.toString() || "0",
-                status: this.mapXeroStatus(invoice.Status, { amountPaid: invoice.AmountPaid, totalAmount: invoice.Total }),
-                issueDate: new Date(invoice.DateString),
-                dueDate: new Date(invoice.DueDateString),
-                paidDate: actualPaidDate,
-                description: `Invoice ${invoice.InvoiceNumber}` || null,
-                currency: invoice.CurrencyCode || "GBP",
-                contact: invoice.Contact || null,
-                paymentDetails: {
-                  amountPaid: invoice.AmountPaid || 0,
-                  amountDue: invoice.AmountDue || 0,
-                  totalAmount: invoice.Total || 0,
-                  payments: response.payments.get(invoice.InvoiceID) || [],
-                },
-                metadata: {
-                  xeroStatus: invoice.Status,
-                  invoiceType: invoice.Type,
-                  subTotal: invoice.SubTotal,
-                  lineItems: invoice.LineItems || [],
-                  branding: invoice.BrandingThemeID || null,
-                },
-              };
-            });
+            // Cache invoices — use embedded AmountPaid/Status, no separate payment calls
+            const invoicesToInsert = pageInvoices.map((invoice: any) => ({
+              tenantId,
+              xeroInvoiceId: invoice.InvoiceID,
+              invoiceNumber: invoice.InvoiceNumber || `INV-${invoice.InvoiceID.substring(0, 8)}`,
+              amount: (invoice.Total ?? 0).toString(),
+              amountPaid: (invoice.AmountPaid ?? 0).toString(),
+              taxAmount: (invoice.TotalTax ?? 0).toString(),
+              status: this.mapXeroStatus(invoice.Status, {
+                amountPaid: invoice.AmountPaid,
+                totalAmount: invoice.Total,
+              }),
+              issueDate: new Date(invoice.DateString || invoice.Date),
+              dueDate: new Date(invoice.DueDateString || invoice.DueDate || invoice.DateString || invoice.Date),
+              paidDate: invoice.FullyPaidOnDate ? new Date(invoice.FullyPaidOnDate) : null,
+              description: `Invoice ${invoice.InvoiceNumber || ''}`.trim() || null,
+              currency: invoice.CurrencyCode || "GBP",
+              contact: invoice.Contact || null,
+              paymentDetails: {
+                amountPaid: invoice.AmountPaid || 0,
+                amountDue: invoice.AmountDue || 0,
+                totalAmount: invoice.Total || 0,
+                payments: [], // Using embedded fields, no separate payment fetch
+              },
+              metadata: {
+                xeroStatus: invoice.Status,
+                invoiceType: invoice.Type,
+                subTotal: invoice.SubTotal,
+                lineItems: invoice.LineItems || [],
+                branding: invoice.BrandingThemeID || null,
+              },
+            }));
 
             await db.insert(cachedXeroInvoices).values(invoicesToInsert);
             totalInvoicesCount += invoicesToInsert.length;
-            console.log(`  📄 Page ${currentPage}: ${invoicesToInsert.length} invoices cached`);
+            console.log(`  ✅ Page ${currentPage}: ${invoicesToInsert.length} invoices cached`);
           }
 
-          hasNextPage = response.pagination.hasNextPage;
+          // Xero returns 100 per page; fewer means last page
+          hasNextPage = pageInvoices.length === 100;
           currentPage++;
 
           if (hasNextPage) {
@@ -122,49 +128,44 @@ export class XeroSyncService {
         }
       }
 
-      console.log(`✅ Fetched ${totalInvoicesCount} invoices in ${currentPage - 1} pages`);
+      console.log(`✅ Fetched ${totalInvoicesCount} invoices in ${currentPage - 1} API calls`);
       console.log(`📇 Found ${uniqueContactIds.size} unique contacts from invoices`);
 
-      // Step 2: Fetch extra contact details (email/phone) for contacts that need it
-      // Use a single batched call via Contacts endpoint with IDs filter
+      // ── Step 2: Batch-fetch contact details (email/phone) ──────────
+      // Single batched call per 50 contacts via /Contacts?IDs=id1,id2,...
       const contactDetailsMap = new Map<string, { email: string | null; phone: string | null }>();
       if (uniqueContactIds.size > 0) {
-        try {
-          const contactIdArray = Array.from(uniqueContactIds.keys());
-          // Fetch in batches of 50 IDs via Contacts/{id} is too many calls.
-          // Instead use Contacts?IDs=id1,id2,... (Xero supports this)
-          const batchSize = 50;
-          for (let i = 0; i < contactIdArray.length; i += batchSize) {
-            const batch = contactIdArray.slice(i, i + batchSize);
+        const contactIdArray = Array.from(uniqueContactIds.keys());
+        const batchSize = 50;
+        for (let i = 0; i < contactIdArray.length; i += batchSize) {
+          const batch = contactIdArray.slice(i, i + batchSize);
+          const batchNum = Math.floor(i / batchSize) + 1;
+          const totalBatches = Math.ceil(contactIdArray.length / batchSize);
+          console.log(`  📇 Contact details batch ${batchNum}/${totalBatches} (${batch.length} contacts)`);
+
+          try {
             const idsParam = batch.join(',');
-            const endpoint = `Contacts?IDs=${idsParam}`;
-            console.log(`  📇 Fetching contact details batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(contactIdArray.length / batchSize)} (${batch.length} contacts)`);
-
-            try {
-              const response = await xeroService.makeAuthenticatedRequestPublic(tokens, endpoint, 'GET', undefined, tenantId);
-              const fetchedContacts = response.Contacts || [];
-              for (const c of fetchedContacts) {
-                contactDetailsMap.set(c.ContactID, {
-                  email: c.EmailAddress || null,
-                  phone: c.Phones?.find((p: any) => p.PhoneType === 'DEFAULT')?.PhoneNumber || null,
-                });
-              }
-            } catch (batchErr: any) {
-              console.warn(`  ⚠️ Failed to fetch contact details batch: ${batchErr.message}`);
-              // Contacts will still be created from invoice data, just without email/phone
+            const response = await xeroService.makeAuthenticatedRequestPublic(
+              tokens, `Contacts?IDs=${idsParam}`, 'GET', undefined, tenantId
+            );
+            for (const c of (response.Contacts || [])) {
+              contactDetailsMap.set(c.ContactID, {
+                email: c.EmailAddress || null,
+                phone: c.Phones?.find((p: any) => p.PhoneType === 'DEFAULT')?.PhoneNumber || null,
+              });
             }
-
-            if (i + batchSize < contactIdArray.length) {
-              await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY_MS));
-            }
+          } catch (batchErr: any) {
+            console.warn(`  ⚠️ Contact details batch failed: ${batchErr.message}`);
           }
-          console.log(`✅ Fetched email/phone for ${contactDetailsMap.size} contacts`);
-        } catch (err) {
-          console.warn('⚠️ Could not fetch contact details, continuing with invoice data only:', err);
+
+          if (i + batchSize < contactIdArray.length) {
+            await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY_MS));
+          }
         }
+        console.log(`✅ Fetched details for ${contactDetailsMap.size} contacts`);
       }
 
-      // Step 3: Create/update contacts from invoice data + extra details
+      // ── Step 3: Create/update contacts ─────────────────────────────
       const existingContacts = await db.select().from(contacts).where(eq(contacts.tenantId, tenantId));
       const existingByXeroId = new Map(
         existingContacts.filter(c => c.xeroContactId).map(c => [c.xeroContactId, c])
@@ -202,7 +203,7 @@ export class XeroSyncService {
             try {
               await assignContactToDefaultSchedule(tenantId, newContact.id);
             } catch (seedErr) {
-              console.warn(`  [xero-sync] Failed to assign schedule for contact ${newContact.id}:`, seedErr);
+              console.warn(`  Schedule assign failed for ${newContact.id}:`, seedErr);
             }
             contactsCreated++;
           }
@@ -213,11 +214,14 @@ export class XeroSyncService {
 
       console.log(`✅ Contacts: ${contactsCreated} created, ${contactsUpdated} updated`);
 
-      // Step 4: Process cached invoices into main invoices table
+      // ── Step 4: Process cached invoices into main table ────────────
       const processedCount = await this.processCachedInvoices(tenantId, mode);
       console.log(`✅ Processed ${processedCount} collection-relevant invoices (mode: ${mode})`);
 
       await db.update(tenants).set({ xeroLastSyncAt: new Date() }).where(eq(tenants.id, tenantId));
+
+      const totalApiCalls = (currentPage - 1) + Math.ceil(uniqueContactIds.size / 50);
+      console.log(`📊 Total Xero API calls: ${totalApiCalls}`);
 
       return {
         success: true,
@@ -225,7 +229,7 @@ export class XeroSyncService {
         contactsCount: contactsCreated + contactsUpdated,
       };
     } catch (error) {
-      console.error("Invoice-first sync failed:", error);
+      console.error("Xero sync failed:", error);
       return {
         success: false,
         invoicesCount: 0,
@@ -256,7 +260,7 @@ export class XeroSyncService {
       let processedCount = 0;
       const seenXeroInvoiceIds: string[] = [];
 
-      // Pre-load contacts for matching
+      // Pre-load contacts for in-memory matching
       const allContacts = await db.select().from(contacts).where(eq(contacts.tenantId, tenantId));
       const contactsByXeroId = new Map(
         allContacts.filter(c => c.xeroContactId).map(c => [c.xeroContactId!, c])
@@ -273,10 +277,9 @@ export class XeroSyncService {
 
           seenXeroInvoiceIds.push(cachedInv.xeroInvoiceId);
 
-          // Look up contact from pre-loaded map
           const contact = contactsByXeroId.get(contactXeroId);
           if (!contact) {
-            console.warn(`⚠️  Skipping invoice ${cachedInv.invoiceNumber} - contact ${contactXeroId} not found in DB`);
+            console.warn(`⚠️  Skipping invoice ${cachedInv.invoiceNumber} - contact ${contactXeroId} not in DB`);
             continue;
           }
 
@@ -284,6 +287,22 @@ export class XeroSyncService {
           if (cachedInv.status === 'unpaid' || cachedInv.status === 'partial') {
             mappedStatus = new Date(cachedInv.dueDate) < new Date() ? 'overdue' : 'pending';
           }
+
+          const invoiceData = {
+            tenantId,
+            contactId: contact.id,
+            xeroInvoiceId: cachedInv.xeroInvoiceId,
+            invoiceNumber: cachedInv.invoiceNumber,
+            amount: cachedInv.amount,
+            amountPaid: cachedInv.amountPaid,
+            taxAmount: cachedInv.taxAmount,
+            status: mappedStatus,
+            issueDate: cachedInv.issueDate,
+            dueDate: cachedInv.dueDate,
+            paidDate: cachedInv.paidDate,
+            description: cachedInv.description,
+            currency: cachedInv.currency,
+          };
 
           if (mode === 'ongoing') {
             const [existing] = await db
@@ -293,53 +312,14 @@ export class XeroSyncService {
 
             if (existing) {
               await db.update(invoices).set({
-                contactId: contact.id,
-                invoiceNumber: cachedInv.invoiceNumber,
-                amount: cachedInv.amount,
-                amountPaid: cachedInv.amountPaid,
-                taxAmount: cachedInv.taxAmount,
-                status: mappedStatus,
-                issueDate: cachedInv.issueDate,
-                dueDate: cachedInv.dueDate,
-                paidDate: cachedInv.paidDate,
-                description: cachedInv.description,
-                currency: cachedInv.currency,
+                ...invoiceData,
                 updatedAt: new Date(),
               }).where(eq(invoices.id, existing.id));
             } else {
-              await db.insert(invoices).values({
-                tenantId,
-                contactId: contact.id,
-                xeroInvoiceId: cachedInv.xeroInvoiceId,
-                invoiceNumber: cachedInv.invoiceNumber,
-                amount: cachedInv.amount,
-                amountPaid: cachedInv.amountPaid,
-                taxAmount: cachedInv.taxAmount,
-                status: mappedStatus,
-                issueDate: cachedInv.issueDate,
-                dueDate: cachedInv.dueDate,
-                paidDate: cachedInv.paidDate,
-                description: cachedInv.description,
-                currency: cachedInv.currency,
-              });
+              await db.insert(invoices).values(invoiceData);
             }
           } else {
-            // Initial mode: just insert (table was already cleared)
-            await db.insert(invoices).values({
-              tenantId,
-              contactId: contact.id,
-              xeroInvoiceId: cachedInv.xeroInvoiceId,
-              invoiceNumber: cachedInv.invoiceNumber,
-              amount: cachedInv.amount,
-              amountPaid: cachedInv.amountPaid,
-              taxAmount: cachedInv.taxAmount,
-              status: mappedStatus,
-              issueDate: cachedInv.issueDate,
-              dueDate: cachedInv.dueDate,
-              paidDate: cachedInv.paidDate,
-              description: cachedInv.description,
-              currency: cachedInv.currency,
-            });
+            await db.insert(invoices).values(invoiceData);
           }
 
           processedCount++;
@@ -348,7 +328,7 @@ export class XeroSyncService {
         }
       }
 
-      // Ongoing mode: mark invoices no longer in Xero as paid/resolved
+      // Ongoing mode: mark stale invoices as paid
       if (mode === 'ongoing' && seenXeroInvoiceIds.length > 0) {
         try {
           await db.update(invoices)
@@ -359,13 +339,13 @@ export class XeroSyncService {
               notInArray(invoices.xeroInvoiceId, seenXeroInvoiceIds),
               sql`${invoices.status} NOT IN ('paid', 'void', 'voided')`,
             ));
-          console.log(`📦 Marked stale invoices as paid (no longer collection-relevant in Xero)`);
+          console.log(`📦 Marked stale invoices as paid`);
         } catch (err) {
           console.warn('Could not mark stale invoices:', err);
         }
       }
 
-      console.log(`✅ Successfully processed ${processedCount} invoices into main table`);
+      console.log(`✅ Processed ${processedCount} invoices into main table`);
       return processedCount;
     } catch (error) {
       console.error("Error processing cached invoices:", error);
@@ -455,14 +435,14 @@ export class XeroSyncService {
   }
 
   // ══════════════════════════════════════════════════════════════════
-  // INITIAL SYNC — clean sweep + fresh insert (replaces demo data)
+  // INITIAL SYNC — clean sweep + fresh insert
   // ══════════════════════════════════════════════════════════════════
 
   private async clearTenantDataForFreshSync(tenantId: string): Promise<void> {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      console.log('🧹 INITIAL SYNC: Clearing all tenant data in FK-safe order...');
+      console.log('🧹 INITIAL SYNC: Clearing tenant data in FK-safe order...');
 
       const tables = [
         'message_drafts', 'compliance_checks', 'action_logs', 'action_items',
@@ -478,8 +458,7 @@ export class XeroSyncService {
         'sms_messages', 'interest_ledger', 'disputes', 'promises_to_pay',
         'debtor_payments', 'conversations',
         'actions',
-        'payment_plan_invoices',
-        'payment_plans',
+        'payment_plan_invoices', 'payment_plans',
         'bank_transactions', 'bank_accounts', 'bills',
         'cached_xero_invoices', 'invoices', 'contacts',
       ];
@@ -495,16 +474,14 @@ export class XeroSyncService {
             await client.query(`DELETE FROM ${table} WHERE tenant_id = $1`, [tenantId]);
           }
         } catch (err: any) {
-          if (err.code === '42P01') {
-            // Table doesn't exist yet — skip
-          } else {
+          if (err.code !== '42P01') {
             console.warn(`  ⚠️  Error clearing ${table}:`, err.message);
           }
         }
       }
 
       await client.query('COMMIT');
-      console.log('✅ All tenant data cleared successfully');
+      console.log('✅ Tenant data cleared');
     } catch (error) {
       await client.query('ROLLBACK');
       console.error('❌ Transaction rolled back:', error);
@@ -515,7 +492,7 @@ export class XeroSyncService {
   }
 
   // ══════════════════════════════════════════════════════════════════
-  // MAIN ENTRY POINT — syncAllDataForTenant(tenantId, mode)
+  // MAIN ENTRY POINT
   // ══════════════════════════════════════════════════════════════════
 
   async syncAllDataForTenant(tenantId: string, mode: SyncMode = 'initial'): Promise<{
@@ -532,23 +509,19 @@ export class XeroSyncService {
     try {
       console.log(`🚀 Starting ${mode.toUpperCase()} Xero sync for tenant: ${tenantId}`);
 
-      // INITIAL mode: clean sweep first
       if (mode === 'initial') {
         await this.clearTenantDataForFreshSync(tenantId);
       }
 
-      // Invoice-first sync: fetches invoices, extracts contacts, syncs both
       const result = await this.syncInvoicesAndContacts(tenantId, mode);
       if (!result.success) {
         throw new Error(`Sync failed: ${result.error}`);
       }
 
       console.log(`🎉 ${mode.toUpperCase()} sync completed:
-        ✅ ${result.contactsCount} contacts (from invoice data)
-        ✅ ${result.invoicesCount} invoices
-        ⏭️  Bills, bank accounts, bank transactions skipped (Open Banking scope)`);
+        ✅ ${result.contactsCount} contacts
+        ✅ ${result.invoicesCount} invoices`);
 
-      // Data quality attention items
       try {
         const count = await attentionItemService.createDataQualityAttentionItems(tenantId);
         if (count > 0) console.log(`📋 Created ${count} data quality attention items`);
