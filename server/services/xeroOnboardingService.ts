@@ -89,17 +89,13 @@ export class XeroOnboardingService {
         await this.initializeServices();
       }
 
-      // Step 1: Import contacts with collection focus
-      console.log('📋 Step 1: Importing customer contacts...');
-      const contactResults = await this.xeroService.syncContactsToDatabase(tokens, tenantId);
-      console.log(`✅ Contacts imported: ${contactResults.synced} synced, ${contactResults.filtered} filtered`);
-      errors.push(...contactResults.errors);
-
-      // Step 2: Import invoices 
-      console.log('💰 Step 2: Importing invoices...');
-      const invoiceResults = await this.xeroService.syncInvoicesToDatabase(tokens, tenantId);
-      console.log(`✅ Invoices imported: ${invoiceResults.synced} synced`);
-      errors.push(...invoiceResults.errors);
+      // Steps 1-2: Import contacts and invoices using optimised invoice-first sync
+      console.log('📋 Steps 1-2: Importing invoices and contacts (invoice-first sync)...');
+      const { XeroSyncService } = await import('./xeroSync');
+      const syncService = new XeroSyncService();
+      const syncResult = await syncService.syncInvoicesAndContacts(tenantId, 'initial');
+      console.log(`✅ Imported: ${syncResult.invoicesCount} invoices, ${syncResult.contactsCount} contacts`);
+      if (syncResult.error) errors.push(syncResult.error);
 
       // Step 3: Generate data summary and insights
       console.log('📊 Step 3: Analyzing imported data...');

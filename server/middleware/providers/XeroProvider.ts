@@ -8,6 +8,9 @@ import {
   TokenAccessor
 } from '../types';
 import { xeroService } from '../../services/xero';
+import { XeroSyncService } from '../../services/xeroSync';
+
+const xeroSyncService = new XeroSyncService();
 
 /**
  * Xero Provider Implementation
@@ -242,16 +245,13 @@ export class XeroProvider implements UniversalProvider {
         tenantId: tokenData.tenantId || tenantId,
       };
 
-      // Sync contacts
-      const contactsResult = await xeroService.syncContactsToDatabase(tokens, tenantId);
-      
-      // Sync invoices  
-      const invoicesResult = await xeroService.syncInvoicesToDatabase(tokens, tenantId);
+      // Use the optimised invoice-first sync (same as Sync Now button)
+      const result = await xeroSyncService.syncInvoicesAndContacts(tenantId, 'ongoing');
 
-      const totalSynced = contactsResult.synced + invoicesResult.synced;
-      const allErrors = [...contactsResult.errors, ...invoicesResult.errors];
-
-      return { synced: totalSynced, errors: allErrors };
+      return {
+        synced: result.invoicesCount + result.contactsCount,
+        errors: result.error ? [result.error] : [],
+      };
 
     } catch (error) {
       console.error('Xero database sync failed:', error);
