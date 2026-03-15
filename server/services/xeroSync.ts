@@ -89,9 +89,9 @@ export class XeroSyncService {
                 amountPaid: invoice.AmountPaid,
                 totalAmount: invoice.Total,
               }),
-              issueDate: new Date(invoice.DateString || invoice.Date),
-              dueDate: new Date(invoice.DueDateString || invoice.DueDate || invoice.DateString || invoice.Date),
-              paidDate: invoice.FullyPaidOnDate ? new Date(invoice.FullyPaidOnDate) : null,
+              issueDate: this.parseXeroDate(invoice.DateString || invoice.Date),
+              dueDate: this.parseXeroDate(invoice.DueDateString || invoice.DueDate || invoice.DateString || invoice.Date),
+              paidDate: invoice.FullyPaidOnDate ? this.parseXeroDate(invoice.FullyPaidOnDate) : null,
               description: `Invoice ${invoice.InvoiceNumber || ''}`.trim() || null,
               currency: invoice.CurrencyCode || "GBP",
               contact: invoice.Contact || null,
@@ -110,10 +110,25 @@ export class XeroSyncService {
               },
             }));
 
-            await db.insert(cachedXeroInvoices).values(invoicesToInsert);
-            totalInvoicesCount += invoicesToInsert.length;
-            console.log(`  ✅ Page ${currentPage}: ${invoicesToInsert.length} invoices cached`);
-            onProgress?.({ contactCount: 0, invoiceCount: totalInvoicesCount });
+            // Log first invoice shape for debugging
+            if (totalInvoicesCount === 0) {
+              console.log(`[DIAG] First cached invoice data: ${JSON.stringify(invoicesToInsert[0], null, 2)}`);
+            }
+
+            try {
+              await db.insert(cachedXeroInvoices).values(invoicesToInsert);
+              totalInvoicesCount += invoicesToInsert.length;
+              console.log(`  ✅ Page ${currentPage}: ${invoicesToInsert.length} invoices cached`);
+              onProgress?.({ contactCount: 0, invoiceCount: totalInvoicesCount });
+            } catch (cacheErr: any) {
+              console.error(`[DIAG] ❌ CACHE INSERT FAILED for page ${currentPage}:`);
+              console.error(`[DIAG]   message: ${cacheErr?.message}`);
+              console.error(`[DIAG]   code: ${cacheErr?.code}`);
+              console.error(`[DIAG]   detail: ${cacheErr?.detail}`);
+              console.error(`[DIAG]   column: ${cacheErr?.column}`);
+              console.error(`[DIAG]   full:`, cacheErr);
+              throw cacheErr; // Re-throw so the page-level catch handles it
+            }
           }
 
           // Xero returns 100 per page; fewer means last page
@@ -395,6 +410,26 @@ export class XeroSyncService {
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────
+
+  /** Parse Xero date strings: ISO "2025-01-15", .NET "/Date(1609459200000+0000)/", or epoch ms */
+  private parseXeroDate(value: string | number | null | undefined): Date {
+    if (!value) return new Date();
+
+    // Handle .NET JSON date format: /Date(1609459200000+0000)/
+    if (typeof value === 'string') {
+      const dotNetMatch = value.match(/\/Date\((\d+)([+-]\d{4})?\)\//);
+      if (dotNetMatch) {
+        return new Date(parseInt(dotNetMatch[1], 10));
+      }
+    }
+
+    const parsed = new Date(value);
+    if (isNaN(parsed.getTime())) {
+      console.warn(`[xeroSync] Invalid date value "${value}", using current date`);
+      return new Date();
+    }
+    return parsed;
+  }
 
   private mapXeroStatus(xeroStatus: string, paymentDetails?: any): string {
     switch (xeroStatus?.toUpperCase()) {
