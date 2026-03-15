@@ -9,7 +9,7 @@ Read /docs/QASHIVO_CONTEXT.md completely. It is the canonical product specificat
 - **Build-to-sell** to a UK bank. Every feature must prove value for acquisition.
 - **REFACTOR** backend (keep existing RBAC, multi-tenant, partner, email, voice, timeline)
 - **REWRITE** frontend (completely new UI per Section 8B of context doc)
-- **REPLACE** auth (swap Replit OIDC for production auth)
+- **REPLACE** auth (swap for production auth)
 - Current phase: **MVP v1 (Months 1-3)**
 - See Section 18 for existing codebase mapping
 - See Section 19 for all development directives
@@ -39,7 +39,7 @@ npm run db:push    # Drizzle Kit: push schema changes to PostgreSQL
 - **Frontend**: React 18 + TypeScript, Vite, Wouter (routing), TanStack Query v5, Shadcn/ui (Radix + Tailwind) — BEING REWRITTEN
 - **Backend**: Express.js (TypeScript ESM, transpiled by tsx in dev, esbuild in prod)
 - **Database**: PostgreSQL (Neon serverless), Drizzle ORM
-- **Auth**: Currently Replit OIDC — BEING REPLACED. Sessions stored in PostgreSQL.
+- **Auth**: Passport local strategy — BEING REPLACED. Sessions stored in PostgreSQL.
 - **AI**: Migrating from OpenAI to Anthropic Claude API for all agents
 - **Email**: SendGrid (transactional + inbound parsing)
 - **SMS**: Vonage
@@ -57,7 +57,6 @@ npm run db:push    # Drizzle Kit: push schema changes to PostgreSQL
   - `startup/orchestrator.ts` — Bootstrap sequence
   - `storage.ts` — `IStorage` interface (data access layer), implemented by `DatabaseStorage`
   - `auth.ts` — Passport local strategy, session config (BEING REPLACED)
-  - `replitAuth.ts` — Replit OIDC (REMOVING)
 - `shared/` — Code shared by client and server
   - `schema.ts` — Single source of truth: ~92 Drizzle tables, Zod validation schemas, TypeScript types
   - `types/`, `utils/`, `forecast.ts`, `currencies.ts`
@@ -93,6 +92,14 @@ Started from `server/startup/orchestrator.ts`. All fire-and-forget async calls m
 - **Primary keys**: UUIDs via `gen_random_uuid()`
 - **Migrations**: `npm run db:push` (Drizzle Kit push)
 - **Adding a table**: Define in `shared/schema.ts` → add relations → create Zod insert schema → run `db:push` → add storage methods in `storage.ts`
+
+## Deployment
+- **Platform**: Railway — auto-deploys from GitHub `main` branch on push
+- **Build**: `npm run build` (Vite client + esbuild server → `dist/`)
+- **Start**: `NODE_ENV=production node dist/index.js`
+- **Logs**: Railway dashboard → service → Deployments → logs
+- **DB**: Neon serverless PostgreSQL (connection via `DATABASE_URL`)
+- Dynamic imports in route files must use `../` paths (relative to `server/routes/`), not `./`, because esbuild bundles to a single file in `dist/`
 
 ## Important Conventions
 - TypeScript ESM throughout — no CommonJS `require()`
@@ -184,13 +191,13 @@ SendGrid inbound webhook (existing /api/webhooks/sendgrid/inbound)
 charlieDecisionEngine.ts  → becomes the scheduling/trigger layer for collectionsAgent.ts
 openai.ts                 → replaced by server/services/llm/claude.ts
 intentAnalyst.ts          → rewired to use Claude via server/services/llm/claude.ts
-auth.ts / replitAuth.ts   → replaced by Clerk middleware
+auth.ts                   → replaced by Clerk middleware
 ```
 
 ### Environment Variables (New for MVP v1)
 
 ```
-# Auth (replacing Replit OIDC)
+# Auth (replacing current Passport local)
 CLERK_PUBLISHABLE_KEY=pk_...
 CLERK_SECRET_KEY=sk_...
 
