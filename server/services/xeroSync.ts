@@ -251,13 +251,25 @@ export class XeroSyncService {
         .from(cachedXeroInvoices)
         .where(eq(cachedXeroInvoices.tenantId, tenantId));
 
-      console.log(`📊 Processing ${cachedInvoices.length} cached invoices into main table (mode: ${mode})...`);
+      console.log(`[DIAG] ══════════════════════════════════════════════`);
+      console.log(`[DIAG] processCachedInvoices START`);
+      console.log(`[DIAG] tenantId: ${tenantId}`);
+      console.log(`[DIAG] mode: ${mode}`);
+      console.log(`[DIAG] cached invoices found: ${cachedInvoices.length}`);
+      if (cachedInvoices.length === 0) {
+        console.log(`[DIAG] ❌ NO CACHED INVOICES — nothing to process`);
+        console.log(`[DIAG] ══════════════════════════════════════════════`);
+        return 0;
+      }
 
       let processedCount = 0;
+      let failedCount = 0;
       const seenXeroInvoiceIds: string[] = [];
 
       // Pre-load contacts for in-memory matching
       const allContacts = await db.select().from(contacts).where(eq(contacts.tenantId, tenantId));
+      console.log(`[DIAG] contacts in DB for tenant: ${allContacts.length}`);
+      console.log(`[DIAG] contacts with xeroContactId: ${allContacts.filter(c => c.xeroContactId).length}`);
       const contactsByXeroId = new Map(
         allContacts.filter(c => c.xeroContactId).map(c => [c.xeroContactId!, c])
       );
@@ -308,6 +320,15 @@ export class XeroSyncService {
             currency: cachedInv.currency,
           };
 
+          // Log the FIRST invoice's full data for debugging
+          if (processedCount === 0 && failedCount === 0) {
+            console.log(`[DIAG] ── First invoice data ──`);
+            console.log(`[DIAG] invoiceData: ${JSON.stringify(invoiceData, null, 2)}`);
+            console.log(`[DIAG] cachedInv.contact.ContactID: ${contactXeroId}`);
+            console.log(`[DIAG] matched contact.id: ${contact.id}`);
+            console.log(`[DIAG] cachedInv.metadata: ${JSON.stringify(cachedInv.metadata)}`);
+          }
+
           if (mode === 'ongoing') {
             const [existing] = await db
               .select({ id: invoices.id })
@@ -328,7 +349,19 @@ export class XeroSyncService {
 
           processedCount++;
         } catch (error: any) {
-          console.error(`❌ Error processing invoice ${cachedInv.invoiceNumber}:`, error?.message || error);
+          failedCount++;
+          console.error(`[DIAG] ❌ INSERT FAILED for invoice ${cachedInv.invoiceNumber}:`);
+          console.error(`[DIAG]   message: ${error?.message}`);
+          console.error(`[DIAG]   code: ${error?.code}`);
+          console.error(`[DIAG]   column: ${error?.column}`);
+          console.error(`[DIAG]   detail: ${error?.detail}`);
+          console.error(`[DIAG]   constraint: ${error?.constraint}`);
+          console.error(`[DIAG]   table: ${error?.table}`);
+          console.error(`[DIAG]   stack: ${error?.stack?.split('\n').slice(0, 3).join(' | ')}`);
+          // Log first 3 failures in full
+          if (failedCount <= 3) {
+            console.error(`[DIAG]   full error:`, error);
+          }
         }
       }
 
@@ -349,10 +382,14 @@ export class XeroSyncService {
         }
       }
 
-      console.log(`✅ Processed ${processedCount} invoices into main table`);
+      console.log(`[DIAG] ── processCachedInvoices SUMMARY ──`);
+      console.log(`[DIAG] ✅ successful inserts: ${processedCount}`);
+      console.log(`[DIAG] ❌ failed inserts: ${failedCount}`);
+      console.log(`[DIAG] ⏭️  skipped (no contact match): ${cachedInvoices.length - processedCount - failedCount}`);
+      console.log(`[DIAG] ══════════════════════════════════════════════`);
       return processedCount;
     } catch (error) {
-      console.error("Error processing cached invoices:", error);
+      console.error("[DIAG] ❌ FATAL error in processCachedInvoices:", error);
       return 0;
     }
   }
