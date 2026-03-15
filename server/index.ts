@@ -147,11 +147,42 @@ app.use((req, res, next) => {
 
 // ─── Process-level error guards ───────────────────────────────────────────────
 process.on('uncaughtException', (err) => {
+  // Neon serverless WebSocket ErrorEvent has a read-only `message` getter that
+  // causes "Cannot set property message of #<ErrorEvent>" if Node tries to
+  // serialize it. Detect and handle gracefully instead of crashing.
+  const errStr = (() => {
+    try { return String(err); } catch { return '[unstringifiable error]'; }
+  })();
+  const isWebSocketError =
+    errStr.includes('ErrorEvent') ||
+    errStr.includes('WebSocket') ||
+    (err && typeof err === 'object' && 'type' in err && (err as any).type === 'error' && 'target' in err);
+
+  if (isWebSocketError) {
+    console.error(`[WARN] WebSocket/Neon connection error (non-fatal) — pid ${process.pid}:`, errStr);
+    // Don't crash — the pool will reconnect automatically
+    return;
+  }
+
   console.error(`[FATAL] uncaughtException — pid ${process.pid}:`, err);
   process.exit(1);
 });
 
 process.on('unhandledRejection', (reason) => {
+  // Same WebSocket ErrorEvent guard for unhandled promise rejections
+  const reasonStr = (() => {
+    try { return String(reason); } catch { return '[unstringifiable reason]'; }
+  })();
+  const isWebSocketError =
+    reasonStr.includes('ErrorEvent') ||
+    reasonStr.includes('WebSocket') ||
+    (reason && typeof reason === 'object' && 'type' in (reason as any) && (reason as any).type === 'error');
+
+  if (isWebSocketError) {
+    console.error(`[WARN] WebSocket/Neon rejection (non-fatal) — pid ${process.pid}:`, reasonStr);
+    return;
+  }
+
   console.error(`[WARN] unhandledRejection — pid ${process.pid}:`, reason);
   // Log but do not exit — background tasks may produce non-fatal rejections
 });

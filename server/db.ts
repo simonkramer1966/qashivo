@@ -3,7 +3,24 @@ import { drizzle } from 'drizzle-orm/neon-serverless';
 import ws from "ws";
 import * as schema from "@shared/schema";
 
-neonConfig.webSocketConstructor = ws;
+// Use a WebSocket wrapper that catches ErrorEvent issues from Neon's driver.
+// The Neon serverless driver can emit WebSocket ErrorEvents with read-only
+// `message` properties that crash Node when serialized.
+class SafeWebSocket extends ws {
+  constructor(...args: ConstructorParameters<typeof ws>) {
+    super(...args);
+    this.on('error', (err) => {
+      // Catch and log WebSocket errors so they don't propagate as
+      // uncaughtExceptions with unserializable ErrorEvent objects
+      const msg = (() => {
+        try { return err?.message || String(err); } catch { return 'WebSocket error'; }
+      })();
+      console.error(`[DB] WebSocket error (handled): ${msg}`);
+    });
+  }
+}
+
+neonConfig.webSocketConstructor = SafeWebSocket as any;
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
@@ -11,22 +28,25 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-export const pool = new Pool({ 
+export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  max: parseInt(process.env.DB_POOL_MAX || '10'), // Maximum connections, configurable via env
-  idleTimeoutMillis: 30000, // Close idle connections after 30 seconds
-  connectionTimeoutMillis: 10000, // Timeout when connecting to database
-  allowExitOnIdle: true, // Allow pool to close when all connections are idle
-  maxUses: 7500 // Maximum number of times a connection can be used before being closed
+  max: parseInt(process.env.DB_POOL_MAX || '10'),
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
+  allowExitOnIdle: true,
+  maxUses: 7500,
 });
 
-// Add error handling for pool
+// Pool-level error handling — prevents unhandled errors from crashing the process
 pool.on('error', (err) => {
-  console.error('Database pool error:', err);
+  const msg = (() => {
+    try { return err?.message || String(err); } catch { return 'unknown pool error'; }
+  })();
+  console.error(`[DB] Pool error (non-fatal, will reconnect): ${msg}`);
 });
 
 pool.on('connect', () => {
-  console.log('New database connection established');
+  console.log('[DB] New database connection established');
 });
 
 export const db = drizzle({ client: pool, schema });
