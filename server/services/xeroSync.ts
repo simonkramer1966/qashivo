@@ -248,14 +248,7 @@ export class XeroSyncService {
         .from(cachedXeroInvoices)
         .where(eq(cachedXeroInvoices.tenantId, tenantId));
 
-      console.log(`📊 Processing ${cachedInvoices.length} cached invoices (mode: ${mode})...`);
-
-      const collectionRelevant = cachedInvoices.filter(inv => {
-        const amountDue = parseFloat(inv.amount) - parseFloat(inv.amountPaid || "0");
-        return (inv.status === 'unpaid' || inv.status === 'partial') && amountDue > 0;
-      });
-
-      console.log(`🎯 Found ${collectionRelevant.length} collection-relevant invoices`);
+      console.log(`📊 Processing ${cachedInvoices.length} cached invoices into main table (mode: ${mode})...`);
 
       let processedCount = 0;
       const seenXeroInvoiceIds: string[] = [];
@@ -266,7 +259,7 @@ export class XeroSyncService {
         allContacts.filter(c => c.xeroContactId).map(c => [c.xeroContactId!, c])
       );
 
-      for (const cachedInv of collectionRelevant) {
+      for (const cachedInv of cachedInvoices) {
         try {
           const contactXeroId = (cachedInv.contact as any)?.ContactID;
 
@@ -275,18 +268,27 @@ export class XeroSyncService {
             continue;
           }
 
-          seenXeroInvoiceIds.push(cachedInv.xeroInvoiceId);
-
           const contact = contactsByXeroId.get(contactXeroId);
           if (!contact) {
             console.warn(`⚠️  Skipping invoice ${cachedInv.invoiceNumber} - contact ${contactXeroId} not in DB`);
             continue;
           }
 
+          seenXeroInvoiceIds.push(cachedInv.xeroInvoiceId);
+
+          // Map cached status to main table status
           let mappedStatus = cachedInv.status;
           if (cachedInv.status === 'unpaid' || cachedInv.status === 'partial') {
             mappedStatus = new Date(cachedInv.dueDate) < new Date() ? 'overdue' : 'pending';
           }
+
+          // Map Xero status for invoiceStatus field (source of truth from Xero)
+          const xeroStatus = (cachedInv.metadata as any)?.xeroStatus || '';
+          let invoiceStatus = 'OPEN';
+          if (xeroStatus === 'PAID') invoiceStatus = 'PAID';
+          else if (xeroStatus === 'VOIDED') invoiceStatus = 'VOID';
+
+          const amountDue = parseFloat(cachedInv.amount) - parseFloat(cachedInv.amountPaid || "0");
 
           const invoiceData = {
             tenantId,
@@ -295,8 +297,10 @@ export class XeroSyncService {
             invoiceNumber: cachedInv.invoiceNumber,
             amount: cachedInv.amount,
             amountPaid: cachedInv.amountPaid,
+            amountDue: amountDue.toFixed(2),
             taxAmount: cachedInv.taxAmount,
             status: mappedStatus,
+            invoiceStatus,
             issueDate: cachedInv.issueDate,
             dueDate: cachedInv.dueDate,
             paidDate: cachedInv.paidDate,
@@ -332,7 +336,7 @@ export class XeroSyncService {
       if (mode === 'ongoing' && seenXeroInvoiceIds.length > 0) {
         try {
           await db.update(invoices)
-            .set({ status: 'paid', updatedAt: new Date() })
+            .set({ status: 'paid', invoiceStatus: 'PAID', updatedAt: new Date() })
             .where(and(
               eq(invoices.tenantId, tenantId),
               sql`${invoices.xeroInvoiceId} IS NOT NULL`,
