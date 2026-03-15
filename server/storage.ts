@@ -1081,12 +1081,10 @@ export class DatabaseStorage implements IStorage {
           break;
         
         case 'open':
-          // Open = all invoices that are not paid or cancelled
+          // Open = all invoices that are not paid, cancelled, void, voided, deleted, or draft
+          // Must match the Debtors page exclusion list for consistent totals
           conditions.push(
-            and(
-              ne(invoices.status, 'paid'),
-              ne(invoices.status, 'cancelled')
-            )!
+            sql`LOWER(${invoices.status}) NOT IN ('paid', 'cancelled', 'void', 'voided', 'deleted', 'draft')`
           );
           break;
         

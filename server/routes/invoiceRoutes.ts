@@ -141,7 +141,9 @@ export function registerInvoiceRoutes(app: Express): void {
       const validatedQuery = invoicesQuerySchema.parse(req.query);
       const { status, search, overdue, contactId, sortBy, sortDir, page, limit } = validatedQuery;
 
-      const allowedContactIds = await getAssignedContactIds(user);
+      // Use req.user for role checks — it has session-enriched tenantRole
+      // storage.getUser() returns DB user where role is often just "user"
+      const allowedContactIds = await getAssignedContactIds(req.user);
 
       console.log(`📊 Optimized Invoices API - Tenant: ${user.tenantId}, Filters: status=${status}, search="${search}", overdue=${overdue}, sortBy=${sortBy}, sortDir=${sortDir}, page=${page}, limit=${limit}${allowedContactIds ? `, restricted to ${allowedContactIds.length} assigned contacts` : ''}`);
       
@@ -364,8 +366,9 @@ export function registerInvoiceRoutes(app: Express): void {
         '90+': { amount: 0, count: 0 },
       };
       
+      const excludedStatuses = ['paid', 'cancelled', 'void', 'voided', 'deleted', 'draft'];
       allFilteredResult.invoices.forEach((inv: any) => {
-        if (inv.status === 'paid' || inv.status === 'cancelled') return;
+        if (excludedStatuses.includes(inv.status?.toLowerCase())) return;
         const dueDate = new Date(inv.dueDate);
         const today = new Date();
         const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
@@ -406,7 +409,7 @@ export function registerInvoiceRoutes(app: Express): void {
       
       const aggregates = {
         totalOutstanding: allFilteredResult.invoices.reduce((sum, inv) => {
-          if (inv.status !== 'paid' && inv.status !== 'cancelled') {
+          if (!excludedStatuses.includes(inv.status?.toLowerCase())) {
             const amount = Number(inv.amount) || 0;
             const amountPaid = Number(inv.amountPaid) || 0;
             return sum + (amount - amountPaid);
@@ -416,7 +419,7 @@ export function registerInvoiceRoutes(app: Express): void {
         overdueCount: allFilteredResult.invoices.filter(inv => inv.status === 'overdue').length,
         pendingCount: allFilteredResult.invoices.filter(inv => inv.status === 'pending').length,
         criticalCount: allFilteredResult.invoices.filter(inv => {
-          if (inv.status === 'paid' || inv.status === 'cancelled') return false;
+          if (excludedStatuses.includes(inv.status?.toLowerCase())) return false;
           const dueDate = new Date(inv.dueDate);
           const today = new Date();
           const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
