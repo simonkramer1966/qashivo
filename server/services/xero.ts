@@ -206,30 +206,29 @@ class XeroService {
 
     // PROACTIVE TOKEN REFRESH: Check if token is expired before making request
     if (tokens.expiresAt && this.isTokenExpired(tokens.expiresAt)) {
-      console.log('🔄 Xero token expired or expiring soon, proactively refreshing...');
-      
-      try {
-        const refreshedTokens = await this.refreshAccessToken(tokens.refreshToken, tokens.tenantId);
-        
-        if (!refreshedTokens) {
-          throw new Error('Failed to refresh Xero access token');
-        }
-        
-        console.log('✅ Xero token refreshed proactively (expires:', refreshedTokens.expiresAt, ')');
-        
-        // Update the database with new tokens if tenant ID provided
+      console.log(`🔄 Xero token expired or expiring soon (expires: ${tokens.expiresAt.toISOString()}), refreshing...`);
+
+      const refreshedTokens = await this.refreshAccessToken(tokens.refreshToken, tokens.tenantId);
+
+      if (!refreshedTokens) {
+        // Refresh failed — mark connection as expired
         if (tenantIdForDbUpdate) {
-          await this.updateTenantTokens(tenantIdForDbUpdate, refreshedTokens);
+          await this.markConnectionExpired(tenantIdForDbUpdate);
         }
-        
-        // Update the tokens object for this request
-        tokens.accessToken = refreshedTokens.accessToken;
-        tokens.refreshToken = refreshedTokens.refreshToken;
-        tokens.expiresAt = refreshedTokens.expiresAt;
-      } catch (refreshError) {
-        console.error('❌ Proactive token refresh failed:', refreshError);
-        // Continue anyway - if it fails, the reactive refresh (on 401) will catch it
+        throw new Error('Xero token expired and refresh failed. Please reconnect Xero.');
       }
+
+      console.log('✅ Xero token refreshed (new expiry:', refreshedTokens.expiresAt, ')');
+
+      // Save new tokens to database
+      if (tenantIdForDbUpdate) {
+        await this.updateTenantTokens(tenantIdForDbUpdate, refreshedTokens);
+      }
+
+      // Update the tokens object for this request
+      tokens.accessToken = refreshedTokens.accessToken;
+      tokens.refreshToken = refreshedTokens.refreshToken;
+      tokens.expiresAt = refreshedTokens.expiresAt;
     }
 
     const makeRequest = async (accessToken: string): Promise<any> => {
@@ -310,7 +309,11 @@ class XeroService {
           
         } catch (refreshError) {
           console.error('❌ Failed to refresh Xero token:', refreshError);
-          throw new Error(`Xero authentication failed: ${refreshError instanceof Error ? refreshError.message : 'Token refresh failed'}`);
+          // Mark connection as expired so UI prompts reconnection
+          if (tenantIdForDbUpdate) {
+            await this.markConnectionExpired(tenantIdForDbUpdate);
+          }
+          throw new Error(`Xero connection expired. Please reconnect Xero in Settings > Integrations.`);
         }
       }
       
@@ -362,6 +365,23 @@ class XeroService {
     }
   }
 
+  private async markConnectionExpired(tenantId: string): Promise<void> {
+    try {
+      const { db } = await import('../db');
+      const { tenants } = await import('@shared/schema');
+      const { eq } = await import('drizzle-orm');
+
+      await db
+        .update(tenants)
+        .set({ xeroConnectionStatus: 'expired' })
+        .where(eq(tenants.id, tenantId));
+
+      console.warn(`⚠️ Marked Xero connection as expired for tenant ${tenantId}`);
+    } catch (dbError) {
+      console.error('Failed to mark connection as expired:', dbError);
+    }
+  }
+
   async refreshAccessToken(refreshToken: string, currentTenantId?: string): Promise<XeroTokens | null> {
     if (this.config.clientId === "default_client_id") {
       console.log("Xero API not configured, mocking token refresh");
@@ -382,7 +402,10 @@ class XeroService {
       });
 
       if (!response.ok) {
-        throw new Error(`Token refresh failed: ${response.status}`);
+        const errorBody = await response.text();
+        console.error(`❌ Xero token refresh failed: ${response.status} ${response.statusText}`);
+        console.error(`❌ Xero refresh error body: ${errorBody.substring(0, 1000)}`);
+        return null;
       }
 
       const tokenData = await response.json();
