@@ -213,12 +213,13 @@ export class XeroSyncService {
         }
       }
 
-      console.log(`✅ Contacts: ${contactsCreated} created, ${contactsUpdated} updated`);
-      onProgress?.({ contactCount: contactsCreated + contactsUpdated, invoiceCount: totalInvoicesCount });
+      const totalContacts = contactsCreated + contactsUpdated;
+      console.log(`✅ Contacts: ${contactsCreated} created, ${contactsUpdated} updated (${totalContacts} total in DB)`);
+      onProgress?.({ contactCount: totalContacts, invoiceCount: totalInvoicesCount });
 
       // ── Step 4: Process cached invoices into main table ────────────
       const processedCount = await this.processCachedInvoices(tenantId, mode);
-      console.log(`✅ Processed ${processedCount} collection-relevant invoices (mode: ${mode})`);
+      console.log(`✅ Processed ${processedCount}/${totalInvoicesCount} invoices into main invoices table (mode: ${mode})`);
 
       await db.update(tenants).set({ xeroLastSyncAt: new Date() }).where(eq(tenants.id, tenantId));
 
@@ -290,8 +291,6 @@ export class XeroSyncService {
           if (xeroStatus === 'PAID') invoiceStatus = 'PAID';
           else if (xeroStatus === 'VOIDED') invoiceStatus = 'VOID';
 
-          const amountDue = parseFloat(cachedInv.amount) - parseFloat(cachedInv.amountPaid || "0");
-
           const invoiceData = {
             tenantId,
             contactId: contact.id,
@@ -299,7 +298,6 @@ export class XeroSyncService {
             invoiceNumber: cachedInv.invoiceNumber,
             amount: cachedInv.amount,
             amountPaid: cachedInv.amountPaid,
-            amountDue: amountDue.toFixed(2),
             taxAmount: cachedInv.taxAmount,
             status: mappedStatus,
             invoiceStatus,
@@ -329,8 +327,8 @@ export class XeroSyncService {
           }
 
           processedCount++;
-        } catch (error) {
-          console.error(`Error processing invoice ${cachedInv.invoiceNumber}:`, error);
+        } catch (error: any) {
+          console.error(`❌ Error processing invoice ${cachedInv.invoiceNumber}:`, error?.message || error);
         }
       }
 
