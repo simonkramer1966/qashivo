@@ -875,8 +875,9 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
       }
 
       // Accept mode from request body: "initial" (clean sweep) or "ongoing" (upsert)
-      // Default to "initial" for now since we're replacing demo data
-      const mode = req.body?.mode === 'ongoing' ? 'ongoing' : 'initial';
+      // Default to "ongoing" — syncInvoicesAndContacts auto-detects initial if no prior sync exists
+      // Only use "initial" if explicitly requested (wipes all tenant data first)
+      const mode = req.body?.mode === 'initial' ? 'initial' : 'ongoing';
 
       console.log(`🚀 Starting ${mode.toUpperCase()} Xero sync for tenant: ${user.tenantId}`);
       updateSyncStatus(user.tenantId, { status: 'syncing', startedAt: new Date().toISOString(), invoiceCount: 0, contactCount: 0 });
