@@ -62,8 +62,8 @@ interface Debtor {
 
 const PAGE_SIZE = 20;
 
-function formatPence(pence: number): string {
-  return `£${(pence / 100).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+function formatGBP(pounds: number): string {
+  return `£${pounds.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function relativeDate(dateStr: string | null): string {
@@ -298,7 +298,7 @@ export default function QollectionsDebtors() {
                     {isLoading ? (
                       <Skeleton className="h-8 w-24" />
                     ) : (
-                      formatPence(kpis.totalOutstanding)
+                      formatGBP(kpis.totalOutstanding)
                     )}
                   </p>
                 </div>
@@ -317,7 +317,7 @@ export default function QollectionsDebtors() {
                     {isLoading ? (
                       <Skeleton className="h-8 w-24" />
                     ) : (
-                      formatPence(kpis.totalOverdue)
+                      formatGBP(kpis.totalOverdue)
                     )}
                   </p>
                 </div>
@@ -435,7 +435,7 @@ export default function QollectionsDebtors() {
                           </div>
                         </TableCell>
                         <TableCell className="font-bold">
-                          {formatPence(debtor.totalOutstanding)}
+                          {formatGBP(debtor.totalOutstanding)}
                         </TableCell>
                         <TableCell
                           className={cn(
@@ -443,7 +443,7 @@ export default function QollectionsDebtors() {
                             debtor.overdueAmount > 0 && "text-red-600",
                           )}
                         >
-                          {formatPence(debtor.overdueAmount)}
+                          {formatGBP(debtor.overdueAmount)}
                         </TableCell>
                         <TableCell>
                           <Badge variant="secondary">
