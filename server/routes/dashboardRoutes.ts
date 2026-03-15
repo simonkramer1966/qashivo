@@ -2230,10 +2230,10 @@ export function registerDashboardRoutes(app: Express): void {
           name: contacts.name,
           companyName: contacts.companyName,
           email: contacts.email,
-          totalOutstanding: sql<number>`COALESCE(SUM(CASE WHEN LOWER(${invoices.status}) NOT IN ('paid', 'void', 'voided', 'deleted') THEN ${invoices.amount} - ${invoices.amountPaid} ELSE 0 END), 0)`,
-          overdueAmount: sql<number>`COALESCE(SUM(CASE WHEN LOWER(${invoices.status}) NOT IN ('paid', 'void', 'voided', 'deleted') AND ${invoices.dueDate} < CURRENT_DATE THEN ${invoices.amount} - ${invoices.amountPaid} ELSE 0 END), 0)`,
-          invoiceCount: sql<number>`COUNT(CASE WHEN LOWER(${invoices.status}) NOT IN ('paid', 'void', 'voided', 'deleted') AND (${invoices.amount} - ${invoices.amountPaid}) > 0 THEN 1 END)`,
-          oldestOverdueDays: sql<number>`COALESCE(MAX(CASE WHEN LOWER(${invoices.status}) NOT IN ('paid', 'void', 'voided', 'deleted') AND ${invoices.dueDate} < CURRENT_DATE THEN EXTRACT(DAY FROM AGE(CURRENT_DATE, ${invoices.dueDate})) END), 0)`,
+          totalOutstanding: sql<number>`COALESCE(SUM(CASE WHEN LOWER(${invoices.status}) NOT IN ('paid', 'void', 'voided', 'deleted', 'draft') THEN ${invoices.amount} - ${invoices.amountPaid} ELSE 0 END), 0)`,
+          overdueAmount: sql<number>`COALESCE(SUM(CASE WHEN LOWER(${invoices.status}) NOT IN ('paid', 'void', 'voided', 'deleted', 'draft') AND ${invoices.dueDate} < CURRENT_DATE THEN ${invoices.amount} - ${invoices.amountPaid} ELSE 0 END), 0)`,
+          invoiceCount: sql<number>`COUNT(CASE WHEN LOWER(${invoices.status}) NOT IN ('paid', 'void', 'voided', 'deleted', 'draft') AND (${invoices.amount} - ${invoices.amountPaid}) > 0 THEN 1 END)`,
+          oldestOverdueDays: sql<number>`COALESCE(MAX(CASE WHEN LOWER(${invoices.status}) NOT IN ('paid', 'void', 'voided', 'deleted', 'draft') AND ${invoices.dueDate} < CURRENT_DATE THEN EXTRACT(DAY FROM AGE(CURRENT_DATE, ${invoices.dueDate})) END), 0)`,
           lastContactDate: sql<Date>`(SELECT MAX(a.created_at) FROM actions a WHERE a.contact_id = ${contacts.id} AND a.tenant_id = ${user.tenantId})`,
           nextActionDate: sql<Date>`(SELECT MIN(a.scheduled_for) FROM actions a WHERE a.contact_id = ${contacts.id} AND a.tenant_id = ${user.tenantId} AND a.status IN ('pending', 'pending_approval', 'scheduled'))`,
           isActive: contacts.isActive,
@@ -2246,10 +2246,10 @@ export function registerDashboardRoutes(app: Express): void {
         .where(and(eq(contacts.tenantId, user.tenantId), eq(contacts.isActive, true)))
         .groupBy(contacts.id, contacts.name, contacts.companyName, contacts.email, contacts.isActive)
         .having(
-          sql`SUM(CASE WHEN LOWER(${invoices.status}) NOT IN ('paid', 'void', 'voided', 'deleted') THEN ${invoices.amount} - ${invoices.amountPaid} ELSE 0 END) > 0`,
+          sql`SUM(CASE WHEN LOWER(${invoices.status}) NOT IN ('paid', 'void', 'voided', 'deleted', 'draft') THEN ${invoices.amount} - ${invoices.amountPaid} ELSE 0 END) > 0`,
         )
         .orderBy(
-          sql`SUM(CASE WHEN LOWER(${invoices.status}) NOT IN ('paid', 'void', 'voided', 'deleted') THEN ${invoices.amount} - ${invoices.amountPaid} ELSE 0 END) DESC`,
+          sql`SUM(CASE WHEN LOWER(${invoices.status}) NOT IN ('paid', 'void', 'voided', 'deleted', 'draft') THEN ${invoices.amount} - ${invoices.amountPaid} ELSE 0 END) DESC`,
         );
 
       const formatted = debtors.map((d) => ({
