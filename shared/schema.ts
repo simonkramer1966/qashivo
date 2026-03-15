@@ -412,19 +412,43 @@ export const cachedXeroInvoices = pgTable("cached_xero_invoices", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
   xeroInvoiceId: varchar("xero_invoice_id").notNull(),
+  xeroContactId: varchar("xero_contact_id"), // Lean: direct FK instead of JSONB blob
   invoiceNumber: varchar("invoice_number").notNull(),
+  reference: varchar("reference"), // Xero reference field
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  amountDue: decimal("amount_due", { precision: 10, scale: 2 }).default("0"), // Outstanding amount from Xero
   amountPaid: decimal("amount_paid", { precision: 10, scale: 2 }).default("0"),
   taxAmount: decimal("tax_amount", { precision: 10, scale: 2 }).default("0"),
-  status: varchar("status").notNull(),
+  xeroStatus: varchar("xero_status").notNull(), // Raw Xero status: AUTHORISED, SUBMITTED, PAID, VOIDED, DELETED, DRAFT
+  status: varchar("status").notNull(), // Mapped status for Qashivo: unpaid, paid, overdue, etc.
   issueDate: timestamp("issue_date").notNull(),
   dueDate: timestamp("due_date").notNull(),
   paidDate: timestamp("paid_date"),
-  description: text("description"),
   currency: varchar("currency").default("GBP"),
-  contact: jsonb("contact"), // Store contact data from Xero
-  paymentDetails: jsonb("payment_details"), // Store payment tracking info
-  metadata: jsonb("metadata"), // Additional Xero data
+  updatedDateUtc: timestamp("updated_date_utc"), // Xero's UpdatedDateUTC for tracking changes
+  // Legacy JSONB columns — kept for schema compatibility, no longer populated
+  description: text("description"),
+  contact: jsonb("contact"),
+  paymentDetails: jsonb("payment_details"),
+  metadata: jsonb("metadata"),
+  syncedAt: timestamp("synced_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Cached Xero contacts — lean mirror of Xero contact data
+export const cachedXeroContacts = pgTable("cached_xero_contacts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  xeroContactId: varchar("xero_contact_id").notNull(),
+  name: varchar("name").notNull(),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  emailAddress: varchar("email_address"),
+  phone: varchar("phone"),
+  contactStatus: varchar("contact_status").default("ACTIVE"), // ACTIVE, ARCHIVED
+  isCustomer: boolean("is_customer").default(false),
+  isSupplier: boolean("is_supplier").default(false),
   syncedAt: timestamp("synced_at").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -567,6 +591,7 @@ export const syncState = pgTable("sync_state", {
   recordsCreated: integer("records_created").default(0),
   recordsUpdated: integer("records_updated").default(0),
   recordsFailed: integer("records_failed").default(0),
+  initialSyncComplete: boolean("initial_sync_complete").default(false), // TRUE only after first full sync succeeds
   metadata: jsonb("metadata"), // Provider-specific sync metadata
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -1809,6 +1834,13 @@ export const cachedXeroInvoicesRelations = relations(cachedXeroInvoices, ({ one 
   }),
 }));
 
+export const cachedXeroContactsRelations = relations(cachedXeroContacts, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [cachedXeroContacts.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
 // Email senders configuration for multi-sender support
 export const emailSenders = pgTable("email_senders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -2416,6 +2448,13 @@ export const insertCachedXeroInvoiceSchema = createInsertSchema(cachedXeroInvoic
   syncedAt: true,
 });
 
+export const insertCachedXeroContactSchema = createInsertSchema(cachedXeroContacts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  syncedAt: true,
+});
+
 export const insertActionSchema = createInsertSchema(actions).omit({
   id: true,
   createdAt: true,
@@ -2636,6 +2675,8 @@ export type InsertContact = z.infer<typeof insertContactSchema>;
 export type Contact = typeof contacts.$inferSelect;
 export type InsertCachedXeroInvoice = z.infer<typeof insertCachedXeroInvoiceSchema>;
 export type CachedXeroInvoice = typeof cachedXeroInvoices.$inferSelect;
+export type InsertCachedXeroContact = z.infer<typeof insertCachedXeroContactSchema>;
+export type CachedXeroContact = typeof cachedXeroContacts.$inferSelect;
 export type InsertAction = z.infer<typeof insertActionSchema>;
 export type Action = typeof actions.$inferSelect;
 export type InsertMessageDraft = z.infer<typeof insertMessageDraftSchema>;
