@@ -41,6 +41,7 @@ const SettingsAutonomyRules = lazy(() => import("@/pages/settings/autonomy-rules
 const SettingsIntegrations = lazy(() => import("@/pages/settings/integrations"));
 const SettingsUsersRoles = lazy(() => import("@/pages/settings/users-roles"));
 const SettingsBilling = lazy(() => import("@/pages/settings/billing"));
+const SettingsDataHealth = lazy(() => import("@/pages/settings/data-health"));
 const InvestorsHome = lazy(() => import("@/pages/investors/index"));
 const InvestorsHowItWorks = lazy(() => import("@/pages/investors/how-it-works"));
 const InvestorsDemoPage = lazy(() => import("@/pages/investors/demo"));
@@ -214,6 +215,7 @@ function Router() {
           <Route path="/settings/integrations" component={SettingsIntegrations} />
           <Route path="/settings/users-roles" component={SettingsUsersRoles} />
           <Route path="/settings/billing" component={SettingsBilling} />
+          <Route path="/settings/data-health" component={SettingsDataHealth} />
 
           {/* Onboarding */}
           <Route path="/onboarding" component={UserOnboarding} />

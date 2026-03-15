@@ -116,7 +116,7 @@ class SyncScheduler {
         console.log(`🚀 Starting background sync for tenant: ${tenant.name}`);
         
         try {
-          const result = await this.xeroSyncService.syncAllDataForTenant(tenant.id);
+          const result = await this.xeroSyncService.syncAllDataForTenant(tenant.id, 'ongoing');
           if (result.success) {
             console.log(`✅ Background sync completed for ${tenant.name}:`, {
               contacts: result.contactsCount,

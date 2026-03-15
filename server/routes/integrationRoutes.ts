@@ -53,6 +53,27 @@ import { getAssignedContactIds, hasContactAccess } from "./routeHelpers";
 
 import { apiMiddleware } from "../middleware";
 
+// In-memory sync status tracking
+const syncStatusMap = new Map<string, {
+  status: 'syncing' | 'complete' | 'failed';
+  invoiceCount: number;
+  contactCount: number;
+  startedAt: string;
+  completedAt?: string;
+  error?: string;
+}>();
+
+export function updateSyncStatus(tenantId: string, update: Partial<typeof syncStatusMap extends Map<string, infer V> ? V : never> & { status: 'syncing' | 'complete' | 'failed' }) {
+  const existing = syncStatusMap.get(tenantId);
+  syncStatusMap.set(tenantId, {
+    invoiceCount: existing?.invoiceCount ?? 0,
+    contactCount: existing?.contactCount ?? 0,
+    startedAt: existing?.startedAt ?? new Date().toISOString(),
+    ...existing,
+    ...update,
+  });
+}
+
 export async function registerIntegrationRoutes(app: Express): Promise<void> {
   app.get("/api/integrations/xero/connect", isAuthenticated, async (req: any, res) => {
     try {
@@ -329,6 +350,26 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Sync status endpoint for polling during background sync
+  app.get("/api/xero/sync-status", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const status = syncStatusMap.get(user.tenantId);
+      if (!status) {
+        return res.json({ status: 'idle', invoiceCount: 0, contactCount: 0 });
+      }
+
+      res.json(status);
+    } catch (error) {
+      console.error("Error fetching sync status:", error);
+      res.status(500).json({ message: "Failed to fetch sync status" });
+    }
+  });
+
   app.get("/api/xero/test-callback", async (req, res) => {
     res.send(`
       <html>
@@ -521,10 +562,12 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
 
       // Trigger automatic comprehensive sync after successful connection
       console.log(`🚀 Triggering automatic initial Xero sync for tenant: ${appTenantId}`);
+      updateSyncStatus(appTenantId, { status: 'syncing', startedAt: new Date().toISOString(), invoiceCount: 0, contactCount: 0 });
       const syncService = new XeroSyncService();
       syncService.syncAllDataForTenant(appTenantId, 'initial')
         .then(async (result) => {
           if (result.success) {
+            updateSyncStatus(appTenantId, { status: 'complete', invoiceCount: result.invoicesCount, contactCount: result.contactsCount, completedAt: new Date().toISOString() });
             console.log(`✅ Initial Xero sync completed successfully:`, result);
             try {
               const { enqueueDebtorScoringAfterSync } = await import("./jobs/debtorScoringJob");
@@ -533,10 +576,12 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
               console.error("Failed to enqueue debtor scoring after sync:", err);
             }
           } else {
+            updateSyncStatus(appTenantId, { status: 'failed', error: result.error || 'Sync failed', completedAt: new Date().toISOString() });
             console.error(`❌ Initial Xero sync failed:`, result.error);
           }
         })
         .catch(error => {
+          updateSyncStatus(appTenantId, { status: 'failed', error: error?.message || 'Sync error', completedAt: new Date().toISOString() });
           console.error(`❌ Initial Xero sync error:`, error);
         });
 
@@ -1796,6 +1841,128 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to create exchange rate" });
+    }
+  });
+
+  // ===== DATA HEALTH ENDPOINT =====
+  // Returns contacts categorized by readiness for collections
+  app.get("/api/settings/data-health", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const tenantId = user.tenantId;
+      const allContacts = await storage.getContacts(tenantId);
+      const allInvoices = await storage.getInvoices(tenantId, 100000);
+
+      const GENERIC_EMAIL_PATTERNS = [
+        'info@', 'accounts@', 'admin@', 'office@', 'finance@',
+        'hello@', 'enquiries@', 'contact@', 'billing@', 'sales@',
+        'support@', 'reception@'
+      ];
+
+      const isGenericEmail = (email: string | null | undefined): boolean => {
+        if (!email) return false;
+        const lower = email.toLowerCase();
+        return GENERIC_EMAIL_PATTERNS.some(p => lower.startsWith(p));
+      };
+
+      const now = new Date();
+      const contactHealthData = allContacts.map((contact: any) => {
+        const contactInvoices = allInvoices.filter((inv: any) => inv.contactId === contact.id);
+        const unpaidInvoices = contactInvoices.filter((inv: any) =>
+          inv.status !== 'paid' && inv.status !== 'voided'
+        );
+        const overdueInvoices = unpaidInvoices.filter((inv: any) =>
+          new Date(inv.dueDate) < now
+        );
+
+        const totalOutstanding = unpaidInvoices.reduce((sum: number, inv: any) =>
+          sum + parseFloat(inv.amountDue || inv.amount || '0'), 0
+        );
+        const totalOverdue = overdueInvoices.reduce((sum: number, inv: any) =>
+          sum + parseFloat(inv.amountDue || inv.amount || '0'), 0
+        );
+
+        // Calculate oldest overdue days
+        let oldestOverdueDays = 0;
+        if (overdueInvoices.length > 0) {
+          const oldest = overdueInvoices.reduce((min: any, inv: any) =>
+            new Date(inv.dueDate) < new Date(min.dueDate) ? inv : min
+          );
+          oldestOverdueDays = Math.floor((now.getTime() - new Date(oldest.dueDate).getTime()) / (1000 * 60 * 60 * 24));
+        }
+
+        // Effective email and phone (AR overlay takes precedence)
+        const effectiveEmail = contact.arContactEmail || contact.email;
+        const effectivePhone = contact.arContactPhone || contact.phone;
+
+        // Determine readiness status
+        const missingFields: string[] = [];
+        let readinessStatus: string;
+
+        if (totalOutstanding === 0) {
+          readinessStatus = 'no_outstanding';
+        } else {
+          const hasEmail = !!effectiveEmail;
+          const hasPhone = !!effectivePhone;
+          const hasGenericEmail = isGenericEmail(effectiveEmail);
+
+          if (!hasEmail) missingFields.push('email');
+          if (!hasPhone) missingFields.push('phone');
+          if (hasGenericEmail) missingFields.push('generic_email');
+
+          if (hasEmail && !hasGenericEmail && hasPhone) {
+            readinessStatus = 'ready';
+          } else if (!hasEmail) {
+            readinessStatus = 'needs_email';
+          } else if (hasGenericEmail) {
+            readinessStatus = 'generic_email';
+          } else if (!hasPhone) {
+            readinessStatus = 'needs_phone';
+          } else {
+            readinessStatus = 'needs_attention';
+          }
+        }
+
+        return {
+          id: contact.id,
+          name: contact.name,
+          companyName: contact.companyName,
+          email: effectiveEmail,
+          phone: effectivePhone,
+          arContactName: contact.arContactName,
+          arContactEmail: contact.arContactEmail,
+          arContactPhone: contact.arContactPhone,
+          readinessStatus,
+          missingFields,
+          totalOutstanding: Math.round(totalOutstanding * 100) / 100,
+          totalOverdue: Math.round(totalOverdue * 100) / 100,
+          invoiceCount: unpaidInvoices.length,
+          oldestOverdueDays,
+        };
+      });
+
+      // Build summary counts
+      const withOutstanding = contactHealthData.filter((c: any) => c.readinessStatus !== 'no_outstanding');
+      const summary = {
+        total: withOutstanding.length,
+        ready: withOutstanding.filter((c: any) => c.readinessStatus === 'ready').length,
+        needsEmail: withOutstanding.filter((c: any) => c.readinessStatus === 'needs_email').length,
+        genericEmail: withOutstanding.filter((c: any) => c.readinessStatus === 'generic_email').length,
+        needsPhone: withOutstanding.filter((c: any) => c.readinessStatus === 'needs_phone').length,
+        needsAttention: withOutstanding.filter((c: any) => c.readinessStatus === 'needs_attention').length,
+      };
+
+      res.json({
+        summary,
+        contacts: contactHealthData.filter((c: any) => c.readinessStatus !== 'no_outstanding'),
+      });
+    } catch (error) {
+      console.error("Error fetching data health:", error);
+      res.status(500).json({ message: "Failed to fetch data health" });
     }
   });
 }
