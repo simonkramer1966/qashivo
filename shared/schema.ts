@@ -419,7 +419,7 @@ export const cachedXeroInvoices = pgTable("cached_xero_invoices", {
   amountDue: decimal("amount_due", { precision: 10, scale: 2 }).default("0"), // Outstanding amount from Xero
   amountPaid: decimal("amount_paid", { precision: 10, scale: 2 }).default("0"),
   taxAmount: decimal("tax_amount", { precision: 10, scale: 2 }).default("0"),
-  xeroStatus: varchar("xero_status").notNull(), // Raw Xero status: AUTHORISED, SUBMITTED, PAID, VOIDED, DELETED, DRAFT
+  xeroStatus: varchar("xero_status").notNull().default("UNKNOWN"), // Raw Xero status: AUTHORISED, SUBMITTED, PAID, VOIDED, DELETED, DRAFT
   status: varchar("status").notNull(), // Mapped status for Qashivo: unpaid, paid, overdue, etc.
   issueDate: timestamp("issue_date").notNull(),
   dueDate: timestamp("due_date").notNull(),
