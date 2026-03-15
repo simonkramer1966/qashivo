@@ -20,7 +20,22 @@ import {
   Users,
   ShieldAlert,
   MailWarning,
+  MoreVertical,
+  Eye,
+  UserPlus,
+  StickyNote,
+  PauseCircle,
+  Star,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useLocation } from "wouter";
 
 interface ContactHealth {
   id: string;
@@ -66,6 +81,7 @@ function formatCurrency(amount: number): string {
 }
 
 export default function SettingsDataHealth() {
+  const [, navigate] = useLocation();
   const { toast } = useToast();
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -226,13 +242,14 @@ export default function SettingsDataHealth() {
                     <th className="text-right p-3 cursor-pointer hover:bg-muted" onClick={() => handleSort('oldestOverdueDays')}>
                       Days {sortField === 'oldestOverdueDays' && (sortDir === 'asc' ? '↑' : '↓')}
                     </th>
-                    <th className="text-center p-3">Actions</th>
+                    <th className="text-center p-3">Edit</th>
+                    <th className="w-10 p-3" />
                   </tr>
                 </thead>
                 <tbody>
                   {filteredContacts.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="text-center p-8 text-muted-foreground">
+                      <td colSpan={9} className="text-center p-8 text-muted-foreground">
                         No debtors found for this filter.
                       </td>
                     </tr>
@@ -242,7 +259,7 @@ export default function SettingsDataHealth() {
                       const isEditing = editingId === contact.id;
 
                       return (
-                        <tr key={contact.id} className="border-b hover:bg-muted/30">
+                        <tr key={contact.id} className="border-b hover:bg-muted/30 cursor-pointer" onClick={() => navigate(`/qollections/debtors/${contact.id}`)}>
                           <td className="p-3">
                             <div className="font-medium">{contact.name}</div>
                             {contact.companyName && (
@@ -256,7 +273,7 @@ export default function SettingsDataHealth() {
                               </Badge>
                             )}
                           </td>
-                          <td className="p-3">
+                          <td className="p-3" onClick={(e) => isEditing && e.stopPropagation()}>
                             {isEditing ? (
                               <Input
                                 value={editValues.email}
@@ -270,7 +287,7 @@ export default function SettingsDataHealth() {
                               </span>
                             )}
                           </td>
-                          <td className="p-3">
+                          <td className="p-3" onClick={(e) => isEditing && e.stopPropagation()}>
                             {isEditing ? (
                               <Input
                                 value={editValues.phone}
@@ -303,7 +320,7 @@ export default function SettingsDataHealth() {
                               <span className="text-muted-foreground">-</span>
                             )}
                           </td>
-                          <td className="p-3 text-center">
+                          <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
                             {isEditing ? (
                               <div className="flex items-center justify-center gap-1">
                                 <Button
@@ -331,6 +348,35 @@ export default function SettingsDataHealth() {
                                 <Pencil className="h-4 w-4" />
                               </Button>
                             )}
+                          </td>
+                          <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-7 w-7">
+                                  <MoreVertical className="h-3.5 w-3.5" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => navigate(`/qollections/debtors/${contact.id}`)}>
+                                  <Eye className="h-4 w-4 mr-2" /> View Details
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => navigate(`/qollections/debtors/${contact.id}`)}>
+                                  <UserPlus className="h-4 w-4 mr-2" /> Add Contact
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => navigate(`/qollections/debtors/${contact.id}`)}>
+                                  <StickyNote className="h-4 w-4 mr-2" /> Add Note
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem>
+                                  <PauseCircle className="h-4 w-4 mr-2" /> Put On Hold
+                                </DropdownMenuItem>
+                                <DropdownMenuItem>
+                                  <Star className="h-4 w-4 mr-2" /> Mark as VIP
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </td>
                         </tr>
                       );

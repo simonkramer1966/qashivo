@@ -22,12 +22,27 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Search,
   Users,
   ChevronLeft,
   ChevronRight,
   PoundSterling,
+  MoreVertical,
+  Eye,
+  UserPlus,
+  StickyNote,
+  PauseCircle,
+  Star,
 } from "lucide-react";
+import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 
 interface Debtor {
@@ -89,6 +104,7 @@ type StatusFilter = "all" | "active" | "overdue";
 type SortOption = "outstanding" | "overdue_days" | "invoices" | "name";
 
 export default function QollectionsDebtors() {
+  const [, navigate] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [sortBy, setSortBy] = useState<SortOption>("outstanding");
@@ -391,6 +407,7 @@ export default function QollectionsDebtors() {
                       <TableHead>Days Overdue</TableHead>
                       <TableHead>Last Contact</TableHead>
                       <TableHead>Next Action</TableHead>
+                      <TableHead className="w-10" />
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -398,9 +415,7 @@ export default function QollectionsDebtors() {
                       <TableRow
                         key={debtor.id}
                         className="cursor-pointer hover:bg-muted/50"
-                        onClick={() =>
-                          (window.location.href = `/qollections/debtors/${debtor.id}`)
-                        }
+                        onClick={() => navigate(`/qollections/debtors/${debtor.id}`)}
                       >
                         <TableCell>
                           <div>
@@ -441,6 +456,35 @@ export default function QollectionsDebtors() {
                         </TableCell>
                         <TableCell className="text-muted-foreground">
                           {formatDate(debtor.nextActionDate)}
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => navigate(`/qollections/debtors/${debtor.id}`)}>
+                                <Eye className="h-4 w-4 mr-2" /> View Details
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => navigate(`/qollections/debtors/${debtor.id}`)}>
+                                <UserPlus className="h-4 w-4 mr-2" /> Add Contact
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => navigate(`/qollections/debtors/${debtor.id}`)}>
+                                <StickyNote className="h-4 w-4 mr-2" /> Add Note
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem>
+                                <PauseCircle className="h-4 w-4 mr-2" /> Put On Hold
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <Star className="h-4 w-4 mr-2" /> Mark as VIP
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       </TableRow>
                     ))}

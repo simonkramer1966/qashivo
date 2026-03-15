@@ -27,6 +27,7 @@ const InvestorInterest = lazy(() => import("@/pages/investor-interest"));
 // Pillar pages — Qollections
 const QollectionsDashboard = lazy(() => import("@/pages/qollections/dashboard"));
 const QollectionsDebtors = lazy(() => import("@/pages/qollections/debtors"));
+const DebtorRecord = lazy(() => import("@/pages/qollections/debtor-record"));
 const QollectionsInvoices = lazy(() => import("@/pages/qollections/invoices"));
 const QollectionsAgentActivity = lazy(() => import("@/pages/qollections/agent-activity"));
 const QollectionsDisputes = lazy(() => import("@/pages/qollections/disputes"));
@@ -197,6 +198,7 @@ function Router() {
           <Route path="/demo">{() => <Redirect to="/qollections" />}</Route>
 
           {/* Pillar routes — Qollections */}
+          <Route path="/qollections/debtors/:id" component={DebtorRecord} />
           <Route path="/qollections/debtors" component={QollectionsDebtors} />
           <Route path="/qollections/invoices" component={QollectionsInvoices} />
           <Route path="/qollections/agent-activity" component={QollectionsAgentActivity} />

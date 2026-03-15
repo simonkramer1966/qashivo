@@ -2,6 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, AlertCircle, Check } from "lucide-react";
+import { useLocation } from "wouter";
 import type { OnboardingStatus } from "../OnboardingWizard";
 
 interface Props {
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export default function Step6ContactAnalysis({ status, onComplete, onSkip, onBack }: Props) {
+  const [, navigate] = useLocation();
   const { toast } = useToast();
   const xeroConnected = status?.xeroConnected || false;
   const summary = status?.contactDataSummary;
@@ -166,7 +168,11 @@ export default function Step6ContactAnalysis({ status, onComplete, onSkip, onBac
                     </thead>
                     <tbody>
                       {summary.contactsWithIssues.slice(0, 10).map((c: any) => (
-                        <tr key={c.contactId} className="border-b border-[#e5e7eb] last:border-0">
+                        <tr
+                          key={c.contactId}
+                          className="border-b border-[#e5e7eb] last:border-0 hover:bg-gray-50 cursor-pointer transition-colors"
+                          onClick={() => navigate(`/qollections/debtors/${c.contactId}`)}
+                        >
                           <td className="py-2 px-3 text-gray-900">{c.contactName || "Unnamed"}</td>
                           <td className="py-2 px-3 text-gray-500">
                             {c.missingFields?.join(", ")}

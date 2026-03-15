@@ -39,6 +39,12 @@ import {
   TrendingUp,
   ArrowUpDown,
   BarChart3,
+  MoreVertical,
+  Eye,
+  UserPlus,
+  StickyNote,
+  PauseCircle,
+  Star as StarIcon,
 } from "lucide-react";
 import {
   BarChart,
@@ -52,6 +58,15 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useLocation } from "wouter";
 
 // ── Types ──────────────────────────────────────────────────
 
@@ -188,6 +203,7 @@ const BUCKET_COLORS = ["hsl(var(--chart-3))", "hsl(var(--chart-1))", "hsl(var(--
 // ── Main Dashboard ─────────────────────────────────────────
 
 export default function QollectionsDashboard() {
+  const [, navigate] = useLocation();
   const { toast } = useToast();
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -584,11 +600,12 @@ export default function QollectionsDashboard() {
                       <SortHeader label="Last Contact" field="lastContactDate" current={sortField} dir={sortDir} onClick={toggleSort} />
                       <th className="py-2 px-3 text-xs font-medium text-muted-foreground">Next Action</th>
                       <th className="py-2 px-3 text-xs font-medium text-muted-foreground">Status</th>
+                      <th className="py-2 px-3 w-10" />
                     </tr>
                   </thead>
                   <tbody>
                     {sortedDebtors.map((d) => (
-                      <tr key={d.id} className="border-b last:border-0 hover:bg-muted/50 transition-colors">
+                      <tr key={d.id} className="border-b last:border-0 hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => navigate(`/qollections/debtors/${d.id}`)}>
                         <td className="py-2.5 px-3">
                           <div className="font-medium">{d.name}</div>
                           <div className="text-xs text-muted-foreground">{d.invoiceCount} invoice{d.invoiceCount !== 1 ? "s" : ""}</div>
@@ -614,6 +631,35 @@ export default function QollectionsDashboard() {
                           <Badge variant="outline" className={`text-[10px] ${d.status === "active" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-muted text-muted-foreground"}`}>
                             {d.status}
                           </Badge>
+                        </td>
+                        <td className="py-2.5 px-3">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+                                <MoreVertical className="h-3.5 w-3.5" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => navigate(`/qollections/debtors/${d.id}`)}>
+                                <Eye className="h-4 w-4 mr-2" /> View Details
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => navigate(`/qollections/debtors/${d.id}`)}>
+                                <UserPlus className="h-4 w-4 mr-2" /> Add Contact
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => navigate(`/qollections/debtors/${d.id}`)}>
+                                <StickyNote className="h-4 w-4 mr-2" /> Add Note
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem>
+                                <PauseCircle className="h-4 w-4 mr-2" /> Put On Hold
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <StarIcon className="h-4 w-4 mr-2" /> Mark as VIP
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </td>
                       </tr>
                     ))}
