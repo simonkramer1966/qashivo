@@ -16,7 +16,7 @@ export class XeroSyncService {
   // Invoice-first sync: date-filtered invoices → extract contacts
   // ══════════════════════════════════════════════════════════════════
 
-  async syncInvoicesAndContacts(tenantId: string, mode: SyncMode = 'initial'): Promise<{
+  async syncInvoicesAndContacts(tenantId: string, mode: SyncMode = 'initial', onProgress?: (counts: { contactCount: number; invoiceCount: number }) => void): Promise<{
     success: boolean;
     invoicesCount: number;
     contactsCount: number;
@@ -113,6 +113,7 @@ export class XeroSyncService {
             await db.insert(cachedXeroInvoices).values(invoicesToInsert);
             totalInvoicesCount += invoicesToInsert.length;
             console.log(`  ✅ Page ${currentPage}: ${invoicesToInsert.length} invoices cached`);
+            onProgress?.({ contactCount: 0, invoiceCount: totalInvoicesCount });
           }
 
           // Xero returns 100 per page; fewer means last page
@@ -213,6 +214,7 @@ export class XeroSyncService {
       }
 
       console.log(`✅ Contacts: ${contactsCreated} created, ${contactsUpdated} updated`);
+      onProgress?.({ contactCount: contactsCreated + contactsUpdated, invoiceCount: totalInvoicesCount });
 
       // ── Step 4: Process cached invoices into main table ────────────
       const processedCount = await this.processCachedInvoices(tenantId, mode);
@@ -499,7 +501,7 @@ export class XeroSyncService {
   // MAIN ENTRY POINT
   // ══════════════════════════════════════════════════════════════════
 
-  async syncAllDataForTenant(tenantId: string, mode: SyncMode = 'initial'): Promise<{
+  async syncAllDataForTenant(tenantId: string, mode: SyncMode = 'initial', onProgress?: (counts: { contactCount: number; invoiceCount: number }) => void): Promise<{
     success: boolean;
     contactsCount: number;
     invoicesCount: number;
@@ -517,7 +519,7 @@ export class XeroSyncService {
         await this.clearTenantDataForFreshSync(tenantId);
       }
 
-      const result = await this.syncInvoicesAndContacts(tenantId, mode);
+      const result = await this.syncInvoicesAndContacts(tenantId, mode, onProgress);
       if (!result.success) {
         throw new Error(`Sync failed: ${result.error}`);
       }

@@ -564,7 +564,9 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
       console.log(`🚀 Triggering automatic initial Xero sync for tenant: ${appTenantId}`);
       updateSyncStatus(appTenantId, { status: 'syncing', startedAt: new Date().toISOString(), invoiceCount: 0, contactCount: 0 });
       const syncService = new XeroSyncService();
-      syncService.syncAllDataForTenant(appTenantId, 'initial')
+      syncService.syncAllDataForTenant(appTenantId, 'initial', (counts) => {
+        updateSyncStatus(appTenantId, { status: 'syncing', ...counts });
+      })
         .then(async (result) => {
           if (result.success) {
             updateSyncStatus(appTenantId, { status: 'complete', invoiceCount: result.invoicesCount, contactCount: result.contactsCount, completedAt: new Date().toISOString() });
@@ -877,9 +879,13 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
       const mode = req.body?.mode === 'ongoing' ? 'ongoing' : 'initial';
 
       console.log(`🚀 Starting ${mode.toUpperCase()} Xero sync for tenant: ${user.tenantId}`);
-      const result = await xeroSyncService.syncAllDataForTenant(user.tenantId, mode as any);
+      updateSyncStatus(user.tenantId, { status: 'syncing', startedAt: new Date().toISOString(), invoiceCount: 0, contactCount: 0 });
+      const result = await xeroSyncService.syncAllDataForTenant(user.tenantId, mode as any, (counts) => {
+        updateSyncStatus(user.tenantId, { status: 'syncing', ...counts });
+      });
 
       if (result.success) {
+        updateSyncStatus(user.tenantId, { status: 'complete', invoiceCount: result.invoicesCount, contactCount: result.contactsCount, completedAt: new Date().toISOString() });
         res.json({
           success: true,
           syncMode: result.syncMode,
@@ -893,6 +899,7 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
           syncedAt: new Date().toISOString(),
         });
       } else {
+        updateSyncStatus(user.tenantId, { status: 'failed', error: result.error || 'Sync failed', completedAt: new Date().toISOString() });
         res.status(500).json({
           success: false,
           message: result.error || "Sync failed",

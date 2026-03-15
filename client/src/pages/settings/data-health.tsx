@@ -1,5 +1,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useXeroSyncStatus } from "@/hooks/useXeroSyncStatus";
+import { XeroSyncBanner } from "@/components/XeroSyncBanner";
 import AppShell from "@/components/layout/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -94,6 +96,8 @@ export default function SettingsDataHealth() {
     queryKey: ["/api/settings/data-health"],
   });
 
+  const { syncStatus, isSyncing } = useXeroSyncStatus([["/api/settings/data-health"]]);
+
   const updateMutation = useMutation({
     mutationFn: async ({ id, email, phone }: { id: string; email: string; phone: string }) => {
       const res = await apiRequest("PATCH", `/api/contacts/${id}/ar-details`, {
@@ -187,6 +191,11 @@ export default function SettingsDataHealth() {
   return (
     <AppShell title="Data Health">
       <div className="p-6 space-y-6">
+        <XeroSyncBanner
+          isSyncing={isSyncing}
+          contactCount={syncStatus?.contactCount ?? 0}
+          invoiceCount={syncStatus?.invoiceCount ?? 0}
+        />
         {/* Summary Cards */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           {summaryCards.map(card => (
