@@ -355,6 +355,13 @@ export function registerInvoiceRoutes(app: Express): void {
         limit: 10000 // Get all
       });
 
+      // Apply same contact restriction to aggregates
+      if (allowedContactIds) {
+        allFilteredResult.invoices = allFilteredResult.invoices.filter(
+          (inv: any) => inv.contactId && allowedContactIds.includes(inv.contactId)
+        );
+      }
+
       // Calculate aggregates across ALL filtered invoices
       const agingBuckets = {
         'total': { amount: 0, count: 0 },
