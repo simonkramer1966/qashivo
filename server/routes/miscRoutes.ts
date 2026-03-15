@@ -97,7 +97,7 @@ export function registerMiscRoutes(app: Express): void {
 
       // If capturing a promise, create promise records
       if (capturePromise) {
-        const { getPromiseReliabilityService } = await import('./services/promiseReliabilityService.js');
+        const { getPromiseReliabilityService } = await import('../services/promiseReliabilityService.js');
         const promiseService = getPromiseReliabilityService();
 
         if (promiseType === 'payment_plan') {
@@ -293,7 +293,7 @@ export function registerMiscRoutes(app: Express): void {
 
       // fetchOnly=true means don't auto-generate if no plan exists
       // This allows showing empty state after deletion
-      const { generateDailyPlan } = await import("./services/dailyPlanGenerator");
+      const { generateDailyPlan } = await import("../services/dailyPlanGenerator");
       const plan = await generateDailyPlan(user.tenantId, req.user.id, false, true);
       
       res.json(plan);
@@ -312,14 +312,14 @@ export function registerMiscRoutes(app: Express): void {
 
       console.log(`🔄 Manual plan generation triggered by user ${req.user.id}`);
 
-      const { generateDailyPlan } = await import("./services/dailyPlanGenerator");
+      const { generateDailyPlan } = await import("../services/dailyPlanGenerator");
       const plan = await generateDailyPlan(user.tenantId, req.user.id, true); // Force regeneration
       
       console.log(`✅ Generated ${plan.actions.length} actions for today's plan`);
 
       // Trigger message pre-generation asynchronously (don't block response)
       if (plan.actions.length > 0) {
-        const { messagePreGenerator } = await import("./services/messagePreGenerator");
+        const { messagePreGenerator } = await import("../services/messagePreGenerator");
         const actionIds = plan.actions.map((a: any) => a.id);
         
         // Run pre-generation in background - user gets fast response while messages are prepared
@@ -406,7 +406,7 @@ export function registerMiscRoutes(app: Express): void {
           mode: 'immediate',
         });
 
-        const { actionExecutor } = await import("./services/actionExecutor");
+        const { actionExecutor } = await import("../services/actionExecutor");
         actionExecutor.executeActionsByIds(actionIds, req.user.id).then(result => {
           console.log(`✅ Immediate execution complete: ${result.successCount} success, ${result.errorCount} failed`);
         }).catch(err => {
@@ -1101,7 +1101,7 @@ export function registerMiscRoutes(app: Express): void {
       }
 
       // Seed AI Facts if this is the first time using AI CFO for this tenant
-      const { seedAiFacts } = await import('./seed-ai-facts');
+      const { seedAiFacts } = await import('../seed-ai-facts');
       await seedAiFacts(user.tenantId);
 
       if (!message || typeof message !== 'string') {

@@ -340,7 +340,7 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      const { xeroHealthCheckService } = await import("./services/xeroHealthCheck");
+      const { xeroHealthCheckService } = await import("../services/xeroHealthCheck");
       const result = await xeroHealthCheckService.checkSingleTenant(user.tenantId);
       
       res.json(result);
@@ -570,7 +570,7 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
             updateSyncStatus(appTenantId, { status: 'complete', invoiceCount: result.invoicesCount, contactCount: result.contactsCount, completedAt: new Date().toISOString() });
             console.log(`✅ Initial Xero sync completed successfully:`, result);
             try {
-              const { enqueueDebtorScoringAfterSync } = await import("./jobs/debtorScoringJob");
+              const { enqueueDebtorScoringAfterSync } = await import("../jobs/debtorScoringJob");
               await enqueueDebtorScoringAfterSync(appTenantId);
             } catch (err) {
               console.error("Failed to enqueue debtor scoring after sync:", err);

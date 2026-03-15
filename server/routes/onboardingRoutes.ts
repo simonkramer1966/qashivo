@@ -255,7 +255,7 @@ export function registerOnboardingRoutes(app: Express): void {
       };
       
       // Import data using XeroOnboardingService
-      const { xeroOnboardingService } = await import('./services/xeroOnboardingService');
+      const { xeroOnboardingService } = await import('../services/xeroOnboardingService');
       const importResult = await xeroOnboardingService.performAutomatedDataImport(xeroTokens, tenantId);
       
       if (importResult.success) {
@@ -684,7 +684,7 @@ export function registerOnboardingRoutes(app: Express): void {
 
   app.get("/api/demo-mode/status", isAuthenticated, async (req: any, res) => {
     try {
-      const { demoModeService } = await import('./services/demoModeService.js');
+      const { demoModeService } = await import('../services/demoModeService.js');
       res.json(demoModeService.getStatus());
     } catch (error) {
       console.error("Error getting demo mode status:", error);
@@ -700,7 +700,7 @@ export function registerOnboardingRoutes(app: Express): void {
         return res.status(400).json({ message: "enabled must be a boolean" });
       }
 
-      const { demoModeService } = await import('./services/demoModeService.js');
+      const { demoModeService } = await import('../services/demoModeService.js');
       demoModeService.setEnabled(enabled);
       
       res.json({ 
@@ -721,7 +721,7 @@ export function registerOnboardingRoutes(app: Express): void {
         return res.status(400).json({ message: "No tenant associated with user" });
       }
 
-      const { demoDataService } = await import('./services/demoDataService.js');
+      const { demoDataService } = await import('../services/demoDataService.js');
       const result = await demoDataService.seedDemoData(tenantId);
       
       if (result.success) {
@@ -746,7 +746,7 @@ export function registerOnboardingRoutes(app: Express): void {
         return res.status(400).json({ message: "No user ID available" });
       }
 
-      const { demoDataService } = await import('./services/demoDataService.js');
+      const { demoDataService } = await import('../services/demoDataService.js');
       const result = await demoDataService.seedForecastData(tenantId, userId);
       
       if (result.success) {
@@ -767,7 +767,7 @@ export function registerOnboardingRoutes(app: Express): void {
         return res.status(400).json({ message: "No tenant associated with user" });
       }
 
-      const { demoDataService } = await import('./services/demoDataService.js');
+      const { demoDataService } = await import('../services/demoDataService.js');
       const result = await demoDataService.clearDemoData(tenantId);
       
       if (result.success) {
@@ -788,7 +788,7 @@ export function registerOnboardingRoutes(app: Express): void {
         return res.status(400).json({ message: "No tenant associated with user" });
       }
 
-      const { demoDataService } = await import('./services/demoDataService.js');
+      const { demoDataService } = await import('../services/demoDataService.js');
       const hasData = await demoDataService.hasDemoData(tenantId);
       
       res.json({ hasData });

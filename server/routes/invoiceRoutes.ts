@@ -590,7 +590,7 @@ export function registerInvoiceRoutes(app: Express): void {
         
         const thankYouMessage = `Thank you for your payment of ${amount} for invoice ${invoice.invoiceNumber}! We really appreciate your business.`;
 
-        const vonageService = await import('./services/vonage.js');
+        const vonageService = await import('../services/vonage.js');
         const smsResult = await vonageService.sendSMS({
           to: contact.phone,
           message: thankYouMessage,
@@ -648,7 +648,7 @@ export function registerInvoiceRoutes(app: Express): void {
         return res.status(404).json({ message: "Invoice not found" });
       }
 
-      const { pauseManager } = await import('./lib/pause-manager.js');
+      const { pauseManager } = await import('../lib/pause-manager.js');
       
       await pauseManager.pauseInvoice({
         invoiceId,
@@ -685,7 +685,7 @@ export function registerInvoiceRoutes(app: Express): void {
         return res.status(404).json({ message: "Invoice not found" });
       }
 
-      const { pauseManager } = await import('./lib/pause-manager.js');
+      const { pauseManager } = await import('../lib/pause-manager.js');
       
       await pauseManager.resumeInvoice({
         invoiceId,
@@ -714,7 +714,7 @@ export function registerInvoiceRoutes(app: Express): void {
         return res.status(404).json({ message: "Invoice not found" });
       }
 
-      const { pauseManager } = await import('./lib/pause-manager.js');
+      const { pauseManager } = await import('../lib/pause-manager.js');
       
       const pauseDetails = await pauseManager.getPauseDetails(invoiceId, user.tenantId);
 
@@ -787,7 +787,7 @@ export function registerInvoiceRoutes(app: Express): void {
         .replace(/{daysOverdue}/g, daysOverdue.toString());
 
       // Send via Vonage
-      const vonageService = await import('./services/vonage.js');
+      const vonageService = await import('../services/vonage.js');
       const result = await vonageService.sendSMS({
         to: invoice.contact.phone,
         message: message,
@@ -869,7 +869,7 @@ export function registerInvoiceRoutes(app: Express): void {
       }
 
       // Import agent manager
-      const { getAgentManager } = await import('./services/agentManager.js');
+      const { getAgentManager } = await import('../services/agentManager.js');
       const agentManager = getAgentManager();
 
       // Get invoice with contact details
@@ -932,7 +932,7 @@ export function registerInvoiceRoutes(app: Express): void {
       }
 
       // Import and use RetellService
-      const { RetellService } = await import('./retell-service.js');
+      const { RetellService } = await import('../retell-service.js');
       const retellService = new RetellService();
 
       // Initiate call
@@ -1260,7 +1260,7 @@ export function registerInvoiceRoutes(app: Express): void {
       }
 
       // Send email using SendGrid with properly formatted sender from Collection Workflow
-      const { sendEmail } = await import("./services/sendgrid");
+      const { sendEmail } = await import("../services/sendgrid");
       const senderEmail = defaultSender.email;
       const senderName = defaultSender.fromName || defaultSender.name || 'Accounts Receivable';
       
@@ -1403,7 +1403,7 @@ export function registerInvoiceRoutes(app: Express): void {
       }
 
       // Send email using SendGrid with properly formatted sender from Collection Workflow
-      const { sendEmail } = await import("./services/sendgrid");
+      const { sendEmail } = await import("../services/sendgrid");
       const senderEmail = defaultSender.email;
       const senderName = defaultSender.fromName || defaultSender.name || 'Accounts Receivable';
       
@@ -1530,8 +1530,8 @@ export function registerInvoiceRoutes(app: Express): void {
       }
 
       // Import PDF and email services
-      const { generateInvoicePDF } = await import('./services/invoicePDF.js');
-      const { sendEmailWithAttachment } = await import('./services/sendgrid.js');
+      const { generateInvoicePDF } = await import('../services/invoicePDF.js');
+      const { sendEmailWithAttachment } = await import('../services/sendgrid.js');
 
       // Generate PDF
       console.log(`Generating PDF for invoice ${invoice.invoiceNumber}...`);

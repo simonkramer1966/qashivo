@@ -1602,7 +1602,7 @@ Guidelines:
       };
 
       // Generate invoice table HTML using shared function
-      const { generateInvoiceTableHtml } = await import("./services/collectionsAutomation");
+      const { generateInvoiceTableHtml } = await import("../services/collectionsAutomation");
       const invoiceSummaries = invoicesWithOverdue.map(inv => ({
         invoiceId: '', // Not needed for table generation
         invoiceNumber: inv.invoiceNumber,
@@ -2019,7 +2019,7 @@ Guidelines:
       };
 
       // Call Retell directly
-      const { createUnifiedRetellCall } = await import('./utils/retellCallHelper');
+      const { createUnifiedRetellCall } = await import('../utils/retellCallHelper');
       
       const result = await createUnifiedRetellCall({
         toNumber: contact.phone,
@@ -2091,7 +2091,7 @@ Guidelines:
       }
 
       // Use communications orchestrator for email
-      const { communicationsOrchestrator } = await import('./services/communicationsOrchestrator');
+      const { communicationsOrchestrator } = await import('../services/communicationsOrchestrator');
       
       const invoiceIds = action.invoiceId ? [action.invoiceId] : [];
 
@@ -2172,7 +2172,7 @@ Guidelines:
       }
 
       // Use communications orchestrator for SMS
-      const { communicationsOrchestrator } = await import('./services/communicationsOrchestrator');
+      const { communicationsOrchestrator } = await import('../services/communicationsOrchestrator');
       
       const invoiceIds = action.invoiceId ? [action.invoiceId] : [];
 
@@ -3875,7 +3875,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      const { checkCollectionActions } = await import("./services/collectionsAutomation");
+      const { checkCollectionActions } = await import("../services/collectionsAutomation");
       const actions = await checkCollectionActions(user.tenantId);
       res.json(actions);
     } catch (error) {
@@ -3891,7 +3891,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      const { getCollectionsAutomationStatus } = await import("./services/collectionsAutomation");
+      const { getCollectionsAutomationStatus } = await import("../services/collectionsAutomation");
       const enabled = await getCollectionsAutomationStatus(user.tenantId);
       res.json({ enabled });
     } catch (error) {
@@ -3912,7 +3912,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         return res.status(400).json({ message: "Invalid enabled value - must be boolean" });
       }
 
-      const { setCollectionsAutomation } = await import("./services/collectionsAutomation");
+      const { setCollectionsAutomation } = await import("../services/collectionsAutomation");
       await setCollectionsAutomation(user.tenantId, enabled);
       res.json({ enabled, message: `Collections automation ${enabled ? 'enabled' : 'disabled'}` });
     } catch (error) {
@@ -4295,7 +4295,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         return res.status(400).json({ message: "Invoice ID is required" });
       }
 
-      const { nudgeInvoiceToNextAction } = await import("./services/collectionsAutomation");
+      const { nudgeInvoiceToNextAction } = await import("../services/collectionsAutomation");
       const nudgeAction = await nudgeInvoiceToNextAction(invoiceId, user.tenantId);
       
       if (!nudgeAction) {
@@ -4335,7 +4335,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       }
 
       // Import collections automation service to determine next action
-      const { nudgeInvoiceToNextAction } = await import("./services/collectionsAutomation");
+      const { nudgeInvoiceToNextAction } = await import("../services/collectionsAutomation");
       const nudgeAction = await nudgeInvoiceToNextAction(invoiceId, user.tenantId);
       
       if (!nudgeAction) {
@@ -4398,7 +4398,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         });
 
         // Send email using SendGrid
-        const { sendEmail } = await import("./services/sendgrid");
+        const { sendEmail } = await import("../services/sendgrid");
         const formattedSender = `${defaultSender.fromName || defaultSender.name} <${defaultSender.email}>`;
         
         const emailSent = await sendEmail({
@@ -4426,7 +4426,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         const daysOverdue = Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)));
 
         // Send SMS using Twilio
-        const { sendPaymentReminderSMS } = await import("./services/twilio");
+        const { sendPaymentReminderSMS } = await import("../services/twilio");
         const smsResult = await sendPaymentReminderSMS({
           phone: invoice.contact.phone,
           name: invoice.contact.name || 'Customer',
@@ -4518,7 +4518,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
   app.get("/api/collections/scheduler/status", isOwner, async (req: any, res) => {
     try {
-      const { collectionsScheduler } = await import("./services/collectionsScheduler");
+      const { collectionsScheduler } = await import("../services/collectionsScheduler");
       const status = collectionsScheduler.getStatus();
       res.json(status);
     } catch (error) {
@@ -4529,7 +4529,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
   app.post("/api/collections/scheduler/start", isOwner, async (req: any, res) => {
     try {
-      const { collectionsScheduler } = await import("./services/collectionsScheduler");
+      const { collectionsScheduler } = await import("../services/collectionsScheduler");
       collectionsScheduler.start();
       res.json({ success: true, message: "Collections scheduler started" });
     } catch (error) {
@@ -4540,7 +4540,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
   app.post("/api/collections/scheduler/stop", isOwner, async (req: any, res) => {
     try {
-      const { collectionsScheduler } = await import("./services/collectionsScheduler");
+      const { collectionsScheduler } = await import("../services/collectionsScheduler");
       collectionsScheduler.stop();
       res.json({ success: true, message: "Collections scheduler stopped" });
     } catch (error) {
@@ -4557,7 +4557,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       }
 
       // Manually trigger a collection run
-      const { checkCollectionActions } = await import("./services/collectionsAutomation");
+      const { checkCollectionActions } = await import("../services/collectionsAutomation");
       const actions = await checkCollectionActions(user.tenantId);
       
       res.json({ 
@@ -4733,7 +4733,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      const { CollectionLearningService } = await import("./services/collectionLearningService");
+      const { CollectionLearningService } = await import("../services/collectionLearningService");
       const learningService = new CollectionLearningService();
       
       const insights = await learningService.getLearningInsights(user.tenantId);
@@ -4767,7 +4767,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
       const outcome = outcomeSchema.parse(req.body);
 
-      const { CollectionLearningService } = await import("./services/collectionLearningService");
+      const { CollectionLearningService } = await import("../services/collectionLearningService");
       const learningService = new CollectionLearningService();
       
       // Record the effectiveness data
@@ -4798,7 +4798,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
       const { contactId } = req.params;
 
-      const { CollectionLearningService } = await import("./services/collectionLearningService");
+      const { CollectionLearningService } = await import("../services/collectionLearningService");
       const learningService = new CollectionLearningService();
       
       const profile = await learningService.getOrCreateCustomerProfile(contactId, user.tenantId);
@@ -4838,7 +4838,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
       const actions = actionsSchema.parse(req.body.actions || req.body);
 
-      const { CollectionLearningService } = await import("./services/collectionLearningService");
+      const { CollectionLearningService } = await import("../services/collectionLearningService");
       const learningService = new CollectionLearningService();
       
       const optimizedActions = await learningService.optimizeActions(actions);

@@ -589,7 +589,7 @@ export async function registerSettingsRoutes(app: Express): Promise<void> {
       try {
         const tenant = await storage.getTenant(tenantId);
         const inviter = await storage.getUser(invitedBy);
-        const { sendUserInvitationEmail } = await import("./services/email/SendGridEmailService");
+        const { sendUserInvitationEmail } = await import("../services/email/SendGridEmailService");
         await sendUserInvitationEmail({
           email,
           inviteToken: invitation.inviteToken,

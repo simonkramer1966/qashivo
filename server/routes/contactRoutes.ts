@@ -379,7 +379,7 @@ export function registerContactRoutes(app: Express): void {
       const { id } = req.params;
       const tenantId = user.tenantId;
 
-      const { customerTimelineService } = await import("./services/customerTimelineService");
+      const { customerTimelineService } = await import("../services/customerTimelineService");
 
       // Fetch all data in parallel for speed
       const [contact, invoicesResult, preferences, timeline] = await Promise.all([
@@ -749,7 +749,7 @@ export function registerContactRoutes(app: Express): void {
       }
       
       // Import Promise Reliability Service
-      const { getPromiseReliabilityService } = await import('./services/promiseReliabilityService.js');
+      const { getPromiseReliabilityService } = await import('../services/promiseReliabilityService.js');
       const promiseService = getPromiseReliabilityService();
       
       const prsSummary = await promiseService.getCustomerPRSSummary(user.tenantId, contactId);
@@ -794,7 +794,7 @@ export function registerContactRoutes(app: Express): void {
         return res.status(403).json({ message: "You do not have access to this contact" });
       }
       
-      const { getPromiseReliabilityService } = await import('./services/promiseReliabilityService.js');
+      const { getPromiseReliabilityService } = await import('../services/promiseReliabilityService.js');
       const promiseService = getPromiseReliabilityService();
       
       const promises = await promiseService.getCustomerPromises(user.tenantId, contactId);
@@ -930,7 +930,7 @@ export function registerContactRoutes(app: Express): void {
       
       // If this is a reminder note, create an attention item so it appears in the Attention list
       if (noteData.noteType === 'reminder' && noteData.reminderDate) {
-        const { attentionItemService } = await import("./services/attentionItemService");
+        const { attentionItemService } = await import("../services/attentionItemService");
         await attentionItemService.createReminderAttentionItem(
           user.tenantId,
           contactId,
@@ -1112,7 +1112,7 @@ export function registerContactRoutes(app: Express): void {
             console.log(`📞 Immediately initiating Retell call to ${phoneToCall}`);
             
             // Import and use the unified Retell call helper with standard variables
-            const { createUnifiedRetellCall, createStandardCollectionVariables } = await import('./utils/retellCallHelper.js');
+            const { createUnifiedRetellCall, createStandardCollectionVariables } = await import('../utils/retellCallHelper.js');
             
             // Calculate days overdue from the oldest invoice
             const daysOverdue = primaryInvoice?.dueDate 
@@ -1343,7 +1343,7 @@ export function registerContactRoutes(app: Express): void {
       }
 
       // Get call details from Retell API
-      const { retellService } = await import('./retell-service.js');
+      const { retellService } = await import('../retell-service.js');
       const callData = await retellService.getCall(callId);
 
       // Normalize Retell status to our status values
@@ -1452,7 +1452,7 @@ export function registerContactRoutes(app: Express): void {
       const linkedInvoiceIds: string[] = action.invoiceIds || (action.invoiceId ? [action.invoiceId] : []);
 
       // Import WorkStateService
-      const { WorkStateService } = await import('./services/workStateService.js');
+      const { WorkStateService } = await import('../services/workStateService.js');
       const workStateService = new WorkStateService();
 
       // HANDLE DIFFERENT TERMINAL STATUSES
@@ -1543,7 +1543,7 @@ export function registerContactRoutes(app: Express): void {
         });
 
         // Create attention item
-        const { AttentionItemService } = await import('./services/attentionItemService.js');
+        const { AttentionItemService } = await import('../services/attentionItemService.js');
         const attentionService = new AttentionItemService();
         await attentionService.createItem({
           tenantId,
@@ -1608,7 +1608,7 @@ export function registerContactRoutes(app: Express): void {
         // Check if we have content to extract from
         if (!transcriptText && !summaryText) {
           // No transcript, create DATA_QUALITY attention item
-          const { AttentionItemService } = await import('./services/attentionItemService.js');
+          const { AttentionItemService } = await import('../services/attentionItemService.js');
           const attentionService = new AttentionItemService();
           await attentionService.createItem({
             tenantId,
@@ -2037,8 +2037,8 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
       });
 
       // Send email via SendGrid with conversation tracking
-      const { sendEmail, DEFAULT_FROM_EMAIL, DEFAULT_FROM } = await import("./services/sendgrid.js");
-      const { generateReplyToEmail, findOrCreateConversation, updateConversationStats } = await import("./services/emailCommunications.js");
+      const { sendEmail, DEFAULT_FROM_EMAIL, DEFAULT_FROM } = await import("../services/sendgrid.js");
+      const { generateReplyToEmail, findOrCreateConversation, updateConversationStats } = await import("../services/emailCommunications.js");
       const { v4: uuidv4 } = await import("uuid");
       
       // Generate IDs for conversation tracking
@@ -2272,7 +2272,7 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
       const normalizedPhone = normalizeUKPhone(recipientPhone);
 
       // Send SMS via Vonage
-      const { sendSMS } = await import("./services/vonage.js");
+      const { sendSMS } = await import("../services/vonage.js");
       
       const result = await sendSMS({
         to: normalizedPhone,
@@ -2352,7 +2352,7 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
       if (!await hasContactAccess(user, contactId)) {
         return res.status(403).json({ message: "You do not have access to this contact" });
       }
-      const { customerTimelineService } = await import("./services/customerTimelineService");
+      const { customerTimelineService } = await import("../services/customerTimelineService");
       
       const preview = await customerTimelineService.getCustomerPreview(user.tenantId, contactId);
       if (!preview) {
@@ -2384,7 +2384,7 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
         return res.status(404).json({ message: "Customer not found" });
       }
 
-      const { customerTimelineService } = await import("./services/customerTimelineService");
+      const { customerTimelineService } = await import("../services/customerTimelineService");
       
       const result = await customerTimelineService.getTimelinePage(
         user.tenantId, 
@@ -2418,7 +2418,7 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
         return res.status(404).json({ message: "Customer not found" });
       }
 
-      const { customerTimelineService } = await import("./services/customerTimelineService");
+      const { customerTimelineService } = await import("../services/customerTimelineService");
       
       const result = await customerTimelineService.getInvoicesPage(
         user.tenantId, 
@@ -2452,7 +2452,7 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
         return res.status(404).json({ message: "Customer not found" });
       }
 
-      const { customerTimelineService } = await import("./services/customerTimelineService");
+      const { customerTimelineService } = await import("../services/customerTimelineService");
       
       const result = await customerTimelineService.getPaidInvoicesPage(
         user.tenantId, 
@@ -2487,7 +2487,7 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
         return res.status(404).json({ message: "Customer not found" });
       }
 
-      const { customerTimelineService } = await import("./services/customerTimelineService");
+      const { customerTimelineService } = await import("../services/customerTimelineService");
       
       const timeline = await customerTimelineService.getTimeline(user.tenantId, contactId, {
         cursor: cursor as string | undefined,
@@ -2531,7 +2531,7 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
         return res.status(404).json({ message: "Customer not found" });
       }
 
-      const { customerTimelineService } = await import("./services/customerTimelineService");
+      const { customerTimelineService } = await import("../services/customerTimelineService");
       
       const userName = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
       const note = await customerTimelineService.createNote(
@@ -2593,7 +2593,7 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
       }
 
       // Get the promise reliability service
-      const { getPromiseReliabilityService } = await import('./services/promiseReliabilityService.js');
+      const { getPromiseReliabilityService } = await import('../services/promiseReliabilityService.js');
       const promiseService = getPromiseReliabilityService();
 
       // Create promises for each invoice or a single promise for full payment
@@ -2631,7 +2631,7 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
       }
 
       // Create a timeline note for the PTP
-      const { customerTimelineService } = await import("./services/customerTimelineService");
+      const { customerTimelineService } = await import("../services/customerTimelineService");
       const userName = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
       
       // Always use the amount from the frontend - that's what the user confirmed
@@ -2686,7 +2686,7 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
         return res.status(404).json({ message: "Customer not found" });
       }
 
-      const { customerTimelineService } = await import("./services/customerTimelineService");
+      const { customerTimelineService } = await import("../services/customerTimelineService");
       const preferences = await customerTimelineService.getPreferences(user.tenantId, contactId);
 
       res.json(preferences);
@@ -2715,7 +2715,7 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
         return res.status(404).json({ message: "Customer not found" });
       }
 
-      const { customerTimelineService } = await import("./services/customerTimelineService");
+      const { customerTimelineService } = await import("../services/customerTimelineService");
       const preferences = await customerTimelineService.updatePreferences(user.tenantId, contactId, updates);
 
       res.json(preferences);
@@ -3497,7 +3497,7 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
         .replace(/\{\{invoice_count\}\}/g, contactInvoices.length.toString());
 
       // Send email using SendGrid with properly formatted sender from Collection Workflow
-      const { sendEmail } = await import("./services/sendgrid");
+      const { sendEmail } = await import("../services/sendgrid");
       const senderEmail = defaultSender.email;
       const senderName = defaultSender.fromName || defaultSender.name || 'Accounts Receivable';
       
