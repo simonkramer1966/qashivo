@@ -170,18 +170,25 @@ class XeroService {
   private config: XeroConfig;
 
   constructor() {
-    // Get the current domain from environment or use localhost for development
-    const domain = process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000';
-    const protocol = domain.includes('localhost') ? 'http' : 'https';
-    
+    // Build base URL: APP_URL (full URL) > RAILWAY_PUBLIC_DOMAIN (hostname only) > localhost
+    let baseUrl: string;
+    if (process.env.APP_URL) {
+      baseUrl = process.env.APP_URL.replace(/\/$/, ''); // full URL, strip trailing slash
+    } else if (process.env.RAILWAY_PUBLIC_DOMAIN) {
+      baseUrl = `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`;
+    } else if (process.env.REPLIT_DOMAINS) {
+      baseUrl = `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`;
+    } else {
+      baseUrl = 'http://localhost:5000';
+    }
+
     this.config = {
       clientId: process.env.XERO_CLIENT_ID || "default_client_id",
       clientSecret: process.env.XERO_CLIENT_SECRET || "default_secret",
-      redirectUri: `${protocol}://${domain}/api/xero/callback`,
+      redirectUri: `${baseUrl}/api/xero/callback`,
       scopes: "openid profile email accounting.transactions accounting.invoices accounting.contacts accounting.settings offline_access",
     };
 
-    // Log configuration status (without secrets)
     console.log(`Xero Config: Client ID present: ${!!process.env.XERO_CLIENT_ID}, Redirect URI: ${this.config.redirectUri}`);
   }
 
