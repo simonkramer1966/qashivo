@@ -119,10 +119,18 @@ export class XeroSyncService {
       };
 
       // ── Step 1: Fetch invoices from Xero ─────────────────────────
+      // INITIAL: Only AUTHORISED + SUBMITTED (open invoices we need to chase)
+      // ONGOING: All statuses via modifiedSince — catches when tracked invoices move to PAID
       const whereClause = `Type=="ACCREC"`;
       const additionalHeaders: Record<string, string> = {};
+      let statusFilter = '';
 
-      if (effectiveMode === 'ongoing' && state.lastSuccessfulSyncAt) {
+      if (effectiveMode === 'initial') {
+        // Only fetch open invoices — no need for paid/voided/deleted history
+        statusFilter = '&Statuses=AUTHORISED,SUBMITTED';
+        console.log(`  Initial sync: fetching only AUTHORISED + SUBMITTED invoices`);
+      } else if (state.lastSuccessfulSyncAt) {
+        // Ongoing: all statuses so we catch status changes (PAID, VOIDED, etc.)
         additionalHeaders['If-Modified-Since'] = state.lastSuccessfulSyncAt.toISOString();
         console.log(`  Using If-Modified-Since: ${state.lastSuccessfulSyncAt.toISOString()}`);
       }
@@ -137,7 +145,7 @@ export class XeroSyncService {
 
       while (hasNextPage) {
         try {
-          const endpoint = `Invoices?where=${encodeURIComponent(whereClause)}&page=${currentPage}`;
+          const endpoint = `Invoices?where=${encodeURIComponent(whereClause)}${statusFilter}&page=${currentPage}`;
           console.log(`  📄 Fetching invoice page ${currentPage}...`);
 
           const response = await xeroService.makeAuthenticatedRequestPublic(
