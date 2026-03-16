@@ -55,7 +55,7 @@ interface NavPillar {
 const navigationPillars: NavPillar[] = [
   { label: "Home", icon: Home, href: "/" },
   {
-    label: "Qollections",
+    label: "Credit Control",
     icon: ClipboardList,
     children: [
       { name: "Dashboard", href: "/qollections", icon: Gauge },
@@ -66,8 +66,8 @@ const navigationPillars: NavPillar[] = [
       { name: "Reports", href: "/qollections/reports", icon: BarChart3 },
     ],
   },
-  { label: "Qashflow", icon: TrendingUp, href: "/qashflow" },
-  { label: "Qapital", icon: Landmark, href: "/qapital" },
+  { label: "Cashflow", icon: TrendingUp, href: "/qashflow" },
+  { label: "Capital", icon: Landmark, href: "/qapital" },
   { label: "Agent Team", icon: Bot, href: "/agent-team" },
   {
     label: "Settings",
@@ -132,7 +132,7 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
         initial.add(pillar.label);
       }
     }
-    if (initial.size === 0) initial.add("Qollections");
+    if (initial.size === 0) initial.add("Credit Control");
     return initial;
   });
 
