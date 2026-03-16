@@ -266,6 +266,8 @@ export const invoices = pgTable("invoices", {
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
   contactId: varchar("contact_id").notNull().references(() => contacts.id),
   xeroInvoiceId: varchar("xero_invoice_id"),
+  sageInvoiceId: varchar("sage_invoice_id"),
+  quickBooksInvoiceId: varchar("quick_books_invoice_id"),
   invoiceNumber: varchar("invoice_number").notNull(),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   amountPaid: decimal("amount_paid", { precision: 10, scale: 2 }).default("0"),

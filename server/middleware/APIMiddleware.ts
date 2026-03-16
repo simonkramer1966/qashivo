@@ -36,7 +36,7 @@ export class APIMiddleware {
   registerProvider(provider: UniversalProvider): void {
     // Inject token accessor into provider
     provider.setTokenAccessor(async (providerName: string, tenantId?: string) => {
-      const tokens = this.authManager.getCachedTokens(providerName, tenantId);
+      const tokens = await this.authManager.getCachedTokens(providerName, tenantId);
       if (!tokens) return null;
       
       // Refresh if expired
@@ -174,7 +174,7 @@ export class APIMiddleware {
       const provider = this.getProvider(providerName);
       if (!provider) return false;
 
-      const tokens = this.authManager.getCachedTokens(providerName, tenantId);
+      const tokens = await this.authManager.getCachedTokens(providerName, tenantId);
       if (!tokens) return false;
 
       if (this.authManager.areTokensExpired(tokens)) {

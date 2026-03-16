@@ -14,6 +14,10 @@ import { startDebtorScoringWorker } from "../jobs/debtorScoringJob";
 import { workflowTimerProcessor } from "../jobs/workflow-timer-processor";
 import { portfolioController } from "../services/portfolioController";
 import { startDsoSnapshotJob } from "../jobs/dsoSnapshotJob";
+import { db } from "../db";
+import { tenants, providerConnections } from "@shared/schema";
+import { eq, and, isNotNull } from "drizzle-orm";
+import { encryptToken, isEncrypted } from "../utils/tokenEncryption";
 
 export async function startAll(): Promise<void> {
   // Phase 0 — Bootstrap
@@ -105,6 +109,14 @@ export async function startAll(): Promise<void> {
     console.error("[startup] API providers failed:", error);
   }
 
+  // Phase 1.5 — Seed provider_connections from existing Xero tenants
+  try {
+    await seedProviderConnections();
+    console.log("[startup] provider_connections seeded");
+  } catch (error) {
+    console.error("[startup] provider_connections seed failed:", error);
+  }
+
   // Phase 2 — Background services
   try {
     void collectionsScheduler;
@@ -167,5 +179,63 @@ export async function startAll(): Promise<void> {
     console.log("[startup] DSO snapshot job started");
   } catch (error) {
     console.error("[startup] DSO snapshot job failed:", error);
+  }
+}
+
+/**
+ * Seed provider_connections table from existing Xero tenant data.
+ * Idempotent — safe to run on every startup. Skips tenants that already have a connection row.
+ */
+async function seedProviderConnections(): Promise<void> {
+  const hasEncryptionKey = !!process.env.PROVIDER_TOKEN_ENCRYPTION_KEY;
+  if (!hasEncryptionKey) {
+    console.warn("[startup] PROVIDER_TOKEN_ENCRYPTION_KEY not set — skipping provider_connections seed");
+    return;
+  }
+
+  // Find tenants with Xero tokens that don't yet have a provider_connections row
+  const xeroTenants = await db.select()
+    .from(tenants)
+    .where(isNotNull(tenants.xeroAccessToken));
+
+  let seeded = 0;
+  for (const tenant of xeroTenants) {
+    if (!tenant.xeroAccessToken) continue;
+
+    // Check if connection already exists
+    const [existing] = await db.select({ id: providerConnections.id })
+      .from(providerConnections)
+      .where(and(
+        eq(providerConnections.tenantId, tenant.id),
+        eq(providerConnections.provider, 'xero')
+      ));
+
+    if (existing) continue;
+
+    // Encrypt tokens before storing
+    const encryptedAccess = encryptToken(tenant.xeroAccessToken);
+    const encryptedRefresh = tenant.xeroRefreshToken ? encryptToken(tenant.xeroRefreshToken) : null;
+
+    await db.insert(providerConnections).values({
+      tenantId: tenant.id,
+      provider: 'xero',
+      connectionName: tenant.xeroOrganisationName || 'Xero',
+      isActive: true,
+      isConnected: !!tenant.xeroAccessToken,
+      accessToken: encryptedAccess,
+      refreshToken: encryptedRefresh,
+      tokenExpiresAt: tenant.xeroExpiresAt || null,
+      providerId: tenant.xeroTenantId || null,
+      lastConnectedAt: new Date(),
+      lastSyncAt: tenant.xeroLastSyncAt || null,
+      syncFrequency: 'hourly',
+      autoSyncEnabled: tenant.xeroAutoSync ?? true,
+    });
+
+    seeded++;
+  }
+
+  if (seeded > 0) {
+    console.log(`[startup] Seeded ${seeded} Xero connection(s) into provider_connections`);
   }
 }

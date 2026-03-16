@@ -1,5 +1,9 @@
 import { ProviderConfig, AuthResult } from './types';
 import crypto from 'crypto';
+import { db } from '../db';
+import { providerConnections } from '@shared/schema';
+import { eq, and } from 'drizzle-orm';
+import { encryptToken, decryptToken } from '../utils/tokenEncryption';
 
 /**
  * Universal Authentication Manager
@@ -7,6 +11,7 @@ import crypto from 'crypto';
  */
 export class AuthManager {
   private tokenCache: Map<string, any> = new Map();
+  private refreshPromises: Map<string, Promise<AuthResult>> = new Map();
 
   /**
    * Generate OAuth authorization URL
@@ -122,9 +127,30 @@ export class AuthManager {
   }
 
   /**
-   * Refresh access token
+   * Refresh access token with concurrent refresh protection.
+   * Uses promise deduplication so only one refresh executes per connection.
    */
   async refreshAccessToken(
+    providerName: string,
+    refreshToken: string,
+    config: ProviderConfig,
+    tenantId?: string
+  ): Promise<AuthResult> {
+    const dedupeKey = `${providerName}:${tenantId || 'default'}`;
+
+    // If a refresh is already in-flight for this connection, reuse it
+    if (this.refreshPromises.has(dedupeKey)) {
+      return this.refreshPromises.get(dedupeKey)!;
+    }
+
+    const promise = this._doRefresh(providerName, refreshToken, config, tenantId)
+      .finally(() => this.refreshPromises.delete(dedupeKey));
+
+    this.refreshPromises.set(dedupeKey, promise);
+    return promise;
+  }
+
+  private async _doRefresh(
     providerName: string,
     refreshToken: string,
     config: ProviderConfig,
@@ -154,13 +180,18 @@ export class AuthManager {
 
       const tokens = {
         accessToken: tokenData.access_token,
-        refreshToken: tokenData.refresh_token || refreshToken, // Some providers don't return new refresh token
+        refreshToken: tokenData.refresh_token || refreshToken,
         expiresAt: new Date(Date.now() + (tokenData.expires_in * 1000)),
         tenantId,
         scope: tokenData.scope,
       };
 
-      // Update cache
+      // Persist encrypted tokens to provider_connections before updating cache
+      if (tenantId) {
+        await this.persistTokensToDb(providerName, tenantId, tokens);
+      }
+
+      // Update cache only after DB write succeeds
       const cacheKey = `${providerName}:${tenantId || 'default'}`;
       this.tokenCache.set(cacheKey, tokens);
 
@@ -172,11 +203,99 @@ export class AuthManager {
   }
 
   /**
-   * Get cached tokens
+   * Persist refreshed tokens to provider_connections with retry.
    */
-  getCachedTokens(providerName: string, tenantId?: string): any {
+  private async persistTokensToDb(
+    providerName: string,
+    tenantId: string,
+    tokens: { accessToken: string; refreshToken: string; expiresAt: Date }
+  ): Promise<void> {
+    const delays = [100, 500, 2000];
+
+    for (let attempt = 0; attempt <= delays.length; attempt++) {
+      try {
+        const hasEncryptionKey = !!process.env.PROVIDER_TOKEN_ENCRYPTION_KEY;
+        const accessTokenValue = hasEncryptionKey ? encryptToken(tokens.accessToken) : tokens.accessToken;
+        const refreshTokenValue = hasEncryptionKey ? encryptToken(tokens.refreshToken) : tokens.refreshToken;
+
+        await db.update(providerConnections)
+          .set({
+            accessToken: accessTokenValue,
+            refreshToken: refreshTokenValue,
+            tokenExpiresAt: tokens.expiresAt,
+            lastError: null,
+            updatedAt: new Date(),
+          })
+          .where(and(
+            eq(providerConnections.tenantId, tenantId),
+            eq(providerConnections.provider, providerName)
+          ));
+
+        return; // Success
+      } catch (error) {
+        if (attempt < delays.length) {
+          console.warn(`[AuthManager] Token DB write retry ${attempt + 1} for ${providerName}:${tenantId.slice(-4)}`);
+          await new Promise(resolve => setTimeout(resolve, delays[attempt]));
+        } else {
+          console.error(`[CRITICAL] Failed to persist refreshed tokens to DB after ${delays.length + 1} attempts. ` +
+            `Provider: ${providerName}, Tenant: ...${tenantId.slice(-4)}. ` +
+            `In-memory cache has valid tokens but DB is stale — next restart will load stale tokens.`);
+        }
+      }
+    }
+  }
+
+  /**
+   * Get cached tokens — falls back to provider_connections DB if cache misses.
+   */
+  async getCachedTokens(providerName: string, tenantId?: string): Promise<any> {
     const cacheKey = `${providerName}:${tenantId || 'default'}`;
-    return this.tokenCache.get(cacheKey);
+    const cached = this.tokenCache.get(cacheKey);
+    if (cached) return cached;
+
+    // DB fallback
+    if (!tenantId) return undefined;
+
+    try {
+      const [conn] = await db.select()
+        .from(providerConnections)
+        .where(and(
+          eq(providerConnections.tenantId, tenantId),
+          eq(providerConnections.provider, providerName),
+          eq(providerConnections.isConnected, true)
+        ));
+
+      if (!conn?.accessToken) return undefined;
+
+      const hasEncryptionKey = !!process.env.PROVIDER_TOKEN_ENCRYPTION_KEY;
+      let accessToken: string;
+      let refreshToken: string | undefined;
+
+      try {
+        accessToken = hasEncryptionKey ? decryptToken(conn.accessToken) : conn.accessToken;
+        refreshToken = conn.refreshToken
+          ? (hasEncryptionKey ? decryptToken(conn.refreshToken) : conn.refreshToken)
+          : undefined;
+      } catch {
+        // Token may be stored unencrypted (pre-migration) — use as-is
+        accessToken = conn.accessToken;
+        refreshToken = conn.refreshToken || undefined;
+      }
+
+      const tokens = {
+        accessToken,
+        refreshToken,
+        expiresAt: conn.tokenExpiresAt || undefined,
+        tenantId: conn.providerId || undefined,
+      };
+
+      // Populate cache for next time
+      this.tokenCache.set(cacheKey, tokens);
+      return tokens;
+    } catch (error) {
+      console.error(`[AuthManager] DB token lookup failed for ${providerName}:`, error);
+      return undefined;
+    }
   }
 
   /**

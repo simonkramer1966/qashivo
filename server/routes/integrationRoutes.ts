@@ -52,6 +52,8 @@ import { signalCollector } from "../lib/signal-collector";
 import { getAssignedContactIds, hasContactAccess } from "./routeHelpers";
 
 import { apiMiddleware } from "../middleware";
+import { providerConnections } from "@shared/schema";
+import { encryptToken } from "../utils/tokenEncryption";
 
 // In-memory sync status tracking
 const syncStatusMap = new Map<string, {
@@ -534,7 +536,50 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
         tenantUpdates.name = xeroOrgName;
       }
       await storage.updateTenant(appTenantId, tenantUpdates);
-      
+
+      // Dual-write: also store in provider_connections (encrypted)
+      try {
+        const hasEncryptionKey = !!process.env.PROVIDER_TOKEN_ENCRYPTION_KEY;
+        const encAccessToken = hasEncryptionKey ? encryptToken(tokens.accessToken) : tokens.accessToken;
+        const encRefreshToken = tokens.refreshToken
+          ? (hasEncryptionKey ? encryptToken(tokens.refreshToken) : tokens.refreshToken)
+          : null;
+
+        await db.insert(providerConnections).values({
+          tenantId: appTenantId,
+          provider: 'xero',
+          connectionName: xeroOrgName || 'Xero',
+          isActive: true,
+          isConnected: true,
+          accessToken: encAccessToken,
+          refreshToken: encRefreshToken,
+          tokenExpiresAt: tokens.expiresAt || null,
+          providerId: xeroTenantId || null,
+          lastConnectedAt: new Date(),
+          syncFrequency: 'hourly',
+          autoSyncEnabled: true,
+        }).onConflictDoUpdate({
+          target: [providerConnections.tenantId, providerConnections.provider],
+          set: {
+            connectionName: xeroOrgName || 'Xero',
+            isActive: true,
+            isConnected: true,
+            accessToken: encAccessToken,
+            refreshToken: encRefreshToken,
+            tokenExpiresAt: tokens.expiresAt || null,
+            providerId: xeroTenantId || null,
+            lastConnectedAt: new Date(),
+            lastError: null,
+            errorCount: 0,
+            updatedAt: new Date(),
+          },
+        });
+        console.log(`[Xero] Dual-write: provider_connections updated for tenant ${appTenantId}`);
+      } catch (dualWriteError) {
+        // Non-fatal — legacy tenants table write already succeeded
+        console.error(`[Xero] Dual-write to provider_connections failed (non-fatal):`, dualWriteError);
+      }
+
       console.log(`[Xero] Connected successfully for tenant: ${appTenantId}, org: ${xeroOrgName}`);
 
       // Clean up OAuth session data (no Passport re-auth needed — Clerk handles auth via JWT)

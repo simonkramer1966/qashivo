@@ -2,7 +2,7 @@ import type { Express } from "express";
 import express from "express";
 import { syncService } from "../services/syncService";
 import { webhookHandler } from "../services/webhookHandler";
-import { isAuthenticated } from "../middleware/clerkAuth";
+import { isAuthenticated } from "../auth";
 import { storage } from "../storage";
 
 /**
@@ -29,7 +29,7 @@ export function registerSyncRoutes(app: Express): void {
       const { backfillMonths = 24, force = false } = req.body;
       
       // Get user's tenant
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ 
           success: false, 
@@ -84,7 +84,7 @@ export function registerSyncRoutes(app: Express): void {
       const { force = false } = req.body;
       
       // Get user's tenant
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ 
           success: false, 
@@ -138,7 +138,7 @@ export function registerSyncRoutes(app: Express): void {
       const { provider } = req.params;
       
       // Get user's tenant
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ 
           success: false, 
@@ -181,7 +181,7 @@ export function registerSyncRoutes(app: Express): void {
   app.get('/api/sync/status', isAuthenticated, async (req, res) => {
     try {
       // Get user's tenant
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ 
           success: false, 
@@ -361,7 +361,7 @@ export function registerSyncRoutes(app: Express): void {
       }
 
       // Get user's tenant
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ 
           success: false, 
