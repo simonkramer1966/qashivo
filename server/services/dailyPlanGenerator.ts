@@ -460,17 +460,21 @@ async function generateDailyPlanWithCharlie(
       : primaryDecision.priorityTier === 'medium' ? 'medium' : 'low';
     
     // Create ONE action per contact (primary invoice ID, but metadata contains all)
-    const [newAction] = await db.insert(actions).values({
+    // Route through proposeAction for batch/approval queue support
+    const { proposeAction } = await import('./batchProcessor');
+    const { id: newActionId } = await proposeAction({
       tenantId,
       contactId: primaryDecision.contactId,
       invoiceId: primaryDecision.invoiceId,
       userId,
       type: channel,
-      status,
       subject,
       content: preparedMessage?.body || '',
       scheduledFor,
       confidenceScore: primaryDecision.confidence.toString(),
+      agentType: 'collections',
+      actionSummary: subject,
+      priority: primaryDecision.priorityScore ? Math.min(Math.round(primaryDecision.priorityScore), 100) : 50,
       metadata: {
         daysOverdue: maxDaysOverdue,
         amount: totalAmount.toString(),
@@ -498,9 +502,8 @@ async function generateDailyPlanWithCharlie(
           dueDate: d.invoice.dueDate ? new Date(d.invoice.dueDate).toISOString() : '',
         })),
       },
-      aiGenerated: true,
-      source: 'automated',
-    }).returning();
+    });
+    const [newAction] = await db.select().from(actions).where(eq(actions.id, newActionId)).limit(1);
     
     // Run LLM pipeline for email actions (generates content + compliance check)
     if (channel === 'email') {

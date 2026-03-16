@@ -584,17 +584,18 @@ export class ActionPlanner {
   private async createScheduledActions(plannedActions: PlannedAction[]): Promise<void> {
     for (const action of plannedActions) {
       try {
-        await db.insert(actions).values({
+        const { proposeAction } = await import('./batchProcessor');
+        await proposeAction({
           tenantId: action.tenantId,
           invoiceId: action.invoiceId,
           contactId: action.contactId,
           type: action.actionType,
-          status: 'scheduled',
           subject: action.subject,
           content: action.content,
           scheduledFor: action.scheduledFor,
           metadata: action.metadata,
-          source: 'automated',
+          agentType: 'collections',
+          actionSummary: action.subject,
         });
       } catch (error: any) {
         console.error(`Error creating scheduled action:`, error.message);
@@ -828,21 +829,25 @@ export async function planAdaptiveActions(
           const invoiceNumbers = scoredInvoices.map(si => si.invoice.invoiceNumber).join(', ');
           const totalAmount = scoredInvoices.reduce((sum, si) => sum + Number(si.invoice.amount || 0), 0);
 
-          // Create bundled action with all invoice IDs
-          await db.insert(actions).values({
+          // Create bundled action with all invoice IDs — route through batch/approval queue
+          const { proposeAction } = await import('./batchProcessor');
+          const actionSubject = invoiceIds.length > 1
+            ? `Payment reminder for ${invoiceIds.length} overdue invoices`
+            : `Payment reminder for invoice ${highestPriority.invoice.invoiceNumber}`;
+          await proposeAction({
             tenantId,
             contactId,
-            invoiceId: highestPriority.invoice.id, // Primary invoice for compatibility
-            invoiceIds, // Sprint 1: Bundled invoice IDs
+            invoiceId: highestPriority.invoice.id,
+            invoiceIds,
             type: highestPriority.recommendation.channel || "email",
-            status: "pending", // Changed from "scheduled" to "pending" for Action Centre review
             scheduledFor: highestPriority.recommendation.suggestedDate || addHours(today, 24),
-            subject: invoiceIds.length > 1
-              ? `Payment reminder for ${invoiceIds.length} overdue invoices`
-              : `Payment reminder for invoice ${highestPriority.invoice.invoiceNumber}`,
+            subject: actionSubject,
             content: invoiceIds.length > 1
               ? `You have ${invoiceIds.length} overdue invoices (${invoiceNumbers}) totalling ${formatCurrency(totalAmount)}.`
               : `Your invoice ${highestPriority.invoice.invoiceNumber} is overdue.`,
+            agentType: 'collections',
+            actionSummary: actionSubject,
+            priority: Math.min(Math.round(highestPriority.recommendation.priority), 100),
             metadata: {
               adaptiveScheduler: true,
               priority: highestPriority.recommendation.priority,
@@ -851,16 +856,14 @@ export async function planAdaptiveActions(
               bundled: invoiceIds.length > 1,
               invoiceCount: invoiceIds.length,
             },
-            // Sprint 1: New adaptive action fields
             recommendedAt: today,
             recommendedBy: "adaptive",
             recommended: {
               channel: highestPriority.recommendation.channel,
               sendAt: highestPriority.recommendation.suggestedDate || addHours(today, 24),
               priority: highestPriority.recommendation.priority,
-              reasons: [], // Will be populated by translateReasons helper
+              reasons: [],
             },
-            source: "automated",
           });
 
           actionsCreated++;

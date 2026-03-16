@@ -100,6 +100,8 @@ export const tenants = pgTable("tenants", {
   // AI Automation Policy Settings (Week 1: Supervised Autonomy)
   approvalMode: varchar("approval_mode").default("manual"), // manual, auto_after_timeout, full_auto
   approvalTimeoutHours: integer("approval_timeout_hours").default(12), // Auto-approve if not reviewed within X hours
+  batchFrequencyMinutes: integer("batch_frequency_minutes").default(60), // Minutes between batch processing cycles
+  countdownResetOnInteraction: boolean("countdown_reset_on_interaction").default(false), // Reset batch countdown when user interacts
   executionTime: varchar("execution_time").default("09:00"), // Daily execution time (HH:MM format)
   executionTimezone: varchar("execution_timezone").default("Europe/London"), // Timezone for execution scheduling
   dailyLimits: jsonb("daily_limits").default({ email: 100, sms: 50, voice: 20 }), // Max actions per channel per day
@@ -648,7 +650,7 @@ export const actions = pgTable("actions", {
   contactId: varchar("contact_id").references(() => contacts.id),
   userId: varchar("user_id").references(() => users.id),
   type: varchar("type").notNull(), // email, sms, call, whatsapp, payment, note, workflow_start, workflow_step
-  status: varchar("status").notNull().default("pending"), // pending, pending_approval, scheduled, executing, completed, failed, cancelled, exception, sent, snoozed, escalated
+  status: varchar("status").notNull().default("pending"), // pending, pending_approval, scheduled, executing, completed, failed, cancelled, exception, sent, snoozed, escalated, deferred
   subject: varchar("subject"),
   content: text("content"),
   scheduledFor: timestamp("scheduled_for"),
@@ -712,6 +714,19 @@ export const actions = pgTable("actions", {
   agentChannel: varchar("agent_channel"), // email | sms | voice | internal
   complianceResult: varchar("compliance_result"), // approved | blocked | regenerated | queued
 
+  // Action Centre: batch & rejection tracking
+  batchId: varchar("batch_id"),
+  agentType: varchar("agent_type"), // collections, risk, cashflow, dispute, working_capital
+  actionSummary: text("action_summary"), // Human-readable one-liner for list view
+  priority: integer("priority").default(50), // 0-100, higher = more urgent
+  rejectedBy: varchar("rejected_by").references(() => users.id),
+  rejectedAt: timestamp("rejected_at"),
+  rejectionReason: text("rejection_reason"),
+  rejectionCategory: varchar("rejection_category"), // tone_wrong, timing_wrong, wrong_contact, wrong_action, compliance_concern, other
+  deferredBy: varchar("deferred_by").references(() => users.id),
+  deferredAt: timestamp("deferred_at"),
+  deferredToBatchId: varchar("deferred_to_batch_id"),
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
@@ -721,6 +736,42 @@ export const actions = pgTable("actions", {
   index("idx_actions_tenant_scheduled").on(table.tenantId, table.scheduledFor),
   index("idx_actions_contact").on(table.contactId),
   index("idx_actions_invoice").on(table.invoiceId),
+  index("idx_actions_batch").on(table.batchId),
+]);
+
+// Action Batches — groups actions for countdown-based batch processing
+export const actionBatches = pgTable("action_batches", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  status: varchar("status").notNull().default("pending"), // pending, processing, completed
+  scheduledFor: timestamp("scheduled_for").notNull(),
+  processedAt: timestamp("processed_at"),
+  totalActions: integer("total_actions").default(0),
+  approvedCount: integer("approved_count").default(0),
+  rejectedCount: integer("rejected_count").default(0),
+  deferredCount: integer("deferred_count").default(0),
+  autoApprovedCount: integer("auto_approved_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_batches_tenant_status").on(table.tenantId, table.status),
+]);
+
+// Rejection Patterns — tracks repeated rejection patterns for Exceptions tab
+export const rejectionPatterns = pgTable("rejection_patterns", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  category: varchar("category").notNull(),
+  actionType: varchar("action_type"),
+  contactId: varchar("contact_id").references(() => contacts.id),
+  occurrences: integer("occurrences").default(1),
+  lastOccurredAt: timestamp("last_occurred_at").defaultNow(),
+  suggestedAdjustment: text("suggested_adjustment"),
+  status: varchar("status").default("open"), // open, acknowledged, resolved
+  acknowledgedBy: varchar("acknowledged_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_rejection_patterns_tenant").on(table.tenantId, table.status),
 ]);
 
 // Message Drafts table for pre-generated AI content
@@ -2463,6 +2514,17 @@ export const insertActionSchema = createInsertSchema(actions).omit({
   updatedAt: true,
 });
 
+export const insertActionBatchSchema = createInsertSchema(actionBatches).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertRejectionPatternSchema = createInsertSchema(rejectionPatterns).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertMessageDraftSchema = createInsertSchema(messageDrafts).omit({
   id: true,
   createdAt: true,
@@ -2681,6 +2743,10 @@ export type InsertCachedXeroContact = z.infer<typeof insertCachedXeroContactSche
 export type CachedXeroContact = typeof cachedXeroContacts.$inferSelect;
 export type InsertAction = z.infer<typeof insertActionSchema>;
 export type Action = typeof actions.$inferSelect;
+export type ActionBatch = typeof actionBatches.$inferSelect;
+export type InsertActionBatch = z.infer<typeof insertActionBatchSchema>;
+export type RejectionPattern = typeof rejectionPatterns.$inferSelect;
+export type InsertRejectionPattern = z.infer<typeof insertRejectionPatternSchema>;
 export type InsertMessageDraft = z.infer<typeof insertMessageDraftSchema>;
 export type MessageDraft = typeof messageDrafts.$inferSelect;
 export type InsertInboundMessage = z.infer<typeof insertInboundMessageSchema>;

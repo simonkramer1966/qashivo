@@ -214,7 +214,7 @@ export function buildWeeklyForecast(
   return forecast;
 }
 
-function normalizeChannel(type: string): 'email' | 'sms' | 'voice' {
+export function normalizeChannel(type: string): 'email' | 'sms' | 'voice' {
   const lower = (type || '').toLowerCase();
   if (['voice', 'call', 'manual_call', 'phone'].includes(lower)) return 'voice';
   if (['sms', 'whatsapp', 'text'].includes(lower)) return 'sms';

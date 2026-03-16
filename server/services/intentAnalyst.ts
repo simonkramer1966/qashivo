@@ -686,23 +686,66 @@ CRITICAL EXCEPTIONS — do NOT flag ambiguity when:
         ? 'exception'  // Will appear in Exceptions/Queries queue
         : 'pending';
 
-      const [action] = await db
-        .insert(actions)
-        .values({
+      let action: any;
+      if (actionStatus === 'exception') {
+        // Exceptions go directly to the Exceptions tab — bypass proposeAction
+        const [created] = await db
+          .insert(actions)
+          .values({
+            tenantId: message.tenantId,
+            contactId: message.contactId,
+            invoiceId: message.invoiceId,
+            type: message.channel,
+            status: 'exception',
+            exceptionReason: analysis.requiresHumanReview ?
+              (analysis.intentType === 'dispute' ? 'dispute_detected' :
+               'low_confidence') : undefined,
+            subject: actionSubject,
+            content: actionContent,
+            intentType: analysis.intentType,
+            intentConfidence: analysis.confidence.toString(),
+            sentiment: analysis.sentiment,
+            source: 'charlie_inbound',
+            agentType: 'collections',
+            actionSummary: actionSubject,
+            recommended: {
+              priority: priorityMap[analysis.intentType] || 'medium',
+              suggestedNextAction: analysis.suggestedNextAction,
+              requiresHumanReview: analysis.requiresHumanReview
+            },
+            metadata: {
+              direction: 'inbound',
+              inboundMessageId: message.id,
+              requiresHumanReview: analysis.requiresHumanReview,
+              suggestedNextAction: analysis.suggestedNextAction,
+              analysis: {
+                reasoning: analysis.reasoning,
+                entities: analysis.extractedEntities
+              },
+              originalMessage: {
+                from: message.from,
+                content: message.content,
+                receivedAt: message.createdAt
+              }
+            }
+          })
+          .returning();
+        action = created;
+      } else {
+        // Route through proposeAction for batch/approval queue
+        const { proposeAction } = await import('./batchProcessor');
+        const { id: actionId } = await proposeAction({
           tenantId: message.tenantId,
           contactId: message.contactId,
           invoiceId: message.invoiceId,
           type: message.channel,
-          status: actionStatus,
-          exceptionReason: analysis.requiresHumanReview ? 
-            (analysis.intentType === 'dispute' ? 'dispute_detected' : 
-             'low_confidence') : undefined,
           subject: actionSubject,
           content: actionContent,
           intentType: analysis.intentType,
           intentConfidence: analysis.confidence.toString(),
           sentiment: analysis.sentiment,
-          source: 'charlie_inbound',
+          agentType: 'collections',
+          actionSummary: actionSubject,
           recommended: {
             priority: priorityMap[analysis.intentType] || 'medium',
             suggestedNextAction: analysis.suggestedNextAction,
@@ -723,8 +766,10 @@ CRITICAL EXCEPTIONS — do NOT flag ambiguity when:
               receivedAt: message.createdAt
             }
           }
-        })
-        .returning();
+        });
+        const [fetched] = await db.select().from(actions).where(eq(actions.id, actionId)).limit(1);
+        action = fetched;
+      }
 
       // Link action back to message
       await db

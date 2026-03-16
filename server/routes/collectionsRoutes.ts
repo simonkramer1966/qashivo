@@ -3981,18 +3981,23 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       }
 
       const { actionId } = req.params;
-      const { reason } = req.body;
+      const { reason, category } = req.body;
+      const now = new Date();
 
       const result = await db
         .update(actions)
         .set({
           status: "cancelled",
+          rejectedBy: user.id,
+          rejectedAt: now,
+          rejectionReason: reason || "Rejected by user",
+          rejectionCategory: category || "other",
           metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({
             rejectedBy: user.id,
-            rejectedAt: new Date().toISOString(),
+            rejectedAt: now.toISOString(),
             rejectionReason: reason || "Rejected by user",
           })}::jsonb`,
-          updatedAt: new Date(),
+          updatedAt: now,
         })
         .where(
           and(
@@ -4006,6 +4011,25 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       if (result.length === 0) {
         return res.status(404).json({ message: "Action not found or not pending approval" });
       }
+
+      // Update batch stats if action belongs to a batch
+      const rejectedAction = result[0];
+      if (rejectedAction.batchId) {
+        const { batchProcessor } = await import("../services/batchProcessor");
+        await batchProcessor.updateBatchStats(rejectedAction.batchId, "rejectedCount").catch(
+          (err: any) => console.error("[reject] batch stats update failed:", err)
+        );
+      }
+
+      // Trigger rejection pattern detection (async, non-blocking)
+      import("../services/rejectionPatternDetector").then(({ detectRejectionPattern }) =>
+        detectRejectionPattern({
+          tenantId: user.tenantId!,
+          category: category || "other",
+          actionType: rejectedAction.type,
+          contactId: rejectedAction.contactId ?? undefined,
+        }).catch((err: any) => console.error("[reject] pattern detection failed:", err))
+      );
 
       res.json({ message: "Action rejected", actionId });
     } catch (error: any) {

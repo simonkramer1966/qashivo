@@ -260,15 +260,17 @@ class TimerServiceClass {
         const exceptionType = this.getExceptionType(timer.timerType);
         const priority = this.getExceptionPriority(timer.timerType);
 
-        await db.insert(actions).values({
+        const { proposeAction } = await import('../services/batchProcessor');
+        await proposeAction({
           tenantId,
           invoiceId: timer.invoiceId,
           contactId: timer.contactId,
-          type: 'note', // Exception notification
-          status: 'pending',
+          type: 'note',
           subject: exceptionType,
           content: `${exceptionType} - Requires review`,
-          source: 'automated',
+          agentType: 'collections',
+          actionSummary: exceptionType,
+          priority: priority === 'high' ? 80 : priority === 'medium' ? 50 : 30,
           metadata: {
             exceptionType,
             timerType: timer.timerType,

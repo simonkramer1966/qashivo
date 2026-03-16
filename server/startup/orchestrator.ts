@@ -14,6 +14,7 @@ import { startDebtorScoringWorker } from "../jobs/debtorScoringJob";
 import { workflowTimerProcessor } from "../jobs/workflow-timer-processor";
 import { portfolioController } from "../services/portfolioController";
 import { startDsoSnapshotJob } from "../jobs/dsoSnapshotJob";
+import { batchProcessor } from "../services/batchProcessor";
 import { db } from "../db";
 import { tenants, providerConnections } from "@shared/schema";
 import { eq, and, isNotNull } from "drizzle-orm";
@@ -179,6 +180,13 @@ export async function startAll(): Promise<void> {
     console.log("[startup] DSO snapshot job started");
   } catch (error) {
     console.error("[startup] DSO snapshot job failed:", error);
+  }
+
+  try {
+    batchProcessor.start();
+    console.log("[startup] batch processor started");
+  } catch (error) {
+    console.error("[startup] batch processor failed:", error);
   }
 }
 

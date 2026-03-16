@@ -7,7 +7,7 @@
  */
 
 import { db } from "../db";
-import { eq, and, lte, sql } from "drizzle-orm";
+import { eq, and, lte, sql, isNull } from "drizzle-orm";
 import {
   actions,
   tenants,
@@ -302,6 +302,7 @@ export async function processAutoApprovals(): Promise<number> {
   const now = new Date();
 
   // Find pending_approval email actions with auto_after_timeout where timeout has passed
+  // Skip actions with a batchId — those are handled by batchProcessor
   const pendingActions = await db
     .select({ id: actions.id, metadata: actions.metadata })
     .from(actions)
@@ -311,6 +312,7 @@ export async function processAutoApprovals(): Promise<number> {
         eq(actions.status, "pending_approval"),
         eq(actions.type, "email"),
         eq(tenants.approvalMode, "auto_after_timeout"),
+        isNull(actions.batchId),
       ),
     );
 
