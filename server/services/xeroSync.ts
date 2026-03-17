@@ -802,8 +802,13 @@ export class XeroSyncService {
     try {
       console.log(`🚀 Starting ${mode.toUpperCase()} Xero sync for tenant: ${tenantId}`);
 
-      if (mode === 'initial') {
+      // SAFETY: Only clear tenant data if this is genuinely the first sync.
+      // Never wipe enriched data (agent notes, strategies, comms) on reconnect.
+      const preState = await this.getSyncState(tenantId);
+      if (mode === 'initial' && !preState.initialSyncComplete) {
         await this.clearTenantDataForFreshSync(tenantId);
+      } else if (mode === 'initial' && preState.initialSyncComplete) {
+        console.warn(`⚠️  Ignoring 'initial' mode — tenant already has completed initial sync. Running as 'ongoing' to protect enriched data.`);
       }
 
       const result = await this.syncInvoicesAndContacts(tenantId, mode, onProgress);

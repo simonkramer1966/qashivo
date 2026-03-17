@@ -55,6 +55,81 @@ import { apiMiddleware } from "../middleware";
 import { providerConnections } from "@shared/schema";
 import { encryptToken } from "../utils/tokenEncryption";
 
+// Allowed hosts for dynamic redirect URI construction
+const ALLOWED_HOSTS = new Set([
+  'qashivo.com',
+  'www.qashivo.com',
+  'qashivo.replit.app',
+  ...(process.env.REPLIT_DOMAINS?.split(',').map(d => d.trim()) || []),
+  ...(process.env.RAILWAY_PUBLIC_DOMAIN ? [process.env.RAILWAY_PUBLIC_DOMAIN] : []),
+  'localhost:5000',
+]);
+
+/**
+ * Build an absolute callback URI for OAuth redirects.
+ * For Xero, uses /api/xero/callback (legacy). For others, uses /api/providers/callback/:provider.
+ */
+function buildCallbackUri(req: any, providerName: string): string {
+  // Prefer SITE_BASE_URL if set (production canonical URL)
+  if (process.env.SITE_BASE_URL) {
+    const base = process.env.SITE_BASE_URL.replace(/\/$/, '');
+    const path = providerName === 'xero' ? '/api/xero/callback' : `/api/providers/callback/${providerName}`;
+    return `${base}${path}`;
+  }
+
+  const host = req.headers['x-forwarded-host'] as string || req.headers.host || '';
+  const cleanHost = host.split(',')[0].trim();
+  let effectiveHost = cleanHost;
+  let proto: string;
+
+  if (!ALLOWED_HOSTS.has(cleanHost)) {
+    effectiveHost = process.env.RAILWAY_PUBLIC_DOMAIN || process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000';
+    proto = effectiveHost.includes('localhost') ? 'http' : 'https';
+  } else {
+    proto = (req.headers['x-forwarded-proto'] as string)?.split(',')[0]?.trim() || (cleanHost.includes('localhost') ? 'http' : 'https');
+  }
+
+  const path = providerName === 'xero' ? '/api/xero/callback' : `/api/providers/callback/${providerName}`;
+  return `${proto}://${effectiveHost}${path}`;
+}
+
+/**
+ * Revoke tokens with the provider's token revocation endpoint.
+ * Best-effort — failures are logged but not thrown.
+ */
+async function revokeProviderTokens(providerName: string, accessToken: string, refreshToken?: string): Promise<void> {
+  const provider = apiMiddleware.getProvider(providerName);
+  if (!provider) return;
+  const config = provider.config;
+
+  const revocationEndpoints: Record<string, string> = {
+    xero: 'https://identity.xero.com/connect/revocation',
+    quickbooks: 'https://developer.api.intuit.com/v2/oauth2/tokens/revoke',
+  };
+  const endpoint = revocationEndpoints[providerName.toLowerCase()];
+  if (!endpoint) return;
+
+  // Revoke refresh token (preferred) or access token
+  const tokenToRevoke = refreshToken || accessToken;
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': `Basic ${Buffer.from(`${config.clientId}:${config.clientSecret}`).toString('base64')}`,
+      },
+      body: new URLSearchParams({ token: tokenToRevoke }),
+    });
+    if (response.ok) {
+      console.log(`[${providerName}] Token revoked successfully`);
+    } else {
+      console.warn(`[${providerName}] Token revocation returned ${response.status}`);
+    }
+  } catch (err) {
+    console.warn(`[${providerName}] Token revocation request failed:`, err);
+  }
+}
+
 // In-memory sync status tracking
 const syncStatusMap = new Map<string, {
   status: 'syncing' | 'complete' | 'failed';
@@ -609,7 +684,9 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
       console.log(`🚀 Triggering automatic initial Xero sync for tenant: ${appTenantId}`);
       updateSyncStatus(appTenantId, { status: 'syncing', startedAt: new Date().toISOString(), invoiceCount: 0, contactCount: 0 });
       const syncService = new XeroSyncService();
-      syncService.syncAllDataForTenant(appTenantId, 'initial', (counts) => {
+      // Use 'ongoing' — syncAllDataForTenant auto-detects initial if no prior sync exists.
+      // Hardcoding 'initial' here would wipe enriched data on Xero reconnect.
+      syncService.syncAllDataForTenant(appTenantId, 'ongoing', (counts) => {
         updateSyncStatus(appTenantId, { status: 'syncing', ...counts });
       })
         .then(async (result) => {
@@ -919,9 +996,8 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      // Accept mode from request body: "initial" (clean sweep) or "ongoing" (upsert)
-      // Default to "ongoing" — syncInvoicesAndContacts auto-detects initial if no prior sync exists
-      // Only use "initial" if explicitly requested (wipes all tenant data first)
+      // Default to "ongoing" — syncAllDataForTenant has a safety guard that
+      // prevents clearTenantDataForFreshSync if initialSyncComplete is already true.
       const mode = req.body?.mode === 'initial' ? 'initial' : 'ongoing';
 
       console.log(`🚀 Starting ${mode.toUpperCase()} Xero sync for tenant: ${user.tenantId}`);
@@ -1204,8 +1280,74 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
       console.error("Error checking provider health:", error);
       res.status(500).json({ 
         success: false, 
-        message: "Failed to check provider health" 
+        message: "Failed to check provider health"
       });
+    }
+  });
+
+  // Provider status endpoint — returns connection status for all configured providers
+  app.get('/api/providers/status', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // Known providers and their required env vars
+      const knownProviders = [
+        { name: 'xero', label: 'Xero', type: 'accounting', envKeys: ['XERO_CLIENT_ID', 'XERO_CLIENT_SECRET'] },
+        { name: 'quickbooks', label: 'QuickBooks', type: 'accounting', envKeys: ['QB_CLIENT_ID', 'QB_CLIENT_SECRET'] },
+        { name: 'sage', label: 'Sage', type: 'accounting', envKeys: ['SAGE_CLIENT_ID', 'SAGE_CLIENT_SECRET'] },
+      ];
+
+      // Query provider_connections for this tenant
+      const connections = await db.select()
+        .from(providerConnections)
+        .where(eq(providerConnections.tenantId, user.tenantId));
+
+      const connectionMap = new Map(connections.map(c => [c.provider, c]));
+
+      const statuses = knownProviders.map(p => {
+        const configured = p.envKeys.every(k => !!process.env[k]);
+        const conn = connectionMap.get(p.name);
+
+        let connectionStatus: 'active' | 'expiring_soon' | 'expired' | 'error' | 'disconnected' = 'disconnected';
+        if (conn?.isConnected) {
+          if (conn.errorCount && conn.errorCount >= 3) {
+            connectionStatus = 'error';
+          } else if (conn.tokenExpiresAt) {
+            const expiresAt = new Date(conn.tokenExpiresAt);
+            const now = new Date();
+            if (expiresAt <= now) {
+              connectionStatus = 'expired';
+            } else if (expiresAt.getTime() - now.getTime() < 5 * 60 * 1000) {
+              connectionStatus = 'expiring_soon';
+            } else {
+              connectionStatus = 'active';
+            }
+          } else {
+            connectionStatus = 'active';
+          }
+        }
+
+        return {
+          provider: p.name,
+          label: p.label,
+          type: p.type,
+          configured,
+          connected: conn?.isConnected ?? false,
+          connectionStatus,
+          orgName: conn?.connectionName || null,
+          lastSyncAt: conn?.lastSyncAt || null,
+          lastError: conn?.lastError || null,
+          errorCount: conn?.errorCount || 0,
+        };
+      });
+
+      res.json({ success: true, providers: statuses });
+    } catch (error) {
+      console.error("Error fetching provider status:", error);
+      res.status(500).json({ success: false, message: "Failed to fetch provider status" });
     }
   });
 
@@ -1213,36 +1355,49 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
     try {
       const { provider: providerName } = req.params;
       const user = await storage.getUser(req.user.id);
-      
+
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
+      // Verify provider is registered
+      const provider = apiMiddleware.getProvider(providerName);
+      if (!provider) {
+        return res.status(404).json({ success: false, message: `Provider '${providerName}' not found or not configured` });
+      }
+
       // Ensure session exists before initiating OAuth flow
       if (!req.session) {
-        return res.status(401).json({ 
-          success: false, 
-          message: "Session required for authentication. Please log in again." 
+        return res.status(401).json({
+          success: false,
+          message: "Session required for authentication. Please log in again."
         });
       }
 
+      // Build dynamic redirect URI — must be absolute and match provider's developer portal
+      const dynamicRedirectUri = buildCallbackUri(req, providerName);
+      console.log(`[${providerName}] Connect: dynamic redirect URI: ${dynamicRedirectUri}`);
+
+      // Store redirect URI in session for callback validation
+      req.session[`${providerName}RedirectUri`] = dynamicRedirectUri;
+
       // Use APIMiddleware to initiate connection (with session for state persistence)
-      const result = await apiMiddleware.connectProvider(providerName, req.session, user.tenantId);
-      
+      const result = await apiMiddleware.connectProvider(providerName, req.session, user.tenantId, undefined, dynamicRedirectUri);
+
       if (result.success && result.authUrl) {
         // Promisify session.save to persist OAuth state before returning auth URL
         await new Promise<void>((resolve, reject) => {
           req.session.save((err: any) => {
             if (err) {
-              console.error("❌ Error saving session:", err);
+              console.error(`Error saving session for ${providerName}:`, err);
               reject(err);
             } else {
-              console.log(`✅ Session saved successfully before ${providerName} redirect`);
+              console.log(`Session saved before ${providerName} redirect`);
               resolve();
             }
           });
         });
-        
+
         // Return auth URL for frontend to redirect to
         res.json({
           success: true,
@@ -1257,10 +1412,143 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
 
     } catch (error) {
       console.error(`Error initiating ${req.params.provider} connection:`, error);
-      res.status(500).json({ 
-        success: false, 
-        message: "Failed to initiate provider connection" 
+      res.status(500).json({
+        success: false,
+        message: "Failed to initiate provider connection"
       });
+    }
+  });
+
+  // Generic OAuth callback for all providers (QuickBooks, Sage, etc.)
+  // Xero has its own callback at /api/xero/callback for backward compatibility
+  app.get('/api/providers/callback/:provider', async (req, res) => {
+    const { provider: providerName } = req.params;
+    console.log(`=== ${providerName.toUpperCase()} CALLBACK RECEIVED ===`);
+
+    try {
+      const { code, state, error, error_description, realmId } = req.query;
+
+      // Check for authorization errors from provider
+      if (error) {
+        console.error(`${providerName} authorization error: ${error} - ${error_description}`);
+        const errorMsg = encodeURIComponent(String(error_description || error || 'Authorization failed'));
+        return res.redirect(`/connection-error?provider=${providerName}&error=${errorMsg}`);
+      }
+
+      if (!code || !state) {
+        const errorMsg = encodeURIComponent('Missing authorization code or state parameter');
+        return res.redirect(`/connection-error?provider=${providerName}&error=${errorMsg}`);
+      }
+
+      // Check session (may have expired during OAuth redirect)
+      if (!req.session) {
+        const errorMsg = encodeURIComponent('Session expired. Please try connecting again.');
+        return res.redirect(`/connection-error?provider=${providerName}&error=${errorMsg}`);
+      }
+
+      // Build callback redirect URI (must match what was sent in the authorize request)
+      const storedRedirectUri = (req.session as any)[`${providerName}RedirectUri`];
+      const callbackRedirectUri = storedRedirectUri || buildCallbackUri(req, providerName);
+      console.log(`[${providerName}] Callback redirect URI: ${callbackRedirectUri}`);
+
+      // Complete the OAuth exchange via APIMiddleware (validates state via session)
+      const result = await apiMiddleware.completeConnection(
+        providerName,
+        code as string,
+        state as string,
+        req.session,
+        callbackRedirectUri
+      );
+
+      if (!result.success || !result.tokens || !result.appTenantId) {
+        console.error(`${providerName} callback failed:`, result.error);
+        const errorMsg = encodeURIComponent(result.error || `Failed to complete ${providerName} authorization`);
+        return res.redirect(`/connection-error?provider=${providerName}&error=${errorMsg}`);
+      }
+
+      const appTenantId = result.appTenantId;
+      const tokens = result.tokens;
+      const providerTenantId = tokens.tenantId || (realmId as string) || null;
+      const orgName = tokens.tenantName || null;
+
+      // For QuickBooks, the realmId comes as a query parameter
+      const effectiveProviderId = providerName === 'quickbooks' && realmId
+        ? (realmId as string)
+        : providerTenantId;
+
+      // For Sage, fetch the business ID after token exchange
+      let sageBusinessId: string | null = null;
+      if (providerName === 'sage' && tokens.accessToken) {
+        try {
+          const bizResponse = await fetch('https://api.accounting.sage.com/v3.1/businesses', {
+            headers: { 'Authorization': `Bearer ${tokens.accessToken}` },
+          });
+          if (bizResponse.ok) {
+            const bizData = await bizResponse.json() as any;
+            sageBusinessId = bizData?.$items?.[0]?.id || bizData?.id || null;
+          }
+        } catch (err) {
+          console.warn(`[${providerName}] Failed to fetch Sage business ID:`, err);
+        }
+      }
+
+      const finalProviderId = sageBusinessId || effectiveProviderId;
+
+      // Store in provider_connections (encrypted)
+      try {
+        const hasEncryptionKey = !!process.env.PROVIDER_TOKEN_ENCRYPTION_KEY;
+        const encAccessToken = hasEncryptionKey ? encryptToken(tokens.accessToken) : tokens.accessToken;
+        const encRefreshToken = tokens.refreshToken
+          ? (hasEncryptionKey ? encryptToken(tokens.refreshToken) : tokens.refreshToken)
+          : null;
+
+        await db.insert(providerConnections).values({
+          tenantId: appTenantId,
+          provider: providerName,
+          connectionName: orgName || providerName.charAt(0).toUpperCase() + providerName.slice(1),
+          isActive: true,
+          isConnected: true,
+          accessToken: encAccessToken,
+          refreshToken: encRefreshToken,
+          tokenExpiresAt: tokens.expiresAt || null,
+          providerId: finalProviderId,
+          lastConnectedAt: new Date(),
+          syncFrequency: 'hourly',
+          autoSyncEnabled: true,
+        }).onConflictDoUpdate({
+          target: [providerConnections.tenantId, providerConnections.provider],
+          set: {
+            connectionName: orgName || providerName.charAt(0).toUpperCase() + providerName.slice(1),
+            isActive: true,
+            isConnected: true,
+            accessToken: encAccessToken,
+            refreshToken: encRefreshToken,
+            tokenExpiresAt: tokens.expiresAt || null,
+            providerId: finalProviderId,
+            lastConnectedAt: new Date(),
+            lastError: null,
+            errorCount: 0,
+            updatedAt: new Date(),
+          },
+        });
+        console.log(`[${providerName}] provider_connections updated for tenant ${appTenantId}`);
+      } catch (dbError) {
+        console.error(`[${providerName}] Failed to write provider_connections:`, dbError);
+        // Non-fatal — OAuth tokens are still cached in memory
+      }
+
+      // Clean up session OAuth data
+      delete (req.session as any)[`${providerName}RedirectUri`];
+
+      console.log(`[${providerName}] Connected successfully for tenant: ${appTenantId}, org: ${orgName}`);
+
+      // Redirect to settings integrations page
+      res.redirect('/settings/integrations?connected=' + providerName);
+
+    } catch (error) {
+      console.error(`Error in ${providerName} callback:`, error);
+      const errorMsg = encodeURIComponent(error instanceof Error ? error.message : 'Unknown error');
+      res.redirect(`/connection-error?provider=${providerName}&error=${errorMsg}`);
     }
   });
 
@@ -1268,14 +1556,44 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
     try {
       const { provider: providerName } = req.params;
       const user = await storage.getUser(req.user.id);
-      
+
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      // Use APIMiddleware to disconnect provider
+      // Try to revoke tokens with the provider's API before disconnecting
+      try {
+        const tokens = await apiMiddleware.getAuthManager().getCachedTokens(providerName, user.tenantId);
+        if (tokens?.accessToken) {
+          await revokeProviderTokens(providerName, tokens.accessToken, tokens.refreshToken);
+        }
+      } catch (revokeErr) {
+        console.warn(`[${providerName}] Token revocation failed (non-fatal):`, revokeErr);
+      }
+
+      // Use APIMiddleware to disconnect provider (clears cache + Xero tenant fields)
       const result = await apiMiddleware.disconnectProvider(providerName, user.tenantId);
-      
+
+      // Also mark provider_connections as disconnected
+      try {
+        await db.update(providerConnections)
+          .set({
+            isConnected: false,
+            isActive: false,
+            accessToken: null,
+            refreshToken: null,
+            tokenExpiresAt: null,
+            updatedAt: new Date(),
+          })
+          .where(and(
+            eq(providerConnections.tenantId, user.tenantId),
+            eq(providerConnections.provider, providerName)
+          ));
+        console.log(`[${providerName}] provider_connections marked disconnected for tenant ${user.tenantId}`);
+      } catch (dbErr) {
+        console.error(`[${providerName}] Failed to update provider_connections on disconnect:`, dbErr);
+      }
+
       if (result.success) {
         res.json({
           success: true,
@@ -1290,9 +1608,9 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
 
     } catch (error) {
       console.error(`Error disconnecting ${req.params.provider}:`, error);
-      res.status(500).json({ 
-        success: false, 
-        message: "Failed to disconnect provider" 
+      res.status(500).json({
+        success: false,
+        message: "Failed to disconnect provider"
       });
     }
   });
