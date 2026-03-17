@@ -21,6 +21,7 @@ import {
   tenants, paymentPromises, promisesToPay, smeClients, contactNotes, timelineEvents,
   attentionItems, outcomes, activityLogs, collectionPolicies, paymentPlans,
   emailMessages, customerContactPersons, scheduledReports,
+  cachedXeroOverpayments, cachedXeroPrepayments, cachedXeroContacts,
 } from "@shared/schema";
 import { computeNextRunAt } from "../services/reportScheduler";
 import { REPORT_TYPE_LABELS, type ReportType } from "../services/reportGenerator";
@@ -113,12 +114,40 @@ export function registerContactRoutes(app: Express): void {
       
       // Use fallback pagination with invoice data
       {
-        // Get all contacts, invoices, and actions in parallel for performance
-        const [rawContacts, allInvoices, allActions] = await Promise.all([
+        // Get all contacts, invoices, actions, and credits in parallel for performance
+        const [rawContacts, allInvoices, allActions, overpayments, prepayments, xeroContacts] = await Promise.all([
           storage.getContacts(user.tenantId),
           storage.getInvoices(user.tenantId, 10000),
-          storage.getActions(user.tenantId)
+          storage.getActions(user.tenantId),
+          db.select().from(cachedXeroOverpayments).where(eq(cachedXeroOverpayments.tenantId, user.tenantId)),
+          db.select().from(cachedXeroPrepayments).where(eq(cachedXeroPrepayments.tenantId, user.tenantId)),
+          db.select().from(cachedXeroContacts).where(eq(cachedXeroContacts.tenantId, user.tenantId)),
         ]);
+
+        // Build xeroContactId → contactId lookup for credits
+        const xeroIdToContactId = new Map<string, string>();
+        for (const c of rawContacts) {
+          if (c.xeroContactId) xeroIdToContactId.set(c.xeroContactId, c.id);
+        }
+
+        // Sum remaining credits per contact
+        const creditsByContactId = new Map<string, number>();
+        for (const op of overpayments) {
+          if (op.xeroContactId && op.status === 'AUTHORISED') {
+            const contactId = xeroIdToContactId.get(op.xeroContactId);
+            if (contactId) {
+              creditsByContactId.set(contactId, (creditsByContactId.get(contactId) || 0) + Number(op.remainingCredit || 0));
+            }
+          }
+        }
+        for (const pp of prepayments) {
+          if (pp.xeroContactId && pp.status === 'AUTHORISED') {
+            const contactId = xeroIdToContactId.get(pp.xeroContactId);
+            if (contactId) {
+              creditsByContactId.set(contactId, (creditsByContactId.get(contactId) || 0) + Number(pp.remainingCredit || 0));
+            }
+          }
+        }
 
         const allContacts = allowedContactIds
           ? rawContacts.filter(c => allowedContactIds.includes(c.id))
@@ -129,12 +158,14 @@ export function registerContactRoutes(app: Express): void {
           const contactInvoices = allInvoices.filter(inv => inv.contactId === contact.id);
           const unpaidInvoices = contactInvoices.filter(inv => inv.status !== 'paid' && inv.status !== 'cancelled');
           
-          // Calculate outstanding amount
-          const outstandingAmount = unpaidInvoices.reduce((sum, inv) => {
+          // Calculate outstanding amount (invoice balances minus overpayment/prepayment credits)
+          const invoiceBalance = unpaidInvoices.reduce((sum, inv) => {
             const amount = Number(inv.amount) || 0;
             const amountPaid = Number(inv.amountPaid) || 0;
             return sum + (amount - amountPaid);
           }, 0);
+          const credits = creditsByContactId.get(contact.id) || 0;
+          const outstandingAmount = Math.max(0, invoiceBalance - credits);
           
           // Calculate overdue invoices and amounts
           const today = new Date();

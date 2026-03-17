@@ -458,6 +458,36 @@ export const cachedXeroContacts = pgTable("cached_xero_contacts", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Cached Xero overpayments — lean mirror for reconciliation
+export const cachedXeroOverpayments = pgTable("cached_xero_overpayments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  xeroOverpaymentId: varchar("xero_overpayment_id").notNull(),
+  xeroContactId: varchar("xero_contact_id"),
+  status: varchar("status").notNull().default("AUTHORISED"), // AUTHORISED, PAID, VOIDED
+  date: timestamp("date"),
+  total: decimal("total", { precision: 10, scale: 2 }).default("0"),
+  remainingCredit: decimal("remaining_credit", { precision: 10, scale: 2 }).default("0"),
+  updatedDateUtc: timestamp("updated_date_utc"),
+  syncedAt: timestamp("synced_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Cached Xero prepayments — lean mirror for reconciliation
+export const cachedXeroPrepayments = pgTable("cached_xero_prepayments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  xeroPrepaymentId: varchar("xero_prepayment_id").notNull(),
+  xeroContactId: varchar("xero_contact_id"),
+  status: varchar("status").notNull().default("AUTHORISED"), // AUTHORISED, PAID, VOIDED
+  date: timestamp("date"),
+  total: decimal("total", { precision: 10, scale: 2 }).default("0"),
+  remainingCredit: decimal("remaining_credit", { precision: 10, scale: 2 }).default("0"),
+  updatedDateUtc: timestamp("updated_date_utc"),
+  syncedAt: timestamp("synced_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Bills table (accounts payable)
 export const bills = pgTable("bills", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

@@ -1680,9 +1680,16 @@ export class DatabaseStorage implements IStorage {
         WHERE tenant_id = ${tenantId}
           AND status = 'paid'
           AND paid_date >= DATE_TRUNC('week', CURRENT_DATE)
+      ),
+      total_credits AS (
+        SELECT COALESCE(
+          (SELECT SUM(CAST(remaining_credit AS DECIMAL)) FROM cached_xero_overpayments WHERE tenant_id = ${tenantId} AND status = 'AUTHORISED'), 0
+        ) + COALESCE(
+          (SELECT SUM(CAST(remaining_credit AS DECIMAL)) FROM cached_xero_prepayments WHERE tenant_id = ${tenantId} AND status = 'AUTHORISED'), 0
+        ) as total
       )
-      SELECT 
-        o.total as total_outstanding,
+      SELECT
+        GREATEST(o.total - tc.total, 0) as total_outstanding,
         o.count as total_invoice_count,
         os.count as overdue_count,
         os.total as overdue_amount,
@@ -1703,6 +1710,7 @@ export class DatabaseStorage implements IStorage {
       CROSS JOIN dso_calc d
       CROSS JOIN collected_this_month cm
       CROSS JOIN collected_this_week cw
+      CROSS JOIN total_credits tc
     `);
 
     const row = result.rows[0] as any;

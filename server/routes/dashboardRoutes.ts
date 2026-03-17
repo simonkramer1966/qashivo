@@ -20,6 +20,7 @@ import {
   tenants, paymentPromises, promisesToPay, smeClients, contactNotes, timelineEvents,
   attentionItems, outcomes, activityLogs, collectionPolicies, paymentPlans,
   emailMessages, customerContactPersons, scheduledReports, complianceChecks,
+  cachedXeroOverpayments, cachedXeroPrepayments,
 } from "@shared/schema";
 import { computeNextRunAt } from "../services/reportScheduler";
 import { REPORT_TYPE_LABELS, type ReportType } from "../services/reportGenerator";
@@ -208,40 +209,67 @@ export function registerDashboardRoutes(app: Express): void {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      // Get top debtors by outstanding amount
-      const topDebtors = await db
-        .select({
-          id: contacts.id,
-          company: contacts.name,
-          totalOutstanding: sql<number>`SUM(CAST(${invoices.amount} AS DECIMAL) - CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL))`,
-          invoiceCount: sql<number>`COUNT(${invoices.id})`,
-          oldestInvoiceDate: sql<Date>`MIN(${invoices.dueDate})`,
-          contactEmail: contacts.email,
-          contactPhone: contacts.phone,
-        })
-        .from(contacts)
-        .leftJoin(invoices, and(
-          eq(invoices.contactId, contacts.id),
-          eq(invoices.tenantId, user.tenantId),
-          sql`CAST(${invoices.amount} AS DECIMAL) > CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL)` // Only unpaid invoices
-        ))
-        .where(eq(contacts.tenantId, user.tenantId))
-        .groupBy(contacts.id, contacts.name, contacts.email, contacts.phone)
-        .having(sql`SUM(CAST(${invoices.amount} AS DECIMAL) - CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL)) > 0`)
-        .orderBy(sql`SUM(CAST(${invoices.amount} AS DECIMAL) - CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL)) DESC`)
-        .limit(10);
+      // Get top debtors by outstanding amount (invoice balances minus credits)
+      const [topDebtors, overpayments, prepayments] = await Promise.all([
+        db
+          .select({
+            id: contacts.id,
+            xeroContactId: contacts.xeroContactId,
+            company: contacts.name,
+            totalOutstanding: sql<number>`SUM(CAST(${invoices.amount} AS DECIMAL) - CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL))`,
+            invoiceCount: sql<number>`COUNT(${invoices.id})`,
+            oldestInvoiceDate: sql<Date>`MIN(${invoices.dueDate})`,
+            contactEmail: contacts.email,
+            contactPhone: contacts.phone,
+          })
+          .from(contacts)
+          .leftJoin(invoices, and(
+            eq(invoices.contactId, contacts.id),
+            eq(invoices.tenantId, user.tenantId),
+            sql`CAST(${invoices.amount} AS DECIMAL) > CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL)`
+          ))
+          .where(eq(contacts.tenantId, user.tenantId))
+          .groupBy(contacts.id, contacts.name, contacts.xeroContactId, contacts.email, contacts.phone)
+          .having(sql`SUM(CAST(${invoices.amount} AS DECIMAL) - CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL)) > 0`)
+          .orderBy(sql`SUM(CAST(${invoices.amount} AS DECIMAL) - CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL)) DESC`)
+          .limit(20),
+        db.select().from(cachedXeroOverpayments).where(eq(cachedXeroOverpayments.tenantId, user.tenantId)),
+        db.select().from(cachedXeroPrepayments).where(eq(cachedXeroPrepayments.tenantId, user.tenantId)),
+      ]);
 
-      // Format the response
-      const formattedDebtors = topDebtors.map((debtor, index) => ({
-        id: debtor.id,
-        rank: index + 1,
-        company: debtor.company || 'Unknown Company',
-        amount: Number(debtor.totalOutstanding) || 0,
-        invoiceCount: Number(debtor.invoiceCount) || 0,
-        oldestInvoiceDate: debtor.oldestInvoiceDate,
-        email: debtor.contactEmail,
-        phone: debtor.contactPhone,
-      }));
+      // Build credit map by xeroContactId
+      const creditsByXeroId = new Map<string, number>();
+      for (const op of overpayments) {
+        if (op.xeroContactId && op.status === 'AUTHORISED') {
+          creditsByXeroId.set(op.xeroContactId, (creditsByXeroId.get(op.xeroContactId) || 0) + Number(op.remainingCredit || 0));
+        }
+      }
+      for (const pp of prepayments) {
+        if (pp.xeroContactId && pp.status === 'AUTHORISED') {
+          creditsByXeroId.set(pp.xeroContactId, (creditsByXeroId.get(pp.xeroContactId) || 0) + Number(pp.remainingCredit || 0));
+        }
+      }
+
+      // Format with credits subtracted, re-sort, take top 10
+      const formattedDebtors = topDebtors
+        .map((debtor) => {
+          const invoiceBalance = Number(debtor.totalOutstanding) || 0;
+          const credits = debtor.xeroContactId ? (creditsByXeroId.get(debtor.xeroContactId) || 0) : 0;
+          return {
+            id: debtor.id,
+            rank: 0,
+            company: debtor.company || 'Unknown Company',
+            amount: Math.max(0, invoiceBalance - credits),
+            invoiceCount: Number(debtor.invoiceCount) || 0,
+            oldestInvoiceDate: debtor.oldestInvoiceDate,
+            email: debtor.contactEmail,
+            phone: debtor.contactPhone,
+          };
+        })
+        .filter(d => d.amount > 0)
+        .sort((a, b) => b.amount - a.amount)
+        .slice(0, 10)
+        .map((d, i) => ({ ...d, rank: i + 1 }));
 
       res.json(formattedDebtors);
     } catch (error) {

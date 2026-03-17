@@ -1,5 +1,5 @@
 import { db, pool } from "../db";
-import { tenants, cachedXeroInvoices, cachedXeroContacts, contacts, invoices, syncState } from "@shared/schema";
+import { tenants, cachedXeroInvoices, cachedXeroContacts, cachedXeroOverpayments, cachedXeroPrepayments, contacts, invoices, syncState } from "@shared/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { xeroService } from "./xero";
 import { attentionItemService } from "./attentionItemService";
@@ -335,6 +335,11 @@ export class XeroSyncService {
       const processCounts = await this.processCachedInvoices(tenantId);
       console.log(`✅ Processed ${processCounts.processed}/${totalInvoicesCount} invoices (${processCounts.created} new, ${processCounts.updated} updated, ${processCounts.failed} failed)`);
 
+      // ── Step 4b: Sync overpayments and prepayments for reconciliation ──
+      const overpaymentCount = await this.syncOverpayments(tenantId, tokens);
+      const prepaymentCount = await this.syncPrepayments(tenantId, tokens);
+      console.log(`✅ Credits: ${overpaymentCount} overpayments, ${prepaymentCount} prepayments`);
+
       // ── Step 5: Record successful sync ────────────────────────────
       await this.updateSyncState(tenantId, {
         syncStatus: 'success',
@@ -490,6 +495,100 @@ export class XeroSyncService {
   }
 
   // ══════════════════════════════════════════════════════════════════
+  // Sync overpayments and prepayments (for reconciliation)
+  // ══════════════════════════════════════════════════════════════════
+
+  async syncOverpayments(tenantId: string, tokens: { accessToken: string; refreshToken: string; expiresAt: Date; tenantId: string }): Promise<number> {
+    try {
+      console.log(`💰 Syncing overpayments for tenant ${tenantId}...`);
+      await db.delete(cachedXeroOverpayments).where(eq(cachedXeroOverpayments.tenantId, tenantId));
+
+      let total = 0;
+      let currentPage = 1;
+      let hasNextPage = true;
+
+      while (hasNextPage) {
+        const endpoint = `Overpayments?where=${encodeURIComponent('Type=="RECEIVE-OVERPAYMENT"')}&page=${currentPage}`;
+        const response = await xeroService.makeAuthenticatedRequestPublic(
+          tokens, endpoint, 'GET', undefined, tenantId
+        );
+        const overpayments = response.Overpayments || [];
+
+        if (overpayments.length > 0) {
+          const toInsert = overpayments.map((op: any) => ({
+            tenantId,
+            xeroOverpaymentId: op.OverpaymentID,
+            xeroContactId: op.Contact?.ContactID || null,
+            status: op.Status || 'AUTHORISED',
+            date: op.DateString ? this.parseXeroDate(op.DateString) : (op.Date ? this.parseXeroDate(op.Date) : null),
+            total: (op.Total ?? 0).toString(),
+            remainingCredit: (op.RemainingCredit ?? 0).toString(),
+            updatedDateUtc: op.UpdatedDateUTC ? this.parseXeroDate(op.UpdatedDateUTC) : null,
+          }));
+
+          await db.insert(cachedXeroOverpayments).values(toInsert);
+          total += toInsert.length;
+        }
+
+        hasNextPage = overpayments.length === 100;
+        currentPage++;
+        if (hasNextPage) await new Promise(r => setTimeout(r, RATE_LIMIT_DELAY_MS));
+      }
+
+      console.log(`✅ Synced ${total} overpayments`);
+      return total;
+    } catch (error) {
+      console.error('❌ Overpayments sync failed:', error);
+      return 0;
+    }
+  }
+
+  async syncPrepayments(tenantId: string, tokens: { accessToken: string; refreshToken: string; expiresAt: Date; tenantId: string }): Promise<number> {
+    try {
+      console.log(`💰 Syncing prepayments for tenant ${tenantId}...`);
+      await db.delete(cachedXeroPrepayments).where(eq(cachedXeroPrepayments.tenantId, tenantId));
+
+      let total = 0;
+      let currentPage = 1;
+      let hasNextPage = true;
+
+      while (hasNextPage) {
+        const endpoint = `Prepayments?where=${encodeURIComponent('Type=="RECEIVE-PREPAYMENT"')}&page=${currentPage}`;
+        const response = await xeroService.makeAuthenticatedRequestPublic(
+          tokens, endpoint, 'GET', undefined, tenantId
+        );
+        const prepayments = response.Prepayments || [];
+
+        if (prepayments.length > 0) {
+          const toInsert = prepayments.map((pp: any) => ({
+            tenantId,
+            xeroPrepaymentId: pp.PrepaymentID,
+            xeroContactId: pp.Contact?.ContactID || null,
+            status: pp.Status || 'AUTHORISED',
+            date: pp.DateString ? this.parseXeroDate(pp.DateString) : (pp.Date ? this.parseXeroDate(pp.Date) : null),
+            total: (pp.Total ?? 0).toString(),
+            remainingCredit: (pp.RemainingCredit ?? 0).toString(),
+            updatedDateUtc: pp.UpdatedDateUTC ? this.parseXeroDate(pp.UpdatedDateUTC) : null,
+          }));
+
+          await db.insert(cachedXeroPrepayments).values(toInsert);
+          total += toInsert.length;
+        }
+
+        hasNextPage = prepayments.length === 100;
+        currentPage++;
+        if (hasNextPage) await new Promise(r => setTimeout(r, RATE_LIMIT_DELAY_MS));
+      }
+
+      console.log(`✅ Synced ${total} prepayments`);
+      return total;
+    } catch (error) {
+      console.error('❌ Prepayments sync failed:', error);
+      return 0;
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════
   // Helpers
   // ══════════════════════════════════════════════════════════════════
 
@@ -619,6 +718,7 @@ export class XeroSyncService {
         'actions',
         'payment_plan_invoices', 'payment_plans',
         'bank_transactions', 'bank_accounts', 'bills',
+        'cached_xero_overpayments', 'cached_xero_prepayments',
         'cached_xero_invoices', 'cached_xero_contacts', 'invoices', 'contacts',
       ];
 
