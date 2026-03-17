@@ -2135,6 +2135,17 @@ export function registerDashboardRoutes(app: Express): void {
 
       const row = (result as any).rows?.[0] || (result as any)[0] || {};
 
+      // Fetch total overpayment/prepayment credits
+      const [opCredits, ppCredits] = await Promise.all([
+        db.select({ total: sql<number>`COALESCE(SUM(${cachedXeroOverpayments.remainingCredit}), 0)` })
+          .from(cachedXeroOverpayments)
+          .where(and(eq(cachedXeroOverpayments.tenantId, user.tenantId), eq(cachedXeroOverpayments.status, "AUTHORISED"))),
+        db.select({ total: sql<number>`COALESCE(SUM(${cachedXeroPrepayments.remainingCredit}), 0)` })
+          .from(cachedXeroPrepayments)
+          .where(and(eq(cachedXeroPrepayments.tenantId, user.tenantId), eq(cachedXeroPrepayments.status, "AUTHORISED"))),
+      ]);
+      const totalCredits = Number(opCredits[0]?.total || 0) + Number(ppCredits[0]?.total || 0);
+
       const bucketOrder = ['current', '1-30', '31-60', '61-90', '90+'];
       const rawBuckets = row.ageing_buckets || [];
       const ageingBuckets = bucketOrder.map((key) => {
@@ -2147,8 +2158,8 @@ export function registerDashboardRoutes(app: Express): void {
       });
 
       res.json({
-        totalOutstanding: Math.round(Number(row.total_outstanding || 0)),
-        totalOverdue: Math.round(Number(row.total_overdue || 0)),
+        totalOutstanding: Math.round(Math.max(0, Number(row.total_outstanding || 0) - totalCredits)),
+        totalOverdue: Math.round(Math.max(0, Number(row.total_overdue || 0) - totalCredits)),
         overdueCount: Number(row.overdue_count || 0),
         dso: Math.round(Number(row.dso || 0)),
         totalDebtors: Number(row.total_debtors || 0),
@@ -2280,20 +2291,60 @@ export function registerDashboardRoutes(app: Express): void {
           sql`SUM(CASE WHEN LOWER(${invoices.status}) NOT IN ('paid', 'void', 'voided', 'deleted', 'draft') THEN ${invoices.amount} - ${invoices.amountPaid} ELSE 0 END) DESC`,
         );
 
-      const formatted = debtors.map((d) => ({
-        id: d.id,
-        name: d.companyName || d.name || "Unknown",
-        email: d.email,
-        totalOutstanding: Math.round(Number(d.totalOutstanding || 0) * 100) / 100,
-        overdueAmount: Math.round(Number(d.overdueAmount || 0) * 100) / 100,
-        invoiceCount: Number(d.invoiceCount || 0),
-        oldestOverdueDays: Math.round(Number(d.oldestOverdueDays || 0)),
-        lastContactDate: d.lastContactDate,
-        nextActionDate: d.nextActionDate,
-        status: d.isActive ? "active" : "inactive",
-      }));
+      // Fetch overpayment/prepayment credits per contact
+      const [allOps, allPps] = await Promise.all([
+        db.select({ xeroContactId: cachedXeroOverpayments.xeroContactId, remainingCredit: cachedXeroOverpayments.remainingCredit })
+          .from(cachedXeroOverpayments)
+          .where(and(eq(cachedXeroOverpayments.tenantId, user.tenantId), eq(cachedXeroOverpayments.status, "AUTHORISED"))),
+        db.select({ xeroContactId: cachedXeroPrepayments.xeroContactId, remainingCredit: cachedXeroPrepayments.remainingCredit })
+          .from(cachedXeroPrepayments)
+          .where(and(eq(cachedXeroPrepayments.tenantId, user.tenantId), eq(cachedXeroPrepayments.status, "AUTHORISED"))),
+      ]);
 
-      res.json(formatted);
+      // Map xeroContactId → internal contactId
+      const contactXeroIds = await db.select({ id: contacts.id, xeroContactId: contacts.xeroContactId })
+        .from(contacts).where(eq(contacts.tenantId, user.tenantId));
+      const xeroToContactId = new Map<string, string>();
+      for (const c of contactXeroIds) {
+        if (c.xeroContactId) xeroToContactId.set(c.xeroContactId, c.id);
+      }
+
+      // Build credits by internal contactId
+      const creditsByContactId = new Map<string, number>();
+      let unmatchedCredits = 0;
+      for (const r of [...allOps, ...allPps]) {
+        const rem = parseFloat(r.remainingCredit || "0");
+        if (rem <= 0) continue;
+        const contactId = r.xeroContactId ? xeroToContactId.get(r.xeroContactId) : undefined;
+        if (contactId) {
+          creditsByContactId.set(contactId, (creditsByContactId.get(contactId) || 0) + rem);
+        } else {
+          unmatchedCredits += rem;
+        }
+      }
+
+      const formatted = debtors.map((d) => {
+        const credit = creditsByContactId.get(d.id) || 0;
+        const rawOutstanding = Number(d.totalOutstanding || 0);
+        const rawOverdue = Number(d.overdueAmount || 0);
+        return {
+          id: d.id,
+          name: d.companyName || d.name || "Unknown",
+          email: d.email,
+          totalOutstanding: Math.round((rawOutstanding - credit) * 100) / 100,
+          overdueAmount: Math.round(Math.max(0, rawOverdue - credit) * 100) / 100,
+          invoiceCount: Number(d.invoiceCount || 0),
+          oldestOverdueDays: Math.round(Number(d.oldestOverdueDays || 0)),
+          lastContactDate: d.lastContactDate,
+          nextActionDate: d.nextActionDate,
+          status: d.isActive ? "active" : "inactive",
+        };
+      });
+
+      // Filter out debtors with zero or negative outstanding after credits
+      const activeDebtors = formatted.filter(d => d.totalOutstanding > 0);
+
+      res.json(activeDebtors);
     } catch (error) {
       console.error("Error fetching qollections debtors:", error);
       res.status(500).json({ message: "Failed to fetch debtor list" });
