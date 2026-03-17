@@ -61,7 +61,7 @@ const navigationPillars: NavPillar[] = [
       { name: "Dashboard", href: "/qollections", icon: Gauge },
       { name: "Debtors", href: "/qollections/debtors", icon: Users },
       { name: "Invoices", href: "/qollections/invoices", icon: FileText },
-      { name: "Agent Activity", href: "/qollections/agent-activity", icon: Activity },
+      { name: "Action Centre", href: "/qollections/agent-activity", icon: Activity },
       { name: "Disputes", href: "/qollections/disputes", icon: AlertTriangle },
       { name: "Reports", href: "/qollections/reports", icon: BarChart3 },
     ],
