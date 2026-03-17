@@ -130,21 +130,28 @@ export function registerContactRoutes(app: Express): void {
           if (c.xeroContactId) xeroIdToContactId.set(c.xeroContactId, c.id);
         }
 
-        // Sum remaining credits per contact
+        // Sum remaining credits per contact + track unmatched credits
         const creditsByContactId = new Map<string, number>();
+        let unmatchedCredits = 0;
         for (const op of overpayments) {
           if (op.xeroContactId && op.status === 'AUTHORISED') {
             const contactId = xeroIdToContactId.get(op.xeroContactId);
+            const amount = Number(op.remainingCredit || 0);
             if (contactId) {
-              creditsByContactId.set(contactId, (creditsByContactId.get(contactId) || 0) + Number(op.remainingCredit || 0));
+              creditsByContactId.set(contactId, (creditsByContactId.get(contactId) || 0) + amount);
+            } else {
+              unmatchedCredits += amount;
             }
           }
         }
         for (const pp of prepayments) {
           if (pp.xeroContactId && pp.status === 'AUTHORISED') {
             const contactId = xeroIdToContactId.get(pp.xeroContactId);
+            const amount = Number(pp.remainingCredit || 0);
             if (contactId) {
-              creditsByContactId.set(contactId, (creditsByContactId.get(contactId) || 0) + Number(pp.remainingCredit || 0));
+              creditsByContactId.set(contactId, (creditsByContactId.get(contactId) || 0) + amount);
+            } else {
+              unmatchedCredits += amount;
             }
           }
         }
@@ -334,7 +341,7 @@ export function registerContactRoutes(app: Express): void {
         const dueInvoiceAmount = allInvoiceAmount - overdueInvoiceAmount;
 
         const aggregates = {
-          totalOutstanding: filteredContacts.reduce((sum, c) => sum + c.outstandingAmount, 0),
+          totalOutstanding: Math.max(0, filteredContacts.reduce((sum, c) => sum + c.outstandingAmount, 0) - unmatchedCredits),
           highRiskCount: filteredContacts.filter(c => c.riskScore >= 70).length,
           totalContacts: filteredContacts.length,
           // Invoice amounts
