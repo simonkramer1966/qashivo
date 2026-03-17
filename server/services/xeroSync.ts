@@ -1,6 +1,6 @@
 import { db, pool } from "../db";
 import { tenants, cachedXeroInvoices, cachedXeroContacts, cachedXeroOverpayments, cachedXeroPrepayments, contacts, invoices, syncState } from "@shared/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, inArray } from "drizzle-orm";
 import { xeroService } from "./xero";
 import { attentionItemService } from "./attentionItemService";
 import { assignContactToDefaultSchedule } from "./strategySeeder";
@@ -135,8 +135,10 @@ export class XeroSyncService {
         console.log(`  Using If-Modified-Since: ${state.lastSuccessfulSyncAt.toISOString()}`);
       }
 
-      // Clear cached table before populating
-      await db.delete(cachedXeroInvoices).where(eq(cachedXeroInvoices.tenantId, tenantId));
+      // Clear cached table before populating (only on initial sync — ongoing uses upsert)
+      if (effectiveMode === 'initial') {
+        await db.delete(cachedXeroInvoices).where(eq(cachedXeroInvoices.tenantId, tenantId));
+      }
 
       let totalInvoicesCount = 0;
       let currentPage = 1;
@@ -186,6 +188,16 @@ export class XeroSyncService {
             }));
 
             try {
+              if (effectiveMode === 'ongoing') {
+                // Delete existing cached rows for these invoices before re-inserting
+                const xeroIds = invoicesToInsert.map((i: any) => i.xeroInvoiceId);
+                await db.delete(cachedXeroInvoices).where(
+                  and(
+                    eq(cachedXeroInvoices.tenantId, tenantId),
+                    inArray(cachedXeroInvoices.xeroInvoiceId, xeroIds)
+                  )
+                );
+              }
               await db.insert(cachedXeroInvoices).values(invoicesToInsert);
               totalInvoicesCount += invoicesToInsert.length;
               console.log(`  ✅ Page ${currentPage}: ${invoicesToInsert.length} invoices cached`);
@@ -212,7 +224,9 @@ export class XeroSyncService {
       console.log(`📇 Found ${uniqueContactIds.size} unique contacts from invoices`);
 
       // ── Step 2: Fetch contact details + cache in cached_xero_contacts ──
-      await db.delete(cachedXeroContacts).where(eq(cachedXeroContacts.tenantId, tenantId));
+      if (effectiveMode === 'initial') {
+        await db.delete(cachedXeroContacts).where(eq(cachedXeroContacts.tenantId, tenantId));
+      }
 
       const contactDetailsMap = new Map<string, {
         email: string | null;
@@ -267,6 +281,15 @@ export class XeroSyncService {
             }
 
             if (contactsToCache.length > 0) {
+              if (effectiveMode === 'ongoing') {
+                const xeroIds = contactsToCache.map((c: any) => c.xeroContactId);
+                await db.delete(cachedXeroContacts).where(
+                  and(
+                    eq(cachedXeroContacts.tenantId, tenantId),
+                    inArray(cachedXeroContacts.xeroContactId, xeroIds)
+                  )
+                );
+              }
               await db.insert(cachedXeroContacts).values(contactsToCache);
             }
           } catch (batchErr: any) {
@@ -442,13 +465,21 @@ export class XeroSyncService {
 
           const existingId = existingByXeroId.get(cachedInv.xeroInvoiceId);
 
+          // Derive amountPaid so that (amount - amountPaid) = amountDue.
+          // Xero's AmountDue accounts for credit notes, which reduce the balance
+          // without increasing AmountPaid. Using amount - amountDue ensures our
+          // outstanding calculation matches Xero exactly.
+          const totalAmount = parseFloat(cachedInv.amount) || 0;
+          const xeroAmountDue = parseFloat(cachedInv.amountDue || '0');
+          const effectiveAmountPaid = Math.max(0, totalAmount - xeroAmountDue).toFixed(2);
+
           if (existingId) {
             // Update Xero-sourced fields ONLY — preserve AR overlay fields
             await db.update(invoices).set({
               contactId: contact.id,
               invoiceNumber: cachedInv.invoiceNumber,
               amount: cachedInv.amount,
-              amountPaid: cachedInv.amountPaid,
+              amountPaid: effectiveAmountPaid,
               taxAmount: cachedInv.taxAmount,
               status: mappedStatus,
               invoiceStatus,
@@ -466,7 +497,7 @@ export class XeroSyncService {
               xeroInvoiceId: cachedInv.xeroInvoiceId,
               invoiceNumber: cachedInv.invoiceNumber,
               amount: cachedInv.amount,
-              amountPaid: cachedInv.amountPaid,
+              amountPaid: effectiveAmountPaid,
               taxAmount: cachedInv.taxAmount,
               status: mappedStatus,
               invoiceStatus,
