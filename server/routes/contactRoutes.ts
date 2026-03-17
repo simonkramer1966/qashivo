@@ -172,7 +172,7 @@ export function registerContactRoutes(app: Express): void {
             return sum + (amount - amountPaid);
           }, 0);
           const credits = creditsByContactId.get(contact.id) || 0;
-          const outstandingAmount = Math.max(0, invoiceBalance - credits);
+          const outstandingAmount = invoiceBalance - credits;
           
           // Calculate overdue invoices and amounts
           const today = new Date();

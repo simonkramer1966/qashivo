@@ -363,6 +363,86 @@ export class XeroSyncService {
       const prepaymentCount = await this.syncPrepayments(tenantId, tokens);
       console.log(`✅ Credits: ${overpaymentCount} overpayments, ${prepaymentCount} prepayments`);
 
+      // ── Step 4c: Import contacts from overpayments/prepayments ──
+      // Some debtors have credits but no open invoices — import their contacts
+      // so they appear on the Debtors page as negative-balance entries.
+      const creditContactIds = new Set<string>();
+      const allOps = await db.select({ xeroContactId: cachedXeroOverpayments.xeroContactId })
+        .from(cachedXeroOverpayments)
+        .where(and(eq(cachedXeroOverpayments.tenantId, tenantId), eq(cachedXeroOverpayments.status, 'AUTHORISED')));
+      const allPps = await db.select({ xeroContactId: cachedXeroPrepayments.xeroContactId })
+        .from(cachedXeroPrepayments)
+        .where(and(eq(cachedXeroPrepayments.tenantId, tenantId), eq(cachedXeroPrepayments.status, 'AUTHORISED')));
+      for (const r of [...allOps, ...allPps]) {
+        if (r.xeroContactId) creditContactIds.add(r.xeroContactId);
+      }
+
+      // Reload existing contacts to find which credit contacts are missing
+      const existingAfterSync = await db.select({ xeroContactId: contacts.xeroContactId })
+        .from(contacts).where(eq(contacts.tenantId, tenantId));
+      const existingXeroIds = new Set<string>(existingAfterSync.map(c => c.xeroContactId).filter((x): x is string => !!x));
+      const missingCreditContactIds = Array.from(creditContactIds).filter(id => !existingXeroIds.has(id));
+
+      if (missingCreditContactIds.length > 0) {
+        console.log(`📇 Importing ${missingCreditContactIds.length} contacts from overpayments/prepayments...`);
+        const batchSize = 50;
+        for (let i = 0; i < missingCreditContactIds.length; i += batchSize) {
+          const batch = missingCreditContactIds.slice(i, i + batchSize);
+          try {
+            const idsParam = batch.join(',');
+            const response = await xeroService.makeAuthenticatedRequestPublic(
+              tokens, `Contacts?IDs=${idsParam}`, 'GET', undefined, tenantId
+            );
+
+            for (const c of (response.Contacts || [])) {
+              const xeroContactId = c.ContactID;
+              const name = c.Name || 'Unknown';
+              const email = c.EmailAddress || null;
+              const phone = c.Phones?.find((p: any) => p.PhoneType === 'DEFAULT')?.PhoneNumber || null;
+
+              // Cache in cached_xero_contacts
+              await db.insert(cachedXeroContacts).values({
+                tenantId,
+                xeroContactId,
+                name,
+                firstName: c.FirstName || null,
+                lastName: c.LastName || null,
+                emailAddress: email,
+                phone,
+                contactStatus: c.ContactStatus || 'ACTIVE',
+                isCustomer: c.IsCustomer ?? false,
+                isSupplier: c.IsSupplier ?? false,
+              });
+
+              // Upsert into main contacts table
+              const [newContact] = await db.insert(contacts).values({
+                tenantId,
+                xeroContactId,
+                name,
+                email,
+                phone,
+                companyName: name,
+                role: 'customer',
+                isActive: true,
+              }).returning();
+
+              try {
+                await assignContactToDefaultSchedule(tenantId, newContact.id);
+              } catch (seedErr) {
+                console.warn(`  Schedule assign failed for ${newContact.id}:`, seedErr);
+              }
+              console.log(`  ✅ Imported credit-only contact: ${name}`);
+            }
+          } catch (batchErr: any) {
+            console.warn(`  ⚠️ Credit contact batch failed: ${batchErr.message}`);
+          }
+
+          if (i + batchSize < missingCreditContactIds.length) {
+            await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY_MS));
+          }
+        }
+      }
+
       // ── Step 5: Record successful sync ────────────────────────────
       await this.updateSyncState(tenantId, {
         syncStatus: 'success',
