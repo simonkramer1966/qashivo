@@ -90,7 +90,7 @@ export class XeroSyncService {
   // Main sync: fetch invoices → cache → extract contacts → upsert
   // ══════════════════════════════════════════════════════════════════
 
-  async syncInvoicesAndContacts(tenantId: string, mode: SyncMode = 'initial', onProgress?: (counts: { contactCount: number; invoiceCount: number }) => void): Promise<{
+  async syncInvoicesAndContacts(tenantId: string, mode: SyncMode = 'initial', onProgress?: (counts: { contactCount: number; invoiceCount: number }) => void, options?: { force?: boolean }): Promise<{
     success: boolean;
     invoicesCount: number;
     contactsCount: number;
@@ -101,8 +101,9 @@ export class XeroSyncService {
       const state = await this.getSyncState(tenantId);
       const isInitial = !state.initialSyncComplete;
       const effectiveMode = mode === 'initial' ? 'initial' : (isInitial ? 'initial' : 'ongoing');
+      const force = options?.force ?? false;
 
-      console.log(`📄 Xero sync for tenant: ${tenantId} (requested: ${mode}, effective: ${effectiveMode}, initialComplete: ${state.initialSyncComplete})`);
+      console.log(`📄 Xero sync for tenant: ${tenantId} (requested: ${mode}, effective: ${effectiveMode}, initialComplete: ${state.initialSyncComplete}, force: ${force})`);
 
       // Mark sync as running
       await this.updateSyncState(tenantId, { syncStatus: 'syncing' });
@@ -121,6 +122,7 @@ export class XeroSyncService {
       // ── Step 1: Fetch invoices from Xero ─────────────────────────
       // INITIAL: Only AUTHORISED + SUBMITTED (open invoices we need to chase)
       // ONGOING: All statuses via modifiedSince — catches when tracked invoices move to PAID
+      // FORCE: Skip If-Modified-Since to re-fetch everything without deleting cache
       const whereClause = `Type=="ACCREC"`;
       const additionalHeaders: Record<string, string> = {};
       let statusFilter = '';
@@ -129,6 +131,9 @@ export class XeroSyncService {
         // Only fetch open invoices — no need for paid/voided/deleted history
         statusFilter = '&Statuses=AUTHORISED,SUBMITTED';
         console.log(`  Initial sync: fetching only AUTHORISED + SUBMITTED invoices`);
+      } else if (force) {
+        // Force: fetch all statuses without If-Modified-Since (full re-fetch, no cache delete)
+        console.log(`  ⚡ Force sync: skipping If-Modified-Since, re-fetching all invoices`);
       } else if (state.lastSuccessfulSyncAt) {
         // Ongoing: all statuses so we catch status changes (PAID, VOIDED, etc.)
         additionalHeaders['If-Modified-Since'] = state.lastSuccessfulSyncAt.toISOString();
@@ -868,7 +873,7 @@ export class XeroSyncService {
   // MAIN ENTRY POINT
   // ══════════════════════════════════════════════════════════════════
 
-  async syncAllDataForTenant(tenantId: string, mode: SyncMode = 'initial', onProgress?: (counts: { contactCount: number; invoiceCount: number }) => void): Promise<{
+  async syncAllDataForTenant(tenantId: string, mode: SyncMode = 'initial', onProgress?: (counts: { contactCount: number; invoiceCount: number }) => void, options?: { force?: boolean }): Promise<{
     success: boolean;
     contactsCount: number;
     invoicesCount: number;
@@ -891,7 +896,7 @@ export class XeroSyncService {
         console.warn(`⚠️  Ignoring 'initial' mode — tenant already has completed initial sync. Running as 'ongoing' to protect enriched data.`);
       }
 
-      const result = await this.syncInvoicesAndContacts(tenantId, mode, onProgress);
+      const result = await this.syncInvoicesAndContacts(tenantId, mode, onProgress, options);
       if (!result.success) {
         throw new Error(`Sync failed: ${result.error}`);
       }

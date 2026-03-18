@@ -999,12 +999,13 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
       // Default to "ongoing" — syncAllDataForTenant has a safety guard that
       // prevents clearTenantDataForFreshSync if initialSyncComplete is already true.
       const mode = req.body?.mode === 'initial' ? 'initial' : 'ongoing';
+      const force = req.body?.force === true;
 
-      console.log(`🚀 Starting ${mode.toUpperCase()} Xero sync for tenant: ${user.tenantId}`);
+      console.log(`🚀 Starting ${mode.toUpperCase()}${force ? ' FORCE' : ''} Xero sync for tenant: ${user.tenantId}`);
       updateSyncStatus(user.tenantId, { status: 'syncing', startedAt: new Date().toISOString(), invoiceCount: 0, contactCount: 0 });
       const result = await xeroSyncService.syncAllDataForTenant(user.tenantId, mode as any, (counts) => {
         updateSyncStatus(user.tenantId, { status: 'syncing', ...counts });
-      });
+      }, { force });
 
       if (result.success) {
         updateSyncStatus(user.tenantId, { status: 'complete', invoiceCount: result.invoicesCount, contactCount: result.contactsCount, completedAt: new Date().toISOString() });
