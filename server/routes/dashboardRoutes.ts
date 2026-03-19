@@ -2109,10 +2109,10 @@ export function registerDashboardRoutes(app: Express): void {
         ageing AS (
           SELECT
             CASE
-              WHEN due_date >= CURRENT_DATE THEN 'current'
-              WHEN EXTRACT(DAY FROM AGE(CURRENT_DATE, due_date)) BETWEEN 1 AND 30 THEN '1-30'
-              WHEN EXTRACT(DAY FROM AGE(CURRENT_DATE, due_date)) BETWEEN 31 AND 60 THEN '31-60'
-              WHEN EXTRACT(DAY FROM AGE(CURRENT_DATE, due_date)) BETWEEN 61 AND 90 THEN '61-90'
+              WHEN (CURRENT_DATE - due_date::date) < 0 THEN 'current'
+              WHEN (CURRENT_DATE - due_date::date) <= 30 THEN '1-30'
+              WHEN (CURRENT_DATE - due_date::date) <= 60 THEN '31-60'
+              WHEN (CURRENT_DATE - due_date::date) <= 90 THEN '61-90'
               ELSE '90+'
             END as bucket,
             COALESCE(SUM(amount - amount_paid), 0) as amount,
@@ -2275,7 +2275,7 @@ export function registerDashboardRoutes(app: Express): void {
           totalOutstanding: sql<number>`COALESCE(SUM(CASE WHEN LOWER(${invoices.status}) NOT IN ('paid', 'void', 'voided', 'deleted', 'draft') THEN ${invoices.amount} - ${invoices.amountPaid} ELSE 0 END), 0)`,
           overdueAmount: sql<number>`COALESCE(SUM(CASE WHEN LOWER(${invoices.status}) NOT IN ('paid', 'void', 'voided', 'deleted', 'draft') AND ${invoices.dueDate} < CURRENT_DATE THEN ${invoices.amount} - ${invoices.amountPaid} ELSE 0 END), 0)`,
           invoiceCount: sql<number>`COUNT(CASE WHEN LOWER(${invoices.status}) NOT IN ('paid', 'void', 'voided', 'deleted', 'draft') AND (${invoices.amount} - ${invoices.amountPaid}) > 0 THEN 1 END)`,
-          oldestOverdueDays: sql<number>`COALESCE(MAX(CASE WHEN LOWER(${invoices.status}) NOT IN ('paid', 'void', 'voided', 'deleted', 'draft') AND ${invoices.dueDate} < CURRENT_DATE THEN EXTRACT(DAY FROM AGE(CURRENT_DATE, ${invoices.dueDate})) END), 0)`,
+          oldestOverdueDays: sql<number>`COALESCE(MAX(CASE WHEN LOWER(${invoices.status}) NOT IN ('paid', 'void', 'voided', 'deleted', 'draft') AND ${invoices.dueDate} <= CURRENT_DATE THEN (CURRENT_DATE - ${invoices.dueDate}::date) END), 0)`,
           lastContactDate: sql<Date>`(SELECT MAX(a.created_at) FROM actions a WHERE a.contact_id = ${contacts.id} AND a.tenant_id = ${user.tenantId})`,
           nextActionDate: sql<Date>`(SELECT MIN(a.scheduled_for) FROM actions a WHERE a.contact_id = ${contacts.id} AND a.tenant_id = ${user.tenantId} AND a.status IN ('pending', 'pending_approval', 'scheduled'))`,
           isActive: contacts.isActive,
