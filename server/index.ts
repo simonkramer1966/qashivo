@@ -9,6 +9,89 @@ import { startAll } from "./startup/orchestrator";
 
 const app = express();
 
+// Xero webhook needs raw body for HMAC-SHA256 signature verification
+// Must come BEFORE express.json() middleware
+app.post("/api/xero/webhooks", express.raw({ type: 'application/json' }), async (req, res) => {
+  try {
+    const crypto = await import("crypto");
+    const signature = req.headers["x-xero-signature"] as string | undefined;
+    const webhookKey = process.env.XERO_WEBHOOK_KEY;
+
+    if (!webhookKey) {
+      console.error("[Xero Webhook] XERO_WEBHOOK_KEY not configured");
+      return res.status(401).send();
+    }
+
+    if (!signature) {
+      return res.status(401).send();
+    }
+
+    // HMAC-SHA256 verification per Xero docs
+    const rawBody = req.body as Buffer;
+    const hash = crypto
+      .createHmac("sha256", webhookKey)
+      .update(rawBody)
+      .digest("base64");
+
+    if (hash !== signature) {
+      return res.status(401).send();
+    }
+
+    // Signature valid — respond 200 immediately, process async
+    res.status(200).send();
+
+    // Parse and process events in background
+    const payload = JSON.parse(rawBody.toString("utf8"));
+    const events = payload.events || [];
+
+    if (events.length === 0) {
+      console.log("[Xero Webhook] Validation ping — no events");
+      return;
+    }
+
+    console.log(`[Xero Webhook] Received ${events.length} event(s)`);
+
+    // Dynamic imports to avoid circular dependencies
+    const { db } = await import("./db");
+    const { tenants } = await import("@shared/schema");
+    const { eq } = await import("drizzle-orm");
+    const { XeroSyncService } = await import("./services/xeroSync");
+
+    const xeroSyncService = new XeroSyncService();
+
+    // Group events by Xero tenant ID and trigger one sync per tenant
+    const xeroTenantIds = [...new Set(events.map((e: any) => e.tenantId).filter(Boolean))] as string[];
+
+    for (const xeroTenantId of xeroTenantIds) {
+      const tenantEvents = events.filter((e: any) => e.tenantId === xeroTenantId);
+      console.log(`[Xero Webhook] ${tenantEvents.length} event(s) for Xero org ${xeroTenantId}:`);
+      for (const evt of tenantEvents) {
+        console.log(`  - ${evt.eventCategory}/${evt.eventType}: ${evt.resourceId}`);
+      }
+
+      // Look up our app tenant by Xero tenant ID
+      const [tenant] = await db
+        .select()
+        .from(tenants)
+        .where(eq(tenants.xeroTenantId, xeroTenantId));
+
+      if (!tenant) {
+        console.warn(`[Xero Webhook] No tenant found for Xero org ${xeroTenantId} — skipping`);
+        continue;
+      }
+
+      // Trigger incremental sync for this tenant
+      console.log(`[Xero Webhook] Triggering incremental sync for tenant ${tenant.id} (${tenant.name})`);
+      xeroSyncService.syncInvoicesAndContacts(tenant.id).catch((err) => {
+        console.error(`[Xero Webhook] Sync failed for tenant ${tenant.id}:`, err);
+      });
+    }
+  } catch (error) {
+    console.error("[Xero Webhook] Processing error:", error);
+    // Response already sent — nothing to do
+  }
+});
+
 // Stripe webhook needs raw body for signature verification
 // Must come BEFORE express.json() middleware
 app.post("/api/debtor/payment/webhook", express.raw({ type: 'application/json' }), async (req, res) => {
