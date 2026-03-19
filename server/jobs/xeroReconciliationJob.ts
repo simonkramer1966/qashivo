@@ -15,7 +15,7 @@ export function startXeroReconciliationJob(): void {
   console.log("[XeroReconciliation] Nightly job scheduled for 02:00 UTC");
 }
 
-async function runNightlyReconciliation(): Promise<void> {
+export async function runNightlyReconciliation(): Promise<void> {
   const start = Date.now();
   console.log("[XeroReconciliation] Starting nightly full reconciliation...");
 

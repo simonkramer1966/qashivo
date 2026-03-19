@@ -920,4 +920,18 @@ router.get("/waitlist", requireAdminAuth, async (req, res) => {
   }
 });
 
+// POST /api/admin/reconcile-xero - Manually trigger full Xero reconciliation for all tenants
+router.post("/reconcile-xero", requireAdminAuth, async (req, res) => {
+  try {
+    const { runNightlyReconciliation } = await import("../jobs/xeroReconciliationJob");
+    res.json({ message: "Reconciliation started", startedAt: new Date().toISOString() });
+    runNightlyReconciliation().catch((err) =>
+      console.error("[XeroReconciliation] Manual trigger error:", err),
+    );
+  } catch (error: any) {
+    console.error("Failed to trigger reconciliation:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;
