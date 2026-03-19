@@ -231,10 +231,11 @@ export default function QollectionsDashboard() {
     refetchInterval: 30000,
   });
 
-  const { data: debtors = [], isLoading: debtorsLoading } = useQuery<Debtor[]>({
+  const { data: debtorsResponse, isLoading: debtorsLoading } = useQuery<{ debtors: Debtor[]; unmatchedCredits: number }>({
     queryKey: ["/api/qollections/debtors"],
     refetchInterval: 60000,
   });
+  const debtors = debtorsResponse?.debtors ?? [];
 
   const { data: dsoTrend = [], isLoading: dsoLoading } = useQuery<DsoTrendPoint[]>({
     queryKey: ["/api/qollections/dso-trend"],

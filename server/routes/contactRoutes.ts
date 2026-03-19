@@ -21,7 +21,7 @@ import {
   tenants, paymentPromises, promisesToPay, smeClients, contactNotes, timelineEvents,
   attentionItems, outcomes, activityLogs, collectionPolicies, paymentPlans,
   emailMessages, customerContactPersons, scheduledReports,
-  cachedXeroOverpayments, cachedXeroPrepayments, cachedXeroContacts,
+  cachedXeroOverpayments, cachedXeroPrepayments, cachedXeroCreditNotes, cachedXeroContacts,
 } from "@shared/schema";
 import { computeNextRunAt } from "../services/reportScheduler";
 import { REPORT_TYPE_LABELS, type ReportType } from "../services/reportGenerator";
@@ -419,23 +419,55 @@ export function registerContactRoutes(app: Express): void {
 
       const { customerTimelineService } = await import("../services/customerTimelineService");
 
-      // Fetch all data in parallel for speed
+      // Fetch core data in parallel
       const [contact, invoicesResult, preferences, timeline] = await Promise.all([
         storage.getContact(id, tenantId),
         storage.getContactInvoices(id, tenantId),
         customerTimelineService.getPreferences(tenantId, id),
-        customerTimelineService.getTimeline(tenantId, id, { limit: 50 })
+        customerTimelineService.getTimeline(tenantId, id, { limit: 50 }),
       ]);
 
       if (!contact) {
         return res.status(404).json({ message: "Contact not found" });
       }
 
+      // Fetch credits for this contact via xeroContactId
+      let credits = { creditNotes: 0, overpayments: 0, prepayments: 0, total: 0, creditNoteItems: [] as any[] };
+      if (contact.xeroContactId) {
+        const [overpayments, prepayments, creditNotes] = await Promise.all([
+          db.select().from(cachedXeroOverpayments)
+            .where(and(eq(cachedXeroOverpayments.tenantId, tenantId), eq(cachedXeroOverpayments.xeroContactId, contact.xeroContactId), eq(cachedXeroOverpayments.status, "AUTHORISED"))),
+          db.select().from(cachedXeroPrepayments)
+            .where(and(eq(cachedXeroPrepayments.tenantId, tenantId), eq(cachedXeroPrepayments.xeroContactId, contact.xeroContactId), eq(cachedXeroPrepayments.status, "AUTHORISED"))),
+          db.select().from(cachedXeroCreditNotes)
+            .where(and(eq(cachedXeroCreditNotes.tenantId, tenantId), eq(cachedXeroCreditNotes.xeroContactId, contact.xeroContactId), eq(cachedXeroCreditNotes.status, "AUTHORISED"))),
+        ]);
+
+        const cnTotal = creditNotes.reduce((s, cn) => s + Number(cn.remainingCredit || 0), 0);
+        const opTotal = overpayments.reduce((s, op) => s + Number(op.remainingCredit || 0), 0);
+        const ppTotal = prepayments.reduce((s, pp) => s + Number(pp.remainingCredit || 0), 0);
+
+        credits = {
+          creditNotes: Math.round(cnTotal * 100) / 100,
+          overpayments: Math.round(opTotal * 100) / 100,
+          prepayments: Math.round(ppTotal * 100) / 100,
+          total: Math.round((cnTotal + opTotal + ppTotal) * 100) / 100,
+          creditNoteItems: creditNotes.map(cn => ({
+            id: cn.id,
+            number: cn.creditNoteNumber,
+            total: Number(cn.total || 0),
+            remainingCredit: Number(cn.remainingCredit || 0),
+            date: cn.date,
+          })),
+        };
+      }
+
       res.json({
         contact,
         invoices: invoicesResult,
         preferences,
-        timeline
+        timeline,
+        credits,
       });
     } catch (error) {
       console.error("Error fetching customer full profile:", error);

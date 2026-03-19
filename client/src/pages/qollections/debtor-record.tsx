@@ -130,11 +130,20 @@ interface Action {
   invoiceId?: string;
 }
 
+interface CreditBreakdown {
+  creditNotes: number;
+  overpayments: number;
+  prepayments: number;
+  total: number;
+  creditNoteItems: { id: string; number: string | null; total: number; remainingCredit: number; date: string | null }[];
+}
+
 interface FullProfileResponse {
   contact: Contact;
   invoices: Invoice[];
   preferences: unknown;
   timeline: unknown;
+  credits?: CreditBreakdown;
 }
 
 interface DataHealthContact {
@@ -313,9 +322,16 @@ export default function DebtorRecordPage() {
   const contact = profile?.contact;
   const invoices = profile?.invoices || [];
 
-  const totalOutstanding = useMemo(
+  const credits = profile?.credits;
+
+  const grossOutstanding = useMemo(
     () => invoices.reduce((sum, inv) => sum + toNumber(inv.amountDue), 0),
     [invoices]
+  );
+
+  const totalOutstanding = useMemo(
+    () => Math.max(0, grossOutstanding - (credits?.total ?? 0)),
+    [grossOutstanding, credits]
   );
 
   const totalOverdue = useMemo(
@@ -615,6 +631,38 @@ export default function DebtorRecordPage() {
               )}
             </div>
           </div>
+
+          {/* Reconciliation breakdown */}
+          {credits && credits.total > 0 ? (
+            <div className="text-sm space-y-1 mb-2">
+              <div className="flex justify-between gap-8">
+                <span className="text-muted-foreground">Invoices outstanding</span>
+                <span className="font-medium tabular-nums">{gbp.format(grossOutstanding)}</span>
+              </div>
+              {credits.creditNotes > 0 && (
+                <div className="flex justify-between gap-8">
+                  <span className="text-muted-foreground">Credit notes</span>
+                  <span className="font-medium tabular-nums text-green-600">-{gbp.format(credits.creditNotes)}</span>
+                </div>
+              )}
+              {credits.overpayments > 0 && (
+                <div className="flex justify-between gap-8">
+                  <span className="text-muted-foreground">Overpayments</span>
+                  <span className="font-medium tabular-nums text-green-600">-{gbp.format(credits.overpayments)}</span>
+                </div>
+              )}
+              {credits.prepayments > 0 && (
+                <div className="flex justify-between gap-8">
+                  <span className="text-muted-foreground">Prepayments</span>
+                  <span className="font-medium tabular-nums text-green-600">-{gbp.format(credits.prepayments)}</span>
+                </div>
+              )}
+              <div className="flex justify-between gap-8 border-t pt-1">
+                <span className="font-medium">Outstanding</span>
+                <span className="font-bold tabular-nums">{gbp.format(totalOutstanding)}</span>
+              </div>
+            </div>
+          ) : null}
 
           {/* Summary metrics */}
           <div className="flex flex-wrap gap-6 text-sm">

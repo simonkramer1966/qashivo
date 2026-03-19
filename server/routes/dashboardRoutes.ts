@@ -20,7 +20,7 @@ import {
   tenants, paymentPromises, promisesToPay, smeClients, contactNotes, timelineEvents,
   attentionItems, outcomes, activityLogs, collectionPolicies, paymentPlans,
   emailMessages, customerContactPersons, scheduledReports, complianceChecks,
-  cachedXeroOverpayments, cachedXeroPrepayments,
+  cachedXeroOverpayments, cachedXeroPrepayments, cachedXeroCreditNotes,
 } from "@shared/schema";
 import { computeNextRunAt } from "../services/reportScheduler";
 import { REPORT_TYPE_LABELS, type ReportType } from "../services/reportGenerator";
@@ -2135,16 +2135,19 @@ export function registerDashboardRoutes(app: Express): void {
 
       const row = (result as any).rows?.[0] || (result as any)[0] || {};
 
-      // Fetch total overpayment/prepayment credits
-      const [opCredits, ppCredits] = await Promise.all([
+      // Fetch total overpayment/prepayment/credit note credits
+      const [opCredits, ppCredits, cnCredits] = await Promise.all([
         db.select({ total: sql<number>`COALESCE(SUM(${cachedXeroOverpayments.remainingCredit}), 0)` })
           .from(cachedXeroOverpayments)
           .where(and(eq(cachedXeroOverpayments.tenantId, user.tenantId), eq(cachedXeroOverpayments.status, "AUTHORISED"))),
         db.select({ total: sql<number>`COALESCE(SUM(${cachedXeroPrepayments.remainingCredit}), 0)` })
           .from(cachedXeroPrepayments)
           .where(and(eq(cachedXeroPrepayments.tenantId, user.tenantId), eq(cachedXeroPrepayments.status, "AUTHORISED"))),
+        db.select({ total: sql<number>`COALESCE(SUM(${cachedXeroCreditNotes.remainingCredit}), 0)` })
+          .from(cachedXeroCreditNotes)
+          .where(and(eq(cachedXeroCreditNotes.tenantId, user.tenantId), eq(cachedXeroCreditNotes.status, "AUTHORISED"))),
       ]);
-      const totalCredits = Number(opCredits[0]?.total || 0) + Number(ppCredits[0]?.total || 0);
+      const totalCredits = Number(opCredits[0]?.total || 0) + Number(ppCredits[0]?.total || 0) + Number(cnCredits[0]?.total || 0);
 
       const bucketOrder = ['current', '1-30', '31-60', '61-90', '90+'];
       const rawBuckets = row.ageing_buckets || [];
@@ -2291,14 +2294,17 @@ export function registerDashboardRoutes(app: Express): void {
           sql`SUM(CASE WHEN LOWER(${invoices.status}) NOT IN ('paid', 'void', 'voided', 'deleted', 'draft') THEN ${invoices.amount} - ${invoices.amountPaid} ELSE 0 END) DESC`,
         );
 
-      // Fetch overpayment/prepayment credits per contact
-      const [allOps, allPps] = await Promise.all([
+      // Fetch overpayment/prepayment/credit note credits per contact
+      const [allOps, allPps, allCns] = await Promise.all([
         db.select({ xeroContactId: cachedXeroOverpayments.xeroContactId, remainingCredit: cachedXeroOverpayments.remainingCredit })
           .from(cachedXeroOverpayments)
           .where(and(eq(cachedXeroOverpayments.tenantId, user.tenantId), eq(cachedXeroOverpayments.status, "AUTHORISED"))),
         db.select({ xeroContactId: cachedXeroPrepayments.xeroContactId, remainingCredit: cachedXeroPrepayments.remainingCredit })
           .from(cachedXeroPrepayments)
           .where(and(eq(cachedXeroPrepayments.tenantId, user.tenantId), eq(cachedXeroPrepayments.status, "AUTHORISED"))),
+        db.select({ xeroContactId: cachedXeroCreditNotes.xeroContactId, remainingCredit: cachedXeroCreditNotes.remainingCredit })
+          .from(cachedXeroCreditNotes)
+          .where(and(eq(cachedXeroCreditNotes.tenantId, user.tenantId), eq(cachedXeroCreditNotes.status, "AUTHORISED"))),
       ]);
 
       // Map xeroContactId → internal contactId
@@ -2312,7 +2318,7 @@ export function registerDashboardRoutes(app: Express): void {
       // Build credits by internal contactId
       const creditsByContactId = new Map<string, number>();
       let unmatchedCredits = 0;
-      for (const r of [...allOps, ...allPps]) {
+      for (const r of [...allOps, ...allPps, ...allCns]) {
         const rem = parseFloat(r.remainingCredit || "0");
         if (rem <= 0) continue;
         const contactId = r.xeroContactId ? xeroToContactId.get(r.xeroContactId) : undefined;
@@ -2344,7 +2350,10 @@ export function registerDashboardRoutes(app: Express): void {
       // Filter out debtors with zero or negative outstanding after credits
       const activeDebtors = formatted.filter(d => d.totalOutstanding > 0);
 
-      res.json(activeDebtors);
+      res.json({
+        debtors: activeDebtors,
+        unmatchedCredits: Math.round(unmatchedCredits * 100) / 100,
+      });
     } catch (error) {
       console.error("Error fetching qollections debtors:", error);
       res.status(500).json({ message: "Failed to fetch debtor list" });

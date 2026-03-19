@@ -112,9 +112,10 @@ export default function QollectionsDebtors() {
   const [sortBy, setSortBy] = useState<SortOption>("outstanding");
   const [page, setPage] = useState(0);
 
-  const { data: debtors, isLoading } = useQuery<Debtor[]>({
+  const { data: debtorsResponse, isLoading } = useQuery<{ debtors: Debtor[]; unmatchedCredits: number }>({
     queryKey: ["/api/qollections/debtors"],
   });
+  const debtors = debtorsResponse?.debtors;
 
   const { syncStatus, isSyncing } = useXeroSyncStatus([["/api/qollections/debtors"]]);
 
@@ -169,7 +170,7 @@ export default function QollectionsDebtors() {
   const showFrom = filtered.length === 0 ? 0 : page * PAGE_SIZE + 1;
   const showTo = Math.min((page + 1) * PAGE_SIZE, filtered.length);
 
-  // KPI calculations
+  // KPI calculations — subtract unmatched credits so total matches dashboard
   const kpis = useMemo(() => {
     if (!debtors || debtors.length === 0)
       return {
@@ -179,10 +180,12 @@ export default function QollectionsDebtors() {
         avgDaysOverdue: 0,
       };
 
-    const totalOutstanding = debtors.reduce(
+    const unmatchedCredits = debtorsResponse?.unmatchedCredits ?? 0;
+    const grossOutstanding = debtors.reduce(
       (sum, d) => sum + d.totalOutstanding,
       0,
     );
+    const totalOutstanding = Math.max(0, grossOutstanding - unmatchedCredits);
     const totalOverdue = debtors.reduce((sum, d) => sum + d.overdueAmount, 0);
     const avgDaysOverdue =
       debtors.length > 0
@@ -198,7 +201,7 @@ export default function QollectionsDebtors() {
       totalOverdue,
       avgDaysOverdue,
     };
-  }, [debtors]);
+  }, [debtors, debtorsResponse]);
 
   return (
     <AppShell

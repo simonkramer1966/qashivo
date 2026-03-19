@@ -1,5 +1,5 @@
 import { db, pool } from "../db";
-import { tenants, cachedXeroInvoices, cachedXeroContacts, cachedXeroOverpayments, cachedXeroPrepayments, contacts, invoices, syncState } from "@shared/schema";
+import { tenants, cachedXeroInvoices, cachedXeroContacts, cachedXeroOverpayments, cachedXeroPrepayments, cachedXeroCreditNotes, contacts, invoices, syncState } from "@shared/schema";
 import { eq, and, sql, inArray } from "drizzle-orm";
 import { xeroService } from "./xero";
 import { attentionItemService } from "./attentionItemService";
@@ -366,7 +366,8 @@ export class XeroSyncService {
       // ── Step 4b: Sync overpayments and prepayments for reconciliation ──
       const overpaymentCount = await this.syncOverpayments(tenantId, tokens);
       const prepaymentCount = await this.syncPrepayments(tenantId, tokens);
-      console.log(`✅ Credits: ${overpaymentCount} overpayments, ${prepaymentCount} prepayments`);
+      const creditNoteCount = await this.syncCreditNotes(tenantId, tokens);
+      console.log(`✅ Credits: ${overpaymentCount} overpayments, ${prepaymentCount} prepayments, ${creditNoteCount} credit notes`);
 
       // ── Step 4c: Import contacts from overpayments/prepayments ──
       // Some debtors have credits but no open invoices — import their contacts
@@ -737,6 +738,61 @@ export class XeroSyncService {
       return allRecords.length;
     } catch (error) {
       console.error('❌ Prepayments sync failed:', error);
+      return 0;
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // Sync credit notes (for reconciliation)
+  // ══════════════════════════════════════════════════════════════════
+
+  async syncCreditNotes(tenantId: string, tokens: { accessToken: string; refreshToken: string; expiresAt: Date; tenantId: string }): Promise<number> {
+    try {
+      console.log(`💳 Syncing credit notes for tenant ${tenantId}...`);
+
+      // Fetch all pages first before touching the database
+      const allRecords: any[] = [];
+      let currentPage = 1;
+      let hasNextPage = true;
+
+      while (hasNextPage) {
+        const endpoint = `CreditNotes?where=${encodeURIComponent('Type=="ACCRECCREDIT"')}&page=${currentPage}`;
+        const response = await xeroService.makeAuthenticatedRequestPublic(
+          tokens, endpoint, 'GET', undefined, tenantId
+        );
+        const creditNotes = response.CreditNotes || [];
+        allRecords.push(...creditNotes);
+
+        hasNextPage = creditNotes.length === 100;
+        currentPage++;
+        if (hasNextPage) await new Promise(r => setTimeout(r, RATE_LIMIT_DELAY_MS));
+      }
+
+      // Only delete+insert after successful fetch — atomic swap
+      const toInsert = allRecords.map((cn: any) => ({
+        tenantId,
+        xeroCreditNoteId: cn.CreditNoteID,
+        xeroContactId: cn.Contact?.ContactID || null,
+        creditNoteNumber: cn.CreditNoteNumber || null,
+        status: cn.Status || 'AUTHORISED',
+        type: cn.Type || 'ACCRECCREDIT',
+        date: cn.DateString ? this.parseXeroDate(cn.DateString) : (cn.Date ? this.parseXeroDate(cn.Date) : null),
+        total: (cn.Total ?? 0).toString(),
+        remainingCredit: (cn.RemainingCredit ?? 0).toString(),
+        updatedDateUtc: cn.UpdatedDateUTC ? this.parseXeroDate(cn.UpdatedDateUTC) : null,
+      }));
+
+      await db.transaction(async (tx) => {
+        await tx.delete(cachedXeroCreditNotes).where(eq(cachedXeroCreditNotes.tenantId, tenantId));
+        if (toInsert.length > 0) {
+          await tx.insert(cachedXeroCreditNotes).values(toInsert);
+        }
+      });
+
+      console.log(`✅ Synced ${allRecords.length} credit notes`);
+      return allRecords.length;
+    } catch (error) {
+      console.error('❌ Credit notes sync failed:', error);
       return 0;
     }
   }

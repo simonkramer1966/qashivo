@@ -488,6 +488,23 @@ export const cachedXeroPrepayments = pgTable("cached_xero_prepayments", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Cached Xero credit notes — lean mirror for AR reconciliation
+export const cachedXeroCreditNotes = pgTable("cached_xero_credit_notes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  xeroCreditNoteId: varchar("xero_credit_note_id").notNull(),
+  xeroContactId: varchar("xero_contact_id"),
+  creditNoteNumber: varchar("credit_note_number"),
+  status: varchar("status").notNull().default("AUTHORISED"), // AUTHORISED, PAID, VOIDED
+  type: varchar("type").notNull().default("ACCRECCREDIT"), // ACCRECCREDIT (receivable) or ACCPAYCREDIT (payable)
+  date: timestamp("date"),
+  total: decimal("total", { precision: 10, scale: 2 }).default("0"),
+  remainingCredit: decimal("remaining_credit", { precision: 10, scale: 2 }).default("0"),
+  updatedDateUtc: timestamp("updated_date_utc"),
+  syncedAt: timestamp("synced_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Bills table (accounts payable)
 export const bills = pgTable("bills", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
