@@ -58,6 +58,7 @@ interface Debtor {
   lastContactDate: string | null;
   nextActionDate: string | null;
   status: "active" | "inactive";
+  hasCredit?: boolean;
 }
 
 const PAGE_SIZE = 20;
@@ -185,7 +186,7 @@ export default function QollectionsDebtors() {
       (sum, d) => sum + d.totalOutstanding,
       0,
     );
-    const totalOutstanding = Math.max(0, grossOutstanding - unmatchedCredits);
+    const totalOutstanding = grossOutstanding - unmatchedCredits;
     const totalOverdue = debtors.reduce((sum, d) => sum + d.overdueAmount, 0);
     const avgDaysOverdue =
       debtors.length > 0
@@ -437,8 +438,13 @@ export default function QollectionsDebtors() {
                             </p>
                           </div>
                         </TableCell>
-                        <TableCell className="font-bold">
+                        <TableCell className={cn("font-bold", debtor.hasCredit && "text-green-600")}>
                           {formatGBP(debtor.totalOutstanding)}
+                          {debtor.hasCredit && (
+                            <Badge variant="outline" className="ml-2 text-xs bg-green-500/10 text-green-700 border-green-300">
+                              Credit
+                            </Badge>
+                          )}
                         </TableCell>
                         <TableCell
                           className={cn(

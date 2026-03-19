@@ -2329,26 +2329,56 @@ export function registerDashboardRoutes(app: Express): void {
         }
       }
 
+      // Track which contacts are already in the invoice query results
+      const debtorContactIds = new Set(debtors.map(d => d.id));
+
       const formatted = debtors.map((d) => {
         const credit = creditsByContactId.get(d.id) || 0;
+        creditsByContactId.delete(d.id); // consumed
         const rawOutstanding = Number(d.totalOutstanding || 0);
         const rawOverdue = Number(d.overdueAmount || 0);
+        const netOutstanding = Math.round((rawOutstanding - credit) * 100) / 100;
         return {
           id: d.id,
           name: d.companyName || d.name || "Unknown",
           email: d.email,
-          totalOutstanding: Math.round((rawOutstanding - credit) * 100) / 100,
+          totalOutstanding: netOutstanding,
           overdueAmount: Math.round(Math.max(0, rawOverdue - credit) * 100) / 100,
           invoiceCount: Number(d.invoiceCount || 0),
           oldestOverdueDays: Math.round(Number(d.oldestOverdueDays || 0)),
           lastContactDate: d.lastContactDate,
           nextActionDate: d.nextActionDate,
           status: d.isActive ? "active" : "inactive",
+          hasCredit: netOutstanding < 0,
         };
       });
 
-      // Filter out debtors with zero or negative outstanding after credits
-      const activeDebtors = formatted.filter(d => d.totalOutstanding > 0);
+      // Add credit-only contacts (credits but no open invoices)
+      for (const [contactId, credit] of creditsByContactId) {
+        if (debtorContactIds.has(contactId)) continue;
+        const contact = contactXeroIds.find(c => c.id === contactId);
+        if (!contact) continue;
+        const contactData = await db.select({ name: contacts.name, companyName: contacts.companyName, email: contacts.email })
+          .from(contacts).where(eq(contacts.id, contactId)).limit(1);
+        const c = contactData[0];
+        if (!c) continue;
+        formatted.push({
+          id: contactId,
+          name: c.companyName || c.name || "Unknown",
+          email: c.email,
+          totalOutstanding: Math.round(-credit * 100) / 100,
+          overdueAmount: 0,
+          invoiceCount: 0,
+          oldestOverdueDays: 0,
+          lastContactDate: null as any,
+          nextActionDate: null as any,
+          status: "active",
+          hasCredit: true,
+        });
+      }
+
+      // Keep all debtors with non-zero balance (positive or negative)
+      const activeDebtors = formatted.filter(d => d.totalOutstanding !== 0);
 
       res.json({
         debtors: activeDebtors,
