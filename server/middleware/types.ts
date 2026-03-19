@@ -20,6 +20,7 @@ export interface AuthResult {
     refreshToken?: string;
     expiresAt?: Date;
     tenantId?: string; // Provider's tenant ID (e.g., Xero tenant ID)
+    tenantName?: string; // Provider's organisation/company name
     scope?: string;
   };
   appTenantId?: string; // Our app's tenant ID (who initiated the connection)

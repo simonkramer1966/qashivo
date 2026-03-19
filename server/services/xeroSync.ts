@@ -512,13 +512,17 @@ export class XeroSyncService {
       );
 
       // Pre-load existing invoices for O(1) upsert lookup
+      // Use a Set to track seen xeroInvoiceIds and skip duplicates
       const existingInvoices = await db
         .select({ id: invoices.id, xeroInvoiceId: invoices.xeroInvoiceId })
         .from(invoices)
         .where(and(eq(invoices.tenantId, tenantId), sql`${invoices.xeroInvoiceId} IS NOT NULL`));
-      const existingByXeroId = new Map(
-        existingInvoices.map(inv => [inv.xeroInvoiceId!, inv.id])
-      );
+      const existingByXeroId = new Map<string, string>();
+      for (const inv of existingInvoices) {
+        if (inv.xeroInvoiceId && !existingByXeroId.has(inv.xeroInvoiceId)) {
+          existingByXeroId.set(inv.xeroInvoiceId, inv.id);
+        }
+      }
 
       for (const cachedInv of cachedInvoices) {
         try {
@@ -576,22 +580,47 @@ export class XeroSyncService {
             }).where(eq(invoices.id, existingId));
             updated++;
           } else {
-            await db.insert(invoices).values({
-              tenantId,
-              contactId: contact.id,
-              xeroInvoiceId: cachedInv.xeroInvoiceId,
-              invoiceNumber: cachedInv.invoiceNumber,
-              amount: cachedInv.amount,
-              amountPaid: effectiveAmountPaid,
-              taxAmount: cachedInv.taxAmount,
-              status: mappedStatus,
-              invoiceStatus,
-              issueDate: cachedInv.issueDate,
-              dueDate: cachedInv.dueDate,
-              paidDate: cachedInv.paidDate,
-              currency: cachedInv.currency,
-            });
-            created++;
+            // Double-check no duplicate exists (guard against Map collision from prior duplicates)
+            const [alreadyExists] = await db.select({ id: invoices.id }).from(invoices)
+              .where(and(eq(invoices.xeroInvoiceId, cachedInv.xeroInvoiceId), eq(invoices.tenantId, tenantId)))
+              .limit(1);
+            if (alreadyExists) {
+              // Update existing instead of creating duplicate
+              await db.update(invoices).set({
+                contactId: contact.id,
+                invoiceNumber: cachedInv.invoiceNumber,
+                amount: cachedInv.amount,
+                amountPaid: effectiveAmountPaid,
+                taxAmount: cachedInv.taxAmount,
+                status: mappedStatus,
+                invoiceStatus,
+                paidDate: cachedInv.paidDate,
+                dueDate: cachedInv.dueDate,
+                issueDate: cachedInv.issueDate,
+                currency: cachedInv.currency,
+                updatedAt: new Date(),
+              }).where(eq(invoices.id, alreadyExists.id));
+              existingByXeroId.set(cachedInv.xeroInvoiceId, alreadyExists.id);
+              updated++;
+            } else {
+              await db.insert(invoices).values({
+                tenantId,
+                contactId: contact.id,
+                xeroInvoiceId: cachedInv.xeroInvoiceId,
+                invoiceNumber: cachedInv.invoiceNumber,
+                amount: cachedInv.amount,
+                amountPaid: effectiveAmountPaid,
+                taxAmount: cachedInv.taxAmount,
+                status: mappedStatus,
+                invoiceStatus,
+                issueDate: cachedInv.issueDate,
+                dueDate: cachedInv.dueDate,
+                paidDate: cachedInv.paidDate,
+                currency: cachedInv.currency,
+              });
+              existingByXeroId.set(cachedInv.xeroInvoiceId, 'new');
+              created++;
+            }
           }
         } catch (error: any) {
           failed++;
@@ -617,9 +646,9 @@ export class XeroSyncService {
   async syncOverpayments(tenantId: string, tokens: { accessToken: string; refreshToken: string; expiresAt: Date; tenantId: string }): Promise<number> {
     try {
       console.log(`💰 Syncing overpayments for tenant ${tenantId}...`);
-      await db.delete(cachedXeroOverpayments).where(eq(cachedXeroOverpayments.tenantId, tenantId));
 
-      let total = 0;
+      // Fetch all pages first before touching the database
+      const allRecords: any[] = [];
       let currentPage = 1;
       let hasNextPage = true;
 
@@ -629,30 +658,34 @@ export class XeroSyncService {
           tokens, endpoint, 'GET', undefined, tenantId
         );
         const overpayments = response.Overpayments || [];
-
-        if (overpayments.length > 0) {
-          const toInsert = overpayments.map((op: any) => ({
-            tenantId,
-            xeroOverpaymentId: op.OverpaymentID,
-            xeroContactId: op.Contact?.ContactID || null,
-            status: op.Status || 'AUTHORISED',
-            date: op.DateString ? this.parseXeroDate(op.DateString) : (op.Date ? this.parseXeroDate(op.Date) : null),
-            total: (op.Total ?? 0).toString(),
-            remainingCredit: (op.RemainingCredit ?? 0).toString(),
-            updatedDateUtc: op.UpdatedDateUTC ? this.parseXeroDate(op.UpdatedDateUTC) : null,
-          }));
-
-          await db.insert(cachedXeroOverpayments).values(toInsert);
-          total += toInsert.length;
-        }
+        allRecords.push(...overpayments);
 
         hasNextPage = overpayments.length === 100;
         currentPage++;
         if (hasNextPage) await new Promise(r => setTimeout(r, RATE_LIMIT_DELAY_MS));
       }
 
-      console.log(`✅ Synced ${total} overpayments`);
-      return total;
+      // Only delete+insert after successful fetch — atomic swap
+      const toInsert = allRecords.map((op: any) => ({
+        tenantId,
+        xeroOverpaymentId: op.OverpaymentID,
+        xeroContactId: op.Contact?.ContactID || null,
+        status: op.Status || 'AUTHORISED',
+        date: op.DateString ? this.parseXeroDate(op.DateString) : (op.Date ? this.parseXeroDate(op.Date) : null),
+        total: (op.Total ?? 0).toString(),
+        remainingCredit: (op.RemainingCredit ?? 0).toString(),
+        updatedDateUtc: op.UpdatedDateUTC ? this.parseXeroDate(op.UpdatedDateUTC) : null,
+      }));
+
+      await db.transaction(async (tx) => {
+        await tx.delete(cachedXeroOverpayments).where(eq(cachedXeroOverpayments.tenantId, tenantId));
+        if (toInsert.length > 0) {
+          await tx.insert(cachedXeroOverpayments).values(toInsert);
+        }
+      });
+
+      console.log(`✅ Synced ${allRecords.length} overpayments`);
+      return allRecords.length;
     } catch (error) {
       console.error('❌ Overpayments sync failed:', error);
       return 0;
@@ -662,9 +695,9 @@ export class XeroSyncService {
   async syncPrepayments(tenantId: string, tokens: { accessToken: string; refreshToken: string; expiresAt: Date; tenantId: string }): Promise<number> {
     try {
       console.log(`💰 Syncing prepayments for tenant ${tenantId}...`);
-      await db.delete(cachedXeroPrepayments).where(eq(cachedXeroPrepayments.tenantId, tenantId));
 
-      let total = 0;
+      // Fetch all pages first before touching the database
+      const allRecords: any[] = [];
       let currentPage = 1;
       let hasNextPage = true;
 
@@ -674,30 +707,34 @@ export class XeroSyncService {
           tokens, endpoint, 'GET', undefined, tenantId
         );
         const prepayments = response.Prepayments || [];
-
-        if (prepayments.length > 0) {
-          const toInsert = prepayments.map((pp: any) => ({
-            tenantId,
-            xeroPrepaymentId: pp.PrepaymentID,
-            xeroContactId: pp.Contact?.ContactID || null,
-            status: pp.Status || 'AUTHORISED',
-            date: pp.DateString ? this.parseXeroDate(pp.DateString) : (pp.Date ? this.parseXeroDate(pp.Date) : null),
-            total: (pp.Total ?? 0).toString(),
-            remainingCredit: (pp.RemainingCredit ?? 0).toString(),
-            updatedDateUtc: pp.UpdatedDateUTC ? this.parseXeroDate(pp.UpdatedDateUTC) : null,
-          }));
-
-          await db.insert(cachedXeroPrepayments).values(toInsert);
-          total += toInsert.length;
-        }
+        allRecords.push(...prepayments);
 
         hasNextPage = prepayments.length === 100;
         currentPage++;
         if (hasNextPage) await new Promise(r => setTimeout(r, RATE_LIMIT_DELAY_MS));
       }
 
-      console.log(`✅ Synced ${total} prepayments`);
-      return total;
+      // Only delete+insert after successful fetch — atomic swap
+      const toInsert = allRecords.map((pp: any) => ({
+        tenantId,
+        xeroPrepaymentId: pp.PrepaymentID,
+        xeroContactId: pp.Contact?.ContactID || null,
+        status: pp.Status || 'AUTHORISED',
+        date: pp.DateString ? this.parseXeroDate(pp.DateString) : (pp.Date ? this.parseXeroDate(pp.Date) : null),
+        total: (pp.Total ?? 0).toString(),
+        remainingCredit: (pp.RemainingCredit ?? 0).toString(),
+        updatedDateUtc: pp.UpdatedDateUTC ? this.parseXeroDate(pp.UpdatedDateUTC) : null,
+      }));
+
+      await db.transaction(async (tx) => {
+        await tx.delete(cachedXeroPrepayments).where(eq(cachedXeroPrepayments.tenantId, tenantId));
+        if (toInsert.length > 0) {
+          await tx.insert(cachedXeroPrepayments).values(toInsert);
+        }
+      });
+
+      console.log(`✅ Synced ${allRecords.length} prepayments`);
+      return allRecords.length;
     } catch (error) {
       console.error('❌ Prepayments sync failed:', error);
       return 0;
