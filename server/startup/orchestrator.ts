@@ -14,6 +14,7 @@ import { startDebtorScoringWorker } from "../jobs/debtorScoringJob";
 import { workflowTimerProcessor } from "../jobs/workflow-timer-processor";
 import { portfolioController } from "../services/portfolioController";
 import { startDsoSnapshotJob } from "../jobs/dsoSnapshotJob";
+import { startXeroReconciliationJob } from "../jobs/xeroReconciliationJob";
 import { batchProcessor } from "../services/batchProcessor";
 import { db } from "../db";
 import { tenants, providerConnections } from "@shared/schema";
@@ -187,6 +188,13 @@ export async function startAll(): Promise<void> {
     console.log("[startup] batch processor started");
   } catch (error) {
     console.error("[startup] batch processor failed:", error);
+  }
+
+  try {
+    startXeroReconciliationJob();
+    console.log("[startup] xero reconciliation job scheduled");
+  } catch (error) {
+    console.error("[startup] xero reconciliation job failed:", error);
   }
 }
 

@@ -907,6 +907,57 @@ export class XeroSyncService {
   }
 
   // ══════════════════════════════════════════════════════════════════
+  // Per-tenant sync lock (prevents concurrent sync runs)
+  // ══════════════════════════════════════════════════════════════════
+
+  private async tryAcquireSyncLock(tenantId: string): Promise<boolean> {
+    // Check if a syncState row exists for this tenant+provider+resource
+    const existing = await db
+      .select({ id: syncState.id })
+      .from(syncState)
+      .where(and(
+        eq(syncState.tenantId, tenantId),
+        eq(syncState.provider, 'xero'),
+        eq(syncState.resource, 'invoices'),
+      ));
+
+    // No row yet — no existing sync to conflict with; row will be created by updateSyncState later
+    if (existing.length === 0) {
+      return true;
+    }
+
+    // Atomic UPDATE: only succeeds if no sync is running (or the lock is stale > 10 min)
+    const result = await db.execute(sql`
+      UPDATE sync_state
+      SET sync_in_progress = true
+      WHERE tenant_id = ${tenantId}
+        AND provider = 'xero'
+        AND resource = 'invoices'
+        AND (
+          sync_in_progress = false
+          OR last_sync_at < NOW() - INTERVAL '10 minutes'
+        )
+      RETURNING id
+    `);
+
+    return (result.rows?.length ?? 0) > 0;
+  }
+
+  private async releaseSyncLock(tenantId: string): Promise<void> {
+    try {
+      await db.execute(sql`
+        UPDATE sync_state
+        SET sync_in_progress = false
+        WHERE tenant_id = ${tenantId}
+          AND provider = 'xero'
+          AND resource = 'invoices'
+      `);
+    } catch (error) {
+      console.warn(`[XeroSync] Failed to release sync lock for tenant ${tenantId}:`, error);
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════
   // MAIN ENTRY POINT
   // ══════════════════════════════════════════════════════════════════
 
@@ -921,6 +972,21 @@ export class XeroSyncService {
     syncMode: SyncMode;
     error?: string;
   }> {
+    const lockAcquired = await this.tryAcquireSyncLock(tenantId);
+    if (!lockAcquired) {
+      console.log(`[XeroSync] Sync already in progress for tenant ${tenantId} — skipping`);
+      return {
+        success: true,
+        contactsCount: 0,
+        invoicesCount: 0,
+        billsCount: 0,
+        bankAccountsCount: 0,
+        bankTransactionsCount: 0,
+        filteredCount: 0,
+        syncMode: mode,
+      };
+    }
+
     try {
       console.log(`🚀 Starting ${mode.toUpperCase()} Xero sync for tenant: ${tenantId}`);
 
@@ -970,6 +1036,8 @@ export class XeroSyncService {
         syncMode: mode,
         error: error instanceof Error ? error.message : "Unknown error",
       };
+    } finally {
+      await this.releaseSyncLock(tenantId);
     }
   }
 }

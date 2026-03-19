@@ -43,10 +43,10 @@ class SyncScheduler {
 
     this.xeroIntervalId = setInterval(() => {
       this.runXeroSyncs().catch(err => console.error('[syncScheduler] Xero sync error:', err));
-    }, 4 * 60 * 60 * 1000); // 4 hours
+    }, 15 * 60 * 1000); // 15 minutes
 
     this.isRunning = true;
-    console.log('✅ Sync scheduler started - API syncs every hour, Xero syncs every 4 hours');
+    console.log('✅ Sync scheduler started - API syncs every hour, Xero syncs every 15 minutes');
   }
 
   /**
@@ -102,7 +102,7 @@ class SyncScheduler {
         }
 
         // Check if sync interval has passed
-        const syncInterval = tenant.xeroSyncInterval || 240; // Default 4 hours in minutes
+        const syncInterval = tenant.xeroSyncInterval || 15; // Default 15 minutes
         const lastSync = tenant.xeroLastSyncAt;
         
         if (lastSync) {

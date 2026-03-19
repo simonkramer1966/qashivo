@@ -626,6 +626,7 @@ export const syncState = pgTable("sync_state", {
   recordsUpdated: integer("records_updated").default(0),
   recordsFailed: integer("records_failed").default(0),
   initialSyncComplete: boolean("initial_sync_complete").default(false), // TRUE only after first full sync succeeds
+  syncInProgress: boolean("sync_in_progress").default(false).notNull(),
   metadata: jsonb("metadata"), // Provider-specific sync metadata
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

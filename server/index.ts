@@ -82,7 +82,7 @@ app.post("/api/xero/webhooks", express.raw({ type: 'application/json' }), async 
 
       // Trigger incremental sync for this tenant
       console.log(`[Xero Webhook] Triggering incremental sync for tenant ${tenant.id} (${tenant.name})`);
-      xeroSyncService.syncInvoicesAndContacts(tenant.id).catch((err) => {
+      xeroSyncService.syncAllDataForTenant(tenant.id, 'ongoing').catch((err) => {
         console.error(`[Xero Webhook] Sync failed for tenant ${tenant.id}:`, err);
       });
     }
