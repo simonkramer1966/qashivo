@@ -1,5 +1,5 @@
 import { db, pool } from "../db";
-import { tenants, cachedXeroInvoices, cachedXeroContacts, cachedXeroOverpayments, cachedXeroPrepayments, cachedXeroCreditNotes, contacts, invoices, syncState } from "@shared/schema";
+import { tenants, cachedXeroInvoices, cachedXeroContacts, cachedXeroOverpayments, cachedXeroPrepayments, cachedXeroCreditNotes, contacts, invoices, syncState, customerContactPersons } from "@shared/schema";
 import { eq, and, sql, inArray } from "drizzle-orm";
 import { xeroService } from "./xero";
 import { attentionItemService } from "./attentionItemService";
@@ -241,6 +241,7 @@ export class XeroSyncService {
         contactStatus: string;
         isCustomer: boolean;
         isSupplier: boolean;
+        contactPersons: { firstName: string; lastName: string; email: string | null; includeInEmails: boolean }[];
       }>();
 
       if (uniqueContactIds.size > 0) {
@@ -268,6 +269,12 @@ export class XeroSyncService {
                 contactStatus: c.ContactStatus || 'ACTIVE',
                 isCustomer: c.IsCustomer ?? false,
                 isSupplier: c.IsSupplier ?? false,
+                contactPersons: ((c.ContactPersons || []) as any[]).map((cp: any) => ({
+                  firstName: cp.FirstName || '',
+                  lastName: cp.LastName || '',
+                  email: cp.EmailAddress || null,
+                  includeInEmails: cp.IncludeInEmails ?? false,
+                })),
               };
               contactDetailsMap.set(c.ContactID, details);
 
@@ -358,6 +365,61 @@ export class XeroSyncService {
       const totalContacts = contactsCreated + contactsUpdated;
       console.log(`✅ Contacts: ${contactsCreated} created, ${contactsUpdated} updated (${totalContacts} total)`);
       onProgress?.({ contactCount: totalContacts, invoiceCount: totalInvoicesCount });
+
+      // ── Step 3b: Upsert Xero ContactPersons into customer_contact_persons ──
+      // Reload contacts to get xeroContactId → internal id mapping
+      const contactsAfterUpsert = await db.select({ id: contacts.id, xeroContactId: contacts.xeroContactId })
+        .from(contacts).where(eq(contacts.tenantId, tenantId));
+      const xeroIdToContactId = new Map(
+        contactsAfterUpsert.filter(c => c.xeroContactId).map(c => [c.xeroContactId!, c.id])
+      );
+
+      let personsUpserted = 0;
+      for (const [xeroContactId, details] of Array.from(contactDetailsMap.entries())) {
+        if (!details.contactPersons || details.contactPersons.length === 0) continue;
+        const parentContactId = xeroIdToContactId.get(xeroContactId);
+        if (!parentContactId) continue;
+
+        for (const cp of details.contactPersons) {
+          const name = [cp.firstName, cp.lastName].filter(Boolean).join(' ').trim();
+          if (!name) continue;
+
+          try {
+            // Check for existing by name + contactId + isFromXero (Xero doesn't provide a stable person ID)
+            const [existing] = await db.select({ id: customerContactPersons.id })
+              .from(customerContactPersons)
+              .where(and(
+                eq(customerContactPersons.tenantId, tenantId),
+                eq(customerContactPersons.contactId, parentContactId),
+                eq(customerContactPersons.name, name),
+                eq(customerContactPersons.isFromXero, true),
+              ));
+
+            if (existing) {
+              await db.update(customerContactPersons).set({
+                email: cp.email,
+                isPrimaryCreditControl: cp.includeInEmails,
+                updatedAt: new Date(),
+              }).where(eq(customerContactPersons.id, existing.id));
+            } else {
+              await db.insert(customerContactPersons).values({
+                tenantId,
+                contactId: parentContactId,
+                name,
+                email: cp.email,
+                isPrimaryCreditControl: cp.includeInEmails,
+                isFromXero: true,
+              });
+            }
+            personsUpserted++;
+          } catch (cpErr: any) {
+            console.warn(`  ⚠️ Failed to upsert contact person "${name}": ${cpErr.message}`);
+          }
+        }
+      }
+      if (personsUpserted > 0) {
+        console.log(`✅ Contact persons: ${personsUpserted} upserted from Xero`);
+      }
 
       // ── Step 4: Process cached invoices into main invoices table ──
       const processCounts = await this.processCachedInvoices(tenantId);
