@@ -22,6 +22,7 @@ import {
   attentionItems, outcomes, activityLogs, collectionPolicies, paymentPlans,
   emailMessages, customerContactPersons, scheduledReports,
   cachedXeroOverpayments, cachedXeroPrepayments, cachedXeroCreditNotes, cachedXeroContacts,
+  activityEvents,
 } from "@shared/schema";
 import { computeNextRunAt } from "../services/reportScheduler";
 import { REPORT_TYPE_LABELS, type ReportType } from "../services/reportGenerator";
@@ -3599,10 +3600,579 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
       }
     } catch (error) {
       console.error("Error sending customer summary email:", error);
-      res.status(500).json({ 
-        success: false, 
-        message: (error as Error).message || "Failed to send email" 
+      res.status(500).json({
+        success: false,
+        message: (error as Error).message || "Failed to send email"
       });
+    }
+  });
+
+  // ============================================================
+  // Debtor Command Centre Endpoints
+  // ============================================================
+
+  // GET /api/contacts/:id/activity — Paginated activity event log
+  app.get("/api/contacts/:id/activity", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      if (!await hasContactAccess(user, req.params.id)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
+
+      const { id } = req.params;
+      const tenantId = user.tenantId;
+      const category = req.query.category as string | undefined;
+      const dateFrom = req.query.dateFrom as string | undefined;
+      const dateTo = req.query.dateTo as string | undefined;
+      const direction = req.query.direction as string | undefined;
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const offset = (page - 1) * limit;
+
+      const conditions = [
+        eq(activityEvents.tenantId, tenantId),
+        eq(activityEvents.contactId, id),
+      ];
+
+      if (category) {
+        conditions.push(eq(activityEvents.category, category));
+      }
+      if (dateFrom) {
+        conditions.push(gte(activityEvents.createdAt, new Date(dateFrom)));
+      }
+      if (dateTo) {
+        conditions.push(lte(activityEvents.createdAt, new Date(dateTo)));
+      }
+      if (direction) {
+        conditions.push(eq(activityEvents.direction, direction));
+      }
+
+      const whereClause = and(...conditions);
+
+      const [events, totalResult] = await Promise.all([
+        db.select()
+          .from(activityEvents)
+          .where(whereClause)
+          .orderBy(desc(activityEvents.createdAt))
+          .limit(limit)
+          .offset(offset),
+        db.select({ count: count() })
+          .from(activityEvents)
+          .where(whereClause),
+      ]);
+
+      res.json({
+        events,
+        total: totalResult[0]?.count ?? 0,
+        page,
+        limit,
+      });
+    } catch (error) {
+      console.error("Error fetching activity events:", error);
+      res.status(500).json({ message: "Failed to fetch activity events" });
+    }
+  });
+
+  // POST /api/contacts/:id/activity — Create manual activity event
+  app.post("/api/contacts/:id/activity", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      if (!await hasContactAccess(user, req.params.id)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
+
+      const { id } = req.params;
+      const tenantId = user.tenantId;
+      const { eventType, category, title, description, direction, linkedInvoiceId, metadata } = req.body;
+
+      if (!eventType || !category || !title) {
+        return res.status(400).json({ message: "eventType, category, and title are required" });
+      }
+
+      const [event] = await db.insert(activityEvents).values({
+        tenantId,
+        contactId: id,
+        eventType,
+        category,
+        title,
+        description: description || null,
+        triggeredBy: user.firstName || user.email || 'user',
+        direction: direction || null,
+        linkedInvoiceId: linkedInvoiceId || null,
+        metadata: metadata || null,
+      }).returning();
+
+      res.json(event);
+    } catch (error) {
+      console.error("Error creating activity event:", error);
+      res.status(500).json({ message: "Failed to create activity event" });
+    }
+  });
+
+  // GET /api/contacts/:id/metrics — Debtor command centre metric tiles
+  app.get("/api/contacts/:id/metrics", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      if (!await hasContactAccess(user, req.params.id)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
+
+      const { id } = req.params;
+      const tenantId = user.tenantId;
+
+      // Fetch contact, open invoices, paid invoices, disputes, and promises in parallel
+      const [
+        contact,
+        openInvoicesResult,
+        paidInvoicesResult,
+        activeDisputes,
+        openPromises,
+      ] = await Promise.all([
+        storage.getContact(id, tenantId),
+        db.select()
+          .from(invoices)
+          .where(and(
+            eq(invoices.tenantId, tenantId),
+            eq(invoices.contactId, id),
+            not(eq(invoices.status, 'paid')),
+            not(eq(invoices.status, 'cancelled')),
+          )),
+        db.select()
+          .from(invoices)
+          .where(and(
+            eq(invoices.tenantId, tenantId),
+            eq(invoices.contactId, id),
+            eq(invoices.status, 'paid'),
+          )),
+        db.select()
+          .from(disputes)
+          .where(and(
+            eq(disputes.tenantId, tenantId),
+            eq(disputes.contactId, id),
+            not(eq(disputes.status, 'resolved')),
+          )),
+        db.select()
+          .from(paymentPromises)
+          .where(and(
+            eq(paymentPromises.tenantId, tenantId),
+            eq(paymentPromises.contactId, id),
+            eq(paymentPromises.status, 'open'),
+          ))
+          .orderBy(desc(paymentPromises.createdAt))
+          .limit(1),
+      ]);
+
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      // Total outstanding (net of credits via amountPaid)
+      const totalOutstanding = openInvoicesResult.reduce((sum, inv) => {
+        const amt = parseFloat(inv.amount || '0');
+        const paid = parseFloat(inv.amountPaid || '0');
+        return sum + (amt - paid);
+      }, 0);
+
+      // Total overdue
+      const now = new Date();
+      const totalOverdue = openInvoicesResult.reduce((sum, inv) => {
+        if (inv.dueDate && new Date(inv.dueDate) < now) {
+          const amt = parseFloat(inv.amount || '0');
+          const paid = parseFloat(inv.amountPaid || '0');
+          return sum + (amt - paid);
+        }
+        return sum;
+      }, 0);
+
+      // Oldest overdue invoice
+      const overdueInvoices = openInvoicesResult
+        .filter(inv => inv.dueDate && new Date(inv.dueDate) < now)
+        .sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime());
+
+      const oldestInvoice = overdueInvoices.length > 0
+        ? {
+            daysOverdue: Math.floor((now.getTime() - new Date(overdueInvoices[0].dueDate!).getTime()) / (1000 * 60 * 60 * 24)),
+            invoiceNumber: overdueInvoices[0].invoiceNumber,
+          }
+        : null;
+
+      // Average days to pay (from paid invoices)
+      const daysToPays: number[] = [];
+      for (const inv of paidInvoicesResult) {
+        if (inv.paidDate && inv.dueDate) {
+          const days = Math.floor(
+            (new Date(inv.paidDate).getTime() - new Date(inv.dueDate).getTime()) / (1000 * 60 * 60 * 24)
+          );
+          daysToPays.push(days);
+        }
+      }
+      const avgDaysToPay = daysToPays.length > 0
+        ? Math.round(daysToPays.reduce((a, b) => a + b, 0) / daysToPays.length)
+        : null;
+
+      // Payment behaviour
+      let paymentBehaviour = "Insufficient data";
+      if (avgDaysToPay !== null) {
+        if (avgDaysToPay <= -5) paymentBehaviour = "Consistently early";
+        else if (avgDaysToPay <= 5) paymentBehaviour = "Pays on time";
+        else if (avgDaysToPay <= 30) paymentBehaviour = "Typically late";
+        else paymentBehaviour = "Chronically late";
+      }
+
+      // Percentage paid on time
+      const pctPaidOnTime = daysToPays.length > 0
+        ? Math.round((daysToPays.filter(d => d <= 0).length / daysToPays.length) * 100)
+        : null;
+
+      // Last payment
+      const paidSorted = paidInvoicesResult
+        .filter(inv => inv.paidDate)
+        .sort((a, b) => new Date(b.paidDate!).getTime() - new Date(a.paidDate!).getTime());
+      const lastPayment = paidSorted.length > 0
+        ? {
+            date: paidSorted[0].paidDate!.toISOString(),
+            amount: parseFloat(paidSorted[0].amount || '0'),
+          }
+        : null;
+
+      // Open invoices count and disputed count
+      const disputedInvoiceIds = new Set(activeDisputes.map(d => d.invoiceId));
+      const disputedCount = openInvoicesResult.filter(inv => disputedInvoiceIds.has(inv.id)).length;
+
+      // Promise to pay
+      const latestPromise = openPromises[0] || null;
+      const promiseToPay = latestPromise
+        ? {
+            date: latestPromise.promisedDate.toISOString(),
+            amount: latestPromise.promisedAmount ? parseFloat(latestPromise.promisedAmount) : null,
+            overdue: new Date(latestPromise.promisedDate) < now,
+          }
+        : null;
+
+      res.json({
+        totalOutstanding: Math.round(totalOutstanding * 100) / 100,
+        totalOverdue: Math.round(totalOverdue * 100) / 100,
+        oldestInvoice,
+        avgDaysToPay,
+        paymentBehaviour,
+        pctPaidOnTime,
+        lastPayment,
+        openInvoices: {
+          total: openInvoicesResult.length,
+          disputed: disputedCount,
+        },
+        riskScore: contact.riskScore ?? null,
+        promiseToPay,
+      });
+    } catch (error) {
+      console.error("Error fetching contact metrics:", error);
+      res.status(500).json({ message: "Failed to fetch contact metrics" });
+    }
+  });
+
+  // POST /api/contacts/:id/draft-communication — AI-powered draft generation with dispute awareness
+  app.post("/api/contacts/:id/draft-communication", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      if (!await hasContactAccess(user, req.params.id)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
+
+      const { id } = req.params;
+      const tenantId = user.tenantId;
+      const { type, invoiceIds } = req.body;
+
+      if (!type || !['email', 'sms'].includes(type)) {
+        return res.status(400).json({ message: "type must be 'email' or 'sms'" });
+      }
+
+      const contact = await storage.getContact(id, tenantId);
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      // Fetch overdue/authorised invoices
+      const now = new Date();
+      let contactInvoices = await db.select()
+        .from(invoices)
+        .where(and(
+          eq(invoices.tenantId, tenantId),
+          eq(invoices.contactId, id),
+          not(eq(invoices.status, 'paid')),
+          not(eq(invoices.status, 'cancelled')),
+        ));
+
+      // Filter to specific invoices if provided
+      if (invoiceIds && invoiceIds.length > 0) {
+        contactInvoices = contactInvoices.filter(inv => invoiceIds.includes(inv.id));
+      }
+
+      // Fetch active disputes for these invoices
+      const invoiceIdList = contactInvoices.map(inv => inv.id);
+      const activeDisputes = invoiceIdList.length > 0
+        ? await db.select()
+            .from(disputes)
+            .where(and(
+              eq(disputes.tenantId, tenantId),
+              inArray(disputes.invoiceId, invoiceIdList),
+              not(eq(disputes.status, 'resolved')),
+            ))
+        : [];
+
+      const disputedInvoiceIds = new Set(activeDisputes.map(d => d.invoiceId));
+
+      const chaseable = contactInvoices.filter(inv => !disputedInvoiceIds.has(inv.id));
+      const disputed = contactInvoices.filter(inv => disputedInvoiceIds.has(inv.id));
+
+      // If nothing is chaseable, block
+      if (chaseable.length === 0) {
+        return res.json({
+          blocked: true,
+          reason: "All overdue invoices are under dispute — manual review recommended",
+        });
+      }
+
+      const chaseableTotal = chaseable.reduce((sum, inv) => sum + parseFloat(inv.amount || '0') - parseFloat(inv.amountPaid || '0'), 0);
+      const disputedTotal = disputed.reduce((sum, inv) => sum + parseFloat(inv.amount || '0') - parseFloat(inv.amountPaid || '0'), 0);
+      const grossTotal = chaseableTotal + disputedTotal;
+
+      // Gather context: recent activity, payment stats, promises
+      const [recentActivity, paidInvoicesResult, openPromises] = await Promise.all([
+        db.select()
+          .from(activityEvents)
+          .where(and(
+            eq(activityEvents.tenantId, tenantId),
+            eq(activityEvents.contactId, id),
+          ))
+          .orderBy(desc(activityEvents.createdAt))
+          .limit(20),
+        db.select()
+          .from(invoices)
+          .where(and(
+            eq(invoices.tenantId, tenantId),
+            eq(invoices.contactId, id),
+            eq(invoices.status, 'paid'),
+          )),
+        db.select()
+          .from(paymentPromises)
+          .where(and(
+            eq(paymentPromises.tenantId, tenantId),
+            eq(paymentPromises.contactId, id),
+            eq(paymentPromises.status, 'open'),
+          ))
+          .orderBy(desc(paymentPromises.createdAt))
+          .limit(1),
+      ]);
+
+      // Calculate avg days to pay for tone selection
+      const daysToPays: number[] = [];
+      for (const inv of paidInvoicesResult) {
+        if (inv.paidDate && inv.dueDate) {
+          const days = Math.floor(
+            (new Date(inv.paidDate).getTime() - new Date(inv.dueDate).getTime()) / (1000 * 60 * 60 * 24)
+          );
+          daysToPays.push(days);
+        }
+      }
+      const avgDaysToPay = daysToPays.length > 0
+        ? Math.round(daysToPays.reduce((a, b) => a + b, 0) / daysToPays.length)
+        : null;
+
+      // Check for broken promises
+      const latestPromise = openPromises[0] || null;
+      const promiseBreached = latestPromise && new Date(latestPromise.promisedDate) < now;
+
+      // Determine max reminder count for chase count
+      const maxReminderCount = Math.max(...chaseable.map(inv => inv.reminderCount ?? 0), 0);
+
+      // Determine workflow stage
+      const workflowStages = chaseable.map(inv => inv.workflowState || 'pre_due');
+      const hasPreLegal = workflowStages.some(s => s === 'pre_legal');
+
+      // Build tone instruction
+      let toneInstruction = "";
+      if (promiseBreached) {
+        toneInstruction = "Tone: DIRECT. The debtor has broken a payment commitment. Reference the broken promise specifically and set a clear, non-negotiable payment deadline.";
+      } else if (hasPreLegal) {
+        toneInstruction = "Tone: FORMAL. This account is at the pre-legal stage. Reference that formal action may follow if payment is not received. Be professional but unambiguous about consequences.";
+      } else if (avgDaysToPay !== null && avgDaysToPay > 30 || maxReminderCount >= 3) {
+        toneInstruction = "Tone: FIRM. This debtor has a history of late payment or has been chased multiple times. Reference previous communications and set a specific payment deadline.";
+      } else if (avgDaysToPay !== null && avgDaysToPay > 0) {
+        toneInstruction = "Tone: POLITE BUT CLEAR. Reference payment terms. Be professional and straightforward.";
+      } else {
+        toneInstruction = "Tone: FRIENDLY. Assume this is an oversight. Be warm and helpful while clearly stating what is owed.";
+      }
+
+      const hasDisputedInvoices = disputed.length > 0;
+      const disputeContext = hasDisputedInvoices
+        ? `\nIMPORTANT: The debtor has ${disputed.length} invoice(s) totalling £${disputedTotal.toFixed(2)} that are under review. Reference the gross total of £${grossTotal.toFixed(2)} for transparency, but ONLY request payment for the chaseable amount of £${chaseableTotal.toFixed(2)}. Do NOT use the word "dispute".`
+        : "";
+
+      const invoiceLines = chaseable.map(inv =>
+        `- ${inv.invoiceNumber}: £${(parseFloat(inv.amount || '0') - parseFloat(inv.amountPaid || '0')).toFixed(2)} (due ${inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('en-GB') : 'N/A'})`
+      ).join("\n");
+
+      const recentActivitySummary = recentActivity.slice(0, 10).map(e =>
+        `- ${e.createdAt.toLocaleDateString('en-GB')}: ${e.title}`
+      ).join("\n");
+
+      const systemPrompt = `You are a professional credit controller writing on behalf of a UK business. Generate a ${type === 'email' ? 'collection email' : 'collection SMS (max 160 characters)'} for a debtor.
+
+${toneInstruction}
+${disputeContext}
+
+The debtor must believe this is written by a real person, not a template or AI. Use natural language. Be specific about amounts and dates. Do not use placeholder text.`;
+
+      const userPrompt = `Contact: ${contact.name}${contact.companyName ? ` (${contact.companyName})` : ''}
+
+Outstanding invoices to chase (£${chaseableTotal.toFixed(2)} total):
+${invoiceLines}
+
+${latestPromise ? `Active payment promise: £${latestPromise.promisedAmount || 'unspecified'} by ${new Date(latestPromise.promisedDate).toLocaleDateString('en-GB')}${promiseBreached ? ' (OVERDUE — promise broken)' : ''}` : 'No active payment promises.'}
+
+Recent activity:
+${recentActivitySummary || 'No recent activity logged.'}
+
+Average days to pay (historical): ${avgDaysToPay !== null ? `${avgDaysToPay} days${avgDaysToPay > 0 ? ' late' : ' early'}` : 'N/A'}
+Times chased on current invoices: ${maxReminderCount}
+
+${type === 'email' ? 'Generate a JSON object with "subject" (string) and "body" (string, plain text with line breaks).' : 'Generate a JSON object with "message" (string, max 160 characters).'}`;
+
+      const draft = await generateJSON<Record<string, string>>({
+        system: systemPrompt,
+        prompt: userPrompt,
+        model: 'standard',
+        temperature: 0.7,
+        schemaHint: type === 'email'
+          ? '{"subject": "string", "body": "string"}'
+          : '{"message": "string (max 160 chars)"}',
+      });
+
+      res.json({
+        draft,
+        chaseable: chaseable.map(inv => ({
+          id: inv.id,
+          invoiceNumber: inv.invoiceNumber,
+          amount: parseFloat(inv.amount || '0'),
+          amountPaid: parseFloat(inv.amountPaid || '0'),
+          dueDate: inv.dueDate,
+        })),
+        disputed: disputed.map(inv => ({
+          id: inv.id,
+          invoiceNumber: inv.invoiceNumber,
+          amount: parseFloat(inv.amount || '0'),
+          amountPaid: parseFloat(inv.amountPaid || '0'),
+          dueDate: inv.dueDate,
+        })),
+        summary: {
+          chaseableTotal: Math.round(chaseableTotal * 100) / 100,
+          disputedTotal: Math.round(disputedTotal * 100) / 100,
+          grossTotal: Math.round(grossTotal * 100) / 100,
+        },
+      });
+    } catch (error) {
+      console.error("Error generating draft communication:", error);
+      res.status(500).json({ message: "Failed to generate draft communication" });
+    }
+  });
+
+  // POST /api/contacts/:id/log-dispute — Create dispute records and activity events
+  app.post("/api/contacts/:id/log-dispute", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      if (!await hasContactAccess(user, req.params.id)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
+
+      const { id } = req.params;
+      const tenantId = user.tenantId;
+      const { invoiceIds, reason, detail } = req.body;
+
+      if (!invoiceIds || !Array.isArray(invoiceIds) || invoiceIds.length === 0) {
+        return res.status(400).json({ message: "invoiceIds array is required" });
+      }
+      if (!reason) {
+        return res.status(400).json({ message: "reason is required" });
+      }
+
+      const contact = await storage.getContact(id, tenantId);
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      // Verify all invoices belong to this contact and tenant
+      const matchingInvoices = await db.select()
+        .from(invoices)
+        .where(and(
+          eq(invoices.tenantId, tenantId),
+          eq(invoices.contactId, id),
+          inArray(invoices.id, invoiceIds),
+        ));
+
+      if (matchingInvoices.length !== invoiceIds.length) {
+        return res.status(400).json({ message: "One or more invoice IDs are invalid or do not belong to this contact" });
+      }
+
+      const responseDueAt = new Date();
+      responseDueAt.setDate(responseDueAt.getDate() + 30);
+
+      const createdDisputes = [];
+
+      for (const invoice of matchingInvoices) {
+        // Create dispute record
+        const [dispute] = await db.insert(disputes).values({
+          invoiceId: invoice.id,
+          tenantId,
+          contactId: id,
+          type: reason,
+          status: 'pending',
+          summary: detail || reason,
+          buyerContactName: contact.name,
+          buyerContactEmail: contact.email || '',
+          responseDueAt,
+        }).returning();
+
+        createdDisputes.push(dispute);
+
+        // Create activity event
+        await db.insert(activityEvents).values({
+          tenantId,
+          contactId: id,
+          eventType: 'dispute_logged',
+          category: 'Disputes',
+          title: `Dispute logged for invoice ${invoice.invoiceNumber}`,
+          description: detail || reason,
+          triggeredBy: user.firstName || user.email || 'user',
+          linkedInvoiceId: invoice.id,
+          linkedDisputeId: dispute.id,
+          metadata: { reason, invoiceNumber: invoice.invoiceNumber },
+        });
+      }
+
+      res.json(createdDisputes);
+    } catch (error) {
+      console.error("Error logging dispute:", error);
+      res.status(500).json({ message: "Failed to log dispute" });
     }
   });
 }

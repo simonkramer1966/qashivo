@@ -505,6 +505,26 @@ export const cachedXeroCreditNotes = pgTable("cached_xero_credit_notes", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Activity events — unified event log for debtor command centre
+export const activityEvents = pgTable("activity_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id),
+  eventType: varchar("event_type").notNull(),
+  category: varchar("category").notNull(), // Communications | Payments | Invoices | Workflows | Disputes | Risk | Notes
+  title: varchar("title").notNull(),
+  description: text("description"),
+  triggeredBy: varchar("triggered_by").notNull(), // 'ai_agent' | 'system' | user display name
+  direction: varchar("direction"), // 'outbound' | 'inbound' | null
+  linkedInvoiceId: varchar("linked_invoice_id"),
+  linkedWorkflowId: varchar("linked_workflow_id"),
+  linkedDisputeId: varchar("linked_dispute_id"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_activity_events_tenant_contact_date").on(table.tenantId, table.contactId, table.createdAt),
+]);
+
 // Bills table (accounts payable)
 export const bills = pgTable("bills", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
