@@ -689,12 +689,10 @@ export default function DebtorRecord() {
 
   const outstandingInvoices = useMemo(
     () =>
-      invoices.filter(
-        (inv) =>
-          inv.status === "AUTHORISED" ||
-          inv.status === "SUBMITTED" ||
-          inv.status === "SENT"
-      ),
+      invoices.filter((inv) => {
+        const s = inv.status.toLowerCase();
+        return s !== "paid" && s !== "void" && s !== "cancelled" && s !== "draft";
+      }),
     [invoices]
   );
 
