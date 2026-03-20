@@ -359,11 +359,8 @@ export default function DebtorRecord() {
   const [noteText, setNoteText] = useState("");
 
   // --- AR details edit state ---
-  const [arEditing, setArEditing] = useState(false);
-  const [arName, setArName] = useState("");
-  const [arEmail, setArEmail] = useState("");
-  const [arPhone, setArPhone] = useState("");
-  const [arNotesField, setArNotesField] = useState("");
+  const [primaryPickerOpen, setPrimaryPickerOpen] = useState(false);
+  const [escalationPickerOpen, setEscalationPickerOpen] = useState(false);
 
   // --- Contact person state ---
   const [personDialogOpen, setPersonDialogOpen] = useState(false);
@@ -571,30 +568,6 @@ export default function DebtorRecord() {
     },
     onError: (err: Error) => {
       toast({ title: "Failed to log dispute", description: err.message, variant: "destructive" });
-    },
-  });
-
-  const saveArMutation = useMutation({
-    mutationFn: async (payload: {
-      arContactName: string;
-      arContactEmail: string;
-      arContactPhone: string;
-      arNotes: string;
-    }) => {
-      const res = await apiRequest("PATCH", `/api/contacts/${contactId}/ar-details`, payload);
-      return res.json();
-    },
-    onSuccess: () => {
-      toast({ title: "AR details saved" });
-      setArEditing(false);
-      queryClient.invalidateQueries({ queryKey: ["debtor-profile", contactId] });
-    },
-    onError: (err: Error) => {
-      toast({
-        title: "Failed to save AR details",
-        description: err.message,
-        variant: "destructive",
-      });
     },
   });
 
@@ -1019,23 +992,6 @@ export default function DebtorRecord() {
     );
   }, [noteText]);
 
-  const startEditAr = useCallback(() => {
-    setArEditing(true);
-    setArName(contact?.arContactName ?? "");
-    setArEmail(contact?.arContactEmail ?? "");
-    setArPhone(contact?.arContactPhone ?? "");
-    setArNotesField(contact?.arNotes ?? "");
-  }, [contact]);
-
-  const handleSaveAr = useCallback(() => {
-    saveArMutation.mutate({
-      arContactName: arName,
-      arContactEmail: arEmail,
-      arContactPhone: arPhone,
-      arNotes: arNotesField,
-    });
-  }, [arName, arEmail, arPhone, arNotesField]);
-
   const openAddPerson = useCallback(() => {
     setEditingPerson(null);
     setPersonName("");
@@ -1434,7 +1390,7 @@ export default function DebtorRecord() {
           {/* TAB 1: Details & Contacts                                       */}
           {/* ============================================================== */}
           <TabsContent value="details" className="space-y-4 mt-4">
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid md:grid-cols-3 gap-4">
               {/* Company info */}
               <Card>
                 <CardHeader>
@@ -1494,107 +1450,152 @@ export default function DebtorRecord() {
                 </CardContent>
               </Card>
 
-              {/* AR Contact Override */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center justify-between">
-                    <span className="flex items-center gap-2">
-                      <User className="h-4 w-4" /> AR Contact Override
-                    </span>
-                    {!arEditing && (
-                      <Button variant="ghost" size="sm" onClick={startEditAr}>
-                        <Pencil className="h-3 w-3 mr-1" /> Edit
-                      </Button>
-                    )}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {arEditing ? (
-                    <div className="space-y-3">
-                      <div>
-                        <label className="text-xs text-muted-foreground">Name</label>
-                        <Input
-                          value={arName}
-                          onChange={(e) => setArName(e.target.value)}
-                          placeholder="AR contact name"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs text-muted-foreground">Email</label>
-                        <Input
-                          value={arEmail}
-                          onChange={(e) => setArEmail(e.target.value)}
-                          placeholder="AR contact email"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs text-muted-foreground">Phone</label>
-                        <Input
-                          value={arPhone}
-                          onChange={(e) => setArPhone(e.target.value)}
-                          placeholder="AR contact phone"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs text-muted-foreground">Notes</label>
-                        <Textarea
-                          value={arNotesField}
-                          onChange={(e) => setArNotesField(e.target.value)}
-                          placeholder="AR notes"
-                          rows={3}
-                        />
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          onClick={handleSaveAr}
-                          disabled={saveArMutation.isPending}
-                        >
-                          {saveArMutation.isPending ? (
-                            <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                          ) : null}
-                          Save
+              {/* AR Primary Contact */}
+              {(() => {
+                const primary = persons.find((p) => p.isPrimaryCreditControl);
+                return (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base flex items-center justify-between">
+                        <span className="flex items-center gap-2">
+                          <Star className="h-4 w-4" /> AR Primary Contact
+                        </span>
+                        <Button variant="ghost" size="sm" onClick={() => setPrimaryPickerOpen(true)}>
+                          <Pencil className="h-3 w-3 mr-1" /> Edit
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setArEditing(false)}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-2 text-sm">
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2 text-sm">
                       <div>
                         <span className="text-muted-foreground">Name:</span>{" "}
-                        <span className="font-medium">
-                          {contact.arContactName || "Not set"}
-                        </span>
+                        <span className="font-medium">{primary?.name || "Not set"}</span>
                       </div>
                       <div>
                         <span className="text-muted-foreground">Email:</span>{" "}
-                        <span className="font-medium">
-                          {contact.arContactEmail || "Not set"}
-                        </span>
+                        <span className="font-medium">{primary?.email || "Not set"}</span>
                       </div>
                       <div>
                         <span className="text-muted-foreground">Phone:</span>{" "}
-                        <span className="font-medium">
-                          {contact.arContactPhone || "Not set"}
-                        </span>
+                        <span className="font-medium">{primary?.phone || "Not set"}</span>
                       </div>
-                      {contact.arNotes && (
-                        <div>
-                          <span className="text-muted-foreground">Notes:</span>{" "}
-                          <span className="font-medium">{contact.arNotes}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                    </CardContent>
+                  </Card>
+                );
+              })()}
+
+              {/* AR Escalation Contact */}
+              {(() => {
+                const escalation = persons.find((p) => p.isEscalation);
+                return (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base flex items-center justify-between">
+                        <span className="flex items-center gap-2">
+                          <AlertCircle className="h-4 w-4" /> AR Escalation Contact
+                        </span>
+                        <Button variant="ghost" size="sm" onClick={() => setEscalationPickerOpen(true)}>
+                          <Pencil className="h-3 w-3 mr-1" /> Edit
+                        </Button>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Name:</span>{" "}
+                        <span className="font-medium">{escalation?.name || "Not set"}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Email:</span>{" "}
+                        <span className="font-medium">{escalation?.email || "Not set"}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Phone:</span>{" "}
+                        <span className="font-medium">{escalation?.phone || "Not set"}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })()}
             </div>
+
+            {/* Primary Contact Picker Dialog */}
+            <Dialog open={primaryPickerOpen} onOpenChange={setPrimaryPickerOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Set AR Primary Contact</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                  {persons.length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-4 text-center">
+                      No contact persons available. Add one first.
+                    </p>
+                  ) : (
+                    persons.map((p) => (
+                      <button
+                        key={p.id}
+                        className={cn(
+                          "w-full text-left rounded-lg border p-3 hover:bg-muted/50 transition-colors",
+                          p.isPrimaryCreditControl && "border-blue-400 bg-blue-50"
+                        )}
+                        onClick={() => {
+                          setPrimaryMutation.mutate(p.id);
+                          setPrimaryPickerOpen(false);
+                        }}
+                      >
+                        <div className="font-medium text-sm flex items-center gap-2">
+                          {p.name}
+                          {p.isPrimaryCreditControl && (
+                            <Badge className="text-[10px] bg-blue-100 text-blue-800">Current</Badge>
+                          )}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          {p.email || "No email"} · {p.phone || "No phone"}
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* Escalation Contact Picker Dialog */}
+            <Dialog open={escalationPickerOpen} onOpenChange={setEscalationPickerOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Set AR Escalation Contact</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                  {persons.length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-4 text-center">
+                      No contact persons available. Add one first.
+                    </p>
+                  ) : (
+                    persons.map((p) => (
+                      <button
+                        key={p.id}
+                        className={cn(
+                          "w-full text-left rounded-lg border p-3 hover:bg-muted/50 transition-colors",
+                          p.isEscalation && "border-orange-400 bg-orange-50"
+                        )}
+                        onClick={() => {
+                          setEscalationMutation.mutate(p.id);
+                          setEscalationPickerOpen(false);
+                        }}
+                      >
+                        <div className="font-medium text-sm flex items-center gap-2">
+                          {p.name}
+                          {p.isEscalation && (
+                            <Badge className="text-[10px] bg-orange-100 text-orange-800">Current</Badge>
+                          )}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          {p.email || "No email"} · {p.phone || "No phone"}
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
 
             {/* Contact Persons */}
             <Card>
@@ -1660,28 +1661,24 @@ export default function DebtorRecord() {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-1">
-                              {!p.isPrimaryCreditControl && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7"
-                                  onClick={() => setPrimaryMutation.mutate(p.id)}
-                                  title="Set as primary"
-                                >
-                                  <Star className="h-3 w-3" />
-                                </Button>
-                              )}
-                              {!p.isEscalation && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7"
-                                  onClick={() => setEscalationMutation.mutate(p.id)}
-                                  title="Set as escalation"
-                                >
-                                  <AlertCircle className="h-3 w-3" />
-                                </Button>
-                              )}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => setPrimaryMutation.mutate(p.id)}
+                                title={p.isPrimaryCreditControl ? "Remove primary" : "Set as primary"}
+                              >
+                                <Star className={cn("h-3 w-3", p.isPrimaryCreditControl && "fill-blue-500 text-blue-500")} />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => setEscalationMutation.mutate(p.id)}
+                                title={p.isEscalation ? "Remove escalation" : "Set as escalation"}
+                              >
+                                <AlertCircle className={cn("h-3 w-3", p.isEscalation && "fill-orange-500 text-orange-500")} />
+                              </Button>
                               <Button
                                 variant="ghost"
                                 size="icon"

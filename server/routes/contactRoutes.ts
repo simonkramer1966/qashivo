@@ -625,15 +625,27 @@ export function registerContactRoutes(app: Express): void {
         return res.status(403).json({ message: "You do not have access to this contact" });
       }
 
-      // Unset all others for this contact, then set the target
+      // Toggle: if already primary, clear it; otherwise set it and clear all others
       const allPersons = await storage.getCustomerContactPersons(user.tenantId, contactId);
-      for (const p of allPersons) {
-        if (p.id !== personId && p.isPrimaryCreditControl) {
-          await storage.updateCustomerContactPerson(p.id, user.tenantId, { isPrimaryCreditControl: false });
-        }
+      const target = allPersons.find(p => p.id === personId);
+      if (!target) {
+        return res.status(404).json({ message: "Contact person not found" });
       }
-      const updated = await storage.updateCustomerContactPerson(personId, user.tenantId, { isPrimaryCreditControl: true });
-      res.json(updated);
+
+      if (target.isPrimaryCreditControl) {
+        // Already primary — toggle off
+        const updated = await storage.updateCustomerContactPerson(personId, user.tenantId, { isPrimaryCreditControl: false });
+        res.json(updated);
+      } else {
+        // Set as primary, clear all others
+        for (const p of allPersons) {
+          if (p.id !== personId && p.isPrimaryCreditControl) {
+            await storage.updateCustomerContactPerson(p.id, user.tenantId, { isPrimaryCreditControl: false });
+          }
+        }
+        const updated = await storage.updateCustomerContactPerson(personId, user.tenantId, { isPrimaryCreditControl: true });
+        res.json(updated);
+      }
     } catch (error) {
       console.error("Error setting primary contact person:", error);
       res.status(500).json({ message: "Failed to set primary contact" });
@@ -651,14 +663,25 @@ export function registerContactRoutes(app: Express): void {
         return res.status(403).json({ message: "You do not have access to this contact" });
       }
 
+      // Toggle: if already escalation, clear it; otherwise set it and clear all others
       const allPersons = await storage.getCustomerContactPersons(user.tenantId, contactId);
-      for (const p of allPersons) {
-        if (p.id !== personId && p.isEscalation) {
-          await storage.updateCustomerContactPerson(p.id, user.tenantId, { isEscalation: false });
-        }
+      const target = allPersons.find(p => p.id === personId);
+      if (!target) {
+        return res.status(404).json({ message: "Contact person not found" });
       }
-      const updated = await storage.updateCustomerContactPerson(personId, user.tenantId, { isEscalation: true });
-      res.json(updated);
+
+      if (target.isEscalation) {
+        const updated = await storage.updateCustomerContactPerson(personId, user.tenantId, { isEscalation: false });
+        res.json(updated);
+      } else {
+        for (const p of allPersons) {
+          if (p.id !== personId && p.isEscalation) {
+            await storage.updateCustomerContactPerson(p.id, user.tenantId, { isEscalation: false });
+          }
+        }
+        const updated = await storage.updateCustomerContactPerson(personId, user.tenantId, { isEscalation: true });
+        res.json(updated);
+      }
     } catch (error) {
       console.error("Error setting escalation contact person:", error);
       res.status(500).json({ message: "Failed to set escalation contact" });
