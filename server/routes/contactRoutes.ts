@@ -614,6 +614,57 @@ export function registerContactRoutes(app: Express): void {
     }
   });
 
+  app.patch("/api/contacts/:contactId/persons/:personId/primary", ...withPermission('customers:edit'), async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+      const { contactId, personId } = req.params;
+      if (!await hasContactAccess(user, contactId)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
+
+      // Unset all others for this contact, then set the target
+      const allPersons = await storage.getCustomerContactPersons(user.tenantId, contactId);
+      for (const p of allPersons) {
+        if (p.id !== personId && p.isPrimaryCreditControl) {
+          await storage.updateCustomerContactPerson(p.id, user.tenantId, { isPrimaryCreditControl: false });
+        }
+      }
+      const updated = await storage.updateCustomerContactPerson(personId, user.tenantId, { isPrimaryCreditControl: true });
+      res.json(updated);
+    } catch (error) {
+      console.error("Error setting primary contact person:", error);
+      res.status(500).json({ message: "Failed to set primary contact" });
+    }
+  });
+
+  app.patch("/api/contacts/:contactId/persons/:personId/escalation", ...withPermission('customers:edit'), async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+      const { contactId, personId } = req.params;
+      if (!await hasContactAccess(user, contactId)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
+
+      const allPersons = await storage.getCustomerContactPersons(user.tenantId, contactId);
+      for (const p of allPersons) {
+        if (p.id !== personId && p.isEscalation) {
+          await storage.updateCustomerContactPerson(p.id, user.tenantId, { isEscalation: false });
+        }
+      }
+      const updated = await storage.updateCustomerContactPerson(personId, user.tenantId, { isEscalation: true });
+      res.json(updated);
+    } catch (error) {
+      console.error("Error setting escalation contact person:", error);
+      res.status(500).json({ message: "Failed to set escalation contact" });
+    }
+  });
+
   app.delete("/api/contacts/:contactId/persons/:personId", ...withPermission('customers:edit'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);

@@ -1388,27 +1388,30 @@ export default function DebtorRecord() {
         {/* Action Bar                                                        */}
         {/* ----------------------------------------------------------------- */}
         <Card>
-          <CardContent className="flex flex-wrap gap-2 py-3 px-4">
-            <Button variant="outline" size="sm" onClick={openEmailSheet}>
+          <CardContent className="flex gap-2 w-full py-3 px-4">
+            <Button variant="outline" size="sm" className="flex-1" onClick={openEmailSheet}>
               <Mail className="h-4 w-4 mr-1" /> Email
             </Button>
-            <Button variant="outline" size="sm" onClick={openSmsSheet}>
+            <Button variant="outline" size="sm" className="flex-1" onClick={openSmsSheet}>
               <MessageSquare className="h-4 w-4 mr-1" /> SMS
             </Button>
-            <Button variant="outline" size="sm" onClick={openCallSheet}>
+            <Button variant="outline" size="sm" className="flex-1" onClick={openCallSheet}>
               <Phone className="h-4 w-4 mr-1" /> Call
             </Button>
-            <Button variant="outline" size="sm" onClick={openStatementDialog}>
+            <Button variant="outline" size="sm" className="flex-1" onClick={openStatementDialog}>
               <FileText className="h-4 w-4 mr-1" /> Statement
             </Button>
-            <Button variant="outline" size="sm" onClick={openPromiseDialog}>
+            <Button variant="outline" size="sm" className="flex-1" onClick={openPromiseDialog}>
               <Handshake className="h-4 w-4 mr-1" /> Promise
             </Button>
-            <Button variant="outline" size="sm" onClick={openDisputeDialog}>
+            <Button variant="outline" size="sm" className="flex-1" onClick={openDisputeDialog}>
               <AlertTriangle className="h-4 w-4 mr-1" /> Dispute
             </Button>
-            <Button variant="outline" size="sm" onClick={openNoteDialog}>
+            <Button variant="outline" size="sm" className="flex-1" onClick={openNoteDialog}>
               <StickyNote className="h-4 w-4 mr-1" /> Note
+            </Button>
+            <Button variant="outline" size="sm" className="flex-1" onClick={openCallSheet}>
+              <Bot className="h-4 w-4 mr-1" /> AI Call
             </Button>
           </CardContent>
         </Card>
