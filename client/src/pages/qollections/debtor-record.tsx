@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -24,6 +25,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Sheet,
   SheetContent,
@@ -76,6 +84,10 @@ import {
   CreditCard,
   Eye,
   Send,
+  Search,
+  Scale,
+  Gavel,
+  Copy,
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -117,6 +129,9 @@ interface Invoice {
   paidDate?: string | null;
   issueDate?: string | null;
   amountCredited?: string | number | null;
+  description?: string | null;
+  lastChasedAt?: string | null;
+  isDisputed?: boolean;
 }
 
 interface MetricsResponse {
@@ -384,6 +399,12 @@ export default function DebtorRecord() {
   const [paidSortKey, setPaidSortKey] = useState<string>("paidDate");
   const [paidSortDir, setPaidSortDir] = useState<SortDir>("desc");
 
+  // --- Outstanding tab state ---
+  const [outstandingSearch, setOutstandingSearch] = useState("");
+  const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<Set<string>>(new Set());
+  const [debtRecoveryDialogOpen, setDebtRecoveryDialogOpen] = useState(false);
+  const [legalEscalationDialogOpen, setLegalEscalationDialogOpen] = useState(false);
+
   // ---------------------------------------------------------------------------
   // Queries
   // ---------------------------------------------------------------------------
@@ -435,7 +456,9 @@ export default function DebtorRecord() {
     queryKey: ["debtor-paid", contactId],
     queryFn: async () => {
       const res = await apiRequest("GET", `/api/contacts/${contactId}/invoices/paid`);
-      return res.json();
+      const data = await res.json();
+      // Endpoint returns { items, total, hasMore } — extract items
+      return Array.isArray(data) ? data : (data.items ?? []);
     },
     enabled: !!contactId && activeTab === "paid",
   });
@@ -447,6 +470,15 @@ export default function DebtorRecord() {
       return res.json();
     },
     enabled: !!contactId && activeTab === "workflows",
+  });
+
+  const outstandingQuery = useQuery<Invoice[]>({
+    queryKey: ["debtor-outstanding", contactId],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/contacts/${contactId}/outstanding-invoices`);
+      return res.json();
+    },
+    enabled: !!contactId,
   });
 
   const disputeActivityQuery = useQuery<ActivityPage>({
@@ -691,7 +723,7 @@ export default function DebtorRecord() {
     () =>
       invoices.filter((inv) => {
         const s = inv.status.toLowerCase();
-        return s !== "paid" && s !== "void" && s !== "cancelled" && s !== "draft";
+        return s !== "paid" && s !== "void" && s !== "cancelled" && s !== "draft" && num(inv.amountDue) > 0;
       }),
     [invoices]
   );
@@ -779,6 +811,87 @@ export default function DebtorRecord() {
   const outstandingTotal = useMemo(
     () => outstandingInvoices.reduce((sum, inv) => sum + num(inv.amountDue), 0),
     [outstandingInvoices]
+  );
+
+  // Outstanding tab: enriched invoices from dedicated endpoint
+  const enrichedOutstanding = outstandingQuery.data ?? [];
+
+  const filteredOutstanding = useMemo(() => {
+    if (!outstandingSearch.trim()) return enrichedOutstanding;
+    const q = outstandingSearch.toLowerCase();
+    return enrichedOutstanding.filter(
+      (inv) =>
+        inv.invoiceNumber.toLowerCase().includes(q) ||
+        (inv.description ?? "").toLowerCase().includes(q)
+    );
+  }, [enrichedOutstanding, outstandingSearch]);
+
+  const sortedEnrichedOutstanding = useMemo(() => {
+    const copy = [...filteredOutstanding];
+    copy.sort((a, b) => {
+      let va: any;
+      let vb: any;
+      switch (outstandingSortKey) {
+        case "invoiceNumber":
+          va = a.invoiceNumber; vb = b.invoiceNumber; break;
+        case "amount":
+          va = num(a.amount); vb = num(b.amount); break;
+        case "amountDue":
+          va = num(a.amountDue); vb = num(b.amountDue); break;
+        case "dueDate":
+          va = new Date(a.dueDate).getTime(); vb = new Date(b.dueDate).getTime(); break;
+        case "daysOverdue":
+          va = daysOverdue(a.dueDate); vb = daysOverdue(b.dueDate); break;
+        case "lastChasedAt":
+          va = a.lastChasedAt ? new Date(a.lastChasedAt).getTime() : 0;
+          vb = b.lastChasedAt ? new Date(b.lastChasedAt).getTime() : 0;
+          break;
+        default:
+          va = new Date(a.dueDate).getTime(); vb = new Date(b.dueDate).getTime();
+      }
+      if (va < vb) return outstandingSortDir === "asc" ? -1 : 1;
+      if (va > vb) return outstandingSortDir === "asc" ? 1 : -1;
+      return 0;
+    });
+    return copy;
+  }, [filteredOutstanding, outstandingSortKey, outstandingSortDir]);
+
+  const outstandingSummary = useMemo(() => {
+    const total = filteredOutstanding.reduce((s, inv) => s + num(inv.amountDue), 0);
+    const overdue = filteredOutstanding.reduce((s, inv) => {
+      const days = daysOverdue(inv.dueDate);
+      return days > 0 ? s + num(inv.amountDue) : s;
+    }, 0);
+    const disputed = filteredOutstanding.reduce((s, inv) => {
+      return inv.isDisputed ? s + num(inv.amountDue) : s;
+    }, 0);
+    const disputedCount = filteredOutstanding.filter((inv) => inv.isDisputed).length;
+    return { count: filteredOutstanding.length, total, overdue, disputed, disputedCount };
+  }, [filteredOutstanding]);
+
+  const allVisibleSelected = sortedEnrichedOutstanding.length > 0 &&
+    sortedEnrichedOutstanding.every((inv) => selectedInvoiceIds.has(inv.id));
+
+  const toggleSelectAll = useCallback(() => {
+    if (allVisibleSelected) {
+      setSelectedInvoiceIds(new Set());
+    } else {
+      setSelectedInvoiceIds(new Set(sortedEnrichedOutstanding.map((inv) => inv.id)));
+    }
+  }, [allVisibleSelected, sortedEnrichedOutstanding]);
+
+  const toggleInvoiceSelection = useCallback((id: string) => {
+    setSelectedInvoiceIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const selectedInvoiceNumbers = useMemo(
+    () => enrichedOutstanding.filter((inv) => selectedInvoiceIds.has(inv.id)).map((inv) => inv.invoiceNumber),
+    [enrichedOutstanding, selectedInvoiceIds]
   );
 
   // ---------------------------------------------------------------------------
@@ -989,6 +1102,59 @@ export default function DebtorRecord() {
       }
     );
   }, [noteText]);
+
+  const handleBulkEscalation = useCallback((type: "debt_recovery" | "legal") => {
+    const ids = Array.from(selectedInvoiceIds);
+    const description = type === "legal" ? "Escalated to legal" : "Escalated to debt recovery";
+    const promises = ids.map((invoiceId) =>
+      logActivityMutation.mutateAsync({
+        eventType: "workflow_escalated",
+        category: "System",
+        title: description,
+        description,
+        direction: undefined,
+        metadata: { linkedInvoiceId: invoiceId },
+      })
+    );
+    Promise.all(promises).then(() => {
+      toast({ title: `${ids.length} invoice(s) escalated` });
+      setSelectedInvoiceIds(new Set());
+      setDebtRecoveryDialogOpen(false);
+      setLegalEscalationDialogOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["debtor-outstanding", contactId] });
+      queryClient.invalidateQueries({ queryKey: ["debtor-activity", contactId] });
+    });
+  }, [selectedInvoiceIds, contactId]);
+
+  const handleSendXeroCopies = useCallback(() => {
+    const ids = Array.from(selectedInvoiceIds);
+    const invNums = enrichedOutstanding
+      .filter((inv) => ids.includes(inv.id))
+      .map((inv) => inv.invoiceNumber);
+    // Log activity per invoice
+    const promises = ids.map((invoiceId) =>
+      logActivityMutation.mutateAsync({
+        eventType: "statement_sent",
+        category: "Communications",
+        title: `Invoice copy resent from Xero`,
+        description: `Xero invoice copy resent`,
+        direction: "outbound",
+        metadata: { linkedInvoiceId: invoiceId },
+      })
+    );
+    Promise.all(promises).then(() => {
+      toast({ title: `Resending invoice copies from Xero for ${invNums.join(", ")}...` });
+      setSelectedInvoiceIds(new Set());
+      queryClient.invalidateQueries({ queryKey: ["debtor-outstanding", contactId] });
+      queryClient.invalidateQueries({ queryKey: ["debtor-activity", contactId] });
+    });
+  }, [selectedInvoiceIds, enrichedOutstanding, contactId]);
+
+  const openBulkNote = useCallback(() => {
+    const invNums = selectedInvoiceNumbers;
+    setNoteText(`Re: Invoice(s) ${invNums.join(", ")}\n\n`);
+    setNoteDialogOpen(true);
+  }, [selectedInvoiceNumbers]);
 
   const openAddPerson = useCallback(() => {
     setEditingPerson(null);
@@ -1880,139 +2046,278 @@ export default function DebtorRecord() {
                 )}
               </div>
             )}
-          </TabsContent>
 
-          {/* ============================================================== */}
-          {/* TAB 3: Outstanding                                              */}
-          {/* ============================================================== */}
-          <TabsContent value="outstanding" className="space-y-4 mt-4">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">
-                <span className="font-semibold text-foreground">
-                  {gbp.format(outstandingTotal)} outstanding
-                </span>
-                {(metrics?.openInvoices.disputed ?? 0) > 0 && (
-                  <span className="text-amber-600">
-                    {" "}
-                    · {gbp.format(metrics?.totalOverdue ?? 0)} overdue
-                  </span>
-                )}
-              </p>
-            </div>
-            {outstandingInvoices.length === 0 ? (
+            {/* Recent Actions */}
+            {actionsQuery.data && Array.isArray(actionsQuery.data) && actionsQuery.data.length > 0 && (
               <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  No outstanding invoices.
-                </CardContent>
-              </Card>
-            ) : (
-              <Card>
-                <CardContent className="p-0">
+                <CardHeader>
+                  <CardTitle className="text-base">Recent Actions</CardTitle>
+                </CardHeader>
+                <CardContent>
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead
-                          className="cursor-pointer select-none"
-                          onClick={() => toggleOutstandingSort("invoiceNumber")}
-                        >
-                          Invoice #
-                          <SortIcon
-                            sortKey="invoiceNumber"
-                            currentKey={outstandingSortKey}
-                            dir={outstandingSortDir}
-                          />
-                        </TableHead>
-                        <TableHead
-                          className="text-right cursor-pointer select-none"
-                          onClick={() => toggleOutstandingSort("amount")}
-                        >
-                          Amount
-                          <SortIcon
-                            sortKey="amount"
-                            currentKey={outstandingSortKey}
-                            dir={outstandingSortDir}
-                          />
-                        </TableHead>
-                        <TableHead
-                          className="text-right cursor-pointer select-none"
-                          onClick={() => toggleOutstandingSort("amountDue")}
-                        >
-                          Amount Due
-                          <SortIcon
-                            sortKey="amountDue"
-                            currentKey={outstandingSortKey}
-                            dir={outstandingSortDir}
-                          />
-                        </TableHead>
-                        <TableHead
-                          className="cursor-pointer select-none"
-                          onClick={() => toggleOutstandingSort("dueDate")}
-                        >
-                          Due Date
-                          <SortIcon
-                            sortKey="dueDate"
-                            currentKey={outstandingSortKey}
-                            dir={outstandingSortDir}
-                          />
-                        </TableHead>
-                        <TableHead
-                          className="text-right cursor-pointer select-none"
-                          onClick={() => toggleOutstandingSort("daysOverdue")}
-                        >
-                          Days Overdue
-                          <SortIcon
-                            sortKey="daysOverdue"
-                            currentKey={outstandingSortKey}
-                            dir={outstandingSortDir}
-                          />
-                        </TableHead>
-                        <TableHead>Ageing</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Date</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {sortedOutstanding.map((inv) => {
-                        const days = daysOverdue(inv.dueDate);
-                        const ageing = ageingBadge(days);
-                        return (
-                          <TableRow key={inv.id}>
-                            <TableCell className="font-medium">
-                              {inv.invoiceNumber}
-                            </TableCell>
-                            <TableCell className="text-right tabular-nums">
-                              {gbp.format(num(inv.amount))}
-                            </TableCell>
-                            <TableCell className="text-right tabular-nums">
-                              {gbp.format(num(inv.amountDue))}
-                            </TableCell>
-                            <TableCell>{formatDate(inv.dueDate)}</TableCell>
-                            <TableCell
-                              className={cn(
-                                "text-right tabular-nums",
-                                days > 60
-                                  ? "text-red-600 font-semibold"
-                                  : days > 30
-                                  ? "text-amber-600"
-                                  : days > 0
-                                  ? "text-yellow-600"
-                                  : "text-green-600"
-                              )}
-                            >
-                              {days > 0 ? days : "Current"}
-                            </TableCell>
-                            <TableCell>
-                              <Badge className={cn("text-[10px]", ageing.colour)}>
-                                {ageing.label}
-                              </Badge>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
+                      {(actionsQuery.data as any[]).slice(0, 20).map((action: any) => (
+                        <TableRow key={action.id}>
+                          <TableCell className="font-medium">
+                            {action.actionType ?? action.type ?? "—"}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{action.status ?? "—"}</Badge>
+                          </TableCell>
+                          <TableCell>{formatDate(action.createdAt)}</TableCell>
+                        </TableRow>
+                      ))}
                     </TableBody>
                   </Table>
                 </CardContent>
               </Card>
             )}
           </TabsContent>
+
+          {/* ============================================================== */}
+          {/* TAB 3: Outstanding                                              */}
+          {/* ============================================================== */}
+          <TabsContent value="outstanding" className="space-y-4 mt-4">
+            {/* Toolbar */}
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative flex-1 min-w-[200px] max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search invoice #, description..."
+                  value={outstandingSearch}
+                  onChange={(e) => { setOutstandingSearch(e.target.value); setSelectedInvoiceIds(new Set()); }}
+                  className="pl-9"
+                />
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setStatementDialogOpen(true)}
+              >
+                <Send className="h-4 w-4 mr-1" /> Send statement
+              </Button>
+              <Button
+                size="sm"
+                className="bg-green-600 hover:bg-green-700 text-white"
+                disabled={selectedInvoiceIds.size === 0}
+                onClick={handleSendXeroCopies}
+              >
+                <Copy className="h-4 w-4 mr-1" /> Send copies from Xero
+              </Button>
+            </div>
+
+            {/* Bulk Action Bar */}
+            {selectedInvoiceIds.size > 0 && (
+              <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
+                <span className="text-sm font-medium">{selectedInvoiceIds.size} selected</span>
+                <Separator orientation="vertical" className="h-5" />
+                <Button variant="outline" size="sm" onClick={openBulkNote}>
+                  <StickyNote className="h-4 w-4 mr-1" /> Log note
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setDebtRecoveryDialogOpen(true)}>
+                  <Scale className="h-4 w-4 mr-1" /> Debt recovery
+                </Button>
+                <Button variant="destructive" size="sm" onClick={() => setLegalEscalationDialogOpen(true)}>
+                  <Gavel className="h-4 w-4 mr-1" /> Escalate to legal
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setSelectedInvoiceIds(new Set())}>
+                  <XCircle className="h-4 w-4 mr-1" /> Clear
+                </Button>
+              </div>
+            )}
+
+            {/* Table */}
+            {outstandingQuery.isLoading ? (
+              <div className="space-y-2">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            ) : sortedEnrichedOutstanding.length === 0 ? (
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground">
+                  {outstandingSearch ? "No invoices match your search." : "No outstanding invoices."}
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardContent className="p-0">
+                  <TooltipProvider>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[40px]">
+                            <Checkbox
+                              checked={allVisibleSelected}
+                              onCheckedChange={toggleSelectAll}
+                            />
+                          </TableHead>
+                          <TableHead className="cursor-pointer select-none" onClick={() => toggleOutstandingSort("invoiceNumber")}>
+                            Invoice #
+                            <SortIcon sortKey="invoiceNumber" currentKey={outstandingSortKey} dir={outstandingSortDir} />
+                          </TableHead>
+                          <TableHead>Description</TableHead>
+                          <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleOutstandingSort("amount")}>
+                            Amount
+                            <SortIcon sortKey="amount" currentKey={outstandingSortKey} dir={outstandingSortDir} />
+                          </TableHead>
+                          <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleOutstandingSort("amountDue")}>
+                            Amount due
+                            <SortIcon sortKey="amountDue" currentKey={outstandingSortKey} dir={outstandingSortDir} />
+                          </TableHead>
+                          <TableHead className="cursor-pointer select-none" onClick={() => toggleOutstandingSort("dueDate")}>
+                            Due date
+                            <SortIcon sortKey="dueDate" currentKey={outstandingSortKey} dir={outstandingSortDir} />
+                          </TableHead>
+                          <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleOutstandingSort("daysOverdue")}>
+                            Days over
+                            <SortIcon sortKey="daysOverdue" currentKey={outstandingSortKey} dir={outstandingSortDir} />
+                          </TableHead>
+                          <TableHead>Ageing</TableHead>
+                          <TableHead className="cursor-pointer select-none" onClick={() => toggleOutstandingSort("lastChasedAt")}>
+                            Last chased
+                            <SortIcon sortKey="lastChasedAt" currentKey={outstandingSortKey} dir={outstandingSortDir} />
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {sortedEnrichedOutstanding.map((inv) => {
+                          const days = daysOverdue(inv.dueDate);
+                          const ageing = ageingBadge(days);
+                          const isSelected = selectedInvoiceIds.has(inv.id);
+                          return (
+                            <TableRow
+                              key={inv.id}
+                              className={cn(
+                                "hover:bg-muted/50 transition-colors",
+                                isSelected && "bg-blue-50 dark:bg-blue-950/50"
+                              )}
+                            >
+                              <TableCell>
+                                {inv.isDisputed ? (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div>
+                                        <Checkbox
+                                          checked={isSelected}
+                                          onCheckedChange={() => toggleInvoiceSelection(inv.id)}
+                                        />
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>This invoice is under dispute</TooltipContent>
+                                  </Tooltip>
+                                ) : (
+                                  <Checkbox
+                                    checked={isSelected}
+                                    onCheckedChange={() => toggleInvoiceSelection(inv.id)}
+                                  />
+                                )}
+                              </TableCell>
+                              <TableCell className="font-medium">
+                                <div className="flex items-center gap-1.5">
+                                  {inv.invoiceNumber}
+                                  {inv.isDisputed && (
+                                    <Badge className="text-[10px] bg-amber-100 text-amber-800 hover:bg-amber-100">
+                                      Dispute
+                                    </Badge>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="max-w-[200px] truncate text-muted-foreground text-sm">
+                                {inv.description || "—"}
+                              </TableCell>
+                              <TableCell className="text-right tabular-nums">
+                                {gbp.format(num(inv.amount))}
+                              </TableCell>
+                              <TableCell className="text-right tabular-nums font-medium">
+                                {gbp.format(num(inv.amountDue))}
+                              </TableCell>
+                              <TableCell>{formatDate(inv.dueDate)}</TableCell>
+                              <TableCell
+                                className={cn(
+                                  "text-right tabular-nums",
+                                  days > 30 ? "text-red-600 font-bold" : days > 0 ? "text-foreground" : ""
+                                )}
+                              >
+                                {days > 0 ? days : "—"}
+                              </TableCell>
+                              <TableCell>
+                                {days > 0 ? (
+                                  <Badge className={cn("text-[10px]", ageing.colour)}>
+                                    {ageing.label}
+                                  </Badge>
+                                ) : null}
+                              </TableCell>
+                              <TableCell className="text-sm text-muted-foreground">
+                                {inv.lastChasedAt ? formatDate(inv.lastChasedAt) : "—"}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </TooltipProvider>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Summary Footer */}
+            <p className="text-sm text-muted-foreground">
+              {outstandingSummary.count} invoice{outstandingSummary.count !== 1 ? "s" : ""}
+              {" · "}{gbp.format(outstandingSummary.total)} outstanding
+              {" · "}{gbp.format(outstandingSummary.overdue)} overdue
+              {outstandingSummary.disputedCount > 0 && (
+                <> · {gbp.format(outstandingSummary.disputed)} under dispute</>
+              )}
+            </p>
+          </TabsContent>
+
+          {/* Debt Recovery Confirmation Dialog */}
+          <Dialog open={debtRecoveryDialogOpen} onOpenChange={setDebtRecoveryDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Escalate to Debt Recovery</DialogTitle>
+                <DialogDescription>
+                  Escalate {selectedInvoiceIds.size} invoice(s) to debt recovery?
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setDebtRecoveryDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={() => handleBulkEscalation("debt_recovery")}>
+                  Confirm
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Legal Escalation Confirmation Dialog */}
+          <Dialog open={legalEscalationDialogOpen} onOpenChange={setLegalEscalationDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Escalate to Legal</DialogTitle>
+                <DialogDescription>
+                  Escalate {selectedInvoiceIds.size} invoice(s) to legal?
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setLegalEscalationDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button variant="destructive" onClick={() => handleBulkEscalation("legal")}>
+                  Confirm
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           {/* ============================================================== */}
           {/* TAB 4: Paid                                                     */}
@@ -2215,38 +2520,6 @@ export default function DebtorRecord() {
               </CardContent>
             </Card>
 
-            {/* Show existing actions if available */}
-            {actionsQuery.data && Array.isArray(actionsQuery.data) && actionsQuery.data.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Recent Actions</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Date</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {(actionsQuery.data as any[]).slice(0, 20).map((action: any) => (
-                        <TableRow key={action.id}>
-                          <TableCell className="font-medium">
-                            {action.actionType ?? action.type ?? "—"}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{action.status ?? "—"}</Badge>
-                          </TableCell>
-                          <TableCell>{formatDate(action.createdAt)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            )}
           </TabsContent>
 
           {/* ============================================================== */}

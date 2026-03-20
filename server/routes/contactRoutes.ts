@@ -3682,10 +3682,120 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
   });
 
   // ============================================================
+  // GET /api/contacts/:id/outstanding-invoices — Outstanding invoices with lastChasedAt + isDisputed
+  app.get("/api/contacts/:id/outstanding-invoices", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+      if (!await hasContactAccess(user, req.params.id)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
+
+      const { id } = req.params;
+      const tenantId = user.tenantId;
+
+      // Fetch outstanding invoices (not paid/void/cancelled/draft)
+      const allInvoices = await db
+        .select()
+        .from(invoices)
+        .where(and(
+          eq(invoices.contactId, id),
+          eq(invoices.tenantId, tenantId),
+          not(inArray(invoices.status, ['paid', 'void', 'cancelled', 'draft']))
+        ))
+        .orderBy(asc(invoices.dueDate));
+
+      // Filter to those with amount due > 0
+      const outstanding = allInvoices.filter(inv => {
+        const due = Number(inv.amount || 0) - Number(inv.amountPaid || 0);
+        return due > 0;
+      });
+
+      if (outstanding.length === 0) {
+        return res.json([]);
+      }
+
+      const invoiceIds = outstanding.map(inv => inv.id);
+
+      // Batch fetch last chased date per invoice from activity_events
+      const lastChasedRows = await db
+        .select({
+          linkedInvoiceId: activityEvents.linkedInvoiceId,
+          lastChasedAt: sql<string>`MAX(${activityEvents.createdAt})`.as('last_chased_at'),
+        })
+        .from(activityEvents)
+        .where(and(
+          eq(activityEvents.tenantId, tenantId),
+          inArray(activityEvents.linkedInvoiceId, invoiceIds),
+          eq(activityEvents.direction, 'outbound'),
+          inArray(activityEvents.eventType, ['email_sent', 'sms_sent', 'call_made', 'call_logged', 'statement_sent'])
+        ))
+        .groupBy(activityEvents.linkedInvoiceId);
+
+      // Also check timeline_events for outbound chases (legacy data)
+      const legacyChasedRows = await db
+        .select({
+          invoiceId: timelineEvents.invoiceId,
+          lastChasedAt: sql<string>`MAX(${timelineEvents.createdAt})`.as('last_chased_at'),
+        })
+        .from(timelineEvents)
+        .where(and(
+          eq(timelineEvents.tenantId, tenantId),
+          inArray(timelineEvents.invoiceId, invoiceIds),
+          inArray(timelineEvents.channel, ['email', 'sms', 'voice'])
+        ))
+        .groupBy(timelineEvents.invoiceId);
+
+      const chasedMap = new Map<string, string>();
+      for (const row of legacyChasedRows) {
+        if (row.invoiceId) chasedMap.set(row.invoiceId, row.lastChasedAt);
+      }
+      for (const row of lastChasedRows) {
+        if (row.linkedInvoiceId) {
+          const existing = chasedMap.get(row.linkedInvoiceId);
+          if (!existing || new Date(row.lastChasedAt) > new Date(existing)) {
+            chasedMap.set(row.linkedInvoiceId, row.lastChasedAt);
+          }
+        }
+      }
+
+      // Batch fetch active disputes per invoice
+      const activeDisputes = await db
+        .select({
+          invoiceId: disputes.invoiceId,
+          cnt: sql<number>`COUNT(*)`.as('cnt'),
+        })
+        .from(disputes)
+        .where(and(
+          eq(disputes.tenantId, tenantId),
+          inArray(disputes.invoiceId, invoiceIds),
+          inArray(disputes.status, ['pending', 'open', 'in_progress', 'under_review'])
+        ))
+        .groupBy(disputes.invoiceId);
+
+      const disputedSet = new Set(activeDisputes.map(d => d.invoiceId));
+
+      const result = outstanding.map(inv => ({
+        ...inv,
+        amountDue: String(Number(inv.amount || 0) - Number(inv.amountPaid || 0)),
+        lastChasedAt: chasedMap.get(inv.id) || null,
+        isDisputed: disputedSet.has(inv.id),
+      }));
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching outstanding invoices:", error);
+      res.status(500).json({ message: "Failed to fetch outstanding invoices" });
+    }
+  });
+
   // Debtor Command Centre Endpoints
   // ============================================================
 
-  // GET /api/contacts/:id/activity — Paginated activity event log
+  // GET /api/contacts/:id/activity — Unified activity feed
+  // Merges activity_events table with timeline_events for a complete history
   app.get("/api/contacts/:id/activity", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -3700,50 +3810,98 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
       const { id } = req.params;
       const tenantId = user.tenantId;
       const category = req.query.category as string | undefined;
-      const dateFrom = req.query.dateFrom as string | undefined;
-      const dateTo = req.query.dateTo as string | undefined;
       const direction = req.query.direction as string | undefined;
+      const range = req.query.range as string | undefined;
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 50;
-      const offset = (page - 1) * limit;
 
-      const conditions = [
+      // Compute date filter from range
+      let dateFrom: Date | null = null;
+      if (range === "30d") dateFrom = new Date(Date.now() - 30 * 86400000);
+      else if (range === "90d") dateFrom = new Date(Date.now() - 90 * 86400000);
+      else if (range === "12m") dateFrom = new Date(Date.now() - 365 * 86400000);
+
+      // 1. Fetch from activity_events
+      const aeConditions: any[] = [
         eq(activityEvents.tenantId, tenantId),
         eq(activityEvents.contactId, id),
       ];
+      if (category) aeConditions.push(eq(activityEvents.category, category));
+      if (direction) aeConditions.push(eq(activityEvents.direction, direction));
+      if (dateFrom) aeConditions.push(gte(activityEvents.createdAt, dateFrom));
 
-      if (category) {
-        conditions.push(eq(activityEvents.category, category));
-      }
-      if (dateFrom) {
-        conditions.push(gte(activityEvents.createdAt, new Date(dateFrom)));
-      }
-      if (dateTo) {
-        conditions.push(lte(activityEvents.createdAt, new Date(dateTo)));
-      }
-      if (direction) {
-        conditions.push(eq(activityEvents.direction, direction));
+      const aeRows = await db.select()
+        .from(activityEvents)
+        .where(and(...aeConditions))
+        .orderBy(desc(activityEvents.createdAt));
+
+      // 2. Fetch from timeline_events (existing communications, notes, etc.)
+      const tlConditions: any[] = [
+        eq(timelineEvents.tenantId, tenantId),
+        eq(timelineEvents.customerId, id),
+      ];
+      if (dateFrom) tlConditions.push(gte(timelineEvents.occurredAt, dateFrom));
+      if (direction && direction !== "All") tlConditions.push(eq(timelineEvents.direction, direction));
+
+      const tlRows = await db.select()
+        .from(timelineEvents)
+        .where(and(...tlConditions))
+        .orderBy(desc(timelineEvents.occurredAt));
+
+      // Map channel to category for filtering
+      function channelToCategory(channel: string): string {
+        const ch = (channel || '').toLowerCase();
+        if (ch === 'email' || ch === 'sms' || ch === 'voice') return 'Communications';
+        if (ch === 'note' || ch === 'internal') return 'Notes';
+        if (ch === 'system') return 'System';
+        if (ch === 'payment') return 'Payments';
+        return 'System';
       }
 
-      const whereClause = and(...conditions);
+      // Map timeline_events to unified activity shape
+      const tlMapped = tlRows
+        .filter(tl => !category || channelToCategory(tl.channel) === category)
+        .map(tl => ({
+          id: tl.id,
+          eventType: tl.channel,
+          category: channelToCategory(tl.channel),
+          title: tl.summary,
+          description: tl.preview || tl.subject || null,
+          triggeredBy: tl.createdByName || tl.createdByType || 'system',
+          direction: tl.direction === 'internal' ? null : tl.direction,
+          linkedInvoiceId: tl.invoiceId,
+          linkedWorkflowId: null,
+          linkedDisputeId: null,
+          metadata: tl.outcomeType ? { outcomeType: tl.outcomeType } : null,
+          createdAt: tl.occurredAt,
+          _source: 'timeline' as const,
+        }));
 
-      const [events, totalResult] = await Promise.all([
-        db.select()
-          .from(activityEvents)
-          .where(whereClause)
-          .orderBy(desc(activityEvents.createdAt))
-          .limit(limit)
-          .offset(offset),
-        db.select({ count: count() })
-          .from(activityEvents)
-          .where(whereClause),
-      ]);
+      // Merge and deduplicate (activity_events take priority)
+      const aeIds = new Set(aeRows.map(e => e.id));
+      const merged = [
+        ...aeRows.map(e => ({ ...e, _source: 'activity_events' as const })),
+        ...tlMapped.filter(tl => !aeIds.has(tl.id)),
+      ];
+
+      // Sort by date descending
+      merged.sort((a, b) => {
+        const da = new Date(a.createdAt).getTime();
+        const db2 = new Date(b.createdAt).getTime();
+        return db2 - da;
+      });
+
+      // Paginate
+      const total = merged.length;
+      const offset = (page - 1) * limit;
+      const paged = merged.slice(offset, offset + limit);
 
       res.json({
-        events,
-        total: totalResult[0]?.count ?? 0,
+        events: paged,
+        total,
         page,
         limit,
+        hasMore: offset + limit < total,
       });
     } catch (error) {
       console.error("Error fetching activity events:", error);
