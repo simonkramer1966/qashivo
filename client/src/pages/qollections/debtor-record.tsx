@@ -1253,7 +1253,7 @@ export default function DebtorRecord() {
 
   if (profileQuery.isLoading) {
     return (
-      <AppShell title="Debtor Command Centre">
+      <AppShell title="Debtor Detail">
         <div className="space-y-4 p-6">
           <Skeleton className="h-8 w-64" />
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -1270,7 +1270,7 @@ export default function DebtorRecord() {
 
   if (profileQuery.isError || !contact) {
     return (
-      <AppShell title="Debtor Command Centre">
+      <AppShell title="Debtor Detail">
         <div className="p-8">
           <Button variant="ghost" size="sm" onClick={() => setLocation("/qollections/debtors")}>
             <ArrowLeft className="h-4 w-4 mr-1" /> Back
@@ -1288,7 +1288,7 @@ export default function DebtorRecord() {
   // ---------------------------------------------------------------------------
 
   return (
-    <AppShell title="Debtor Command Centre">
+    <AppShell title="Debtor Detail">
       <div className="space-y-4 p-4 md:p-6 max-w-[1400px] mx-auto">
         {/* ----------------------------------------------------------------- */}
         {/* Back + Header                                                     */}
