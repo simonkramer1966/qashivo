@@ -1549,42 +1549,46 @@ export default function DebtorRecord() {
         {/* Action Bar                                                        */}
         {/* ----------------------------------------------------------------- */}
         <Card>
-          <CardContent className="flex items-center gap-2 w-full py-3 px-4">
+          <CardContent className="flex items-center gap-0 w-full py-3 px-4">
             {/* Reach Out group */}
-            <Button variant="outline" size="sm" className="flex-1" onClick={openEmailSheet}>
-              <Mail className="h-4 w-4 mr-1" /> Email
-            </Button>
-            <Button variant="outline" size="sm" className="flex-1" onClick={openSmsSheet}>
-              <MessageSquare className="h-4 w-4 mr-1" /> SMS
-            </Button>
-            <Button variant="outline" size="sm" className="flex-1" onClick={openCallSheet}>
-              <Phone className="h-4 w-4 mr-1" /> Call
-            </Button>
-            <Button variant="outline" size="sm" className="flex-1" onClick={openCallSheet}>
-              <Bot className="h-4 w-4 mr-1" /> AI Call
-            </Button>
+            <div className="flex flex-1 gap-2">
+              <Button variant="outline" size="sm" className="flex-1" onClick={openEmailSheet}>
+                <Mail className="h-4 w-4 mr-1" /> Email
+              </Button>
+              <Button variant="outline" size="sm" className="flex-1" onClick={openSmsSheet}>
+                <MessageSquare className="h-4 w-4 mr-1" /> SMS
+              </Button>
+              <Button variant="outline" size="sm" className="flex-1" onClick={openCallSheet}>
+                <Phone className="h-4 w-4 mr-1" /> Call
+              </Button>
+              <Button variant="outline" size="sm" className="flex-1" onClick={openCallSheet}>
+                <Bot className="h-4 w-4 mr-1" /> AI Call
+              </Button>
+            </div>
 
             {/* Divider */}
-            <Separator orientation="vertical" className="h-7 mx-1" />
+            <Separator orientation="vertical" className="h-7 mx-3 shrink-0" />
 
             {/* Record group — visible on md+ */}
-            <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground hidden md:inline-flex" onClick={openStatementDialog}>
-              <FileText className="h-4 w-4 mr-1" /> Statement
-            </Button>
-            <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground hidden md:inline-flex" onClick={openPromiseDialog}>
-              <Handshake className="h-4 w-4 mr-1" /> Promise
-            </Button>
-            <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground hidden md:inline-flex" onClick={openDisputeDialog}>
-              <AlertTriangle className="h-4 w-4 mr-1" /> Dispute
-            </Button>
-            <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground hidden md:inline-flex" onClick={openNoteDialog}>
-              <StickyNote className="h-4 w-4 mr-1" /> Note
-            </Button>
+            <div className="hidden md:flex flex-1 gap-2">
+              <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground" onClick={openStatementDialog}>
+                <FileText className="h-4 w-4 mr-1" /> Statement
+              </Button>
+              <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground" onClick={openPromiseDialog}>
+                <Handshake className="h-4 w-4 mr-1" /> Promise
+              </Button>
+              <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground" onClick={openDisputeDialog}>
+                <AlertTriangle className="h-4 w-4 mr-1" /> Dispute
+              </Button>
+              <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground" onClick={openNoteDialog}>
+                <StickyNote className="h-4 w-4 mr-1" /> Note
+              </Button>
+            </div>
 
             {/* Record group — collapsed dropdown on small viewports */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground md:hidden">
+                <Button variant="ghost" size="sm" className="text-muted-foreground md:hidden">
                   More <ChevronDown className="h-4 w-4 ml-1" />
                 </Button>
               </DropdownMenuTrigger>
