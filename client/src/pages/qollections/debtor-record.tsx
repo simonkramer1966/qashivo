@@ -1331,18 +1331,49 @@ export default function DebtorRecord() {
         {/* ----------------------------------------------------------------- */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {/* 1 - Total Outstanding */}
-          <Card className="p-3">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">
-              Total Outstanding
-            </p>
-            {metricsQuery.isLoading ? (
-              <Skeleton className="h-6 w-20 mt-1" />
-            ) : (
-              <p className="text-lg font-bold tabular-nums">
-                {gbp.format(metrics?.totalOutstanding ?? 0)}
-              </p>
-            )}
-          </Card>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Card className="p-3 cursor-default">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">
+                    Total Outstanding
+                  </p>
+                  {metricsQuery.isLoading ? (
+                    <Skeleton className="h-6 w-20 mt-1" />
+                  ) : (
+                    <p className="text-lg font-bold tabular-nums">
+                      {gbp.format(metrics?.totalOutstanding ?? 0)}
+                    </p>
+                  )}
+                </Card>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="p-0">
+                {(() => {
+                  const gross = (metrics?.totalOutstanding ?? 0) + (credits?.total ?? 0);
+                  const overdue = metrics?.totalOverdue ?? 0;
+                  const due = gross - overdue;
+                  const cn = credits?.creditNotes ?? 0;
+                  const op = credits?.overpayments ?? 0;
+                  const pp = credits?.prepayments ?? 0;
+                  const net = metrics?.totalOutstanding ?? 0;
+                  return (
+                    <div className="text-xs font-mono p-3 space-y-0.5 min-w-[280px]">
+                      <div className="flex justify-between"><span>Due (not yet overdue)</span><span className="tabular-nums">{gbp.format(due)}</span></div>
+                      <div className="flex justify-between"><span>Overdue</span><span className="tabular-nums">{gbp.format(overdue)}</span></div>
+                      <Separator className="my-1.5" />
+                      <div className="flex justify-between font-semibold"><span>Gross Outstanding</span><span className="tabular-nums">{gbp.format(gross)}</span></div>
+                      <div className="h-1.5" />
+                      {cn > 0 && <div className="flex justify-between text-muted-foreground"><span>Less: Credit Notes</span><span className="tabular-nums">({gbp.format(cn)})</span></div>}
+                      {op > 0 && <div className="flex justify-between text-muted-foreground"><span>Less: Overpayments</span><span className="tabular-nums">({gbp.format(op)})</span></div>}
+                      {pp > 0 && <div className="flex justify-between text-muted-foreground"><span>Less: Prepayments</span><span className="tabular-nums">({gbp.format(pp)})</span></div>}
+                      {(cn > 0 || op > 0 || pp > 0) && <Separator className="my-1.5" />}
+                      <div className="flex justify-between font-bold"><span>Total Outstanding</span><span className="tabular-nums">{gbp.format(net)}</span></div>
+                    </div>
+                  );
+                })()}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
 
           {/* 2 - Total Overdue */}
           <Card className="p-3">
