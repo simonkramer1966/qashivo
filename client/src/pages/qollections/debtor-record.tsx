@@ -2352,11 +2352,12 @@ export default function DebtorRecord() {
                             dir={paidSortDir}
                           />
                         </TableHead>
+                        <TableHead>Description</TableHead>
                         <TableHead
                           className="text-right cursor-pointer select-none"
                           onClick={() => togglePaidSort("amount")}
                         >
-                          Amount
+                          Paid Amount
                           <SortIcon
                             sortKey="amount"
                             currentKey={paidSortKey}
@@ -2404,8 +2405,11 @@ export default function DebtorRecord() {
                             <TableCell className="font-medium">
                               {inv.invoiceNumber}
                             </TableCell>
+                            <TableCell className="max-w-[200px] truncate text-muted-foreground text-sm">
+                              {inv.description || "—"}
+                            </TableCell>
                             <TableCell className="text-right tabular-nums">
-                              {gbp.format(num(inv.amount))}
+                              {gbp.format(num(inv.amountPaid))}
                             </TableCell>
                             <TableCell>{formatDate(inv.paidDate)}</TableCell>
                             <TableCell
@@ -2422,12 +2426,10 @@ export default function DebtorRecord() {
                             >
                               {daysToPay != null ? `${daysToPay}d` : "—"}
                             </TableCell>
-                            <TableCell>
-                              {hasCredit && (
-                                <Badge variant="outline" className="text-[10px]">
-                                  Part credit: {gbp.format(num(inv.amountCredited))}
-                                </Badge>
-                              )}
+                            <TableCell className="text-sm text-muted-foreground">
+                              {hasCredit
+                                ? `Part credit: ${gbp.format(num(inv.amountCredited))}`
+                                : "—"}
                             </TableCell>
                           </TableRow>
                         );
