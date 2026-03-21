@@ -3794,6 +3794,44 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
   // Debtor Command Centre Endpoints
   // ============================================================
 
+  // POST /api/contacts/:id/calculate-risk — Trigger risk score calculation
+  app.post("/api/contacts/:id/calculate-risk", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+      if (!await hasContactAccess(user, req.params.id)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
+
+      const { id } = req.params;
+      const tenantId = user.tenantId;
+
+      const { DynamicRiskScoringService } = await import("../services/dynamicRiskScoringService");
+      const riskService = new DynamicRiskScoringService();
+      const result = await riskService.calculateCustomerRiskScore(tenantId, id);
+
+      if (result) {
+        // Update contact record with risk score and band
+        const score = result.overallRiskScore != null ? parseFloat(String(result.overallRiskScore)) : null;
+        const band = (result as any).riskBand ?? (result as any).band ?? null;
+        if (score != null) {
+          await db.update(contacts).set({
+            riskScore: score,
+            riskBand: band ?? (score < 30 ? 'low' : score <= 60 ? 'medium' : 'high'),
+          }).where(and(eq(contacts.id, id), eq(contacts.tenantId, tenantId)));
+        }
+        res.json({ success: true, result });
+      } else {
+        res.json({ success: false, message: "Unable to calculate risk score — insufficient data" });
+      }
+    } catch (error) {
+      console.error("Error calculating risk score:", error);
+      res.status(500).json({ message: "Failed to calculate risk score" });
+    }
+  });
+
   // GET /api/contacts/:id/activity — Unified activity feed
   // Merges activity_events table with timeline_events for a complete history
   app.get("/api/contacts/:id/activity", isAuthenticated, async (req: any, res) => {
@@ -3849,7 +3887,7 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
         .orderBy(desc(timelineEvents.occurredAt));
 
       // Map channel to category for filtering
-      function channelToCategory(channel: string): string {
+      const channelToCategory = (channel: string): string => {
         const ch = (channel || '').toLowerCase();
         if (ch === 'email' || ch === 'sms' || ch === 'voice') return 'Communications';
         if (ch === 'note' || ch === 'internal') return 'Notes';
@@ -3877,11 +3915,71 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
           _source: 'timeline' as const,
         }));
 
+      // 3. Synthesize events from invoices (created + paid)
+      const shouldIncludeInvoices = !category || category === 'Payments' || category === 'System';
+      let invoiceEvents: typeof tlMapped = [];
+      if (shouldIncludeInvoices) {
+        const invConditions: any[] = [
+          eq(invoices.tenantId, tenantId),
+          eq(invoices.contactId, id),
+        ];
+        const contactInvoices = await db.select().from(invoices).where(and(...invConditions));
+
+        for (const inv of contactInvoices) {
+          // Invoice issued event
+          if (inv.issueDate && (!category || category === 'System')) {
+            const d = new Date(inv.issueDate);
+            if (!dateFrom || d >= dateFrom) {
+              invoiceEvents.push({
+                id: `inv-issued-${inv.id}`,
+                eventType: 'invoice_issued',
+                category: 'System',
+                title: `Invoice ${inv.invoiceNumber} issued`,
+                description: `${inv.invoiceNumber} for £${Number(inv.amount || 0).toFixed(2)}`,
+                triggeredBy: 'Xero',
+                direction: 'outbound',
+                linkedInvoiceId: inv.id,
+                linkedWorkflowId: null,
+                linkedDisputeId: null,
+                metadata: null,
+                createdAt: d,
+                _source: 'invoices' as const,
+              });
+            }
+          }
+          // Payment received event
+          if (inv.paidDate && inv.status === 'paid' && (!category || category === 'Payments')) {
+            const d = new Date(inv.paidDate);
+            if (!dateFrom || d >= dateFrom) {
+              invoiceEvents.push({
+                id: `inv-paid-${inv.id}`,
+                eventType: 'payment_received',
+                category: 'Payments',
+                title: `Payment received — ${inv.invoiceNumber}`,
+                description: `£${Number(inv.amountPaid || inv.amount || 0).toFixed(2)} paid`,
+                triggeredBy: 'Xero',
+                direction: 'inbound',
+                linkedInvoiceId: inv.id,
+                linkedWorkflowId: null,
+                linkedDisputeId: null,
+                metadata: null,
+                createdAt: d,
+                _source: 'invoices' as const,
+              });
+            }
+          }
+        }
+        if (direction && direction !== 'All') {
+          invoiceEvents = invoiceEvents.filter(e => e.direction === direction);
+        }
+      }
+
       // Merge and deduplicate (activity_events take priority)
       const aeIds = new Set(aeRows.map(e => e.id));
       const merged = [
         ...aeRows.map(e => ({ ...e, _source: 'activity_events' as const })),
         ...tlMapped.filter(tl => !aeIds.has(tl.id)),
+        ...invoiceEvents,
       ];
 
       // Sort by date descending

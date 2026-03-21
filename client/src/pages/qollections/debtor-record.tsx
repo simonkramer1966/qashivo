@@ -1322,12 +1322,12 @@ export default function DebtorRecord() {
                   {contact.riskBand} risk
                 </Badge>
               )}
-              {contact.playbookRiskTag && (() => {
-                const tag = contact.playbookRiskTag.toUpperCase();
+              {(() => {
+                const tag = (contact.playbookRiskTag ?? "NORMAL").toUpperCase();
                 const behaviour = (metrics?.paymentBehaviour ?? "").toLowerCase();
-                const score = metrics?.riskScore ?? null;
-                const isHigh = tag.includes("HIGH") || behaviour.includes("chronically") || (score != null && score > 60);
-                const isWatchlist = tag.includes("WATCH") || behaviour.includes("typically late") || (score != null && score > 30 && score <= 60);
+                const pctOnTime = metrics?.pctPaidOnTime ?? null;
+                const isHigh = tag.includes("HIGH") || behaviour.includes("chronically") || (pctOnTime != null && pctOnTime === 0);
+                const isWatchlist = tag.includes("WATCH") || behaviour.includes("typically late");
                 return (
                   <Badge
                     variant="outline"
@@ -1340,7 +1340,7 @@ export default function DebtorRecord() {
                         : ""
                     )}
                   >
-                    {contact.playbookRiskTag}
+                    {contact.playbookRiskTag ?? "NORMAL"}
                   </Badge>
                 );
               })()}
@@ -2384,6 +2384,9 @@ export default function DebtorRecord() {
           {/* TAB 4: Paid                                                     */}
           {/* ============================================================== */}
           <TabsContent value="paid" className="space-y-4 mt-4">
+            <p className="text-xs text-muted-foreground">
+              Terms: {contact.paymentTerms || "30 days"} · Days to Pay is relative to due date
+            </p>
             {paidQuery.isLoading ? (
               <div className="space-y-2">
                 <Skeleton className="h-12 w-full" />
@@ -2668,33 +2671,60 @@ export default function DebtorRecord() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="flex items-center justify-center py-8">
-                  <div className="text-center">
-                    <div
-                      className={cn(
-                        "inline-flex items-center justify-center w-24 h-24 rounded-full text-3xl font-bold",
-                        riskBg(metrics?.riskScore),
-                        riskColour(metrics?.riskScore)
-                      )}
-                    >
-                      {metrics?.riskScore ?? "—"}
-                    </div>
-                    {contact.riskBand && (
-                      <div className="mt-3">
-                        <Badge
-                          className={cn(
-                            "text-sm",
-                            contact.riskBand === "low"
-                              ? "bg-green-100 text-green-800"
-                              : contact.riskBand === "medium"
-                              ? "bg-amber-100 text-amber-800"
-                              : "bg-red-100 text-red-800"
-                          )}
-                        >
-                          {contact.riskBand} risk
-                        </Badge>
+                  {metrics?.riskScore != null ? (
+                    <div className="text-center">
+                      <div
+                        className={cn(
+                          "inline-flex items-center justify-center w-24 h-24 rounded-full text-3xl font-bold",
+                          riskBg(metrics.riskScore),
+                          riskColour(metrics.riskScore)
+                        )}
+                      >
+                        {metrics.riskScore}
                       </div>
-                    )}
-                  </div>
+                      {contact.riskBand && (
+                        <div className="mt-3">
+                          <Badge
+                            className={cn(
+                              "text-sm",
+                              contact.riskBand === "low"
+                                ? "bg-green-100 text-green-800"
+                                : contact.riskBand === "medium"
+                                ? "bg-amber-100 text-amber-800"
+                                : "bg-red-100 text-red-800"
+                            )}
+                          >
+                            {contact.riskBand} risk
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center space-y-3">
+                      <ShieldAlert className="h-10 w-10 mx-auto text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">Risk score not yet calculated</p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          apiRequest("POST", `/api/contacts/${contactId}/calculate-risk`)
+                            .then((r) => r.json())
+                            .then((data) => {
+                              if (data.success) {
+                                toast({ title: "Risk score calculated" });
+                                queryClient.invalidateQueries({ queryKey: ["debtor-profile", contactId] });
+                                queryClient.invalidateQueries({ queryKey: ["debtor-metrics", contactId] });
+                              } else {
+                                toast({ title: data.message || "Unable to calculate risk score", variant: "destructive" });
+                              }
+                            })
+                            .catch(() => toast({ title: "Failed to calculate risk score", variant: "destructive" }));
+                        }}
+                      >
+                        <RefreshCw className="h-4 w-4 mr-1" /> Calculate now
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
