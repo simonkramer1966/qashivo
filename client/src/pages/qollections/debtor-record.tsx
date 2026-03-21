@@ -1937,65 +1937,6 @@ export default function DebtorRecord() {
               </CardContent>
             </Card>
 
-            {/* Credits breakdown */}
-            {credits && credits.total > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <CreditCard className="h-4 w-4" /> Credits
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <div>
-                      <span className="text-muted-foreground">Credit Notes:</span>{" "}
-                      <span className="font-medium">{gbp.format(credits.creditNotes)}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Overpayments:</span>{" "}
-                      <span className="font-medium">{gbp.format(credits.overpayments)}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Prepayments:</span>{" "}
-                      <span className="font-medium">{gbp.format(credits.prepayments)}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Total Credits:</span>{" "}
-                      <span className="font-bold">{gbp.format(credits.total)}</span>
-                    </div>
-                  </div>
-                  {credits.creditNoteItems.length > 0 && (
-                    <>
-                      <Separator className="my-2" />
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Credit Note</TableHead>
-                            <TableHead>Date</TableHead>
-                            <TableHead className="text-right">Total</TableHead>
-                            <TableHead className="text-right">Remaining</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {credits.creditNoteItems.map((cn) => (
-                            <TableRow key={cn.id}>
-                              <TableCell>{cn.number || "—"}</TableCell>
-                              <TableCell>{formatDate(cn.date)}</TableCell>
-                              <TableCell className="text-right">
-                                {gbp.format(cn.total)}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {gbp.format(cn.remainingCredit)}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-            )}
           </TabsContent>
 
           {/* ============================================================== */}
