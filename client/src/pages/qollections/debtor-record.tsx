@@ -404,6 +404,8 @@ export default function DebtorRecord() {
   const [outstandingSortDir, setOutstandingSortDir] = useState<SortDir>("asc");
   const [paidSortKey, setPaidSortKey] = useState<string>("paidDate");
   const [paidSortDir, setPaidSortDir] = useState<SortDir>("desc");
+  const [paidPage, setPaidPage] = useState(1);
+  const [paidPerPage, setPaidPerPage] = useState(25);
 
   // --- Outstanding tab state ---
   const [outstandingSearch, setOutstandingSearch] = useState("");
@@ -2399,55 +2401,125 @@ export default function DebtorRecord() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {sortedPaid.map((inv) => {
-                        const daysToPay =
-                          inv.paidDate && inv.dueDate
-                            ? Math.floor(
-                                (new Date(inv.paidDate).getTime() -
-                                  new Date(inv.dueDate).getTime()) /
-                                  86400000
-                              )
-                            : null;
-                        const hasCredit = num(inv.amountCredited) > 0;
-                        return (
-                          <TableRow key={inv.id}>
-                            <TableCell className="font-medium">
-                              {inv.invoiceNumber}
-                            </TableCell>
-                            <TableCell className="max-w-[200px] truncate text-muted-foreground text-sm">
-                              {inv.description || "—"}
-                            </TableCell>
-                            <TableCell className="text-right tabular-nums">
-                              {gbp.format(num(inv.amountPaid))}
-                            </TableCell>
-                            <TableCell>{formatDate(inv.paidDate)}</TableCell>
-                            <TableCell
-                              className={cn(
-                                "text-right tabular-nums",
-                                daysToPay == null
-                                  ? "text-muted-foreground"
-                                  : daysToPay <= 0
-                                  ? "text-green-600"
-                                  : daysToPay <= 30
-                                  ? "text-amber-600"
-                                  : "text-red-600"
-                              )}
-                            >
-                              {daysToPay != null ? `${daysToPay}d` : "—"}
-                            </TableCell>
-                            <TableCell className="text-sm text-muted-foreground">
-                              {hasCredit
-                                ? `Part credit: ${gbp.format(num(inv.amountCredited))}`
-                                : "—"}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
+                      {sortedPaid
+                        .slice((paidPage - 1) * paidPerPage, paidPage * paidPerPage)
+                        .map((inv) => {
+                          const daysToPay =
+                            inv.paidDate && inv.dueDate
+                              ? Math.floor(
+                                  (new Date(inv.paidDate).getTime() -
+                                    new Date(inv.dueDate).getTime()) /
+                                    86400000
+                                )
+                              : null;
+                          const hasCredit = num(inv.amountCredited) > 0;
+                          return (
+                            <TableRow key={inv.id}>
+                              <TableCell className="font-medium">
+                                {inv.invoiceNumber}
+                              </TableCell>
+                              <TableCell className="max-w-[200px] truncate text-muted-foreground text-sm">
+                                {inv.description || "—"}
+                              </TableCell>
+                              <TableCell className="text-right tabular-nums">
+                                {gbp.format(num(inv.amountPaid))}
+                              </TableCell>
+                              <TableCell>{formatDate(inv.paidDate)}</TableCell>
+                              <TableCell
+                                className={cn(
+                                  "text-right tabular-nums",
+                                  daysToPay == null
+                                    ? "text-muted-foreground"
+                                    : daysToPay <= 0
+                                    ? "text-green-600"
+                                    : daysToPay <= 30
+                                    ? "text-amber-600"
+                                    : "text-red-600"
+                                )}
+                              >
+                                {daysToPay != null ? `${daysToPay}d` : "—"}
+                              </TableCell>
+                              <TableCell className="text-sm text-muted-foreground">
+                                {hasCredit
+                                  ? `Part credit: ${gbp.format(num(inv.amountCredited))}`
+                                  : "—"}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
                     </TableBody>
                   </Table>
                 </CardContent>
               </Card>
             )}
+
+            {/* Pagination */}
+            {sortedPaid.length > 0 && (() => {
+              const totalPages = Math.ceil(sortedPaid.length / paidPerPage);
+              return (
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <span>Rows per page</span>
+                    <Select
+                      value={String(paidPerPage)}
+                      onValueChange={(v) => { setPaidPerPage(Number(v)); setPaidPage(1); }}
+                    >
+                      <SelectTrigger className="w-[70px] h-8">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="25">25</SelectItem>
+                        <SelectItem value="50">50</SelectItem>
+                        <SelectItem value="100">100</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <span className="ml-2">
+                      {(paidPage - 1) * paidPerPage + 1}–{Math.min(paidPage * paidPerPage, sortedPaid.length)} of {sortedPaid.length}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={paidPage <= 1}
+                      onClick={() => setPaidPage((p) => p - 1)}
+                    >
+                      Prev
+                    </Button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter((p) => p === 1 || p === totalPages || Math.abs(p - paidPage) <= 1)
+                      .reduce<(number | "ellipsis")[]>((acc, p, idx, arr) => {
+                        if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push("ellipsis");
+                        acc.push(p);
+                        return acc;
+                      }, [])
+                      .map((item, idx) =>
+                        item === "ellipsis" ? (
+                          <span key={`e-${idx}`} className="px-1 text-muted-foreground">…</span>
+                        ) : (
+                          <Button
+                            key={item}
+                            variant={item === paidPage ? "default" : "outline"}
+                            size="sm"
+                            className="min-w-[32px]"
+                            onClick={() => setPaidPage(item)}
+                          >
+                            {item}
+                          </Button>
+                        )
+                      )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={paidPage >= totalPages}
+                      onClick={() => setPaidPage((p) => p + 1)}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              );
+            })()}
           </TabsContent>
 
           {/* ============================================================== */}
