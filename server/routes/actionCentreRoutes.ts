@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { isAuthenticated } from "../auth";
 import { storage } from "../storage";
 import { db } from "../db";
-import { actions, actionBatches, rejectionPatterns, tenants } from "@shared/schema";
+import { actions, actionBatches, rejectionPatterns, tenants, messageDrafts } from "@shared/schema";
 import { eq, and, inArray, desc, sql, or } from "drizzle-orm";
 import { batchProcessor } from "../services/batchProcessor";
 import { z } from "zod";
@@ -340,6 +340,96 @@ export function registerActionCentreRoutes(app: Express): void {
       res.json({ message: "Pattern acknowledged" });
     } catch (error: any) {
       console.error("Error acknowledging pattern:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ── Message Draft Routes ──────────────────────────────────────────
+
+  // GET /api/drafts — List message drafts for tenant
+  app.get("/api/drafts", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const status = req.query.status as string | undefined;
+      const drafts = await storage.getMessageDrafts(user.tenantId, status);
+      res.json({ drafts });
+    } catch (error: any) {
+      console.error("Error fetching message drafts:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // GET /api/drafts/:id — Get single draft
+  app.get("/api/drafts/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const draft = await storage.getMessageDraft(req.params.id, user.tenantId);
+      if (!draft) return res.status(404).json({ message: "Draft not found" });
+
+      res.json({ draft });
+    } catch (error: any) {
+      console.error("Error fetching message draft:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // POST /api/drafts/:id/approve — Approve a draft and mark for sending
+  app.post("/api/drafts/:id/approve", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const draft = await storage.getMessageDraft(req.params.id, user.tenantId);
+      if (!draft) return res.status(404).json({ message: "Draft not found" });
+      if (draft.status !== "pending_approval") {
+        return res.status(400).json({ message: `Draft is not pending approval (current status: ${draft.status})` });
+      }
+
+      const updated = await storage.updateMessageDraft(req.params.id, user.tenantId, {
+        status: "approved",
+        reviewedAt: new Date(),
+        reviewedByUserId: user.id,
+        reviewNote: req.body.reviewNote || null,
+      });
+
+      res.json({ message: "Draft approved", draft: updated });
+    } catch (error: any) {
+      console.error("Error approving draft:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // POST /api/drafts/:id/reject — Reject a draft with a note
+  app.post("/api/drafts/:id/reject", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const { reviewNote } = req.body;
+      if (!reviewNote || typeof reviewNote !== "string") {
+        return res.status(400).json({ message: "reviewNote is required when rejecting a draft" });
+      }
+
+      const draft = await storage.getMessageDraft(req.params.id, user.tenantId);
+      if (!draft) return res.status(404).json({ message: "Draft not found" });
+      if (draft.status !== "pending_approval") {
+        return res.status(400).json({ message: `Draft is not pending approval (current status: ${draft.status})` });
+      }
+
+      const updated = await storage.updateMessageDraft(req.params.id, user.tenantId, {
+        status: "rejected",
+        reviewedAt: new Date(),
+        reviewedByUserId: user.id,
+        reviewNote,
+      });
+
+      res.json({ message: "Draft rejected", draft: updated });
+    } catch (error: any) {
+      console.error("Error rejecting draft:", error);
       res.status(500).json({ message: error.message });
     }
   });

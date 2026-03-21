@@ -132,7 +132,10 @@ export const tenants = pgTable("tenants", {
   emailConnectionStatus: varchar("email_connection_status").default("disconnected"),
   emailLastSyncAt: timestamp("email_last_sync_at"),
   emailSyncEnabled: boolean("email_sync_enabled").default(false),
-  
+
+  // Default AI persona for this tenant (FK to agent_personas — defined later in file, so no inline .references())
+  defaultPersonaId: varchar("default_persona_id"),
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -845,33 +848,49 @@ export const rejectionPatterns = pgTable("rejection_patterns", {
 // Message Drafts table for pre-generated AI content
 export const messageDrafts = pgTable("message_drafts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  actionId: varchar("action_id").notNull().references(() => actions.id, { onDelete: 'cascade' }),
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
-  
-  // Channel and content
-  channel: varchar("channel").notNull(), // email, sms, voice
-  subject: varchar("subject"), // For emails
-  body: text("body"), // Email HTML body or SMS text
-  voiceScript: text("voice_script"), // For voice calls
-  callToAction: varchar("call_to_action"), // Brief CTA text
-  
-  // Context tracking for freshness detection
-  contextHash: varchar("context_hash").notNull(), // Hash of context data to detect changes
-  
-  // Status tracking
-  status: varchar("status").notNull().default("pending"), // pending, generated, used, stale, failed
-  generatedAt: timestamp("generated_at"),
-  usedAt: timestamp("used_at"),
-  
-  // Error tracking
-  errorMessage: text("error_message"),
-  
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  actionId: varchar("action_id").references(() => actions.id),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id),
+  channel: varchar("channel").notNull().default("email"), // email, sms
+  subject: varchar("subject"),
+  body: text("body").notNull(),
+  context: jsonb("context"), // snapshot of data used to generate draft
+  agentReasoning: text("agent_reasoning"), // why agent chose this content
+  personaId: varchar("persona_id").references(() => agentPersonas.id),
+  status: varchar("status").notNull().default("pending_approval"), // pending_approval, approved, rejected, sent
+  reviewedAt: timestamp("reviewed_at"),
+  reviewedByUserId: varchar("reviewed_by_user_id").references(() => users.id),
+  reviewNote: text("review_note"),
+  sentAt: timestamp("sent_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => [
-  index("idx_message_drafts_action").on(table.actionId),
   index("idx_message_drafts_tenant_status").on(table.tenantId, table.status),
+  index("idx_message_drafts_contact").on(table.contactId),
 ]);
+
+export const messageDraftsRelations = relations(messageDrafts, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [messageDrafts.tenantId],
+    references: [tenants.id],
+  }),
+  action: one(actions, {
+    fields: [messageDrafts.actionId],
+    references: [actions.id],
+  }),
+  contact: one(contacts, {
+    fields: [messageDrafts.contactId],
+    references: [contacts.id],
+  }),
+  persona: one(agentPersonas, {
+    fields: [messageDrafts.personaId],
+    references: [agentPersonas.id],
+  }),
+  reviewedBy: one(users, {
+    fields: [messageDrafts.reviewedByUserId],
+    references: [users.id],
+  }),
+}));
 
 // Inbound Messages table for intent analysis
 export const inboundMessages = pgTable("inbound_messages", {
@@ -1678,7 +1697,11 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   actions: many(actions),
 }));
 
-export const tenantsRelations = relations(tenants, ({ many }) => ({
+export const tenantsRelations = relations(tenants, ({ many, one }) => ({
+  defaultPersona: one(agentPersonas, {
+    fields: [tenants.defaultPersonaId],
+    references: [agentPersonas.id],
+  }),
   users: many(users),
   contacts: many(contacts),
   invoices: many(invoices),

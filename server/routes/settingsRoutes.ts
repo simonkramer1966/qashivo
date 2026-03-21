@@ -1075,6 +1075,118 @@ export async function registerSettingsRoutes(app: Express): Promise<void> {
     }
   });
 
+  // ============================================================
+  // Multi-Persona CRUD endpoints — /api/personas
+  // ============================================================
+
+  // List all personas for tenant
+  app.get("/api/personas", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+      const personas = await storage.getAgentPersonas(user.tenantId);
+      res.json(personas);
+    } catch (error: any) {
+      console.error("Error fetching personas:", error);
+      res.status(500).json({ message: "Failed to fetch personas" });
+    }
+  });
+
+  // Create a new persona
+  app.post("/api/personas", ...withPermission('admin:settings'), async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const createSchema = z.object({
+        personaName: z.string().min(1, "Persona name is required"),
+        jobTitle: z.string().default(""),
+        emailSignatureName: z.string().default(""),
+        emailSignatureTitle: z.string().default(""),
+        emailSignatureCompany: z.string().default(""),
+        emailSignaturePhone: z.string().optional(),
+        toneDefault: z.enum(["friendly", "professional", "firm", "empathetic"]).default("professional"),
+        companyContext: z.string().optional(),
+        sectorContext: z.string().default("general"),
+        isActive: z.boolean().default(true),
+      });
+
+      const parsed = createSchema.parse(req.body);
+      const persona = await storage.createAgentPersona({
+        ...parsed,
+        tenantId: user.tenantId,
+      });
+      res.status(201).json(persona);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid input", errors: error.errors });
+      }
+      console.error("Error creating persona:", error);
+      res.status(500).json({ message: "Failed to create persona" });
+    }
+  });
+
+  // Update a persona
+  app.patch("/api/personas/:id", ...withPermission('admin:settings'), async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const updateSchema = z.object({
+        personaName: z.string().min(1).optional(),
+        jobTitle: z.string().optional(),
+        emailSignatureName: z.string().optional(),
+        emailSignatureTitle: z.string().optional(),
+        emailSignatureCompany: z.string().optional(),
+        emailSignaturePhone: z.string().optional(),
+        toneDefault: z.enum(["friendly", "professional", "firm", "empathetic"]).optional(),
+        companyContext: z.string().optional(),
+        sectorContext: z.string().optional(),
+        isActive: z.boolean().optional(),
+      });
+
+      const parsed = updateSchema.parse(req.body);
+      const updated = await storage.updateAgentPersona(req.params.id, user.tenantId, parsed);
+      if (!updated) {
+        return res.status(404).json({ message: "Persona not found" });
+      }
+      res.json(updated);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid input", errors: error.errors });
+      }
+      console.error("Error updating persona:", error);
+      res.status(500).json({ message: "Failed to update persona" });
+    }
+  });
+
+  // Delete a persona
+  app.delete("/api/personas/:id", ...withPermission('admin:settings'), async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const existing = await storage.getAgentPersona(req.params.id, user.tenantId);
+      if (!existing) {
+        return res.status(404).json({ message: "Persona not found" });
+      }
+
+      await storage.deleteAgentPersona(req.params.id, user.tenantId);
+      res.json({ message: "Persona deleted" });
+    } catch (error: any) {
+      console.error("Error deleting persona:", error);
+      res.status(500).json({ message: "Failed to delete persona" });
+    }
+  });
+
   app.get("/api/tenant/metadata", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);

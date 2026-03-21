@@ -160,6 +160,9 @@ import {
   dsoSnapshots,
   type DsoSnapshot,
   type InsertDsoSnapshot,
+  messageDrafts,
+  type MessageDraft,
+  type InsertMessageDraft,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc, sql, count, sum, ne, isNotNull, isNull, gte, lte, lt, or, ilike, inArray } from "drizzle-orm";
@@ -618,6 +621,12 @@ export interface IStorage {
   // DSO Snapshot operations
   createDsoSnapshot(snapshot: InsertDsoSnapshot): Promise<DsoSnapshot>;
   getDsoSnapshots(tenantId: string, days?: number): Promise<DsoSnapshot[]>;
+
+  // Message Draft operations
+  getMessageDrafts(tenantId: string, status?: string): Promise<MessageDraft[]>;
+  getMessageDraft(id: string, tenantId: string): Promise<MessageDraft | undefined>;
+  createMessageDraft(draft: InsertMessageDraft): Promise<MessageDraft>;
+  updateMessageDraft(id: string, tenantId: string, updates: Partial<InsertMessageDraft>): Promise<MessageDraft>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -5630,6 +5639,28 @@ export class DatabaseStorage implements IStorage {
       .from(dsoSnapshots)
       .where(and(eq(dsoSnapshots.tenantId, tenantId), gte(dsoSnapshots.snapshotDate, cutoff)))
       .orderBy(asc(dsoSnapshots.snapshotDate));
+  }
+
+  // Message Draft operations
+  async getMessageDrafts(tenantId: string, status?: string): Promise<MessageDraft[]> {
+    const conditions: any[] = [eq(messageDrafts.tenantId, tenantId)];
+    if (status) conditions.push(eq(messageDrafts.status, status));
+    return db.select().from(messageDrafts).where(and(...conditions)).orderBy(desc(messageDrafts.createdAt));
+  }
+
+  async getMessageDraft(id: string, tenantId: string): Promise<MessageDraft | undefined> {
+    const [draft] = await db.select().from(messageDrafts).where(and(eq(messageDrafts.id, id), eq(messageDrafts.tenantId, tenantId)));
+    return draft;
+  }
+
+  async createMessageDraft(draft: InsertMessageDraft): Promise<MessageDraft> {
+    const [created] = await db.insert(messageDrafts).values(draft).returning();
+    return created;
+  }
+
+  async updateMessageDraft(id: string, tenantId: string, updates: Partial<InsertMessageDraft>): Promise<MessageDraft> {
+    const [updated] = await db.update(messageDrafts).set({ ...updates, updatedAt: new Date() }).where(and(eq(messageDrafts.id, id), eq(messageDrafts.tenantId, tenantId))).returning();
+    return updated;
   }
 }
 

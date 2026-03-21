@@ -1,24 +1,38 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import AppShell from "@/components/layout/app-shell";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import {
   Bot,
   Loader2,
-  Save,
-  User,
+  Plus,
+  Pencil,
+  Trash2,
   Mail,
-  Phone,
-  Building2,
-  Briefcase,
 } from "lucide-react";
 
 interface AgentPersona {
@@ -30,196 +44,171 @@ interface AgentPersona {
   emailSignatureTitle: string;
   emailSignatureCompany: string;
   emailSignaturePhone: string | null;
-  toneDefault: "friendly" | "professional" | "firm";
+  toneDefault: string;
+  voiceCharacteristics: unknown;
   companyContext: string | null;
   sectorContext: string | null;
   isActive: boolean;
+  createdAt: string | null;
+  updatedAt: string | null;
 }
 
+interface PersonaForm {
+  personaName: string;
+  jobTitle: string;
+  emailSignatureName: string;
+  emailSignatureTitle: string;
+  emailSignatureCompany: string;
+  emailSignaturePhone: string;
+  toneDefault: string;
+  companyContext: string;
+  sectorContext: string;
+  isActive: boolean;
+}
+
+const EMPTY_FORM: PersonaForm = {
+  personaName: "",
+  jobTitle: "",
+  emailSignatureName: "",
+  emailSignatureTitle: "",
+  emailSignatureCompany: "",
+  emailSignaturePhone: "",
+  toneDefault: "professional",
+  companyContext: "",
+  sectorContext: "general",
+  isActive: true,
+};
+
 const TONE_OPTIONS = [
-  {
-    value: "friendly",
-    label: "Friendly",
-    description: "Warm, approachable tone. Best for early-stage reminders and relationship-focused sectors.",
-    color: "bg-emerald-100 text-emerald-700 border-emerald-200",
-  },
-  {
-    value: "professional",
-    label: "Professional",
-    description: "Balanced and business-like. Suitable for most B2B communication.",
-    color: "bg-blue-100 text-blue-700 border-blue-200",
-  },
-  {
-    value: "firm",
-    label: "Firm",
-    description: "Direct and assertive. For escalation stages and persistent non-payment.",
-    color: "bg-amber-100 text-amber-700 border-amber-200",
-  },
+  { value: "professional", label: "Professional", color: "bg-blue-100 text-blue-700" },
+  { value: "friendly", label: "Friendly", color: "bg-emerald-100 text-emerald-700" },
+  { value: "firm", label: "Firm", color: "bg-amber-100 text-amber-700" },
+  { value: "empathetic", label: "Empathetic", color: "bg-purple-100 text-purple-700" },
 ];
 
-const SECTOR_OPTIONS = [
-  { value: "recruitment", label: "Recruitment" },
-  { value: "manufacturing", label: "Manufacturing" },
-  { value: "professional_services", label: "Professional Services" },
-  { value: "construction", label: "Construction" },
-  { value: "technology", label: "Technology" },
-  { value: "general", label: "General" },
-];
+function getToneBadgeClass(tone: string): string {
+  return TONE_OPTIONS.find((t) => t.value === tone)?.color ?? "bg-gray-100 text-gray-700";
+}
 
 export default function SettingsAgentPersonas() {
   const { toast } = useToast();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState<PersonaForm>(EMPTY_FORM);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
-  const { data: persona, isLoading } = useQuery<AgentPersona | null>({
-    queryKey: ["/api/agent-persona"],
+  const { data: personas, isLoading } = useQuery<AgentPersona[]>({
+    queryKey: ["/api/personas"],
   });
 
-  const [form, setForm] = useState({
-    personaName: "",
-    jobTitle: "",
-    emailSignatureName: "",
-    emailSignatureTitle: "",
-    emailSignatureCompany: "",
-    emailSignaturePhone: "",
-    toneDefault: "professional" as "friendly" | "professional" | "firm",
-    companyContext: "",
-    sectorContext: "recruitment",
-  });
-
-  useEffect(() => {
-    if (persona) {
-      setForm({
-        personaName: persona.personaName || "",
-        jobTitle: persona.jobTitle || "",
-        emailSignatureName: persona.emailSignatureName || "",
-        emailSignatureTitle: persona.emailSignatureTitle || "",
-        emailSignatureCompany: persona.emailSignatureCompany || "",
-        emailSignaturePhone: persona.emailSignaturePhone || "",
-        toneDefault: persona.toneDefault || "professional",
-        companyContext: persona.companyContext || "",
-        sectorContext: persona.sectorContext || "recruitment",
-      });
-    }
-  }, [persona]);
-
-  const saveMutation = useMutation({
-    mutationFn: async (data: typeof form) => {
-      const res = await apiRequest("PATCH", "/api/agent-persona", data);
+  const createMutation = useMutation({
+    mutationFn: async (data: PersonaForm) => {
+      const res = await apiRequest("POST", "/api/personas", data);
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/agent-persona"] });
-      toast({ title: "Persona saved", description: "Agent persona has been updated." });
+      queryClient.invalidateQueries({ queryKey: ["/api/personas"] });
+      setDialogOpen(false);
+      toast({ title: "Persona created", description: "New agent persona has been added." });
     },
     onError: () => {
-      toast({ title: "Error", description: "Failed to save persona.", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to create persona.", variant: "destructive" });
     },
   });
 
-  const handleSave = () => {
-    saveMutation.mutate(form);
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: PersonaForm }) => {
+      const res = await apiRequest("PATCH", `/api/personas/${id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/personas"] });
+      setDialogOpen(false);
+      setEditingId(null);
+      toast({ title: "Persona updated", description: "Agent persona has been saved." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update persona.", variant: "destructive" });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/personas/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/personas"] });
+      setDeleteConfirmId(null);
+      toast({ title: "Persona deleted", description: "Agent persona has been removed." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to delete persona.", variant: "destructive" });
+    },
+  });
+
+  const openCreate = () => {
+    setEditingId(null);
+    setForm(EMPTY_FORM);
+    setDialogOpen(true);
   };
 
-  const updateField = (field: keyof typeof form, value: string) => {
+  const openEdit = (persona: AgentPersona) => {
+    setEditingId(persona.id);
+    setForm({
+      personaName: persona.personaName,
+      jobTitle: persona.jobTitle,
+      emailSignatureName: persona.emailSignatureName,
+      emailSignatureTitle: persona.emailSignatureTitle,
+      emailSignatureCompany: persona.emailSignatureCompany,
+      emailSignaturePhone: persona.emailSignaturePhone ?? "",
+      toneDefault: persona.toneDefault,
+      companyContext: persona.companyContext ?? "",
+      sectorContext: persona.sectorContext ?? "general",
+      isActive: persona.isActive,
+    });
+    setDialogOpen(true);
+  };
+
+  const handleSave = () => {
+    if (!form.personaName.trim()) {
+      toast({ title: "Validation", description: "Persona name is required.", variant: "destructive" });
+      return;
+    }
+    if (editingId) {
+      updateMutation.mutate({ id: editingId, data: form });
+    } else {
+      createMutation.mutate(form);
+    }
+  };
+
+  const isSaving = createMutation.isPending || updateMutation.isPending;
+
+  const updateField = <K extends keyof PersonaForm>(field: K, value: PersonaForm[K]) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
   if (isLoading) {
     return (
       <AppShell title="Agent Personas" subtitle="Configure agent personalities and behaviour">
-        <div className="max-w-4xl mx-auto space-y-6">
-          {/* Agent Identity skeleton */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Skeleton className="h-5 w-5 rounded" />
-                <Skeleton className="h-5 w-32" />
-              </div>
-              <Skeleton className="h-4 w-72 mt-1" />
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-10 w-full rounded-md" />
-                </div>
-                <div className="space-y-2">
+        <div className="max-w-5xl mx-auto space-y-4">
+          <div className="flex justify-between items-center">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-10 w-32" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => (
+              <Card key={i}>
+                <CardHeader>
+                  <Skeleton className="h-5 w-32" />
+                  <Skeleton className="h-4 w-24 mt-1" />
+                </CardHeader>
+                <CardContent className="space-y-2">
                   <Skeleton className="h-4 w-20" />
-                  <Skeleton className="h-10 w-full rounded-md" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Default Tone skeleton */}
-          <Card>
-            <CardHeader>
-              <Skeleton className="h-5 w-28" />
-              <Skeleton className="h-4 w-80 mt-1" />
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="p-4 rounded-lg border-2 border-border space-y-2">
-                    <Skeleton className="h-5 w-20 rounded-full" />
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-3/4" />
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Sector & Context skeleton */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Skeleton className="h-5 w-5 rounded" />
-                <Skeleton className="h-5 w-36" />
-              </div>
-              <Skeleton className="h-4 w-80 mt-1" />
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-28" />
-                <Skeleton className="h-10 w-full rounded-md" />
-              </div>
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-[100px] w-full rounded-md" />
-                <Skeleton className="h-3 w-72" />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Email Signature skeleton */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Skeleton className="h-5 w-5 rounded" />
-                <Skeleton className="h-5 w-32" />
-              </div>
-              <Skeleton className="h-4 w-64 mt-1" />
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="space-y-2">
-                    <Skeleton className="h-4 w-20" />
-                    <Skeleton className="h-10 w-full rounded-md" />
-                  </div>
-                ))}
-              </div>
-              <Separator />
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-28" />
-                <div className="rounded-md border bg-muted/30 p-4 space-y-2">
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-3 w-24" />
-                  <Skeleton className="h-3 w-40" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                  <Skeleton className="h-6 w-16 rounded-full" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       </AppShell>
     );
@@ -227,25 +216,114 @@ export default function SettingsAgentPersonas() {
 
   return (
     <AppShell title="Agent Personas" subtitle="Configure agent personalities and behaviour">
-      <div className="max-w-4xl mx-auto space-y-6">
-            {/* Identity */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <Bot className="h-5 w-5 text-primary" />
-                  <CardTitle>Agent Identity</CardTitle>
-                </div>
-                <CardDescription>
-                  Set the name and role your AI agent uses when communicating with debtors.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
+      <div className="max-w-5xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <p className="text-sm text-muted-foreground">
+            {personas?.length ?? 0} persona{(personas?.length ?? 0) !== 1 ? "s" : ""} configured
+          </p>
+          <Button onClick={openCreate}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Persona
+          </Button>
+        </div>
+
+        {/* Persona Cards */}
+        {(!personas || personas.length === 0) ? (
+          <Card className="border-dashed">
+            <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+              <Bot className="h-12 w-12 text-muted-foreground/40 mb-4" />
+              <h3 className="text-lg font-medium mb-1">No personas yet</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Create your first agent persona to start sending AI-generated collection emails.
+              </p>
+              <Button onClick={openCreate}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Persona
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {personas.map((persona) => (
+              <Card key={persona.id} className={!persona.isActive ? "opacity-60" : ""}>
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      <Bot className="h-5 w-5 text-primary" />
+                      <CardTitle className="text-base">{persona.personaName}</CardTitle>
+                    </div>
+                    <Badge variant={persona.isActive ? "default" : "secondary"}>
+                      {persona.isActive ? "Active" : "Inactive"}
+                    </Badge>
+                  </div>
+                  {persona.jobTitle && (
+                    <p className="text-sm text-muted-foreground">{persona.jobTitle}</p>
+                  )}
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Tone:</span>
+                    <Badge variant="outline" className={getToneBadgeClass(persona.toneDefault)}>
+                      {persona.toneDefault}
+                    </Badge>
+                  </div>
+
+                  {/* Signature preview */}
+                  {(persona.emailSignatureName || persona.emailSignatureCompany) && (
+                    <div className="rounded-md border bg-muted/30 p-3 text-xs space-y-0.5">
+                      <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                        <Mail className="h-3 w-3" />
+                        <span>Signature</span>
+                      </div>
+                      {persona.emailSignatureName && (
+                        <p className="font-medium text-sm">{persona.emailSignatureName}</p>
+                      )}
+                      {persona.emailSignatureTitle && (
+                        <p className="text-muted-foreground">{persona.emailSignatureTitle}</p>
+                      )}
+                      {persona.emailSignatureCompany && (
+                        <p className="text-muted-foreground">{persona.emailSignatureCompany}</p>
+                      )}
+                    </div>
+                  )}
+
+                  <Separator />
+
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" className="flex-1" onClick={() => openEdit(persona)}>
+                      <Pencil className="h-3.5 w-3.5 mr-1" />
+                      Edit
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => setDeleteConfirmId(persona.id)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* Add/Edit Dialog */}
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{editingId ? "Edit Persona" : "Add Persona"}</DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-6 py-2">
+              {/* Identity */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-medium">Identity</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="personaName">
-                      <User className="inline h-4 w-4 mr-1" />
-                      Persona Name
-                    </Label>
+                    <Label htmlFor="personaName">Persona Name *</Label>
                     <Input
                       id="personaName"
                       placeholder="e.g. Charlie"
@@ -254,10 +332,7 @@ export default function SettingsAgentPersonas() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="jobTitle">
-                      <Briefcase className="inline h-4 w-4 mr-1" />
-                      Job Title
-                    </Label>
+                    <Label htmlFor="jobTitle">Job Title</Label>
                     <Input
                       id="jobTitle"
                       placeholder="e.g. Credit Controller"
@@ -266,93 +341,13 @@ export default function SettingsAgentPersonas() {
                     />
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
 
-            {/* Default Tone */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Default Tone</CardTitle>
-                <CardDescription>
-                  The baseline tone your agent uses. Individual collection steps can override this.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {TONE_OPTIONS.map((tone) => (
-                    <button
-                      key={tone.value}
-                      type="button"
-                      onClick={() => updateField("toneDefault", tone.value)}
-                      className={`p-4 rounded-lg border-2 text-left transition-all ${
-                        form.toneDefault === tone.value
-                          ? "border-primary bg-primary/5"
-                          : "border-border hover:border-muted-foreground/30"
-                      }`}
-                    >
-                      <Badge className={`mb-2 ${tone.color}`}>{tone.label}</Badge>
-                      <p className="text-sm text-muted-foreground">{tone.description}</p>
-                    </button>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+              <Separator />
 
-            {/* Sector & Context */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <Building2 className="h-5 w-5 text-primary" />
-                  <CardTitle>Sector & Context</CardTitle>
-                </div>
-                <CardDescription>
-                  Help the agent understand your industry so it can tailor language and approach.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="sectorContext">Industry Sector</Label>
-                  <select
-                    id="sectorContext"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    value={form.sectorContext}
-                    onChange={(e) => updateField("sectorContext", e.target.value)}
-                  >
-                    {SECTOR_OPTIONS.map((s) => (
-                      <option key={s.value} value={s.value}>
-                        {s.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="companyContext">Company Context</Label>
-                  <textarea
-                    id="companyContext"
-                    className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    placeholder="Describe your company and any specific instructions for the agent. e.g. 'We are a recruitment agency specialising in tech placements. Our clients value personal relationships and we want to maintain goodwill throughout collections.'"
-                    value={form.companyContext}
-                    onChange={(e) => updateField("companyContext", e.target.value)}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    This context is injected into every LLM prompt so the agent writes emails that sound like your team.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Email Signature */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <Mail className="h-5 w-5 text-primary" />
-                  <CardTitle>Email Signature</CardTitle>
-                </div>
-                <CardDescription>
-                  Configure how the agent signs emails sent to debtors.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
+              {/* Email Signature */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-medium">Email Signature</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="emailSignatureName">Name</Label>
@@ -373,7 +368,7 @@ export default function SettingsAgentPersonas() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="emailSignatureCompany">Company Name</Label>
+                    <Label htmlFor="emailSignatureCompany">Company</Label>
                     <Input
                       id="emailSignatureCompany"
                       placeholder="e.g. Acme Recruitment Ltd"
@@ -382,10 +377,7 @@ export default function SettingsAgentPersonas() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="emailSignaturePhone">
-                      <Phone className="inline h-4 w-4 mr-1" />
-                      Phone (optional)
-                    </Label>
+                    <Label htmlFor="emailSignaturePhone">Phone (optional)</Label>
                     <Input
                       id="emailSignaturePhone"
                       placeholder="e.g. +44 20 7123 4567"
@@ -395,92 +387,119 @@ export default function SettingsAgentPersonas() {
                   </div>
                 </div>
 
-                <Separator />
-
                 {/* Signature Preview */}
                 <div className="space-y-2">
-                  <Label className="text-muted-foreground">Signature Preview</Label>
+                  <Label className="text-muted-foreground text-xs">Signature Preview</Label>
                   <div className="rounded-md border bg-muted/30 p-4 text-sm">
                     <p className="font-medium">{form.emailSignatureName || "Agent Name"}</p>
-                    <p className="text-muted-foreground">
-                      {form.emailSignatureTitle || "Title"}
-                    </p>
-                    <p className="text-muted-foreground">
-                      {form.emailSignatureCompany || "Company"}
-                    </p>
+                    <p className="text-muted-foreground text-xs">{form.emailSignatureTitle || "Title"}</p>
+                    <p className="text-muted-foreground text-xs">{form.emailSignatureCompany || "Company"}</p>
                     {form.emailSignaturePhone && (
-                      <p className="text-muted-foreground">{form.emailSignaturePhone}</p>
+                      <p className="text-muted-foreground text-xs">{form.emailSignaturePhone}</p>
                     )}
                   </div>
                 </div>
+              </div>
 
-                <Separator />
+              <Separator />
 
-                {/* Email Preview */}
+              {/* Tone */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-medium">Tone</h4>
+                <Select value={form.toneDefault} onValueChange={(v) => updateField("toneDefault", v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select tone" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TONE_OPTIONS.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>
+                        {t.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Separator />
+
+              {/* Context */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-medium">Context</h4>
                 <div className="space-y-2">
-                  <Label className="text-muted-foreground">Email Preview</Label>
-                  <div className="rounded-md border bg-background shadow-sm overflow-hidden">
-                    {/* Email header */}
-                    <div className="border-b bg-muted/20 px-4 py-3 space-y-1">
-                      <div className="flex items-center gap-2 text-sm">
-                        <span className="text-muted-foreground">From:</span>
-                        <span className="font-medium">
-                          {form.emailSignatureName || "Agent Name"}{" "}
-                          <span className="text-muted-foreground font-normal">
-                            &lt;{(form.personaName || "agent").toLowerCase().replace(/\s+/g, ".")}@
-                            {(form.emailSignatureCompany || "company").toLowerCase().replace(/\s+/g, "").replace(/ltd|limited|inc/gi, "").trim() || "company"}.co.uk&gt;
-                          </span>
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <span className="text-muted-foreground">To:</span>
-                        <span className="text-muted-foreground italic">debtor@example.com</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <span className="text-muted-foreground">Subject:</span>
-                        <span className="font-medium">Friendly Reminder — Invoice #INV-2024-0042 (GBP 3,450.00)</span>
-                      </div>
-                    </div>
-                    {/* Email body */}
-                    <div className="px-4 py-4 text-sm space-y-3">
-                      <p className="text-muted-foreground italic">
-                        [AI-generated email body based on your persona, tone, and company context will appear here]
-                      </p>
-                      <div className="pt-3 border-t border-dashed border-border">
-                        <p className="font-medium">{form.emailSignatureName || "Agent Name"}</p>
-                        <p className="text-muted-foreground text-xs">
-                          {form.emailSignatureTitle || "Title"}
-                        </p>
-                        <p className="text-muted-foreground text-xs">
-                          {form.emailSignatureCompany || "Company"}
-                        </p>
-                        {form.emailSignaturePhone && (
-                          <p className="text-muted-foreground text-xs">{form.emailSignaturePhone}</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                  <Label htmlFor="companyContext">Company Context</Label>
+                  <Textarea
+                    id="companyContext"
+                    placeholder="Describe your company and any specific instructions for the agent..."
+                    value={form.companyContext}
+                    onChange={(e) => updateField("companyContext", e.target.value)}
+                    rows={3}
+                  />
                 </div>
-              </CardContent>
-            </Card>
+                <div className="space-y-2">
+                  <Label htmlFor="sectorContext">Sector Context</Label>
+                  <Textarea
+                    id="sectorContext"
+                    placeholder="e.g. recruitment, manufacturing, professional services..."
+                    value={form.sectorContext}
+                    onChange={(e) => updateField("sectorContext", e.target.value)}
+                    rows={2}
+                  />
+                </div>
+              </div>
 
-            {/* Save Button */}
-            <div className="sticky bottom-0 bg-background pt-4 pb-8 border-t border-border">
-              <div className="flex justify-end">
-              <Button
-                onClick={handleSave}
-                disabled={saveMutation.isPending}
-                className="bg-primary hover:bg-primary/90 text-white"
-              >
-                {saveMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Save className="h-4 w-4 mr-2" />
-                )}
-                Save Persona
-              </Button>
+              <Separator />
+
+              {/* Active Toggle */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Active</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Only active personas can be used for agent communications.
+                  </p>
+                </div>
+                <Switch
+                  checked={form.isActive}
+                  onCheckedChange={(checked) => updateField("isActive", checked)}
+                />
               </div>
             </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSave} disabled={isSaving}>
+                {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                {editingId ? "Save Changes" : "Create Persona"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={!!deleteConfirmId} onOpenChange={() => setDeleteConfirmId(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete Persona</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to delete this persona? This action cannot be undone.
+            </p>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => deleteConfirmId && deleteMutation.mutate(deleteConfirmId)}
+                disabled={deleteMutation.isPending}
+              >
+                {deleteMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Delete
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppShell>
   );
