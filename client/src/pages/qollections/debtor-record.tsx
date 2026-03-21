@@ -33,6 +33,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Sheet,
   SheetContent,
   SheetHeader,
@@ -1541,7 +1547,8 @@ export default function DebtorRecord() {
         {/* Action Bar                                                        */}
         {/* ----------------------------------------------------------------- */}
         <Card>
-          <CardContent className="flex gap-2 w-full py-3 px-4">
+          <CardContent className="flex items-center gap-2 w-full py-3 px-4">
+            {/* Reach Out group */}
             <Button variant="outline" size="sm" className="flex-1" onClick={openEmailSheet}>
               <Mail className="h-4 w-4 mr-1" /> Email
             </Button>
@@ -1551,21 +1558,49 @@ export default function DebtorRecord() {
             <Button variant="outline" size="sm" className="flex-1" onClick={openCallSheet}>
               <Phone className="h-4 w-4 mr-1" /> Call
             </Button>
-            <Button variant="outline" size="sm" className="flex-1" onClick={openStatementDialog}>
-              <FileText className="h-4 w-4 mr-1" /> Statement
-            </Button>
-            <Button variant="outline" size="sm" className="flex-1" onClick={openPromiseDialog}>
-              <Handshake className="h-4 w-4 mr-1" /> Promise
-            </Button>
-            <Button variant="outline" size="sm" className="flex-1" onClick={openDisputeDialog}>
-              <AlertTriangle className="h-4 w-4 mr-1" /> Dispute
-            </Button>
-            <Button variant="outline" size="sm" className="flex-1" onClick={openNoteDialog}>
-              <StickyNote className="h-4 w-4 mr-1" /> Note
-            </Button>
             <Button variant="outline" size="sm" className="flex-1" onClick={openCallSheet}>
               <Bot className="h-4 w-4 mr-1" /> AI Call
             </Button>
+
+            {/* Divider */}
+            <Separator orientation="vertical" className="h-7 mx-1" />
+
+            {/* Record group — visible on md+ */}
+            <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground hidden md:inline-flex" onClick={openStatementDialog}>
+              <FileText className="h-4 w-4 mr-1" /> Statement
+            </Button>
+            <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground hidden md:inline-flex" onClick={openPromiseDialog}>
+              <Handshake className="h-4 w-4 mr-1" /> Promise
+            </Button>
+            <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground hidden md:inline-flex" onClick={openDisputeDialog}>
+              <AlertTriangle className="h-4 w-4 mr-1" /> Dispute
+            </Button>
+            <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground hidden md:inline-flex" onClick={openNoteDialog}>
+              <StickyNote className="h-4 w-4 mr-1" /> Note
+            </Button>
+
+            {/* Record group — collapsed dropdown on small viewports */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground md:hidden">
+                  More <ChevronDown className="h-4 w-4 ml-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={openStatementDialog}>
+                  <FileText className="h-4 w-4 mr-2" /> Statement
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={openPromiseDialog}>
+                  <Handshake className="h-4 w-4 mr-2" /> Promise
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={openDisputeDialog}>
+                  <AlertTriangle className="h-4 w-4 mr-2" /> Dispute
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={openNoteDialog}>
+                  <StickyNote className="h-4 w-4 mr-2" /> Note
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </CardContent>
         </Card>
 
