@@ -1496,7 +1496,7 @@ export default function DebtorRecord() {
             ) : (
               <p className="text-lg tabular-nums truncate">
                 {metrics?.lastPayment
-                  ? `${gbp.format(metrics.lastPayment.amount)} (${formatDate(metrics.lastPayment.date)})`
+                  ? <><span className="font-bold">{gbp.format(metrics.lastPayment.amount)}</span> ({formatDate(metrics.lastPayment.date)})</>
                   : "—"}
               </p>
             )}
@@ -1547,7 +1547,7 @@ export default function DebtorRecord() {
               <div className="flex items-center gap-2">
                 <p className="text-lg tabular-nums">
                   {metrics.promiseToPay.amount != null
-                    ? `${gbp.format(metrics.promiseToPay.amount)} (${formatDate(metrics.promiseToPay.date)})`
+                    ? <><span className="font-bold">{gbp.format(metrics.promiseToPay.amount)}</span> ({formatDate(metrics.promiseToPay.date)})</>
                     : formatDate(metrics.promiseToPay.date)}
                 </p>
                 {metrics.promiseToPay.overdue && (
