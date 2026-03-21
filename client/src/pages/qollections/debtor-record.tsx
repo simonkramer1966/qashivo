@@ -2136,8 +2136,8 @@ export default function DebtorRecord() {
                 <Send className="h-4 w-4 mr-1" /> Send statement
               </Button>
               <Button
+                variant="outline"
                 size="sm"
-                className="bg-green-600 hover:bg-green-700 text-white"
                 disabled={selectedInvoiceIds.size === 0}
                 onClick={handleSendXeroCopies}
               >
@@ -2145,25 +2145,48 @@ export default function DebtorRecord() {
               </Button>
             </div>
 
-            {/* Bulk Action Bar */}
-            {selectedInvoiceIds.size > 0 && (
-              <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
-                <span className="text-sm font-medium">{selectedInvoiceIds.size} selected</span>
-                <Separator orientation="vertical" className="h-5" />
-                <Button variant="outline" size="sm" onClick={openBulkNote}>
-                  <StickyNote className="h-4 w-4 mr-1" /> Log note
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => setDebtRecoveryDialogOpen(true)}>
-                  <Scale className="h-4 w-4 mr-1" /> Debt recovery
-                </Button>
-                <Button variant="destructive" size="sm" onClick={() => setLegalEscalationDialogOpen(true)}>
-                  <Gavel className="h-4 w-4 mr-1" /> Escalate to legal
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => setSelectedInvoiceIds(new Set())}>
-                  <XCircle className="h-4 w-4 mr-1" /> Clear
-                </Button>
+            {/* Bulk Action Bar — animated */}
+            <div
+              className={cn(
+                "grid transition-all duration-200 ease-in-out",
+                selectedInvoiceIds.size > 0 ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+              )}
+            >
+              <div className="overflow-hidden">
+                <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <span className="text-sm font-medium">{selectedInvoiceIds.size} selected</span>
+                  <Separator orientation="vertical" className="h-5" />
+                  <Button variant="outline" size="sm" onClick={openEmailSheet}>
+                    <Mail className="h-4 w-4 mr-1" /> Send chase email
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setStatementDialogOpen(true)}>
+                    <Send className="h-4 w-4 mr-1" /> Send statement
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm">
+                        More <ChevronDown className="h-4 w-4 ml-1" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      <DropdownMenuItem onClick={openBulkNote}>
+                        <StickyNote className="h-4 w-4 mr-2" /> Log note
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setDebtRecoveryDialogOpen(true)}>
+                        <Scale className="h-4 w-4 mr-2" /> Debt recovery
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setLegalEscalationDialogOpen(true)}>
+                        <Gavel className="h-4 w-4 mr-2" /> Escalate to legal
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <div className="flex-1" />
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedInvoiceIds(new Set())}>
+                    <XCircle className="h-4 w-4 mr-1" /> Clear
+                  </Button>
+                </div>
               </div>
-            )}
+            </div>
 
             {/* Table */}
             {outstandingQuery.isLoading ? (
@@ -2196,25 +2219,20 @@ export default function DebtorRecord() {
                             <SortIcon sortKey="invoiceNumber" currentKey={outstandingSortKey} dir={outstandingSortDir} />
                           </TableHead>
                           <TableHead>Description</TableHead>
-                          <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleOutstandingSort("amount")}>
-                            Amount
-                            <SortIcon sortKey="amount" currentKey={outstandingSortKey} dir={outstandingSortDir} />
-                          </TableHead>
                           <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleOutstandingSort("amountDue")}>
-                            Amount due
+                            Amount Due
                             <SortIcon sortKey="amountDue" currentKey={outstandingSortKey} dir={outstandingSortDir} />
                           </TableHead>
                           <TableHead className="cursor-pointer select-none" onClick={() => toggleOutstandingSort("dueDate")}>
-                            Due date
+                            Due Date
                             <SortIcon sortKey="dueDate" currentKey={outstandingSortKey} dir={outstandingSortDir} />
                           </TableHead>
-                          <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleOutstandingSort("daysOverdue")}>
-                            Days over
+                          <TableHead className="cursor-pointer select-none" onClick={() => toggleOutstandingSort("daysOverdue")}>
+                            Overdue
                             <SortIcon sortKey="daysOverdue" currentKey={outstandingSortKey} dir={outstandingSortDir} />
                           </TableHead>
-                          <TableHead>Ageing</TableHead>
                           <TableHead className="cursor-pointer select-none" onClick={() => toggleOutstandingSort("lastChasedAt")}>
-                            Last chased
+                            Last Chased
                             <SortIcon sortKey="lastChasedAt" currentKey={outstandingSortKey} dir={outstandingSortDir} />
                           </TableHead>
                         </TableRow>
@@ -2265,30 +2283,41 @@ export default function DebtorRecord() {
                               <TableCell className="max-w-[200px] truncate text-muted-foreground text-sm">
                                 {inv.description || "—"}
                               </TableCell>
-                              <TableCell className="text-right tabular-nums">
-                                {gbp.format(num(inv.amount))}
-                              </TableCell>
                               <TableCell className="text-right tabular-nums font-medium">
                                 {gbp.format(num(inv.amountDue))}
                               </TableCell>
                               <TableCell>{formatDate(inv.dueDate)}</TableCell>
-                              <TableCell
-                                className={cn(
-                                  "text-right tabular-nums",
-                                  days > 30 ? "text-red-600 font-bold" : days > 0 ? "text-foreground" : ""
-                                )}
-                              >
-                                {days > 0 ? days : "—"}
-                              </TableCell>
                               <TableCell>
                                 {days > 0 ? (
-                                  <Badge className={cn("text-[10px]", ageing.colour)}>
-                                    {ageing.label}
-                                  </Badge>
-                                ) : null}
+                                  <div className="flex items-center gap-2">
+                                    <span className={cn(
+                                      "tabular-nums",
+                                      days > 30 ? "text-red-600 font-bold" : ""
+                                    )}>
+                                      {days}d
+                                    </span>
+                                    <Badge className={cn("text-[10px]", ageing.colour)}>
+                                      {ageing.label}
+                                    </Badge>
+                                  </div>
+                                ) : (
+                                  <span className="text-muted-foreground">Current</span>
+                                )}
                               </TableCell>
-                              <TableCell className="text-sm text-muted-foreground">
-                                {inv.lastChasedAt ? formatDate(inv.lastChasedAt) : "—"}
+                              <TableCell className="text-sm">
+                                {inv.lastChasedAt ? (
+                                  <span className="text-muted-foreground">{formatDate(inv.lastChasedAt)}</span>
+                                ) : (
+                                  <button
+                                    className="text-amber-600 hover:text-amber-700 hover:underline font-medium"
+                                    onClick={() => {
+                                      setSelectedInvoiceIds(new Set([inv.id]));
+                                      openEmailSheet();
+                                    }}
+                                  >
+                                    Chase now
+                                  </button>
+                                )}
                               </TableCell>
                             </TableRow>
                           );
