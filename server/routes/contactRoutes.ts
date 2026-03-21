@@ -4028,9 +4028,13 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
         return sum;
       }, 0);
 
-      // Oldest overdue invoice
+      // Oldest overdue invoice (due date passed AND balance > 0)
       const overdueInvoices = openInvoicesResult
-        .filter(inv => inv.dueDate && new Date(inv.dueDate) < now)
+        .filter(inv => {
+          if (!inv.dueDate || new Date(inv.dueDate) >= now) return false;
+          const balance = parseFloat(inv.amount || '0') - parseFloat(inv.amountPaid || '0');
+          return balance > 0;
+        })
         .sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime());
 
       const oldestInvoice = overdueInvoices.length > 0
@@ -4103,6 +4107,7 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
         lastPayment,
         openInvoices: {
           total: openInvoicesResult.length,
+          overdue: overdueInvoices.length,
           disputed: disputedCount,
         },
         riskScore: contact.riskScore ?? null,

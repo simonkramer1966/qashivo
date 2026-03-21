@@ -142,7 +142,7 @@ interface MetricsResponse {
   paymentBehaviour: string;
   pctPaidOnTime: number | null;
   lastPayment: { date: string; amount: number } | null;
-  openInvoices: { total: number; disputed: number };
+  openInvoices: { total: number; overdue: number; disputed: number };
   riskScore: number | null;
   promiseToPay: { date: string; amount: number | null; overdue: boolean } | null;
 }
@@ -1394,10 +1394,10 @@ export default function DebtorRecord() {
             )}
           </Card>
 
-          {/* 3 - Oldest Invoice */}
+          {/* 3 - Oldest Overdue */}
           <Card className="p-3">
             <p className="text-xs text-muted-foreground uppercase tracking-wider">
-              Oldest Invoice
+              Oldest Overdue
             </p>
             {metricsQuery.isLoading ? (
               <Skeleton className="h-6 w-20 mt-1" />
@@ -1469,9 +1469,9 @@ export default function DebtorRecord() {
             {metricsQuery.isLoading ? (
               <Skeleton className="h-6 w-20 mt-1" />
             ) : (
-              <p className="text-lg font-bold tabular-nums truncate">
+              <p className="text-lg tabular-nums truncate">
                 {metrics?.lastPayment
-                  ? `${formatDate(metrics.lastPayment.date)} ${gbp.format(metrics.lastPayment.amount)}`
+                  ? `${gbp.format(metrics.lastPayment.amount)} (${formatDate(metrics.lastPayment.date)})`
                   : "—"}
               </p>
             )}
@@ -1486,13 +1486,13 @@ export default function DebtorRecord() {
               <Skeleton className="h-6 w-20 mt-1" />
             ) : (
               <p className="text-lg font-bold tabular-nums">
-                {metrics?.openInvoices.total ?? 0} open
-                {(metrics?.openInvoices.disputed ?? 0) > 0 && (
-                  <span className="text-amber-600">
-                    {" "}
-                    · {metrics!.openInvoices.disputed} disputed
-                  </span>
-                )}
+                {metrics?.openInvoices.total ?? 0} Due
+                <span className={cn(
+                  "ml-1",
+                  (metrics?.openInvoices.overdue ?? 0) > 0 ? "text-red-600" : ""
+                )}>
+                  · {metrics?.openInvoices.overdue ?? 0} Overdue
+                </span>
               </p>
             )}
           </Card>
@@ -1520,8 +1520,10 @@ export default function DebtorRecord() {
               <Skeleton className="h-6 w-20 mt-1" />
             ) : metrics?.promiseToPay ? (
               <div className="flex items-center gap-2">
-                <p className="text-lg font-bold tabular-nums">
-                  {formatDate(metrics.promiseToPay.date)}
+                <p className="text-lg tabular-nums">
+                  {metrics.promiseToPay.amount != null
+                    ? `${gbp.format(metrics.promiseToPay.amount)} (${formatDate(metrics.promiseToPay.date)})`
+                    : formatDate(metrics.promiseToPay.date)}
                 </p>
                 {metrics.promiseToPay.overdue && (
                   <Badge variant="destructive" className="text-xs">
@@ -1530,7 +1532,7 @@ export default function DebtorRecord() {
                 )}
               </div>
             ) : (
-              <p className="text-lg font-bold tabular-nums text-muted-foreground">None logged</p>
+              <p className="text-lg tabular-nums text-muted-foreground">None logged</p>
             )}
           </Card>
         </div>
