@@ -1322,11 +1322,28 @@ export default function DebtorRecord() {
                   {contact.riskBand} risk
                 </Badge>
               )}
-              {contact.playbookRiskTag && (
-                <Badge variant="outline" className="text-xs">
-                  {contact.playbookRiskTag}
-                </Badge>
-              )}
+              {contact.playbookRiskTag && (() => {
+                const tag = contact.playbookRiskTag.toUpperCase();
+                const behaviour = (metrics?.paymentBehaviour ?? "").toLowerCase();
+                const score = metrics?.riskScore ?? null;
+                const isHigh = tag.includes("HIGH") || behaviour.includes("chronically") || (score != null && score > 60);
+                const isWatchlist = tag.includes("WATCH") || behaviour.includes("typically late") || (score != null && score > 30 && score <= 60);
+                return (
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "text-xs",
+                      isHigh
+                        ? "border-red-300 bg-red-50 text-red-700"
+                        : isWatchlist
+                        ? "border-amber-300 bg-amber-50 text-amber-700"
+                        : ""
+                    )}
+                  >
+                    {contact.playbookRiskTag}
+                  </Badge>
+                );
+              })()}
             </div>
             {contact.companyName && contact.companyName !== contact.name && (
               <p className="text-sm text-muted-foreground">{contact.companyName}</p>
