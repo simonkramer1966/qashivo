@@ -1614,10 +1614,10 @@ export default function DebtorRecord() {
             <TabsTrigger value="details" className="flex-1">Details & Contacts</TabsTrigger>
             <TabsTrigger value="activity" className="flex-1">Activity</TabsTrigger>
             <TabsTrigger value="outstanding" className="flex-1">Outstanding</TabsTrigger>
-            <TabsTrigger value="paid" className="flex-1">Paid</TabsTrigger>
             <TabsTrigger value="disputes" className="flex-1">Disputes</TabsTrigger>
             <TabsTrigger value="workflows" className="flex-1">Workflows</TabsTrigger>
             <TabsTrigger value="risk" className="flex-1">Risk & Credit</TabsTrigger>
+            <TabsTrigger value="paid" className="flex-1">Paid</TabsTrigger>
           </TabsList>
 
           {/* ============================================================== */}
