@@ -412,7 +412,7 @@ export function registerOnboardingRoutes(app: Express): void {
       if (!tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
 
       const { step, status } = req.body;
-      if (!step || step < 2 || step > 6 || !["COMPLETED", "SKIPPED"].includes(status)) {
+      if (!step || step < 2 || step > 8 || !["COMPLETED", "SKIPPED"].includes(status)) {
         return res.status(400).json({ message: "Invalid step or status" });
       }
 
@@ -511,6 +511,29 @@ export function registerOnboardingRoutes(app: Express): void {
     } catch (error) {
       console.error("Error toggling SMS opt-in:", error);
       res.status(500).json({ message: "Failed to update SMS opt-in" });
+    }
+  });
+
+  // Riley weekly review schedule (Step 8)
+  app.post('/api/onboarding/riley-review-schedule', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      const tenantId = user?.tenantId || req.session?.activeTenantId;
+      if (!tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const { day, time, timezone } = req.body;
+      if (!day || !time) return res.status(400).json({ message: "day and time are required" });
+
+      await storage.updateTenant(tenantId, {
+        rileyReviewDay: day,
+        rileyReviewTime: time,
+        rileyReviewTimezone: timezone || "Europe/London",
+      } as any);
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error saving Riley review schedule:", error);
+      res.status(500).json({ message: "Failed to save review schedule" });
     }
   });
 

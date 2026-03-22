@@ -2292,6 +2292,8 @@ export const onboardingProgress = pgTable("onboarding_progress", {
   step4Status: varchar("step4_status").notNull().default("NOT_STARTED"),
   step5Status: varchar("step5_status").notNull().default("NOT_STARTED"),
   step6Status: varchar("step6_status").notNull().default("NOT_STARTED"),
+  step7Status: varchar("step7_status").notNull().default("NOT_STARTED"),
+  step8Status: varchar("step8_status").notNull().default("NOT_STARTED"),
 
   companyDetails: jsonb("company_details"),
   smsMobileOptIn: boolean("sms_mobile_opt_in").default(false),

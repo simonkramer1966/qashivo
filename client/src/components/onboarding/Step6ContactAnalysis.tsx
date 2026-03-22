@@ -62,6 +62,22 @@ export default function Step6ContactAnalysis({ status, onComplete, onSkip, onBac
         Review your contact data quality and configure SMS preferences.
       </p>
 
+      {/* Riley context note */}
+      {summary && (
+        <div className="border border-[#14b8a6]/20 rounded-lg p-4 mb-6 bg-[#14b8a6]/5">
+          <div className="flex items-start gap-3">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#14b8a6]/10 text-xs font-semibold text-[#14b8a6]">
+              R
+            </div>
+            <p className="text-[13px] text-gray-700 leading-relaxed">
+              {summary.missingEmail > 0 || summary.missingPhone > 0
+                ? `I've found ${summary.totalContacts} contacts. ${summary.missingEmail} are missing email addresses — the agent won't be able to chase those until they're updated. You can fix these in the Debtors page after setup.`
+                : `Looking good — all ${summary.totalContacts} contacts have email addresses, so the agent can reach everyone from day one.`}
+            </p>
+          </div>
+        </div>
+      )}
+
       {!xeroConnected ? (
         <div className="border border-[#e5e7eb] rounded-lg p-5 mb-6">
           <div className="flex items-start gap-3">
@@ -230,7 +246,7 @@ export default function Step6ContactAnalysis({ status, onComplete, onSkip, onBac
             className="px-5 py-2 rounded-lg bg-[#14b8a6] text-white text-[13px] font-medium hover:bg-[#0d9488] disabled:opacity-50 transition-colors flex items-center gap-2"
           >
             {markCompleteMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            Finish setup
+            Continue
           </button>
         </div>
       </div>

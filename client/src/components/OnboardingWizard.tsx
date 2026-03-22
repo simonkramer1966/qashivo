@@ -10,7 +10,9 @@ import Step3OpenBanking from "./onboarding/Step3OpenBanking";
 import Step4AgentPersona from "./onboarding/Step4AgentPersona";
 import Step5CommPrefs from "./onboarding/Step5CommPrefs";
 import Step6ContactAnalysis from "./onboarding/Step6ContactAnalysis";
-import Step7GoLive from "./onboarding/Step7GoLive";
+import Step7BusinessIntel from "./onboarding/Step7BusinessIntel";
+import Step8WeeklyReview from "./onboarding/Step8WeeklyReview";
+import Step9GoLive from "./onboarding/Step9GoLive";
 
 type StepStatus = "NOT_STARTED" | "COMPLETED" | "SKIPPED" | "RUNNING";
 
@@ -21,6 +23,8 @@ export interface OnboardingStatus {
   step4Status: StepStatus;
   step5Status: StepStatus;
   step6Status: StepStatus;
+  step7Status: StepStatus;
+  step8Status: StepStatus;
   companyDetails: {
     subscriberFirstName: string;
     subscriberLastName: string;
@@ -44,7 +48,7 @@ export interface OnboardingStatus {
   emailConnectedAddress: string | null;
 }
 
-// 7 user-facing steps mapped to 6 DB step status fields + Go Live
+// 9 user-facing steps mapped to 8 DB step status fields + Go Live
 const STEPS = [
   { number: 1, label: "Welcome", dbStep: 1, required: true },
   { number: 2, label: "Connect Xero", dbStep: 2, required: false },
@@ -52,12 +56,14 @@ const STEPS = [
   { number: 4, label: "Agent Persona", dbStep: 4, required: false },
   { number: 5, label: "Preferences", dbStep: 5, required: false },
   { number: 6, label: "Review Debtors", dbStep: 6, required: false },
-  { number: 7, label: "Go Live", dbStep: 0, required: false },
+  { number: 7, label: "Business Intel", dbStep: 7, required: false },
+  { number: 8, label: "Weekly Review", dbStep: 8, required: false },
+  { number: 9, label: "Go Live", dbStep: 0, required: false },
 ];
 
 function getStepStatus(status: OnboardingStatus | undefined, uiStep: number): StepStatus {
   if (!status) return "NOT_STARTED";
-  if (uiStep === 7) {
+  if (uiStep === 9) {
     return status.onboardingCompleted ? "COMPLETED" : "NOT_STARTED";
   }
   const dbStep = STEPS.find((s) => s.number === uiStep)?.dbStep || uiStep;
@@ -140,14 +146,14 @@ export function OnboardingWizard() {
   // Auto-advance to first incomplete step
   useEffect(() => {
     if (!status) return;
-    for (let i = 1; i <= 7; i++) {
+    for (let i = 1; i <= 9; i++) {
       const s = getStepStatus(status, i);
       if (s === "NOT_STARTED" || s === "RUNNING") {
         setActiveStep(i);
         return;
       }
     }
-    setActiveStep(7);
+    setActiveStep(9);
   }, [
     status?.step1Status,
     status?.step2Status,
@@ -155,11 +161,13 @@ export function OnboardingWizard() {
     status?.step4Status,
     status?.step5Status,
     status?.step6Status,
+    status?.step7Status,
+    status?.step8Status,
     status?.onboardingCompleted,
   ]);
 
   const handleNext = () => {
-    if (activeStep < 7) {
+    if (activeStep < 9) {
       setActiveStep(activeStep + 1);
     }
   };
@@ -271,7 +279,23 @@ export function OnboardingWizard() {
           />
         )}
         {activeStep === 7 && (
-          <Step7GoLive
+          <Step7BusinessIntel
+            status={status}
+            onComplete={handleStepComplete}
+            onSkip={handleSkip}
+            onBack={handleBack}
+          />
+        )}
+        {activeStep === 8 && (
+          <Step8WeeklyReview
+            status={status}
+            onComplete={handleStepComplete}
+            onSkip={handleSkip}
+            onBack={handleBack}
+          />
+        )}
+        {activeStep === 9 && (
+          <Step9GoLive
             status={status}
             onBack={handleBack}
           />

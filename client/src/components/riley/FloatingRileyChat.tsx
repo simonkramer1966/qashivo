@@ -231,8 +231,8 @@ export default function FloatingRileyChat() {
     [handleSend],
   );
 
-  // Don't render on onboarding page
-  if (location === "/onboarding") return null;
+  // Don't render on onboarding page or public pages
+  if (location === "/onboarding" || location.startsWith("/investors") || location.startsWith("/debtor-portal")) return null;
 
   return (
     <>

@@ -57,6 +57,8 @@ export interface OnboardingStatusResponse {
   step4Status: StepStatus;
   step5Status: StepStatus;
   step6Status: StepStatus;
+  step7Status: StepStatus;
+  step8Status: StepStatus;
   companyDetails: CompanyDetails | null;
   smsMobileOptIn: boolean;
   agedDebtorsSummary: AgedDebtorsSummary | null;
@@ -122,6 +124,8 @@ export class OnboardingService {
         step4Status: "NOT_STARTED",
         step5Status: "NOT_STARTED",
         step6Status: "NOT_STARTED",
+        step7Status: "NOT_STARTED",
+        step8Status: "NOT_STARTED",
         companyDetails: null,
         smsMobileOptIn: false,
         agedDebtorsSummary: null,
@@ -141,6 +145,8 @@ export class OnboardingService {
       step4Status: (progress.step4Status as StepStatus) || "NOT_STARTED",
       step5Status: (progress.step5Status as StepStatus) || "NOT_STARTED",
       step6Status: (progress.step6Status as StepStatus) || "NOT_STARTED",
+      step7Status: ((progress as any).step7Status as StepStatus) || "NOT_STARTED",
+      step8Status: ((progress as any).step8Status as StepStatus) || "NOT_STARTED",
       companyDetails: progress.companyDetails as CompanyDetails | null,
       smsMobileOptIn: progress.smsMobileOptIn || false,
       agedDebtorsSummary: progress.agedDebtorsSummary as AgedDebtorsSummary | null,
@@ -185,6 +191,8 @@ export class OnboardingService {
       4: onboardingProgress.step4Status,
       5: onboardingProgress.step5Status,
       6: onboardingProgress.step6Status,
+      7: onboardingProgress.step7Status,
+      8: onboardingProgress.step8Status,
     };
 
     const column = columnMap[step];
@@ -301,16 +309,18 @@ export class OnboardingService {
       status.step4Status,
       status.step5Status,
       status.step6Status,
-    ].every(s => s === "COMPLETED" || s === "SKIPPED" || s === "RUNNING");
+      (status as any).step7Status,
+      (status as any).step8Status,
+    ].every(s => s === "COMPLETED" || s === "SKIPPED" || s === "RUNNING" || !s);
     return step1Done && otherStepsDone;
   }
 
   async tryCompleteOnboarding(tenantId: string): Promise<boolean> {
     const status = await this.getFullStatus(tenantId);
     if (status.step1Status !== "COMPLETED") return false;
-    const stepKeys = ["step2Status", "step3Status", "step4Status", "step5Status", "step6Status"] as const;
+    const stepKeys = ["step2Status", "step3Status", "step4Status", "step5Status", "step6Status", "step7Status", "step8Status"] as const;
     for (let i = 0; i < stepKeys.length; i++) {
-      const s = status[stepKeys[i]] as string;
+      const s = (status as any)[stepKeys[i]] as string;
       if (s === "NOT_STARTED") {
         await this.updateStepStatus(tenantId, i + 2, "SKIPPED");
       }
