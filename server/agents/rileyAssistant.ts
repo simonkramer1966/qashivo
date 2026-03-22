@@ -92,6 +92,582 @@ interface ExtractionResult {
   }>;
 }
 
+// ── Page Context Assembly ────────────────────────────────────
+
+function formatGBP(amount: number): string {
+  return `£${amount.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function formatDate(d: Date | string | null): string {
+  if (!d) return "N/A";
+  const date = typeof d === "string" ? new Date(d) : d;
+  return date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+/**
+ * Deep debtor context — loaded when user is viewing a specific debtor record.
+ */
+export async function buildDebtorContext(contactId: string, tenantId: string): Promise<string> {
+  try {
+    // Parallel fetch all debtor data
+    const [contact, contactInvoices, contactPersons, aiFacts] = await Promise.all([
+      storage.getContact(contactId, tenantId),
+      storage.getInvoicesByContact(contactId, tenantId),
+      storage.getCustomerContactPersons(tenantId, contactId),
+      storage.listAiFacts(tenantId, contactId),
+    ]);
+
+    if (!contact) return `DEBTOR CONTEXT: Contact not found (${contactId})`;
+
+    // Fetch last 20 actions for this contact
+    let recentActions: any[] = [];
+    try {
+      const allActions = await storage.getActions(tenantId, 500);
+      recentActions = allActions
+        .filter((a: any) => a.contactId === contactId)
+        .slice(0, 20);
+    } catch { /* graceful */ }
+
+    // Compute payment statistics
+    const now = new Date();
+    let totalOutstanding = 0;
+    let totalOverdue = 0;
+    let overdueCount = 0;
+    let paidOnTime = 0;
+    let paidTotal = 0;
+    let totalDaysToPay = 0;
+    let paidWithDaysCount = 0;
+
+    const overdueInvoices: any[] = [];
+    const otherInvoices: any[] = [];
+
+    for (const inv of contactInvoices) {
+      const amount = Number(inv.amount || 0);
+      const status = (inv.status || "").toLowerCase();
+
+      if (status === "paid") {
+        paidTotal++;
+        if (inv.paidDate && inv.dueDate) {
+          const paidDate = new Date(inv.paidDate);
+          const dueDate = new Date(inv.dueDate);
+          const daysToPay = Math.round((paidDate.getTime() - new Date(inv.issueDate || inv.createdAt || dueDate).getTime()) / 86400000);
+          if (daysToPay > 0) {
+            totalDaysToPay += daysToPay;
+            paidWithDaysCount++;
+          }
+          if (paidDate <= dueDate) paidOnTime++;
+        }
+      } else if (["authorised", "sent", "overdue"].includes(status)) {
+        totalOutstanding += amount;
+        if (inv.dueDate && new Date(inv.dueDate) < now) {
+          totalOverdue += amount;
+          overdueCount++;
+          const daysOverdue = Math.round((now.getTime() - new Date(inv.dueDate).getTime()) / 86400000);
+          overdueInvoices.push({ ...inv, amount, daysOverdue });
+        } else {
+          otherInvoices.push({ ...inv, amount, daysOverdue: 0 });
+        }
+      }
+    }
+
+    // Sort: overdue (most days first), then upcoming by due date
+    overdueInvoices.sort((a, b) => b.daysOverdue - a.daysOverdue);
+    otherInvoices.sort((a, b) => {
+      const da = a.dueDate ? new Date(a.dueDate).getTime() : 0;
+      const db2 = b.dueDate ? new Date(b.dueDate).getTime() : 0;
+      return da - db2;
+    });
+
+    const avgDaysToPay = paidWithDaysCount > 0 ? Math.round(totalDaysToPay / paidWithDaysCount) : 0;
+    const onTimeRate = paidTotal > 0 ? Math.round((paidOnTime / paidTotal) * 100) : 0;
+
+    // Build the text block
+    const lines: string[] = [];
+    lines.push(`DEBTOR: ${contact.companyName || contact.name}`);
+    lines.push(`Outstanding: ${formatGBP(totalOutstanding)} | Overdue: ${formatGBP(totalOverdue)} | Avg days to pay: ${avgDaysToPay || "N/A"}`);
+    lines.push(`Risk score: ${contact.riskScore ?? "Not assessed"} (${contact.riskBand || "N/A"}) | On-time rate: ${onTimeRate}%`);
+    lines.push(`Blocked from chasing: ${contact.manualBlocked ? "Yes" : "No"} | Vulnerable: ${contact.isPotentiallyVulnerable ? "Yes" : "No"}`);
+    lines.push(`Stage: ${contact.playbookStage || "CREDIT_CONTROL"} | Contact method: ${contact.preferredContactMethod || "email"}`);
+    if (contact.arNotes) lines.push(`Internal notes: ${contact.arNotes}`);
+    if (contact.notes) lines.push(`General notes: ${contact.notes}`);
+
+    // Contact persons
+    lines.push("");
+    lines.push("CONTACTS ON FILE:");
+    // Primary from contact record
+    const primaryEmail = contact.arContactEmail || contact.email || "Not set";
+    const primaryPhone = contact.arContactPhone || contact.phone || "Not set";
+    lines.push(`- ${contact.arContactName || contact.name} — Primary`);
+    lines.push(`  Email: ${primaryEmail} | Phone: ${primaryPhone}`);
+
+    if (contactPersons.length > 0) {
+      for (const cp of contactPersons) {
+        const roles: string[] = [];
+        if ((cp as any).isPrimaryCreditControl) roles.push("Primary AR Contact");
+        if ((cp as any).isEscalation) roles.push("Escalation Contact");
+        if (roles.length === 0) roles.push("Other");
+        lines.push(`- ${cp.name || "Unnamed"} (${(cp as any).jobTitle || "No title"}) — ${roles.join(", ")}`);
+        lines.push(`  Email: ${cp.email || "Not set"} | Phone: ${cp.phone || "Not set"}`);
+      }
+    }
+
+    // Invoices
+    const allDisplayInvoices = [...overdueInvoices, ...otherInvoices].slice(0, 30);
+    lines.push("");
+    lines.push(`INVOICES (${contactInvoices.length} total, ${overdueCount} overdue):`);
+    for (const inv of allDisplayInvoices) {
+      let line = `- ${inv.invoiceNumber || "No number"} ${formatGBP(inv.amount)} due ${formatDate(inv.dueDate)}`;
+      if (inv.daysOverdue > 0) line += ` — ${inv.daysOverdue} days overdue`;
+      if ((inv.status || "").toLowerCase() === "paid") line += ` — paid ${formatDate(inv.paidDate)}`;
+      lines.push(line);
+    }
+    if (contactInvoices.length > 30) {
+      lines.push(`... and ${contactInvoices.length - 30} more invoices`);
+    }
+
+    // Agent activity
+    lines.push("");
+    lines.push(`AGENT ACTIVITY (last ${recentActions.length} actions):`);
+    if (recentActions.length === 0) {
+      lines.push("No agent actions recorded yet.");
+    } else {
+      for (const action of recentActions) {
+        const date = formatDate(action.createdAt);
+        const summary = action.subject || action.type || "Action";
+        lines.push(`- ${date}: ${action.type} — ${summary}`);
+        if (action.intentType) lines.push(`  → Intent detected: ${action.intentType} (${action.sentiment || "neutral"})`);
+      }
+    }
+
+    // AI Facts
+    lines.push("");
+    lines.push("RILEY'S KNOWN FACTS ABOUT THIS DEBTOR:");
+    if (aiFacts.length === 0) {
+      lines.push("None gathered yet — this is your first conversation about them.");
+    } else {
+      for (const f of aiFacts.slice(0, 20)) {
+        lines.push(`- ${f.factKey || f.title}: ${f.factValue || f.content} (confidence: ${f.confidence || "N/A"}, source: ${f.source || "unknown"})`);
+      }
+    }
+
+    return lines.join("\n");
+  } catch (error) {
+    console.error(`[Riley] buildDebtorContext failed for ${contactId}:`, error);
+    return `DEBTOR CONTEXT: Failed to load context for contact ${contactId}`;
+  }
+}
+
+/**
+ * Build page-aware context based on the current route the user is viewing.
+ */
+async function buildPageContext(
+  pageContext: string,
+  tenantId: string,
+  relatedEntityType?: string,
+  relatedEntityId?: string,
+): Promise<string> {
+  // Detect debtor context from either explicit entity or URL pattern
+  const debtorId = detectDebtorId(pageContext, relatedEntityType, relatedEntityId);
+  if (debtorId) {
+    return buildDebtorContext(debtorId, tenantId);
+  }
+
+  try {
+    // Route-based context loading
+    const route = pageContext.toLowerCase();
+
+    // ── Debtors list ──
+    if (route.includes("/qollections/debtors") || route === "debtors list") {
+      return await buildDebtorsListContext(tenantId);
+    }
+
+    // ── Invoice detail ──
+    if (relatedEntityType === "invoice" && relatedEntityId) {
+      return await buildInvoiceDetailContext(relatedEntityId, tenantId);
+    }
+
+    // ── Invoices list ──
+    if (route.includes("/qollections/invoices") || route === "invoices") {
+      return await buildInvoicesListContext(tenantId);
+    }
+
+    // ── Agent activity ──
+    if (route.includes("/qollections/agent-activity") || route.includes("agent activity")) {
+      return await buildActivityContext(tenantId);
+    }
+
+    // ── Qashflow (weekly review) ──
+    if (route.includes("/qashflow") || route === "qashflow") {
+      return await buildQashflowContext(tenantId);
+    }
+
+    // ── Data Health ──
+    if (route.includes("/settings/data-health") || route === "data health") {
+      return await buildDataHealthContext(tenantId);
+    }
+
+    // ── Settings pages ──
+    if (route.includes("/settings") || route.includes("settings")) {
+      return await buildSettingsContext(tenantId);
+    }
+
+    // ── Onboarding ──
+    if (route.includes("/onboarding") || route === "onboarding") {
+      return await buildOnboardingContext(tenantId);
+    }
+
+    // Default: no extra page context (tenant snapshot is always present)
+    return "";
+  } catch (error) {
+    console.error("[Riley] buildPageContext failed:", error);
+    return "";
+  }
+}
+
+function detectDebtorId(
+  pageContext: string,
+  relatedEntityType?: string,
+  relatedEntityId?: string,
+): string | null {
+  // Explicit entity
+  if (relatedEntityType === "debtor" && relatedEntityId) return relatedEntityId;
+  // URL pattern: /qollections/debtors/<uuid>
+  const match = pageContext.match(/\/qollections\/debtors\/([0-9a-f-]{36})/i);
+  return match?.[1] || null;
+}
+
+async function buildDebtorsListContext(tenantId: string): Promise<string> {
+  const lines: string[] = ["PAGE CONTEXT: Debtors List"];
+
+  const [metrics, brokenPromises, pendingDrafts] = await Promise.all([
+    storage.getInvoiceMetrics(tenantId).catch(() => null),
+    storage.getPaymentPromises(tenantId, { status: "broken" }).catch(() => []),
+    storage.getMessageDrafts(tenantId, "pending_approval").catch(() => []),
+  ]);
+
+  if (metrics) {
+    lines.push(`AR Summary: ${formatGBP(metrics.totalOutstanding || 0)} outstanding, ${formatGBP((metrics as any).overdueAmount || 0)} overdue`);
+    lines.push(`Debtors: ${metrics.totalInvoiceCount || 0} invoices, ${metrics.overdueCount || 0} overdue, DSO: ${metrics.dso || 0} days`);
+  }
+  lines.push(`Pending approvals: ${pendingDrafts.length} emails awaiting review`);
+
+  // Broken promises this week
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+  const recentBroken = brokenPromises.filter((p: any) => p.createdAt && new Date(p.createdAt) >= oneWeekAgo);
+  if (recentBroken.length > 0) {
+    lines.push(`Broken promises this week: ${recentBroken.length}`);
+  }
+
+  // Top 5 debtors by overdue amount
+  try {
+    const overdueInvs = await storage.getOverdueInvoices(tenantId);
+    const debtorTotals = new Map<string, { name: string; total: number }>();
+    for (const inv of overdueInvs) {
+      const cid = (inv as any).contactId;
+      const name = (inv as any).contact?.name || "Unknown";
+      const existing = debtorTotals.get(cid) || { name, total: 0 };
+      existing.total += Number(inv.amount || 0);
+      debtorTotals.set(cid, existing);
+    }
+    const sorted = Array.from(debtorTotals.entries())
+      .sort((a, b) => b[1].total - a[1].total)
+      .slice(0, 5);
+    if (sorted.length > 0) {
+      lines.push("\nTop 5 debtors by overdue amount:");
+      for (const [, { name, total }] of sorted) {
+        lines.push(`- ${name}: ${formatGBP(total)} overdue`);
+      }
+    }
+  } catch { /* graceful */ }
+
+  return lines.join("\n");
+}
+
+async function buildInvoicesListContext(tenantId: string): Promise<string> {
+  const lines: string[] = ["PAGE CONTEXT: Invoices List"];
+
+  try {
+    const allInvoices = await storage.getInvoices(tenantId, 10000);
+    const statusCounts: Record<string, { count: number; value: number }> = {};
+    let overdue60 = 0;
+    const now = new Date();
+
+    for (const inv of allInvoices) {
+      const status = (inv.status || "unknown").toLowerCase();
+      if (!statusCounts[status]) statusCounts[status] = { count: 0, value: 0 };
+      statusCounts[status].count++;
+      statusCounts[status].value += Number(inv.amount || 0);
+
+      if (status === "overdue" && inv.dueDate) {
+        const days = Math.round((now.getTime() - new Date(inv.dueDate).getTime()) / 86400000);
+        if (days > 60) overdue60++;
+      }
+    }
+
+    for (const [status, { count: c, value }] of Object.entries(statusCounts)) {
+      lines.push(`${status}: ${c} invoices, ${formatGBP(value)}`);
+    }
+    if (overdue60 > 0) lines.push(`Overdue >60 days: ${overdue60} invoices`);
+  } catch { /* graceful */ }
+
+  return lines.join("\n");
+}
+
+async function buildInvoiceDetailContext(invoiceId: string, tenantId: string): Promise<string> {
+  const lines: string[] = ["PAGE CONTEXT: Invoice Detail"];
+
+  try {
+    const inv = await storage.getInvoice(invoiceId, tenantId);
+    if (!inv) return "PAGE CONTEXT: Invoice not found";
+
+    const amount = Number(inv.amount || 0);
+    const now = new Date();
+    const daysOverdue = inv.dueDate ? Math.round((now.getTime() - new Date(inv.dueDate).getTime()) / 86400000) : 0;
+
+    lines.push(`Invoice: ${inv.invoiceNumber} | ${formatGBP(amount)} | Status: ${inv.status}`);
+    lines.push(`Due: ${formatDate(inv.dueDate)}${daysOverdue > 0 ? ` (${daysOverdue} days overdue)` : ""}`);
+
+    // Parent debtor
+    const contact = (inv as any).contact;
+    if (contact) {
+      lines.push(`\nDebtor: ${contact.companyName || contact.name}`);
+      lines.push(`Total outstanding: ${formatGBP(Number((contact as any).totalOutstanding || 0))}`);
+      if (contact.riskScore) lines.push(`Risk: ${contact.riskScore} (${contact.riskBand || "N/A"})`);
+    }
+
+    // AI facts for parent debtor
+    if (contact?.id) {
+      const facts = await storage.listAiFacts(tenantId, contact.id);
+      if (facts.length > 0) {
+        lines.push("\nKnown facts about this debtor:");
+        for (const f of facts.slice(0, 10)) {
+          lines.push(`- ${f.factKey || f.title}: ${f.factValue || f.content}`);
+        }
+      }
+    }
+
+    // Actions/comms for this invoice
+    try {
+      const allActions = await storage.getActions(tenantId, 500);
+      const invActions = allActions.filter((a: any) => a.invoiceId === invoiceId).slice(0, 10);
+      if (invActions.length > 0) {
+        lines.push("\nCommunications thread:");
+        for (const a of invActions) {
+          lines.push(`- ${formatDate(a.createdAt)}: ${a.type} — ${a.subject || a.status}`);
+          if (a.intentType) lines.push(`  → Intent: ${a.intentType} (${a.sentiment || "neutral"})`);
+        }
+      }
+    } catch { /* graceful */ }
+  } catch (error) {
+    console.error("[Riley] buildInvoiceDetailContext failed:", error);
+  }
+
+  return lines.join("\n");
+}
+
+async function buildActivityContext(tenantId: string): Promise<string> {
+  const lines: string[] = ["PAGE CONTEXT: Agent Activity"];
+
+  try {
+    const recentActions = await storage.getActions(tenantId, 30);
+    lines.push(`Showing last ${recentActions.length} agent actions`);
+
+    // Summarise by type
+    const typeCounts: Record<string, number> = {};
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    let weekEmails = 0;
+    let weekResponses = 0;
+    const intentSummary: Record<string, number> = {};
+
+    for (const a of recentActions) {
+      typeCounts[a.type] = (typeCounts[a.type] || 0) + 1;
+      if (a.createdAt && new Date(a.createdAt) >= oneWeekAgo) {
+        if (a.type === "email") weekEmails++;
+        if (a.hasResponse) weekResponses++;
+        if (a.intentType) intentSummary[a.intentType] = (intentSummary[a.intentType] || 0) + 1;
+      }
+    }
+
+    lines.push(`\nThis week: ${weekEmails} emails sent, ${weekResponses} responses received`);
+    if (weekEmails > 0) {
+      lines.push(`Response rate: ${Math.round((weekResponses / weekEmails) * 100)}%`);
+    }
+    if (Object.keys(intentSummary).length > 0) {
+      lines.push("Intent signals this week: " + Object.entries(intentSummary).map(([k, v]) => `${k}: ${v}`).join(", "));
+    }
+
+    // Recent actions list
+    lines.push("\nRecent actions:");
+    for (const a of recentActions.slice(0, 15)) {
+      lines.push(`- ${formatDate(a.createdAt)}: ${a.type} — ${a.subject || a.status || "N/A"}`);
+    }
+  } catch { /* graceful */ }
+
+  return lines.join("\n");
+}
+
+async function buildQashflowContext(tenantId: string): Promise<string> {
+  const lines: string[] = ["PAGE CONTEXT: Qashflow (Weekly Review)"];
+
+  try {
+    // Active forecast adjustments
+    const adjustments = await storage.listForecastAdjustments(tenantId);
+    const active = adjustments.filter((a) => !a.expired);
+    if (active.length > 0) {
+      lines.push(`\nActive forecast adjustments (${active.length}):`);
+      for (const a of active.slice(0, 10)) {
+        const dir = a.affects === "inflows" ? "+" : "-";
+        lines.push(`- ${a.description}: ${dir}${formatGBP(Math.abs(Number(a.amount)))} (${a.timingType}${a.followUpStatus === "pending" ? ", needs follow-up" : ""})`);
+      }
+    }
+
+    // Expected inflows from AR
+    const metrics = await storage.getInvoiceMetrics(tenantId).catch(() => null);
+    if (metrics) {
+      lines.push(`\nAR snapshot: ${formatGBP(metrics.totalOutstanding || 0)} outstanding`);
+      lines.push(`Avg days to pay: ${metrics.avgDaysToPay || "N/A"}, On-time rate: ${metrics.onTimePaymentRate || "N/A"}%`);
+      lines.push(`Collected this week: ${formatGBP(metrics.collectedThisWeek || 0)}, this month: ${formatGBP(metrics.collectedThisMonth || 0)}`);
+    }
+
+    // DSO trend
+    try {
+      const snapshots = await storage.getDsoSnapshots(tenantId, 30);
+      if (snapshots.length >= 2) {
+        const latest = Number(snapshots[0].dsoValue);
+        const oldest = Number(snapshots[snapshots.length - 1].dsoValue);
+        lines.push(`DSO trend (30d): ${Math.round(oldest)} → ${Math.round(latest)} days`);
+      }
+    } catch { /* graceful */ }
+  } catch { /* graceful */ }
+
+  return lines.join("\n");
+}
+
+async function buildDataHealthContext(tenantId: string): Promise<string> {
+  const lines: string[] = ["PAGE CONTEXT: Data Health"];
+
+  try {
+    const allContacts = await storage.getContacts(tenantId);
+    const customers = allContacts.filter((c: any) => c.role === "customer" && c.isActive);
+
+    let ready = 0, needsEmail = 0, genericEmail = 0, needsPhone = 0, needsAttention = 0;
+    const needsFixing: Array<{ name: string; outstanding: number; issues: string[] }> = [];
+
+    for (const c of customers) {
+      const issues: string[] = [];
+      const email = (c as any).arContactEmail || c.email;
+      if (!email) {
+        needsEmail++;
+        issues.push("no email");
+      } else if (email.includes("noreply") || email.includes("info@") || email.includes("admin@")) {
+        genericEmail++;
+        issues.push("generic email");
+      }
+      if (!c.phone && !(c as any).arContactPhone) {
+        needsPhone++;
+        issues.push("no phone");
+      }
+      if (issues.length === 0) {
+        ready++;
+      } else {
+        if (issues.length >= 2) needsAttention++;
+        // We'll sort by outstanding later via invoices
+        needsFixing.push({ name: c.name, outstanding: 0, issues });
+      }
+    }
+
+    lines.push(`Ready: ${ready} | Needs email: ${needsEmail} | Generic email: ${genericEmail} | Needs phone: ${needsPhone} | Needs attention: ${needsAttention}`);
+    lines.push(`Total active customers: ${customers.length}`);
+
+    // Get outstanding amounts for contacts that need fixing
+    if (needsFixing.length > 0) {
+      try {
+        const overdueInvs = await storage.getOverdueInvoices(tenantId);
+        const debtorTotals = new Map<string, number>();
+        for (const inv of overdueInvs) {
+          const cid = (inv as any).contactId;
+          debtorTotals.set(cid, (debtorTotals.get(cid) || 0) + Number(inv.amount || 0));
+        }
+
+        // Match back
+        for (const nf of needsFixing) {
+          const contact = customers.find((c: any) => c.name === nf.name);
+          if (contact) nf.outstanding = debtorTotals.get(contact.id) || 0;
+        }
+
+        const topNeedFix = needsFixing
+          .sort((a, b) => b.outstanding - a.outstanding)
+          .slice(0, 10);
+
+        if (topNeedFix.length > 0) {
+          lines.push("\nTop debtors needing data fixes (by outstanding):");
+          for (const d of topNeedFix) {
+            lines.push(`- ${d.name}: ${formatGBP(d.outstanding)} — ${d.issues.join(", ")}`);
+          }
+        }
+      } catch { /* graceful */ }
+    }
+  } catch { /* graceful */ }
+
+  return lines.join("\n");
+}
+
+async function buildSettingsContext(tenantId: string): Promise<string> {
+  const lines: string[] = ["PAGE CONTEXT: Settings"];
+
+  try {
+    const tenant = await storage.getTenant(tenantId);
+    if (tenant) {
+      lines.push(`Communication mode: ${(tenant as any).communicationMode || "testing"}`);
+      lines.push(`Approval mode: ${(tenant as any).approvalMode || "manual"}`);
+    }
+
+    // Agent persona
+    try {
+      const persona = await storage.getActiveAgentPersona(tenantId);
+      if (persona) {
+        lines.push(`Active persona: ${persona.personaName} (${(persona as any).jobTitle || "Agent"})`);
+        lines.push(`Tone: ${(persona as any).toneDefault || "professional"}`);
+      }
+    } catch { /* graceful */ }
+
+    // Xero connection
+    try {
+      // Check if Xero is connected by looking at the tenant's xero fields or accounting connections
+      if (tenant && (tenant as any).xeroOrganisationId) {
+        lines.push(`Xero: Connected (org: ${(tenant as any).xeroOrganisationName || "N/A"})`);
+      } else {
+        lines.push("Xero: Not connected");
+      }
+    } catch { /* graceful */ }
+  } catch { /* graceful */ }
+
+  return lines.join("\n");
+}
+
+async function buildOnboardingContext(tenantId: string): Promise<string> {
+  const lines: string[] = ["PAGE CONTEXT: Onboarding"];
+
+  try {
+    const tenant = await storage.getTenant(tenantId);
+    if (tenant && (tenant as any).xeroOrganisationId) {
+      lines.push("Xero: Connected and syncing");
+    } else {
+      lines.push("Xero: Not yet connected");
+    }
+
+    // Quick data health summary
+    const allContacts = await storage.getContacts(tenantId);
+    const customers = allContacts.filter((c: any) => c.role === "customer" && c.isActive);
+    const withEmail = customers.filter((c: any) => c.arContactEmail || c.email);
+    lines.push(`Contacts synced: ${customers.length} (${withEmail.length} with email)`);
+  } catch { /* graceful */ }
+
+  return lines.join("\n");
+}
+
 // ── System Prompt Assembly ───────────────────────────────────
 
 const RILEY_IDENTITY = `You are Riley, an AI assistant built into Qashivo — a credit control and cashflow platform for UK SMEs.
@@ -149,7 +725,7 @@ For weekly review setup, ask: "When would you like your weekly cashflow catch-up
 Keep it conversational — you're building rapport while gathering intelligence.`;
 }
 
-export function buildRileySystemPrompt(context: RileyContext): string {
+export function buildRileySystemPrompt(context: RileyContext, pageContextBlock?: string): string {
   const {
     userName,
     userRole,
@@ -184,6 +760,7 @@ export function buildRileySystemPrompt(context: RileyContext): string {
     `- Current DSO: ${tenantSnapshot.currentDso} days`,
     `- Currency: ${tenantSnapshot.currency}`,
     factsBlock,
+    pageContextBlock ? `\nCURRENT PAGE CONTEXT:\n${pageContextBlock}` : "",
     buildOnboardingGuidance(topic),
     `\nINSTRUCTIONS:
 - Respond naturally and conversationally. Keep it concise.
@@ -192,7 +769,19 @@ export function buildRileySystemPrompt(context: RileyContext): string {
 - If the user wants to take an action (pause a debtor, change settings, etc.), confirm what they want before saying you'll do it. You cannot execute actions directly — note what was requested.
 - Connect insights across pillars when relevant (e.g., "That overdue invoice from Acme affects your cashflow forecast too").
 - For debtor-specific questions, use any facts you have. If you don't have context, ask.
-- Never fabricate data. If you don't know, say so and suggest where to look.`,
+- Never fabricate data. If you don't know, say so and suggest where to look.
+
+You always know exactly where the user is in the app and have the relevant data for that page loaded. Use it proactively — if you can see they're on Data Health and 12 debtors need email addresses, lead with that. Don't make them ask.
+
+When you have full debtor context (on the debtor detail page), you can give specific credit control advice:
+- Which invoices to prioritise chasing and why
+- Whether the current agent approach is working based on response rates
+- What tone or channel to recommend based on payment history
+- Whether to escalate, put on hold, or change strategy
+- Specific risks or opportunities with this debtor
+
+Always refer to the debtor by name. Reference specific invoice numbers and amounts when relevant. Be a genuine credit control advisor, not a data reader.
+If you have no aiFacts for a debtor yet, treat the conversation as an opportunity to start gathering intelligence — ask one focused question at the end of your response.`,
   ];
 
   return parts.join("\n");
@@ -289,13 +878,14 @@ export async function getRileyResponse(params: {
   }
 
   // 2. Fetch context in parallel
-  const [user, tenantSnapshot, relevantFacts] = await Promise.all([
+  const [user, tenantSnapshot, relevantFacts, pageContextBlock] = await Promise.all([
     storage.getUser(userId),
     getTenantSnapshot(tenantId),
     storage.listAiFacts(
       tenantId,
       relatedEntityId || undefined,
     ),
+    buildPageContext(pageContext, tenantId, relatedEntityType, relatedEntityId),
   ]);
 
   const userName =
@@ -313,7 +903,7 @@ export async function getRileyResponse(params: {
     relevantFacts: relevantFacts.slice(0, 30), // Cap to avoid token bloat
     relatedEntityType,
     relatedEntityId,
-  });
+  }, pageContextBlock);
 
   // 4. Build conversation messages (last 20)
   const existingMessages = (conversation.messages as Array<{ role: string; content: string }>) || [];

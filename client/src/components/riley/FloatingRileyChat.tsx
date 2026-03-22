@@ -31,11 +31,28 @@ function getPageContext(path: string): string {
   if (ROUTE_LABELS[path]) return ROUTE_LABELS[path];
   // Debtor detail page
   if (path.startsWith("/qollections/debtors/")) return "Debtor Detail";
+  // Invoice detail page
+  if (path.startsWith("/qollections/invoices/")) return "Invoice Detail";
   // Prefix match
   for (const [route, label] of Object.entries(ROUTE_LABELS)) {
     if (path.startsWith(route)) return label;
   }
   return "Qashivo";
+}
+
+/** Extract entity type and ID from the current route for deep context injection */
+function getRelatedEntity(path: string): { relatedEntityType?: string; relatedEntityId?: string } {
+  // Debtor detail: /qollections/debtors/<uuid>
+  const debtorMatch = path.match(/^\/qollections\/debtors\/([0-9a-f-]{36})$/i);
+  if (debtorMatch) {
+    return { relatedEntityType: "debtor", relatedEntityId: debtorMatch[1] };
+  }
+  // Invoice detail: /qollections/invoices/<uuid>
+  const invoiceMatch = path.match(/^\/qollections\/invoices\/([0-9a-f-]{36})$/i);
+  if (invoiceMatch) {
+    return { relatedEntityType: "invoice", relatedEntityId: invoiceMatch[1] };
+  }
+  return {};
 }
 
 function getGreeting(path: string): string {
@@ -149,11 +166,13 @@ export default function FloatingRileyChat() {
   // Send message mutation
   const sendMutation = useMutation({
     mutationFn: async (message: string) => {
+      const entity = getRelatedEntity(location);
       const res = await apiRequest("POST", "/api/riley/message", {
         message,
-        pageContext: getPageContext(location),
+        pageContext: location, // Send the full route path for server-side context loading
         topic: getTopic(location),
         conversationId,
+        ...entity,
       });
       return res.json();
     },
