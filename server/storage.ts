@@ -163,6 +163,12 @@ import {
   messageDrafts,
   type MessageDraft,
   type InsertMessageDraft,
+  rileyConversations,
+  type RileyConversation,
+  type InsertRileyConversation,
+  forecastUserAdjustments,
+  type ForecastUserAdjustment,
+  type InsertForecastUserAdjustment,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc, sql, count, sum, ne, isNotNull, isNull, gte, lte, lt, or, ilike, inArray } from "drizzle-orm";
@@ -627,6 +633,21 @@ export interface IStorage {
   getMessageDraft(id: string, tenantId: string): Promise<MessageDraft | undefined>;
   createMessageDraft(draft: InsertMessageDraft): Promise<MessageDraft>;
   updateMessageDraft(id: string, tenantId: string, updates: Partial<InsertMessageDraft>): Promise<MessageDraft>;
+
+  // Riley Conversation operations
+  createRileyConversation(data: InsertRileyConversation): Promise<RileyConversation>;
+  getRileyConversation(id: string, tenantId: string): Promise<RileyConversation | undefined>;
+  updateRileyConversation(id: string, tenantId: string, updates: Partial<InsertRileyConversation>): Promise<RileyConversation>;
+  listRileyConversations(tenantId: string): Promise<RileyConversation[]>;
+
+  // Forecast User Adjustment operations
+  createForecastAdjustment(data: InsertForecastUserAdjustment): Promise<ForecastUserAdjustment>;
+  listForecastAdjustments(tenantId: string): Promise<ForecastUserAdjustment[]>;
+  updateForecastAdjustment(id: string, tenantId: string, updates: Partial<InsertForecastUserAdjustment>): Promise<ForecastUserAdjustment>;
+
+  // AI Facts operations (Riley intelligence)
+  upsertAiFact(data: InsertAiFact): Promise<AiFact>;
+  listAiFacts(tenantId: string, entityId?: string): Promise<AiFact[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -5661,6 +5682,82 @@ export class DatabaseStorage implements IStorage {
   async updateMessageDraft(id: string, tenantId: string, updates: Partial<InsertMessageDraft>): Promise<MessageDraft> {
     const [updated] = await db.update(messageDrafts).set({ ...updates, updatedAt: new Date() }).where(and(eq(messageDrafts.id, id), eq(messageDrafts.tenantId, tenantId))).returning();
     return updated;
+  }
+
+  // Riley Conversation operations
+  async createRileyConversation(data: InsertRileyConversation): Promise<RileyConversation> {
+    const [created] = await db.insert(rileyConversations).values(data).returning();
+    return created;
+  }
+
+  async getRileyConversation(id: string, tenantId: string): Promise<RileyConversation | undefined> {
+    const [conv] = await db.select().from(rileyConversations)
+      .where(and(eq(rileyConversations.id, id), eq(rileyConversations.tenantId, tenantId)));
+    return conv;
+  }
+
+  async updateRileyConversation(id: string, tenantId: string, updates: Partial<InsertRileyConversation>): Promise<RileyConversation> {
+    const [updated] = await db.update(rileyConversations)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(rileyConversations.id, id), eq(rileyConversations.tenantId, tenantId)))
+      .returning();
+    return updated;
+  }
+
+  async listRileyConversations(tenantId: string): Promise<RileyConversation[]> {
+    return db.select().from(rileyConversations)
+      .where(eq(rileyConversations.tenantId, tenantId))
+      .orderBy(desc(rileyConversations.updatedAt));
+  }
+
+  // Forecast User Adjustment operations
+  async createForecastAdjustment(data: InsertForecastUserAdjustment): Promise<ForecastUserAdjustment> {
+    const [created] = await db.insert(forecastUserAdjustments).values(data).returning();
+    return created;
+  }
+
+  async listForecastAdjustments(tenantId: string): Promise<ForecastUserAdjustment[]> {
+    return db.select().from(forecastUserAdjustments)
+      .where(eq(forecastUserAdjustments.tenantId, tenantId))
+      .orderBy(desc(forecastUserAdjustments.createdAt));
+  }
+
+  async updateForecastAdjustment(id: string, tenantId: string, updates: Partial<InsertForecastUserAdjustment>): Promise<ForecastUserAdjustment> {
+    const [updated] = await db.update(forecastUserAdjustments)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(forecastUserAdjustments.id, id), eq(forecastUserAdjustments.tenantId, tenantId)))
+      .returning();
+    return updated;
+  }
+
+  // AI Facts operations (Riley intelligence)
+  async upsertAiFact(data: InsertAiFact): Promise<AiFact> {
+    // If factKey + entityId + tenantId match, update; otherwise insert
+    if (data.factKey && data.entityId) {
+      const [existing] = await db.select().from(aiFacts)
+        .where(and(
+          eq(aiFacts.tenantId, data.tenantId),
+          eq(aiFacts.factKey, data.factKey),
+          eq(aiFacts.entityId, data.entityId),
+        ));
+      if (existing) {
+        const [updated] = await db.update(aiFacts)
+          .set({ ...data, updatedAt: new Date() })
+          .where(eq(aiFacts.id, existing.id))
+          .returning();
+        return updated;
+      }
+    }
+    const [created] = await db.insert(aiFacts).values(data).returning();
+    return created;
+  }
+
+  async listAiFacts(tenantId: string, entityId?: string): Promise<AiFact[]> {
+    const conditions = [eq(aiFacts.tenantId, tenantId), eq(aiFacts.isActive, true)];
+    if (entityId) conditions.push(eq(aiFacts.entityId, entityId));
+    return db.select().from(aiFacts)
+      .where(and(...conditions))
+      .orderBy(desc(aiFacts.updatedAt));
   }
 }
 

@@ -136,6 +136,11 @@ export const tenants = pgTable("tenants", {
   // Default AI persona for this tenant (FK to agent_personas — defined later in file, so no inline .references())
   defaultPersonaId: varchar("default_persona_id"),
 
+  // Riley weekly review scheduling
+  rileyReviewDay: text("riley_review_day"), // e.g. "monday"
+  rileyReviewTime: text("riley_review_time"), // e.g. "09:00"
+  rileyReviewTimezone: text("riley_review_timezone").default("Europe/London"),
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -1466,21 +1471,30 @@ export const smsMessages = pgTable("sms_messages", {
 ]);
 
 // AI CFO Facts Database - Knowledge base for accurate AI responses
+// Extended for Riley intelligence extraction (Section 20.4 Layer 2)
 export const aiFacts = pgTable("ai_facts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
-  category: varchar("category").notNull(), // 'policies', 'procedures', 'benchmarks', 'regulations', 'company_info', 'industry_data'
+  category: varchar("category").notNull(), // 'policies', 'procedures', 'benchmarks', 'regulations', 'company_info', 'industry_data', 'debtor_relationship', 'payment_behaviour', 'business_context', 'seasonal_pattern', 'cashflow_input', 'finance_preference', 'industry_norm', 'internal_policy', 'contact_intel'
   title: varchar("title").notNull(),
   content: text("content").notNull(),
   tags: jsonb("tags"), // Array of strings for searchability
   priority: integer("priority").default(5), // 1-10, higher priority facts are referenced first
   isActive: boolean("is_active").default(true),
   lastVerified: timestamp("last_verified").defaultNow(),
-  source: varchar("source"), // Where this fact came from (e.g., "company_policy", "regulation", "industry_report")
+  source: varchar("source"), // 'company_policy', 'regulation', 'riley_onboarding', 'riley_conversation', 'riley_inferred', 'user_manual'
   applicableRegions: jsonb("applicable_regions"), // Geographic applicability
   effectiveDate: timestamp("effective_date"),
   expirationDate: timestamp("expiration_date"),
   createdBy: varchar("created_by"),
+  // Riley intelligence extensions
+  entityType: text("entity_type"), // 'debtor' | 'tenant' | 'invoice' | 'forecast' | null
+  entityId: text("entity_id"), // contactId, invoiceId, etc.
+  factKey: text("fact_key"), // structured key e.g. 'relationship_tier', 'tone_override', 'payment_quirk'
+  factValue: text("fact_value"), // the extracted intelligence
+  confidence: decimal("confidence", { precision: 3, scale: 2 }), // 0.00-1.00 (user stated = 1.0, inferred = 0.7)
+  sourceConversationId: varchar("source_conversation_id"), // FK to rileyConversations (defined later)
+  expiresAt: timestamp("expires_at"), // some facts expire (seasonal patterns, capex estimates)
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -1968,6 +1982,10 @@ export const aiFactsRelations = relations(aiFacts, ({ one }) => ({
   tenant: one(tenants, {
     fields: [aiFacts.tenantId],
     references: [tenants.id],
+  }),
+  sourceConversation: one(rileyConversations, {
+    fields: [aiFacts.sourceConversationId],
+    references: [rileyConversations.id],
   }),
 }));
 
@@ -5721,3 +5739,88 @@ export const insertDsoSnapshotSchema = createInsertSchema(dsoSnapshots).omit({
 
 export type DsoSnapshot = typeof dsoSnapshots.$inferSelect;
 export type InsertDsoSnapshot = z.infer<typeof insertDsoSnapshotSchema>;
+
+// ── Sprint 7.1: Riley Conversations ────────────────────────
+export const rileyConversations = pgTable("riley_conversations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  messages: jsonb("messages").notNull().default([]), // [{role, content, timestamp}]
+  topic: text("topic"), // 'debtor_intel' | 'forecast_input' | 'system_help' | 'onboarding' | 'weekly_review'
+  relatedEntityType: text("related_entity_type"), // 'debtor' | 'invoice' | 'forecast' | 'settings'
+  relatedEntityId: text("related_entity_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_riley_conversations_tenant_user").on(table.tenantId, table.userId),
+]);
+
+export const rileyConversationsRelations = relations(rileyConversations, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [rileyConversations.tenantId],
+    references: [tenants.id],
+  }),
+  user: one(users, {
+    fields: [rileyConversations.userId],
+    references: [users.id],
+  }),
+}));
+
+export const insertRileyConversationSchema = createInsertSchema(rileyConversations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type RileyConversation = typeof rileyConversations.$inferSelect;
+export type InsertRileyConversation = z.infer<typeof insertRileyConversationSchema>;
+
+// ── Sprint 7.1: Forecast User Adjustments (Section 20.4 Layer 3) ──
+export const forecastUserAdjustments = pgTable("forecast_user_adjustments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  category: text("category").notNull(), // 'revenue_change' | 'cost_change' | 'hiring' | 'capex' | 'tax' | 'other'
+  description: text("description").notNull(),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  timingType: text("timing_type").notNull(), // 'one_off_date' | 'date_range' | 'recurring_monthly'
+  startDate: timestamp("start_date"),
+  endDate: timestamp("end_date"),
+  enteredDate: timestamp("entered_date").notNull().defaultNow(),
+  expiryDate: timestamp("expiry_date"), // default 3 months from enteredDate, set in application logic
+  lastConfirmedDate: timestamp("last_confirmed_date"),
+  expired: boolean("expired").default(false),
+  affects: text("affects").notNull(), // 'inflows' | 'outflows'
+  source: text("source").notNull(), // 'riley_conversation' | 'manual_ui'
+  sourceConversationId: varchar("source_conversation_id").references(() => rileyConversations.id),
+  materialityScore: decimal("materiality_score", { precision: 6, scale: 4 }), // amount / monthly_revenue
+  followUpPriority: text("follow_up_priority").default("none"), // 'high' | 'medium' | 'low' | 'none'
+  followUpStatus: text("follow_up_status").default("pending"), // 'pending' | 'asked' | 'confirmed' | 'cancelled' | 'auto_resolved'
+  lastFollowUpAt: timestamp("last_follow_up_at"),
+  followUpCount: integer("follow_up_count").default(0),
+  autoResolved: boolean("auto_resolved").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_forecast_adjustments_tenant").on(table.tenantId),
+  index("idx_forecast_adjustments_expired").on(table.tenantId, table.expired),
+]);
+
+export const forecastUserAdjustmentsRelations = relations(forecastUserAdjustments, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [forecastUserAdjustments.tenantId],
+    references: [tenants.id],
+  }),
+  sourceConversation: one(rileyConversations, {
+    fields: [forecastUserAdjustments.sourceConversationId],
+    references: [rileyConversations.id],
+  }),
+}));
+
+export const insertForecastUserAdjustmentSchema = createInsertSchema(forecastUserAdjustments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type ForecastUserAdjustment = typeof forecastUserAdjustments.$inferSelect;
+export type InsertForecastUserAdjustment = z.infer<typeof insertForecastUserAdjustmentSchema>;

@@ -10,11 +10,12 @@ Read /docs/QASHIVO_CONTEXT.md completely. It is the canonical product specificat
 - **REFACTOR** backend (keep existing RBAC, multi-tenant, partner, email, voice, timeline)
 - **REWRITE** frontend (completely new UI per Section 8B of context doc)
 - **REPLACE** auth (swap for production auth)
-- Current phase: **MVP v1 (Months 1-3)**
+- Current phase: **MVP v1.1** — Riley AI Assistant, Data Health, Xero production hardening
 - See Section 18 for existing codebase mapping
 - See Section 19 for all development directives
 - See Section 12 for MVP v1 scope
 - See Section 8A for bank proof points
+- See `docs/QASHIVO_CONTEXT_ADDENDUM_v4.2.md` Sections 20-23 for Riley, Data Health, onboarding, Xero architecture
 
 ## Critical Rules
 1. Every communication is LLM-generated in the agent's persona voice. NO templates. If it reads like a template, it's wrong.
@@ -92,14 +93,6 @@ Started from `server/startup/orchestrator.ts`. All fire-and-forget async calls m
 - **Primary keys**: UUIDs via `gen_random_uuid()`
 - **Migrations**: `npm run db:push` (Drizzle Kit push)
 - **Adding a table**: Define in `shared/schema.ts` → add relations → create Zod insert schema → run `db:push` → add storage methods in `storage.ts`
-
-## Deployment
-- **Platform**: Railway — auto-deploys from GitHub `main` branch on push
-- **Build**: `npm run build` (Vite client + esbuild server → `dist/`)
-- **Start**: `NODE_ENV=production node dist/index.js`
-- **Logs**: Railway dashboard → service → Deployments → logs
-- **DB**: Neon serverless PostgreSQL (connection via `DATABASE_URL`)
-- Dynamic imports in route files must use `../` paths (relative to `server/routes/`), not `./`, because esbuild bundles to a single file in `dist/`
 
 ## Important Conventions
 - TypeScript ESM throughout — no CommonJS `require()`
@@ -215,3 +208,43 @@ TRUELAYER_CLIENT_SECRET=...
 ### What Does NOT Ship in MVP v1
 
 SMS, voice calls, Bayesian forecasting, Qashflow dashboard, Qapital, payment plan negotiation by agent, chat widget, cross-debtor learning, partner portal. See Section 12 of context doc for the full MVP phase breakdown.
+
+---
+
+## MVP v1.1 Build Plan
+
+Read `docs/MVP_V1.1_BUILD_SPEC.md` for full sprint breakdown. Read `docs/QASHIVO_CONTEXT_ADDENDUM_v4.2.md` for Riley architecture (Sections 20-23).
+
+### Sprint Sequence (v1.1)
+
+| Sprint | Focus | Key Deliverable |
+|--------|-------|-----------------|
+| 5 | Xero Production + Data Health | Reliable sync, token refresh, data health page, communication test mode |
+| 6 | Debtor Detail Page | Full debtor record, multi-contact, row click navigation |
+| 7 | Riley AI Assistant | Chat widget, conversations, intelligence extraction, onboarding mode |
+| 8 | Weekly CFO Review | Qashflow tab, review generation, proactive notifications |
+
+### Riley AI Assistant (Sprint 7)
+
+Riley is Qashivo's always-available AI assistant — the intelligence layer across all three pillars. She serves as onboarding guide, business intelligence gatherer, virtual CFO, system help, and action taker.
+
+**Key tables:**
+- `rileyConversations` — conversation history (JSONB messages, topic, related entity)
+- `forecastUserAdjustments` — cashflow inputs captured from Riley conversations (Section 20.4 Layer 3)
+- `aiFacts` (extended) — structured business intelligence extracted from conversations (Section 20.4 Layer 2)
+- `tenants` — rileyReviewDay/Time/Timezone for weekly CFO review scheduling
+
+**Key service (to build):**
+- `server/agents/rileyAssistant.ts` — prompt assembly, context building, response generation, intelligence extraction
+
+**Riley does NOT use templates.** Every response is LLM-generated with full business context.
+
+## Deployment
+
+- **Platform**: Railway — auto-deploys from GitHub `main` branch on push
+- **No Replit dependencies** — all @replit packages removed, no .replit or replit.md files
+- **Build**: `npm run build` (Vite client + esbuild server → `dist/`)
+- **Start**: `NODE_ENV=production node dist/index.js`
+- **Logs**: Railway dashboard → service → Deployments → logs
+- **DB**: Neon serverless PostgreSQL (connection via `DATABASE_URL`)
+- **DB migrations**: Use `npm run db:push` (Drizzle Kit). For large schemas, may need manual SQL via scripts to avoid drizzle-kit column type conflicts.
