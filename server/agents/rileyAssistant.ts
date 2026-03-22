@@ -512,10 +512,12 @@ async function buildActivityContext(tenantId: string): Promise<string> {
 async function buildQashflowContext(tenantId: string): Promise<string> {
   const lines: string[] = ["PAGE CONTEXT: Qashflow (Weekly Review)"];
 
+  // Each query is independently try/caught — one failure must not kill the whole context
+
+  // Active forecast adjustments
   try {
-    // Active forecast adjustments
     const adjustments = await storage.listForecastAdjustments(tenantId);
-    const active = adjustments.filter((a) => !a.expired);
+    const active = (adjustments || []).filter((a) => !a.expired);
     if (active.length > 0) {
       lines.push(`\nActive forecast adjustments (${active.length}):`);
       for (const a of active.slice(0, 10)) {
@@ -523,40 +525,50 @@ async function buildQashflowContext(tenantId: string): Promise<string> {
         lines.push(`- ${a.description}: ${dir}${formatGBP(Math.abs(Number(a.amount)))} (${a.timingType}${a.followUpStatus === "pending" ? ", needs follow-up" : ""})`);
       }
     }
+  } catch (err) {
+    console.error("[Riley] buildQashflowContext: listForecastAdjustments failed:", err);
+  }
 
-    // Expected inflows from AR
-    const metrics = await storage.getInvoiceMetrics(tenantId).catch(() => null);
+  // Expected inflows from AR
+  try {
+    const metrics = await storage.getInvoiceMetrics(tenantId);
     if (metrics) {
       lines.push(`\nAR snapshot: ${formatGBP(metrics.totalOutstanding || 0)} outstanding`);
       lines.push(`Avg days to pay: ${metrics.avgDaysToPay || "N/A"}, On-time rate: ${metrics.onTimePaymentRate || "N/A"}%`);
       lines.push(`Collected this week: ${formatGBP(metrics.collectedThisWeek || 0)}, this month: ${formatGBP(metrics.collectedThisMonth || 0)}`);
     }
+  } catch (err) {
+    console.error("[Riley] buildQashflowContext: getInvoiceMetrics failed:", err);
+  }
 
-    // DSO trend
-    try {
-      const snapshots = await storage.getDsoSnapshots(tenantId, 30);
-      if (snapshots.length >= 2) {
-        const latest = Number(snapshots[0].dsoValue);
-        const oldest = Number(snapshots[snapshots.length - 1].dsoValue);
-        lines.push(`DSO trend (30d): ${Math.round(oldest)} → ${Math.round(latest)} days`);
-      }
-    } catch { /* graceful */ }
+  // DSO trend
+  try {
+    const snapshots = await storage.getDsoSnapshots(tenantId, 30);
+    if (snapshots && snapshots.length >= 2) {
+      const latest = Number(snapshots[0].dsoValue);
+      const oldest = Number(snapshots[snapshots.length - 1].dsoValue);
+      lines.push(`DSO trend (30d): ${Math.round(oldest)} → ${Math.round(latest)} days`);
+    }
+  } catch (err) {
+    console.error("[Riley] buildQashflowContext: getDsoSnapshots failed:", err);
+  }
 
-    // Latest weekly review context
-    try {
-      const latestReview = await storage.getLatestWeeklyReview(tenantId);
-      if (latestReview) {
-        lines.push(`\nLatest weekly review (${latestReview.weekStartDate}):`);
-        lines.push(latestReview.summaryText.slice(0, 500));
-        if (latestReview.keyNumbers) {
-          const kn = latestReview.keyNumbers as any;
-          if (kn.expected) {
-            lines.push(`Expected scenario: In ${formatGBP(kn.expected.expectedIn || 0)}, Out ${formatGBP(kn.expected.expectedOut || 0)}, Net ${formatGBP(kn.expected.netPosition || 0)}`);
-          }
+  // Latest weekly review context
+  try {
+    const latestReview = await storage.getLatestWeeklyReview(tenantId);
+    if (latestReview && latestReview.summaryText) {
+      lines.push(`\nLatest weekly review (${latestReview.weekStartDate}):`);
+      lines.push(latestReview.summaryText.slice(0, 500));
+      if (latestReview.keyNumbers) {
+        const kn = latestReview.keyNumbers as any;
+        if (kn?.expected) {
+          lines.push(`Expected scenario: In ${formatGBP(kn.expected.expectedIn || 0)}, Out ${formatGBP(kn.expected.expectedOut || 0)}, Net ${formatGBP(kn.expected.netPosition || 0)}`);
         }
       }
-    } catch { /* graceful */ }
-  } catch { /* graceful */ }
+    }
+  } catch (err) {
+    console.error("[Riley] buildQashflowContext: getLatestWeeklyReview failed:", err);
+  }
 
   return lines.join("\n");
 }

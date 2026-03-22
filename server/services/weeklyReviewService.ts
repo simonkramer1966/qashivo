@@ -220,6 +220,8 @@ After the prose, output a JSON block with debtor focus items. Use this exact for
 ]
 ---END_JSON---
 
+Write in plain prose paragraphs only. Do not use markdown headers (##), horizontal rules (---), bold markers (**), or a title line. The UI provides all formatting — just write the content as flowing paragraphs.
+
 Keep the tone professional but accessible — this is for a business owner, not an accountant.
 Use GBP (£) for all amounts. Be specific with numbers, not vague.`;
 }

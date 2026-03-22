@@ -16,7 +16,8 @@ import {
   ChevronUp,
   PoundSterling,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import ReactMarkdown from "react-markdown";
 
 interface KeyNumbers {
   optimistic: { expectedIn: number; expectedOut: number; netPosition: number; pressurePoints: string[] };
@@ -136,6 +137,13 @@ export default function WeeklyReview() {
   const keyNumbers = review.keyNumbers;
   const debtorFocus = review.debtorFocus || [];
 
+  // Strip redundant LLM-generated title line (e.g. "# Weekly Cash Collection Review")
+  const cleanedSummary = useMemo(() => {
+    return review.summaryText
+      .replace(/^#+ .*(?:review|summary|collection).*\n*/i, "")
+      .trim();
+  }, [review.summaryText]);
+
   return (
     <div className="space-y-6">
       {/* ── Header ─────────────────────────────────── */}
@@ -176,8 +184,8 @@ export default function WeeklyReview() {
           <CardTitle className="text-base">Weekly Summary</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="prose prose-sm max-w-none dark:prose-invert whitespace-pre-wrap">
-            {review.summaryText}
+          <div className="prose prose-sm max-w-none dark:prose-invert">
+            <ReactMarkdown>{cleanedSummary}</ReactMarkdown>
           </div>
         </CardContent>
       </Card>
