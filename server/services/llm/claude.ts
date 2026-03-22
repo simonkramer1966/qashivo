@@ -47,6 +47,43 @@ export async function generateText(opts: GenerateTextOptions): Promise<string> {
   return block.text;
 }
 
+export type { ModelTier };
+
+export interface ConversationMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+interface GenerateConversationOptions {
+  system: string;
+  messages: ConversationMessage[];
+  model?: ModelTier;
+  temperature?: number;
+  maxTokens?: number;
+}
+
+/**
+ * Generate a response from Claude given a full conversation history.
+ * Use this for multi-turn conversations like Riley chat.
+ */
+export async function generateConversation(opts: GenerateConversationOptions): Promise<string> {
+  const { system, messages, model = "standard", temperature = 0.4, maxTokens = 1024 } = opts;
+
+  const response = await anthropic.messages.create({
+    model: MODELS[model],
+    max_tokens: maxTokens,
+    temperature,
+    system,
+    messages,
+  });
+
+  const block = response.content[0];
+  if (block.type !== "text") {
+    throw new Error(`Unexpected content block type: ${block.type}`);
+  }
+  return block.text;
+}
+
 /**
  * Generate a JSON response from Claude and parse it.
  * Returns a typed object — caller is responsible for runtime validation.
