@@ -3,6 +3,7 @@ import { isAuthenticated } from "../auth";
 import { storage } from "../storage";
 import {
   getRileyResponse,
+  getRileyResponseStreaming,
   extractIntelligence,
   getProactiveSuggestions,
   type RileyTopic,
@@ -18,6 +19,9 @@ const VALID_TOPICS = new Set<RileyTopic>([
 
 export function registerRileyRoutes(app: Express): void {
   // ── POST /api/riley/message ─────────────────────────────────
+  // Supports two modes:
+  //   stream: false (default) — returns full JSON response
+  //   stream: true — returns Server-Sent Events with text deltas
   app.post("/api/riley/message", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -32,6 +36,7 @@ export function registerRileyRoutes(app: Express): void {
         conversationId,
         relatedEntityType,
         relatedEntityId,
+        stream,
       } = req.body;
 
       if (!message || typeof message !== "string" || !message.trim()) {
@@ -43,7 +48,50 @@ export function registerRileyRoutes(app: Express): void {
           ? (topic as RileyTopic)
           : "system_help";
 
-      const result = await getRileyResponse({
+      // ── Non-streaming path (existing behaviour) ─────────────
+      if (!stream) {
+        const result = await getRileyResponse({
+          tenantId: user.tenantId,
+          userId: user.id,
+          conversationId: conversationId || null,
+          userMessage: message.trim(),
+          pageContext: pageContext || "unknown",
+          topic: resolvedTopic,
+          relatedEntityType: relatedEntityType || undefined,
+          relatedEntityId: relatedEntityId || undefined,
+        });
+
+        // Fire-and-forget intelligence extraction
+        extractIntelligence(result.conversationId, user.tenantId).catch((err) =>
+          console.error("[Riley] Background extraction failed:", err),
+        );
+
+        return res.json({
+          response: result.response,
+          conversationId: result.conversationId,
+        });
+      }
+
+      // ── Streaming path (SSE) ────────────────────────────────
+      res.writeHead(200, {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+        "X-Accel-Buffering": "no", // Disable nginx buffering
+      });
+
+      // Detect client disconnect
+      let clientDisconnected = false;
+      req.on("close", () => {
+        clientDisconnected = true;
+      });
+
+      const writeSse = (data: Record<string, unknown>) => {
+        if (clientDisconnected) return;
+        res.write(`data: ${JSON.stringify(data)}\n\n`);
+      };
+
+      const { conversationId: convId } = await getRileyResponseStreaming({
         tenantId: user.tenantId,
         userId: user.id,
         conversationId: conversationId || null,
@@ -52,20 +100,39 @@ export function registerRileyRoutes(app: Express): void {
         topic: resolvedTopic,
         relatedEntityType: relatedEntityType || undefined,
         relatedEntityId: relatedEntityId || undefined,
+
+        onDelta(text) {
+          writeSse({ delta: text });
+        },
+
+        onDone(fullResponse, finalConvId) {
+          writeSse({ done: true, conversationId: finalConvId });
+          res.end();
+
+          // Fire-and-forget intelligence extraction
+          extractIntelligence(finalConvId, user.tenantId!).catch((err) =>
+            console.error("[Riley] Background extraction failed:", err),
+          );
+        },
+
+        onError(error) {
+          console.error("[Riley] Stream error:", error);
+          writeSse({ error: "Response generation failed" });
+          res.end();
+        },
       });
 
-      // Fire-and-forget intelligence extraction
-      extractIntelligence(result.conversationId, user.tenantId).catch((err) =>
-        console.error("[Riley] Background extraction failed:", err),
-      );
+      // Send conversationId immediately so client can track it
+      writeSse({ conversationId: convId });
 
-      res.json({
-        response: result.response,
-        conversationId: result.conversationId,
-      });
     } catch (error) {
       console.error("[Riley] Error processing message:", error);
-      res.status(500).json({ message: "Failed to process message" });
+      // If headers already sent (streaming started), just end
+      if (res.headersSent) {
+        res.end();
+      } else {
+        res.status(500).json({ message: "Failed to process message" });
+      }
     }
   });
 

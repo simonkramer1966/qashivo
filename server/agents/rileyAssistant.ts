@@ -20,6 +20,7 @@ import {
 } from "@shared/schema";
 import {
   generateConversation,
+  streamConversation,
   generateJSON,
   type ConversationMessage,
 } from "../services/llm/claude";
@@ -540,6 +541,21 @@ async function buildQashflowContext(tenantId: string): Promise<string> {
         lines.push(`DSO trend (30d): ${Math.round(oldest)} → ${Math.round(latest)} days`);
       }
     } catch { /* graceful */ }
+
+    // Latest weekly review context
+    try {
+      const latestReview = await storage.getLatestWeeklyReview(tenantId);
+      if (latestReview) {
+        lines.push(`\nLatest weekly review (${latestReview.weekStartDate}):`);
+        lines.push(latestReview.summaryText.slice(0, 500));
+        if (latestReview.keyNumbers) {
+          const kn = latestReview.keyNumbers as any;
+          if (kn.expected) {
+            lines.push(`Expected scenario: In ${formatGBP(kn.expected.expectedIn || 0)}, Out ${formatGBP(kn.expected.expectedOut || 0)}, Net ${formatGBP(kn.expected.netPosition || 0)}`);
+          }
+        }
+      }
+    } catch { /* graceful */ }
   } catch { /* graceful */ }
 
   return lines.join("\n");
@@ -936,6 +952,121 @@ export async function getRileyResponse(params: {
   });
 
   return { response, conversationId: conversation.id };
+}
+
+/**
+ * Streaming variant of getRileyResponse.
+ * Performs the same context assembly, then streams deltas via callback.
+ * Returns the conversationId immediately so the route can begin SSE,
+ * then calls onDelta for each text chunk and onDone when finished.
+ */
+export async function getRileyResponseStreaming(params: {
+  tenantId: string;
+  userId: string;
+  conversationId: string | null;
+  userMessage: string;
+  pageContext: string;
+  topic: RileyTopic;
+  relatedEntityType?: string;
+  relatedEntityId?: string;
+  onDelta: (text: string) => void;
+  onDone: (fullResponse: string, conversationId: string) => void;
+  onError: (error: Error) => void;
+}): Promise<{ conversationId: string }> {
+  const {
+    tenantId,
+    userId,
+    userMessage,
+    pageContext,
+    topic,
+    relatedEntityType,
+    relatedEntityId,
+    onDelta,
+    onDone,
+    onError,
+  } = params;
+
+  // 1. Load or create conversation
+  let conversation = params.conversationId
+    ? await storage.getRileyConversation(params.conversationId, tenantId)
+    : null;
+
+  if (!conversation) {
+    conversation = await storage.createRileyConversation({
+      tenantId,
+      userId,
+      messages: [],
+      topic,
+      relatedEntityType: relatedEntityType || null,
+      relatedEntityId: relatedEntityId || null,
+    });
+  }
+
+  // 2. Fetch context in parallel
+  const [user, tenantSnapshot, relevantFacts, pageContextBlock] = await Promise.all([
+    storage.getUser(userId),
+    getTenantSnapshot(tenantId),
+    storage.listAiFacts(tenantId, relatedEntityId || undefined),
+    buildPageContext(pageContext, tenantId, relatedEntityType, relatedEntityId),
+  ]);
+
+  const userName =
+    [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "User";
+  const userRole = user?.role || "owner";
+
+  // 3. Build system prompt
+  const systemPrompt = buildRileySystemPrompt({
+    userName,
+    userRole,
+    pageContext,
+    topic,
+    isOnboarding: topic === "onboarding",
+    tenantSnapshot,
+    relevantFacts: relevantFacts.slice(0, 30),
+    relatedEntityType,
+    relatedEntityId,
+  }, pageContextBlock);
+
+  // 4. Build conversation messages (last 20)
+  const existingMessages = (conversation.messages as Array<{ role: string; content: string }>) || [];
+  const recentMessages = existingMessages.slice(-19);
+  const conversationHistory: ConversationMessage[] = recentMessages.map((m) => ({
+    role: m.role as "user" | "assistant",
+    content: m.content,
+  }));
+  conversationHistory.push({ role: "user", content: userMessage });
+
+  const convId = conversation.id;
+  const existingMsgs = existingMessages;
+
+  // 5. Stream Claude response (async — runs after we return)
+  streamConversation(
+    {
+      system: systemPrompt,
+      messages: conversationHistory,
+      model: "standard",
+      temperature: 0.5,
+      maxTokens: 1024,
+    },
+    onDelta,
+  )
+    .then(async (fullResponse) => {
+      // 6. Persist to conversation
+      const now = new Date().toISOString();
+      const updatedMessages = [
+        ...existingMsgs,
+        { role: "user", content: userMessage, timestamp: now },
+        { role: "assistant", content: fullResponse, timestamp: now },
+      ];
+      await storage.updateRileyConversation(convId, tenantId, {
+        messages: updatedMessages as any,
+      });
+      onDone(fullResponse, convId);
+    })
+    .catch(onError);
+
+  // Return immediately so the route can start SSE headers
+  return { conversationId: convId };
 }
 
 // ── Intelligence Extraction ──────────────────────────────────

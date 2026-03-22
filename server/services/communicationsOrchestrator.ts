@@ -367,11 +367,8 @@ class CommunicationsOrchestrator {
       
       const tenant = await storage.getTenant(request.tenantId);
       
-      const { RetellService } = await import('../retell-service');
-      const retellService = new RetellService();
-      
       const fromNumber = process.env.RETELL_FROM_NUMBER || process.env.VONAGE_PHONE_NUMBER || '';
-      
+
       if (!fromNumber) {
         return {
           success: false,
@@ -382,18 +379,33 @@ class CommunicationsOrchestrator {
           retryable: false,
         };
       }
-      
-      const callResult = await retellService.createCall({
+
+      const retellAgentId = process.env.RETELL_AGENT_ID;
+      if (!retellAgentId) {
+        return {
+          success: false,
+          channel: 'voice',
+          status: 'failed',
+          traceId: '',
+          error: 'No Retell agent ID configured',
+          retryable: false,
+        };
+      }
+
+      // Use central voice wrapper (enforces communication mode)
+      const { sendVoiceCall } = await import('./communications/sendVoiceCall.js');
+
+      const callResult = await sendVoiceCall({
+        tenantId: request.tenantId,
+        to: recipientPhone,
+        contactName: contact.name || 'Customer',
+        agentId: retellAgentId,
         fromNumber,
-        toNumber: recipientPhone,
-        agentId: process.env.RETELL_AGENT_ID,
         dynamicVariables: {
-          customer_name: contact.name || 'Customer',
           company_name: tenant?.name || 'Our Company',
           ...request.personalization,
         },
         metadata: {
-          tenantId: request.tenantId,
           contactId: request.contactId,
           invoiceId: request.invoiceIds?.[0],
           actionId: request.actionId,
@@ -401,6 +413,7 @@ class CommunicationsOrchestrator {
           tone: request.tone,
           escalationLevel: request.escalationLevel,
         },
+        context: 'COMMS_ORCHESTRATOR',
       });
       
       console.log(`🎙️ Voice call initiated: ${callResult.callId}`);

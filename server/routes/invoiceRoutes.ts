@@ -941,23 +941,23 @@ export function registerInvoiceRoutes(app: Express): void {
         return res.status(500).json({ message: "Retell agent not configured" });
       }
 
-      // Import and use RetellService
-      const { RetellService } = await import('../retell-service.js');
-      const retellService = new RetellService();
+      // Initiate call via central voice wrapper (enforces communication mode)
+      const { sendVoiceCall } = await import('../services/communications/sendVoiceCall.js');
 
-      // Initiate call
-      const callResult = await retellService.createCall({
-        fromNumber: process.env.RETELL_PHONE_NUMBER || '',
-        toNumber: invoice.contact.phone,
+      const callResult = await sendVoiceCall({
+        tenantId: user.tenantId,
+        to: invoice.contact.phone,
+        contactName: customerName,
         agentId: agentId,
+        fromNumber: process.env.RETELL_PHONE_NUMBER || '',
         dynamicVariables,
         metadata: {
-          tenantId: user.tenantId,
           invoiceId: invoice.id,
           contactId: invoice.contactId,
           scriptType,
           daysOverdue: daysOverdue.toString(),
         },
+        context: 'AI_VOICE_CALL',
       });
 
       console.log(`📞 AI voice call initiated: ${callResult.callId} to ${invoice.contact.phone}`);
@@ -1628,6 +1628,7 @@ ${tenant.name}
         subject: emailSubject,
         text: customMessage || defaultMessage,
         html: customMessage ? undefined : htmlMessage,
+        tenantId: user.tenantId,
         attachments: [{
           content: pdfBuffer,
           filename: `Invoice-${invoice.invoiceNumber}.pdf`,

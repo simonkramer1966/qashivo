@@ -15,6 +15,7 @@ import { workflowTimerProcessor } from "../jobs/workflow-timer-processor";
 import { portfolioController } from "../services/portfolioController";
 import { startDsoSnapshotJob } from "../jobs/dsoSnapshotJob";
 import { startXeroReconciliationJob } from "../jobs/xeroReconciliationJob";
+import { startWeeklyReviewJob } from "../jobs/weeklyReviewJob";
 import { batchProcessor } from "../services/batchProcessor";
 import { db } from "../db";
 import { tenants, providerConnections } from "@shared/schema";
@@ -195,6 +196,13 @@ export async function startAll(): Promise<void> {
     console.log("[startup] xero reconciliation job scheduled");
   } catch (error) {
     console.error("[startup] xero reconciliation job failed:", error);
+  }
+
+  try {
+    startWeeklyReviewJob();
+    console.log("[startup] weekly review job scheduled");
+  } catch (error) {
+    console.error("[startup] weekly review job failed:", error);
   }
 }
 

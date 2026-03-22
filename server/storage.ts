@@ -169,6 +169,9 @@ import {
   forecastUserAdjustments,
   type ForecastUserAdjustment,
   type InsertForecastUserAdjustment,
+  weeklyReviews,
+  type WeeklyReview,
+  type InsertWeeklyReview,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc, sql, count, sum, ne, isNotNull, isNull, gte, lte, lt, or, ilike, inArray } from "drizzle-orm";
@@ -648,6 +651,11 @@ export interface IStorage {
   // AI Facts operations (Riley intelligence)
   upsertAiFact(data: InsertAiFact): Promise<AiFact>;
   listAiFacts(tenantId: string, entityId?: string): Promise<AiFact[]>;
+
+  // Weekly Review operations (Sprint 8)
+  createWeeklyReview(data: InsertWeeklyReview): Promise<WeeklyReview>;
+  getLatestWeeklyReview(tenantId: string): Promise<WeeklyReview | undefined>;
+  listWeeklyReviews(tenantId: string, limit?: number): Promise<WeeklyReview[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -5758,6 +5766,27 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(aiFacts)
       .where(and(...conditions))
       .orderBy(desc(aiFacts.updatedAt));
+  }
+
+  // Weekly Review operations (Sprint 8)
+  async createWeeklyReview(data: InsertWeeklyReview): Promise<WeeklyReview> {
+    const [created] = await db.insert(weeklyReviews).values(data).returning();
+    return created;
+  }
+
+  async getLatestWeeklyReview(tenantId: string): Promise<WeeklyReview | undefined> {
+    const [review] = await db.select().from(weeklyReviews)
+      .where(eq(weeklyReviews.tenantId, tenantId))
+      .orderBy(desc(weeklyReviews.generatedAt))
+      .limit(1);
+    return review;
+  }
+
+  async listWeeklyReviews(tenantId: string, limit = 12): Promise<WeeklyReview[]> {
+    return db.select().from(weeklyReviews)
+      .where(eq(weeklyReviews.tenantId, tenantId))
+      .orderBy(desc(weeklyReviews.generatedAt))
+      .limit(limit);
   }
 }
 

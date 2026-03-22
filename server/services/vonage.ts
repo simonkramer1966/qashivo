@@ -4,7 +4,7 @@ const apiKey = process.env.VONAGE_API_KEY || '';
 const apiSecret = process.env.VONAGE_API_SECRET || '';
 const fromNumber = process.env.VONAGE_PHONE_NUMBER || '';
 
-const vonageClient = (apiKey && apiSecret) 
+const vonageClient = (apiKey && apiSecret)
   ? new Vonage({
       apiKey: apiKey,
       apiSecret: apiSecret,
@@ -22,11 +22,12 @@ interface SMSParams {
   to: string;
   message: string;
   from?: string;
+  tenantId?: string;
 }
 
-export async function sendSMS(params: SMSParams & { 
-  invoiceId?: string; 
-  customerId?: string; 
+export async function sendSMS(params: SMSParams & {
+  invoiceId?: string;
+  customerId?: string;
 }): Promise<{
   success: boolean;
   messageId?: string;
@@ -37,7 +38,7 @@ export async function sendSMS(params: SMSParams & {
     const { demoModeService } = await import('./demoModeService.js');
     if (demoModeService.isEnabled()) {
       console.log('🎭 Demo mode: Skipping real SMS send, returning mock success');
-      
+
       // Schedule mock inbound response if context available
       if (params.invoiceId && params.customerId) {
         const { mockResponderService } = await import('./mockResponderService.js');
@@ -48,7 +49,7 @@ export async function sendSMS(params: SMSParams & {
           customerId: params.customerId,
         });
       }
-      
+
       // Return mock success immediately - DO NOT send real SMS
       return { success: true, messageId: 'demo-mock-sms-' + Date.now() };
     }
@@ -62,8 +63,8 @@ export async function sendSMS(params: SMSParams & {
     let to = params.to;
     let text = params.message;
 
-    // Safety net: check tenant communication mode for SMS redirection
-    if ((params as any).tenantId) {
+    // SECURITY: Communication mode enforcement — MUST happen before any send
+    if (params.tenantId) {
       try {
         const { db } = await import('../db.js');
         const { tenants } = await import('../../shared/schema.js');
@@ -71,24 +72,35 @@ export async function sendSMS(params: SMSParams & {
         const [tenant] = await db.select({
           communicationMode: tenants.communicationMode,
           testPhones: tenants.testPhones,
-        }).from(tenants).where(eq(tenants.id, (params as any).tenantId));
+        }).from(tenants).where(eq(tenants.id, params.tenantId));
 
-        if (tenant?.communicationMode === 'off') {
-          console.log(`🚫 [SmsSafetyNet] Communication mode is OFF — blocking SMS`);
-          return { success: false, error: 'Communication mode is OFF' };
+        const mode = tenant?.communicationMode || 'testing'; // Default to testing, not live
+
+        console.log(`📱 [SmsCommMode] tenant=${params.tenantId} mode=${mode} intendedRecipient=${to}`);
+
+        if (mode === 'off') {
+          console.log(`🚫 [SmsCommMode] BLOCKED — mode is OFF for tenant ${params.tenantId}`);
+          return { success: false, error: 'Communication mode is OFF — all outbound blocked' };
         }
 
-        if (tenant?.communicationMode === 'testing') {
-          const testPhones = tenant.testPhones as string[] | null;
+        if (mode === 'testing' || mode === 'soft_live') {
+          const testPhones = tenant?.testPhones as string[] | null;
           if (testPhones?.length) {
             const originalTo = to;
             to = testPhones[0];
-            text = `[TEST] Original recipient: ${originalTo}\n\n${text}`;
-            console.log(`🧪 [SmsSafetyNet] Redirected SMS from ${originalTo} → ${to}`);
+            const modeLabel = mode === 'testing' ? 'TEST' : 'SOFT LIVE';
+            text = `[${modeLabel}] Original recipient: ${originalTo}\n\n${text}`;
+            console.log(`🧪 [SmsCommMode] ${modeLabel} redirect from ${originalTo} → ${to}`);
           }
         }
+        // mode === 'live' — send to real recipient, no modification
       } catch (err) {
         console.warn('[SmsSafetyNet] Could not check communication mode:', err);
+        // In production, block if we can't verify
+        if (process.env.NODE_ENV === 'production') {
+          console.error('🚫 [SmsSafetyNet] BLOCKING SMS — cannot verify communication mode in production');
+          return { success: false, error: 'Cannot verify communication mode — SMS blocked for safety' };
+        }
       }
     }
 
@@ -102,15 +114,15 @@ export async function sendSMS(params: SMSParams & {
 
     if (response.messages && response.messages[0]) {
       const message = response.messages[0];
-      
+
       if (message.status === '0') {
         console.log(`✅ Vonage SMS sent successfully! Message ID: ${message.messageId}`);
         return { success: true, messageId: message.messageId };
       } else {
         console.error(`❌ Vonage SMS error: ${message.errorText}`);
-        return { 
-          success: false, 
-          error: message.errorText || 'Failed to send SMS' 
+        return {
+          success: false,
+          error: message.errorText || 'Failed to send SMS'
         };
       }
     }
@@ -122,9 +134,9 @@ export async function sendSMS(params: SMSParams & {
     if (error.response) {
       console.error('❌ Vonage error response:', JSON.stringify(error.response, null, 2));
     }
-    return { 
-      success: false, 
-      error: error.message || 'Failed to send SMS' 
+    return {
+      success: false,
+      error: error.message || 'Failed to send SMS'
     };
   }
 }
@@ -136,6 +148,7 @@ export async function sendPaymentReminderSMS(
     invoiceNumber: string;
     amount: number;
     daysPastDue: number;
+    tenantId?: string;
   }
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const message = `Hi ${contactData.name}, this is a friendly reminder that Invoice ${contactData.invoiceNumber} for £${contactData.amount} is ${contactData.daysPastDue} days past due. Please contact us to arrange payment. Thank you!`;
@@ -143,6 +156,7 @@ export async function sendPaymentReminderSMS(
   return await sendSMS({
     to: contactData.phone,
     message,
+    tenantId: contactData.tenantId,
   });
 }
 
@@ -153,6 +167,7 @@ export async function sendUrgentPaymentNotice(
     invoiceNumber: string;
     amount: number;
     daysPastDue: number;
+    tenantId?: string;
   }
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const message = `URGENT: ${contactData.name}, Invoice ${contactData.invoiceNumber} (£${contactData.amount}) is ${contactData.daysPastDue} days overdue. Immediate payment required to avoid further action. Please call us today.`;
@@ -160,13 +175,15 @@ export async function sendUrgentPaymentNotice(
   return await sendSMS({
     to: contactData.phone,
     message,
+    tenantId: contactData.tenantId,
   });
 }
 
 export async function sendCustomSMS(
   to: string,
   message: string,
-  from?: string
+  from?: string,
+  tenantId?: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  return await sendSMS({ to, message, from });
+  return await sendSMS({ to, message, from, tenantId });
 }

@@ -1,6 +1,9 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import Retell from "retell-sdk";
 
+// SAFETY NOTE: MCP tools are admin-level system tools with no tenant context.
+// They bypass communication mode enforcement by design.
+// For tenant-scoped calls, use sendVoiceCall() from services/communications/sendVoiceCall.ts.
 export const registerCallTools = (server: McpServer, retellClient: Retell) => {
   server.tool(
     "create_phone_call",

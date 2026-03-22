@@ -85,6 +85,39 @@ export async function generateConversation(opts: GenerateConversationOptions): P
 }
 
 /**
+ * Stream a conversation response from Claude, yielding text deltas.
+ * Use this for real-time SSE streaming in chat interfaces.
+ */
+export async function streamConversation(
+  opts: GenerateConversationOptions,
+  onDelta: (text: string) => void,
+): Promise<string> {
+  const { system, messages, model = "standard", temperature = 0.4, maxTokens = 1024 } = opts;
+
+  const stream = anthropic.messages.stream({
+    model: MODELS[model],
+    max_tokens: maxTokens,
+    temperature,
+    system,
+    messages,
+  });
+
+  let fullText = "";
+
+  for await (const event of stream) {
+    if (
+      event.type === "content_block_delta" &&
+      event.delta.type === "text_delta"
+    ) {
+      fullText += event.delta.text;
+      onDelta(event.delta.text);
+    }
+  }
+
+  return fullText;
+}
+
+/**
  * Generate a JSON response from Claude and parse it.
  * Returns a typed object — caller is responsible for runtime validation.
  */

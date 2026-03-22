@@ -284,6 +284,7 @@ import { registerSettingsRoutes } from "./routes/settingsRoutes";
 import { registerMiscRoutes } from "./routes/miscRoutes";
 import { registerActionCentreRoutes } from "./routes/actionCentreRoutes";
 import { registerRileyRoutes } from "./routes/rileyRoutes";
+import { registerWeeklyReviewRoutes } from "./routes/weeklyReviewRoutes";
 import { ForecastEngine, type ForecastConfig, type ForecastScenario } from "../shared/forecast";
 import { subscriptionService } from "./services/subscriptionService";
 import { cleanEmailContent } from "./services/messagePostProcessor";
@@ -511,6 +512,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerMiscRoutes(app);
   registerActionCentreRoutes(app);
   registerRileyRoutes(app);
+  registerWeeklyReviewRoutes(app);
 
   // Partner and Context Management Routes
   // Get current auth context (user info, role, active tenant)
@@ -1057,6 +1059,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           switch (name) {
             case 'create_phone_call':
               try {
+                // SAFETY NOTE: MCP HTTP proxy — admin-level, no tenant context, bypasses mode enforcement.
                 // Critical Fix: Normalize dynamic variables for Retell AI
                 const normalizedVariables = normalizeDynamicVariables(toolArgs.dynamic_variables, 'MCP_HTTP');
                 logVariableTransformation(toolArgs.dynamic_variables, normalizedVariables, 'MCP_HTTP');
@@ -2449,6 +2452,7 @@ Guidelines:
         invoiceNumber: invoice.invoiceNumber,
         amount: Number(invoice.amount),
         daysPastDue,
+        tenantId: user.tenantId,
       });
 
       if (result.success) {
@@ -2557,6 +2561,7 @@ Guidelines:
         invoiceNumber: "TEST-001",
         amount: 100.00,
         daysPastDue: 0,
+        tenantId: user.tenantId,
       });
 
       if (result.success) {
@@ -2947,14 +2952,14 @@ Guidelines:
       // Get tenant information for fallback organization name
       const tenant = await storage.getTenant(user.tenantId);
       
-      // Import the unified Retell helper
-      const { createUnifiedRetellCall, createStandardCollectionVariables } = await import('./utils/retellCallHelper');
-      
+      // Import helpers for variable preparation
+      const { createStandardCollectionVariables } = await import('./utils/retellCallHelper');
+
       // Create standard collection variables using the helper (accepts any format)
       // Demo values provide realistic test data for the voice agent
       const variablesData = createStandardCollectionVariables({
         customerName: customerName || "Test Customer",
-        companyName: companyName || "Test Company", 
+        companyName: companyName || "Test Company",
         organisationName: organisationName || tenant?.name || "Nexus AR",
         invoiceNumber: invoiceNumber || "TEST-001",
         invoiceAmount: invoiceAmount || "1500.00",
@@ -2978,16 +2983,25 @@ Guidelines:
         accountAge: "180",
       });
 
-      // Use unified Retell call creation (handles variable normalization, phone formatting, etc.)
-      const callResult = await createUnifiedRetellCall({
-        toNumber: phone,
+      // Use central voice wrapper (enforces communication mode)
+      const { sendVoiceCall } = await import('./services/communications/sendVoiceCall');
+
+      const agentId = process.env.RETELL_AGENT_ID;
+      if (!agentId) {
+        return res.status(500).json({ message: "Retell agent not configured" });
+      }
+
+      const callResult = await sendVoiceCall({
+        tenantId: user.tenantId,
+        to: phone,
+        contactName: customerName || "Test Customer",
+        agentId,
         dynamicVariables: variablesData,
-        context: 'TEST_VOICE',
         metadata: {
           type: 'test_call',
-          tenantId: user.tenantId,
           userId: user.id
-        }
+        },
+        context: 'TEST_VOICE',
       });
 
       // Store the test call record
@@ -6315,7 +6329,11 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       console.log('🎤 [VOICE-DEMO] Retell config check - API_KEY:', process.env.RETELL_API_KEY ? 'SET' : 'MISSING');
       console.log('🎤 [VOICE-DEMO] Retell config check - PHONE_NUMBER:', process.env.RETELL_PHONE_NUMBER ? 'SET' : 'MISSING');
       
-      // Trigger Retell AI call with investor demo script
+      // SAFETY NOTE: This is a public investor demo endpoint with NO tenantId.
+      // It uses hardcoded dummy data and bypasses communication mode enforcement.
+      // This is acceptable because: (1) no tenant data involved, (2) user provides their own phone,
+      // (3) endpoint is @deprecated and for investor demos only.
+      // For tenant-scoped calls, use sendVoiceCall() from services/communications/sendVoiceCall.ts.
       const { createUnifiedRetellCall, createStandardCollectionVariables } = await import('./utils/retellCallHelper.js');
       
       // Calculate due date as 15 days ago

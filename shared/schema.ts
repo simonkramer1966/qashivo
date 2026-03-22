@@ -12,6 +12,7 @@ import {
   decimal,
   boolean,
   unique,
+  date,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -5826,3 +5827,41 @@ export const insertForecastUserAdjustmentSchema = createInsertSchema(forecastUse
 
 export type ForecastUserAdjustment = typeof forecastUserAdjustments.$inferSelect;
 export type InsertForecastUserAdjustment = z.infer<typeof insertForecastUserAdjustmentSchema>;
+
+// ── Sprint 8: Weekly CFO Reviews ──────────────────────────
+
+export const weeklyReviews = pgTable("weekly_reviews", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  weekStartDate: date("week_start_date").notNull(),
+  weekEndDate: date("week_end_date").notNull(),
+  generatedAt: timestamp("generated_at").defaultNow().notNull(),
+  summaryText: text("summary_text").notNull(), // 3-4 paragraph Claude-generated narrative
+  keyNumbers: jsonb("key_numbers"), // { expectedIn, expectedOut, netPosition, pressurePoints }
+  debtorFocus: jsonb("debtor_focus"), // array of debtors relevant to cash this week
+  forecastAdjustmentsUsed: jsonb("forecast_adjustments_used"), // snapshot of inputs used
+  previousReviewId: varchar("previous_review_id"), // FK to self for history chain
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const weeklyReviewsRelations = relations(weeklyReviews, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [weeklyReviews.tenantId],
+    references: [tenants.id],
+  }),
+  previousReview: one(weeklyReviews, {
+    fields: [weeklyReviews.previousReviewId],
+    references: [weeklyReviews.id],
+  }),
+}));
+
+export const insertWeeklyReviewSchema = createInsertSchema(weeklyReviews).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  generatedAt: true,
+});
+
+export type WeeklyReview = typeof weeklyReviews.$inferSelect;
+export type InsertWeeklyReview = z.infer<typeof insertWeeklyReviewSchema>;

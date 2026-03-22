@@ -1256,8 +1256,9 @@ export function registerContactRoutes(app: Express): void {
           } else {
             console.log(`📞 Immediately initiating Retell call to ${phoneToCall}`);
             
-            // Import and use the unified Retell call helper with standard variables
-            const { createUnifiedRetellCall, createStandardCollectionVariables } = await import('../utils/retellCallHelper.js');
+            // Import variable helper + central voice wrapper (enforces communication mode)
+            const { createStandardCollectionVariables } = await import('../utils/retellCallHelper.js');
+            const { sendVoiceCall } = await import('../services/communications/sendVoiceCall.js');
             
             // Calculate days overdue from the oldest invoice
             const daysOverdue = primaryInvoice?.dueDate 
@@ -1390,10 +1391,12 @@ export function registerContactRoutes(app: Express): void {
               accountAge: accountAge,
             });
             
-            const unifiedResult = await createUnifiedRetellCall({
-              fromNumber: process.env.RETELL_PHONE_NUMBER || '+442045772088',
-              toNumber: phoneToCall,
+            const unifiedResult = await sendVoiceCall({
+              tenantId: user.tenantId,
+              to: phoneToCall,
+              contactName: nameToCall,
               agentId: agentId,
+              fromNumber: process.env.RETELL_PHONE_NUMBER || '+442045772088',
               dynamicVariables: {
                 ...callVariables,
                 voiceTone: voiceTone,
@@ -1404,7 +1407,6 @@ export function registerContactRoutes(app: Express): void {
               },
               metadata: {
                 // Use snake_case keys to match webhook expectations
-                tenant_id: user.tenantId,
                 contact_id: contact.id,
                 invoice_id: primaryInvoice?.id,
                 action_id: newAction.id,
@@ -1414,10 +1416,10 @@ export function registerContactRoutes(app: Express): void {
                 goal,
                 reason,
               },
-              context: 'SYSTEM_CALL'
+              context: 'SYSTEM_CALL',
             });
-            
-            // Convert unified result to expected format
+
+            // Convert to expected format
             retellResult = {
               call_id: unifiedResult.callId,
               status: unifiedResult.status,

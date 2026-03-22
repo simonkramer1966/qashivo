@@ -3,7 +3,7 @@ import { db } from "../db";
 import { actions, contacts, invoices, tenants, messageDrafts, emailMessages } from "@shared/schema";
 import { sendEmail } from "./sendgrid";
 import { sendSMS } from "./vonage";
-import { RetellService } from "../retell-service";
+// RetellService import removed — voice calls now go through sendVoiceCall() wrapper
 import { websocketService } from "./websocketService";
 import { aiMessageGenerator, type MessageContext, type ToneSettings } from "./aiMessageGenerator";
 import { ToneProfile, PlaybookStage } from "./playbookEngine";
@@ -639,18 +639,20 @@ export class ActionExecutor {
         }
       }
 
-      const retellService = new RetellService();
-      
       // Use recipientPhone/recipientName from metadata if available (set by schedule-call)
       const phoneToCall = action.metadata?.recipientPhone || contact.phone;
       const nameToCall = action.metadata?.recipientName || contact.name;
-      
-      const result = await retellService.createCall({
-        fromNumber: process.env.RETELL_PHONE_NUMBER || '+442045772088',
-        toNumber: phoneToCall,
+
+      // Use central voice wrapper (enforces communication mode)
+      const { sendVoiceCall } = await import('./communications/sendVoiceCall.js');
+
+      const result = await sendVoiceCall({
+        tenantId: tenant.id,
+        to: phoneToCall,
+        contactName: nameToCall,
         agentId: agentId,
+        fromNumber: process.env.RETELL_PHONE_NUMBER || '+442045772088',
         dynamicVariables: {
-          customerName: nameToCall,
           companyName: contact.companyName || contact.name,
           invoiceNumber: invoice?.invoiceNumber || 'N/A',
           amount: invoice?.amount || 'N/A',
@@ -664,7 +666,6 @@ export class ActionExecutor {
           callGoal: action.metadata?.goal || 'payment_commitment',
         },
         metadata: {
-          tenantId: tenant.id,
           contactId: contact.id,
           invoiceId: invoice?.id,
           actionId: action.id,
@@ -672,7 +673,8 @@ export class ActionExecutor {
           stage: action.metadata?.stage,
           aiGenerated: !action.content || action.content.trim() === '',
           usedPreGenerated,
-        }
+        },
+        context: 'ACTION_EXECUTOR',
       });
 
       if (usedPreGenerated) {

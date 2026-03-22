@@ -25,6 +25,23 @@ Read /docs/QASHIVO_CONTEXT.md completely. It is the canonical product specificat
 5. Open Banking payment data trains models. Accounting platform data does NOT. See Section 5A.
 6. The debtor must believe the agent is human.
 
+## Outbound Communications Safety (CRITICAL)
+
+All outbound communications (email, SMS, voice) MUST go through the central enforcement wrapper before reaching the wire:
+- **Email**: `enforceCommunicationMode()` in `server/services/sendgrid.ts`
+- **SMS**: mode check in `server/services/vonage.ts`
+- **Voice (Retell)**: `sendVoiceCall()` in `server/services/communications/sendVoiceCall.ts`
+
+Never call SendGrid, Vonage, or Retell APIs directly from routes, agents, or any new service. Always pass `tenantId` through to the wrapper.
+
+The wrappers enforce Off / Testing / Soft Live / Live modes and **fail closed on errors** — if the DB is unreachable, sends are blocked rather than allowed through.
+
+**Soft Live note:** No contact-level opt-in mechanism exists yet. Soft Live currently behaves identically to Testing mode until opt-in is built.
+
+**Exceptions (no tenant context):** Investor demo endpoint (`/api/investor/voice-demo`) and MCP admin tools bypass mode enforcement — these are non-tenant-scoped and documented with safety comments.
+
+*Added: 22 March 2026 — post communication mode audit, Sprint 7. Voice wrapper added same date.*
+
 ## Commands
 ```bash
 npm run dev        # Start dev server (tsx, port 5000)

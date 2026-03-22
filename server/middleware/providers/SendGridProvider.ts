@@ -70,7 +70,8 @@ export class SendGridProvider implements UniversalProvider {
             subject: options.body.subject,
             text: options.body.text,
             html: options.body.html,
-            recipients: options.body.recipients
+            recipients: options.body.recipients,
+            tenantId: options.body.tenantId,
           });
           break;
 
@@ -88,7 +89,8 @@ export class SendGridProvider implements UniversalProvider {
             subject: options.body.subject,
             text: options.body.text,
             html: options.body.html,
-            attachments: options.body.attachments
+            attachments: options.body.attachments,
+            tenantId: options.body.tenantId,
           });
           break;
 

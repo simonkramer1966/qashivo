@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -89,6 +89,7 @@ interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   timestamp: string;
+  interrupted?: boolean;
 }
 
 // ── Typing indicator ────────────────────────────────────────
@@ -110,6 +111,74 @@ function TypingIndicator() {
   );
 }
 
+// ── SSE streaming helper ────────────────────────────────────
+
+async function sendStreamingMessage(
+  body: Record<string, unknown>,
+  callbacks: {
+    onConversationId: (id: string) => void;
+    onDelta: (text: string) => void;
+    onDone: (conversationId: string) => void;
+    onError: (error: string) => void;
+  },
+): Promise<void> {
+  const response = await fetch("/api/riley/message", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...body, stream: true }),
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) {
+    throw new Error("ReadableStream not supported");
+  }
+
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+
+    // Process complete SSE lines
+    const lines = buffer.split("\n");
+    buffer = lines.pop() || ""; // Keep incomplete line in buffer
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith("data: ")) continue;
+
+      try {
+        const data = JSON.parse(trimmed.slice(6));
+
+        if (data.conversationId && !data.done) {
+          callbacks.onConversationId(data.conversationId);
+        }
+        if (data.delta) {
+          callbacks.onDelta(data.delta);
+        }
+        if (data.done) {
+          callbacks.onDone(data.conversationId);
+          return;
+        }
+        if (data.error) {
+          callbacks.onError(data.error);
+          return;
+        }
+      } catch {
+        // Skip malformed SSE lines
+      }
+    }
+  }
+}
+
 // ── Main component ──────────────────────────────────────────
 
 export default function FloatingRileyChat() {
@@ -123,8 +192,12 @@ export default function FloatingRileyChat() {
       : null,
   );
   const [hasShownGreeting, setHasShownGreeting] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [isWaitingForFirstDelta, setIsWaitingForFirstDelta] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  // Ref to accumulate streamed text without re-renders per character
+  const streamBufferRef = useRef("");
 
   // Fetch proactive suggestions for badge
   const { data: suggestions } = useQuery<ProactiveSuggestion[]>({
@@ -163,48 +236,10 @@ export default function FloatingRileyChat() {
       });
   }, []); // Only on mount
 
-  // Send message mutation
-  const sendMutation = useMutation({
-    mutationFn: async (message: string) => {
-      const entity = getRelatedEntity(location);
-      const res = await apiRequest("POST", "/api/riley/message", {
-        message,
-        pageContext: location, // Send the full route path for server-side context loading
-        topic: getTopic(location),
-        conversationId,
-        ...entity,
-      });
-      return res.json();
-    },
-    onSuccess: (data: { response: string; conversationId: string }) => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: data.response,
-          timestamp: new Date().toISOString(),
-        },
-      ]);
-      setConversationId(data.conversationId);
-      localStorage.setItem("riley_conversation_id", data.conversationId);
-    },
-    onError: () => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content:
-            "Sorry, I had trouble processing that. Could you try again?",
-          timestamp: new Date().toISOString(),
-        },
-      ]);
-    },
-  });
-
   // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, sendMutation.isPending]);
+  }, [messages, isStreaming, isWaitingForFirstDelta]);
 
   // Focus input when expanded
   useEffect(() => {
@@ -230,15 +265,153 @@ export default function FloatingRileyChat() {
 
   const handleSend = useCallback(() => {
     const text = inputValue.trim();
-    if (!text || sendMutation.isPending) return;
+    if (!text || isStreaming) return;
 
+    // Add user message
     setMessages((prev) => [
       ...prev,
       { role: "user", content: text, timestamp: new Date().toISOString() },
     ]);
     setInputValue("");
-    sendMutation.mutate(text);
-  }, [inputValue, sendMutation]);
+    setIsStreaming(true);
+    setIsWaitingForFirstDelta(true);
+    streamBufferRef.current = "";
+
+    const entity = getRelatedEntity(location);
+
+    // Flush buffer to state at ~30fps for smooth rendering
+    let flushTimer: ReturnType<typeof setInterval> | null = null;
+    let lastFlushedLength = 0;
+
+    const startFlushing = () => {
+      if (flushTimer) return;
+      flushTimer = setInterval(() => {
+        const current = streamBufferRef.current;
+        if (current.length > lastFlushedLength) {
+          lastFlushedLength = current.length;
+          setMessages((prev) => {
+            const last = prev[prev.length - 1];
+            if (last?.role === "assistant" && !last.interrupted) {
+              return [...prev.slice(0, -1), { ...last, content: current }];
+            }
+            return prev;
+          });
+        }
+      }, 33); // ~30fps
+    };
+
+    const stopFlushing = () => {
+      if (flushTimer) {
+        clearInterval(flushTimer);
+        flushTimer = null;
+      }
+    };
+
+    sendStreamingMessage(
+      {
+        message: text,
+        pageContext: location,
+        topic: getTopic(location),
+        conversationId,
+        ...entity,
+      },
+      {
+        onConversationId(id) {
+          setConversationId(id);
+          localStorage.setItem("riley_conversation_id", id);
+        },
+
+        onDelta(delta) {
+          // On first delta, replace typing indicator with empty assistant bubble
+          if (streamBufferRef.current === "") {
+            setIsWaitingForFirstDelta(false);
+            setMessages((prev) => [
+              ...prev,
+              { role: "assistant", content: "", timestamp: new Date().toISOString() },
+            ]);
+            startFlushing();
+          }
+          streamBufferRef.current += delta;
+        },
+
+        onDone(finalConversationId) {
+          stopFlushing();
+          // Final flush with complete text
+          const finalText = streamBufferRef.current;
+          setMessages((prev) => {
+            const last = prev[prev.length - 1];
+            if (last?.role === "assistant") {
+              return [...prev.slice(0, -1), { ...last, content: finalText }];
+            }
+            return prev;
+          });
+          if (finalConversationId) {
+            setConversationId(finalConversationId);
+            localStorage.setItem("riley_conversation_id", finalConversationId);
+          }
+          setIsStreaming(false);
+          setIsWaitingForFirstDelta(false);
+        },
+
+        onError() {
+          stopFlushing();
+          const partialText = streamBufferRef.current;
+          if (partialText) {
+            // Keep what we got, mark as interrupted
+            setMessages((prev) => {
+              const last = prev[prev.length - 1];
+              if (last?.role === "assistant") {
+                return [
+                  ...prev.slice(0, -1),
+                  { ...last, content: partialText, interrupted: true },
+                ];
+              }
+              return prev;
+            });
+          } else {
+            // No content received at all
+            setMessages((prev) => [
+              ...prev,
+              {
+                role: "assistant",
+                content: "Sorry, I had trouble processing that. Could you try again?",
+                timestamp: new Date().toISOString(),
+              },
+            ]);
+          }
+          setIsStreaming(false);
+          setIsWaitingForFirstDelta(false);
+        },
+      },
+    ).catch(() => {
+      // Fallback for network-level failures (fetch itself fails)
+      stopFlushing();
+      const partialText = streamBufferRef.current;
+      if (partialText) {
+        setMessages((prev) => {
+          const last = prev[prev.length - 1];
+          if (last?.role === "assistant") {
+            return [
+              ...prev.slice(0, -1),
+              { ...last, content: partialText, interrupted: true },
+            ];
+          }
+          return prev;
+        });
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: "Sorry, I had trouble processing that. Could you try again?",
+            timestamp: new Date().toISOString(),
+          },
+        ]);
+      }
+      setIsStreaming(false);
+      setIsWaitingForFirstDelta(false);
+    });
+  }, [inputValue, isStreaming, location, conversationId]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -309,11 +482,16 @@ export default function FloatingRileyChat() {
                     }`}
                   >
                     {msg.content}
+                    {msg.interrupted && (
+                      <span className="mt-1 block text-[10px] italic text-muted-foreground">
+                        Response interrupted
+                      </span>
+                    )}
                   </div>
                 </div>
               ))}
 
-              {sendMutation.isPending && <TypingIndicator />}
+              {isWaitingForFirstDelta && <TypingIndicator />}
 
               <div ref={messagesEndRef} />
             </div>
@@ -329,12 +507,12 @@ export default function FloatingRileyChat() {
                 onKeyDown={handleKeyDown}
                 placeholder="Ask Riley anything…"
                 className="text-sm"
-                disabled={sendMutation.isPending}
+                disabled={isStreaming}
               />
               <Button
                 size="icon"
                 onClick={handleSend}
-                disabled={!inputValue.trim() || sendMutation.isPending}
+                disabled={!inputValue.trim() || isStreaming}
                 className="shrink-0"
               >
                 <Send className="h-4 w-4" />
