@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
 import PageLoader from "@/components/PageLoader";
 import AdminShell from "@/components/AdminShell";
+import FloatingRileyChat from "@/components/riley/FloatingRileyChat";
 import type { OnboardingStatus } from "@/components/OnboardingWizard";
 
 // Lazy-loaded pages
@@ -258,6 +259,7 @@ function Router() {
           <Route path="/" component={QollectionsDashboard} />
           <Route path="/:rest*" component={NotFound} />
         </Switch>
+        <FloatingRileyChat />
         </OnboardingGuard>
       )}
     </>
