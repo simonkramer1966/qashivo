@@ -99,6 +99,7 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
   const { data: tenant } = useQuery<{
     id: string;
     name: string;
+    xeroOrganisationName?: string | null;
     settings?: { companyName?: string };
   }>({
     queryKey: ["/api/tenant"],
@@ -164,7 +165,7 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
     return "U";
   }, [user]);
 
-  const companyName = tenant?.settings?.companyName || tenant?.name || "";
+  const companyName = tenant?.xeroOrganisationName || tenant?.settings?.companyName || tenant?.name || "";
 
   // When in mobile Sheet, always show expanded
   const isCollapsed = false;
