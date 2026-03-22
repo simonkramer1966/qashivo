@@ -16,6 +16,7 @@ import {
   contacts,
   paymentPromises,
   messageDrafts,
+  weeklyReviews,
   type AiFact,
 } from "@shared/schema";
 import {
@@ -1254,11 +1255,14 @@ export async function getProactiveSuggestions(
   tenantId: string,
 ): Promise<ProactiveSuggestion[]> {
   const suggestions: ProactiveSuggestion[] = [];
-  const oneWeekAgo = new Date();
+  const now = new Date();
+  const oneWeekAgo = new Date(now);
   oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+  const oneDayAgo = new Date(now);
+  oneDayAgo.setDate(oneDayAgo.getDate() - 1);
 
+  // 1. Broken promises this week
   try {
-    // 1. Broken promises this week
     const brokenPromises = await storage.getPaymentPromises(tenantId, {
       status: "broken",
     });
@@ -1272,106 +1276,231 @@ export async function getProactiveSuggestions(
         priority: "high",
       });
     }
+  } catch (err) {
+    console.error("[Riley] Proactive: broken promises query failed:", err);
+  }
 
-    // 2. Pending approval drafts
-    try {
-      const pendingDrafts = await storage.getMessageDrafts(
-        tenantId,
-        "pending_approval",
+  // 2. Pending approval drafts
+  try {
+    const pendingDrafts = await storage.getMessageDrafts(
+      tenantId,
+      "pending_approval",
+    );
+    if (pendingDrafts.length > 0) {
+      suggestions.push({
+        type: "pending_approvals",
+        message: `${pendingDrafts.length} email${pendingDrafts.length === 1 ? "" : "s"} waiting for your approval`,
+        priority: pendingDrafts.length >= 5 ? "high" : "medium",
+      });
+    }
+  } catch (err) {
+    console.error("[Riley] Proactive: pending approvals query failed:", err);
+  }
+
+  // 3. New invoices created/synced in last 24 hours
+  try {
+    const [result] = await db
+      .select({ count: count() })
+      .from(invoices)
+      .where(
+        and(
+          eq(invoices.tenantId, tenantId),
+          gte(invoices.createdAt, oneDayAgo),
+        ),
       );
-      if (pendingDrafts.length > 0) {
+    const newCount = Number(result?.count || 0);
+    if (newCount > 0) {
+      suggestions.push({
+        type: "new_invoices",
+        message: `${newCount} new invoice${newCount === 1 ? "" : "s"} synced in the last 24 hours`,
+        priority: "low",
+      });
+    }
+  } catch (err) {
+    console.error("[Riley] Proactive: new invoices query failed:", err);
+  }
+
+  // 4. DSO change vs 7 days ago
+  try {
+    const snapshots = await storage.getDsoSnapshots(tenantId, 14);
+    if (snapshots.length >= 2) {
+      const latest = Number(snapshots[0].dsoValue);
+      const previous = Number(snapshots[snapshots.length - 1].dsoValue);
+      const change = latest - previous;
+      if (change <= -3) {
         suggestions.push({
-          type: "pending_approvals",
-          message: `${pendingDrafts.length} email${pendingDrafts.length === 1 ? "" : "s"} waiting for your approval`,
-          priority: pendingDrafts.length >= 5 ? "high" : "medium",
+          type: "dso_change",
+          message: `Your DSO improved by ${Math.abs(Math.round(change))} days recently — nice work!`,
+          priority: "low",
+        });
+      } else if (change >= 5) {
+        suggestions.push({
+          type: "dso_change",
+          message: `Your DSO has increased by ${Math.round(change)} days — want to look at what's causing it?`,
+          priority: "medium",
         });
       }
-    } catch {
-      // Message drafts may not have pending items
     }
+  } catch (err) {
+    console.error("[Riley] Proactive: DSO snapshots query failed:", err);
+  }
 
-    // 3. DSO change vs last snapshot
-    try {
-      const snapshots = await storage.getDsoSnapshots(tenantId, 14);
-      if (snapshots.length >= 2) {
-        const latest = Number(snapshots[0].dsoValue);
-        const previous = Number(snapshots[snapshots.length - 1].dsoValue);
-        const change = latest - previous;
-        if (change <= -3) {
-          suggestions.push({
-            type: "dso_improvement",
-            message: `Your DSO improved by ${Math.abs(Math.round(change))} days recently — nice work!`,
-            priority: "low",
-          });
-        } else if (change >= 5) {
-          suggestions.push({
-            type: "dso_deterioration",
-            message: `Your DSO has increased by ${Math.round(change)} days — want to look at what's causing it?`,
-            priority: "medium",
-          });
-        }
-      }
-    } catch {
-      // DSO snapshots may not exist yet
+  // 5. Weekly review ready (generated in last 7 days)
+  try {
+    const [review] = await db
+      .select({ id: weeklyReviews.id, generatedAt: weeklyReviews.generatedAt })
+      .from(weeklyReviews)
+      .where(
+        and(
+          eq(weeklyReviews.tenantId, tenantId),
+          gte(weeklyReviews.generatedAt, oneWeekAgo),
+        ),
+      )
+      .orderBy(desc(weeklyReviews.generatedAt))
+      .limit(1);
+    if (review) {
+      suggestions.push({
+        type: "weekly_review_ready",
+        message: "Your weekly CFO review is ready — want to walk through it?",
+        priority: "medium",
+        entityId: review.id,
+      });
     }
+  } catch (err) {
+    console.error("[Riley] Proactive: weekly review query failed:", err);
+  }
 
-    // 4. Expiring forecast adjustments
-    try {
-      const adjustments = await storage.listForecastAdjustments(tenantId);
-      const nextWeek = new Date();
-      nextWeek.setDate(nextWeek.getDate() + 7);
-      const expiring = adjustments.filter(
-        (a) =>
-          !a.expired &&
-          a.expiryDate &&
-          new Date(a.expiryDate) <= nextWeek &&
-          a.followUpStatus === "pending",
-      );
-      for (const adj of expiring.slice(0, 3)) {
-        suggestions.push({
-          type: "forecast_expiring",
-          message: `The ${adj.description} (£${Number(adj.amount).toLocaleString("en-GB")}) was expected — did it go through?`,
-          priority:
-            Number(adj.materialityScore || 0) > 0.1 ? "high" : "medium",
-          entityId: adj.id,
-        });
-      }
-    } catch {
-      // Forecast adjustments may not exist yet
+  // 6. Expiring forecast adjustments (within next 7 days)
+  try {
+    const adjustments = await storage.listForecastAdjustments(tenantId);
+    const nextWeek = new Date(now);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    const expiring = adjustments.filter(
+      (a) =>
+        !a.expired &&
+        a.expiryDate &&
+        new Date(a.expiryDate) <= nextWeek &&
+        a.followUpStatus === "pending",
+    );
+    for (const adj of expiring.slice(0, 3)) {
+      suggestions.push({
+        type: "forecast_expiring",
+        message: `The ${adj.description} (£${Number(adj.amount).toLocaleString("en-GB")}) was expected — did it go through?`,
+        priority:
+          Number(adj.materialityScore || 0) > 0.1 ? "high" : "medium",
+        entityId: adj.id,
+      });
     }
+  } catch (err) {
+    console.error("[Riley] Proactive: forecast expiring query failed:", err);
+  }
 
-    // 5. New overdue invoices (invoices that became overdue in last 7 days)
-    try {
-      const [result] = await db
-        .select({ count: count() })
+  // 7. Debtor deteriorating (avgDaysToPay increased >20% vs 30 days ago)
+  try {
+    const allContacts = await storage.getContacts(tenantId);
+    const customers = allContacts.filter((c: any) => c.role === "customer" && c.isActive);
+    const thirtyDaysAgo = new Date(now);
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    // Get invoices paid recently vs paid before to compare average days to pay
+    for (const contact of customers.slice(0, 50)) {
+      const contactInvoices = await db
+        .select({
+          paidDate: invoices.paidDate,
+          issueDate: invoices.issueDate,
+          createdAt: invoices.createdAt,
+        })
         .from(invoices)
         .where(
           and(
             eq(invoices.tenantId, tenantId),
-            eq(invoices.status, "overdue"),
-            gte(invoices.dueDate, oneWeekAgo),
+            eq(invoices.contactId, contact.id),
+            eq(invoices.status, "paid"),
           ),
         );
-      const newOverdue = Number(result?.count || 0);
-      if (newOverdue >= 3) {
+
+      if (contactInvoices.length < 4) continue; // Not enough data
+
+      const recent = contactInvoices.filter(
+        (i) => i.paidDate && new Date(i.paidDate) >= thirtyDaysAgo,
+      );
+      const older = contactInvoices.filter(
+        (i) => i.paidDate && new Date(i.paidDate) < thirtyDaysAgo,
+      );
+
+      if (recent.length < 2 || older.length < 2) continue;
+
+      const avgRecent =
+        recent.reduce((sum, i) => {
+          if (!i.paidDate || !i.issueDate) return sum;
+          return sum + (new Date(i.paidDate).getTime() - new Date(i.issueDate).getTime()) / 86400000;
+        }, 0) / recent.length;
+
+      const avgOlder =
+        older.reduce((sum, i) => {
+          if (!i.paidDate || !i.issueDate) return sum;
+          return sum + (new Date(i.paidDate).getTime() - new Date(i.issueDate).getTime()) / 86400000;
+        }, 0) / older.length;
+
+      if (avgOlder > 0 && avgRecent > avgOlder * 1.2) {
         suggestions.push({
-          type: "new_overdue",
-          message: `${newOverdue} invoices became overdue this week`,
+          type: "debtor_deteriorating",
+          message: `${contact.name} is paying slower — avg ${Math.round(avgRecent)} days vs ${Math.round(avgOlder)} days previously`,
           priority: "medium",
+          entityId: contact.id,
         });
+        // Limit to top 3 deteriorating debtors
+        const deterioratingCount = suggestions.filter(
+          (s) => s.type === "debtor_deteriorating",
+        ).length;
+        if (deterioratingCount >= 3) break;
       }
-    } catch {
-      // Invoice query may fail for new tenants
     }
-  } catch (error) {
-    console.error("[Riley] Failed to generate proactive suggestions:", error);
+  } catch (err) {
+    console.error("[Riley] Proactive: debtor deteriorating query failed:", err);
   }
 
-  // Sort by priority
-  const priorityOrder = { high: 0, medium: 1, low: 2 };
-  suggestions.sort(
-    (a, b) => priorityOrder[a.priority] - priorityOrder[b.priority],
-  );
+  // 8. New overdue invoices (became overdue in last 7 days)
+  try {
+    const [result] = await db
+      .select({ count: count() })
+      .from(invoices)
+      .where(
+        and(
+          eq(invoices.tenantId, tenantId),
+          eq(invoices.status, "overdue"),
+          gte(invoices.dueDate, oneWeekAgo),
+        ),
+      );
+    const newOverdue = Number(result?.count || 0);
+    if (newOverdue >= 3) {
+      suggestions.push({
+        type: "new_overdue",
+        message: `${newOverdue} invoices became overdue this week`,
+        priority: "medium",
+      });
+    }
+  } catch (err) {
+    console.error("[Riley] Proactive: new overdue query failed:", err);
+  }
+
+  // Sort by priority, then by type tiebreaker
+  const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
+  const typeOrder: Record<string, number> = {
+    broken_promises: 0,
+    pending_approvals: 1,
+    new_invoices: 2,
+    dso_change: 3,
+    weekly_review_ready: 4,
+    forecast_expiring: 5,
+    debtor_deteriorating: 6,
+    new_overdue: 7,
+  };
+  suggestions.sort((a, b) => {
+    const pDiff = (priorityOrder[a.priority] ?? 2) - (priorityOrder[b.priority] ?? 2);
+    if (pDiff !== 0) return pDiff;
+    return (typeOrder[a.type] ?? 99) - (typeOrder[b.type] ?? 99);
+  });
 
   return suggestions;
 }

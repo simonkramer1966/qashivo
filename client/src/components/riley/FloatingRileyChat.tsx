@@ -199,7 +199,13 @@ export default function FloatingRileyChat() {
   // Ref to accumulate streamed text without re-renders per character
   const streamBufferRef = useRef("");
 
-  // Fetch proactive suggestions for badge
+  // ── Proactive suggestions ─────────────────────────────────
+  // Unseen suggestions drive the badge count; cleared on panel open
+  const [unseenSuggestions, setUnseenSuggestions] = useState<ProactiveSuggestion[]>([]);
+  const [suggestionQueue, setSuggestionQueue] = useState<ProactiveSuggestion[]>([]);
+  const hasShownProactiveRef = useRef(false);
+
+  // Fetch proactive suggestions — poll every 5 minutes
   const { data: suggestions } = useQuery<ProactiveSuggestion[]>({
     queryKey: ["/api/riley/proactive"],
     queryFn: async () => {
@@ -210,7 +216,17 @@ export default function FloatingRileyChat() {
     refetchInterval: 5 * 60 * 1000,
   });
 
-  const badgeCount = suggestions?.length || 0;
+  // When new suggestions arrive from API, update unseen list
+  useEffect(() => {
+    if (suggestions && suggestions.length > 0 && !isOpen) {
+      setUnseenSuggestions(suggestions);
+      setSuggestionQueue(suggestions);
+      hasShownProactiveRef.current = false;
+    }
+  }, [suggestions]);
+
+  // Badge = unseen count (only when panel is closed)
+  const badgeCount = isOpen ? 0 : unseenSuggestions.length;
 
   // Load existing conversation on mount if we have an ID
   useEffect(() => {
@@ -248,9 +264,33 @@ export default function FloatingRileyChat() {
     }
   }, [isOpen]);
 
-  // Show greeting on first expand
+  // Show greeting or proactive suggestion on expand
   const handleExpand = useCallback(() => {
     setIsOpen(true);
+    // Clear badge
+    setUnseenSuggestions([]);
+
+    // If we have queued proactive suggestions and haven't shown one yet this open
+    if (suggestionQueue.length > 0 && !hasShownProactiveRef.current) {
+      hasShownProactiveRef.current = true;
+      const top = suggestionQueue[0];
+      const remaining = suggestionQueue.slice(1);
+      setSuggestionQueue(remaining);
+      setHasShownGreeting(true);
+
+      // Show the suggestion as Riley's opening message
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: top.message,
+          timestamp: new Date().toISOString(),
+        },
+      ]);
+      return;
+    }
+
+    // Default greeting for first open with no suggestions
     if (!hasShownGreeting && messages.length === 0) {
       setHasShownGreeting(true);
       setMessages([
@@ -261,7 +301,7 @@ export default function FloatingRileyChat() {
         },
       ]);
     }
-  }, [hasShownGreeting, messages.length, location]);
+  }, [hasShownGreeting, messages.length, location, suggestionQueue]);
 
   const handleSend = useCallback(() => {
     const text = inputValue.trim();
