@@ -1343,12 +1343,39 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
 
       const connectionMap = new Map(connections.map(c => [c.provider, c]));
 
+      // For Xero, the tenants table is the source of truth for tokens & sync status
+      // (health check + sync job update tenants, not providerConnections)
+      const [tenant] = await db.select({
+        xeroConnectionStatus: tenants.xeroConnectionStatus,
+        xeroLastSyncAt: tenants.xeroLastSyncAt,
+        xeroHealthCheckError: tenants.xeroHealthCheckError,
+        xeroOrganisationName: tenants.xeroOrganisationName,
+      }).from(tenants).where(eq(tenants.id, user.tenantId));
+
       const statuses = knownProviders.map(p => {
         const configured = p.envKeys.every(k => !!process.env[k]);
         const conn = connectionMap.get(p.name);
 
         let connectionStatus: 'active' | 'expiring_soon' | 'expired' | 'error' | 'disconnected' = 'disconnected';
-        if (conn?.isConnected) {
+        let lastSyncAt: Date | string | null = conn?.lastSyncAt || null;
+        let orgName: string | null = conn?.connectionName || null;
+
+        if (p.name === 'xero' && tenant) {
+          // Use tenants table as source of truth for Xero connection health
+          const status = tenant.xeroConnectionStatus;
+          if (status === 'connected') {
+            connectionStatus = 'active';
+          } else if (status === 'expired') {
+            connectionStatus = 'expired';
+          } else if (status === 'error') {
+            connectionStatus = 'error';
+          } else if (conn?.isConnected) {
+            // Fallback: connected in providerConnections but no health check status yet
+            connectionStatus = 'active';
+          }
+          lastSyncAt = tenant.xeroLastSyncAt || lastSyncAt;
+          orgName = tenant.xeroOrganisationName || orgName;
+        } else if (conn?.isConnected) {
           if (conn.errorCount && conn.errorCount >= 3) {
             connectionStatus = 'error';
           } else if (conn.tokenExpiresAt) {
@@ -1371,11 +1398,11 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
           label: p.label,
           type: p.type,
           configured,
-          connected: conn?.isConnected ?? false,
+          connected: p.name === 'xero' ? (tenant?.xeroConnectionStatus === 'connected' || conn?.isConnected) ?? false : conn?.isConnected ?? false,
           connectionStatus,
-          orgName: conn?.connectionName || null,
-          lastSyncAt: conn?.lastSyncAt || null,
-          lastError: conn?.lastError || null,
+          orgName,
+          lastSyncAt,
+          lastError: conn?.lastError || (p.name === 'xero' ? tenant?.xeroHealthCheckError : null) || null,
           errorCount: conn?.errorCount || 0,
         };
       });

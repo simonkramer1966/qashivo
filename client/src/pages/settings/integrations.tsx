@@ -127,11 +127,13 @@ const ACCOUNTING_PROVIDERS = {
   sme: [
     { id: "xero", name: "Xero", description: "Cloud accounting for small business", color: "#13B5EA" },
     { id: "quickbooks", name: "QuickBooks", description: "Accounting & invoicing", color: "#2CA01C" },
+    { id: "sage", name: "Sage 50/200", description: "Desktop & on-premise accounting", color: "#00D639" },
     { id: "freeagent", name: "FreeAgent", description: "Accounting for freelancers & micro-businesses", color: "#4B9CD3" },
-    { id: "sage", name: "Sage Business Cloud", description: "Small business accounting", color: "#00D639" },
-    { id: "zoho", name: "Zoho Books", description: "Online accounting software", color: "#E42527" },
+    { id: "kashflow", name: "KashFlow", description: "Simple cloud accounting for SMEs", color: "#0099CC" },
+    { id: "clearbooks", name: "Clear Books", description: "UK cloud accounting software", color: "#1E88E5" },
   ],
   midmarket: [
+    { id: "sage_business_cloud", name: "Sage Business Cloud", description: "Cloud accounting for growing businesses", color: "#00D639" },
     { id: "sage_intacct", name: "Sage Intacct", description: "Cloud financial management", color: "#00D639" },
     { id: "netsuite", name: "NetSuite", description: "ERP & financial management", color: "#1A3E72" },
     { id: "exact", name: "Exact Online", description: "Cloud business software", color: "#E8400E" },
