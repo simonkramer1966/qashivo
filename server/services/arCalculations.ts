@@ -88,19 +88,32 @@ export async function getARSummary(tenantId: string): Promise<ARSummary> {
   }
 
   // 5. Net per-contact and sum
+  // Include ALL net values (positive AND negative) in totalOutstanding
+  // so that credit-heavy contacts reduce the total. Only count debtorCount
+  // for contacts with net > 0.
   let totalOutstanding = 0;
   let totalOverdue = 0;
   let debtorCount = 0;
+  const consumedContactIds = new Set<string>();
 
   for (const d of debtorRows) {
     const credit = creditsByContactId.get(d.contactId) || 0;
+    consumedContactIds.add(d.contactId);
     const netOutstanding = Math.round((Number(d.totalOutstanding || 0) - credit) * 100) / 100;
     const netOverdue = Math.round(Math.max(0, Number(d.overdueAmount || 0) - credit) * 100) / 100;
 
+    // Always include in total (negative values reduce it)
+    totalOutstanding += netOutstanding;
     if (netOutstanding > 0) {
-      totalOutstanding += netOutstanding;
       totalOverdue += netOverdue;
       debtorCount++;
+    }
+  }
+
+  // Subtract credits for contacts not in debtorRows (credit-only contacts)
+  for (const [contactId, credit] of creditsByContactId) {
+    if (!consumedContactIds.has(contactId)) {
+      totalOutstanding -= credit;
     }
   }
 
