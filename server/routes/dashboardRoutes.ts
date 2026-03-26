@@ -2129,8 +2129,8 @@ export function registerDashboardRoutes(app: Express): void {
       const overdueRow = (overdueCountResult as any).rows?.[0] || (overdueCountResult as any)[0] || {};
 
       res.json({
-        totalOutstanding: Math.round(arSummary.totalOutstanding),
-        totalOverdue: Math.round(arSummary.totalOverdue),
+        totalOutstanding: arSummary.totalOutstanding,
+        totalOverdue: arSummary.totalOverdue,
         overdueCount: Number(overdueRow.overdue_count || 0),
         dso: arSummary.currentDSO,
         totalDebtors: arSummary.debtorCount,
