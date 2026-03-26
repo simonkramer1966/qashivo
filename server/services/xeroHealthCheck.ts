@@ -89,9 +89,20 @@ export class XeroHealthCheckService {
         return;
       }
 
+      // CRITICAL: Save new tokens immediately — Xero uses rotating refresh tokens,
+      // so the old refresh token is now invalidated. Must persist before anything else.
+      await db
+        .update(tenants)
+        .set({
+          xeroAccessToken: refreshedTokens.accessToken,
+          xeroRefreshToken: refreshedTokens.refreshToken,
+          xeroExpiresAt: refreshedTokens.expiresAt,
+        })
+        .where(eq(tenants.id, tenant.id));
+
       // Token refresh succeeded - try a lightweight API call to verify and get org info
       const orgInfo = await this.getOrganisationInfo(refreshedTokens.accessToken, refreshedTokens.tenantId);
-      
+
       if (orgInfo.isConnected) {
         // Update health check status and organisation name if available
         await db
