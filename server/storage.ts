@@ -1662,16 +1662,16 @@ export class DatabaseStorage implements IStorage {
           COUNT(*) as count
         FROM invoices
         WHERE tenant_id = ${tenantId}
-          AND LOWER(status) NOT IN ('paid', 'void', 'voided', 'deleted')
+          AND LOWER(status) NOT IN ('paid', 'void', 'voided', 'deleted', 'draft')
       ),
       overdue_stats AS (
-        SELECT 
+        SELECT
           COUNT(*) as count,
           COALESCE(SUM(amount - amount_paid), 0) as total,
           COALESCE(AVG(CURRENT_DATE - due_date::date), 0) as avg_days
         FROM invoices
         WHERE tenant_id = ${tenantId}
-          AND LOWER(status) NOT IN ('paid', 'void', 'voided', 'deleted')
+          AND LOWER(status) NOT IN ('paid', 'void', 'voided', 'deleted', 'draft')
           AND due_date <= CURRENT_DATE
       ),
       paid_stats AS (
@@ -1724,6 +1724,8 @@ export class DatabaseStorage implements IStorage {
           (SELECT SUM(CAST(remaining_credit AS DECIMAL)) FROM cached_xero_overpayments WHERE tenant_id = ${tenantId} AND status = 'AUTHORISED'), 0
         ) + COALESCE(
           (SELECT SUM(CAST(remaining_credit AS DECIMAL)) FROM cached_xero_prepayments WHERE tenant_id = ${tenantId} AND status = 'AUTHORISED'), 0
+        ) + COALESCE(
+          (SELECT SUM(CAST(remaining_credit AS DECIMAL)) FROM cached_xero_credit_notes WHERE tenant_id = ${tenantId} AND status = 'AUTHORISED'), 0
         ) as total
       )
       SELECT

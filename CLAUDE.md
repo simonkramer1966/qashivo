@@ -218,6 +218,9 @@ Accounting providers (Xero, QuickBooks, Sage) registered at startup via `Provide
 - Email OAuth tokens stored on `tenants` table, accounting provider tokens on `providerConnections` table
 - See `docs/OAUTH_SETUP.md` for Google, Microsoft, and Xero OAuth setup instructions
 
+### Data Integrity
+All AR summary figures (outstanding, overdue, DSO, debtor count) must use `getARSummary()` in `server/services/arCalculations.ts`. Never write inline SUM queries for these figures in route handlers. The correct calculation including credit note and overpayment netting lives in one place only. Invoice status filter: excludes `paid, void, voided, deleted, draft`.
+
 ### Background Jobs
 Started from `server/startup/orchestrator.ts`. All fire-and-forget async calls must have `.catch()` handlers.
 

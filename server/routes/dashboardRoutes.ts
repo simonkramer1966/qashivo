@@ -2066,6 +2066,7 @@ export function registerDashboardRoutes(app: Express): void {
   });
 
   // ── Sprint 3.1: Qollections Dashboard Summary (AR cards + ageing buckets) ──
+  // Uses getARSummary() for totals — single source of truth matching Debtors page
   app.get("/api/qollections/summary", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -2073,100 +2074,67 @@ export function registerDashboardRoutes(app: Express): void {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      const result = await db.execute(sql`
-        WITH outstanding AS (
-          SELECT
-            COALESCE(SUM(amount - amount_paid), 0) as total_outstanding,
-            COUNT(*) as total_invoices
-          FROM invoices
-          WHERE tenant_id = ${user.tenantId}
-            AND LOWER(status) NOT IN ('paid', 'void', 'voided', 'deleted')
-        ),
-        overdue AS (
-          SELECT
-            COALESCE(SUM(amount - amount_paid), 0) as total_overdue,
-            COUNT(*) as overdue_count
-          FROM invoices
-          WHERE tenant_id = ${user.tenantId}
-            AND LOWER(status) NOT IN ('paid', 'void', 'voided', 'deleted')
-            AND due_date < CURRENT_DATE
-        ),
-        dso_calc AS (
-          SELECT
-            COALESCE(AVG(EXTRACT(DAY FROM AGE(paid_date, issue_date))), 0) as dso
-          FROM invoices
-          WHERE tenant_id = ${user.tenantId}
-            AND status = 'paid'
-            AND paid_date >= NOW() - INTERVAL '90 days'
-        ),
-        debtor_count AS (
-          SELECT COUNT(DISTINCT contact_id) as total
-          FROM invoices
-          WHERE tenant_id = ${user.tenantId}
-            AND LOWER(status) NOT IN ('paid', 'void', 'voided', 'deleted')
-            AND (amount - amount_paid) > 0
-        ),
-        ageing AS (
-          SELECT
-            CASE
-              WHEN (CURRENT_DATE - due_date::date) < 0 THEN 'current'
-              WHEN (CURRENT_DATE - due_date::date) <= 30 THEN '1-30'
-              WHEN (CURRENT_DATE - due_date::date) <= 60 THEN '31-60'
-              WHEN (CURRENT_DATE - due_date::date) <= 90 THEN '61-90'
-              ELSE '90+'
-            END as bucket,
-            COALESCE(SUM(amount - amount_paid), 0) as amount,
-            COUNT(*) as invoice_count
-          FROM invoices
-          WHERE tenant_id = ${user.tenantId}
-            AND LOWER(status) NOT IN ('paid', 'void', 'voided', 'deleted')
-            AND (amount - amount_paid) > 0
-          GROUP BY bucket
-        )
+      const { getARSummary } = await import("../services/arCalculations.js");
+
+      // Get AR totals (per-contact credit netting, matching Debtors page exactly)
+      const arSummary = await getARSummary(user.tenantId);
+
+      // Ageing buckets (Dashboard-specific, separate query)
+      const ageingResult = await db.execute(sql`
         SELECT
-          (SELECT total_outstanding FROM outstanding) as total_outstanding,
-          (SELECT total_invoices FROM outstanding) as total_invoices,
-          (SELECT total_overdue FROM overdue) as total_overdue,
-          (SELECT overdue_count FROM overdue) as overdue_count,
-          (SELECT dso FROM dso_calc) as dso,
-          (SELECT total FROM debtor_count) as total_debtors,
-          (SELECT json_agg(json_build_object('bucket', bucket, 'amount', amount, 'count', invoice_count)) FROM ageing) as ageing_buckets
+          CASE
+            WHEN (CURRENT_DATE - due_date::date) < 0 THEN 'current'
+            WHEN (CURRENT_DATE - due_date::date) <= 30 THEN '1-30'
+            WHEN (CURRENT_DATE - due_date::date) <= 60 THEN '31-60'
+            WHEN (CURRENT_DATE - due_date::date) <= 90 THEN '61-90'
+            ELSE '90+'
+          END as bucket,
+          COALESCE(SUM(amount - amount_paid), 0) as amount,
+          COUNT(*) as invoice_count
+        FROM invoices
+        WHERE tenant_id = ${user.tenantId}
+          AND LOWER(status) NOT IN ('paid', 'void', 'voided', 'deleted', 'draft')
+          AND (amount - amount_paid) > 0
+        GROUP BY bucket
       `);
 
-      const row = (result as any).rows?.[0] || (result as any)[0] || {};
-
-      // Fetch total overpayment/prepayment/credit note credits
-      const [opCredits, ppCredits, cnCredits] = await Promise.all([
-        db.select({ total: sql<number>`COALESCE(SUM(${cachedXeroOverpayments.remainingCredit}), 0)` })
-          .from(cachedXeroOverpayments)
-          .where(and(eq(cachedXeroOverpayments.tenantId, user.tenantId), eq(cachedXeroOverpayments.status, "AUTHORISED"))),
-        db.select({ total: sql<number>`COALESCE(SUM(${cachedXeroPrepayments.remainingCredit}), 0)` })
-          .from(cachedXeroPrepayments)
-          .where(and(eq(cachedXeroPrepayments.tenantId, user.tenantId), eq(cachedXeroPrepayments.status, "AUTHORISED"))),
-        db.select({ total: sql<number>`COALESCE(SUM(${cachedXeroCreditNotes.remainingCredit}), 0)` })
-          .from(cachedXeroCreditNotes)
-          .where(and(eq(cachedXeroCreditNotes.tenantId, user.tenantId), eq(cachedXeroCreditNotes.status, "AUTHORISED"))),
-      ]);
-      const totalCredits = Number(opCredits[0]?.total || 0) + Number(ppCredits[0]?.total || 0) + Number(cnCredits[0]?.total || 0);
-
+      const rawBuckets = (ageingResult as any).rows || ageingResult || [];
       const bucketOrder = ['current', '1-30', '31-60', '61-90', '90+'];
-      const rawBuckets = row.ageing_buckets || [];
       const ageingBuckets = bucketOrder.map((key) => {
-        const found = rawBuckets.find((b: any) => b.bucket === key);
+        const found = (rawBuckets as any[]).find((b: any) => b.bucket === key);
         return {
           bucket: key,
           amount: Math.round(Number(found?.amount || 0)),
-          count: Number(found?.count || 0),
+          count: Number(found?.invoice_count || found?.count || 0),
         };
       });
 
+      // Invoice count (total non-excluded)
+      const invoiceCountResult = await db.execute(sql`
+        SELECT COUNT(*) as total_invoices
+        FROM invoices
+        WHERE tenant_id = ${user.tenantId}
+          AND LOWER(status) NOT IN ('paid', 'void', 'voided', 'deleted', 'draft')
+      `);
+      const invoiceRow = (invoiceCountResult as any).rows?.[0] || (invoiceCountResult as any)[0] || {};
+
+      // Overdue count
+      const overdueCountResult = await db.execute(sql`
+        SELECT COUNT(*) as overdue_count
+        FROM invoices
+        WHERE tenant_id = ${user.tenantId}
+          AND LOWER(status) NOT IN ('paid', 'void', 'voided', 'deleted', 'draft')
+          AND due_date < CURRENT_DATE
+      `);
+      const overdueRow = (overdueCountResult as any).rows?.[0] || (overdueCountResult as any)[0] || {};
+
       res.json({
-        totalOutstanding: Math.round(Math.max(0, Number(row.total_outstanding || 0) - totalCredits)),
-        totalOverdue: Math.round(Math.max(0, Number(row.total_overdue || 0) - totalCredits)),
-        overdueCount: Number(row.overdue_count || 0),
-        dso: Math.round(Number(row.dso || 0)),
-        totalDebtors: Number(row.total_debtors || 0),
-        totalInvoices: Number(row.total_invoices || 0),
+        totalOutstanding: Math.round(arSummary.totalOutstanding),
+        totalOverdue: Math.round(arSummary.totalOverdue),
+        overdueCount: Number(overdueRow.overdue_count || 0),
+        dso: arSummary.currentDSO,
+        totalDebtors: arSummary.debtorCount,
+        totalInvoices: Number(invoiceRow.total_invoices || 0),
         ageingBuckets,
       });
     } catch (error) {
