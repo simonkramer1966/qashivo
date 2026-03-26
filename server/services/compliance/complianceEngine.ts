@@ -8,7 +8,7 @@
  */
 
 import { db } from "../../db";
-import { eq, and, gte, desc } from "drizzle-orm";
+import { eq, and, gte, desc, inArray } from "drizzle-orm";
 import {
   tenants,
   contacts,
@@ -93,6 +93,8 @@ export async function checkCompliance(input: ComplianceInput): Promise<Complianc
   const windowStart = new Date();
   windowStart.setDate(windowStart.getDate() - windowDays);
 
+  // Only count actions that were actually sent/completed — not pending/failed ones
+  const SENT_STATUSES = ["completed", "sent", "delivered"];
   const recentActions = await db
     .select()
     .from(actions)
@@ -100,6 +102,7 @@ export async function checkCompliance(input: ComplianceInput): Promise<Complianc
       eq(actions.tenantId, input.tenantId),
       eq(actions.contactId, input.contactId),
       gte(actions.createdAt, windowStart),
+      inArray(actions.status, SENT_STATUSES),
     ));
 
   const outboundCount = recentActions.filter(a =>
@@ -125,6 +128,7 @@ export async function checkCompliance(input: ComplianceInput): Promise<Complianc
       eq(actions.contactId, input.contactId),
       eq(actions.type, "email"),
       gte(actions.createdAt, cooldownStart),
+      inArray(actions.status, SENT_STATUSES),
     ))
     .orderBy(desc(actions.createdAt))
     .limit(1);
@@ -286,8 +290,14 @@ async function checkDataIsolation(
     // Skip the target debtor's own invoices
     if (inv.contactId === contactId) continue;
 
-    // Check if another debtor's invoice number appears in the content
-    if (inv.invoiceNumber && content.includes(inv.invoiceNumber)) {
+    // Skip short invoice numbers (< 3 chars) — too many false positives
+    if (!inv.invoiceNumber || inv.invoiceNumber.length < 3) continue;
+
+    // Use word-boundary matching to avoid substring false positives
+    // e.g. invoice "123" shouldn't match "£1,234" or "12345"
+    const escaped = inv.invoiceNumber.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const pattern = new RegExp(`\\b${escaped}\\b`);
+    if (pattern.test(content)) {
       return `Data isolation: email references invoice "${inv.invoiceNumber}" which belongs to a different debtor`;
     }
   }

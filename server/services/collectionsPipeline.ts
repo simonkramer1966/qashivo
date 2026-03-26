@@ -23,6 +23,8 @@ import { sendEmail } from "./sendgrid";
 import { resolvePrimaryEmail } from "./contactEmailResolver";
 import { storage } from "../storage";
 import { approveAndSendReply } from "./inboundReplyPipeline";
+import { generateReplyToEmail, findOrCreateConversation, updateConversationStats } from "./emailCommunications";
+import { v4 as uuidv4 } from "uuid";
 import type { ActionContext } from "../agents/prompts/collectionEmail";
 import type { CharlieDecision } from "./playbookEngine";
 import { determineTone, mapToneToActionContext } from "./toneEscalationEngine";
@@ -373,18 +375,24 @@ async function deliverEmail(
     const portalLink = `${portalBaseUrl}/${tenantId}/${contactId}`;
     const finalBody = email.body.replace(/\{\{PORTAL_LINK\}\}/g, portalLink);
 
+    // Find or create conversation for threading
+    const conversationId = await findOrCreateConversation(tenantId, contactId, email.subject);
+    const emailMessageId = uuidv4();
+    const replyToEmail = generateReplyToEmail(tenantId, conversationId, emailMessageId);
+
     // Send via SendGrid
     const fromEmail = process.env.SENDGRID_FROM_EMAIL || "cc@qashivo.com";
     const fromName = tenant.name ? `${tenant.name} via Qashivo` : "Qashivo Credit Control";
     const textBody = finalBody.replace(/<[^>]*>/g, "");
 
-    console.log(`[Pipeline] Sending email to ${recipientEmail}`);
+    console.log(`[Pipeline] Sending email to ${recipientEmail} (replyTo: ${replyToEmail})`);
     const sendResult = await sendEmail({
       to: recipientEmail,
       from: `${fromName} <${fromEmail}>`,
       subject: email.subject,
       html: finalBody,
       text: textBody,
+      replyTo: replyToEmail,
       tenantId,
     });
 
@@ -398,25 +406,31 @@ async function deliverEmail(
       })
       .where(eq(actions.id, actionId));
 
-    // Log to emailMessages
+    // Log to emailMessages — use actual post-enforcement values when available
     try {
       await db.insert(emailMessages).values({
+        id: emailMessageId,
         tenantId,
+        conversationId,
         direction: "OUTBOUND",
         channel: "EMAIL",
         actionId,
         contactId,
-        toEmail: recipientEmail,
+        toEmail: sendResult.actualTo || recipientEmail,
         toName: contact.name || null,
         fromEmail,
         fromName,
-        subject: email.subject,
+        subject: sendResult.actualSubject || email.subject,
         textBody,
         htmlBody: finalBody,
+        replyToken: `${tenantId}.${conversationId}.${emailMessageId}`,
         status: sendResult.success ? "SENT" : "FAILED",
         sendgridMessageId: sendResult.messageId || null,
         sentAt: sendResult.success ? new Date() : null,
       });
+
+      // Update conversation stats
+      await updateConversationStats(conversationId, "outbound");
     } catch (err) {
       console.warn(`[Pipeline] Email sent but failed to record in email_messages:`, err);
     }

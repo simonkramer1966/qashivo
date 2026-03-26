@@ -152,6 +152,41 @@ export function updateSyncStatus(tenantId: string, update: Partial<typeof syncSt
 }
 
 export async function registerIntegrationRoutes(app: Express): Promise<void> {
+
+  // ── Communications status (SendGrid, Vonage, Retell) ──────────────
+  app.get("/api/integrations/communications/status", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const [tenant] = await db.select({
+        communicationMode: tenants.communicationMode,
+      }).from(tenants).where(eq(tenants.id, user.tenantId));
+
+      res.json({
+        sendgrid: {
+          configured: !!process.env.SENDGRID_API_KEY && process.env.SENDGRID_API_KEY !== 'default_key',
+          fromEmail: process.env.SENDGRID_FROM_EMAIL || 'cc@qashivo.com',
+          inboundDomain: 'in.qashivo.com',
+          communicationMode: tenant?.communicationMode || 'off',
+        },
+        vonage: {
+          configured: !!process.env.VONAGE_API_KEY,
+          fromNumber: process.env.VONAGE_FROM_NUMBER || null,
+        },
+        retell: {
+          configured: !!process.env.RETELL_API_KEY,
+          agentId: process.env.RETELL_AGENT_ID || null,
+        },
+      });
+    } catch (error) {
+      console.error('Communications status error:', error);
+      res.status(500).json({ message: 'Failed to get communications status' });
+    }
+  });
+
   app.get("/api/integrations/xero/connect", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);

@@ -1,9 +1,26 @@
 # Qashivo — Claude Code Instructions
 
+> **This file is a living document and Claude Code's persistent memory for Qashivo.**
+> It must be updated at the end of every meaningful session. See SELF-UPDATE PROTOCOL below.
+
+---
+
+## SELF-UPDATE PROTOCOL
+
+**After every session** where you make code changes, fix bugs, or learn something new about the codebase, update this file before ending:
+
+1. **CURRENT STATE** — tick off completed items, update sprint progress, note what changed
+2. **RECENT CHANGES LOG** — add a dated entry describing what was done
+3. **KNOWN ISSUES** — add any bugs discovered, remove any fixed
+4. **CODEBASE LEARNINGS** — add patterns, gotchas, or conventions discovered while working in the code
+5. **ARCHITECTURE NOTES** — if you find how the system actually works differs from the spec, record the reality
+
+**Before every session**, read this file first. It is more current than any spec document.
+
+---
+
 ## Before Starting ANY Work
-Read /docs/QASHIVO_CONTEXT.md completely. It is the canonical product specification
- (2,500+ lines, 19 sections).
- Do not skip it. Every development decision must align with this document.
+Read /docs/QASHIVO_CONTEXT.md completely. It is the canonical product specification (2,500+ lines, 19 sections). Do not skip it. Every development decision must align with this document.
 
 ## Strategy
 - **Build-to-sell** to a UK bank. Every feature must prove value for acquisition.
@@ -16,6 +33,7 @@ Read /docs/QASHIVO_CONTEXT.md completely. It is the canonical product specificat
 - See Section 12 for MVP v1 scope
 - See Section 8A for bank proof points
 - See `docs/QASHIVO_CONTEXT_ADDENDUM_v4.2.md` Sections 20-23 for Riley, Data Health, onboarding, Xero architecture
+- See `docs/MVP_V1.1_BUILD_SPEC.md` for Sprint 5-8 breakdown
 
 ## Critical Rules
 1. Every communication is LLM-generated in the agent's persona voice. NO templates. If it reads like a template, it's wrong.
@@ -24,6 +42,9 @@ Read /docs/QASHIVO_CONTEXT.md completely. It is the canonical product specificat
 4. Default currency is GBP. UK-first market.
 5. Open Banking payment data trains models. Accounting platform data does NOT. See Section 5A.
 6. The debtor must believe the agent is human.
+7. AR overlay fields (arContactEmail, arContactPhone, arContactName, arNotes) are SACRED — never overwrite during any sync operation. This is Qashivo-owned data, a core stickiness factor, and a data asset for the bank buyer.
+8. Make targeted edits, not full rebuilds, unless Simon explicitly asks for a rebuild.
+9. Ask before deleting — if you think code is dead/unused, flag it rather than removing silently.
 
 ## Outbound Communications Safety (CRITICAL)
 
@@ -41,6 +62,83 @@ The wrappers enforce Off / Testing / Soft Live / Live modes and **fail closed on
 **Exceptions (no tenant context):** Investor demo endpoint (`/api/investor/voice-demo`) and MCP admin tools bypass mode enforcement — these are non-tenant-scoped and documented with safety comments.
 
 *Added: 22 March 2026 — post communication mode audit, Sprint 7. Voice wrapper added same date.*
+
+---
+
+## CURRENT STATE
+
+<!-- UPDATE THIS SECTION EVERY SESSION -->
+
+**Current sprint**: Sprint 5 — Xero production hardening + Data Health + Communication Test Mode
+
+**Sprint 5 checklist**:
+- [ ] Xero redirect URI fix (replace REPLIT_DOMAINS with APP_URL env var)
+- [ ] Remove old syncContactsToDatabase code
+- [ ] Fix invoice sync (write to BOTH cached_xero_invoices AND invoices table)
+- [ ] Token refresh (offline_access, proactive refresh, 401 retry, mark expired on failure)
+- [ ] Sync status API (GET /api/xero/sync-status)
+- [ ] Sync banner on Debtors/Data Health pages (auto-refresh on completion)
+- [ ] Background sync mode (4-hour, mode='ongoing', never overwrite AR overlay)
+- [ ] Data Health API endpoint (GET /api/settings/data-health)
+- [ ] Generic email detection (12 patterns: info@, accounts@, admin@, office@, finance@, hello@, enquiries@, contact@, billing@, sales@, support@, reception@)
+- [ ] Data Health page UI (Settings > Data Health — summary cards, search, sortable table, inline editing)
+- [ ] AR overlay inline editing (saves to arContactEmail/arContactPhone)
+- [ ] Communication test mode settings UI (Off/Testing/Soft Live/Live radio)
+- [ ] Communication test mode pipeline integration ([TEST] prefix, redirect to test addresses)
+- [ ] Default new tenants to "testing" mode
+
+**Upcoming sprints**:
+- Sprint 6: Debtor Detail page + row navigation + three-dot menus
+- Sprint 7: Riley AI Assistant (chat widget, conversations, intelligence extraction, onboarding)
+- Sprint 8: Weekly CFO Review (Qashflow tab, review generation, proactive notifications)
+
+---
+
+## RECENT CHANGES LOG
+
+<!-- ADD NEW ENTRIES AT THE TOP — format: YYYY-MM-DD: What changed -->
+
+- 2026-03-22: Added voice wrapper for Retell communication mode enforcement. Completed comms mode audit across all outbound channels.
+
+---
+
+## KNOWN ISSUES
+
+<!-- ADD bugs when discovered (with date), REMOVE when fixed -->
+
+- **Ageing analysis chart bug**: Dashboard showing wrong aging buckets (flagged 15 March 2026)
+- **Xero redirect URI**: Still references REPLIT_DOMAINS in xero.ts constructor — needs APP_URL
+- **Old sync code**: syncContactsToDatabase may still exist — needs deletion if unused
+- **Invoice sync incomplete**: syncInvoicesAndContacts may not be writing to both cached_xero_invoices AND main invoices table
+
+---
+
+## CODEBASE LEARNINGS
+
+<!-- ADD to this section whenever you discover something non-obvious about the codebase -->
+
+### Patterns discovered
+- **Comms wrappers fail closed** — if DB is unreachable during mode check, sends are blocked not allowed. This is intentional.
+- **Soft Live = Testing** until contact-level opt-in is built. No separate behaviour yet.
+- **Investor demo bypasses mode enforcement** — `/api/investor/voice-demo` has no tenant context, documented with safety comments.
+
+### Gotchas & traps
+- **Replit remnants**: Old code may reference REPLIT_DOMAINS, Replit-specific env vars, or Replit file paths. Replace with APP_URL and Railway equivalents. All @replit packages have been removed.
+- **Drizzle schema is large**: ~92 tables. When making schema changes, check for FK dependencies before adding/removing columns. Large schemas may need manual SQL via scripts to avoid drizzle-kit column type conflicts.
+- **AI layer is thin**: The current AI integration (charlieDecisionEngine, charliePlaybook, intentAnalyst, actionPlanner) is acknowledged as too thin/bolted-on. Future architecture moves toward five distinct agents with shared state and orchestration.
+
+### Sync conventions
+- **Invoice-first sync**: Fetch invoices from Xero → extract contacts from invoice data → batch-fetch contact details. This is the correct sync path (xeroSync.ts), NOT the old syncContactsToDatabase.
+- **Two sync modes**: INITIAL (clean sweep + fresh insert) for first connection. ONGOING (upsert by xeroInvoiceId/xeroContactId, never delete) for scheduled background syncs.
+- **Rate limiting**: 1.5 second delay between paginated Xero API calls, 60 second wait on 429.
+- **Token refresh**: Proactive (check expiry with 2-min buffer before API calls) + reactive (401 retry once). Failed refresh → mark connection "expired", prompt user to reconnect.
+
+### Design system
+- **shadcn/ui**: zinc neutral palette, semantic tokens, minimal borders, near-black primary actions.
+- This is a financial product — no rainbow dashboards, no playful UI.
+- Wouter for routing, TanStack Query v5 for data fetching.
+
+---
 
 ## Commands
 ```bash
@@ -63,6 +161,8 @@ npm run db:push    # Drizzle Kit: push schema changes to PostgreSQL
 - **SMS**: Vonage
 - **Voice**: Retell AI
 - **Billing**: Stripe
+- **Hosting**: Railway (project: `impartial-quietude`) → `https://qashivo-production.up.railway.app`
+- **File storage**: Cloudflare R2 (planned)
 
 ### Directory Layout
 - `client/src/` — React app (BEING REWRITTEN). Pages in `pages/`, components in `components/`, Shadcn primitives in `components/ui/`
@@ -71,10 +171,17 @@ npm run db:push    # Drizzle Kit: push schema changes to PostgreSQL
   - `routes.ts` — Root router, imports feature route modules from `routes/`
   - `routes/` — Feature route modules (~17 files)
   - `services/` — Business logic (~74 services). Key: `charlieDecisionEngine.ts` (AI agent — evolving to LLM-powered), `xeroSync.ts`, `openai.ts` (replacing with Anthropic)
+  - `services/sendgrid.ts` — Email delivery with `enforceCommunicationMode()` wrapper
+  - `services/vonage.ts` — SMS with communication mode check
+  - `services/communications/sendVoiceCall.ts` — Voice with mode enforcement
   - `middleware/` — Auth, RBAC (`rbac.ts`), provider abstraction
   - `startup/orchestrator.ts` — Bootstrap sequence
   - `storage.ts` — `IStorage` interface (data access layer), implemented by `DatabaseStorage`
   - `auth.ts` — Passport local strategy, session config (BEING REPLACED)
+  - `agents/` — AI agent implementations (collectionsAgent, rileyAssistant)
+  - `agents/prompts/` — Prompt assembly functions per action type
+  - `services/compliance/` — Compliance engine (rule-based v1)
+  - `services/llm/claude.ts` — Claude API abstraction (generateText(), generateJSON())
 - `shared/` — Code shared by client and server
   - `schema.ts` — Single source of truth: ~92 Drizzle tables, Zod validation schemas, TypeScript types
   - `types/`, `utils/`, `forecast.ts`, `currencies.ts`
@@ -102,6 +209,15 @@ Use the `storage` singleton (from `server/storage.ts`), not raw `db` queries in 
 ### Provider Abstraction
 Accounting providers (Xero, QuickBooks, Sage) registered at startup via `ProviderRegistry`. Communication: SendGrid (email), Vonage (SMS), Retell AI (voice).
 
+### Integrations Page
+- Route: `/settings/integrations` — 4-tab layout (Accounting, Email, Banking, Communications)
+- Accounting providers: `/api/providers/status` → `server/routes/integrationRoutes.ts`
+- Email connection: `/api/email-connection/*` → `server/routes/emailConnectionRoutes.ts`
+- Communications status: `/api/integrations/communications/status` → `server/routes/integrationRoutes.ts`
+- OAuth callbacks redirect to `/settings/integrations?email_connected=true` (or `?error=...`)
+- Email OAuth tokens stored on `tenants` table, accounting provider tokens on `providerConnections` table
+- See `docs/OAUTH_SETUP.md` for Google, Microsoft, and Xero OAuth setup instructions
+
 ### Background Jobs
 Started from `server/startup/orchestrator.ts`. All fire-and-forget async calls must have `.catch()` handlers.
 
@@ -111,120 +227,98 @@ Started from `server/startup/orchestrator.ts`. All fire-and-forget async calls m
 - **Migrations**: `npm run db:push` (Drizzle Kit push)
 - **Adding a table**: Define in `shared/schema.ts` → add relations → create Zod insert schema → run `db:push` → add storage methods in `storage.ts`
 
+### Key Schema Tables
+- `invoices` — main invoice data, joined everywhere
+- `contacts` — debtor/customer records with AR overlay fields
+- `cached_xero_invoices` — raw Xero data for reference
+- `aiFacts` — business intelligence extracted by Riley (extended in Sprint 7: category, entityType, entityId, factKey, confidence, source, sourceConversationId, expiresAt, isActive)
+- `tenants` — multi-tenant root, includes settings (extended: rileyReviewDay/Time/Timezone)
+- `agentPersonas` — AI persona config per tenant
+- `complianceChecks` — audit log of compliance checks on agent content
+- `rileyConversations` — conversation history between Riley and users (Sprint 7)
+- `forecastUserAdjustments` — cashflow inputs from Riley conversations (Sprint 7)
+- `weeklyReviews` — generated CFO review content (Sprint 8)
+
 ## Important Conventions
 - TypeScript ESM throughout — no CommonJS `require()`
 - Sanitize responses: use `stripSensitiveFields()` before returning user/tenant data
 - The `unhandledRejection` handler logs but does not exit — background task failures must not crash the server
 - Vite dev server integration is in `server/vite.ts` — do not modify
+- Use `APP_URL` env var for any URL that needs to reference the production domain
+
+---
+
+## ARCHITECTURE NOTES
+
+<!-- Record how things ACTUALLY work vs how specs say they should -->
+
+### Data flow (Xero sync)
+```
+Xero API
+  ↓ (invoice-first sync, 1.5s rate limit between pages)
+cached_xero_invoices (raw cache) + invoices table + contacts table
+  ↓
+AR overlay fields preserved (NEVER overwritten)
+  ↓
+Data Health assessment recalculated
+  ↓
+Debtor scoring job queued
+```
+
+### Core pipeline: LLM Email Generation → Delivery
+```
+Scheduler trigger (existing schedulerState/collectionSchedules)
+  → Context assembly (debtor profile, invoices, conversation history)
+  → LLM generation (collectionsAgent.ts → Claude API via llm/claude.ts)
+  → Compliance check (compliance/complianceEngine.ts)
+  → IF Semi-Auto: insert to messageDrafts as pending_approval → user approves
+  → IF Full Auto: promote directly to actions table
+  → Email delivery (SendGrid via enforceCommunicationMode wrapper)
+  → Logging (timelineEvents + complianceChecks + action status update)
+```
+
+### Core pipeline: Inbound Email → Agent Response
+```
+SendGrid inbound webhook (/api/webhooks/sendgrid/inbound)
+  → Match to debtor via replyToken or email address
+  → Intent extraction via Claude (intentAnalyst)
+  → Signal creation (customerBehaviorSignals + contactOutcomes)
+  → Agent generates contextual reply (same LLM pipeline)
+  → Compliance check → approval flow → delivery via wrapper
+  → Threading maintained via In-Reply-To/References (emailMessages)
+```
+
+### Agent architecture (current vs planned)
+**Current**: Single Collections Agent with LLM email generation, compliance checking, approval queue, intent extraction, tone escalation. AI layer is thin — essentially prompt-and-respond.
+
+**Planned (MVP v2+)**: Five distinct agents — Collections, Risk Assessment, Cashflow Forecasting, Dispute Resolution, Working Capital Optimization. Shared state, tool registries, inter-agent orchestration via Orchestrator. May need architectural evolution away from monolith for long-running agent workloads.
+
+### Key services being evolved
+```
+charlieDecisionEngine.ts  → scheduling/trigger layer for collectionsAgent.ts
+openai.ts                 → replaced by server/services/llm/claude.ts
+intentAnalyst.ts          → rewired to use Claude via server/services/llm/claude.ts
+auth.ts                   → replaced by production auth (Clerk or Supabase)
+```
 
 ---
 
 ## MVP v1 Build Plan
 
-Read `docs/MVP_V1_BUILD_SPEC.md` for full sprint breakdown with schema changes, pipeline architecture, and build order. Below is the summary.
+Read `docs/MVP_V1_BUILD_SPEC.md` for full sprint breakdown with schema changes, pipeline architecture, and build order.
 
 ### Sprint Sequence
 
 | Sprint | Weeks | Focus | Key Deliverable |
 |--------|-------|-------|-----------------|
-| 0 | 1 | Foundation | Auth replaced (Clerk), OpenAI→Claude, BullMQ added, frontend shell scaffolded |
+| 0 | 1 | Foundation | Auth replaced, OpenAI→Claude, BullMQ added, frontend shell scaffolded |
 | 1 | 2–3 | First LLM Email | Agent persona config, LLM email generation, compliance engine, inbound email→agent |
 | 2 | 4–6 | Autonomy + Onboarding | Approval queue UI, debtor portal persona, onboarding flow, Open Banking connection |
 | 3 | 7–9 | Dashboard + Reporting | Qollections dashboard rebuild, DSO tracking, default strategies, agent activity log |
 | 4 | 10–12 | Intelligence + Polish | Claude intent extraction, tone escalation engine, E2E testing, metrics |
 
-### New Directories (create in Sprint 0)
-
-```
-server/agents/                     # AI agent implementations
-server/agents/collectionsAgent.ts  # Collections Agent core — LLM email generation + response
-server/agents/prompts/             # Prompt assembly functions per action type
-server/services/compliance/        # Compliance engine (rule-based v1)
-server/services/compliance/complianceEngine.ts
-server/services/compliance/rules.ts
-server/services/llm/               # Claude API abstraction layer
-server/services/llm/claude.ts      # Thin wrapper: generateText(), generateJSON()
-server/services/queue/             # BullMQ job queue setup
-server/services/queue/index.ts     # Queue definitions + Redis connection
-```
-
-These sit alongside (not replace) the existing `server/services/` directory.
-
-### New Schema Tables (MVP v1)
-
-```
-agentPersonas          — AI persona config per tenant (name, title, signature, tone, company context)
-complianceChecks       — Audit log of every compliance check on agent-generated content
-openBankingConnections — TrueLayer/Yapily consent and connection state
-dsoSnapshots           — Daily DSO metric snapshots for trend tracking
-```
-
-### Modified Schema (MVP v1)
-
-```
-users                  — Add clerkId (varchar, unique) for Clerk auth
-actions                — Add agentReasoning (text) for audit trail
-invoices               — Change currency default "USD" → "GBP"
-bills                  — Change currency default "USD" → "GBP"
-bankAccounts           — Change currency default "USD" → "GBP"
-tenants                — Add defaultPersonaId (FK → agentPersonas)
-```
-
-### Core Pipeline: LLM Email Generation → Delivery
-
-```
-Scheduler trigger (existing schedulerState/collectionSchedules)
-  → Context assembly (debtor profile, invoices, conversation history from existing tables)
-  → LLM generation (server/agents/collectionsAgent.ts → Claude API via server/services/llm/claude.ts)
-  → Compliance check (server/services/compliance/complianceEngine.ts)
-  → IF Semi-Auto: insert to messageDrafts as pending_approval → user approves in dashboard
-  → IF Full Auto: promote directly to actions table
-  → Email delivery (existing SendGrid pipeline via emailMessages)
-  → Logging (timelineEvents + complianceChecks + action status update)
-```
-
-### Core Pipeline: Inbound Email → Agent Response
-
-```
-SendGrid inbound webhook (existing /api/webhooks/sendgrid/inbound)
-  → Match to debtor via replyToken or email address (existing routing)
-  → Intent extraction via Claude (replacing OpenAI intentAnalyst)
-  → Signal creation (existing customerBehaviorSignals + contactOutcomes)
-  → Agent generates contextual reply (same LLM pipeline as outbound)
-  → Compliance check → approval flow → delivery
-  → Threading maintained via In-Reply-To/References (existing emailMessages infrastructure)
-```
-
-### Key Existing Services Being Evolved
-
-```
-charlieDecisionEngine.ts  → becomes the scheduling/trigger layer for collectionsAgent.ts
-openai.ts                 → replaced by server/services/llm/claude.ts
-intentAnalyst.ts          → rewired to use Claude via server/services/llm/claude.ts
-auth.ts                   → replaced by Clerk middleware
-```
-
-### Environment Variables (New for MVP v1)
-
-```
-# Auth (replacing current Passport local)
-CLERK_PUBLISHABLE_KEY=pk_...
-CLERK_SECRET_KEY=sk_...
-
-# LLM (replacing OPENAI_API_KEY)
-ANTHROPIC_API_KEY=sk-ant-...
-
-# Queue
-REDIS_URL=redis://localhost:6379
-
-# Open Banking (read-only in v1)
-TRUELAYER_CLIENT_ID=...
-TRUELAYER_CLIENT_SECRET=...
-```
-
 ### What Does NOT Ship in MVP v1
-
-SMS, voice calls, Bayesian forecasting, Qashflow dashboard, Qapital, payment plan negotiation by agent, chat widget, cross-debtor learning, partner portal. See Section 12 of context doc for the full MVP phase breakdown.
+SMS, voice calls, Bayesian forecasting, Qashflow dashboard, Qapital, payment plan negotiation by agent, chat widget, cross-debtor learning, partner portal. See Section 12 of context doc.
 
 ---
 
@@ -245,16 +339,31 @@ Read `docs/MVP_V1.1_BUILD_SPEC.md` for full sprint breakdown. Read `docs/QASHIVO
 
 Riley is Qashivo's always-available AI assistant — the intelligence layer across all three pillars. She serves as onboarding guide, business intelligence gatherer, virtual CFO, system help, and action taker.
 
-**Key tables:**
-- `rileyConversations` — conversation history (JSONB messages, topic, related entity)
-- `forecastUserAdjustments` — cashflow inputs captured from Riley conversations (Section 20.4 Layer 3)
-- `aiFacts` (extended) — structured business intelligence extracted from conversations (Section 20.4 Layer 2)
-- `tenants` — rileyReviewDay/Time/Timezone for weekly CFO review scheduling
+**Key tables:** rileyConversations, forecastUserAdjustments, aiFacts (extended), tenants (rileyReviewDay/Time/Timezone)
 
-**Key service (to build):**
-- `server/agents/rileyAssistant.ts` — prompt assembly, context building, response generation, intelligence extraction
+**Key service:** `server/agents/rileyAssistant.ts` — prompt assembly, context building, response generation, intelligence extraction
 
 **Riley does NOT use templates.** Every response is LLM-generated with full business context.
+
+---
+
+## Environment Variables
+
+| Variable | Purpose | Status |
+|----------|---------|--------|
+| APP_URL | Production domain for Xero redirect URI etc. | Required |
+| DATABASE_URL | Neon PostgreSQL connection string | Active |
+| OPENAI_API_KEY | GPT-4/5 for agent LLM calls | Active (migrating to Anthropic) |
+| ANTHROPIC_API_KEY | Claude API for agents | Planned |
+| XERO_CLIENT_ID | Xero OAuth app ID | Active |
+| XERO_CLIENT_SECRET | Xero OAuth secret | Active |
+| STRIPE_SECRET_KEY | Stripe payments | Active |
+| SENDGRID_API_KEY | Email sending | Active |
+| VONAGE_API_KEY | SMS/voice | Active |
+| RETELL_API_KEY | Voice AI | Active |
+| REDIS_URL | BullMQ job queue | Planned |
+| TRUELAYER_CLIENT_ID | Open Banking (read-only v1) | Planned |
+| TRUELAYER_CLIENT_SECRET | Open Banking | Planned |
 
 ## Deployment
 
@@ -265,3 +374,5 @@ Riley is Qashivo's always-available AI assistant — the intelligence layer acro
 - **Logs**: Railway dashboard → service → Deployments → logs
 - **DB**: Neon serverless PostgreSQL (connection via `DATABASE_URL`)
 - **DB migrations**: Use `npm run db:push` (Drizzle Kit). For large schemas, may need manual SQL via scripts to avoid drizzle-kit column type conflicts.
+- **GitHub**: `simonkramer1966`
+- **Local codebase**: `~/Documents/qashivo`

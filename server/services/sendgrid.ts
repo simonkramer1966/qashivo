@@ -118,7 +118,7 @@ export async function sendEmail(params: {
   customerId?: string;
   trackClicks?: boolean;
   tenantId?: string;
-}): Promise<{ success: boolean; messageId?: string; error?: string }> {
+}): Promise<{ success: boolean; messageId?: string; error?: string; actualTo?: string; actualSubject?: string }> {
   try {
     // 1. Demo mode check (short-circuits everything)
     const { demoModeService } = await import('./demoModeService.js');
@@ -224,8 +224,10 @@ export async function sendEmail(params: {
     const result = await emailService.sendEmail(message);
     return {
       success: result.success,
-      messageId: result.messageId,
-      error: result.error
+      messageId: result.providerMessageId || result.messageId,
+      error: result.error,
+      actualTo: params.to,
+      actualSubject: params.subject,
     };
   } catch (error: any) {
     console.error('Send email error:', error);
