@@ -4165,16 +4165,33 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
       // Payment behaviour
       let paymentBehaviour = "Insufficient data";
       if (avgDaysToPay !== null) {
-        if (avgDaysToPay <= -5) paymentBehaviour = "Consistently early";
-        else if (avgDaysToPay <= 5) paymentBehaviour = "Pays on time";
+        if (avgDaysToPay <= 5) paymentBehaviour = "Pays on time";
+        else if (avgDaysToPay <= 15) paymentBehaviour = "Occasionally late";
         else if (avgDaysToPay <= 30) paymentBehaviour = "Typically late";
-        else paymentBehaviour = "Chronically late";
+        else if (avgDaysToPay <= 45) paymentBehaviour = "Chronically late";
+        else paymentBehaviour = "Severely overdue";
       }
 
       // Percentage paid on time
       const pctPaidOnTime = daysToPays.length > 0
         ? Math.round((daysToPays.filter(d => d <= 0).length / daysToPays.length) * 100)
         : null;
+
+      // Compute risk tag from payment metrics
+      let riskTag = "Insufficient data";
+      if (avgDaysToPay !== null && pctPaidOnTime !== null) {
+        if (pctPaidOnTime < 20 || avgDaysToPay > 60) riskTag = "Critical";
+        else if (pctPaidOnTime < 40 || avgDaysToPay > 35) riskTag = "High Risk";
+        else if (pctPaidOnTime < 60 || avgDaysToPay > 20) riskTag = "Elevated";
+        else if (pctPaidOnTime >= 80 && avgDaysToPay <= 10) riskTag = "Low Risk";
+        else riskTag = "Normal";
+      } else if (avgDaysToPay !== null) {
+        if (avgDaysToPay > 60) riskTag = "Critical";
+        else if (avgDaysToPay > 35) riskTag = "High Risk";
+        else if (avgDaysToPay > 20) riskTag = "Elevated";
+        else if (avgDaysToPay <= 10) riskTag = "Low Risk";
+        else riskTag = "Normal";
+      }
 
       // Last payment
       const paidSorted = paidInvoicesResult
@@ -4215,6 +4232,7 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
           disputed: disputedCount,
         },
         riskScore: contact.riskScore ?? null,
+        riskTag,
         promiseToPay,
       });
     } catch (error) {

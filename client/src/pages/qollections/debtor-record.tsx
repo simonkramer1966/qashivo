@@ -150,6 +150,7 @@ interface MetricsResponse {
   lastPayment: { date: string; amount: number } | null;
   openInvoices: { total: number; overdue: number; disputed: number };
   riskScore: number | null;
+  riskTag: string;
   promiseToPay: { date: string; amount: number | null; overdue: boolean } | null;
 }
 
@@ -318,9 +319,9 @@ function riskBg(score: number | null | undefined): string {
 
 function behaviourColour(b: string): string {
   const lower = b.toLowerCase();
-  if (lower.includes("early") || lower.includes("on time") || lower === "good") return "text-green-600";
-  if (lower.includes("chronically") || lower.includes("very late") || lower === "poor") return "text-red-600";
-  if (lower.includes("late") || lower === "fair") return "text-amber-600";
+  if (lower.includes("on time") || lower.includes("early")) return "text-green-600";
+  if (lower.includes("severely") || lower.includes("chronically")) return "text-red-600";
+  if (lower.includes("late")) return "text-amber-600";
   return "text-muted-foreground";
 }
 
@@ -1322,28 +1323,21 @@ export default function DebtorRecord() {
                   {contact.riskBand} risk
                 </Badge>
               )}
-              {(() => {
-                const tag = (contact.playbookRiskTag ?? "NORMAL").toUpperCase();
-                const behaviour = (metrics?.paymentBehaviour ?? "").toLowerCase();
-                const pctOnTime = metrics?.pctPaidOnTime ?? null;
-                const isHigh = tag.includes("HIGH") || behaviour.includes("chronically") || (pctOnTime != null && pctOnTime === 0);
-                const isWatchlist = tag.includes("WATCH") || behaviour.includes("typically late");
-                return (
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      "text-xs",
-                      isHigh
-                        ? "border-red-300 bg-red-50 text-red-700"
-                        : isWatchlist
-                        ? "border-amber-300 bg-amber-50 text-amber-700"
-                        : ""
-                    )}
-                  >
-                    {contact.playbookRiskTag ?? "NORMAL"}
-                  </Badge>
-                );
-              })()}
+              {metrics?.riskTag && metrics.riskTag !== "Insufficient data" && (
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "text-xs",
+                    metrics.riskTag === "Critical" ? "border-red-300 bg-red-50 text-red-700" :
+                    metrics.riskTag === "High Risk" ? "border-orange-300 bg-orange-50 text-orange-700" :
+                    metrics.riskTag === "Elevated" ? "border-amber-300 bg-amber-50 text-amber-700" :
+                    metrics.riskTag === "Low Risk" ? "border-green-300 bg-green-50 text-green-700" :
+                    ""
+                  )}
+                >
+                  {metrics.riskTag}
+                </Badge>
+              )}
             </div>
             {contact.companyName && contact.companyName !== contact.name && (
               <p className="text-sm text-muted-foreground">{contact.companyName}</p>
