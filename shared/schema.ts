@@ -1025,6 +1025,9 @@ export const emailMessages = pgTable("email_messages", {
   textBody: text("text_body"),
   htmlBody: text("html_body"),
   
+  // CC recipients (outbound)
+  ccRecipients: jsonb("cc_recipients").$type<string[]>(),
+
   // SendGrid metadata
   sendgridMessageId: varchar("sendgrid_message_id"),
   inReplyTo: varchar("in_reply_to"),

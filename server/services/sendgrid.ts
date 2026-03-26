@@ -108,6 +108,7 @@ async function enforceCommunicationMode(params: {
 
 export async function sendEmail(params: {
   to: string;
+  cc?: string[];
   from: string;
   subject: string;
   html: string;
@@ -118,7 +119,7 @@ export async function sendEmail(params: {
   customerId?: string;
   trackClicks?: boolean;
   tenantId?: string;
-}): Promise<{ success: boolean; messageId?: string; error?: string; actualTo?: string; actualSubject?: string }> {
+}): Promise<{ success: boolean; messageId?: string; error?: string; actualTo?: string; actualSubject?: string; actualCc?: string[] }> {
   try {
     // 1. Demo mode check (short-circuits everything)
     const { demoModeService } = await import('./demoModeService.js');
@@ -161,6 +162,18 @@ export async function sendEmail(params: {
         params.subject = modeResult.subject;
         params.html = modeResult.html;
         params.text = modeResult.text;
+
+        // CC handling: suppress in testing/soft_live, pass through in live
+        if (modeResult.mode !== 'live' && params.cc?.length) {
+          const suppressedCc = params.cc.join(', ');
+          const ccNote = `<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:8px 16px;margin-bottom:12px;font-size:12px;color:#92400e;"><strong>CC suppressed (${modeResult.mode} mode)</strong>: ${suppressedCc}</div>`;
+          params.html = ccNote + params.html;
+          if (params.text) {
+            params.text = `[CC suppressed (${modeResult.mode} mode): ${suppressedCc}]\n\n${params.text}`;
+          }
+          console.log(`🧪 [CommMode] CC suppressed in ${modeResult.mode} mode: ${suppressedCc}`);
+          params.cc = [];
+        }
       } catch (err: any) {
         if (err.message?.includes('Communication mode is OFF')) {
           // Re-throw mode-off errors — these are intentional blocks
@@ -188,6 +201,7 @@ export async function sendEmail(params: {
           const connectedResult = await sendViaConnectedAccount({
             tenantId: params.tenantId,
             to: params.to, // Already transformed by mode enforcement
+            cc: params.cc, // Already suppressed in non-live modes
             subject: params.subject,
             htmlBody: params.html,
             textBody: params.text,
@@ -212,6 +226,7 @@ export async function sendEmail(params: {
 
     const message: EmailMessage = {
       to: [{ email: params.to }],
+      cc: params.cc?.length ? params.cc.map(email => ({ email })) : undefined,
       from: parseEmailAddress(params.from),
       subject: params.subject,
       htmlContent: params.html,
@@ -228,6 +243,7 @@ export async function sendEmail(params: {
       error: result.error,
       actualTo: params.to,
       actualSubject: params.subject,
+      actualCc: params.cc?.length ? params.cc : undefined,
     };
   } catch (error: any) {
     console.error('Send email error:', error);

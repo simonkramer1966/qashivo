@@ -16,6 +16,7 @@ import {
   messageDrafts,
   emailMessages,
   timelineEvents,
+  customerContactPersons,
 } from "@shared/schema";
 import { generateCollectionEmail } from "../agents/collectionsAgent";
 import { checkCompliance, type ComplianceResult } from "./compliance/complianceEngine";
@@ -370,6 +371,9 @@ async function deliverEmail(
       return { actionId, status: "failed", error: "No email address for contact" };
     }
 
+    // Fetch escalation contacts for auto-CC
+    const escalationCc = await getEscalationCc(tenantId, contactId);
+
     // Replace portal link placeholder
     const portalBaseUrl = process.env.PORTAL_BASE_URL || `${process.env.APP_URL || "https://app.qashivo.com"}/portal`;
     const portalLink = `${portalBaseUrl}/${tenantId}/${contactId}`;
@@ -385,9 +389,10 @@ async function deliverEmail(
     const fromName = tenant.name ? `${tenant.name} via Qashivo` : "Qashivo Credit Control";
     const textBody = finalBody.replace(/<[^>]*>/g, "");
 
-    console.log(`[Pipeline] Sending email to ${recipientEmail} (replyTo: ${replyToEmail})`);
+    console.log(`[Pipeline] Sending email to ${recipientEmail} (replyTo: ${replyToEmail}, cc: ${escalationCc.length ? escalationCc.join(', ') : 'none'})`);
     const sendResult = await sendEmail({
       to: recipientEmail,
+      cc: escalationCc.length ? escalationCc : undefined,
       from: `${fromName} <${fromEmail}>`,
       subject: email.subject,
       html: finalBody,
@@ -423,6 +428,7 @@ async function deliverEmail(
         subject: sendResult.actualSubject || email.subject,
         textBody,
         htmlBody: finalBody,
+        ccRecipients: sendResult.actualCc?.length ? sendResult.actualCc : null,
         replyToken: `${tenantId}.${conversationId}.${emailMessageId}`,
         status: sendResult.success ? "SENT" : "FAILED",
         sendgridMessageId: sendResult.messageId || null,
@@ -480,6 +486,28 @@ async function deliverEmail(
 }
 
 // ── Helpers ─────────────────────────────────────────────────
+
+/**
+ * Fetch escalation contact email(s) for auto-CC on agent-sent emails.
+ */
+async function getEscalationCc(tenantId: string, contactId: string): Promise<string[]> {
+  try {
+    const persons = await db
+      .select({ email: customerContactPersons.email })
+      .from(customerContactPersons)
+      .where(
+        and(
+          eq(customerContactPersons.contactId, contactId),
+          eq(customerContactPersons.tenantId, tenantId),
+          eq(customerContactPersons.isEscalation, true),
+        ),
+      );
+    return persons.filter(p => p.email).map(p => p.email!);
+  } catch (err) {
+    console.warn(`[Pipeline] Failed to fetch escalation CC for contact ${contactId}:`, err);
+    return [];
+  }
+}
 
 /**
  * Map a CharlieDecision to an ActionContext, using the tone escalation engine

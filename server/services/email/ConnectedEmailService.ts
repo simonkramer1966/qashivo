@@ -6,6 +6,7 @@ import { refreshAccessToken } from '../emailConnection';
 export interface ConnectedEmailParams {
   tenantId: string;
   to: string;
+  cc?: string[];
   subject: string;
   htmlBody: string;
   textBody?: string;
@@ -74,6 +75,7 @@ async function sendViaGmail(accessToken: string, params: ConnectedEmailParams, f
     const rawEmail = buildRawEmail({
       from: fromEmail,
       to: params.to,
+      cc: params.cc,
       subject: params.subject,
       htmlBody: params.htmlBody,
       textBody: params.textBody,
@@ -142,6 +144,12 @@ async function sendViaOutlook(accessToken: string, params: ConnectedEmailParams,
       ],
     };
 
+    if (params.cc?.length) {
+      message.ccRecipients = params.cc.map(email => ({
+        emailAddress: { address: email },
+      }));
+    }
+
     if (params.replyTo) {
       message.replyTo = [
         {
@@ -182,6 +190,7 @@ async function sendViaOutlook(accessToken: string, params: ConnectedEmailParams,
 function buildRawEmail(params: {
   from: string;
   to: string;
+  cc?: string[];
   subject: string;
   htmlBody: string;
   textBody?: string;
@@ -195,6 +204,9 @@ function buildRawEmail(params: {
 
   lines.push(`From: ${params.from}`);
   lines.push(`To: ${params.to}`);
+  if (params.cc?.length) {
+    lines.push(`Cc: ${params.cc.join(', ')}`);
+  }
   lines.push(`Subject: ${params.subject}`);
   lines.push('MIME-Version: 1.0');
 

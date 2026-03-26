@@ -56,8 +56,10 @@ import {
   Sparkles,
   Send,
   Loader2,
-  Search
+  Search,
+  Plus,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { useCurrency } from "@/hooks/useCurrency";
 import { getCustomerDisplayName, getCustomerCompanyName } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -145,6 +147,9 @@ export function CustomerPreviewDrawer({
   const [isGeneratingEmail, setIsGeneratingEmail] = useState(false);
   const [includeStatutoryInterest, setIncludeStatutoryInterest] = useState(true);
   const [selectedRecipientEmail, setSelectedRecipientEmail] = useState<string>("");
+  const [ccRecipients, setCcRecipients] = useState<string[]>([]);
+  const [showCcInput, setShowCcInput] = useState(false);
+  const [ccInputValue, setCcInputValue] = useState("");
   
   const [isSmsMode, setIsSmsMode] = useState(false);
   const [smsTemplate, setSmsTemplate] = useState<SmsTemplateType>("payment_reminder");
@@ -478,6 +483,15 @@ export function CustomerPreviewDrawer({
     const primaryContact = preview?.allCreditControlContacts?.find(c => c.isPrimary);
     const defaultEmail = primaryContact?.email || preview?.creditControlContact?.email || preview?.customer?.email || '';
     setSelectedRecipientEmail(defaultEmail);
+    // Auto-populate CC with escalation contact if one exists
+    const escalationContact = preview?.allCreditControlContacts?.find((c: any) => c.isEscalation && c.email);
+    if (escalationContact?.email) {
+      setCcRecipients([escalationContact.email]);
+    } else {
+      setCcRecipients([]);
+    }
+    setShowCcInput(false);
+    setCcInputValue("");
   };
 
   const resetEmailForm = () => {
@@ -489,6 +503,9 @@ export function CustomerPreviewDrawer({
     setIsGeneratingEmail(false);
     setIncludeStatutoryInterest(true);
     setSelectedRecipientEmail("");
+    setCcRecipients([]);
+    setShowCcInput(false);
+    setCcInputValue("");
   };
 
   const handleSmsButtonClick = () => {
@@ -687,6 +704,7 @@ export function CustomerPreviewDrawer({
       body: string;
       templateType: string;
       recipientEmail: string;
+      cc?: string[];
     }) => {
       const res = await apiRequest("POST", `/api/contacts/${customerId}/send-email`, emailData);
       return await res.json();
@@ -867,6 +885,7 @@ export function CustomerPreviewDrawer({
       body: emailBody,
       templateType: emailTemplate,
       recipientEmail: selectedRecipientEmail,
+      cc: ccRecipients,
     });
   };
 
@@ -1821,6 +1840,87 @@ export function CustomerPreviewDrawer({
                                 )}
                               </div>
                             </div>
+
+                            {/* CC Field */}
+                            {(ccRecipients.length > 0 || showCcInput) && (
+                              <div>
+                                <Label className="text-xs text-muted-foreground mb-1.5 block">
+                                  CC
+                                </Label>
+                                <div className="flex flex-wrap gap-1.5 items-center min-h-[36px] px-3 py-1.5 rounded-md border border-border bg-background">
+                                  {ccRecipients.map((email) => {
+                                    const contactPerson = preview?.allCreditControlContacts?.find((c: any) => c.email === email);
+                                    return (
+                                      <Badge
+                                        key={email}
+                                        variant="secondary"
+                                        className="text-[11px] gap-1 pr-1"
+                                      >
+                                        {contactPerson?.name ? `${contactPerson.name} <${email}>` : email}
+                                        <button
+                                          type="button"
+                                          onClick={() => setCcRecipients(prev => prev.filter(e => e !== email))}
+                                          className="ml-0.5 hover:text-destructive"
+                                        >
+                                          <X className="h-3 w-3" />
+                                        </button>
+                                      </Badge>
+                                    );
+                                  })}
+                                  {showCcInput ? (
+                                    <input
+                                      type="email"
+                                      placeholder="email@domain.com"
+                                      value={ccInputValue}
+                                      onChange={(e) => setCcInputValue(e.target.value)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ',') {
+                                          e.preventDefault();
+                                          const email = ccInputValue.trim().replace(/,$/, '');
+                                          if (email && email.includes('@') && !ccRecipients.includes(email)) {
+                                            setCcRecipients(prev => [...prev, email]);
+                                            setCcInputValue("");
+                                          }
+                                        }
+                                        if (e.key === 'Escape') {
+                                          setShowCcInput(false);
+                                          setCcInputValue("");
+                                        }
+                                      }}
+                                      onBlur={() => {
+                                        const email = ccInputValue.trim();
+                                        if (email && email.includes('@') && !ccRecipients.includes(email)) {
+                                          setCcRecipients(prev => [...prev, email]);
+                                        }
+                                        setCcInputValue("");
+                                        setShowCcInput(false);
+                                      }}
+                                      className="flex-1 min-w-[140px] bg-transparent border-none outline-none text-[12px] h-6"
+                                      autoFocus
+                                    />
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => setShowCcInput(true)}
+                                      className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-0.5"
+                                    >
+                                      <Plus className="h-3 w-3" />
+                                      Add CC
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                            {ccRecipients.length === 0 && !showCcInput && (
+                              <button
+                                type="button"
+                                onClick={() => setShowCcInput(true)}
+                                className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-0.5"
+                              >
+                                <Plus className="h-3 w-3" />
+                                Add CC
+                              </button>
+                            )}
 
                             <div>
                               <Label htmlFor="emailSubject" className="text-xs text-muted-foreground mb-1.5 block">

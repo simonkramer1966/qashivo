@@ -262,7 +262,8 @@ export class CustomerTimelineService {
         name: c.name || undefined,
         email: c.email || undefined,
         phone: c.phone || undefined,
-        isPrimary: c.isPrimaryCreditControl || false
+        isPrimary: c.isPrimaryCreditControl || false,
+        isEscalation: c.isEscalation || false,
       })),
       messagingStatus: preferences ? {
         emailOptedOut: !preferences.emailEnabled,

@@ -2164,7 +2164,8 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
       if (!await hasContactAccess(user, contactId)) {
         return res.status(403).json({ message: "You do not have access to this contact" });
       }
-      const { subject, body, templateType, recipientEmail: providedRecipient } = req.body;
+      const { subject, body, templateType, recipientEmail: providedRecipient, cc } = req.body;
+      const ccRecipients: string[] = Array.isArray(cc) ? cc.filter((e: any) => typeof e === 'string' && e.includes('@')) : [];
 
       // Verify contact exists
       const contact = await storage.getContact(contactId, user.tenantId);
@@ -2209,13 +2210,15 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
         subject,
         textBody: body,
         htmlBody,
+        ccRecipients: ccRecipients.length ? ccRecipients : null,
         threadKey,
         replyToken,
         status: 'QUEUED',
       }).returning();
-      
+
       const result = await sendEmail({
         to: recipientEmail,
+        cc: ccRecipients.length ? ccRecipients : undefined,
         from: `${tenant?.name || DEFAULT_FROM} <${DEFAULT_FROM_EMAIL}>`,
         replyTo: replyToEmail,
         subject,
@@ -2260,7 +2263,8 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
         metadata: {
           templateType,
           messageId: result.messageId,
-          sentTo: contact.email
+          sentTo: recipientEmail,
+          cc: ccRecipients.length ? ccRecipients : undefined,
         }
       }).returning();
 
