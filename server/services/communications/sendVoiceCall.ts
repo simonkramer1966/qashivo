@@ -133,7 +133,7 @@ export async function sendVoiceCall(params: SendVoiceCallParams): Promise<VoiceC
   // If redirected, add original recipient info to metadata
   const enrichedMetadata = {
     ...metadata,
-    tenantId,
+    tenant_id: tenantId,
     communicationMode: mode,
     ...(actualTo !== to ? { originalRecipient: to, originalContactName: contactName } : {}),
   };

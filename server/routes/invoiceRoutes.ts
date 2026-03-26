@@ -941,6 +941,25 @@ export function registerInvoiceRoutes(app: Express): void {
         return res.status(500).json({ message: "Retell agent not configured" });
       }
 
+      // Create action BEFORE the call so action_id is available in Retell metadata
+      const createdAction = await storage.createAction({
+        tenantId: user.tenantId,
+        invoiceId: invoice.id,
+        contactId: invoice.contactId,
+        userId: user.id,
+        type: 'ai_voice',
+        status: 'scheduled',
+        subject: `AI Voice Call (${selectedAgent.name}) - Invoice ${invoice.invoiceNumber}`,
+        content: `Automated collection call initiated to ${customerName} using ${selectedAgent.name}`,
+        scheduledFor: new Date(),
+        metadata: {
+          scriptType,
+          agentTierId: selectedAgent.id,
+          agentName: selectedAgent.name,
+          daysOverdue,
+        },
+      });
+
       // Initiate call via central voice wrapper (enforces communication mode)
       const { sendVoiceCall } = await import('../services/communications/sendVoiceCall.js');
 
@@ -952,8 +971,9 @@ export function registerInvoiceRoutes(app: Express): void {
         fromNumber: process.env.RETELL_PHONE_NUMBER || '',
         dynamicVariables,
         metadata: {
-          invoiceId: invoice.id,
-          contactId: invoice.contactId,
+          invoice_id: invoice.id,
+          contact_id: invoice.contactId,
+          action_id: createdAction.id,
           scriptType,
           daysOverdue: daysOverdue.toString(),
         },
@@ -961,27 +981,6 @@ export function registerInvoiceRoutes(app: Express): void {
       });
 
       console.log(`📞 AI voice call initiated: ${callResult.callId} to ${invoice.contact.phone}`);
-
-      // Log the action
-      await storage.createAction({
-        tenantId: user.tenantId,
-        invoiceId: invoice.id,
-        contactId: invoice.contactId,
-        userId: user.id,
-        type: 'ai_voice',
-        status: 'scheduled',
-        subject: `AI Voice Call (${selectedAgent.name}) - Invoice ${invoice.invoiceNumber}`,
-        content: `Automated collection call initiated to ${customerName} using ${selectedAgent.name}`,
-        scheduledFor: new Date(),
-        metadata: {
-          callId: callResult.callId,
-          scriptType,
-          agentId: callResult.agentId,
-          agentTierId: selectedAgent.id,
-          agentName: selectedAgent.name,
-          daysOverdue,
-        },
-      });
 
       // Update invoice reminder tracking
       await storage.updateInvoice(invoiceId, user.tenantId, {
