@@ -515,21 +515,6 @@ async function buildQashflowContext(tenantId: string): Promise<string> {
 
   // Each query is independently try/caught — one failure must not kill the whole context
 
-  // Active forecast adjustments
-  try {
-    const adjustments = await storage.listForecastAdjustments(tenantId);
-    const active = (adjustments || []).filter((a) => !a.expired);
-    if (active.length > 0) {
-      lines.push(`\nActive forecast adjustments (${active.length}):`);
-      for (const a of active.slice(0, 10)) {
-        const dir = a.affects === "inflows" ? "+" : "-";
-        lines.push(`- ${a.description}: ${dir}${formatGBP(Math.abs(Number(a.amount)))} (${a.timingType}${a.followUpStatus === "pending" ? ", needs follow-up" : ""})`);
-      }
-    }
-  } catch (err) {
-    console.error("[Riley] buildQashflowContext: listForecastAdjustments failed:", err);
-  }
-
   // Expected inflows from AR
   try {
     const metrics = await storage.getInvoiceMetrics(tenantId);
@@ -563,13 +548,15 @@ async function buildQashflowContext(tenantId: string): Promise<string> {
       if (latestReview.keyNumbers) {
         const kn = latestReview.keyNumbers as any;
         if (kn?.expected) {
-          lines.push(`Expected scenario: In ${formatGBP(kn.expected.expectedIn || 0)}, Out ${formatGBP(kn.expected.expectedOut || 0)}, Net ${formatGBP(kn.expected.netPosition || 0)}`);
+          lines.push(`Expected collection: ${formatGBP(kn.expected.expectedIn || 0)}`);
         }
       }
     }
   } catch (err) {
     console.error("[Riley] buildQashflowContext: getLatestWeeklyReview failed:", err);
   }
+
+  lines.push("\nFOCUS: Help the user understand expected cash inflows from debtors. Identify which debtors are most important to collect this week. If asked about outflows, acknowledge and say outflow forecasting is coming in a future update.");
 
   return lines.join("\n");
 }

@@ -1,6 +1,6 @@
 import { storage } from "../storage";
 import { generateText } from "./llm/claude";
-import type { Invoice, Contact, WeeklyReview, ForecastUserAdjustment } from "@shared/schema";
+import type { Invoice, Contact, WeeklyReview } from "@shared/schema";
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -18,8 +18,6 @@ interface DebtorScenario {
 
 interface ScenarioTotals {
   expectedIn: number;
-  expectedOut: number;
-  netPosition: number;
   pressurePoints: string[];
 }
 
@@ -118,26 +116,14 @@ function buildDebtorScenarios(
 }
 
 /**
- * Determine if a forecast adjustment represents an outflow.
- */
-function isOutflow(adj: ForecastUserAdjustment): boolean {
-  return adj.affects === "outflows";
-}
-
-/**
- * Build three-scenario cashflow estimates for the next 3 weeks.
+ * Build three-scenario collection estimates for the next 3 weeks.
+ * Inflows only — outflow forecasting suppressed for MVP v1.1 demo.
  */
 function buildScenarioTotals(
   scenarios: DebtorScenario[],
   metrics: { totalOutstanding: number },
-  forecastAdjustments: ForecastUserAdjustment[],
 ): KeyNumbers {
   const totalAR = Number(metrics.totalOutstanding);
-
-  // Sum known outflows from forecast adjustments
-  const knownOutflows = forecastAdjustments
-    .filter(isOutflow)
-    .reduce((sum: number, a) => sum + Math.abs(Number(a.amount ?? 0)), 0);
 
   const optimisticIn = totalAR; // everyone pays on time
   const expectedIn = totalAR * 0.7; // ~70% at historical pace
@@ -154,24 +140,9 @@ function buildScenarioTotals(
   }
 
   return {
-    optimistic: {
-      expectedIn: optimisticIn,
-      expectedOut: knownOutflows,
-      netPosition: optimisticIn - knownOutflows,
-      pressurePoints: [],
-    },
-    expected: {
-      expectedIn,
-      expectedOut: knownOutflows,
-      netPosition: expectedIn - knownOutflows,
-      pressurePoints,
-    },
-    pessimistic: {
-      expectedIn: pessimisticIn,
-      expectedOut: knownOutflows,
-      netPosition: pessimisticIn - knownOutflows,
-      pressurePoints,
-    },
+    optimistic: { expectedIn: optimisticIn, pressurePoints: [] },
+    expected: { expectedIn, pressurePoints },
+    pessimistic: { expectedIn: pessimisticIn, pressurePoints },
   };
 }
 
@@ -184,7 +155,6 @@ function buildCFOPrompt(params: {
   keyNumbers: KeyNumbers;
   topDebtors: DebtorScenario[];
   dsoTrend: Array<{ date: unknown; dso: unknown }>;
-  forecastAdjustments: Array<Record<string, unknown>>;
   previousSummary: string | null;
 }): string {
   return `You are the CFO advisor for a UK SME. Write a weekly cash collection review.
@@ -192,18 +162,19 @@ function buildCFOPrompt(params: {
 DATA CONTEXT:
 - Week: ${params.weekStart} to ${params.weekEnd}
 - AR Metrics: ${JSON.stringify(params.metrics)}
-- Three-Scenario Forecast: ${JSON.stringify(params.keyNumbers)}
+- Three-Scenario Collection Forecast: ${JSON.stringify(params.keyNumbers)}
 - Top Debtors (by amount owed): ${JSON.stringify(params.topDebtors.slice(0, 8))}
 - DSO Trend (last 4 weeks): ${JSON.stringify(params.dsoTrend.slice(-4))}
-- Known Outflows/Adjustments: ${JSON.stringify(params.forecastAdjustments)}
 ${params.previousSummary ? `- Previous Review Summary: ${params.previousSummary.slice(0, 500)}` : "- No previous review available."}
 
 INSTRUCTIONS:
 Write a plain-English weekly review in 3-4 paragraphs covering:
-1. This week's cash position and collections performance
-2. What to expect over the next 2-3 weeks (reference the three scenarios)
-3. Key risks and which debtors need attention
-4. One or two specific recommendations
+1. This week's collections performance and AR health
+2. Expected cash inflows over the next 2-3 weeks (reference the three collection scenarios)
+3. Which debtors need attention and why
+4. One or two specific collection recommendations
+
+Focus entirely on expected cash inflows from debtors. Do not mention outflows, expenses, or net position.
 
 After the prose, output a JSON block with debtor focus items. Use this exact format:
 
@@ -254,7 +225,6 @@ export async function generateWeeklyReview(
   const keyNumbers = buildScenarioTotals(
     debtorScenarios,
     metrics,
-    forecastAdjustments,
   );
 
   // DSO trend for prompt
@@ -280,13 +250,6 @@ export async function generateWeeklyReview(
     keyNumbers,
     topDebtors: debtorScenarios,
     dsoTrend,
-    forecastAdjustments: forecastAdjustments.map((a) => ({
-      description: a.description,
-      amount: a.amount,
-      category: a.category,
-      affects: a.affects,
-      timingType: a.timingType,
-    })),
     previousSummary: previousReview?.summaryText || null,
   });
 

@@ -20,9 +20,9 @@ import { useState, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 
 interface KeyNumbers {
-  optimistic: { expectedIn: number; expectedOut: number; netPosition: number; pressurePoints: string[] };
-  expected: { expectedIn: number; expectedOut: number; netPosition: number; pressurePoints: string[] };
-  pessimistic: { expectedIn: number; expectedOut: number; netPosition: number; pressurePoints: string[] };
+  optimistic: { expectedIn: number; pressurePoints: string[] };
+  expected: { expectedIn: number; pressurePoints: string[] };
+  pessimistic: { expectedIn: number; pressurePoints: string[] };
 }
 
 interface DebtorFocusItem {
@@ -197,22 +197,14 @@ export default function WeeklyReview() {
             <CardHeader className="pb-2">
               <CardTitle className="text-sm flex items-center gap-1.5 text-green-700 dark:text-green-400">
                 <TrendingUp className="h-4 w-4" />
-                Optimistic
+                Optimistic Collection
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-1 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Expected In</span>
-                <span className="font-medium">{formatCurrency(keyNumbers.optimistic.expectedIn)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Expected Out</span>
-                <span className="font-medium">{formatCurrency(keyNumbers.optimistic.expectedOut)}</span>
-              </div>
-              <div className="flex justify-between border-t pt-1 mt-1">
-                <span className="font-medium">Net Position</span>
+                <span className="text-muted-foreground">Expected Inflows</span>
                 <span className="font-semibold text-green-700 dark:text-green-400">
-                  {formatCurrency(keyNumbers.optimistic.netPosition)}
+                  {formatCurrency(keyNumbers.optimistic?.expectedIn ?? 0)}
                 </span>
               </div>
             </CardContent>
@@ -222,27 +214,19 @@ export default function WeeklyReview() {
             <CardHeader className="pb-2">
               <CardTitle className="text-sm flex items-center gap-1.5 text-blue-700 dark:text-blue-400">
                 <PoundSterling className="h-4 w-4" />
-                Expected
+                Expected Collection
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-1 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Expected In</span>
-                <span className="font-medium">{formatCurrency(keyNumbers.expected.expectedIn)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Expected Out</span>
-                <span className="font-medium">{formatCurrency(keyNumbers.expected.expectedOut)}</span>
-              </div>
-              <div className="flex justify-between border-t pt-1 mt-1">
-                <span className="font-medium">Net Position</span>
+                <span className="text-muted-foreground">Expected Inflows</span>
                 <span className="font-semibold text-blue-700 dark:text-blue-400">
-                  {formatCurrency(keyNumbers.expected.netPosition)}
+                  {formatCurrency(keyNumbers.expected?.expectedIn ?? 0)}
                 </span>
               </div>
-              {keyNumbers.expected.pressurePoints.length > 0 && (
+              {(keyNumbers.expected?.pressurePoints ?? []).length > 0 && (
                 <div className="mt-2 pt-2 border-t space-y-1">
-                  {keyNumbers.expected.pressurePoints.map((p, i) => (
+                  {(keyNumbers.expected?.pressurePoints ?? []).map((p, i) => (
                     <p key={i} className="text-xs text-muted-foreground flex items-start gap-1">
                       <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0 text-amber-500" />
                       {p}
@@ -257,22 +241,14 @@ export default function WeeklyReview() {
             <CardHeader className="pb-2">
               <CardTitle className="text-sm flex items-center gap-1.5 text-red-700 dark:text-red-400">
                 <TrendingDown className="h-4 w-4" />
-                Pessimistic
+                Pessimistic Collection
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-1 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Expected In</span>
-                <span className="font-medium">{formatCurrency(keyNumbers.pessimistic.expectedIn)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Expected Out</span>
-                <span className="font-medium">{formatCurrency(keyNumbers.pessimistic.expectedOut)}</span>
-              </div>
-              <div className="flex justify-between border-t pt-1 mt-1">
-                <span className="font-medium">Net Position</span>
+                <span className="text-muted-foreground">Expected Inflows</span>
                 <span className="font-semibold text-red-700 dark:text-red-400">
-                  {formatCurrency(keyNumbers.pessimistic.netPosition)}
+                  {formatCurrency(keyNumbers.pessimistic?.expectedIn ?? 0)}
                 </span>
               </div>
             </CardContent>
