@@ -12,7 +12,7 @@ import { sendEmail } from './sendgrid';
 import { sendSMS } from './vonage';
 import { randomUUID } from 'crypto';
 import { wrapInHtmlEmailTemplate } from './messagePostProcessor';
-import { resolvePrimaryEmail, resolvePrimarySmsNumber } from './contactEmailResolver';
+import { resolvePrimaryEmail, resolvePrimarySmsNumber, resolvePrimaryContactName } from './contactEmailResolver';
 
 // Channel adapter interface - unified contract for all communication channels
 interface ChannelAdapter {
@@ -252,11 +252,11 @@ class CommunicationsOrchestrator {
         throw new Error('Contact not found');
       }
       
-      const recipientEmail = await resolvePrimaryEmail(contact.id, request.tenantId, contact.email);
+      const recipientEmail = await resolvePrimaryEmail(contact.id, request.tenantId, contact.email, contact.arContactEmail);
       if (!recipientEmail) {
         throw new Error('Contact has no email address');
       }
-      
+
       const tenant = await storage.getTenant(request.tenantId);
       
       const emailSenders = await storage.getEmailSenders(request.tenantId);
@@ -320,11 +320,11 @@ class CommunicationsOrchestrator {
       if (!contact) {
         throw new Error('Contact not found');
       }
-      const recipientPhone = await resolvePrimarySmsNumber(contact.id, request.tenantId, contact.phone);
+      const recipientPhone = await resolvePrimarySmsNumber(contact.id, request.tenantId, contact.phone, contact.arContactPhone);
       if (!recipientPhone) {
         throw new Error('Contact has no phone number');
       }
-      
+
       const result = await sendSMS({
         to: recipientPhone,
         message: request.content,
@@ -360,11 +360,11 @@ class CommunicationsOrchestrator {
       if (!contact) {
         throw new Error('Contact not found');
       }
-      const recipientPhone = await resolvePrimarySmsNumber(contact.id, request.tenantId, contact.phone);
+      const recipientPhone = await resolvePrimarySmsNumber(contact.id, request.tenantId, contact.phone, contact.arContactPhone);
       if (!recipientPhone) {
         throw new Error('Contact has no phone number');
       }
-      
+
       const tenant = await storage.getTenant(request.tenantId);
       
       const fromNumber = process.env.RETELL_FROM_NUMBER || process.env.VONAGE_PHONE_NUMBER || '';
@@ -395,12 +395,16 @@ class CommunicationsOrchestrator {
       // Use central voice wrapper (enforces communication mode)
       const { sendVoiceCall } = await import('./communications/sendVoiceCall.js');
 
+      // Resolve language for voice call
+      const voiceLanguage = contact.preferredLanguage || tenant?.defaultLanguage || 'en-GB';
+
       const callResult = await sendVoiceCall({
         tenantId: request.tenantId,
         to: recipientPhone,
-        contactName: contact.name || 'Customer',
+        contactName: await resolvePrimaryContactName(contact.id, request.tenantId, contact.name, contact.arContactName),
         agentId: retellAgentId,
         fromNumber,
+        language: voiceLanguage,
         dynamicVariables: {
           company_name: tenant?.name || 'Our Company',
           ...request.personalization,
@@ -446,7 +450,7 @@ class CommunicationsOrchestrator {
     if (!contact) {
       return { valid: false, reason: 'Contact not found' };
     }
-    const recipientEmail = await resolvePrimaryEmail(contactId, tenantId, contact.email);
+    const recipientEmail = await resolvePrimaryEmail(contactId, tenantId, contact.email, contact.arContactEmail);
     if (!recipientEmail) {
       return { valid: false, reason: 'No email address' };
     }
@@ -456,13 +460,13 @@ class CommunicationsOrchestrator {
     }
     return { valid: true };
   }
-  
+
   private async validateSMSContact(contactId: string, tenantId: string): Promise<{ valid: boolean; reason?: string }> {
     const contact = await storage.getContact(contactId, tenantId);
     if (!contact) {
       return { valid: false, reason: 'Contact not found' };
     }
-    const recipientPhone = await resolvePrimarySmsNumber(contactId, tenantId, contact.phone);
+    const recipientPhone = await resolvePrimarySmsNumber(contactId, tenantId, contact.phone, contact.arContactPhone);
     if (!recipientPhone) {
       return { valid: false, reason: 'No phone number' };
     }

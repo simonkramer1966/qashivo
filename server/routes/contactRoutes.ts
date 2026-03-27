@@ -22,12 +22,15 @@ import {
   attentionItems, outcomes, activityLogs, collectionPolicies, paymentPlans,
   emailMessages, customerContactPersons, scheduledReports,
   cachedXeroOverpayments, cachedXeroPrepayments, cachedXeroCreditNotes, cachedXeroContacts,
-  activityEvents,
+  activityEvents, riskScores,
 } from "@shared/schema";
 import { computeNextRunAt } from "../services/reportScheduler";
 import { REPORT_TYPE_LABELS, type ReportType } from "../services/reportGenerator";
 import { getOverdueCategoryFromDueDate } from "@shared/utils/overdueUtils";
 import { calculateLatePaymentInterest } from "../utils/interestCalculator";
+import { calculateBatchLPI, formatLPIRate, type LPIConfig } from "../services/lpiService";
+import { resolvePrimaryEmail } from "../services/contactEmailResolver";
+import { getLanguageName, getCurrencySymbol, formatCurrencyForPrompt } from "@shared/currencies";
 import { eq, and, desc, asc, sql, count, avg, gte, lte, lt, inArray, or, isNull, isNotNull, gt, not } from 'drizzle-orm';
 import { db } from '../db';
 import { z } from "zod";
@@ -754,6 +757,37 @@ export function registerContactRoutes(app: Express): void {
     } catch (error) {
       console.error("Error updating AR contact details:", error);
       res.status(500).json({ message: "Failed to update AR contact details" });
+    }
+  });
+
+  // PATCH /api/contacts/:id — General contact field update (supports lpiEnabled, lpiGracePeriodDays)
+  app.patch("/api/contacts/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+      if (!await hasContactAccess(user, req.params.id)) {
+        return res.status(403).json({ message: "You do not have access to this contact" });
+      }
+
+      const { id } = req.params;
+      const updates: Record<string, any> = {};
+      if (req.body.lpiEnabled !== undefined) updates.lpiEnabled = req.body.lpiEnabled;
+      if (req.body.lpiGracePeriodDays !== undefined) updates.lpiGracePeriodDays = req.body.lpiGracePeriodDays;
+      if (req.body.preferredCurrency !== undefined) updates.preferredCurrency = req.body.preferredCurrency || null;
+      if (req.body.preferredLanguage !== undefined) updates.preferredLanguage = req.body.preferredLanguage || null;
+
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ message: "No valid fields to update" });
+      }
+
+      updates.updatedAt = new Date();
+      await db.update(contacts).set(updates).where(eq(contacts.id, id));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error updating contact:", error);
+      res.status(500).json({ message: "Failed to update contact" });
     }
   });
 
@@ -2145,7 +2179,7 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
         subject: emailDraft.subject,
         body: emailDraft.body,
         templateType: emailDraft.templateType,
-        contactEmail: contact.arContactEmail || contact.email
+        contactEmail: await resolvePrimaryEmail(contact.id, user.tenantId, contact.email, contact.arContactEmail)
       });
     } catch (error) {
       console.error("Error generating email:", error);
@@ -2173,8 +2207,8 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
         return res.status(404).json({ message: "Contact not found" });
       }
 
-      // Use provided recipient email, or fallback to AR contact email, then primary email
-      const recipientEmail = providedRecipient || contact.arContactEmail || contact.email;
+      // Use provided recipient email (user explicitly chose), or resolve via primary contact hierarchy
+      const recipientEmail = providedRecipient || await resolvePrimaryEmail(contact.id, user.tenantId, contact.email, contact.arContactEmail);
       if (!recipientEmail) {
         return res.status(400).json({ message: "Contact has no email address" });
       }
@@ -3658,8 +3692,13 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
       
       const formattedSender = `${senderName} <${senderEmail}>`;
       
+      const resolvedRecipient = await resolvePrimaryEmail(contact.id, user.tenantId, contact.email, contact.arContactEmail);
+      if (!resolvedRecipient) {
+        return res.status(400).json({ message: "Contact has no email address" });
+      }
+
       const emailSent = await sendEmail({
-        to: contact.email,
+        to: resolvedRecipient,
         from: formattedSender,
         subject: processedSubject,
         html: processedContent.replace(/\n/g, '<br>'),
@@ -3667,7 +3706,7 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
       });
 
       if (emailSent) {
-        console.log(`✅ Summary email sent to ${contact.name} (${contact.email}) for ${contactInvoices.length} invoices`);
+        console.log(`✅ Summary email sent to ${contact.name} (${resolvedRecipient}) for ${contactInvoices.length} invoices`);
         res.json({ 
           success: true, 
           message: `Account summary sent to ${contact.name}` 
@@ -4068,13 +4107,15 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
       const { id } = req.params;
       const tenantId = user.tenantId;
 
-      // Fetch contact, open invoices, paid invoices, disputes, and promises in parallel
+      // Fetch contact, open invoices, paid invoices, disputes, promises, tenant, and risk scores in parallel
       const [
         contact,
         openInvoicesResult,
         paidInvoicesResult,
         activeDisputes,
         openPromises,
+        tenant,
+        riskScoreRecord,
       ] = await Promise.all([
         storage.getContact(id, tenantId),
         db.select()
@@ -4108,6 +4149,8 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
           ))
           .orderBy(desc(paymentPromises.createdAt))
           .limit(1),
+        storage.getTenant(tenantId),
+        db.select().from(riskScores).where(and(eq(riskScores.tenantId, tenantId), eq(riskScores.contactId, id))).limit(1),
       ]);
 
       if (!contact) {
@@ -4162,13 +4205,14 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
         ? Math.round(daysToPays.reduce((a, b) => a + b, 0) / daysToPays.length)
         : null;
 
-      // Payment behaviour
+      // Payment behaviour (relative to payment terms)
+      const terms = contact?.paymentTerms ?? 30;
       let paymentBehaviour = "Insufficient data";
       if (avgDaysToPay !== null) {
-        if (avgDaysToPay <= 5) paymentBehaviour = "Pays on time";
-        else if (avgDaysToPay <= 15) paymentBehaviour = "Occasionally late";
-        else if (avgDaysToPay <= 30) paymentBehaviour = "Typically late";
-        else if (avgDaysToPay <= 45) paymentBehaviour = "Chronically late";
+        if (avgDaysToPay <= 0) paymentBehaviour = "Pays on time";
+        else if (avgDaysToPay <= terms * 0.33) paymentBehaviour = "Occasionally late";
+        else if (avgDaysToPay <= terms * 0.66) paymentBehaviour = "Typically late";
+        else if (avgDaysToPay <= terms * 1.5) paymentBehaviour = "Chronically late";
         else paymentBehaviour = "Severely overdue";
       }
 
@@ -4177,9 +4221,21 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
         ? Math.round((daysToPays.filter(d => d <= 0).length / daysToPays.length) * 100)
         : null;
 
-      // Compute risk tag from payment metrics
+      // Compute risk tag — prefer riskScores table, fallback to inline calculation
       let riskTag = "Insufficient data";
-      if (avgDaysToPay !== null && pctPaidOnTime !== null) {
+      let creditRiskScore: number | null = null;
+      let riskFactors: string[] = [];
+      const rs = riskScoreRecord?.[0];
+      if (rs?.overallRiskScore) {
+        const score = parseFloat(rs.overallRiskScore as string);
+        creditRiskScore = Math.round(score * 100);
+        riskFactors = (rs.riskFactors as string[]) ?? [];
+        if (score >= 0.71) riskTag = "Critical";
+        else if (score >= 0.51) riskTag = "High Risk";
+        else if (score >= 0.31) riskTag = "Elevated";
+        else if (score >= 0.16) riskTag = "Normal";
+        else riskTag = "Low Risk";
+      } else if (avgDaysToPay !== null && pctPaidOnTime !== null) {
         if (pctPaidOnTime < 20 || avgDaysToPay > 60) riskTag = "Critical";
         else if (pctPaidOnTime < 40 || avgDaysToPay > 35) riskTag = "High Risk";
         else if (pctPaidOnTime < 60 || avgDaysToPay > 20) riskTag = "Elevated";
@@ -4192,6 +4248,25 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
         else if (avgDaysToPay <= 10) riskTag = "Low Risk";
         else riskTag = "Normal";
       }
+
+      // LPI calculation
+      const lpiConfig: LPIConfig = {
+        boeBaseRate: parseFloat(tenant?.boeBaseRate || '4.50'),
+        interestMarkup: parseFloat(tenant?.interestMarkup || '8.00'),
+        gracePeriodDays: (contact as any).lpiGracePeriodDays ?? tenant?.interestGracePeriod ?? 7,
+        enabled: (tenant?.useLatePamentLegislation ?? false) && ((contact as any).lpiEnabled ?? true),
+      };
+
+      const overdueForLPI = openInvoicesResult.filter(inv => inv.dueDate && new Date(inv.dueDate) < now);
+      const lpiResult = lpiConfig.enabled
+        ? calculateBatchLPI(overdueForLPI.map(inv => ({
+            id: inv.id,
+            invoiceNumber: inv.invoiceNumber || '',
+            amount: inv.amount || '0',
+            amountPaid: inv.amountPaid || '0',
+            dueDate: new Date(inv.dueDate!),
+          })), lpiConfig)
+        : { items: [], totalLPI: 0, accruingCount: 0 };
 
       // Last payment
       const paidSorted = paidInvoicesResult
@@ -4231,9 +4306,19 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
           overdue: overdueInvoices.length,
           disputed: disputedCount,
         },
-        riskScore: contact.riskScore ?? null,
+        riskScore: contact!.riskScore ?? null,
         riskTag,
         promiseToPay,
+        totalLPI: lpiResult.totalLPI,
+        lpiAccruingCount: lpiResult.accruingCount,
+        lpiEnabled: lpiConfig.enabled,
+        lpiRate: formatLPIRate(lpiConfig),
+        lpiAnnualRate: lpiConfig.boeBaseRate + lpiConfig.interestMarkup,
+        lpiGracePeriodDays: lpiConfig.gracePeriodDays,
+        lpiItems: lpiResult.items,
+        creditRiskScore,
+        riskFactors,
+        paymentTerms: terms,
       });
     } catch (error) {
       console.error("Error fetching contact metrics:", error);
@@ -4311,8 +4396,8 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
       const disputedTotal = disputed.reduce((sum, inv) => sum + parseFloat(inv.amount || '0') - parseFloat(inv.amountPaid || '0'), 0);
       const grossTotal = chaseableTotal + disputedTotal;
 
-      // Gather context: recent activity, payment stats, promises
-      const [recentActivity, paidInvoicesResult, openPromises] = await Promise.all([
+      // Gather context: recent activity, payment stats, promises, tenant (for LPI)
+      const [recentActivity, paidInvoicesResult, openPromises, draftTenant] = await Promise.all([
         db.select()
           .from(activityEvents)
           .where(and(
@@ -4337,6 +4422,7 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
           ))
           .orderBy(desc(paymentPromises.createdAt))
           .limit(1),
+        storage.getTenant(tenantId),
       ]);
 
       // Calculate avg days to pay for tone selection
@@ -4378,20 +4464,30 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
         toneInstruction = "Tone: FRIENDLY. Assume this is an oversight. Be warm and helpful while clearly stating what is owed.";
       }
 
+      // Resolve language & currency for this contact
+      const draftLanguage = contact.preferredLanguage || draftTenant?.defaultLanguage || 'en-GB';
+      const draftCurrency = contact.preferredCurrency || draftTenant?.currency || 'GBP';
+      const draftLangName = getLanguageName(draftLanguage);
+
       const hasDisputedInvoices = disputed.length > 0;
       const disputeContext = hasDisputedInvoices
-        ? `\nIMPORTANT: The debtor has ${disputed.length} invoice(s) totalling £${disputedTotal.toFixed(2)} that are under review. Reference the gross total of £${grossTotal.toFixed(2)} for transparency, but ONLY request payment for the chaseable amount of £${chaseableTotal.toFixed(2)}. Do NOT use the word "dispute".`
+        ? `\nIMPORTANT: The debtor has ${disputed.length} invoice(s) totalling ${formatCurrencyForPrompt(disputedTotal, draftCurrency)} that are under review. Reference the gross total of ${formatCurrencyForPrompt(grossTotal, draftCurrency)} for transparency, but ONLY request payment for the chaseable amount of ${formatCurrencyForPrompt(chaseableTotal, draftCurrency)}. Do NOT use the word "dispute".`
         : "";
 
       const invoiceLines = chaseable.map(inv =>
-        `- ${inv.invoiceNumber}: £${(parseFloat(inv.amount || '0') - parseFloat(inv.amountPaid || '0')).toFixed(2)} (due ${inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('en-GB') : 'N/A'})`
+        `- ${inv.invoiceNumber}: ${formatCurrencyForPrompt(parseFloat(inv.amount || '0') - parseFloat(inv.amountPaid || '0'), draftCurrency)} (due ${inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('en-GB') : 'N/A'})`
       ).join("\n");
 
       const recentActivitySummary = recentActivity.slice(0, 10).map(e =>
         `- ${e.createdAt.toLocaleDateString('en-GB')}: ${e.title}`
       ).join("\n");
 
-      const systemPrompt = `You are a professional credit controller writing on behalf of a UK business. Generate a ${type === 'email' ? 'collection email' : 'collection SMS (max 160 characters)'} for a debtor.
+      const languageInstruction = draftLanguage.startsWith('en')
+        ? ''
+        : `\nWrite the ENTIRE ${type === 'email' ? 'email body' : 'SMS'} in ${draftLangName}. The debtor speaks ${draftLangName}. Keep the email signature in English (do not translate names, titles, or company name).`;
+
+      const systemPrompt = `You are a professional credit controller writing on behalf of a business. Generate a ${type === 'email' ? 'collection email' : 'collection SMS (max 160 characters)'} for a debtor.
+Format all monetary amounts in ${draftCurrency} (${getCurrencySymbol(draftCurrency)}).${languageInstruction}
 
 ${toneInstruction}
 ${disputeContext}
@@ -4400,17 +4496,37 @@ The debtor must believe this is written by a real person, not a template or AI. 
 
       const userPrompt = `Contact: ${contact.name}${contact.companyName ? ` (${contact.companyName})` : ''}
 
-Outstanding invoices to chase (£${chaseableTotal.toFixed(2)} total):
+Outstanding invoices to chase (${formatCurrencyForPrompt(chaseableTotal, draftCurrency)} total):
 ${invoiceLines}
 
-${latestPromise ? `Active payment promise: £${latestPromise.promisedAmount || 'unspecified'} by ${new Date(latestPromise.promisedDate).toLocaleDateString('en-GB')}${promiseBreached ? ' (OVERDUE — promise broken)' : ''}` : 'No active payment promises.'}
+${latestPromise ? `Active payment promise: ${formatCurrencyForPrompt(parseFloat(latestPromise.promisedAmount || '0'), draftCurrency)} by ${new Date(latestPromise.promisedDate).toLocaleDateString('en-GB')}${promiseBreached ? ' (OVERDUE — promise broken)' : ''}` : 'No active payment promises.'}
 
 Recent activity:
 ${recentActivitySummary || 'No recent activity logged.'}
 
 Average days to pay (historical): ${avgDaysToPay !== null ? `${avgDaysToPay} days${avgDaysToPay > 0 ? ' late' : ' early'}` : 'N/A'}
 Times chased on current invoices: ${maxReminderCount}
-
+${(() => {
+        const draftLpiConfig: LPIConfig = {
+          boeBaseRate: parseFloat(draftTenant?.boeBaseRate || '4.50'),
+          interestMarkup: parseFloat(draftTenant?.interestMarkup || '8.00'),
+          gracePeriodDays: (contact as any).lpiGracePeriodDays ?? draftTenant?.interestGracePeriod ?? 7,
+          enabled: (draftTenant?.useLatePamentLegislation ?? false) && ((contact as any).lpiEnabled ?? true),
+        };
+        if (!draftLpiConfig.enabled) return '';
+        const lpiResult = calculateBatchLPI(chaseable.filter(inv => inv.dueDate && new Date(inv.dueDate) < now).map(inv => ({
+          id: inv.id, invoiceNumber: inv.invoiceNumber || '', amount: inv.amount || '0', amountPaid: inv.amountPaid || '0', dueDate: new Date(inv.dueDate!),
+        })), draftLpiConfig);
+        if (lpiResult.totalLPI <= 0) return '';
+        const lines = [`\nLATE PAYMENT INTEREST (Late Payment of Commercial Debts (Interest) Act 1998):`];
+        lines.push(`Annual rate: ${formatLPIRate(draftLpiConfig)}`);
+        lines.push(`Total interest accrued: ${formatCurrencyForPrompt(lpiResult.totalLPI, draftCurrency)}`);
+        for (const item of lpiResult.items) {
+          if (item.lpiAmount > 0) lines.push(`- ${item.invoiceNumber}: ${formatCurrencyForPrompt(item.lpiAmount, draftCurrency)} (${item.lpiDays} days)`);
+        }
+        lines.push(`\nInclude a paragraph about the right to charge interest under the Act. State the rate and accrued amount. Keep factual and professional.`);
+        return lines.join('\n');
+      })()}
 ${type === 'email' ? 'Generate a JSON object with "subject" (string) and "body" (string, plain text with line breaks).' : 'Generate a JSON object with "message" (string, max 160 characters).'}`;
 
       const draft = await generateJSON<Record<string, string>>({

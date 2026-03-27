@@ -98,6 +98,7 @@ import {
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { CURRENCIES, SUPPORTED_LANGUAGES, getLanguageName, getCurrencySymbol } from "@shared/currencies";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -112,6 +113,8 @@ interface Contact {
   arContactEmail?: string | null;
   arContactName?: string | null;
   arNotes?: string | null;
+  preferredCurrency?: string | null;
+  preferredLanguage?: string | null;
   companyName?: string | null;
   xeroContactId?: string | null;
   playbookRiskTag?: string | null;
@@ -152,6 +155,16 @@ interface MetricsResponse {
   riskScore: number | null;
   riskTag: string;
   promiseToPay: { date: string; amount: number | null; overdue: boolean } | null;
+  totalLPI: number;
+  lpiAccruingCount: number;
+  lpiEnabled: boolean;
+  lpiRate: string;
+  lpiAnnualRate: number;
+  lpiGracePeriodDays: number;
+  lpiItems: Array<{ invoiceId: string; invoiceNumber: string; balance: number; lpiAmount: number; lpiDays: number; dailyRate: number; isAccruing: boolean }>;
+  creditRiskScore: number | null;
+  riskFactors: string[];
+  paymentTerms: number;
 }
 
 interface ActivityEvent {
@@ -505,6 +518,26 @@ export default function DebtorRecord() {
   // ---------------------------------------------------------------------------
   // Mutations
   // ---------------------------------------------------------------------------
+
+  const toggleLpiMutation = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      const res = await apiRequest("PATCH", `/api/contacts/${contactId}`, { lpiEnabled: enabled });
+      if (!res.ok) throw new Error("Failed");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/contacts/${contactId}/metrics`] });
+    },
+  });
+
+  const updateContactPrefMutation = useMutation({
+    mutationFn: async (data: { preferredCurrency?: string | null; preferredLanguage?: string | null }) => {
+      const res = await apiRequest("PATCH", `/api/contacts/${contactId}`, data);
+      if (!res.ok) throw new Error("Failed");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/contacts/${contactId}`] });
+    },
+  });
 
   const draftMutation = useMutation<DraftResponse, Error, { type: string }>({
     mutationFn: async ({ type }) => {
@@ -1336,7 +1369,23 @@ export default function DebtorRecord() {
                   )}
                 >
                   {metrics.riskTag}
+                  {metrics.creditRiskScore != null && (
+                    <span className="ml-1 opacity-70">{metrics.creditRiskScore}/100</span>
+                  )}
                 </Badge>
+              )}
+              {metrics && (
+                <button
+                  onClick={() => toggleLpiMutation.mutate(!metrics.lpiEnabled)}
+                  className={cn(
+                    "text-xs px-2 py-0.5 rounded-full border transition-colors",
+                    metrics.lpiEnabled
+                      ? "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                      : "border-zinc-200 text-muted-foreground hover:bg-zinc-50"
+                  )}
+                >
+                  LPI {metrics.lpiEnabled ? "ON" : "OFF"}
+                </button>
               )}
             </div>
             {contact.companyName && contact.companyName !== contact.name && (
@@ -1453,14 +1502,19 @@ export default function DebtorRecord() {
             {metricsQuery.isLoading ? (
               <Skeleton className="h-6 w-20 mt-1" />
             ) : (
-              <p
-                className={cn(
-                  "text-lg font-bold tabular-nums",
-                  behaviourColour(metrics?.paymentBehaviour ?? "")
-                )}
-              >
-                {metrics?.paymentBehaviour || "—"}
-              </p>
+              <>
+                <p
+                  className={cn(
+                    "text-lg font-bold tabular-nums",
+                    behaviourColour(metrics?.paymentBehaviour ?? "")
+                  )}
+                >
+                  {metrics?.paymentBehaviour || "—"}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  vs {metrics?.paymentTerms ?? 30}d terms
+                </p>
+              </>
             )}
           </Card>
 
@@ -1477,6 +1531,27 @@ export default function DebtorRecord() {
                   ? `${Math.round(metrics.pctPaidOnTime)}%`
                   : "—"}
               </p>
+            )}
+          </Card>
+
+          {/* LPI Card */}
+          <Card className="p-3">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">
+              Late Payment Interest
+            </p>
+            {metricsQuery.isLoading ? (
+              <Skeleton className="h-6 w-20 mt-1" />
+            ) : !metrics?.lpiEnabled ? (
+              <p className="text-lg font-bold text-muted-foreground">Disabled</p>
+            ) : (
+              <>
+                <p className={cn("text-lg font-bold tabular-nums", metrics.totalLPI > 0 && "text-amber-600")}>
+                  {gbp.format(metrics.totalLPI)}
+                </p>
+                {metrics.lpiAccruingCount > 0 && (
+                  <p className="text-xs text-muted-foreground">{metrics.lpiAccruingCount} invoices accruing</p>
+                )}
+              </>
             )}
           </Card>
 
@@ -1765,6 +1840,68 @@ export default function DebtorRecord() {
                 );
               })()}
             </div>
+
+            {/* Communication Preferences */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" /> Communication Preferences
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <span className="text-sm text-muted-foreground">Currency</span>
+                    <Select
+                      value={contact?.preferredCurrency || "__default__"}
+                      onValueChange={(val) =>
+                        updateContactPrefMutation.mutate({
+                          preferredCurrency: val === "__default__" ? "" : val,
+                        })
+                      }
+                    >
+                      <SelectTrigger className="h-9 rounded-lg bg-background border-border max-w-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__default__">Use default</SelectItem>
+                        {CURRENCIES.map((c) => (
+                          <SelectItem key={c.code} value={c.code}>
+                            {c.symbol} {c.name} ({c.code})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <span className="text-sm text-muted-foreground">Language</span>
+                    <Select
+                      value={contact?.preferredLanguage || "__default__"}
+                      onValueChange={(val) =>
+                        updateContactPrefMutation.mutate({
+                          preferredLanguage: val === "__default__" ? "" : val,
+                        })
+                      }
+                    >
+                      <SelectTrigger className="h-9 rounded-lg bg-background border-border max-w-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__default__">Use default</SelectItem>
+                        {SUPPORTED_LANGUAGES.map((l) => (
+                          <SelectItem key={l.code} value={l.code}>
+                            {l.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Overrides the tenant default for AI emails and voice calls.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Primary Contact Picker Dialog */}
             <Dialog open={primaryPickerOpen} onOpenChange={setPrimaryPickerOpen}>
@@ -2212,6 +2349,10 @@ export default function DebtorRecord() {
                             Invoice #
                             <SortIcon sortKey="invoiceNumber" currentKey={outstandingSortKey} dir={outstandingSortDir} />
                           </TableHead>
+                          <TableHead className="cursor-pointer select-none" onClick={() => toggleOutstandingSort("issueDate")}>
+                            Invoice Date
+                            <SortIcon sortKey="issueDate" currentKey={outstandingSortKey} dir={outstandingSortDir} />
+                          </TableHead>
                           <TableHead>Description</TableHead>
                           <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleOutstandingSort("amountDue")}>
                             Amount Due
@@ -2225,6 +2366,7 @@ export default function DebtorRecord() {
                             Overdue
                             <SortIcon sortKey="daysOverdue" currentKey={outstandingSortKey} dir={outstandingSortDir} />
                           </TableHead>
+                          <TableHead className="text-right">LPI</TableHead>
                           <TableHead className="cursor-pointer select-none" onClick={() => toggleOutstandingSort("lastChasedAt")}>
                             Last Chased
                             <SortIcon sortKey="lastChasedAt" currentKey={outstandingSortKey} dir={outstandingSortDir} />
@@ -2274,6 +2416,9 @@ export default function DebtorRecord() {
                                   )}
                                 </div>
                               </TableCell>
+                              <TableCell className="text-sm text-muted-foreground">
+                                {formatDate(inv.issueDate)}
+                              </TableCell>
                               <TableCell className="max-w-[200px] truncate text-muted-foreground text-sm">
                                 {inv.description || "—"}
                               </TableCell>
@@ -2297,6 +2442,26 @@ export default function DebtorRecord() {
                                 ) : (
                                   <span className="text-muted-foreground">Current</span>
                                 )}
+                              </TableCell>
+                              <TableCell className="text-right tabular-nums">
+                                {(() => {
+                                  const lpi = metrics?.lpiItems?.find(l => l.invoiceId === inv.id);
+                                  if (!metrics?.lpiEnabled) return <span className="text-muted-foreground text-xs">—</span>;
+                                  if (!lpi || !lpi.isAccruing) return <span className="text-muted-foreground text-xs">—</span>;
+                                  return (
+                                    <Tooltip>
+                                      <TooltipTrigger>
+                                        <span className="text-amber-600 font-medium">{gbp.format(lpi.lpiAmount)}</span>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <div className="text-xs">
+                                          <p>{gbp.format(lpi.lpiAmount)} at {metrics.lpiRate}</p>
+                                          <p>{lpi.lpiDays} days × {gbp.format(lpi.dailyRate)}/day</p>
+                                        </div>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  );
+                                })()}
                               </TableCell>
                               <TableCell className="text-sm">
                                 {inv.lastChasedAt ? (
@@ -2410,6 +2575,8 @@ export default function DebtorRecord() {
                             dir={paidSortDir}
                           />
                         </TableHead>
+                        <TableHead>Invoice Date</TableHead>
+                        <TableHead>Due Date</TableHead>
                         <TableHead>Description</TableHead>
                         <TableHead
                           className="text-right cursor-pointer select-none"
@@ -2464,6 +2631,12 @@ export default function DebtorRecord() {
                             <TableRow key={inv.id}>
                               <TableCell className="font-medium">
                                 {inv.invoiceNumber}
+                              </TableCell>
+                              <TableCell className="text-sm text-muted-foreground">
+                                {formatDate(inv.issueDate)}
+                              </TableCell>
+                              <TableCell className="text-sm text-muted-foreground">
+                                {formatDate(inv.dueDate)}
                               </TableCell>
                               <TableCell className="max-w-[200px] truncate text-muted-foreground text-sm">
                                 {inv.description || "—"}

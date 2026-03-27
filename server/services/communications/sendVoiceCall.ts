@@ -18,6 +18,7 @@ export interface SendVoiceCallParams {
   dynamicVariables?: Record<string, any>;
   metadata?: Record<string, any>;
   context?: string;                     // Logging context (e.g. 'AI_CALL', 'SYSTEM_CALL')
+  language?: string;                    // e.g. 'en-GB', 'fr-FR' — passed to Retell agent
 }
 
 export interface VoiceCallResult {
@@ -41,6 +42,7 @@ export async function sendVoiceCall(params: SendVoiceCallParams): Promise<VoiceC
     dynamicVariables = {},
     metadata = {},
     context = 'VOICE_CALL',
+    language,
   } = params;
 
   // ── 1. Demo mode short-circuit ────────────────────────────────
@@ -124,10 +126,11 @@ export async function sendVoiceCall(params: SendVoiceCallParams): Promise<VoiceC
   // ── 4. Dispatch via unified Retell helper ─────────────────────
   const { createUnifiedRetellCall } = await import('../../utils/retellCallHelper.js');
 
-  // Inject mode context into dynamic variables so the voice agent knows
+  // Inject mode context + language into dynamic variables so the voice agent knows
   const enrichedVariables = {
     ...dynamicVariables,
     customerName: actualContactName,
+    ...(language ? { language } : {}),
   };
 
   // If redirected, add original recipient info to metadata

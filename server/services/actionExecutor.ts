@@ -369,7 +369,7 @@ export class ActionExecutor {
     tenant: any
   ): Promise<{ success: boolean; data?: any; error?: string }> {
     try {
-      const recipientEmail = await resolvePrimaryEmail(contact.id, action.tenantId, contact.email);
+      const recipientEmail = await resolvePrimaryEmail(contact.id, action.tenantId, contact.email, contact.arContactEmail);
       if (!recipientEmail) {
         return { success: false, error: 'Contact has no email address' };
       }
@@ -486,7 +486,7 @@ export class ActionExecutor {
     tenant: any
   ): Promise<{ success: boolean; data?: any; error?: string }> {
     try {
-      const recipientPhone = await resolvePrimarySmsNumber(contact.id, action.tenantId, contact.phone);
+      const recipientPhone = await resolvePrimarySmsNumber(contact.id, action.tenantId, contact.phone, contact.arContactPhone);
       if (!recipientPhone) {
         return { success: false, error: 'Contact has no phone number' };
       }

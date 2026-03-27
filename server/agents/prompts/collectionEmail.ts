@@ -4,6 +4,7 @@
  */
 
 import type { AgentPersona } from "@shared/schema";
+import { getLanguageName, getCurrencySymbol, formatCurrencyForPrompt } from "@shared/currencies";
 
 // ── Input types ──────────────────────────────────────────────
 
@@ -15,12 +16,20 @@ export interface DebtorProfile {
   creditLimit?: number;
   riskTag: "NORMAL" | "HIGH_VALUE";
   isPotentiallyVulnerable?: boolean;
+  currency: string;    // resolved: contact.preferredCurrency ?? tenant.currency ?? 'GBP'
+  language: string;    // resolved: contact.preferredLanguage ?? tenant.defaultLanguage ?? 'en-GB'
   arNotes?: string;
   behaviour?: {
     medianDaysToPay?: number;
     trend?: number; // positive = getting slower
     promiseBreachCount?: number;
     emailReplyRate?: number;
+  };
+  lpiContext?: {
+    enabled: boolean;
+    totalLPI: number;
+    rateDisplay: string;   // "12.50% (BoE 4.50% + 8.00% statutory)"
+    annualRate: number;
   };
 }
 
@@ -33,6 +42,8 @@ export interface OutstandingInvoice {
   currency: string;
   workflowState: "pre_due" | "due" | "late" | "resolved";
   pauseState?: "dispute" | "ptp" | "payment_plan" | null;
+  lpiAmount?: number;
+  lpiDays?: number;
 }
 
 export interface ConversationEntry {
@@ -61,6 +72,8 @@ export interface PolicyConstraints {
 export function buildSystemPrompt(
   persona: AgentPersona,
   policyConstraints?: PolicyConstraints,
+  language: string = 'en-GB',
+  currency: string = 'GBP',
 ): string {
   const lines: string[] = [];
 
@@ -82,7 +95,15 @@ export function buildSystemPrompt(
   // Communication rules
   lines.push(`COMMUNICATION RULES:`);
   lines.push(`- Your default tone is: ${persona.toneDefault}. Adjust only when the action context specifies a different tone level.`);
-  lines.push(`- Write in British English. Use £ for currency.`);
+  const langName = getLanguageName(language);
+  const currSymbol = getCurrencySymbol(currency);
+  if (language.startsWith('en')) {
+    lines.push(`- Write in ${langName}. Format monetary amounts in ${currency} (${currSymbol}).`);
+  } else {
+    lines.push(`- Write the ENTIRE email body in ${langName}. The debtor speaks ${langName}.`);
+    lines.push(`- Format monetary amounts in ${currency} (${currSymbol}).`);
+    lines.push(`- Keep the email signature in English (do not translate names, titles, or company name).`);
+  }
   lines.push(`- Be conversational and natural — never use template language like "[Customer Name]" or "[Invoice Number]".`);
   lines.push(`- Reference specific invoice details and any prior conversation history provided.`);
   lines.push(`- Include the placeholder {{PORTAL_LINK}} where the debtor can view and pay their invoices online.`);
@@ -132,7 +153,7 @@ export function buildUserPrompt(
   sections.push(`- Contact: ${debtor.contactName} (${debtor.contactEmail})`);
   sections.push(`- Payment terms: ${debtor.paymentTerms} days`);
   if (debtor.creditLimit) {
-    sections.push(`- Credit limit: £${debtor.creditLimit.toLocaleString()}`);
+    sections.push(`- Credit limit: ${formatCurrencyForPrompt(debtor.creditLimit, debtor.currency)}`);
   }
   sections.push(`- Risk tag: ${debtor.riskTag}`);
   if (debtor.isPotentiallyVulnerable) {
@@ -172,9 +193,22 @@ export function buildUserPrompt(
         : inv.daysOverdue === 0
           ? "due today"
           : `due in ${Math.abs(inv.daysOverdue)} days`;
-      sections.push(`- ${inv.invoiceNumber}: £${balance.toFixed(2)} — ${overdueLabel} — state: ${stateInfo}`);
+      sections.push(`- ${inv.invoiceNumber}: ${formatCurrencyForPrompt(balance, debtor.currency)} — ${overdueLabel} — state: ${stateInfo}`);
     }
-    sections.push(`- Total owed: £${totalOwed.toFixed(2)}`);
+    sections.push(`- Total owed: ${formatCurrencyForPrompt(totalOwed, debtor.currency)}`);
+
+    // LPI section
+    if (debtor.lpiContext?.enabled && debtor.lpiContext.totalLPI > 0) {
+      sections.push("");
+      sections.push("LATE PAYMENT INTEREST (Late Payment of Commercial Debts (Interest) Act 1998):");
+      sections.push(`- Annual rate: ${debtor.lpiContext.rateDisplay}`);
+      sections.push(`- Total interest accrued: ${formatCurrencyForPrompt(debtor.lpiContext.totalLPI, debtor.currency)}`);
+      for (const inv of invoices) {
+        if (inv.lpiAmount && inv.lpiAmount > 0) {
+          sections.push(`  - ${inv.invoiceNumber}: ${formatCurrencyForPrompt(inv.lpiAmount, debtor.currency)} interest (${inv.lpiDays} days)`);
+        }
+      }
+    }
   }
   sections.push("");
 
@@ -223,6 +257,9 @@ export function buildUserPrompt(
     sections.push(`This is an escalation — express concern about the overdue balance and emphasise the importance of payment.`);
   } else if (action.actionType === "final_notice") {
     sections.push(`This is a final notice — clearly state the consequences of non-payment and set a clear deadline.`);
+  }
+  if (debtor.lpiContext?.enabled && debtor.lpiContext.totalLPI > 0) {
+    sections.push(`Include a paragraph stating the company's right to charge interest under the Late Payment of Commercial Debts (Interest) Act 1998. State the rate (${debtor.lpiContext.rateDisplay}) and accrued amount (${formatCurrencyForPrompt(debtor.lpiContext.totalLPI, debtor.currency)}). Keep factual and professional — not threatening.`);
   }
 
   return sections.join("\n");

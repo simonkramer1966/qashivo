@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
 import {
   Form,
   FormControl,
@@ -55,7 +56,7 @@ import {
   RotateCcw
 } from "lucide-react";
 import { SiXero, SiSage, SiQuickbooks, SiGoogle } from "react-icons/si";
-import { CURRENCIES, DEFAULT_CURRENCY } from "@shared/currencies";
+import { CURRENCIES, DEFAULT_CURRENCY, SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE } from "@shared/currencies";
 import { usePermissions } from "@/hooks/usePermissions";
 import ProtectedComponent from "@/components/rbac/ProtectedComponent";
 import PermissionMatrix from "@/components/rbac/PermissionMatrix";
@@ -280,6 +281,9 @@ interface PlaybookSettings {
   contactWindowDays: number;
   businessHoursStart: string;
   businessHoursEnd: string;
+  boeBaseRate: string;
+  interestMarkup: string;
+  interestGracePeriod: number;
 }
 
 function PlaybookTabContent() {
@@ -316,6 +320,9 @@ function PlaybookTabContent() {
   const [highValueThreshold, setHighValueThreshold] = useState<string>('10000');
   const [singleInvoiceThreshold, setSingleInvoiceThreshold] = useState<string>('5000');
   const [useLatePamentLegislation, setUseLatePamentLegislation] = useState(false);
+  const [boeBaseRate, setBoeBaseRate] = useState<string>('4.50');
+  const [interestMarkup, setInterestMarkup] = useState<string>('8.00');
+  const [interestGracePeriod, setInterestGracePeriod] = useState<string>('7');
   const [emailCooldown, setEmailCooldown] = useState<string>('3');
   const [smsCooldown, setSmsCooldown] = useState<string>('5');
   const [voiceCooldown, setVoiceCooldown] = useState<string>('7');
@@ -329,6 +336,9 @@ function PlaybookTabContent() {
       setHighValueThreshold(tenantSettings.highValueThreshold || '10000');
       setSingleInvoiceThreshold(tenantSettings.singleInvoiceHighValueThreshold || '5000');
       setUseLatePamentLegislation(tenantSettings.useLatePamentLegislation || false);
+      setBoeBaseRate(tenantSettings.boeBaseRate || '4.50');
+      setInterestMarkup(tenantSettings.interestMarkup || '8.00');
+      setInterestGracePeriod(tenantSettings.interestGracePeriod?.toString() || '7');
       setEmailCooldown(tenantSettings.channelCooldowns?.email?.toString() || '3');
       setSmsCooldown(tenantSettings.channelCooldowns?.sms?.toString() || '5');
       setVoiceCooldown(tenantSettings.channelCooldowns?.voice?.toString() || '7');
@@ -344,6 +354,9 @@ function PlaybookTabContent() {
       highValueThreshold: parseFloat(highValueThreshold),
       singleInvoiceHighValueThreshold: parseFloat(singleInvoiceThreshold),
       useLatePamentLegislation,
+      boeBaseRate,
+      interestMarkup,
+      interestGracePeriod: parseInt(interestGracePeriod),
       channelCooldowns: {
         email: parseInt(emailCooldown),
         sms: parseInt(smsCooldown),
@@ -557,12 +570,65 @@ function PlaybookTabContent() {
               and compensation information in recovery-stage communications.
             </p>
           </div>
-          <Switch 
+          <Switch
             checked={useLatePamentLegislation}
             onCheckedChange={setUseLatePamentLegislation}
             data-testid="switch-late-payment-legislation"
           />
         </div>
+        {useLatePamentLegislation && (
+          <div className="mt-6 p-4 rounded-lg border border-border bg-muted/30 space-y-4">
+            <h3 className="text-sm font-semibold text-foreground">Late Payment Interest Configuration</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="boeBaseRate" className="text-sm">BoE Base Rate (%)</Label>
+                <Input
+                  id="boeBaseRate"
+                  type="number"
+                  step="0.25"
+                  min="0"
+                  max="20"
+                  value={boeBaseRate}
+                  onChange={(e) => setBoeBaseRate(e.target.value)}
+                  className="h-9 rounded-lg bg-background border-border focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="interestMarkup" className="text-sm">Statutory Uplift (%)</Label>
+                <Input
+                  id="interestMarkup"
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  max="20"
+                  value={interestMarkup}
+                  onChange={(e) => setInterestMarkup(e.target.value)}
+                  className="h-9 rounded-lg bg-background border-border focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                />
+              </div>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              Effective rate: <span className="font-semibold text-foreground">{(parseFloat(boeBaseRate || '0') + parseFloat(interestMarkup || '0')).toFixed(2)}% p.a.</span>
+              <span className="ml-1">(Statutory rate = 8% above BoE base rate)</span>
+            </div>
+            <Separator />
+            <div className="space-y-2">
+              <Label htmlFor="interestGracePeriod" className="text-sm">Default Grace Period (days)</Label>
+              <Input
+                id="interestGracePeriod"
+                type="number"
+                min="0"
+                max="90"
+                value={interestGracePeriod}
+                onChange={(e) => setInterestGracePeriod(e.target.value)}
+                className="h-9 rounded-lg bg-background border-border focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3] max-w-[200px]"
+              />
+              <p className="text-sm text-muted-foreground">
+                Interest accrues {interestGracePeriod} days after the invoice due date
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="py-6">
@@ -2032,6 +2098,7 @@ export default function Settings() {
   
   const [organizationName, setOrganizationName] = useState<string>("");
   const [organizationCurrency, setOrganizationCurrency] = useState<string>(DEFAULT_CURRENCY);
+  const [organizationLanguage, setOrganizationLanguage] = useState<string>(DEFAULT_LANGUAGE);
   const [eomDay, setEomDay] = useState<string>("25");
   const [isConnecting, setIsConnecting] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
@@ -2058,6 +2125,7 @@ export default function Settings() {
   interface TenantData {
     name?: string;
     currency?: string;
+    defaultLanguage?: string;
     eomDay?: number;
     primaryColor?: string;
     logoUrl?: string;
@@ -2090,6 +2158,7 @@ export default function Settings() {
     if (tenant) {
       setOrganizationName(tenant.name || "");
       setOrganizationCurrency(tenant.currency || DEFAULT_CURRENCY);
+      setOrganizationLanguage(tenant.defaultLanguage || DEFAULT_LANGUAGE);
       setEomDay(tenant.eomDay?.toString() || "25");
       setPrimaryColor(tenant.primaryColor || "#17B6C3");
       setLogoUrl(tenant.logoUrl || "");
@@ -2195,6 +2264,7 @@ export default function Settings() {
     updateTenantMutation.mutate({
       name: organizationName,
       currency: organizationCurrency,
+      defaultLanguage: organizationLanguage,
       eomDay: parseInt(eomDay),
     });
   };
@@ -2497,6 +2567,27 @@ export default function Settings() {
                           ))}
                         </SelectContent>
                       </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="language" className="text-sm">Default Language</Label>
+                      <Select
+                        value={organizationLanguage}
+                        onValueChange={setOrganizationLanguage}
+                      >
+                        <SelectTrigger className="h-9 rounded-lg bg-background border-border max-w-md focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]" data-testid="select-language">
+                          <SelectValue placeholder="Select language" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background border-border">
+                          {SUPPORTED_LANGUAGES.map((lang) => (
+                            <SelectItem key={lang.code} value={lang.code}>
+                              {lang.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-sm text-muted-foreground">
+                        Language used for AI-generated emails and voice calls. Can be overridden per debtor.
+                      </p>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="eomDay" className="text-sm">EOM Day for Cash Flow</Label>

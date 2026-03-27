@@ -366,7 +366,7 @@ async function deliverEmail(
       return { actionId, status: "failed", error: "Contact not found" };
     }
 
-    const recipientEmail = await resolvePrimaryEmail(contactId, tenantId, contact.email);
+    const recipientEmail = await resolvePrimaryEmail(contactId, tenantId, contact.email, contact.arContactEmail);
     if (!recipientEmail) {
       return { actionId, status: "failed", error: "No email address for contact" };
     }

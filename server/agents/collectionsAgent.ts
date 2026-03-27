@@ -13,6 +13,7 @@ import {
   agentPersonas,
   contacts,
   invoices,
+  tenants,
   timelineEvents,
   customerBehaviorSignals,
   collectionPolicies,
@@ -81,7 +82,7 @@ export async function generateCollectionEmail(
     maxTouchesBeforeEscalation: policy?.maxTouchesBeforeEscalation ?? undefined,
     cooldownDaysBetweenTouches: policy?.cooldownDaysBetweenTouches ?? undefined,
   };
-  const systemPrompt = buildSystemPrompt(persona, policyConstraints);
+  const systemPrompt = buildSystemPrompt(persona, policyConstraints, debtor.language, debtor.currency);
   const userPrompt = buildUserPrompt(debtor, outstandingInvoices, history, effectiveAction);
 
   // 5. Call Claude (Sonnet — cost-effective, fast)
@@ -126,6 +127,13 @@ async function loadDebtorProfile(tenantId: string, contactId: string): Promise<D
     throw new Error(`Contact ${contactId} not found for tenant ${tenantId}`);
   }
 
+  // Load tenant for currency/language defaults
+  const [tenant] = await db
+    .select({ currency: tenants.currency, defaultLanguage: tenants.defaultLanguage })
+    .from(tenants)
+    .where(eq(tenants.id, tenantId))
+    .limit(1);
+
   // Load behaviour signals if available
   let behaviour: DebtorProfile["behaviour"] | undefined;
   const [signals] = await db
@@ -153,6 +161,8 @@ async function loadDebtorProfile(tenantId: string, contactId: string): Promise<D
     paymentTerms: contact.paymentTerms ?? 30,
     creditLimit: contact.creditLimit ? Number(contact.creditLimit) : undefined,
     riskTag: (contact.playbookRiskTag as "NORMAL" | "HIGH_VALUE") || "NORMAL",
+    currency: contact.preferredCurrency || tenant?.currency || 'GBP',
+    language: contact.preferredLanguage || tenant?.defaultLanguage || 'en-GB',
     isPotentiallyVulnerable: contact.isPotentiallyVulnerable ?? false,
     arNotes: contact.arNotes ?? undefined,
     behaviour,

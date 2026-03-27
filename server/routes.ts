@@ -4363,6 +4363,34 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
+  // PATCH /api/tenant — update general organisation settings (name, currency, language, etc.)
+  app.patch('/api/tenant', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const allowedFields = ['name', 'currency', 'defaultLanguage', 'eomDay', 'primaryColor', 'logoUrl'];
+      const updates: any = {};
+      for (const field of allowedFields) {
+        if (req.body[field] !== undefined) {
+          updates[field] = req.body[field];
+        }
+      }
+
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ message: "No valid fields to update" });
+      }
+
+      const tenant = await storage.updateTenant(user.tenantId, updates);
+      res.json(stripSensitiveTenantFields(tenant));
+    } catch (error) {
+      console.error("Error updating tenant:", error);
+      res.status(500).json({ message: "Failed to update tenant settings" });
+    }
+  });
+
   // Get accessible tenants for organization dropdown (Enhanced for Partner-Client System)
   app.get("/api/user/accessible-tenants", isAuthenticated, async (req: any, res) => {
     try {
@@ -4559,6 +4587,10 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         contactWindowDays: tenant.contactWindowDays || 14,
         businessHoursStart: tenant.businessHoursStart || '08:00',
         businessHoursEnd: tenant.businessHoursEnd || '18:00',
+        boeBaseRate: tenant.boeBaseRate || '4.50',
+        interestMarkup: tenant.interestMarkup || '8.00',
+        interestGracePeriod: tenant.interestGracePeriod || 7,
+        defaultLanguage: tenant.defaultLanguage || 'en-GB',
       });
     } catch (error) {
       console.error("Error fetching playbook settings:", error);
@@ -4581,6 +4613,10 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     contactWindowDays: z.number().min(7).max(30).optional(),
     businessHoursStart: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/).optional(),
     businessHoursEnd: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/).optional(),
+    boeBaseRate: z.union([z.string(), z.number()]).optional(),
+    interestMarkup: z.union([z.string(), z.number()]).optional(),
+    interestGracePeriod: z.number().min(0).max(90).optional(),
+    defaultLanguage: z.string().optional(),
   });
 
   app.patch('/api/settings/playbook', ...withPermission('admin:settings'), async (req: any, res) => {
@@ -4618,10 +4654,14 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       if (validated.contactWindowDays !== undefined) updates.contactWindowDays = validated.contactWindowDays;
       if (validated.businessHoursStart !== undefined) updates.businessHoursStart = validated.businessHoursStart;
       if (validated.businessHoursEnd !== undefined) updates.businessHoursEnd = validated.businessHoursEnd;
+      if (validated.boeBaseRate !== undefined) updates.boeBaseRate = String(validated.boeBaseRate);
+      if (validated.interestMarkup !== undefined) updates.interestMarkup = String(validated.interestMarkup);
+      if (validated.interestGracePeriod !== undefined) updates.interestGracePeriod = validated.interestGracePeriod;
+      if (validated.defaultLanguage !== undefined) updates.defaultLanguage = validated.defaultLanguage;
 
       const tenant = await storage.updateTenant(user.tenantId!, updates);
       console.log(`✅ Playbook settings updated for tenant ${user.tenantId}`);
-      
+
       res.json({
         tenantStyle: tenant.tenantStyle || 'STANDARD',
         highValueThreshold: tenant.highValueThreshold || '10000',
@@ -4632,6 +4672,10 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         contactWindowDays: tenant.contactWindowDays || 14,
         businessHoursStart: tenant.businessHoursStart || '08:00',
         businessHoursEnd: tenant.businessHoursEnd || '18:00',
+        boeBaseRate: tenant.boeBaseRate || '4.50',
+        interestMarkup: tenant.interestMarkup || '8.00',
+        interestGracePeriod: tenant.interestGracePeriod || 7,
+        defaultLanguage: tenant.defaultLanguage || 'en-GB',
       });
     } catch (error) {
       console.error("Error updating playbook settings:", error);

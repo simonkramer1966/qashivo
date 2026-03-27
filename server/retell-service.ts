@@ -137,6 +137,7 @@ export class RetellService {
     responseEngine?: any;
     webhookUrl?: string;
     agentName?: string;
+    language?: string;
   }): Promise<any> {
     try {
       // Create agent with proper Retell configuration
@@ -147,7 +148,7 @@ export class RetellService {
           type: "retell-llm" as const,
           llm_id: "gpt-4"
         },
-        language: "en-US" as const,
+        language: (config.language || "en-US") as any,
         voice_temperature: 1,
         voice_speed: 1,
         responsiveness: 1,

@@ -87,6 +87,7 @@ export const tenants = pgTable("tenants", {
   
   // Currency setting
   currency: varchar("currency").default("GBP"),
+  defaultLanguage: varchar("default_language").default("en-GB"),
   
   // Late payment interest settings
   boeBaseRate: decimal("boe_base_rate", { precision: 5, scale: 2 }).default("5.00"), // Bank of England base rate %
@@ -177,7 +178,11 @@ export const contacts = pgTable("contacts", {
   arContactEmail: varchar("ar_contact_email"), // AR-specific email
   arContactPhone: varchar("ar_contact_phone"), // AR-specific phone
   arNotes: text("ar_notes"), // AR-specific notes (separate from general notes)
-  
+
+  // Communication preferences (user-set, never overwritten by sync)
+  preferredCurrency: varchar("preferred_currency"),   // e.g. 'EUR', 'USD'. Null = use tenant default
+  preferredLanguage: varchar("preferred_language"),    // e.g. 'fr-FR', 'de-DE'. Null = use tenant default
+
   // Collections workflow assignment
   workflowId: varchar("workflow_id").references(() => workflows.id), // Assigned collections workflow (defaults to Standard Collections Workflow)
   
@@ -193,7 +198,9 @@ export const contacts = pgTable("contacts", {
   isPotentiallyVulnerable: boolean("is_potentially_vulnerable").default(false), // Sole trader under strain - softer approach
   wrongPartyRisk: varchar("wrong_party_risk").default("NONE"), // NONE, SUSPECTED, CONFIRMED
   interestNotified: boolean("interest_notified").default(false), // Whether statutory interest notification was sent
-  
+  lpiEnabled: boolean("lpi_enabled").default(true), // Whether LPI is enabled for this contact
+  lpiGracePeriodDays: integer("lpi_grace_period_days").default(7), // Grace period before interest starts accruing
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
@@ -5646,6 +5653,7 @@ export const agentPersonas = pgTable("agent_personas", {
   voiceCharacteristics: jsonb("voice_characteristics"), // MVP v3: gender, accent, pace
   companyContext: text("company_context"), // what the agent "knows" about the company
   sectorContext: varchar("sector_context").default("general"), // recruitment | manufacturing | general | ...
+  defaultLanguage: varchar("default_language").default("en-GB"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
