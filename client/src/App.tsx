@@ -57,6 +57,13 @@ const InvestorsVoiceDemo = lazy(() => import("@/pages/investors/voice-demo"));
 const InvestorsContact = lazy(() => import("@/pages/investors/contact"));
 const InvestorsMetrics = lazy(() => import("@/pages/investors/metrics"));
 
+// Marketing pages
+const MarketingHome = lazy(() => import("@/pages/marketing/HomePage"));
+const MarketingFeatures = lazy(() => import("@/pages/marketing/FeaturesPage"));
+const MarketingWhyQashivo = lazy(() => import("@/pages/marketing/WhyQashivoPage"));
+const MarketingPricing = lazy(() => import("@/pages/marketing/PricingPage"));
+const MarketingContact = lazy(() => import("@/pages/marketing/ContactPage"));
+
 function PermissionGuard({ permission, children }: { permission: string; children: React.ReactNode }) {
   const { hasPermission, isLoadingPermissions } = usePermissions();
   const [, setLocation] = useLocation();
@@ -177,8 +184,15 @@ function Router() {
           <Route path="/investors/metrics" component={InvestorsMetrics} />
           <Route path="/investor-interest" component={InvestorInterest} />
 
+          {/* Marketing pages (public) */}
+          <Route path="/features" component={MarketingFeatures} />
+          <Route path="/why-qashivo" component={MarketingWhyQashivo} />
+          <Route path="/pricing" component={MarketingPricing} />
+          <Route path="/contact" component={MarketingContact} />
+
+          {/* Home → marketing home for unauthenticated visitors */}
+          <Route path="/" component={MarketingHome} />
           {/* Everything else → Clerk sign-in */}
-          <Route path="/">{() => <Redirect to="/login" />}</Route>
           <Route path="/:rest*">{() => <Redirect to="/login" />}</Route>
         </Switch>
       ) : (
@@ -193,10 +207,14 @@ function Router() {
           <Route path="/home">{() => <Redirect to="/qollections" />}</Route>
           <Route path="/homepage">{() => <Redirect to="/qollections" />}</Route>
           <Route path="/product">{() => <Redirect to="/qollections" />}</Route>
-          <Route path="/pricing">{() => <Redirect to="/qollections" />}</Route>
-          <Route path="/contact">{() => <Redirect to="/qollections" />}</Route>
           <Route path="/partners">{() => <Redirect to="/qollections" />}</Route>
           <Route path="/demo">{() => <Redirect to="/qollections" />}</Route>
+
+          {/* Marketing pages (accessible when authenticated too) */}
+          <Route path="/features" component={MarketingFeatures} />
+          <Route path="/why-qashivo" component={MarketingWhyQashivo} />
+          <Route path="/pricing" component={MarketingPricing} />
+          <Route path="/contact" component={MarketingContact} />
 
           {/* Pillar routes — Qollections */}
           <Route path="/qollections/debtors/:id" component={DebtorRecord} />
