@@ -462,10 +462,14 @@ export function registerQuizRoutes(app: Express): void {
         return res.status(400).json({ message: "Invalid input", errors: error.errors });
       }
       console.error("Riley chat error:", error);
+      const isApiError = error instanceof Error && (error.message.includes("credit balance") || error.message.includes("API key") || error.constructor.name === "BadRequestError" || error.constructor.name === "AuthenticationError");
+      const userMessage = isApiError
+        ? "Riley is temporarily unavailable. Please try again in a few minutes, or book a demo at qashivo.com/contact."
+        : "Something went wrong. Please try again.";
       if (!res.headersSent) {
-        res.status(500).json({ message: "Failed to get response" });
+        res.status(500).json({ message: userMessage });
       } else {
-        res.write(`data: ${JSON.stringify({ type: "error", message: "Something went wrong" })}\n\n`);
+        res.write(`data: ${JSON.stringify({ type: "error", message: userMessage })}\n\n`);
         res.end();
       }
     }
