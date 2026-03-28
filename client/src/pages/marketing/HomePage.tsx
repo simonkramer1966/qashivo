@@ -360,15 +360,12 @@ export default function HomePage() {
                   </button>
                 </Link>
               </div>
-              <div className="hidden md:flex bg-white border border-slate-200 rounded aspect-[3/4] items-center justify-center shadow-sm">
-                <div className="text-center p-4">
-                  <p className="font-headline text-lg font-black text-slate-900">
-                    The Cash Gap
-                  </p>
-                  <p className="text-xs text-slate-400 font-bold mt-1">
-                    Simon Kramer
-                  </p>
-                </div>
+              <div className="hidden md:block">
+                <img
+                  src="/images/marketing/cash-gap-cover.png"
+                  alt="The Cash Gap by Simon Kramer"
+                  className="w-64 shadow-xl rounded-lg"
+                />
               </div>
             </div>
           </div>

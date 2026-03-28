@@ -889,18 +889,11 @@ export default function CashflowHealthCheckPage() {
             <section className="bg-surface-container-lowest py-32 px-8">
               <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center gap-16">
                 <div className="w-full md:w-1/2 flex justify-center">
-                  <div className="relative group">
-                    {/* Book Cover Mockup */}
-                    <div className="w-72 h-[420px] bg-[#0F172A] rounded-r-2xl shadow-2xl flex flex-col p-8 border-l-8 border-[#1E293B] relative z-10 transition-transform hover:-rotate-2 duration-300">
-                      <div className="flex-grow flex flex-col justify-center">
-                        <h4 className="text-secondary-fixed font-headline font-extrabold text-5xl tracking-tighter leading-none mb-4">THE CASH GAP</h4>
-                        <div className="h-1 w-24 bg-secondary-fixed mb-8" />
-                        <p className="text-white/60 font-body text-sm uppercase tracking-widest">Mastering Liquid Intelligence for UK SMEs</p>
-                      </div>
-                      <div className="text-white font-bold text-lg tracking-tight">Simon Kramer</div>
-                    </div>
-                    <div className="absolute inset-0 bg-secondary-fixed/20 blur-3xl rounded-full scale-110 -z-10 group-hover:scale-125 transition-transform duration-700" />
-                  </div>
+                  <img
+                    src="/images/marketing/cash-gap-cover.png"
+                    alt="The Cash Gap by Simon Kramer"
+                    className="w-72 shadow-xl rounded-lg"
+                  />
                 </div>
                 <div className="w-full md:w-1/2">
                   <h2 className="font-headline font-extrabold text-4xl tracking-tight mb-6">Your Free Copy of The Cash Gap</h2>
