@@ -96,11 +96,11 @@ export default function PricingPage() {
         {/* Hero */}
         <header className="max-w-7xl mx-auto px-6 lg:px-24 py-24 lg:py-32 text-center">
           <div className="max-w-4xl mx-auto">
-            <h1 className="font-headline text-5xl lg:text-7xl font-extrabold text-on-background mb-8 leading-tight">
+            <h1 className="font-headline text-6xl md:text-8xl font-extrabold text-on-background mb-8 leading-tight">
               Pricing that scales with your{" "}
               <span className="text-mkt-secondary">ambition</span>.
             </h1>
-            <p className="font-body text-xl text-on-surface-variant leading-relaxed max-w-3xl mx-auto font-medium mb-12">
+            <p className="font-body text-xl md:text-2xl text-on-surface-variant leading-relaxed max-w-3xl mx-auto font-medium mb-12">
               Transparent plans designed for UK SMEs. No hidden fees, no
               long-term contracts. Start free, upgrade when you're ready.
             </p>

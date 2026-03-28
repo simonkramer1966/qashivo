@@ -34,11 +34,11 @@ export default function ContactPage() {
       <div className="pt-24">
         {/* Page Header */}
         <header className="max-w-7xl mx-auto px-6 mb-20 lg:pl-24">
-          <h1 className="font-headline text-5xl md:text-7xl font-extrabold tracking-tight text-mkt-primary max-w-4xl leading-none mb-8">
+          <h1 className="font-headline text-6xl md:text-8xl font-extrabold tracking-tight text-mkt-primary max-w-4xl leading-none mb-8">
             Let's Talk About <br />
             <span className="text-mkt-secondary">Your Cashflow.</span>
           </h1>
-          <p className="font-body text-xl text-on-surface-variant max-w-2xl leading-relaxed">
+          <p className="font-body text-xl md:text-2xl text-on-surface-variant max-w-2xl leading-relaxed">
             Book a demo, ask a question, or tell us what's keeping you up at
             night. We're here to help.
           </p>

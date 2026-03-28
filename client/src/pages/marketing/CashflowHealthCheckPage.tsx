@@ -394,10 +394,10 @@ export default function CashflowHealthCheckPage() {
             <section className="max-w-7xl mx-auto px-8 pt-20 pb-16">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
                 <div className="lg:col-span-7 pr-0 lg:pr-12">
-                  <h1 className="font-headline font-extrabold text-5xl md:text-7xl tracking-[-0.02em] leading-[1.1] text-primary-container mb-8">
+                  <h1 className="font-headline font-extrabold text-6xl md:text-8xl tracking-[-0.02em] leading-[1.1] text-primary-container mb-8">
                     The Cashflow <br /><span className="text-mkt-teal">Health Check</span>
                   </h1>
-                  <p className="text-xl text-on-surface-variant leading-relaxed mb-10 max-w-2xl">
+                  <p className="text-xl md:text-2xl text-on-surface-variant leading-relaxed mb-10 max-w-2xl">
                     Score your working capital cycle in 2 minutes. Find out where cash is leaking from your business — and get a free copy of <span className="font-semibold italic">The Cash Gap</span> to fix it.
                   </p>
                   <div className="flex flex-wrap gap-6 items-center text-sm font-label tracking-wide uppercase text-on-surface-variant/80">

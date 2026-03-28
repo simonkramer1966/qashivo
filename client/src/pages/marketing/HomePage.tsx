@@ -15,11 +15,11 @@ export default function HomePage() {
           <div className="absolute inset-0 blueprint-grid"></div>
           <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center z-10 py-20">
             <div>
-              <h1 className="font-headline text-5xl md:text-7xl font-black text-white leading-[1.1] tracking-tight mb-8">
+              <h1 className="font-headline text-6xl md:text-8xl font-extrabold text-white leading-[1.1] tracking-tight mb-8">
                 Get Paid Faster. <br />
                 <span className="text-mkt-secondary">Automatically.</span>
               </h1>
-              <p className="text-xl text-slate-400 leading-relaxed mb-10 max-w-xl">
+              <p className="text-xl md:text-2xl text-slate-400 leading-relaxed mb-10 max-w-xl">
                 Qashivo is your AI-powered credit controller for UK businesses.
                 It manages your entire accounts receivable lifecycle — from automated
                 follow-ups to cashflow forecasting.
