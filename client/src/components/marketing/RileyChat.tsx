@@ -25,11 +25,14 @@ export default function RileyChat({ leadId, leadName }: RileyChatProps) {
   const [streamingText, setStreamingText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const container = messagesContainerRef.current;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
   }, []);
 
   useEffect(() => {
@@ -169,7 +172,7 @@ export default function RileyChat({ leadId, leadName }: RileyChatProps) {
         {/* Chat container */}
         <div className="bg-surface-container-low rounded-2xl ghost-border overflow-hidden">
           {/* Messages area */}
-          <div className="max-h-[500px] overflow-y-auto p-6 space-y-4">
+          <div ref={messagesContainerRef} className="h-[400px] overflow-y-auto p-6 space-y-4">
             {messages.map((msg, i) => (
               <MessageBubble key={i} message={msg} />
             ))}
@@ -195,7 +198,6 @@ export default function RileyChat({ leadId, leadName }: RileyChatProps) {
               </div>
             )}
 
-            <div ref={messagesEndRef} />
           </div>
 
           {/* Input area */}
