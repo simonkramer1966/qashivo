@@ -2,7 +2,8 @@
  * RileyChat — Website conversation advisor component (post-quiz)
  *
  * Inline chat on the quiz results page. Streams Riley's responses via SSE.
- * Handles conversation history, typing indicators, and auto-scroll.
+ * Handles conversation history, typing indicators, auto-scroll,
+ * Cal.com availability display, and demo booking.
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -11,6 +12,12 @@ interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   timestamp?: string;
+}
+
+interface TimeSlot {
+  date: string;
+  time: string;
+  startTime: string;
 }
 
 interface RileyChatProps {
@@ -25,6 +32,9 @@ export default function RileyChat({ leadId, leadName }: RileyChatProps) {
   const [streamingText, setStreamingText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
+  const [isBooking, setIsBooking] = useState(false);
+  const [bookingConfirmed, setBookingConfirmed] = useState<string | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -37,7 +47,7 @@ export default function RileyChat({ leadId, leadName }: RileyChatProps) {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, streamingText, scrollToBottom]);
+  }, [messages, streamingText, availableSlots, scrollToBottom]);
 
   // Load existing conversation or request opening message
   useEffect(() => {
@@ -46,7 +56,6 @@ export default function RileyChat({ leadId, leadName }: RileyChatProps) {
 
     (async () => {
       try {
-        // Check for existing conversation
         const historyRes = await fetch(`/api/quiz/chat/${leadId}`);
         if (historyRes.ok) {
           const data = await historyRes.json();
@@ -55,8 +64,6 @@ export default function RileyChat({ leadId, leadName }: RileyChatProps) {
             return;
           }
         }
-
-        // No history — request Riley's opening message
         sendMessage(undefined);
       } catch (err) {
         console.error("Failed to load chat:", err);
@@ -70,8 +77,8 @@ export default function RileyChat({ leadId, leadName }: RileyChatProps) {
     setIsStreaming(true);
     setStreamingText("");
     setError(null);
+    setAvailableSlots([]);
 
-    // Add user message to display immediately
     if (userMessage) {
       setMessages((prev) => [...prev, { role: "user", content: userMessage, timestamp: new Date().toISOString() }]);
     }
@@ -88,7 +95,6 @@ export default function RileyChat({ leadId, leadName }: RileyChatProps) {
         throw new Error(data.message || "Failed to get response");
       }
 
-      // Read SSE stream
       const reader = res.body?.getReader();
       if (!reader) throw new Error("No response body");
 
@@ -114,15 +120,22 @@ export default function RileyChat({ leadId, leadName }: RileyChatProps) {
 
             if (event.type === "delta") {
               fullText += event.text;
-              // Strip booking markers from displayed text
-              const displayText = fullText.replace(/\[SHOW_AVAILABILITY\]/g, "").replace(/\[BOOK:[^\]]+\]/g, "");
+              const displayText = stripMarkers(fullText);
               setStreamingText(displayText);
             } else if (event.type === "done") {
-              const cleanText = fullText.replace(/\[SHOW_AVAILABILITY\]/g, "").replace(/\[BOOK:[^\]]+\]/g, "");
+              const cleanText = stripMarkers(fullText);
               setMessages((prev) => [...prev, { role: "assistant", content: cleanText, timestamp: new Date().toISOString() }]);
               setStreamingText("");
+            } else if (event.type === "availability") {
+              // Show time slot picker
+              if (event.slots && event.slots.length > 0) {
+                setAvailableSlots(pickDisplaySlots(event.slots));
+              }
             } else if (event.type === "booking_confirmed") {
-              // Could show a confirmation UI element
+              setBookingConfirmed(event.time);
+              setAvailableSlots([]);
+            } else if (event.type === "booking_failed") {
+              setError("Couldn't book that time. You can book directly at cal.eu/simon-kramer-5051hr/15min");
             } else if (event.type === "error") {
               setError(event.message);
             }
@@ -147,7 +160,43 @@ export default function RileyChat({ leadId, leadName }: RileyChatProps) {
     sendMessage(trimmed);
   }, [input, isStreaming, sendMessage]);
 
-  const firstName = leadName.split(" ")[0];
+  const handleBookSlot = useCallback(async (slot: TimeSlot) => {
+    setIsBooking(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/quiz/book-demo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leadId, startTime: slot.startTime }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        if (data.fallbackUrl) {
+          throw new Error(`Couldn't book — try directly at ${data.fallbackUrl}`);
+        }
+        throw new Error(data.message || "Booking failed");
+      }
+
+      setBookingConfirmed(slot.startTime);
+      setAvailableSlots([]);
+
+      // Add a confirmation message from Riley
+      const dt = new Date(slot.startTime);
+      const dayStr = dt.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/London" });
+      const timeStr = dt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" });
+      setMessages((prev) => [...prev, {
+        role: "assistant",
+        content: `You're booked in — ${dayStr} at ${timeStr} with Simon. You'll get a calendar invite shortly. He'll have your Health Check results so you can jump straight into the specifics.`,
+        timestamp: new Date().toISOString(),
+      }]);
+    } catch (err: any) {
+      setError(err.message || "Booking failed");
+    } finally {
+      setIsBooking(false);
+    }
+  }, [leadId]);
+
   const isAtLimit = messages.length >= 20;
 
   return (
@@ -198,6 +247,51 @@ export default function RileyChat({ leadId, leadName }: RileyChatProps) {
               </div>
             )}
 
+            {/* Available time slots */}
+            {availableSlots.length > 0 && !bookingConfirmed && (
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-mkt-teal flex-shrink-0 flex items-center justify-center mt-1">
+                  <span className="text-white font-bold text-sm">R</span>
+                </div>
+                <div className="max-w-[85%]">
+                  <p className="text-xs text-on-surface-variant mb-2">Pick a time that works for you:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {availableSlots.map((slot, i) => {
+                      const dt = new Date(slot.startTime);
+                      const day = dt.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "Europe/London" });
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => handleBookSlot(slot)}
+                          disabled={isBooking}
+                          className="px-4 py-2 bg-surface-container-lowest rounded-xl text-sm font-semibold text-on-surface ghost-border hover:border-mkt-teal hover:bg-white transition-colors disabled:opacity-50"
+                        >
+                          <span className="block text-xs text-on-surface-variant">{day}</span>
+                          <span className="text-mkt-teal">{slot.time}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {isBooking && (
+                    <p className="text-xs text-on-surface-variant mt-2 animate-pulse">Booking your demo...</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Booking confirmed badge */}
+            {bookingConfirmed && (
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-mkt-teal flex-shrink-0 flex items-center justify-center mt-1">
+                  <span className="text-white font-bold text-sm">R</span>
+                </div>
+                <div className="inline-flex items-center gap-2 bg-secondary-container/30 rounded-xl px-4 py-2">
+                  <span className="material-symbols-outlined text-mkt-teal text-lg">check_circle</span>
+                  <span className="text-sm font-bold text-on-secondary-container">Demo booked</span>
+                </div>
+              </div>
+            )}
+
           </div>
 
           {/* Input area */}
@@ -209,13 +303,13 @@ export default function RileyChat({ leadId, leadName }: RileyChatProps) {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Ask Riley anything about your results..."
-                disabled={isStreaming}
+                disabled={isStreaming || isBooking}
                 maxLength={1000}
                 className="flex-1 bg-surface-container-lowest rounded-xl px-4 py-3 text-sm text-on-surface placeholder:text-on-surface-variant/50 ghost-border focus:outline-none focus:ring-1 focus:ring-mkt-teal/40 disabled:opacity-50"
               />
               <button
                 type="submit"
-                disabled={isStreaming || !input.trim()}
+                disabled={isStreaming || isBooking || !input.trim()}
                 className="px-5 py-3 bg-mkt-teal text-white font-bold rounded-xl hover:bg-mkt-teal/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 <span className="material-symbols-outlined text-lg">send</span>
@@ -241,6 +335,39 @@ export default function RileyChat({ leadId, leadName }: RileyChatProps) {
       </div>
     </section>
   );
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function stripMarkers(text: string): string {
+  return text.replace(/\[SHOW_AVAILABILITY\]/g, "").replace(/\[BOOK:[^\]]+\]/g, "").trim();
+}
+
+/** Pick up to 6 well-spaced slots across the available days */
+function pickDisplaySlots(slots: TimeSlot[]): TimeSlot[] {
+  // Group by date
+  const byDate: Record<string, TimeSlot[]> = {};
+  for (const s of slots) {
+    (byDate[s.date] ??= []).push(s);
+  }
+  const dates = Object.keys(byDate).sort().slice(0, 3); // max 3 days
+  const picked: TimeSlot[] = [];
+  for (const d of dates) {
+    const daySlots = byDate[d];
+    // Pick 2 slots per day: one morning-ish, one afternoon-ish
+    const morning = daySlots.find((s) => {
+      const h = new Date(s.startTime).getUTCHours();
+      return h >= 9 && h < 12;
+    });
+    const afternoon = daySlots.find((s) => {
+      const h = new Date(s.startTime).getUTCHours();
+      return h >= 13 && h < 17;
+    });
+    if (morning) picked.push(morning);
+    if (afternoon) picked.push(afternoon);
+    if (!morning && !afternoon && daySlots.length > 0) picked.push(daySlots[0]);
+  }
+  return picked.slice(0, 6);
 }
 
 // ─── Message Bubble ───────────────────────────────────────────────────────────

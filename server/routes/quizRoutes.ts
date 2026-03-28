@@ -551,7 +551,9 @@ async function fetchCalAvailability(): Promise<Array<{ date: string; time: strin
   endDate.setDate(endDate.getDate() + 7);
   const endTime = endDate.toISOString();
 
-  const url = `${CAL_API_BASE}/v2/slots/available?startTime=${encodeURIComponent(startTime)}&endTime=${encodeURIComponent(endTime)}&eventTypeSlug=${CAL_EVENT_SLUG}&username=${CAL_USERNAME}`;
+  const url = `${CAL_API_BASE}/v2/slots/available?startTime=${encodeURIComponent(startTime)}&endTime=${encodeURIComponent(endTime)}&eventTypeSlug=${CAL_EVENT_SLUG}&usernameList[]=${CAL_USERNAME}`;
+
+  console.log("[Cal.com] Fetching availability:", url);
 
   const response = await fetch(url, {
     headers: {
@@ -561,6 +563,8 @@ async function fetchCalAvailability(): Promise<Array<{ date: string; time: strin
   });
 
   if (!response.ok) {
+    const errorBody = await response.text();
+    console.error("[Cal.com] Availability error:", response.status, errorBody);
     throw new Error(`Cal.com API error: ${response.status}`);
   }
 
@@ -599,9 +603,13 @@ async function createCalBooking(lead: any, startTime: string): Promise<{ success
         name: lead.fullName,
         email: lead.email,
         timeZone: "Europe/London",
+        language: "en",
       },
-      bookingFieldsResponses: {
-        notes: `Booked via Cashflow Health Check quiz. Score: ${lead.totalScore}/40. Weakest area: ${lead.weakestSection}. Company: ${lead.companyName || "Not provided"}.`,
+      metadata: {
+        source: "cashflow-health-check",
+        quizScore: `${lead.totalScore}/40`,
+        weakestArea: lead.weakestSection,
+        company: lead.companyName || "Not provided",
       },
     }),
   });
