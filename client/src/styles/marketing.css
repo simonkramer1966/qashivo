@@ -141,3 +141,37 @@
 details > summary::-webkit-details-marker {
   display: none;
 }
+
+/* ─── Quiz page (Stitch) ─────────────────────────────────────────────────── */
+
+.ghost-border {
+  outline: 1px solid rgba(198, 198, 205, 0.15);
+}
+
+.editorial-gradient {
+  background: linear-gradient(135deg, #000000 0%, #131b2e 100%);
+}
+
+.editorial-grid-bg {
+  background-image: radial-gradient(rgba(172, 237, 255, 0.1) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.progress-ring__circle {
+  transition: stroke-dashoffset 0.8s ease-out;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+}
+
+.answer-card {
+  border-left: 3px solid transparent;
+  transition: all 0.3s ease;
+}
+.answer-card:hover {
+  border-left-color: #00687a;
+  background-color: #ffffff;
+}
+.answer-card-active {
+  border-left: 3px solid #00687a;
+  background-color: #ffffff;
+}
