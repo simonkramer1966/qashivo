@@ -341,6 +341,39 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* HEALTH CHECK CALLOUT */}
+        <section className="py-24 bg-slate-50">
+          <div className="max-w-5xl mx-auto px-6">
+            <div className="grid grid-cols-1 md:grid-cols-[1fr_200px] gap-12 items-center">
+              <div>
+                <h2 className="font-headline text-3xl font-black tracking-tight mb-4">
+                  How Healthy Is Your Working Capital Cycle?
+                </h2>
+                <p className="text-slate-500 text-lg leading-relaxed mb-8">
+                  Take our free 2-minute health check. Get your score across
+                  credit control, cashflow, and finance — plus a free copy of{" "}
+                  <em>The Cash Gap</em>.
+                </p>
+                <Link to="/cashflow-health-check">
+                  <button className="bg-mkt-secondary text-white px-8 py-4 rounded font-black text-lg hover:bg-cyan-500 transition-colors">
+                    Take the Health Check &rarr;
+                  </button>
+                </Link>
+              </div>
+              <div className="hidden md:flex bg-white border border-slate-200 rounded aspect-[3/4] items-center justify-center shadow-sm">
+                <div className="text-center p-4">
+                  <p className="font-headline text-lg font-black text-slate-900">
+                    The Cash Gap
+                  </p>
+                  <p className="text-xs text-slate-400 font-bold mt-1">
+                    Simon Kramer
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* FINAL CTA SECTION */}
         <section className="py-32 bg-white text-center px-6">
           <div className="max-w-3xl mx-auto">

@@ -5876,3 +5876,41 @@ export const insertWeeklyReviewSchema = createInsertSchema(weeklyReviews).omit({
 
 export type WeeklyReview = typeof weeklyReviews.$inferSelect;
 export type InsertWeeklyReview = z.infer<typeof insertWeeklyReviewSchema>;
+
+// ─── Quiz Leads (public, no tenantId) ────────────────────────────────────────
+
+export const quizLeads = pgTable("quiz_leads", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  fullName: varchar("full_name").notNull(),
+  email: varchar("email").notNull(),
+  companyName: varchar("company_name"),
+  role: varchar("role"),
+  creditControlScore: integer("credit_control_score"),
+  cashflowScore: integer("cashflow_score"),
+  financeScore: integer("finance_score"),
+  totalScore: integer("total_score"),
+  creditControlTier: varchar("credit_control_tier"),
+  cashflowTier: varchar("cashflow_tier"),
+  financeTier: varchar("finance_tier"),
+  overallTier: varchar("overall_tier"),
+  answers: jsonb("answers"),
+  weakestSection: varchar("weakest_section"),
+  completed: boolean("completed").default(false),
+  bookSent: boolean("book_sent").default(false),
+  startedAt: timestamp("started_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_quiz_leads_email").on(table.email),
+]);
+
+export const insertQuizLeadSchema = createInsertSchema(quizLeads).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  startedAt: true,
+});
+
+export type QuizLead = typeof quizLeads.$inferSelect;
+export type InsertQuizLead = z.infer<typeof insertQuizLeadSchema>;

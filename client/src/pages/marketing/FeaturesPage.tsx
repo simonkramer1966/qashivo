@@ -214,6 +214,13 @@ export default function FeaturesPage() {
           </div>
         </section>
 
+        {/* Health Check CTA */}
+        <div className="bg-surface py-8 text-center">
+          <Link to="/cashflow-health-check" className="text-sm font-bold text-brand-teal hover:underline">
+            Not sure where to start? Take our free Cashflow Health Check &rarr;
+          </Link>
+        </div>
+
         {/* Integration Bar */}
         <section className="py-24 bg-surface border-b border-slate-200">
           <div className="max-w-7xl mx-auto px-6">

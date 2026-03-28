@@ -38,6 +38,13 @@ export default function MarketingFooter() {
                 </span>
               </Link>
             </li>
+            <li>
+              <Link href="/cashflow-health-check">
+                <span className="text-slate-500 hover:text-brand-navy font-medium text-sm transition-colors cursor-pointer">
+                  Cashflow Health Check
+                </span>
+              </Link>
+            </li>
           </ul>
         </div>
         <div>

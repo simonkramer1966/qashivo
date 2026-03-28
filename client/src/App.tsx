@@ -63,6 +63,7 @@ const MarketingFeatures = lazy(() => import("@/pages/marketing/FeaturesPage"));
 const MarketingWhyQashivo = lazy(() => import("@/pages/marketing/WhyQashivoPage"));
 const MarketingPricing = lazy(() => import("@/pages/marketing/PricingPage"));
 const MarketingContact = lazy(() => import("@/pages/marketing/ContactPage"));
+const MarketingHealthCheck = lazy(() => import("@/pages/marketing/CashflowHealthCheckPage"));
 
 function PermissionGuard({ permission, children }: { permission: string; children: React.ReactNode }) {
   const { hasPermission, isLoadingPermissions } = usePermissions();
@@ -189,6 +190,7 @@ function Router() {
           <Route path="/why-qashivo" component={MarketingWhyQashivo} />
           <Route path="/pricing" component={MarketingPricing} />
           <Route path="/contact" component={MarketingContact} />
+          <Route path="/cashflow-health-check" component={MarketingHealthCheck} />
 
           {/* Home → marketing home for unauthenticated visitors */}
           <Route path="/" component={MarketingHome} />
@@ -215,6 +217,7 @@ function Router() {
           <Route path="/why-qashivo" component={MarketingWhyQashivo} />
           <Route path="/pricing" component={MarketingPricing} />
           <Route path="/contact" component={MarketingContact} />
+          <Route path="/cashflow-health-check" component={MarketingHealthCheck} />
 
           {/* Pillar routes — Qollections */}
           <Route path="/qollections/debtors/:id" component={DebtorRecord} />

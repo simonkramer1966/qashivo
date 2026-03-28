@@ -285,6 +285,7 @@ import { registerMiscRoutes } from "./routes/miscRoutes";
 import { registerActionCentreRoutes } from "./routes/actionCentreRoutes";
 import { registerRileyRoutes } from "./routes/rileyRoutes";
 import { registerWeeklyReviewRoutes } from "./routes/weeklyReviewRoutes";
+import { registerQuizRoutes } from "./routes/quizRoutes";
 import { ForecastEngine, type ForecastConfig, type ForecastScenario } from "../shared/forecast";
 import { subscriptionService } from "./services/subscriptionService";
 import { cleanEmailContent } from "./services/messagePostProcessor";
@@ -513,6 +514,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerActionCentreRoutes(app);
   registerRileyRoutes(app);
   registerWeeklyReviewRoutes(app);
+  registerQuizRoutes(app);
 
   // Partner and Context Management Routes
   // Get current auth context (user info, role, active tenant)

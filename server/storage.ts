@@ -172,6 +172,9 @@ import {
   weeklyReviews,
   type WeeklyReview,
   type InsertWeeklyReview,
+  quizLeads,
+  type QuizLead,
+  type InsertQuizLead,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc, sql, count, sum, ne, isNotNull, isNull, gte, lte, lt, or, ilike, inArray } from "drizzle-orm";
@@ -656,6 +659,11 @@ export interface IStorage {
   createWeeklyReview(data: InsertWeeklyReview): Promise<WeeklyReview>;
   getLatestWeeklyReview(tenantId: string): Promise<WeeklyReview | undefined>;
   listWeeklyReviews(tenantId: string, limit?: number): Promise<WeeklyReview[]>;
+
+  // Quiz Lead operations (public, no tenantId)
+  createQuizLead(data: InsertQuizLead): Promise<QuizLead>;
+  updateQuizLead(id: string, updates: Partial<InsertQuizLead>): Promise<QuizLead>;
+  getQuizLead(id: string): Promise<QuizLead | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -5789,6 +5797,25 @@ export class DatabaseStorage implements IStorage {
       .where(eq(weeklyReviews.tenantId, tenantId))
       .orderBy(desc(weeklyReviews.generatedAt))
       .limit(limit);
+  }
+
+  // Quiz Lead operations (public, no tenantId)
+  async createQuizLead(data: InsertQuizLead): Promise<QuizLead> {
+    const [lead] = await db.insert(quizLeads).values(data).returning();
+    return lead;
+  }
+
+  async updateQuizLead(id: string, updates: Partial<InsertQuizLead>): Promise<QuizLead> {
+    const [lead] = await db.update(quizLeads)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(quizLeads.id, id))
+      .returning();
+    return lead;
+  }
+
+  async getQuizLead(id: string): Promise<QuizLead | undefined> {
+    const [lead] = await db.select().from(quizLeads).where(eq(quizLeads.id, id));
+    return lead;
   }
 }
 

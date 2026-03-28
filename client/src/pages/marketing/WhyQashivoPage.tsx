@@ -98,6 +98,13 @@ export default function WhyQashivoPage() {
           </div>
         </section>
 
+        {/* Health Check CTA */}
+        <div className="max-w-7xl mx-auto px-6 mb-16 text-center">
+          <Link to="/cashflow-health-check" className="text-sm font-bold text-brand-teal hover:underline">
+            Not sure where to start? Take our free Cashflow Health Check &rarr;
+          </Link>
+        </div>
+
         {/* Core Principles Section */}
         <section className="max-w-7xl mx-auto px-6 mb-32">
           <h2 className="font-headline text-5xl font-black tracking-tighter mb-20">Built for Total Control</h2>
