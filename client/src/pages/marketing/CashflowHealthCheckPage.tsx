@@ -201,6 +201,11 @@ export default function CashflowHealthCheckPage() {
   const currentStepNum = getCurrentStepNumber(step);
   const progressPct = step.type === "landing" ? 0 : Math.round((currentStepNum / totalSteps) * 100);
 
+  // Scroll to top on step change
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [step.type, "sectionIndex" in step ? step.sectionIndex : null, "questionIndex" in step ? step.questionIndex : null]);
+
   // ─── Lead form submit ──────────────────────────────────────────────────
 
   const handleLeadSubmit = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
