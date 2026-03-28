@@ -1,7 +1,10 @@
-import type { Express } from "express";
+import type { Express, Request, Response } from "express";
 import { z } from "zod";
 import { storage } from "../storage";
 import { sendEmailWithAttachment } from "../services/sendgrid";
+import { getRileyWebsiteResponse } from "../agents/rileyWebsite";
+import type { ConversationMessage } from "../services/llm/claude";
+import rateLimit from "express-rate-limit";
 import fs from "fs";
 import path from "path";
 
@@ -187,6 +190,22 @@ function buildResultsEmailHtml(params: {
 
 const DEFAULT_FROM = "Qashivo <hello@qashivo.com>";
 
+// Rate limiter for Riley chat — 10 messages/minute per IP
+const chatRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  message: { message: "Too many messages. Please wait a moment before sending another." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Cal.com configuration
+const CAL_API_BASE = process.env.CAL_API_BASE || "https://api.cal.eu";
+const CAL_API_KEY = process.env.CAL_API_KEY || "";
+const CAL_USERNAME = process.env.CAL_USERNAME || "simon-kramer-5051hr";
+const CAL_EVENT_SLUG = process.env.CAL_EVENT_SLUG || "15min";
+const CAL_API_VERSION = process.env.CAL_API_VERSION || "2024-08-13";
+
 export function registerQuizRoutes(app: Express): void {
   // Start quiz — create lead record
   app.post("/api/quiz/start", async (req, res) => {
@@ -313,4 +332,281 @@ export function registerQuizRoutes(app: Express): void {
       res.status(500).json({ message: "Failed to get quiz results" });
     }
   });
+
+  // ─── Riley Chat (SSE Streaming) ─────────────────────────────────────────────
+
+  const chatSchema = z.object({
+    leadId: z.string().min(1),
+    message: z.string().max(1000).optional(), // optional for opening message
+  });
+
+  app.post("/api/quiz/chat", chatRateLimit, async (req: Request, res: Response) => {
+    try {
+      const { leadId, message } = chatSchema.parse(req.body);
+
+      // Load lead
+      const lead = await storage.getQuizLead(leadId);
+      if (!lead || !lead.completed) {
+        return res.status(404).json({ message: "Quiz results not found" });
+      }
+
+      // Get or create conversation
+      let conversation = await storage.getQuizConversationByLeadId(leadId);
+
+      if (!conversation) {
+        // Check conversation limit (max 3 per lead)
+        const convCount = await storage.countQuizConversationsByLeadId(leadId);
+        if (convCount >= 3) {
+          return res.status(429).json({ message: "Maximum conversations reached for this quiz." });
+        }
+        conversation = await storage.createQuizConversation({
+          quizLeadId: leadId,
+          messages: [],
+          messageCount: 0,
+        });
+      }
+
+      // Check message limit (max 20 messages per conversation)
+      const messages = (conversation.messages as any[]) || [];
+      if (messages.length >= 20) {
+        return res.status(429).json({ message: "This conversation has reached its limit. Book a demo to continue the discussion!" });
+      }
+
+      // Check 30-min inactivity timeout
+      if (conversation.lastMessageAt) {
+        const inactiveMs = Date.now() - new Date(conversation.lastMessageAt).getTime();
+        if (inactiveMs > 30 * 60 * 1000) {
+          // Start a new conversation
+          const convCount = await storage.countQuizConversationsByLeadId(leadId);
+          if (convCount >= 3) {
+            return res.status(429).json({ message: "Maximum conversations reached for this quiz." });
+          }
+          conversation = await storage.createQuizConversation({
+            quizLeadId: leadId,
+            messages: [],
+            messageCount: 0,
+          });
+        }
+      }
+
+      const conversationHistory: ConversationMessage[] = ((conversation.messages as any[]) || []).map(
+        (m: any) => ({ role: m.role as "user" | "assistant", content: m.content }),
+      );
+
+      // Set up SSE
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+      res.setHeader("X-Accel-Buffering", "no");
+      res.flushHeaders();
+
+      let fullResponse = "";
+
+      const rileyResponse = await getRileyWebsiteResponse({
+        lead,
+        conversationHistory,
+        userMessage: message,
+        onDelta: (text: string) => {
+          fullResponse += text;
+          res.write(`data: ${JSON.stringify({ type: "delta", text })}\n\n`);
+        },
+      });
+
+      // Store messages
+      const updatedMessages = [...((conversation.messages as any[]) || [])];
+      if (message) {
+        updatedMessages.push({ role: "user", content: message, timestamp: new Date().toISOString() });
+      }
+      updatedMessages.push({ role: "assistant", content: rileyResponse, timestamp: new Date().toISOString() });
+
+      await storage.updateQuizConversation(conversation.id, {
+        messages: updatedMessages as any,
+        messageCount: updatedMessages.length,
+        lastMessageAt: new Date(),
+      });
+
+      // Check for booking markers and process them
+      const bookMatch = rileyResponse.match(/\[BOOK:([^\]]+)\]/);
+      if (bookMatch) {
+        const bookingTime = bookMatch[1];
+        try {
+          const bookingResult = await createCalBooking(lead, bookingTime);
+          if (bookingResult.success) {
+            await storage.updateQuizLead(leadId, {
+              demoBooked: true,
+              demoBookedAt: new Date(),
+              calBookingUid: bookingResult.uid,
+            });
+            res.write(`data: ${JSON.stringify({ type: "booking_confirmed", time: bookingTime, uid: bookingResult.uid })}\n\n`);
+          }
+        } catch (bookErr) {
+          console.error("Cal.com booking failed:", bookErr);
+          res.write(`data: ${JSON.stringify({ type: "booking_failed" })}\n\n`);
+        }
+      }
+
+      // Check for availability marker
+      if (rileyResponse.includes("[SHOW_AVAILABILITY]")) {
+        try {
+          const slots = await fetchCalAvailability();
+          res.write(`data: ${JSON.stringify({ type: "availability", slots })}\n\n`);
+        } catch (slotErr) {
+          console.error("Cal.com availability fetch failed:", slotErr);
+        }
+      }
+
+      res.write(`data: ${JSON.stringify({ type: "done" })}\n\n`);
+      res.end();
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid input", errors: error.errors });
+      }
+      console.error("Riley chat error:", error);
+      if (!res.headersSent) {
+        res.status(500).json({ message: "Failed to get response" });
+      } else {
+        res.write(`data: ${JSON.stringify({ type: "error", message: "Something went wrong" })}\n\n`);
+        res.end();
+      }
+    }
+  });
+
+  // Get conversation history
+  app.get("/api/quiz/chat/:leadId", async (req, res) => {
+    try {
+      const conversation = await storage.getQuizConversationByLeadId(req.params.leadId);
+      if (!conversation) {
+        return res.json({ messages: [] });
+      }
+      res.json({ messages: conversation.messages || [] });
+    } catch (error) {
+      console.error("Failed to get chat history:", error);
+      res.status(500).json({ message: "Failed to get chat history" });
+    }
+  });
+
+  // ─── Cal.com Availability ───────────────────────────────────────────────────
+
+  app.get("/api/quiz/availability", async (_req, res) => {
+    try {
+      const slots = await fetchCalAvailability();
+      res.json({ slots });
+    } catch (error) {
+      console.error("Failed to fetch availability:", error);
+      res.status(500).json({ message: "Failed to fetch availability", fallbackUrl: `https://cal.eu/${CAL_USERNAME}/${CAL_EVENT_SLUG}` });
+    }
+  });
+
+  // ─── Cal.com Demo Booking ──────────────────────────────────────────────────
+
+  const bookDemoSchema = z.object({
+    leadId: z.string().min(1),
+    startTime: z.string().min(1), // ISO datetime
+  });
+
+  app.post("/api/quiz/book-demo", async (req, res) => {
+    try {
+      const { leadId, startTime } = bookDemoSchema.parse(req.body);
+
+      const lead = await storage.getQuizLead(leadId);
+      if (!lead) {
+        return res.status(404).json({ message: "Quiz lead not found" });
+      }
+
+      if (lead.demoBooked) {
+        return res.status(400).json({ message: "Demo already booked for this lead" });
+      }
+
+      const result = await createCalBooking(lead, startTime);
+
+      await storage.updateQuizLead(leadId, {
+        demoBooked: true,
+        demoBookedAt: new Date(),
+        calBookingUid: result.uid,
+      });
+
+      res.json({ success: true, booking: result });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid input", errors: error.errors });
+      }
+      console.error("Failed to book demo:", error);
+      res.status(500).json({
+        message: "Failed to book demo",
+        fallbackUrl: `https://cal.eu/${CAL_USERNAME}/${CAL_EVENT_SLUG}`,
+      });
+    }
+  });
+}
+
+// ─── Cal.com Helpers ──────────────────────────────────────────────────────────
+
+async function fetchCalAvailability(): Promise<Array<{ date: string; time: string; startTime: string }>> {
+  const startTime = new Date().toISOString();
+  const endDate = new Date();
+  endDate.setDate(endDate.getDate() + 7);
+  const endTime = endDate.toISOString();
+
+  const url = `${CAL_API_BASE}/v2/slots/available?startTime=${encodeURIComponent(startTime)}&endTime=${encodeURIComponent(endTime)}&eventTypeSlug=${CAL_EVENT_SLUG}&username=${CAL_USERNAME}`;
+
+  const response = await fetch(url, {
+    headers: {
+      "cal-api-version": CAL_API_VERSION,
+      ...(CAL_API_KEY ? { Authorization: `Bearer ${CAL_API_KEY}` } : {}),
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Cal.com API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const slots: Array<{ date: string; time: string; startTime: string }> = [];
+
+  // Cal.com v2 returns { data: { slots: { "YYYY-MM-DD": [{ time: "..." }] } } }
+  const slotsData = data?.data?.slots || {};
+  for (const [date, daySlots] of Object.entries(slotsData)) {
+    for (const slot of daySlots as any[]) {
+      const dt = new Date(slot.time);
+      slots.push({
+        date,
+        time: dt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" }),
+        startTime: slot.time,
+      });
+    }
+  }
+
+  return slots;
+}
+
+async function createCalBooking(lead: any, startTime: string): Promise<{ success: boolean; uid: string }> {
+  const response = await fetch(`${CAL_API_BASE}/v2/bookings`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "cal-api-version": CAL_API_VERSION,
+      ...(CAL_API_KEY ? { Authorization: `Bearer ${CAL_API_KEY}` } : {}),
+    },
+    body: JSON.stringify({
+      start: startTime,
+      eventTypeSlug: CAL_EVENT_SLUG,
+      username: CAL_USERNAME,
+      attendee: {
+        name: lead.fullName,
+        email: lead.email,
+        timeZone: "Europe/London",
+      },
+      bookingFieldsResponses: {
+        notes: `Booked via Cashflow Health Check quiz. Score: ${lead.totalScore}/40. Weakest area: ${lead.weakestSection}. Company: ${lead.companyName || "Not provided"}.`,
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Cal.com booking failed: ${response.status} — ${errorText}`);
+  }
+
+  const data = await response.json();
+  return { success: true, uid: data?.data?.uid || data?.uid || "unknown" };
 }

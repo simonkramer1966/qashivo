@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link } from "wouter";
 import MarketingLayout from "@/layouts/MarketingLayout";
+import RileyChat from "@/components/marketing/RileyChat";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import {
   QUIZ_SECTIONS,
@@ -191,6 +192,7 @@ export default function CashflowHealthCheckPage() {
   const [step, setStep] = useState<Step>({ type: "landing" });
   const [leadId, setLeadId] = useState<string | null>(null);
   const [leadEmail, setLeadEmail] = useState("");
+  const [leadName, setLeadName] = useState("");
   const [answers, setAnswers] = useState<AnswerRecord[]>([]);
   const [results, setResults] = useState<QuizResults | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -234,6 +236,7 @@ export default function CashflowHealthCheckPage() {
       const { leadId: id } = await res.json();
       setLeadId(id);
       setLeadEmail(body.email);
+      setLeadName(body.fullName);
       setStep({ type: "section_intro", sectionIndex: 0 });
     } catch (err: any) {
       setFormError(err.message);
@@ -914,7 +917,10 @@ export default function CashflowHealthCheckPage() {
               </div>
             </section>
 
-            {/* SECTION 6: FINAL CTA */}
+            {/* SECTION 6: RILEY CHAT */}
+            {leadId && <RileyChat leadId={leadId} leadName={leadName} />}
+
+            {/* SECTION 7: FINAL CTA */}
             <section className="bg-[#0F172A] editorial-grid-bg py-24 px-8 text-center relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-b from-[#0F172A] via-transparent to-[#0F172A] pointer-events-none" />
               <div className="max-w-3xl mx-auto relative z-10">

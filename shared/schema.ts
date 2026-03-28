@@ -5897,6 +5897,9 @@ export const quizLeads = pgTable("quiz_leads", {
   weakestSection: varchar("weakest_section"),
   completed: boolean("completed").default(false),
   bookSent: boolean("book_sent").default(false),
+  demoBooked: boolean("demo_booked").default(false),
+  demoBookedAt: timestamp("demo_booked_at"),
+  calBookingUid: varchar("cal_booking_uid"),
   startedAt: timestamp("started_at").defaultNow(),
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -5914,3 +5917,26 @@ export const insertQuizLeadSchema = createInsertSchema(quizLeads).omit({
 
 export type QuizLead = typeof quizLeads.$inferSelect;
 export type InsertQuizLead = z.infer<typeof insertQuizLeadSchema>;
+
+// ─── Quiz Conversations (Riley website advisor) ──────────────────────────────
+
+export const quizConversations = pgTable("quiz_conversations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  quizLeadId: varchar("quiz_lead_id").notNull(),
+  messages: jsonb("messages").default([]),
+  messageCount: integer("message_count").default(0),
+  startedAt: timestamp("started_at").defaultNow(),
+  lastMessageAt: timestamp("last_message_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_quiz_conversations_lead").on(table.quizLeadId),
+]);
+
+export const insertQuizConversationSchema = createInsertSchema(quizConversations).omit({
+  id: true,
+  createdAt: true,
+  startedAt: true,
+});
+
+export type QuizConversation = typeof quizConversations.$inferSelect;
+export type InsertQuizConversation = z.infer<typeof insertQuizConversationSchema>;

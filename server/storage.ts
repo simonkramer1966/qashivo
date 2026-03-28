@@ -175,6 +175,9 @@ import {
   quizLeads,
   type QuizLead,
   type InsertQuizLead,
+  quizConversations,
+  type QuizConversation,
+  type InsertQuizConversation,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc, sql, count, sum, ne, isNotNull, isNull, gte, lte, lt, or, ilike, inArray } from "drizzle-orm";
@@ -664,6 +667,13 @@ export interface IStorage {
   createQuizLead(data: InsertQuizLead): Promise<QuizLead>;
   updateQuizLead(id: string, updates: Partial<InsertQuizLead>): Promise<QuizLead>;
   getQuizLead(id: string): Promise<QuizLead | undefined>;
+
+  // Quiz Conversation operations (Riley website advisor)
+  createQuizConversation(data: InsertQuizConversation): Promise<QuizConversation>;
+  getQuizConversation(id: string): Promise<QuizConversation | undefined>;
+  getQuizConversationByLeadId(quizLeadId: string): Promise<QuizConversation | undefined>;
+  updateQuizConversation(id: string, updates: Partial<InsertQuizConversation>): Promise<QuizConversation>;
+  countQuizConversationsByLeadId(quizLeadId: string): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -5816,6 +5826,39 @@ export class DatabaseStorage implements IStorage {
   async getQuizLead(id: string): Promise<QuizLead | undefined> {
     const [lead] = await db.select().from(quizLeads).where(eq(quizLeads.id, id));
     return lead;
+  }
+
+  // Quiz Conversation operations (Riley website advisor)
+  async createQuizConversation(data: InsertQuizConversation): Promise<QuizConversation> {
+    const [conv] = await db.insert(quizConversations).values(data).returning();
+    return conv;
+  }
+
+  async getQuizConversation(id: string): Promise<QuizConversation | undefined> {
+    const [conv] = await db.select().from(quizConversations).where(eq(quizConversations.id, id));
+    return conv;
+  }
+
+  async getQuizConversationByLeadId(quizLeadId: string): Promise<QuizConversation | undefined> {
+    const [conv] = await db.select().from(quizConversations)
+      .where(eq(quizConversations.quizLeadId, quizLeadId))
+      .orderBy(desc(quizConversations.createdAt))
+      .limit(1);
+    return conv;
+  }
+
+  async updateQuizConversation(id: string, updates: Partial<InsertQuizConversation>): Promise<QuizConversation> {
+    const [conv] = await db.update(quizConversations)
+      .set(updates)
+      .where(eq(quizConversations.id, id))
+      .returning();
+    return conv;
+  }
+
+  async countQuizConversationsByLeadId(quizLeadId: string): Promise<number> {
+    const [result] = await db.select({ count: count() }).from(quizConversations)
+      .where(eq(quizConversations.quizLeadId, quizLeadId));
+    return result.count;
   }
 }
 
