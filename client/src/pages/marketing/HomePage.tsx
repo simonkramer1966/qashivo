@@ -48,14 +48,14 @@ export default function HomePage() {
               <div
                 className="absolute inset-0 rounded-lg pointer-events-none"
                 style={{
-                  background: 'linear-gradient(to bottom, #0F172A 0%, #0F172A 5%, transparent 15%, transparent 85%, #0F172A 95%, #0F172A 100%)',
+                  background: 'linear-gradient(to bottom, #0F172A 0%, #0F172A 2%, transparent 8%, transparent 93%, #0F172A 97%, #0F172A 100%)',
                 }}
               />
               {/* Left edge fade */}
               <div
                 className="absolute inset-0 rounded-lg pointer-events-none"
                 style={{
-                  background: 'linear-gradient(to right, #0F172A 0%, #0F172A 10%, transparent 20%)',
+                  background: 'linear-gradient(to right, #0F172A 0%, #0F172A 5%, transparent 10%)',
                 }}
               />
             </div>
