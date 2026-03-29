@@ -225,20 +225,37 @@ export default function FeaturesPage() {
         <section className="py-24 bg-surface border-b border-slate-200">
           <div className="max-w-7xl mx-auto px-6">
             <h3 className="font-headline font-extrabold text-slate-400 uppercase tracking-widest text-[10px] text-center mb-12">Works With Your Existing Tools</h3>
-            <div className="flex flex-wrap justify-center items-center gap-16 lg:gap-32 grayscale opacity-60">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 bg-brand-navy rounded flex items-center justify-center text-white font-black">X</div>
-                <span className="font-bold text-slate-900">XERO</span>
+            <div className="flex flex-wrap justify-center items-center gap-16 lg:gap-32">
+              {/* Xero */}
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-14 h-14 bg-slate-100 rounded-lg flex items-center justify-center">
+                  <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                    <path d="M6 8L14 16M14 16L22 8M14 16L6 24M14 16L22 24" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+                <span className="font-bold text-slate-400 text-xs uppercase tracking-wider">Xero</span>
               </div>
-              <div className="flex items-center gap-4">
-                <span className="material-symbols-outlined text-3xl text-slate-900">account_balance</span>
-                <span className="font-bold text-slate-900 uppercase">Open Banking</span>
+              {/* QuickBooks */}
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-14 h-14 bg-slate-100 rounded-lg flex items-center justify-center">
+                  <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                    <circle cx="14" cy="14" r="12" stroke="#94a3b8" strokeWidth="2"/>
+                    <path d="M10 9V19M10 14H15C16.657 14 18 12.657 18 11C18 9.343 16.657 9 15 9H10" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+                <span className="font-bold text-slate-400 text-xs uppercase tracking-wider">QuickBooks</span>
               </div>
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 bg-[#635BFF] rounded flex items-center justify-center text-white font-black text-xl italic">S</div>
-                <span className="font-bold text-slate-900">STRIPE</span>
+              {/* Sage */}
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-14 h-14 bg-slate-100 rounded-lg flex items-center justify-center">
+                  <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                    <path d="M19 9.5C18 8 15.5 7 14 7C11 7 9 9 9 11.5C9 14 11 14.5 14 15.5C17 16.5 19 17 19 19.5C19 22 17 24 14 24C11.5 24 9.5 22.5 9 21" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+                <span className="font-bold text-slate-400 text-xs uppercase tracking-wider">Sage</span>
               </div>
             </div>
+            <p className="text-center text-slate-400 text-xs uppercase tracking-widest mt-10">More coming soon&hellip;</p>
           </div>
         </section>
 

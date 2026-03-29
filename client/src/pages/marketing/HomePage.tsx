@@ -159,7 +159,7 @@ export default function HomePage() {
                   Qashflow
                 </h3>
                 <p className="text-slate-600 leading-relaxed mb-6">
-                  Connect your Xero to see your cash position clearly and spot
+                  Connect your accounting software to see your cash position clearly and spot
                   problems before they hit.
                 </p>
                 <Link
@@ -206,11 +206,11 @@ export default function HomePage() {
                   Step 01
                 </div>
                 <h4 className="font-headline font-black text-lg mb-2">
-                  Connect Your Xero
+                  Connect Your Software
                 </h4>
                 <p className="text-slate-500 text-sm">
-                  One-click connection. Your invoices and debtors sync
-                  automatically.
+                  One-click connection to your accounting software. Your
+                  invoices and debtors sync automatically.
                 </p>
               </div>
               <div className="p-8 bg-white border border-slate-200">
