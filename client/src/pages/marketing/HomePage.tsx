@@ -39,85 +39,11 @@ export default function HomePage() {
               </div>
             </div>
             <div className="relative">
-              <div className="bg-slate-950/50 border border-white/10 rounded p-8 aspect-[4/3] flex items-center justify-center relative">
-                <div className="absolute top-4 left-4 font-mono text-[10px] text-slate-500 uppercase tracking-widest">
-                  System Architecture v3.1
-                </div>
-                <svg
-                  className="w-full h-full"
-                  viewBox="0 0 400 300"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    className="node-connection"
-                    d="M 40,150 L 160,80"
-                    fill="none"
-                    stroke="#334155"
-                    strokeWidth="1"
-                  />
-                  <path
-                    className="node-connection"
-                    d="M 40,150 L 160,220"
-                    fill="none"
-                    stroke="#334155"
-                    strokeWidth="1"
-                  />
-                  <path
-                    className="node-connection"
-                    d="M 160,80 L 320,150"
-                    fill="none"
-                    stroke="#06b6d4"
-                    strokeWidth="1.5"
-                  />
-                  <path
-                    className="node-connection"
-                    d="M 160,220 L 320,150"
-                    fill="none"
-                    stroke="#f59e0b"
-                    strokeWidth="1.5"
-                  />
-                  <rect
-                    fill="#0f172a"
-                    height="20"
-                    stroke="#334155"
-                    strokeWidth="2"
-                    width="20"
-                    x="30"
-                    y="140"
-                  />
-                  <rect
-                    fill="#0f172a"
-                    height="20"
-                    stroke="#06b6d4"
-                    strokeWidth="2"
-                    width="20"
-                    x="150"
-                    y="70"
-                  />
-                  <rect
-                    fill="#0f172a"
-                    height="20"
-                    stroke="#f59e0b"
-                    strokeWidth="2"
-                    width="20"
-                    x="150"
-                    y="210"
-                  />
-                  <rect fill="#06b6d4" height="20" width="20" x="310" y="140" />
-                  <text
-                    className="tracking-widest"
-                    fill="white"
-                    fontFamily="Inter"
-                    fontSize="14"
-                    fontWeight="900"
-                    textAnchor="middle"
-                    x="200"
-                    y="155"
-                  >
-                    QASHIVO CORE
-                  </text>
-                </svg>
-              </div>
+              <img
+                src="/images/marketing/qashivo-home-hero.jpeg"
+                alt="Qashivo platform overview showing Qollections credit control, Qashflow cashflow intelligence, and Qapital working capital modules"
+                className="w-full rounded-lg"
+              />
             </div>
           </div>
         </section>
