@@ -5,7 +5,7 @@ import { usePageMeta } from "@/hooks/usePageMeta";
 
 export default function PricingPage() {
   usePageMeta(
-    "Pricing — Qashivo",
+    "Pricing | Qashivo",
     "Simple, transparent pricing. From £99/month. AI credit control for less than the cost of a junior clerk."
   );
   const [isAnnual, setIsAnnual] = useState(false);
@@ -43,8 +43,8 @@ export default function PricingPage() {
       badge: "Most Effective",
       features: [
         "All Starter plus:",
-        "Riley — learns your business, answers questions, takes action",
-        "Autonomous multi-channel collection — email, SMS & automated voice calls",
+        "Riley: learns your business, answers questions, takes action",
+        "Autonomous multi-channel collection: email, SMS & automated voice calls",
         "Unlimited escalation sequences",
         "Weekly cashflow briefing with risks and recommendations",
       ],

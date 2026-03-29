@@ -4,7 +4,7 @@ import { usePageMeta } from "@/hooks/usePageMeta";
 
 export default function WhyQashivoPage() {
   usePageMeta(
-    "Why Qashivo — Stop Losing Cash to Late Payments",
+    "Why Qashivo | Stop Losing Cash to Late Payments",
     "See why UK businesses choose Qashivo over manual chasing, debt collection agencies, and in-house credit controllers."
   );
   return (
@@ -51,7 +51,7 @@ export default function WhyQashivoPage() {
               <ul className="space-y-6 relative z-10">
                 <li className="flex gap-4 items-start">
                   <span className="material-symbols-outlined text-teal-brand font-bold">check_circle</span>
-                  <span className="text-lg font-bold">Qashivo emails, texts, and phones your debtors — reducing your workload by 90%</span>
+                  <span className="text-lg font-bold">Qashivo emails, texts, and phones your debtors, reducing your workload by 90%</span>
                 </li>
                 <li className="flex gap-4 items-start">
                   <span className="material-symbols-outlined text-teal-brand font-bold">check_circle</span>
@@ -92,7 +92,7 @@ export default function WhyQashivoPage() {
                 <div className="absolute top-0 right-0 bg-mkt-primary text-white px-4 py-1.5 text-[10px] font-black uppercase tracking-widest">Recommended</div>
                 <div className="text-[10px] font-black uppercase tracking-widest text-mkt-primary mb-8">The Smarter Way</div>
                 <h4 className="font-headline text-2xl font-black mb-6">Qashivo</h4>
-                <p className="text-on-surface-variant text-lg leading-snug font-bold">From £99/month. Emails, SMS, and automated voice calls — working 24/7. Professional tone. Full control. Gets smarter every week.</p>
+                <p className="text-on-surface-variant text-lg leading-snug font-bold">From £99/month. Emails, SMS, and automated voice calls, working 24/7. Professional tone. Full control. Gets smarter every week.</p>
               </div>
             </div>
           </div>
@@ -111,7 +111,7 @@ export default function WhyQashivoPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-16">
             <div className="space-y-6">
               <h3 className="font-headline text-3xl font-black tracking-tight">Zero Idle Time</h3>
-              <p className="text-on-surface-variant text-lg leading-relaxed font-bold">Unlike a person, Qashivo never forgets a follow-up. Every invoice is chased across email, SMS, and voice — at exactly the right moment.</p>
+              <p className="text-on-surface-variant text-lg leading-relaxed font-bold">Unlike a person, Qashivo never forgets a follow-up. Every invoice is chased across email, SMS, and voice, at exactly the right moment.</p>
             </div>
             <div className="space-y-6">
               <h3 className="font-headline text-3xl font-black tracking-tight">You Stay in Control</h3>

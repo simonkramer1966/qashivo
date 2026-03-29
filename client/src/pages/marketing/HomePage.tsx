@@ -4,8 +4,8 @@ import { usePageMeta } from "@/hooks/usePageMeta";
 
 export default function HomePage() {
   usePageMeta(
-    "Qashivo — AI-Powered Credit Control for UK Businesses",
-    "Stop chasing invoices. Qashivo is your autonomous AI credit controller — chasing debtors, forecasting cashflow, and protecting your cash position. 24/7."
+    "Qashivo | AI-Powered Credit Control for UK Businesses",
+    "Stop chasing invoices. Qashivo is your autonomous AI credit controller. It chases debtors, forecasts cashflow, and protects your cash position. 24/7."
   );
   return (
     <MarketingLayout currentPage="/">
@@ -21,7 +21,7 @@ export default function HomePage() {
               </h1>
               <p className="text-xl md:text-2xl text-slate-400 leading-relaxed mb-10 max-w-xl">
                 Qashivo is your AI-powered credit controller for UK businesses.
-                It manages your entire accounts receivable lifecycle — from automated
+                It manages your entire accounts receivable lifecycle, from automated
                 follow-ups to cashflow forecasting.
               </p>
               <div className="flex flex-wrap gap-4">
@@ -138,7 +138,7 @@ export default function HomePage() {
                 </h3>
                 <p className="text-slate-600 leading-relaxed mb-6">
                   Qashivo writes emails, sends SMS reminders,
-                  and phones your debtors — with the right tone, at the right
+                  and phones your debtors, with the right tone, at the right
                   time. Multi-channel chasing that never stops.
                 </p>
                 <Link
@@ -180,7 +180,7 @@ export default function HomePage() {
                   Qapital
                 </h3>
                 <p className="text-slate-600 leading-relaxed mb-6">
-                  When cashflow gaps appear, Qashivo finds the right finance —
+                  When cashflow gaps appear, Qashivo finds the right finance,
                   matched to your actual numbers.
                 </p>
                 <Link
@@ -234,7 +234,7 @@ export default function HomePage() {
                 </h4>
                 <p className="text-slate-500 text-sm">
                   Professional collection emails, SMS reminders, and automated voice
-                  calls — all sent on your behalf, with full approval control.
+                  calls, all sent on your behalf, with full approval control.
                 </p>
               </div>
               <div className="p-8 bg-slate-900 text-white">
@@ -322,7 +322,7 @@ export default function HomePage() {
                 </h4>
                 <p className="text-slate-400 text-sm leading-relaxed">
                   Your team spends hours writing chase emails and making
-                  awkward phone calls. Qashivo handles both — automatically.
+                  awkward phone calls. Qashivo handles both, automatically.
                 </p>
               </div>
               <div className="p-8 border border-white/10 bg-white/5">
@@ -351,7 +351,7 @@ export default function HomePage() {
                 </h2>
                 <p className="text-slate-500 text-lg leading-relaxed mb-8">
                   Take our free 2-minute health check. Get your score across
-                  credit control, cashflow, and finance — plus a free copy of{" "}
+                  credit control, cashflow, and finance, plus a free copy of{" "}
                   <em>The Cash Gap</em>.
                 </p>
                 <Link to="/cashflow-health-check">

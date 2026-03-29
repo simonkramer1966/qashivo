@@ -4,7 +4,7 @@ import { usePageMeta } from "@/hooks/usePageMeta";
 
 export default function FeaturesPage() {
   usePageMeta(
-    "Features — Qashivo",
+    "Features | Qashivo",
     "AI credit control, cashflow forecasting, and working capital. Three integrated pillars for autonomous cashflow management."
   );
   return (
@@ -17,7 +17,7 @@ export default function FeaturesPage() {
               One Platform. Three Ways to <span className="text-mkt-secondary">Protect Your Cash</span>.
             </h1>
             <p className="font-body text-xl md:text-2xl text-on-surface-variant leading-relaxed max-w-3xl mx-auto font-medium">
-              Autonomous credit control, cashflow forecasting, and working capital — working together, around the clock.
+              Autonomous credit control, cashflow forecasting, and working capital, working together, around the clock.
             </p>
           </div>
         </header>
@@ -64,13 +64,13 @@ export default function FeaturesPage() {
                   <h4 className="font-bold text-lg text-brand-navy mb-2 flex items-center gap-2">
                     <span className="w-1 h-4 bg-brand-teal"></span> Smart Email Generation
                   </h4>
-                  <p className="text-on-surface-variant leading-relaxed font-medium">Qashivo writes collection emails that reference real invoice data and match your tone — part of a coordinated multi-channel approach.</p>
+                  <p className="text-on-surface-variant leading-relaxed font-medium">Qashivo writes collection emails that reference real invoice data and match your tone, as part of a coordinated multi-channel approach.</p>
                 </div>
                 <div className="group">
                   <h4 className="font-bold text-lg text-brand-navy mb-2 flex items-center gap-2">
                     <span className="w-1 h-4 bg-brand-teal"></span> Automated Voice Calling
                   </h4>
-                  <p className="text-on-surface-variant leading-relaxed font-medium">Qashivo doesn't just email — it phones your debtors too. Automated voice calls that chase payments, confirm promises to pay, and escalate when needed. Professional, calm, and persistent.</p>
+                  <p className="text-on-surface-variant leading-relaxed font-medium">Qashivo doesn't just email. It phones your debtors too. Automated voice calls that chase payments, confirm promises to pay, and escalate when needed. Professional, calm, and persistent.</p>
                 </div>
                 <div className="group">
                   <h4 className="font-bold text-lg text-brand-navy mb-2 flex items-center gap-2">
@@ -82,7 +82,7 @@ export default function FeaturesPage() {
                   <h4 className="font-bold text-lg text-brand-navy mb-2 flex items-center gap-2">
                     <span className="w-1 h-4 bg-brand-teal"></span> Intelligent Escalation
                   </h4>
-                  <p className="text-on-surface-variant leading-relaxed font-medium">Five-stage escalation from friendly reminder to final notice — Qashivo adapts timing and tone based on each debtor's behaviour.</p>
+                  <p className="text-on-surface-variant leading-relaxed font-medium">Five-stage escalation from friendly reminder to final notice. Qashivo adapts timing and tone based on each debtor's behaviour.</p>
                 </div>
                 <div className="group">
                   <h4 className="font-bold text-lg text-brand-navy mb-2 flex items-center gap-2">
@@ -104,7 +104,7 @@ export default function FeaturesPage() {
               <ul className="space-y-4">
                 <li className="p-6 rounded border border-slate-200 hover:border-brand-navy transition-all duration-200">
                   <h4 className="font-extrabold text-brand-navy mb-2">Weekly CFO Briefing</h4>
-                  <p className="text-sm text-on-surface-variant font-medium leading-relaxed">Riley prepares a plain-English cashflow briefing every week — risks, recommendations, and what to do about them.</p>
+                  <p className="text-sm text-on-surface-variant font-medium leading-relaxed">Riley prepares a plain-English cashflow briefing every week: risks, recommendations, and what to do about them.</p>
                 </li>
                 <li className="p-6 rounded border border-slate-200 hover:border-brand-navy transition-all duration-200">
                   <h4 className="font-extrabold text-brand-navy mb-2">13-Week Rolling Forecast</h4>
@@ -170,7 +170,7 @@ export default function FeaturesPage() {
               <div className="space-y-8">
                 <div>
                   <h4 className="font-extrabold text-xl text-brand-navy mb-2">Intelligent Matching</h4>
-                  <p className="text-on-surface-variant font-medium leading-relaxed">Qashivo analyses your situation and recommends the right finance — invoice factoring, credit lines, or asset finance.</p>
+                  <p className="text-on-surface-variant font-medium leading-relaxed">Qashivo analyses your situation and recommends the right finance: invoice factoring, credit lines, or asset finance.</p>
                 </div>
                 <div>
                   <h4 className="font-extrabold text-xl text-brand-navy mb-2">Pre-Qualified Offers</h4>
@@ -185,9 +185,9 @@ export default function FeaturesPage() {
         <section className="bg-brand-navy py-32 text-white relative overflow-hidden">
           <div className="absolute inset-0 data-grid-bg opacity-5 pointer-events-none"></div>
           <div className="max-w-7xl mx-auto px-6 lg:px-24 text-center relative z-10">
-            <h2 className="font-headline text-4xl lg:text-5xl font-extrabold mb-6">Meet Riley — Your Finance Advisor</h2>
+            <h2 className="font-headline text-4xl lg:text-5xl font-extrabold mb-6">Meet Riley. Your Finance Advisor.</h2>
             <p className="text-white/70 text-lg max-w-2xl mx-auto mb-20 font-medium">
-              Riley is the brain behind Qashivo. She learns your business, monitors your cash, and tells you what matters — in plain English.
+              Riley is the brain behind Qashivo. She learns your business, monitors your cash, and tells you what matters, in plain English.
             </p>
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 text-left">
               <div className="bg-white/5 border border-white/10 p-8 rounded hover:bg-white/10 transition-colors">
@@ -203,7 +203,7 @@ export default function FeaturesPage() {
               <div className="bg-white/5 border border-white/10 p-8 rounded hover:bg-white/10 transition-colors">
                 <div className="w-2 h-8 bg-white mb-6"></div>
                 <h4 className="font-extrabold text-lg mb-4 text-white">Takes Action</h4>
-                <p className="text-sm text-white/50 leading-relaxed">Sends emails, triggers SMS, schedules voice calls, pauses chasing, flags problems — on your instruction or autonomously.</p>
+                <p className="text-sm text-white/50 leading-relaxed">Sends emails, triggers SMS, schedules voice calls, pauses chasing, flags problems, on your instruction or autonomously.</p>
               </div>
               <div className="bg-white/5 border border-white/10 p-8 rounded hover:bg-white/10 transition-colors">
                 <div className="w-2 h-8 bg-brand-teal mb-6"></div>
@@ -226,34 +226,23 @@ export default function FeaturesPage() {
           <div className="max-w-7xl mx-auto px-6">
             <h3 className="font-headline font-extrabold text-slate-400 uppercase tracking-widest text-[10px] text-center mb-12">Works With Your Existing Tools</h3>
             <div className="flex flex-wrap justify-center items-center gap-16 lg:gap-32">
-              {/* Xero */}
-              <div className="flex flex-col items-center gap-3">
-                <div className="w-14 h-14 bg-slate-100 rounded-lg flex items-center justify-center">
-                  <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-                    <path d="M6 8L14 16M14 16L22 8M14 16L6 24M14 16L22 24" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
+              {[
+                { src: "/images/marketing/xero-logo.png", label: "Xero" },
+                { src: "/images/marketing/quickbooks-logo.png", label: "QuickBooks" },
+                { src: "/images/marketing/sage-logo.png", label: "Sage" },
+              ].map((item) => (
+                <div key={item.label} className="flex flex-col items-center gap-3 group">
+                  <img
+                    src={item.src}
+                    alt={item.label}
+                    className="w-16 h-16 rounded-full object-contain transition-all duration-200"
+                    style={{ filter: "grayscale(100%) opacity(0.5)" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.filter = "grayscale(100%) opacity(0.7)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.filter = "grayscale(100%) opacity(0.5)"; }}
+                  />
+                  <span className="font-bold text-slate-400 text-xs uppercase tracking-wider">{item.label}</span>
                 </div>
-                <span className="font-bold text-slate-400 text-xs uppercase tracking-wider">Xero</span>
-              </div>
-              {/* QuickBooks */}
-              <div className="flex flex-col items-center gap-3">
-                <div className="w-14 h-14 bg-slate-100 rounded-lg flex items-center justify-center">
-                  <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-                    <circle cx="14" cy="14" r="12" stroke="#94a3b8" strokeWidth="2"/>
-                    <path d="M10 9V19M10 14H15C16.657 14 18 12.657 18 11C18 9.343 16.657 9 15 9H10" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </div>
-                <span className="font-bold text-slate-400 text-xs uppercase tracking-wider">QuickBooks</span>
-              </div>
-              {/* Sage */}
-              <div className="flex flex-col items-center gap-3">
-                <div className="w-14 h-14 bg-slate-100 rounded-lg flex items-center justify-center">
-                  <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-                    <path d="M19 9.5C18 8 15.5 7 14 7C11 7 9 9 9 11.5C9 14 11 14.5 14 15.5C17 16.5 19 17 19 19.5C19 22 17 24 14 24C11.5 24 9.5 22.5 9 21" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </div>
-                <span className="font-bold text-slate-400 text-xs uppercase tracking-wider">Sage</span>
-              </div>
+              ))}
             </div>
             <p className="text-center text-slate-400 text-xs uppercase tracking-widest mt-10">More coming soon&hellip;</p>
           </div>

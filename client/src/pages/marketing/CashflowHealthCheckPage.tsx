@@ -185,7 +185,7 @@ function AnimatedScore({ target, max }: { target: number; max: number }) {
 
 export default function CashflowHealthCheckPage() {
   usePageMeta(
-    "Cashflow Health Check — Qashivo",
+    "Cashflow Health Check | Qashivo",
     "Score your working capital cycle in 2 minutes. Find out where cash is leaking from your business and get a free copy of The Cash Gap.",
   );
 
@@ -331,22 +331,22 @@ export default function CashflowHealthCheckPage() {
     const section = QUIZ_SECTIONS[sectionIndex];
     const summaries: Record<SectionId, Record<TierKey, string>> = {
       credit_control: {
-        critical: "Your credit control needs urgent attention — cash is being lost to late payments.",
-        at_risk: "Your credit control has solid foundations — with room to optimise.",
-        good: "Your credit control is performing well — fine-tuning will unlock more.",
+        critical: "Your credit control needs urgent attention. Cash is being lost to late payments.",
+        at_risk: "Your credit control has solid foundations, with room to improve.",
+        good: "Your credit control is performing well. Fine-tuning will unlock more.",
         excellent: "Your credit control is best-in-class. Keep it up.",
       },
       cashflow: {
-        critical: "Your cashflow visibility is dangerously low — surprises are inevitable.",
-        at_risk: "Your cashflow has gaps — better forecasting will prevent surprises.",
-        good: "Your cashflow management is solid — scenario planning is the next step.",
+        critical: "Your cashflow visibility is dangerously low. Surprises are inevitable.",
+        at_risk: "Your cashflow has gaps. Better forecasting will prevent surprises.",
+        good: "Your cashflow management is solid. Scenario planning is the next step.",
         excellent: "Your cashflow visibility is exceptional. You're ahead of the curve.",
       },
       finance: {
-        critical: "Your finance strategy is reactive — you need to plan ahead.",
-        at_risk: "Your finance approach has potential — quantifying costs will help.",
-        good: "Your finance management is strong — pre-qualifying will give you speed.",
-        excellent: "Your finance strategy is optimised. Focus on cost of capital next.",
+        critical: "Your finance strategy is reactive. You need to plan ahead.",
+        at_risk: "Your finance approach has potential. Quantifying costs will help.",
+        good: "Your finance management is strong. Pre-qualifying will give you speed.",
+        excellent: "Your finance strategy is strong. Focus on cost of capital next.",
       },
     };
     return summaries[section.id][tier];
@@ -379,7 +379,7 @@ export default function CashflowHealthCheckPage() {
                 )}
                 {step.type === "section_result" && (
                   <p className="text-on-surface font-headline font-bold text-lg">
-                    {QUIZ_SECTIONS[step.sectionIndex].heading} — Results
+                    {QUIZ_SECTIONS[step.sectionIndex].heading}: Results
                   </p>
                 )}
               </div>
@@ -406,7 +406,7 @@ export default function CashflowHealthCheckPage() {
                     The Cashflow <br /><span className="text-mkt-teal">Health Check</span>
                   </h1>
                   <p className="text-xl md:text-2xl text-on-surface-variant leading-relaxed mb-10 max-w-2xl">
-                    Score your working capital cycle in 2 minutes. Find out where cash is leaking from your business — and get a free copy of <span className="font-semibold italic">The Cash Gap</span> to fix it.
+                    Score your working capital cycle in 2 minutes. Find out where cash is leaking from your business, and get a free copy of <span className="font-semibold italic">The Cash Gap</span> to fix it.
                   </p>
                   <div className="flex flex-wrap gap-6 items-center text-sm font-label tracking-wide uppercase text-on-surface-variant/80">
                     <span className="flex items-center gap-2"><span className="material-symbols-outlined text-sm">schedule</span> Takes 2 minutes</span>
