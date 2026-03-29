@@ -44,6 +44,20 @@ export default function HomePage() {
                 alt="Qashivo platform overview showing Qollections credit control, Qashflow cashflow intelligence, and Qapital working capital modules"
                 className="w-full rounded-lg"
               />
+              {/* Top/bottom edge fade */}
+              <div
+                className="absolute inset-0 rounded-lg pointer-events-none"
+                style={{
+                  background: 'linear-gradient(to bottom, #0F172A 0%, #0F172A 5%, transparent 15%, transparent 85%, #0F172A 95%, #0F172A 100%)',
+                }}
+              />
+              {/* Left edge fade */}
+              <div
+                className="absolute inset-0 rounded-lg pointer-events-none"
+                style={{
+                  background: 'linear-gradient(to right, #0F172A 0%, #0F172A 10%, transparent 20%)',
+                }}
+              />
             </div>
           </div>
         </section>
