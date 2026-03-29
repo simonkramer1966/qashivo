@@ -69,7 +69,7 @@ export const QUIZ_QUESTIONS: QuizQuestion[] = [
     sectionId: "credit_control",
     text: "How do you currently chase overdue invoices?",
     answers: [
-      { id: "q1a", text: "We don't really chase \u2014 we wait and hope", score: 1 },
+      { id: "q1a", text: "We don't really chase. We wait and hope", score: 1 },
       { id: "q1b", text: "We send a manual email when we remember", score: 2 },
       { id: "q1c", text: "We follow a template email sequence", score: 3 },
       { id: "q1d", text: "We have a structured multi-channel process with escalation across email, SMS, and phone", score: 4 },
@@ -89,12 +89,12 @@ export const QUIZ_QUESTIONS: QuizQuestion[] = [
   {
     id: "q3",
     sectionId: "credit_control",
-    text: "When a debtor replies with a dispute, query, or promise to pay \u2014 what happens?",
+    text: "When a debtor replies with a dispute, query, or promise to pay, what happens?",
     answers: [
       { id: "q3a", text: "It probably gets lost in someone's inbox", score: 1 },
       { id: "q3b", text: "We deal with it but there's no real system", score: 2 },
       { id: "q3c", text: "We track it but follow-up is inconsistent", score: 3 },
-      { id: "q3d", text: "It's logged, categorised, and followed up systematically \u2014 with escalation to a human for complex cases", score: 4 },
+      { id: "q3d", text: "It's logged, categorised, and followed up systematically. Complex cases get escalated to a human", score: 4 },
     ],
   },
   {
@@ -105,14 +105,14 @@ export const QUIZ_QUESTIONS: QuizQuestion[] = [
       { id: "q4a", text: "Just email", score: 1 },
       { id: "q4b", text: "Email and occasional phone calls", score: 2 },
       { id: "q4c", text: "Email, phone, and sometimes SMS", score: 3 },
-      { id: "q4d", text: "Multiple channels \u2014 and we know which channel works best for each debtor", score: 4 },
+      { id: "q4d", text: "Multiple channels, and we know which one works best for each debtor", score: 4 },
     ],
   },
   // Section 2: Cashflow
   {
     id: "q5",
     sectionId: "cashflow",
-    text: "How well do you know your cash position right now \u2014 today?",
+    text: "How well do you know your cash position right now?",
     answers: [
       { id: "q5a", text: "I'd have to check my bank account and guess", score: 1 },
       { id: "q5b", text: "I have a rough idea from my accounting software", score: 2 },
@@ -125,7 +125,7 @@ export const QUIZ_QUESTIONS: QuizQuestion[] = [
     sectionId: "cashflow",
     text: "Do you forecast your cashflow?",
     answers: [
-      { id: "q6a", text: "No \u2014 we deal with problems as they come", score: 1 },
+      { id: "q6a", text: "No. We deal with problems as they come", score: 1 },
       { id: "q6b", text: "We have a spreadsheet but it's usually out of date by Tuesday", score: 2 },
       { id: "q6c", text: "We update a forecast monthly", score: 3 },
       { id: "q6d", text: "We have a rolling forecast that updates automatically from live accounting data", score: 4 },
@@ -134,12 +134,12 @@ export const QUIZ_QUESTIONS: QuizQuestion[] = [
   {
     id: "q7",
     sectionId: "cashflow",
-    text: "When did you last have a cashflow surprise \u2014 an unexpected shortfall?",
+    text: "When did you last have an unexpected cashflow shortfall?",
     answers: [
-      { id: "q7a", text: "It happens regularly \u2014 almost every month", score: 1 },
+      { id: "q7a", text: "Almost every month", score: 1 },
       { id: "q7b", text: "In the last month", score: 2 },
       { id: "q7c", text: "In the last 6 months", score: 3 },
-      { id: "q7d", text: "Can't remember \u2014 we always see them coming", score: 4 },
+      { id: "q7d", text: "Can't remember. We always see them coming", score: 4 },
     ],
   },
   // Section 3: Finance
@@ -162,7 +162,7 @@ export const QUIZ_QUESTIONS: QuizQuestion[] = [
       { id: "q9a", text: "No idea", score: 1 },
       { id: "q9b", text: "I know it's a problem but haven't quantified it", score: 2 },
       { id: "q9c", text: "I have a rough estimate", score: 3 },
-      { id: "q9d", text: "Yes \u2014 I know the exact cash impact of every overdue day", score: 4 },
+      { id: "q9d", text: "Yes. I know the exact cash impact of every overdue day", score: 4 },
     ],
   },
   {
@@ -213,7 +213,7 @@ export const OVERALL_RESULTS: OverallResult[] = [
     maxScore: 15,
     headline: "Your working capital cycle has serious gaps",
     summary:
-      "Your credit control is mostly reactive, your cashflow visibility is limited, and you don't have structured options for funding gaps. Late payments are silently costing your business significant cash. The good news: the biggest improvements come from starting the basics \u2014 and they produce results within weeks.",
+      "Your credit control is mostly reactive, your cashflow visibility is limited, and you don't have structured options for funding gaps. Late payments are silently costing you real money. The good news? The biggest improvements come from starting the basics. You'll see results within weeks.",
   },
   {
     tier: "at_risk",
@@ -221,15 +221,15 @@ export const OVERALL_RESULTS: OverallResult[] = [
     maxScore: 24,
     headline: "Your working capital cycle has room to improve",
     summary:
-      "You have some processes in place, but gaps in your credit control, cashflow forecasting, or finance strategy mean cash is leaking through. You're doing better than most UK businesses, but there's a significant opportunity to tighten up and unlock working capital you didn't know you had.",
+      "You have some processes in place, but gaps in your credit control, forecasting, or finance strategy mean cash is leaking through. You're ahead of most UK businesses. There's a real opportunity to tighten up and free working capital you didn't know you had.",
   },
   {
     tier: "good",
     minScore: 25,
     maxScore: 32,
-    headline: "Your working capital cycle is solid \u2014 with gaps to close",
+    headline: "Your working capital cycle is solid, with gaps to close",
     summary:
-      "You've built good foundations. The opportunity now is in connecting the pieces \u2014 linking your collection activity to cashflow forecasting, optimising which channels work for each debtor, and making sure your finance options match your actual cash cycle.",
+      "You've built good foundations. The next step is connecting the pieces. Link your collection activity to your forecast, find the right channel for each debtor, and make sure your finance options match your actual cash cycle.",
   },
   {
     tier: "excellent",
@@ -237,7 +237,7 @@ export const OVERALL_RESULTS: OverallResult[] = [
     maxScore: 40,
     headline: "Your working capital cycle is best-in-class",
     summary:
-      "You're ahead of the vast majority of UK businesses. The remaining opportunity is in intelligent automation \u2014 letting the system handle routine conversations while your team focuses on strategy and the relationships that matter most.",
+      "You're ahead of the vast majority of UK businesses. The remaining opportunity is automation. Let the system handle routine conversations while your team focuses on strategy and the relationships that matter most.",
   },
 ];
 
@@ -262,12 +262,12 @@ export const SECTION_RECOMMENDATIONS: SectionRecommendation[] = [
     sectionId: "credit_control",
     tier: "at_risk",
     heading: "Add structure to your chasing",
-    body: "You're chasing, but inconsistently. A multi-step escalation sequence \u2014 friendly reminder, firm follow-up, final notice \u2014 with the right timing will dramatically improve collection rates.",
+    body: "You're chasing, but inconsistently. A multi-step escalation sequence (friendly reminder, firm follow-up, final notice) with the right timing will dramatically improve collection rates.",
   },
   {
     sectionId: "credit_control",
     tier: "good",
-    heading: "Optimise your channel mix",
+    heading: "Improve your channel mix",
     body: "Your process is solid. The next step is understanding which debtors respond to which channels and automating the coordination between email, SMS, and phone.",
   },
   {
@@ -287,7 +287,7 @@ export const SECTION_RECOMMENDATIONS: SectionRecommendation[] = [
     sectionId: "cashflow",
     tier: "at_risk",
     heading: "Move from static to rolling forecasts",
-    body: "Your current forecasting is reactive. A rolling 13-week forecast that updates from live data will show you problems 4\u20136 weeks before they hit your bank account.",
+    body: "Your current forecasting is reactive. A rolling 13-week forecast that updates from live data will show you problems 4 to 6 weeks before they hit your bank account.",
   },
   {
     sectionId: "cashflow",
@@ -299,14 +299,14 @@ export const SECTION_RECOMMENDATIONS: SectionRecommendation[] = [
     sectionId: "cashflow",
     tier: "excellent",
     heading: "Link collection to forecast",
-    body: "Your forecasting is strong. Connecting it directly to your collection activity \u2014 so accelerating chasing on key invoices automatically improves your forecast \u2014 closes the loop.",
+    body: "Your forecasting is strong. Connect it directly to your collection activity. When you speed up chasing on key invoices, your forecast improves automatically. That closes the loop.",
   },
   // Finance
   {
     sectionId: "finance",
     tier: "critical",
     heading: "Understand your options before you need them",
-    body: "When a cashflow gap hits, you shouldn't be scrambling. Understanding what finance products exist \u2014 invoice factoring, credit lines, asset finance \u2014 before you need them puts you in control.",
+    body: "When a cashflow gap hits, you shouldn't be scrambling. Know what finance products exist (invoice factoring, credit lines, asset finance) before you need them. That puts you in control.",
   },
   {
     sectionId: "finance",
@@ -323,8 +323,8 @@ export const SECTION_RECOMMENDATIONS: SectionRecommendation[] = [
   {
     sectionId: "finance",
     tier: "excellent",
-    heading: "Optimise your cost of capital",
-    body: "You have strong financial management. The opportunity is in continuously matching the cheapest available finance to your actual cash cycle \u2014 reducing the cost of bridging gaps.",
+    heading: "Lower your cost of capital",
+    body: "You have strong financial management. The next step is continuously matching the cheapest available finance to your actual cash cycle, so you reduce the cost of bridging gaps.",
   },
 ];
 
@@ -332,11 +332,11 @@ export const SECTION_RECOMMENDATIONS: SectionRecommendation[] = [
 
 export const BOOK_CHAPTER_MAP: Record<SectionId, string> = {
   credit_control:
-    "Chapters 3\u20135 on building a systematic collections process and multi-channel chasing",
+    "Chapters 3 to 5 on building a systematic collections process and multi-channel chasing",
   cashflow:
-    "Chapters 6\u20138 on cashflow forecasting, visibility, and early warning systems",
+    "Chapters 6 to 8 on cashflow forecasting, visibility, and early warning systems",
   finance:
-    "Chapters 9\u201311 on working capital options, invoice finance, and bridging gaps",
+    "Chapters 9 to 11 on working capital options, invoice finance, and bridging gaps",
 };
 
 // ─── Comparison Stats ────────────────────────────────────────────────────────
