@@ -40,7 +40,7 @@ export default function HomePage() {
             </div>
             <div className="relative">
               <img
-                src="/images/marketing/qashivo-home-hero.jpeg"
+                src="/images/marketing/qashivo-home-hero.png"
                 alt="Qashivo platform overview showing Qollections credit control, Qashflow cashflow intelligence, and Qapital working capital modules"
                 className="w-full rounded-lg"
               />
