@@ -492,6 +492,140 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Public contact page form endpoint (no auth required)
+  const contactFormSchema = z.object({
+    fullName: z.string().min(1, "Name is required"),
+    workEmail: z.string().email("Valid email is required"),
+    company: z.string().optional(),
+    role: z.string().optional(),
+    annualRevenue: z.string().optional(),
+    primaryObjective: z.string().optional(),
+    requirements: z.string().optional(),
+  });
+
+  app.post('/api/contact', async (req, res) => {
+    try {
+      const data = contactFormSchema.parse(req.body);
+
+      const { sendEmail } = await import('./services/sendgrid');
+
+      const qashivoEmail = 'hello@qashivo.com';
+      const baseUrl = process.env.SITE_BASE_URL || 'https://www.qashivo.com';
+
+      // Build details table rows for optional fields
+      const optionalRows = [
+        data.company && `<tr><td style="padding:10px;border:1px solid #ddd;font-weight:bold;background:#f9f9f9;">Company</td><td style="padding:10px;border:1px solid #ddd;">${data.company}</td></tr>`,
+        data.role && `<tr><td style="padding:10px;border:1px solid #ddd;font-weight:bold;background:#f9f9f9;">Role</td><td style="padding:10px;border:1px solid #ddd;">${data.role}</td></tr>`,
+        data.annualRevenue && `<tr><td style="padding:10px;border:1px solid #ddd;font-weight:bold;background:#f9f9f9;">Annual Revenue</td><td style="padding:10px;border:1px solid #ddd;">${data.annualRevenue}</td></tr>`,
+        data.primaryObjective && `<tr><td style="padding:10px;border:1px solid #ddd;font-weight:bold;background:#f9f9f9;">Biggest Challenge</td><td style="padding:10px;border:1px solid #ddd;">${data.primaryObjective}</td></tr>`,
+      ].filter(Boolean).join('');
+
+      // Email to Qashivo team
+      const teamEmailHtml = `
+        <h2>New Contact Form Submission from ${data.fullName}</h2>
+        <table style="border-collapse:collapse;width:100%;max-width:600px;">
+          <tr><td style="padding:10px;border:1px solid #ddd;font-weight:bold;background:#f9f9f9;">Name</td><td style="padding:10px;border:1px solid #ddd;">${data.fullName}</td></tr>
+          <tr><td style="padding:10px;border:1px solid #ddd;font-weight:bold;background:#f9f9f9;">Email</td><td style="padding:10px;border:1px solid #ddd;"><a href="mailto:${data.workEmail}">${data.workEmail}</a></td></tr>
+          ${optionalRows}
+        </table>
+        ${data.requirements ? `<h3 style="margin-top:20px;">Message</h3><p style="background:#f9f9f9;padding:15px;border-radius:5px;">${data.requirements.replace(/\n/g, '<br>')}</p>` : ''}
+        <hr style="margin:20px 0;">
+        <p style="color:#666;font-size:12px;">Submitted via the Qashivo website contact page.</p>
+      `;
+
+      const teamEmailText = [
+        `New Contact Form Submission`,
+        `Name: ${data.fullName}`,
+        `Email: ${data.workEmail}`,
+        data.company && `Company: ${data.company}`,
+        data.role && `Role: ${data.role}`,
+        data.annualRevenue && `Annual Revenue: ${data.annualRevenue}`,
+        data.primaryObjective && `Biggest Challenge: ${data.primaryObjective}`,
+        data.requirements && `\nMessage:\n${data.requirements}`,
+      ].filter(Boolean).join('\n');
+
+      // Confirmation email to the submitter
+      const firstName = data.fullName.split(' ')[0];
+      const confirmationEmailHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+        <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;line-height:1.6;color:#333;max-width:600px;margin:0 auto;padding:20px;">
+          <div style="text-align:center;margin-bottom:30px;">
+            <table align="center" cellpadding="0" cellspacing="0" style="margin:0 auto;">
+              <tr>
+                <td style="vertical-align:middle;padding-right:10px;">
+                  <img src="${baseUrl}/images/qashivo-logo.png" alt="Qashivo" width="36" height="36" style="display:block;border:0;">
+                </td>
+                <td style="vertical-align:middle;">
+                  <span style="color:#0B0F17;font-size:24px;font-weight:700;letter-spacing:-0.5px;">Qashivo</span>
+                </td>
+              </tr>
+            </table>
+          </div>
+
+          <p style="color:#333;font-size:16px;">Hi ${firstName},</p>
+
+          <p style="color:#556070;">Thanks for getting in touch. We've received your message and will get back to you within 4 business hours.</p>
+
+          <p style="color:#556070;">In the meantime, have you taken our free Cashflow Health Check?</p>
+
+          <div style="text-align:center;margin:30px 0;">
+            <a href="${baseUrl}/cashflow-health-check" style="display:inline-block;background:#12B8C4;color:white;text-decoration:none;padding:12px 30px;border-radius:25px;font-weight:500;">Take the Cashflow Health Check</a>
+          </div>
+
+          <p style="color:#556070;">Best,<br>The Qashivo Team</p>
+
+          <hr style="border:none;border-top:1px solid #E6E8EC;margin:30px 0;">
+          <p style="color:#999;font-size:12px;text-align:center;">
+            Nexus KPI Limited. Built in London. Backed by innovation.<br>
+            <a href="${baseUrl}" style="color:#12B8C4;">www.qashivo.com</a>
+          </p>
+        </body>
+        </html>
+      `;
+
+      const confirmationEmailText = `Hi ${firstName},\n\nThanks for getting in touch. We've received your message and will get back to you within 4 business hours.\n\nIn the meantime, have you taken our free Cashflow Health Check?\n${baseUrl}/cashflow-health-check\n\nBest,\nThe Qashivo Team`;
+
+      // Send email to Qashivo team
+      const teamEmailResult = await sendEmail({
+        to: qashivoEmail,
+        from: qashivoEmail,
+        subject: `New Contact Form Submission from ${data.fullName}`,
+        html: teamEmailHtml,
+        text: teamEmailText,
+        replyTo: data.workEmail,
+      });
+
+      // Send confirmation email to submitter
+      const confirmationResult = await sendEmail({
+        to: data.workEmail,
+        from: qashivoEmail,
+        subject: 'Thanks for contacting Qashivo',
+        html: confirmationEmailHtml,
+        text: confirmationEmailText,
+        trackClicks: false,
+      });
+
+      if (!confirmationResult.success) {
+        console.warn('Failed to send contact confirmation email:', confirmationResult.error);
+      }
+
+      if (teamEmailResult.success) {
+        res.json({ success: true, fullName: data.fullName, workEmail: data.workEmail });
+      } else {
+        console.error('Failed to send contact team email:', teamEmailResult.error);
+        res.status(500).json({ success: false, message: 'Failed to send your message. Please try again or email us directly at hello@qashivo.com.' });
+      }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ success: false, message: error.errors[0].message });
+      }
+      console.error('Contact form error:', error);
+      res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
+    }
+  });
+
   // Auth middleware
   await setupAuth(app);
 

@@ -16,11 +16,31 @@ export default function ContactPage() {
   const [primaryObjective, setPrimaryObjective] = useState("");
   const [requirements, setRequirements] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName.trim() || !workEmail.trim()) return;
-    setSubmitted(true);
+    setSubmitting(true);
+    setError("");
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fullName, workEmail, company, role, annualRevenue, primaryObjective, requirements }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSubmitted(true);
+      } else {
+        setError(data.message || "Something went wrong. Please try again.");
+      }
+    } catch {
+      setError("Failed to send. Please try again or email us at hello@qashivo.com.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const inputClass =
@@ -68,10 +88,10 @@ export default function ContactPage() {
                       </svg>
                     </div>
                     <h3 className="font-headline text-2xl font-extrabold text-mkt-primary mb-4">
-                      Submission Received
+                      Thanks {fullName.split(" ")[0]}.
                     </h3>
                     <p className="font-body text-on-surface-variant text-lg">
-                      Thank you. We'll be in touch within 4 business hours.
+                      We've sent a confirmation to {workEmail} and will be in touch within 4 business hours.
                     </p>
                   </div>
                 ) : (
@@ -199,12 +219,17 @@ export default function ContactPage() {
                         />
                       </div>
 
+                      {error && (
+                        <p className="text-red-600 text-sm font-medium">{error}</p>
+                      )}
+
                       {/* Submit */}
                       <button
                         type="submit"
-                        className="w-full bg-mkt-primary text-white font-bold text-sm tracking-widest uppercase py-4 hover:bg-mkt-primary/90 transition-colors"
+                        disabled={submitting}
+                        className="w-full bg-mkt-primary text-white font-bold text-sm tracking-widest uppercase py-4 hover:bg-mkt-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        Book a Demo
+                        {submitting ? "Sending..." : "Book a Demo"}
                       </button>
                     </form>
                   </>
