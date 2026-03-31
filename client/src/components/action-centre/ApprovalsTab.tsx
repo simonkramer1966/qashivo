@@ -7,11 +7,22 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
   Check, X, Clock, Mail, MessageSquare, Phone, ChevronDown, ChevronUp,
-  ArrowRight, Eye,
+  ArrowRight, Eye, RefreshCw, Trash2, Loader2,
 } from "lucide-react";
 import { formatRelativeTime, normalizeChannel } from "./utils";
 
@@ -101,6 +112,57 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
     },
   });
 
+  const clearQueueMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/approval-queue/clear");
+      return res.json();
+    },
+    onSuccess: (data: { cancelled: number }) => {
+      toast({ title: `Approval queue cleared — ${data.cancelled} items cancelled` });
+      queryClient.invalidateQueries({ queryKey: ["/api/action-centre"] });
+    },
+    onError: () => toast({ title: "Failed to clear queue", variant: "destructive" }),
+  });
+
+  const runAgentMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/agent/run-now");
+      return res.json();
+    },
+    onSuccess: (data: { generated: number; communicationMode: string }) => {
+      if (data.communicationMode === "testing") {
+        toast({ title: `${data.generated} new emails generated`, description: "Running in test mode — emails will be sent to test addresses, not real debtors." });
+      } else {
+        toast({ title: `${data.generated} new emails generated and queued for approval` });
+      }
+      queryClient.invalidateQueries({ queryKey: ["/api/action-centre"] });
+    },
+    onError: (err: Error) => toast({ title: "Agent run failed", description: err.message, variant: "destructive" }),
+  });
+
+  const [showLiveWarning, setShowLiveWarning] = useState(false);
+
+  const handleRunAgent = async () => {
+    try {
+      const res = await apiRequest("GET", "/api/agent/communication-mode");
+      const { mode } = await res.json();
+      if (mode === "off") {
+        toast({ title: "Communications are disabled", description: "Enable a communication mode in Settings > Autonomy & Rules first.", variant: "destructive" });
+        return;
+      }
+      if (mode === "testing") {
+        toast({ title: "Running in test mode", description: "Emails will be sent to test addresses, not real debtors." });
+      }
+      if (mode === "live") {
+        setShowLiveWarning(true);
+        return;
+      }
+      runAgentMutation.mutate();
+    } catch {
+      runAgentMutation.mutate();
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-3">
@@ -126,7 +188,77 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
   }
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-3">
+      {/* Action bar */}
+      <div className="flex items-center justify-end gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1.5"
+          onClick={handleRunAgent}
+          disabled={runAgentMutation.isPending}
+        >
+          {runAgentMutation.isPending ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <RefreshCw className="h-3.5 w-3.5" />
+          )}
+          {runAgentMutation.isPending ? "Generating..." : "Run agent now"}
+        </Button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10"
+              disabled={clearQueueMutation.isPending || actions.length === 0}
+            >
+              {clearQueueMutation.isPending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Trash2 className="h-3.5 w-3.5" />
+              )}
+              Clear queue
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Clear approval queue?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will cancel all {actions.length} pending items. This cannot be undone. The agent will generate new emails on the next scheduled run.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={() => clearQueueMutation.mutate()}
+              >
+                Clear queue
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+
+      {/* Live Mode Warning */}
+      <AlertDialog open={showLiveWarning} onOpenChange={setShowLiveWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>You are in Live mode</AlertDialogTitle>
+            <AlertDialogDescription>
+              Generated emails will be sent to real debtors after approval. Continue?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setShowLiveWarning(false); runAgentMutation.mutate(); }}>
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <Table>
         <TableHeader>
           <TableRow>

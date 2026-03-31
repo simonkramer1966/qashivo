@@ -433,4 +433,87 @@ export function registerActionCentreRoutes(app: Express): void {
       res.status(500).json({ message: error.message });
     }
   });
+
+  // ── POST /api/approval-queue/clear ─────────────────────────
+  // Soft-cancel all pending items in the approval queue
+  app.post("/api/approval-queue/clear", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const result = await db
+        .update(actions)
+        .set({
+          status: "cancelled",
+          metadata: sql`jsonb_set(COALESCE(metadata, '{}'), '{cancellationReason}', '"manually_cleared"')`,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(actions.tenantId, user.tenantId),
+            inArray(actions.status, ["pending", "pending_approval", "queued"]),
+          )
+        )
+        .returning({ id: actions.id });
+
+      console.log(`[ACTION-CENTRE] Queue cleared — ${result.length} items cancelled for tenant ${user.tenantId}`);
+
+      res.json({ cancelled: result.length });
+    } catch (error: any) {
+      console.error("Error clearing approval queue:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ── POST /api/agent/run-now ────────────────────────────────
+  // Trigger the collections agent on-demand for all eligible debtors
+  app.post("/api/agent/run-now", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      // Check communication mode
+      const tenant = await storage.getTenant(user.tenantId);
+      if (!tenant) return res.status(404).json({ message: "Tenant not found" });
+
+      const mode = (tenant as any).communicationMode ?? "off";
+      if (mode === "off") {
+        return res.status(400).json({
+          message: "Communications are disabled. Enable a communication mode in Settings > Autonomy & Rules first.",
+          code: "COMMS_OFF",
+        });
+      }
+
+      // Return communication mode info so frontend can show appropriate toast
+      const { checkCollectionActions } = await import("../services/collectionsAutomation");
+      const generatedActions = await checkCollectionActions(user.tenantId);
+
+      console.log(`[ACTION-CENTRE] Agent run-now — ${generatedActions.length} actions generated for tenant ${user.tenantId} (mode: ${mode})`);
+
+      res.json({
+        success: true,
+        generated: generatedActions.length,
+        communicationMode: mode,
+        message: `${generatedActions.length} new emails generated and queued for approval`,
+      });
+    } catch (error: any) {
+      console.error("Error running agent:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ── GET /api/agent/communication-mode ──────────────────────
+  // Return the current tenant communication mode (for frontend safety checks)
+  app.get("/api/agent/communication-mode", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const tenant = await storage.getTenant(user.tenantId);
+      res.json({ mode: (tenant as any)?.communicationMode ?? "off" });
+    } catch (error: any) {
+      console.error("Error fetching communication mode:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
 }

@@ -17,6 +17,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import {
   CheckCircle2,
@@ -45,6 +56,8 @@ import {
   StickyNote,
   PauseCircle,
   Star as StarIcon,
+  RefreshCw,
+  Trash2,
 } from "lucide-react";
 import {
   BarChart,
@@ -283,6 +296,61 @@ export default function QollectionsDashboard() {
     onError: (err: Error) => toast({ title: "Snooze failed", description: err.message, variant: "destructive" }),
   });
 
+  const clearQueueMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/approval-queue/clear");
+      return res.json();
+    },
+    onSuccess: (data: { cancelled: number }) => {
+      toast({ title: `Approval queue cleared — ${data.cancelled} items cancelled` });
+      queryClient.invalidateQueries({ queryKey: ["/api/actions/pending-queue"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/approvals"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/qollections/activity"] });
+    },
+    onError: (err: Error) => toast({ title: "Failed to clear queue", description: err.message, variant: "destructive" }),
+  });
+
+  const runAgentMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/agent/run-now");
+      return res.json();
+    },
+    onSuccess: (data: { generated: number; communicationMode: string; message: string }) => {
+      if (data.communicationMode === "testing") {
+        toast({ title: `${data.generated} new emails generated`, description: "Running in test mode — emails will be sent to test addresses, not real debtors." });
+      } else {
+        toast({ title: `${data.generated} new emails generated and queued for approval` });
+      }
+      queryClient.invalidateQueries({ queryKey: ["/api/actions/pending-queue"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/approvals"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/qollections/activity"] });
+    },
+    onError: (err: Error) => toast({ title: "Agent run failed", description: err.message, variant: "destructive" }),
+  });
+
+  const [showLiveWarning, setShowLiveWarning] = useState(false);
+
+  const handleRunAgent = async () => {
+    try {
+      const res = await apiRequest("GET", "/api/agent/communication-mode");
+      const { mode } = await res.json();
+      if (mode === "off") {
+        toast({ title: "Communications are disabled", description: "Enable a communication mode in Settings > Autonomy & Rules first.", variant: "destructive" });
+        return;
+      }
+      if (mode === "testing") {
+        toast({ title: "Running in test mode", description: "Emails will be sent to test addresses, not real debtors." });
+      }
+      if (mode === "live") {
+        setShowLiveWarning(true);
+        return;
+      }
+      runAgentMutation.mutate();
+    } catch {
+      runAgentMutation.mutate();
+    }
+  };
+
   const openEditDialog = (action: PendingAction) => {
     setEditSubject(action.subject || "");
     setEditBody((action.content || "").replace(/<[^>]*>/g, ""));
@@ -407,11 +475,65 @@ export default function QollectionsDashboard() {
                   </CardTitle>
                   <CardDescription className="text-xs">AI-generated actions awaiting review</CardDescription>
                 </div>
-                {queue.length > 0 && (
-                  <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
-                    {queue.length} pending
-                  </Badge>
-                )}
+                <div className="flex items-center gap-2">
+                  {queue.length > 0 && (
+                    <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
+                      {queue.length} pending
+                    </Badge>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs gap-1"
+                    onClick={handleRunAgent}
+                    disabled={runAgentMutation.isPending}
+                  >
+                    {runAgentMutation.isPending ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-3 w-3" />
+                    )}
+                    <span className="hidden sm:inline">
+                      {runAgentMutation.isPending ? "Generating..." : "Run agent now"}
+                    </span>
+                  </Button>
+                  {queue.length > 0 && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          disabled={clearQueueMutation.isPending}
+                        >
+                          {clearQueueMutation.isPending ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-3 w-3" />
+                          )}
+                          <span className="hidden sm:inline">Clear queue</span>
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Clear approval queue?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will cancel all {queue.length} pending items. This cannot be undone. The agent will generate new emails on the next scheduled run.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            onClick={() => clearQueueMutation.mutate()}
+                          >
+                            Clear queue
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -722,6 +844,24 @@ export default function QollectionsDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Live Mode Warning Dialog */}
+      <AlertDialog open={showLiveWarning} onOpenChange={setShowLiveWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>You are in Live mode</AlertDialogTitle>
+            <AlertDialogDescription>
+              Generated emails will be sent to real debtors after approval. Continue?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setShowLiveWarning(false); runAgentMutation.mutate(); }}>
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppShell>
   );
 }
