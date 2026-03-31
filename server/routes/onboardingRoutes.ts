@@ -662,17 +662,28 @@ export function registerOnboardingRoutes(app: Express): void {
         onboardingCompletedAt: new Date(),
       });
 
-      // Mark step 6 as completed
-      await onboardingService.updateStepStatus(tenantId, 6, "COMPLETED");
+      // Mark step 6 as completed (best-effort)
+      try {
+        await onboardingService.updateStepStatus(tenantId, 6, "COMPLETED");
+      } catch (stepErr) {
+        console.error("Failed to mark step 6 as completed (non-blocking):", stepErr);
+      }
 
-      await storage.createActivityLog({
-        tenantId,
-        userId: user?.id,
-        activityType: "onboarding_completed",
-        category: "audit",
-        description: "Onboarding completed — agent is live",
-        metadata: {},
-      });
+      // Activity log is best-effort — don't block go-live if it fails
+      try {
+        await storage.createActivityLog({
+          tenantId,
+          userId: user?.id,
+          activityType: "onboarding_completed",
+          category: "audit",
+          action: "completed",
+          result: "success",
+          description: "Onboarding completed — agent is live",
+          metadata: {},
+        });
+      } catch (logErr) {
+        console.error("Failed to create go-live activity log (non-blocking):", logErr);
+      }
 
       res.json({ success: true, completed: true });
     } catch (error) {
@@ -689,14 +700,20 @@ export function registerOnboardingRoutes(app: Express): void {
 
       const completed = await onboardingService.tryCompleteOnboarding(tenantId);
       if (completed) {
-        await storage.createActivityLog({
-          tenantId,
-          userId: user?.id,
-          activityType: "onboarding_completed",
-          category: "audit",
-          description: "Onboarding wizard completed",
-          metadata: {},
-        });
+        try {
+          await storage.createActivityLog({
+            tenantId,
+            userId: user?.id,
+            activityType: "onboarding_completed",
+            category: "audit",
+            action: "completed",
+            result: "success",
+            description: "Onboarding wizard completed",
+            metadata: {},
+          });
+        } catch (logErr) {
+          console.error("Failed to create complete-all activity log (non-blocking):", logErr);
+        }
       }
       res.json({ success: true, completed });
     } catch (error) {
