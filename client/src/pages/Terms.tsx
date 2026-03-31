@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
-import logo from "@assets/Main_Nexus_Logo_copy_1768893717341.png";
+import logo from "@/assets/qashivo-logo.png";
 
 export default function Terms() {
   const [, setLocation] = useLocation();

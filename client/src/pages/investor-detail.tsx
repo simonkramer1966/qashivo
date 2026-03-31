@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Brain, TrendingUp, Shield, Zap, CheckCircle, Target, Users, Rocket, BarChart3, Clock, DollarSign, Award, ArrowRight, Phone, Mail } from "lucide-react";
 import { SiXero, SiStripe, SiOpenai, SiQuickbooks } from "react-icons/si";
-import qashivoLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
+import qashivoLogo from "@/assets/qashivo-logo.png";
 
 export default function InvestorDetail() {
   return (

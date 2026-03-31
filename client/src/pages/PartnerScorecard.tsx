@@ -7,7 +7,7 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowRight, Check, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
-import logo from "@assets/Main_Nexus_Logo_copy_1768893717341.png";
+import logo from "@/assets/qashivo-logo.png";
 import overviewScreenshot from "@assets/Screenshot_2026-01-20_at_16.41.29_1768927459381.png";
 
 type Stage = "signup" | "scorecard" | "results";

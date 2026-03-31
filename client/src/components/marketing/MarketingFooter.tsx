@@ -1,11 +1,13 @@
 import { Link } from "wouter";
+import qashivoLogo from "@/assets/qashivo-logo.png";
 
 export default function MarketingFooter() {
   return (
     <footer className="w-full bg-slate-50 border-t border-slate-200">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-12 max-w-7xl mx-auto px-8 py-20">
         <div className="col-span-1">
-          <div className="text-2xl font-black text-slate-900 mb-6 uppercase tracking-tighter">
+          <div className="flex items-center gap-2 text-2xl font-black text-slate-900 mb-6 uppercase tracking-tighter">
+            <img src={qashivoLogo} alt="Qashivo" className="h-8 w-8" />
             Qashivo
           </div>
           <p className="text-slate-500 text-sm font-medium leading-relaxed">

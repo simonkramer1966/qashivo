@@ -25,7 +25,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import logo from "@assets/Main_Nexus_Logo_copy_1768893717341.png";
+import logo from "@/assets/qashivo-logo.png";
 
 const contactSchema = z.object({
   name: z.string().min(1, "Name is required"),

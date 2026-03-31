@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { HandshakeIcon, TrendingUp, Rocket, Users, Star, Award, Calendar, CheckCircle, Target, Zap, Shield, Clock, DollarSign, BarChart3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SiXero, SiStripe, SiOpenai, SiQuickbooks } from "react-icons/si";
-import qashivoLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
+import qashivoLogo from "@/assets/qashivo-logo.png";
 import partnerVideo from "@assets/Partner v1_1760867099574.mp4";
 
 export default function BetaPartner() {

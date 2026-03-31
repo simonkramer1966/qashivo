@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import heroVideo from "@assets/Hero-Animation-Feb-25-10-10-55_1772704261589.mp4";
-import logo from "@assets/Main_Nexus_Logo_copy_1768893717341.png";
+import logo from "@/assets/qashivo-logo.png";
 import simonPic from "@assets/Simon_Pic_1772705100283.avif";
 import officeImg from "@assets/image_1772706665154.png";
 import smeOwnerImg from "@assets/image_1772706996989.png";

@@ -13,7 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { queryClient } from "@/lib/queryClient";
-import nexusLogo from "@assets/Main_Nexus_Logo_copy_1768893717341.png";
+import nexusLogo from "@/assets/qashivo-logo.png";
 
 interface AdminLayoutProps {
   children: React.ReactNode;

@@ -11,7 +11,7 @@ import {
   Lock
 } from "lucide-react";
 import heroImage from "@assets/generated_images/Advanced_AI_technology_center_4b230f51.png";
-import logo from "@assets/Main Nexus Logo copy_1763392904110.png";
+import logo from "@/assets/qashivo-logo.png";
 import xeroLogo from "@assets/Xero_software_logo.svg_1763402921236.png";
 
 export default function Integrations() {

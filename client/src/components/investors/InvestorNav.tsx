@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
-import logo from "@assets/Main_Nexus_Logo_copy_1768893717341.png";
+import logo from "@/assets/qashivo-logo.png";
 
 const navLinks = [
   { label: "Home", href: "/investors" },

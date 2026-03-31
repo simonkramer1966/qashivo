@@ -7,7 +7,7 @@ import { Check, Handshake, ClipboardCheck, BarChart3, Shield, Eye, FileCheck, Cl
 import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
-import logo from "@assets/Main_Nexus_Logo_copy_1768893717341.png";
+import logo from "@/assets/qashivo-logo.png";
 
 interface DesignPartnerFormData {
   name: string;

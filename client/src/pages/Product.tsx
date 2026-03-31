@@ -3,7 +3,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useLocation } from "wouter";
 import { ArrowRight, Check, Menu, X } from "lucide-react";
 import { useState } from "react";
-import logo from "@assets/Main_Nexus_Logo_copy_1768893717341.png";
+import logo from "@/assets/qashivo-logo.png";
 import overviewScreenshot from "@assets/Screenshot_2026-01-15_at_16.33.25_1768920824618.png";
 import cashFlowScreenshot from "@assets/Screenshot_2026-01-15_at_16.57.28_1768920824623.png";
 import cashboardScreenshot from "@assets/Screenshot_2026-01-20_at_21.57.35_1768946629428.png";

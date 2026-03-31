@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import splashImage from "@assets/stock_images/financial_technology_0d743e1b.jpg";
-import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
+import nexusLogo from "@/assets/qashivo-logo.png";
 
 interface SplashScreenProps {
   onEnter: () => void;

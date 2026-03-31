@@ -14,7 +14,7 @@ import { Oscilloscope } from "@/components/Oscilloscope";
 import { EmailOutcomeDemo } from "@/components/EmailOutcomeDemo";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, MessageSquare, PhoneOff } from "lucide-react";
-import logo from "@assets/Main_Nexus_Logo_copy_1768893717341.png";
+import logo from "@/assets/qashivo-logo.png";
 import dashboardScreenshot from "@assets/Screenshot_2026-01-20_at_16.41.29_1769100769786.png";
 import actionCentreScreenshot from "@assets/Screenshot_2026-01-20_at_22.11.45_1769101272168.png";
 import xeroLogo from "@assets/Xero_software_logo.svg_1768974407536.png";

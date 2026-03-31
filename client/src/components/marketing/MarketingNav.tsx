@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
+import qashivoLogo from "@/assets/qashivo-logo.png";
 
 interface MarketingNavProps {
   currentPage?: string;
@@ -26,8 +27,11 @@ export default function MarketingNav({ currentPage }: MarketingNavProps) {
     <nav className="fixed top-0 w-full z-50 bg-white/90 backdrop-blur-md border-b border-slate-200">
       <div className="flex justify-between items-center max-w-7xl mx-auto px-6 py-4">
         <Link href="/">
-          <span className="text-2xl font-black text-slate-900 tracking-tighter uppercase cursor-pointer">
-            Qashivo
+          <span className="flex items-center gap-2 cursor-pointer">
+            <img src={qashivoLogo} alt="Qashivo" className="h-8 w-8" />
+            <span className="text-2xl font-black text-slate-900 tracking-tighter uppercase">
+              Qashivo
+            </span>
           </span>
         </Link>
 

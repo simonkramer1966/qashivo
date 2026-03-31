@@ -34,7 +34,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
+import nexusLogo from "@/assets/qashivo-logo.png";
 
 // ── Navigation structure ──────────────────────────────────
 

@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
-import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
+import nexusLogo from "@/assets/qashivo-logo.png";
 import splashImage from "@assets/stock_images/financial_technology_0d743e1b.jpg";
 
 const getUserTypeAndRedirect = async () => {
