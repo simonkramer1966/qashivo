@@ -388,7 +388,7 @@ export default function DemoPage() {
             <span className="text-[11px] text-brand-teal font-bold tracking-[0.2em] uppercase mb-4 block font-headline">
               Interactive Demo
             </span>
-            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-6 leading-tight font-headline">
+            <h1 className="text-6xl md:text-8xl font-extrabold tracking-tight mb-6 leading-[1.1] font-headline">
               The future of{" "}
               <span className="text-brand-teal">automated recovery</span>.
             </h1>
