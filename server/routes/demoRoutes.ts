@@ -238,10 +238,17 @@ export function registerDemoRoutes(app: Express) {
             "This is a live demo call showcasing Qashivo's AI credit control capabilities",
         });
 
-        // The frontend sends phoneNumber already in E.164 format (e.g. +447716273336)
-        console.log(
-          `[DEMO] Starting Retell call — agent: ${demoAgentId}, to: ${phoneNumber.trim()}, caller: ${name.trim()}`
-        );
+        // Pre-call diagnostics
+        const fromNumber = process.env.RETELL_PHONE_NUMBER || "(not set)";
+        console.log(`[DEMO] ====== PRE-CALL DIAGNOSTICS ======`);
+        console.log(`[DEMO] Agent ID: ${demoAgentId?.substring(0, 8)}...`);
+        console.log(`[DEMO] API Key: ${process.env.RETELL_API_KEY?.substring(0, 8)}...`);
+        console.log(`[DEMO] From number (RETELL_PHONE_NUMBER): ${fromNumber}`);
+        console.log(`[DEMO] To number (raw from frontend): "${phoneNumber.trim()}"`);
+        console.log(`[DEMO] To number length: ${phoneNumber.trim().length}, starts with +: ${phoneNumber.trim().startsWith("+")}`);
+        console.log(`[DEMO] Caller name: ${name.trim()}`);
+        console.log(`[DEMO] Call variables:`, JSON.stringify(callVariables, null, 2));
+        console.log(`[DEMO] ====================================`);
 
         const callResult = await createUnifiedRetellCall({
           toNumber: phoneNumber.trim(),
@@ -251,9 +258,8 @@ export function registerDemoRoutes(app: Express) {
           context: "PUBLIC_DEMO",
         });
 
-        console.log(
-          `[DEMO] Retell call created — retellCallId: ${callResult.callId}, status: ${callResult.status}`
-        );
+        console.log(`[DEMO] Retell call created successfully — retellCallId: ${callResult.callId}, status: ${callResult.status}`);
+        console.log(`[DEMO] Full call result:`, JSON.stringify(callResult, null, 2));
 
         await storage.updateDemoCall(call.id, {
           retellCallId: callResult.callId,
@@ -265,7 +271,15 @@ export function registerDemoRoutes(app: Express) {
           status: "initiated",
         });
       } catch (retellError: any) {
-        console.error("[DEMO] Retell call failed:", retellError?.message);
+        console.error(`[DEMO] ====== RETELL CALL FAILED ======`);
+        console.error(`[DEMO] Error message: ${retellError?.message}`);
+        console.error(`[DEMO] Error name: ${retellError?.name}`);
+        console.error(`[DEMO] HTTP status: ${retellError?.status || retellError?.statusCode || "N/A"}`);
+        console.error(`[DEMO] Error body:`, retellError?.body || retellError?.response?.data || "N/A");
+        console.error(`[DEMO] Error headers:`, retellError?.headers || retellError?.response?.headers || "N/A");
+        console.error(`[DEMO] Full error object:`, JSON.stringify(retellError, Object.getOwnPropertyNames(retellError), 2));
+        console.error(`[DEMO] Error stack:`, retellError?.stack);
+        console.error(`[DEMO] ================================`);
         // Update DB to failed so we have a record
         await storage.updateDemoCall(call.id, { status: "failed" });
         return res.status(502).json({
