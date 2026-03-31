@@ -309,11 +309,13 @@ export function registerDemoRoutes(app: Express) {
         call.status !== "failed"
       ) {
         try {
+          console.log(`[DEMO] Polling Retell for call ${call.retellCallId} (DB status: ${call.status})`);
           const { RetellService } = await import("../retell-service.js");
           const retellService = new RetellService();
           const retellCall = await (retellService as any).getCall(
             call.retellCallId
           );
+          console.log(`[DEMO] Retell getCall response — call_status: ${retellCall?.call_status}, duration_ms: ${retellCall?.duration_ms}, has_transcript: ${!!retellCall?.transcript}, has_transcript_object: ${!!retellCall?.transcript_object}`);
           if (retellCall) {
             const mappedStatus =
               retellCall.call_status === "ended"
@@ -414,8 +416,14 @@ export function registerDemoRoutes(app: Express) {
                 : call.callDurationSeconds ?? 0,
             });
           }
-        } catch {
-          // Retell lookup failed — return DB status
+        } catch (pollErr: any) {
+          console.error(`[DEMO] ====== CALL-STATUS POLL FAILED ======`);
+          console.error(`[DEMO] retellCallId: ${call.retellCallId}`);
+          console.error(`[DEMO] Error: ${pollErr?.message}`);
+          console.error(`[DEMO] Status: ${pollErr?.status || pollErr?.statusCode || "N/A"}`);
+          console.error(`[DEMO] Body:`, pollErr?.body || pollErr?.response?.data || "N/A");
+          console.error(`[DEMO] Full error:`, JSON.stringify(pollErr, Object.getOwnPropertyNames(pollErr), 2));
+          console.error(`[DEMO] ================================`);
         }
       }
 
