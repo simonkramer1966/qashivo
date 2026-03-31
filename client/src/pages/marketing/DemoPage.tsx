@@ -414,10 +414,9 @@ export default function DemoPage() {
       }
     } catch {
       setFallbackMsg(
-        "We couldn't connect the call right now. Here's a sample intelligence report from a recent Qashivo call."
+        "We couldn't connect the call right now. Please check your number and try again."
       );
       setCallState("fallback");
-      setShowResults(true);
     }
   }, [name, phone, countryCode]);
 

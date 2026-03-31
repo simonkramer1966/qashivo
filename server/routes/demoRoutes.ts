@@ -66,6 +66,13 @@ const SAMPLE_REPORT = {
 };
 
 export function registerDemoRoutes(app: Express) {
+  console.log("[DEMO] Registering demo routes — env check:", {
+    RETELL_API_KEY: process.env.RETELL_API_KEY ? "SET" : "MISSING",
+    RETELL_DEMO_AGENT_ID: process.env.RETELL_DEMO_AGENT_ID ? "SET" : "MISSING",
+    RETELL_AGENT_ID: process.env.RETELL_AGENT_ID ? "SET" : "MISSING",
+    RETELL_PHONE_NUMBER: process.env.RETELL_PHONE_NUMBER ? "SET" : "MISSING",
+  });
+
   // POST /api/demo/start-call — initiate a demo voice call
   app.post("/api/demo/start-call", async (req, res) => {
     try {
@@ -197,27 +204,10 @@ export function registerDemoRoutes(app: Express) {
         });
       } catch (retellError: any) {
         console.error("[DEMO] Retell call failed:", retellError?.message);
-        console.error("[DEMO] Retell error details:", {
-          status: retellError?.status,
-          response: retellError?.response?.data || retellError?.body || "no response body",
-        });
-        // Fallback to sample data
-        await storage.updateDemoCall(call.id, {
-          status: "completed",
-          transcript: SAMPLE_REPORT.transcript,
-          intentScore: SAMPLE_REPORT.intentScore,
-          sentiment: SAMPLE_REPORT.sentiment,
-          commitmentLevel: SAMPLE_REPORT.commitmentLevel,
-          cashflowImpact: SAMPLE_REPORT.cashflowImpact,
-          recommendedActions: SAMPLE_REPORT.recommendedActions,
-          riskInsights: SAMPLE_REPORT.riskInsights,
-          callDurationSeconds: SAMPLE_REPORT.callDurationSeconds,
-          completedAt: new Date(),
-        });
-        return res.json({
-          callId: call.id,
-          status: "completed",
-          fallback: true,
+        // Update DB to failed so we have a record
+        await storage.updateDemoCall(call.id, { status: "failed" });
+        return res.status(502).json({
+          message: `Voice call failed: ${retellError?.message || "Unknown Retell error"}. Please try again.`,
         });
       }
     } catch (error: any) {
