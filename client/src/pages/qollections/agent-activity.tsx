@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import CountdownBanner from "@/components/action-centre/CountdownBanner";
 import ModeSelector from "@/components/action-centre/ModeSelector";
+import OverviewTab from "@/components/action-centre/OverviewTab";
 import ApprovalsTab from "@/components/action-centre/ApprovalsTab";
 import ActionedTab from "@/components/action-centre/ActionedTab";
 import ExceptionsTab from "@/components/action-centre/ExceptionsTab";
@@ -51,11 +52,12 @@ export default function QollectionsAgentActivity() {
         {showCountdown && <CountdownBanner />}
 
         {/* Tabs */}
-        <Tabs defaultValue={showApprovals ? "approvals" : "actioned"}>
+        <Tabs defaultValue="overview">
           <TabsList>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
             {showApprovals && (
               <TabsTrigger value="approvals" className="gap-2">
-                Approvals Queue
+                Queue
                 {approvalCount > 0 && (
                   <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1.5 text-xs">
                     {approvalCount}
@@ -63,7 +65,7 @@ export default function QollectionsAgentActivity() {
                 )}
               </TabsTrigger>
             )}
-            <TabsTrigger value="actioned">Actioned Items</TabsTrigger>
+            <TabsTrigger value="actioned">Activity</TabsTrigger>
             <TabsTrigger value="exceptions" className="gap-2">
               Exceptions
               {exceptionCount > 0 && (
@@ -73,6 +75,10 @@ export default function QollectionsAgentActivity() {
               )}
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="overview" className="mt-4">
+            <OverviewTab />
+          </TabsContent>
 
           {showApprovals && (
             <TabsContent value="approvals" className="mt-4">

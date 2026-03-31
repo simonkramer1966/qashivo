@@ -2,8 +2,8 @@ import type { Express } from "express";
 import { isAuthenticated } from "../auth";
 import { storage } from "../storage";
 import { db } from "../db";
-import { actions, actionBatches, rejectionPatterns, tenants, messageDrafts } from "@shared/schema";
-import { eq, and, inArray, desc, sql, or } from "drizzle-orm";
+import { actions, actionBatches, rejectionPatterns, tenants, messageDrafts, contacts, invoices, disputes, complianceChecks, emailMessages, promisesToPay, paymentPlans } from "@shared/schema";
+import { eq, and, inArray, desc, sql, or, gte, lte, count, sum, not, isNull, between } from "drizzle-orm";
 import { batchProcessor } from "../services/batchProcessor";
 import { z } from "zod";
 
@@ -513,6 +513,534 @@ export function registerActionCentreRoutes(app: Express): void {
       res.json({ mode: (tenant as any)?.communicationMode ?? "off" });
     } catch (error: any) {
       console.error("Error fetching communication mode:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ── GET /api/action-centre/summary ──────────────────────────
+  // Control panel summary stats: queued, actioned, exceptions
+  app.get("/api/action-centre/summary", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const tenantId = user.tenantId;
+      const now = new Date();
+      const period = (req.query.period as string) || "week";
+
+      // Compute date range
+      let periodFrom: Date;
+      let periodTo: Date = now;
+
+      if (period === "today") {
+        periodFrom = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+      } else if (period === "month") {
+        periodFrom = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+      } else if (period === "custom") {
+        periodFrom = new Date(req.query.dateFrom as string);
+        periodTo = new Date(req.query.dateTo as string);
+        if (isNaN(periodFrom.getTime()) || isNaN(periodTo.getTime())) {
+          return res.status(400).json({ message: "Invalid dateFrom or dateTo for custom period" });
+        }
+      } else {
+        // week (default): Monday of this week
+        const dayOfWeek = now.getUTCDay(); // 0=Sun, 1=Mon...
+        const mondayOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        periodFrom = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - mondayOffset));
+      }
+
+      // Previous period (same length, immediately before)
+      const periodLengthMs = periodTo.getTime() - periodFrom.getTime();
+      const prevFrom = new Date(periodFrom.getTime() - periodLengthMs);
+      const prevTo = new Date(periodFrom.getTime());
+
+      const pendingStatuses = ["pending", "pending_approval", "queued"];
+      const completedStatuses = ["completed", "sent", "delivered"];
+
+      // ── QUEUED stats ──
+      let queued = { total: 0, emails: 0, sms: 0, calls: 0, waitingOver24h: 0, debtorsOver60DaysOverdue: 0, totalValueQueued: 0 };
+      try {
+        const queuedBase = and(eq(actions.tenantId, tenantId), inArray(actions.status, pendingStatuses));
+
+        const [totalResult] = await db.select({ count: sql<number>`count(*)::int` }).from(actions).where(queuedBase);
+        queued.total = totalResult?.count ?? 0;
+
+        const [emailResult] = await db.select({ count: sql<number>`count(*)::int` }).from(actions).where(and(queuedBase, eq(actions.type, "email")));
+        queued.emails = emailResult?.count ?? 0;
+
+        const [smsResult] = await db.select({ count: sql<number>`count(*)::int` }).from(actions).where(and(queuedBase, eq(actions.type, "sms")));
+        queued.sms = smsResult?.count ?? 0;
+
+        const [callsResult] = await db.select({ count: sql<number>`count(*)::int` }).from(actions).where(and(queuedBase, inArray(actions.type, ["call", "voice"])));
+        queued.calls = callsResult?.count ?? 0;
+
+        const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        const [waitingResult] = await db.select({ count: sql<number>`count(*)::int` }).from(actions).where(and(queuedBase, lte(actions.createdAt, twentyFourHoursAgo)));
+        queued.waitingOver24h = waitingResult?.count ?? 0;
+
+        // Debtors over 60 days overdue: join actions to invoices
+        try {
+          const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+          const [over60Result] = await db
+            .select({ count: sql<number>`count(distinct ${actions.contactId})::int` })
+            .from(actions)
+            .innerJoin(invoices, eq(actions.invoiceId, invoices.id))
+            .where(and(queuedBase, lte(invoices.dueDate, sixtyDaysAgo)));
+          queued.debtorsOver60DaysOverdue = over60Result?.count ?? 0;
+        } catch { queued.debtorsOver60DaysOverdue = 0; }
+
+        // Total value queued: join to invoices and sum amount
+        try {
+          const [valueResult] = await db
+            .select({ total: sql<number>`coalesce(sum(${invoices.amount}::numeric), 0)::float` })
+            .from(actions)
+            .innerJoin(invoices, eq(actions.invoiceId, invoices.id))
+            .where(queuedBase);
+          queued.totalValueQueued = valueResult?.total ?? 0;
+        } catch { queued.totalValueQueued = 0; }
+      } catch (err) {
+        console.error("[summary] queued query error:", err);
+      }
+
+      // ── ACTIONED stats ──
+      let actioned = { total: 0, emailsSent: 0, emailsSentVsPrevious: 0, smsSent: 0, callsMade: 0, promisesToPay: 0, paymentPlansAgreed: 0, responseRate: 0 };
+      try {
+        const actionedBase = and(
+          eq(actions.tenantId, tenantId),
+          inArray(actions.status, completedStatuses),
+          gte(actions.createdAt, periodFrom),
+          lte(actions.createdAt, periodTo),
+        );
+
+        const [totalResult] = await db.select({ count: sql<number>`count(*)::int` }).from(actions).where(actionedBase);
+        actioned.total = totalResult?.count ?? 0;
+
+        const [emailResult] = await db.select({ count: sql<number>`count(*)::int` }).from(actions).where(and(actionedBase, eq(actions.type, "email")));
+        actioned.emailsSent = emailResult?.count ?? 0;
+
+        const [smsResult] = await db.select({ count: sql<number>`count(*)::int` }).from(actions).where(and(actionedBase, eq(actions.type, "sms")));
+        actioned.smsSent = smsResult?.count ?? 0;
+
+        const [callsResult] = await db.select({ count: sql<number>`count(*)::int` }).from(actions).where(and(actionedBase, inArray(actions.type, ["call", "voice"])));
+        actioned.callsMade = callsResult?.count ?? 0;
+
+        // Emails sent vs previous period
+        try {
+          const prevActionedBase = and(
+            eq(actions.tenantId, tenantId),
+            inArray(actions.status, completedStatuses),
+            eq(actions.type, "email"),
+            gte(actions.createdAt, prevFrom),
+            lte(actions.createdAt, prevTo),
+          );
+          const [prevEmailResult] = await db.select({ count: sql<number>`count(*)::int` }).from(actions).where(prevActionedBase);
+          const prevEmails = prevEmailResult?.count ?? 0;
+          actioned.emailsSentVsPrevious = prevEmails > 0
+            ? Math.round(((actioned.emailsSent - prevEmails) / prevEmails) * 100)
+            : actioned.emailsSent > 0 ? 100 : 0;
+        } catch { actioned.emailsSentVsPrevious = 0; }
+
+        // Promises to pay
+        try {
+          const [ptpResult] = await db.select({ count: sql<number>`count(*)::int` }).from(promisesToPay).where(and(
+            eq(promisesToPay.tenantId, tenantId),
+            gte(promisesToPay.createdAt, periodFrom),
+            lte(promisesToPay.createdAt, periodTo),
+          ));
+          actioned.promisesToPay = ptpResult?.count ?? 0;
+        } catch { actioned.promisesToPay = 0; }
+
+        // Payment plans agreed
+        try {
+          const [ppResult] = await db.select({ count: sql<number>`count(*)::int` }).from(paymentPlans).where(and(
+            eq(paymentPlans.tenantId, tenantId),
+            gte(paymentPlans.createdAt, periodFrom),
+            lte(paymentPlans.createdAt, periodTo),
+          ));
+          actioned.paymentPlansAgreed = ppResult?.count ?? 0;
+        } catch { actioned.paymentPlansAgreed = 0; }
+
+        // Response rate: inbound emails / outbound emails * 100
+        try {
+          const emailPeriodBase = and(
+            eq(emailMessages.tenantId, tenantId),
+            gte(emailMessages.createdAt, periodFrom),
+            lte(emailMessages.createdAt, periodTo),
+          );
+          const [inboundResult] = await db.select({ count: sql<number>`count(*)::int` }).from(emailMessages).where(and(emailPeriodBase, eq(emailMessages.direction, "INBOUND")));
+          const [outboundResult] = await db.select({ count: sql<number>`count(*)::int` }).from(emailMessages).where(and(emailPeriodBase, eq(emailMessages.direction, "OUTBOUND")));
+          const inbound = inboundResult?.count ?? 0;
+          const outbound = outboundResult?.count ?? 0;
+          actioned.responseRate = outbound > 0 ? Math.round((inbound / outbound) * 100) : 0;
+        } catch { actioned.responseRate = 0; }
+      } catch (err) {
+        console.error("[summary] actioned query error:", err);
+      }
+
+      // ── EXCEPTIONS stats ──
+      let exceptions = {
+        total: 0, disputedInvoices: 0, unresponsiveEndOfFlow: 0, wantsHumanContact: 0,
+        complianceFailures: 0, distress: 0, serviceIssue: 0, missingPO: 0, insolvencyRisk: 0, other: 0,
+      };
+      try {
+        // Disputed invoices (open)
+        try {
+          const [disputeResult] = await db.select({ count: sql<number>`count(*)::int` }).from(disputes).where(and(
+            eq(disputes.tenantId, tenantId),
+            eq(disputes.status, "open"),
+          ));
+          exceptions.disputedInvoices = disputeResult?.count ?? 0;
+        } catch { exceptions.disputedInvoices = 0; }
+
+        // Compliance failures in period
+        try {
+          const [compResult] = await db.select({ count: sql<number>`count(*)::int` }).from(complianceChecks).where(and(
+            eq(complianceChecks.tenantId, tenantId),
+            eq(complianceChecks.checkResult, "blocked"),
+            gte(complianceChecks.createdAt, periodFrom),
+            lte(complianceChecks.createdAt, periodTo),
+          ));
+          exceptions.complianceFailures = compResult?.count ?? 0;
+        } catch { exceptions.complianceFailures = 0; }
+
+        // Unresponsive end of flow (actions with exceptionType)
+        try {
+          const [unrespResult] = await db.select({ count: sql<number>`count(*)::int` }).from(actions).where(and(
+            eq(actions.tenantId, tenantId),
+            eq(actions.exceptionType, "unresponsive"),
+          ));
+          exceptions.unresponsiveEndOfFlow = unrespResult?.count ?? 0;
+        } catch { exceptions.unresponsiveEndOfFlow = 0; }
+
+        // Contact-level exception types
+        const exceptionTypes = [
+          { key: "wantsHumanContact" as const, value: "wants_human" },
+          { key: "distress" as const, value: "distress" },
+          { key: "serviceIssue" as const, value: "service_issue" },
+          { key: "missingPO" as const, value: "missing_po" },
+          { key: "insolvencyRisk" as const, value: "insolvency_risk" },
+          { key: "other" as const, value: "other" },
+        ];
+        for (const { key, value } of exceptionTypes) {
+          try {
+            const [result] = await db.select({ count: sql<number>`count(*)::int` }).from(contacts).where(and(
+              eq(contacts.tenantId, tenantId),
+              eq(contacts.isException, true),
+              eq(contacts.exceptionType, value),
+            ));
+            exceptions[key] = result?.count ?? 0;
+          } catch { exceptions[key] = 0; }
+        }
+
+        exceptions.total = exceptions.disputedInvoices + exceptions.unresponsiveEndOfFlow +
+          exceptions.wantsHumanContact + exceptions.complianceFailures + exceptions.distress +
+          exceptions.serviceIssue + exceptions.missingPO + exceptions.insolvencyRisk + exceptions.other;
+      } catch (err) {
+        console.error("[summary] exceptions query error:", err);
+      }
+
+      res.json({
+        generatedAt: now.toISOString(),
+        period: { from: periodFrom.toISOString(), to: periodTo.toISOString() },
+        queued,
+        actioned,
+        exceptions,
+      });
+    } catch (error: any) {
+      console.error("Error fetching action centre summary:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ── GET /api/action-centre/drilldown ────────────────────────
+  // Paginated drilldown for a specific metric
+  app.get("/api/action-centre/drilldown", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const tenantId = user.tenantId;
+      const metric = req.query.metric as string;
+      if (!metric) return res.status(400).json({ message: "metric query param is required" });
+
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
+      const offset = (page - 1) * limit;
+      const now = new Date();
+      const period = (req.query.period as string) || "week";
+
+      // Compute period date range (same logic as summary)
+      let periodFrom: Date;
+      let periodTo: Date = now;
+      if (period === "today") {
+        periodFrom = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+      } else if (period === "month") {
+        periodFrom = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+      } else if (period === "custom") {
+        periodFrom = new Date(req.query.dateFrom as string);
+        periodTo = new Date(req.query.dateTo as string);
+        if (isNaN(periodFrom.getTime()) || isNaN(periodTo.getTime())) {
+          return res.status(400).json({ message: "Invalid dateFrom or dateTo for custom period" });
+        }
+      } else {
+        const dayOfWeek = now.getUTCDay();
+        const mondayOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        periodFrom = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - mondayOffset));
+      }
+
+      const pendingStatuses = ["pending", "pending_approval", "queued"];
+      const completedStatuses = ["completed", "sent", "delivered"];
+
+      // Helper: query actions with contact name join
+      const queryActions = async (whereClause: any) => {
+        const rows = await db
+          .select({
+            id: actions.id,
+            type: actions.type,
+            status: actions.status,
+            subject: actions.subject,
+            contactId: actions.contactId,
+            contactName: contacts.name,
+            invoiceId: actions.invoiceId,
+            createdAt: actions.createdAt,
+            actionSummary: actions.actionSummary,
+            priority: actions.priority,
+          })
+          .from(actions)
+          .leftJoin(contacts, eq(actions.contactId, contacts.id))
+          .where(whereClause)
+          .orderBy(desc(actions.createdAt))
+          .limit(limit)
+          .offset(offset);
+
+        const [countResult] = await db.select({ count: sql<number>`count(*)::int` }).from(actions).where(whereClause);
+        return { items: rows, total: countResult?.count ?? 0 };
+      };
+
+      // Helper: query contacts with exception info
+      const queryContacts = async (whereClause: any) => {
+        const rows = await db
+          .select({
+            id: contacts.id,
+            name: contacts.name,
+            companyName: contacts.companyName,
+            exceptionType: contacts.exceptionType,
+            exceptionNote: contacts.exceptionNote,
+            exceptionFlaggedAt: contacts.exceptionFlaggedAt,
+          })
+          .from(contacts)
+          .where(whereClause)
+          .orderBy(desc(contacts.exceptionFlaggedAt))
+          .limit(limit)
+          .offset(offset);
+
+        const [countResult] = await db.select({ count: sql<number>`count(*)::int` }).from(contacts).where(whereClause);
+        return { items: rows, total: countResult?.count ?? 0 };
+      };
+
+      let result: { items: any[]; total: number };
+
+      switch (metric) {
+        case "queued_emails":
+          result = await queryActions(and(eq(actions.tenantId, tenantId), inArray(actions.status, pendingStatuses), eq(actions.type, "email")));
+          break;
+        case "queued_sms":
+          result = await queryActions(and(eq(actions.tenantId, tenantId), inArray(actions.status, pendingStatuses), eq(actions.type, "sms")));
+          break;
+        case "queued_calls":
+          result = await queryActions(and(eq(actions.tenantId, tenantId), inArray(actions.status, pendingStatuses), inArray(actions.type, ["call", "voice"])));
+          break;
+        case "queued_over24h": {
+          const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+          result = await queryActions(and(eq(actions.tenantId, tenantId), inArray(actions.status, pendingStatuses), lte(actions.createdAt, twentyFourHoursAgo)));
+          break;
+        }
+        case "actioned_emails":
+          result = await queryActions(and(eq(actions.tenantId, tenantId), inArray(actions.status, completedStatuses), eq(actions.type, "email"), gte(actions.createdAt, periodFrom), lte(actions.createdAt, periodTo)));
+          break;
+        case "actioned_sms":
+          result = await queryActions(and(eq(actions.tenantId, tenantId), inArray(actions.status, completedStatuses), eq(actions.type, "sms"), gte(actions.createdAt, periodFrom), lte(actions.createdAt, periodTo)));
+          break;
+        case "actioned_calls":
+          result = await queryActions(and(eq(actions.tenantId, tenantId), inArray(actions.status, completedStatuses), inArray(actions.type, ["call", "voice"]), gte(actions.createdAt, periodFrom), lte(actions.createdAt, periodTo)));
+          break;
+        case "exc_disputes": {
+          const rows = await db
+            .select({
+              id: disputes.id,
+              invoiceId: disputes.invoiceId,
+              contactId: disputes.contactId,
+              type: disputes.type,
+              status: disputes.status,
+              summary: disputes.summary,
+              buyerContactName: disputes.buyerContactName,
+              responseDueAt: disputes.responseDueAt,
+              createdAt: disputes.createdAt,
+            })
+            .from(disputes)
+            .where(and(eq(disputes.tenantId, tenantId), eq(disputes.status, "open")))
+            .orderBy(desc(disputes.createdAt))
+            .limit(limit)
+            .offset(offset);
+
+          const [countResult] = await db.select({ count: sql<number>`count(*)::int` }).from(disputes).where(and(eq(disputes.tenantId, tenantId), eq(disputes.status, "open")));
+          result = { items: rows, total: countResult?.count ?? 0 };
+          break;
+        }
+        case "exc_unresponsive":
+          result = await queryActions(and(eq(actions.tenantId, tenantId), eq(actions.exceptionType, "unresponsive")));
+          break;
+        case "exc_compliance": {
+          const rows = await db
+            .select({
+              id: complianceChecks.id,
+              actionId: complianceChecks.actionId,
+              contactId: complianceChecks.contactId,
+              checkResult: complianceChecks.checkResult,
+              violations: complianceChecks.violations,
+              createdAt: complianceChecks.createdAt,
+            })
+            .from(complianceChecks)
+            .where(and(
+              eq(complianceChecks.tenantId, tenantId),
+              eq(complianceChecks.checkResult, "blocked"),
+              gte(complianceChecks.createdAt, periodFrom),
+              lte(complianceChecks.createdAt, periodTo),
+            ))
+            .orderBy(desc(complianceChecks.createdAt))
+            .limit(limit)
+            .offset(offset);
+
+          const [countResult] = await db.select({ count: sql<number>`count(*)::int` }).from(complianceChecks).where(and(
+            eq(complianceChecks.tenantId, tenantId),
+            eq(complianceChecks.checkResult, "blocked"),
+            gte(complianceChecks.createdAt, periodFrom),
+            lte(complianceChecks.createdAt, periodTo),
+          ));
+          result = { items: rows, total: countResult?.count ?? 0 };
+          break;
+        }
+        case "exc_wants_human":
+          result = await queryContacts(and(eq(contacts.tenantId, tenantId), eq(contacts.isException, true), eq(contacts.exceptionType, "wants_human")));
+          break;
+        case "exc_distress":
+          result = await queryContacts(and(eq(contacts.tenantId, tenantId), eq(contacts.isException, true), eq(contacts.exceptionType, "distress")));
+          break;
+        case "exc_service_issue":
+          result = await queryContacts(and(eq(contacts.tenantId, tenantId), eq(contacts.isException, true), eq(contacts.exceptionType, "service_issue")));
+          break;
+        case "exc_missing_po":
+          result = await queryContacts(and(eq(contacts.tenantId, tenantId), eq(contacts.isException, true), eq(contacts.exceptionType, "missing_po")));
+          break;
+        case "exc_insolvency_risk":
+          result = await queryContacts(and(eq(contacts.tenantId, tenantId), eq(contacts.isException, true), eq(contacts.exceptionType, "insolvency_risk")));
+          break;
+        case "exc_other":
+          result = await queryContacts(and(eq(contacts.tenantId, tenantId), eq(contacts.isException, true), eq(contacts.exceptionType, "other")));
+          break;
+        default:
+          return res.status(400).json({ message: `Unknown metric: ${metric}` });
+      }
+
+      res.json({
+        metric,
+        items: result.items,
+        total: result.total,
+        page,
+        limit,
+      });
+    } catch (error: any) {
+      console.error("Error fetching action centre drilldown:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ── POST /api/approval-queue/approve-all ────────────────────
+  // Approve all pending actions in the queue
+  app.post("/api/approval-queue/approve-all", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const now = new Date();
+      const result = await db
+        .update(actions)
+        .set({
+          status: "sent",
+          approvedBy: user.id,
+          approvedAt: now,
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(actions.tenantId, user.tenantId),
+            inArray(actions.status, ["pending", "pending_approval"]),
+          )
+        )
+        .returning({ id: actions.id });
+
+      console.log(`[ACTION-CENTRE] Approve all — ${result.length} actions approved for tenant ${user.tenantId}`);
+
+      res.json({ approved: result.length });
+    } catch (error: any) {
+      console.error("Error approving all actions:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ── PATCH /api/contacts/:id/exception ───────────────────────
+  // Flag or unflag a contact as an exception
+  app.patch("/api/contacts/:id/exception", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const { id } = req.params;
+      const { isException: flagException, exceptionType, exceptionNote } = req.body;
+
+      if (typeof flagException !== "boolean") {
+        return res.status(400).json({ message: "isException (boolean) is required" });
+      }
+
+      // Verify contact belongs to tenant
+      const [existing] = await db
+        .select({ id: contacts.id })
+        .from(contacts)
+        .where(and(eq(contacts.id, id), eq(contacts.tenantId, user.tenantId)))
+        .limit(1);
+
+      if (!existing) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      const now = new Date();
+      let updates: Record<string, any>;
+
+      if (flagException) {
+        updates = {
+          isException: true,
+          exceptionType: exceptionType || null,
+          exceptionNote: exceptionNote || null,
+          exceptionFlaggedAt: now,
+          updatedAt: now,
+        };
+      } else {
+        updates = {
+          isException: false,
+          exceptionResolvedAt: now,
+          updatedAt: now,
+        };
+      }
+
+      const [updated] = await db
+        .update(contacts)
+        .set(updates)
+        .where(eq(contacts.id, id))
+        .returning();
+
+      res.json({ contact: updated });
+    } catch (error: any) {
+      console.error("Error updating contact exception:", error);
       res.status(500).json({ message: error.message });
     }
   });

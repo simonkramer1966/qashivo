@@ -201,6 +201,13 @@ export const contacts = pgTable("contacts", {
   lpiEnabled: boolean("lpi_enabled").default(true), // Whether LPI is enabled for this contact
   lpiGracePeriodDays: integer("lpi_grace_period_days").default(7), // Grace period before interest starts accruing
 
+  // Exception flagging
+  isException: boolean("is_exception").default(false),
+  exceptionType: text("exception_type"), // dispute, unresponsive, wants_human, compliance_failure, distress, service_issue, missing_po, insolvency_risk, other
+  exceptionNote: text("exception_note"),
+  exceptionFlaggedAt: timestamp("exception_flagged_at"),
+  exceptionResolvedAt: timestamp("exception_resolved_at"),
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
@@ -211,6 +218,7 @@ export const contacts = pgTable("contacts", {
   index("idx_contacts_tenant_id").on(table.tenantId),
   index("idx_contacts_playbook_stage").on(table.playbookStage),
   index("idx_contacts_next_touch").on(table.nextTouchNotBefore),
+  index("idx_contacts_exception").on(table.isException),
 ]);
 
 // Contact Notes table
@@ -746,6 +754,7 @@ export const actions = pgTable("actions", {
   approvedAt: timestamp("approved_at"), // When approved
   confidenceScore: decimal("confidence_score", { precision: 3, scale: 2 }), // AI confidence 0.00 to 1.00
   exceptionReason: varchar("exception_reason"), // Why flagged as exception: first_contact_high_value, dispute_detected, vip_customer, low_confidence
+  exceptionType: text("exception_type"), // unresponsive, compliance_failure, etc.
   workflowStepId: varchar("workflow_step_id"),
   aiGenerated: boolean("ai_generated").default(false),
   source: varchar("source").default("automated"), // automated, manual

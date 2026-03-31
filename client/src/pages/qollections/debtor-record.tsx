@@ -124,6 +124,10 @@ interface Contact {
   creditLimit?: string | null;
   paymentTerms?: string | null;
   address?: string | null;
+  isException?: boolean;
+  exceptionType?: string | null;
+  exceptionNote?: string | null;
+  exceptionFlaggedAt?: string | null;
 }
 
 interface Invoice {
@@ -748,6 +752,29 @@ export default function DebtorRecord() {
         description: err.message,
         variant: "destructive",
       });
+    },
+  });
+
+  // --- Exception flagging state ---
+  const [exceptionDialogOpen, setExceptionDialogOpen] = useState(false);
+  const [exceptionType, setExceptionType] = useState("disputed");
+  const [exceptionNote, setExceptionNote] = useState("");
+
+  const flagExceptionMutation = useMutation({
+    mutationFn: async ({ flag, type, note }: { flag: boolean; type?: string; note?: string }) => {
+      const res = await apiRequest("PATCH", `/api/contacts/${contactId}/exception`, { flag, type, note });
+      return res.json();
+    },
+    onSuccess: (_, vars) => {
+      toast({ title: vars.flag ? "Exception flagged" : "Exception resolved" });
+      queryClient.invalidateQueries({ queryKey: ["debtor-profile", contactId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/action-centre"] });
+      setExceptionDialogOpen(false);
+      setExceptionType("disputed");
+      setExceptionNote("");
+    },
+    onError: (err: Error) => {
+      toast({ title: "Failed to update exception", description: err.message, variant: "destructive" });
     },
   });
 
@@ -1387,6 +1414,12 @@ export default function DebtorRecord() {
                   LPI {metrics.lpiEnabled ? "ON" : "OFF"}
                 </button>
               )}
+              {contact.isException && (
+                <Badge variant="destructive" className="gap-1">
+                  <ShieldAlert className="h-3 w-3" />
+                  Exception{contact.exceptionType ? `: ${contact.exceptionType}` : ""}
+                </Badge>
+              )}
             </div>
             {contact.companyName && contact.companyName !== contact.name && (
               <p className="text-sm text-muted-foreground">{contact.companyName}</p>
@@ -1669,6 +1702,26 @@ export default function DebtorRecord() {
               <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground" onClick={openNoteDialog}>
                 <StickyNote className="h-4 w-4 mr-1" /> Note
               </Button>
+              {contact.isException ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="flex-1 text-green-600 hover:text-green-700"
+                  onClick={() => flagExceptionMutation.mutate({ flag: false })}
+                  disabled={flagExceptionMutation.isPending}
+                >
+                  <CheckCircle2 className="h-4 w-4 mr-1" /> Resolve Exception
+                </Button>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="flex-1 text-destructive"
+                  onClick={() => setExceptionDialogOpen(true)}
+                >
+                  <ShieldAlert className="h-4 w-4 mr-1" /> Flag Exception
+                </Button>
+              )}
             </div>
 
             {/* Record group — collapsed dropdown on small viewports */}
@@ -1691,6 +1744,21 @@ export default function DebtorRecord() {
                 <DropdownMenuItem onClick={openNoteDialog}>
                   <StickyNote className="h-4 w-4 mr-2" /> Note
                 </DropdownMenuItem>
+                {contact.isException ? (
+                  <DropdownMenuItem
+                    className="text-green-600"
+                    onClick={() => flagExceptionMutation.mutate({ flag: false })}
+                  >
+                    <CheckCircle2 className="h-4 w-4 mr-2" /> Resolve Exception
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem
+                    className="text-destructive"
+                    onClick={() => setExceptionDialogOpen(true)}
+                  >
+                    <ShieldAlert className="h-4 w-4 mr-2" /> Flag Exception
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </CardContent>
@@ -3603,6 +3671,60 @@ export default function DebtorRecord() {
                   <Loader2 className="h-3 w-3 animate-spin mr-1" />
                 )}
                 {editingPerson ? "Update" : "Add"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        {/* Exception flagging dialog */}
+        <Dialog open={exceptionDialogOpen} onOpenChange={setExceptionDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Flag Exception</DialogTitle>
+              <DialogDescription>
+                Mark this contact as an exception to exclude from automated collections.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm font-medium">Exception Type</label>
+                <Select value={exceptionType} onValueChange={setExceptionType}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="disputed">Disputed</SelectItem>
+                    <SelectItem value="legal">Legal / Litigation</SelectItem>
+                    <SelectItem value="insolvency">Insolvency</SelectItem>
+                    <SelectItem value="payment_plan">Payment Plan Active</SelectItem>
+                    <SelectItem value="write_off">Write-off Candidate</SelectItem>
+                    <SelectItem value="key_account">Key Account — Manual Only</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Note (optional)</label>
+                <Textarea
+                  className="mt-1"
+                  placeholder="Reason for flagging..."
+                  value={exceptionNote}
+                  onChange={(e) => setExceptionNote(e.target.value)}
+                  rows={3}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" size="sm" onClick={() => setExceptionDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => flagExceptionMutation.mutate({ flag: true, type: exceptionType, note: exceptionNote || undefined })}
+                disabled={flagExceptionMutation.isPending}
+              >
+                {flagExceptionMutation.isPending && <Loader2 className="h-3 w-3 animate-spin mr-1" />}
+                Flag Exception
               </Button>
             </DialogFooter>
           </DialogContent>
