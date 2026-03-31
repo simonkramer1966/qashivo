@@ -158,20 +158,20 @@ export function registerDemoRoutes(app: Express) {
         req.socket.remoteAddress ||
         "unknown";
 
-      // Rate limiting: 3 calls per phone / 24h, 10 per IP / 24h
+      // Rate limiting: 10 calls per phone / 24h, 30 per IP / 24h
       const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
       const [phoneCalls, ipCalls] = await Promise.all([
         storage.countRecentDemoCallsByPhone(phoneNumber.trim(), since),
         storage.countRecentDemoCallsByIp(clientIp, since),
       ]);
 
-      if (phoneCalls >= 3) {
+      if (phoneCalls >= 10) {
         return res.status(429).json({
           message:
             "You've reached the maximum demo calls for this number today. Try again tomorrow.",
         });
       }
-      if (ipCalls >= 10) {
+      if (ipCalls >= 30) {
         return res.status(429).json({
           message: "Too many demo requests. Please try again later.",
         });
