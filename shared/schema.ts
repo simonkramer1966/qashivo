@@ -5940,3 +5940,36 @@ export const insertQuizConversationSchema = createInsertSchema(quizConversations
 
 export type QuizConversation = typeof quizConversations.$inferSelect;
 export type InsertQuizConversation = z.infer<typeof insertQuizConversationSchema>;
+
+// ─── Demo Calls (public voice demo page) ──────────────────────────────────────
+
+export const demoCalls = pgTable("demo_calls", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  callerName: text("caller_name").notNull(),
+  phoneNumber: text("phone_number").notNull(),
+  ipAddress: text("ip_address"),
+  retellCallId: text("retell_call_id"),
+  status: text("status").default("initiated"), // initiated, ringing, active, completed, failed
+  transcript: jsonb("transcript"),
+  intentScore: integer("intent_score"),
+  sentiment: text("sentiment"),
+  commitmentLevel: text("commitment_level"),
+  cashflowImpact: jsonb("cashflow_impact"),
+  recommendedActions: jsonb("recommended_actions"),
+  riskInsights: jsonb("risk_insights"),
+  callDurationSeconds: integer("call_duration_seconds"),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_demo_calls_phone").on(table.phoneNumber),
+  index("idx_demo_calls_ip").on(table.ipAddress),
+]);
+
+export const insertDemoCallSchema = createInsertSchema(demoCalls).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type DemoCall = typeof demoCalls.$inferSelect;
+export type InsertDemoCall = z.infer<typeof insertDemoCallSchema>;

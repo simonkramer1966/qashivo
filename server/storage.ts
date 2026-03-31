@@ -178,6 +178,9 @@ import {
   quizConversations,
   type QuizConversation,
   type InsertQuizConversation,
+  demoCalls,
+  type DemoCall,
+  type InsertDemoCall,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc, sql, count, sum, ne, isNotNull, isNull, gte, lte, lt, or, ilike, inArray } from "drizzle-orm";
@@ -5858,6 +5861,35 @@ export class DatabaseStorage implements IStorage {
   async countQuizConversationsByLeadId(quizLeadId: string): Promise<number> {
     const [result] = await db.select({ count: count() }).from(quizConversations)
       .where(eq(quizConversations.quizLeadId, quizLeadId));
+    return result.count;
+  }
+
+  // ─── Demo Calls ──────────────────────────────────────────────────────────────
+
+  async createDemoCall(data: InsertDemoCall): Promise<DemoCall> {
+    const [call] = await db.insert(demoCalls).values(data).returning();
+    return call;
+  }
+
+  async getDemoCall(id: string): Promise<DemoCall | undefined> {
+    const [call] = await db.select().from(demoCalls).where(eq(demoCalls.id, id));
+    return call;
+  }
+
+  async updateDemoCall(id: string, updates: Partial<InsertDemoCall>): Promise<DemoCall> {
+    const [call] = await db.update(demoCalls).set(updates).where(eq(demoCalls.id, id)).returning();
+    return call;
+  }
+
+  async countRecentDemoCallsByPhone(phoneNumber: string, since: Date): Promise<number> {
+    const [result] = await db.select({ count: count() }).from(demoCalls)
+      .where(and(eq(demoCalls.phoneNumber, phoneNumber), gte(demoCalls.createdAt, since)));
+    return result.count;
+  }
+
+  async countRecentDemoCallsByIp(ipAddress: string, since: Date): Promise<number> {
+    const [result] = await db.select({ count: count() }).from(demoCalls)
+      .where(and(eq(demoCalls.ipAddress, ipAddress), gte(demoCalls.createdAt, since)));
     return result.count;
   }
 }

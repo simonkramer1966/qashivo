@@ -175,3 +175,43 @@ details > summary::-webkit-details-marker {
   border-left: 3px solid #00687a;
   background-color: #ffffff;
 }
+
+/* ─── Demo page (voice demo) ────────────────────────────────────────────────── */
+
+.wave-container {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 120px;
+}
+.wave-bar {
+  width: 4px;
+  height: 20px;
+  background: linear-gradient(to top, #06b6d4, #22d3ee);
+  border-radius: 99px;
+  transition: all 0.3s ease;
+}
+
+.fade-in-entry {
+  opacity: 0;
+  animation: fadeInEntry 0.4s ease-out forwards;
+}
+@keyframes fadeInEntry {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.scroll-custom::-webkit-scrollbar { width: 5px; }
+.scroll-custom::-webkit-scrollbar-track { background: transparent; }
+.scroll-custom::-webkit-scrollbar-thumb { background: #e0e3e5; border-radius: 10px; }
+
+.stagger-load > * { opacity: 0; }
+.stagger-load > *:nth-child(1) { animation: fadeInEntry 0.6s ease-out 0.1s forwards; }
+.stagger-load > *:nth-child(2) { animation: fadeInEntry 0.6s ease-out 0.2s forwards; }
+.stagger-load > *:nth-child(3) { animation: fadeInEntry 0.6s ease-out 0.3s forwards; }
+.stagger-load > *:nth-child(4) { animation: fadeInEntry 0.6s ease-out 0.4s forwards; }
+
+.badge-slide {
+  opacity: 0;
+  animation: fadeInEntry 0.3s ease-out forwards;
+}

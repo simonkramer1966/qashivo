@@ -65,6 +65,7 @@ const MarketingHealthCheck = lazy(() => import("@/pages/marketing/CashflowHealth
 const MarketingPrivacy = lazy(() => import("@/pages/marketing/PrivacyPage"));
 const MarketingTerms = lazy(() => import("@/pages/marketing/TermsPage"));
 const MarketingGdpr = lazy(() => import("@/pages/marketing/GdprPage"));
+const MarketingDemo = lazy(() => import("@/pages/marketing/DemoPage"));
 
 function PermissionGuard({ permission, children }: { permission: string; children: React.ReactNode }) {
   const { hasPermission, isLoadingPermissions } = usePermissions();
@@ -193,6 +194,7 @@ function Router() {
           <Route path="/pricing" component={MarketingPricing} />
           <Route path="/contact" component={MarketingContact} />
           <Route path="/cashflow-health-check" component={MarketingHealthCheck} />
+          <Route path="/demo" component={MarketingDemo} />
 
           {/* Home → marketing home for unauthenticated visitors */}
           <Route path="/" component={MarketingHome} />
@@ -212,14 +214,13 @@ function Router() {
           <Route path="/homepage">{() => <Redirect to="/qollections" />}</Route>
           <Route path="/product">{() => <Redirect to="/qollections" />}</Route>
           <Route path="/partners">{() => <Redirect to="/qollections" />}</Route>
-          <Route path="/demo">{() => <Redirect to="/qollections" />}</Route>
-
           {/* Marketing pages (accessible when authenticated too) */}
           <Route path="/features" component={MarketingFeatures} />
           <Route path="/why-qashivo" component={MarketingWhyQashivo} />
           <Route path="/pricing" component={MarketingPricing} />
           <Route path="/contact" component={MarketingContact} />
           <Route path="/cashflow-health-check" component={MarketingHealthCheck} />
+          <Route path="/demo" component={MarketingDemo} />
 
           {/* Legal / governance pages (accessible when authenticated too) */}
           <Route path="/privacy" component={MarketingPrivacy} />

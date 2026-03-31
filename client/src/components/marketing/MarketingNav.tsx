@@ -6,10 +6,11 @@ interface MarketingNavProps {
   currentPage?: string;
 }
 
-const navLinks = [
+const navLinks: { label: string; path: string; highlight?: boolean }[] = [
   { label: "Home", path: "/" },
   { label: "Features", path: "/features" },
   { label: "Why Qashivo", path: "/why-qashivo" },
+  { label: "Demo", path: "/demo", highlight: true },
   { label: "Pricing", path: "/pricing" },
   { label: "Contact", path: "/contact" },
 ];
@@ -43,10 +44,17 @@ export default function MarketingNav({ currentPage }: MarketingNavProps) {
                 className={`mkt-nav-link font-headline font-bold text-sm transition-colors duration-300 cursor-pointer ${
                   isActive(link.path)
                     ? "text-brand-navy font-extrabold"
+                    : link.highlight
+                    ? "text-brand-teal hover:text-brand-teal/80"
                     : "text-slate-600 hover:text-slate-900"
                 }`}
               >
                 {link.label}
+                {link.highlight && (
+                  <span className="ml-1 text-[9px] bg-brand-teal text-white px-1.5 py-0.5 rounded-full font-bold uppercase">
+                    Live
+                  </span>
+                )}
               </span>
             </Link>
           ))}
@@ -84,11 +92,20 @@ export default function MarketingNav({ currentPage }: MarketingNavProps) {
             <Link key={link.path} href={link.path}>
               <span
                 className={`block font-headline font-bold text-base cursor-pointer ${
-                  isActive(link.path) ? "text-brand-navy" : "text-slate-600"
+                  isActive(link.path)
+                    ? "text-brand-navy"
+                    : link.highlight
+                    ? "text-brand-teal"
+                    : "text-slate-600"
                 }`}
                 onClick={() => setMobileOpen(false)}
               >
                 {link.label}
+                {link.highlight && (
+                  <span className="ml-1 text-[9px] bg-brand-teal text-white px-1.5 py-0.5 rounded-full font-bold uppercase">
+                    Live
+                  </span>
+                )}
               </span>
             </Link>
           ))}
