@@ -169,6 +169,11 @@ export function registerDemoRoutes(app: Express) {
             "This is a live demo call showcasing Qashivo's AI credit control capabilities",
         });
 
+        // The frontend sends phoneNumber already in E.164 format (e.g. +447716273336)
+        console.log(
+          `[DEMO] Starting Retell call — agent: ${demoAgentId}, to: ${phoneNumber.trim()}, caller: ${name.trim()}`
+        );
+
         const callResult = await createUnifiedRetellCall({
           toNumber: phoneNumber.trim(),
           agentId: demoAgentId,
@@ -176,6 +181,10 @@ export function registerDemoRoutes(app: Express) {
           metadata: { type: "public_demo", demoCallId: call.id },
           context: "PUBLIC_DEMO",
         });
+
+        console.log(
+          `[DEMO] Retell call created — retellCallId: ${callResult.callId}, status: ${callResult.status}`
+        );
 
         await storage.updateDemoCall(call.id, {
           retellCallId: callResult.callId,
@@ -188,6 +197,10 @@ export function registerDemoRoutes(app: Express) {
         });
       } catch (retellError: any) {
         console.error("[DEMO] Retell call failed:", retellError?.message);
+        console.error("[DEMO] Retell error details:", {
+          status: retellError?.status,
+          response: retellError?.response?.data || retellError?.body || "no response body",
+        });
         // Fallback to sample data
         await storage.updateDemoCall(call.id, {
           status: "completed",

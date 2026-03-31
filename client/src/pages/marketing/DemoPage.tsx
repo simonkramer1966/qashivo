@@ -238,6 +238,51 @@ function badgeClasses(type: string) {
   }
 }
 
+// ─── Country codes ──────────────────────────────────────────────────────────────
+
+const COUNTRY_CODES = [
+  { code: "+44", country: "GB", label: "UK (+44)" },
+  { code: "+1", country: "US", label: "US (+1)" },
+  { code: "+353", country: "IE", label: "IE (+353)" },
+  { code: "+33", country: "FR", label: "FR (+33)" },
+  { code: "+49", country: "DE", label: "DE (+49)" },
+  { code: "+34", country: "ES", label: "ES (+34)" },
+  { code: "+39", country: "IT", label: "IT (+39)" },
+  { code: "+31", country: "NL", label: "NL (+31)" },
+  { code: "+61", country: "AU", label: "AU (+61)" },
+  { code: "+64", country: "NZ", label: "NZ (+64)" },
+  { code: "+27", country: "ZA", label: "ZA (+27)" },
+  { code: "+971", country: "AE", label: "UAE (+971)" },
+  { code: "+91", country: "IN", label: "IN (+91)" },
+  { code: "+86", country: "CN", label: "CN (+86)" },
+  { code: "+81", country: "JP", label: "JP (+81)" },
+  { code: "+82", country: "KR", label: "KR (+82)" },
+  { code: "+55", country: "BR", label: "BR (+55)" },
+  { code: "+52", country: "MX", label: "MX (+52)" },
+  { code: "+46", country: "SE", label: "SE (+46)" },
+  { code: "+47", country: "NO", label: "NO (+47)" },
+  { code: "+45", country: "DK", label: "DK (+45)" },
+  { code: "+358", country: "FI", label: "FI (+358)" },
+  { code: "+48", country: "PL", label: "PL (+48)" },
+  { code: "+41", country: "CH", label: "CH (+41)" },
+  { code: "+43", country: "AT", label: "AT (+43)" },
+  { code: "+32", country: "BE", label: "BE (+32)" },
+  { code: "+351", country: "PT", label: "PT (+351)" },
+  { code: "+30", country: "GR", label: "GR (+30)" },
+  { code: "+90", country: "TR", label: "TR (+90)" },
+  { code: "+966", country: "SA", label: "SA (+966)" },
+  { code: "+65", country: "SG", label: "SG (+65)" },
+  { code: "+852", country: "HK", label: "HK (+852)" },
+] as const;
+
+/** Format a local number + country dial code to E.164 */
+function toE164(dialCode: string, local: string): string {
+  let digits = local.replace(/\D/g, "");
+  // Remove leading zero (common UK/EU convention)
+  if (digits.startsWith("0")) digits = digits.substring(1);
+  return `${dialCode}${digits}`;
+}
+
 // ─── Main Component ─────────────────────────────────────────────────────────────
 
 export default function DemoPage() {
@@ -249,6 +294,7 @@ export default function DemoPage() {
   const [callState, setCallState] = useState<CallState>("pre-call");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [countryCode, setCountryCode] = useState("+44");
   const [errors, setErrors] = useState<{ name?: string; phone?: string }>({});
   const [callId, setCallId] = useState<string | null>(null);
   const [callDuration, setCallDuration] = useState(0);
@@ -338,10 +384,11 @@ export default function DemoPage() {
     setCallState("during-call");
 
     try {
+      const e164Phone = toE164(countryCode, phone);
       const res = await fetch("/api/demo/start-call", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), phoneNumber: phone.trim() }),
+        body: JSON.stringify({ name: name.trim(), phoneNumber: e164Phone }),
       });
       const data = await res.json();
 
@@ -372,7 +419,7 @@ export default function DemoPage() {
       setCallState("fallback");
       setShowResults(true);
     }
-  }, [name, phone]);
+  }, [name, phone, countryCode]);
 
   const handleRetry = () => {
     setCallState("pre-call");
@@ -398,8 +445,7 @@ export default function DemoPage() {
               <span className="text-brand-teal">automated recovery</span>.
             </h1>
             <p className="text-lg text-slate-500 leading-relaxed font-medium">
-              Experience our AI-powered credit controller first-hand. No setup,
-              no commitment—just a real-time conversation.
+              Experience our AI-powered credit controller first-hand. No setup, no commitment, just a real-time conversation.
             </p>
           </div>
 
@@ -455,11 +501,18 @@ export default function DemoPage() {
                       Your Phone Number
                     </label>
                     <div className="flex">
-                      <div className="flex items-center gap-2 px-5 py-4 bg-slate-50 rounded-l-xl border border-r-0 border-slate-200">
-                        <span className="text-sm font-bold text-slate-700">
-                          +44
-                        </span>
-                      </div>
+                      <select
+                        value={countryCode}
+                        onChange={(e) => setCountryCode(e.target.value)}
+                        disabled={callState === "during-call"}
+                        className="px-3 py-4 bg-slate-50 rounded-l-xl border border-r-0 border-slate-200 text-sm font-bold text-slate-700 focus:ring-brand-teal focus:border-brand-teal appearance-none cursor-pointer pr-7 bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3Cpath%20fill%3D%22%2394a3b8%22%20d%3D%22M2%204l4%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_0.5rem_center]"
+                      >
+                        {COUNTRY_CODES.map((c) => (
+                          <option key={c.code} value={c.code}>
+                            {c.label}
+                          </option>
+                        ))}
+                      </select>
                       <input
                         type="tel"
                         value={phone}
@@ -660,20 +713,6 @@ export default function DemoPage() {
                   ID: {results.callId?.substring(0, 13) || "CALL-8829-QX"}
                 </span>
               </div>
-            </div>
-            <div className="mt-6 md:mt-0 flex gap-4">
-              <button className="flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 text-slate-700 text-sm font-bold rounded-xl shadow-sm hover:bg-slate-50 transition-all">
-                <span className="material-symbols-outlined text-lg">
-                  download
-                </span>
-                Export
-              </button>
-              <button className="flex items-center gap-2 px-6 py-3 bg-brand-navy text-white text-sm font-bold rounded-xl shadow-sm hover:opacity-90 transition-all">
-                <span className="material-symbols-outlined text-lg">
-                  share
-                </span>
-                Share Report
-              </button>
             </div>
           </div>
 
