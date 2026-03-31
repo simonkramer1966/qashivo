@@ -53,19 +53,25 @@ export default function MarketingFooter() {
           </h4>
           <ul className="space-y-4">
             <li>
-              <a href="#" className="text-slate-500 hover:text-brand-navy font-medium text-sm transition-colors">
-                {/* TODO: create legal pages */}Privacy Policy
-              </a>
+              <Link href="/privacy">
+                <span className="text-slate-500 hover:text-brand-navy font-medium text-sm transition-colors cursor-pointer">
+                  Privacy Policy
+                </span>
+              </Link>
             </li>
             <li>
-              <a href="#" className="text-slate-500 hover:text-brand-navy font-medium text-sm transition-colors">
-                {/* TODO: create legal pages */}GDPR Compliance
-              </a>
+              <Link href="/gdpr">
+                <span className="text-slate-500 hover:text-brand-navy font-medium text-sm transition-colors cursor-pointer">
+                  GDPR &amp; Data Protection
+                </span>
+              </Link>
             </li>
             <li>
-              <a href="#" className="text-slate-500 hover:text-brand-navy font-medium text-sm transition-colors">
-                {/* TODO: create legal pages */}Terms of Service
-              </a>
+              <Link href="/terms">
+                <span className="text-slate-500 hover:text-brand-navy font-medium text-sm transition-colors cursor-pointer">
+                  Terms of Service
+                </span>
+              </Link>
             </li>
           </ul>
         </div>

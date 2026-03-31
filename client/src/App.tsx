@@ -20,8 +20,6 @@ const ConnectionError = lazy(() => import("@/pages/connection-error"));
 const AcceptInvite = lazy(() => import("@/pages/accept-invite"));
 const AcceptUserInvite = lazy(() => import("@/pages/accept-user-invite"));
 const SmeOnboarding = lazy(() => import("@/pages/sme-onboarding"));
-const Privacy = lazy(() => import("@/pages/Privacy"));
-const Terms = lazy(() => import("@/pages/Terms"));
 const QashivoAdminDashboard = lazy(() => import("@/pages/qashivo-admin"));
 const InvestorInterest = lazy(() => import("@/pages/investor-interest"));
 
@@ -64,6 +62,9 @@ const MarketingWhyQashivo = lazy(() => import("@/pages/marketing/WhyQashivoPage"
 const MarketingPricing = lazy(() => import("@/pages/marketing/PricingPage"));
 const MarketingContact = lazy(() => import("@/pages/marketing/ContactPage"));
 const MarketingHealthCheck = lazy(() => import("@/pages/marketing/CashflowHealthCheckPage"));
+const MarketingPrivacy = lazy(() => import("@/pages/marketing/PrivacyPage"));
+const MarketingTerms = lazy(() => import("@/pages/marketing/TermsPage"));
+const MarketingGdpr = lazy(() => import("@/pages/marketing/GdprPage"));
 
 function PermissionGuard({ permission, children }: { permission: string; children: React.ReactNode }) {
   const { hasPermission, isLoadingPermissions } = usePermissions();
@@ -167,8 +168,9 @@ function Router() {
           <Route path="/accept-user-invite" component={AcceptUserInvite} />
           <Route path="/sme-onboarding" component={SmeOnboarding} />
           <Route path="/connection-error" component={ConnectionError} />
-          <Route path="/privacy" component={Privacy} />
-          <Route path="/terms" component={Terms} />
+          <Route path="/privacy" component={MarketingPrivacy} />
+          <Route path="/terms" component={MarketingTerms} />
+          <Route path="/gdpr" component={MarketingGdpr} />
 
           {/* Investor pages (public) */}
           <Route path="/investors" component={InvestorsHome} />
@@ -219,6 +221,11 @@ function Router() {
           <Route path="/contact" component={MarketingContact} />
           <Route path="/cashflow-health-check" component={MarketingHealthCheck} />
 
+          {/* Legal / governance pages (accessible when authenticated too) */}
+          <Route path="/privacy" component={MarketingPrivacy} />
+          <Route path="/terms" component={MarketingTerms} />
+          <Route path="/gdpr" component={MarketingGdpr} />
+
           {/* Pillar routes — Qollections */}
           <Route path="/qollections/debtors/:id" component={DebtorRecord} />
           <Route path="/qollections/debtors" component={QollectionsDebtors} />
@@ -248,8 +255,6 @@ function Router() {
           <Route path="/debtor-portal" component={DebtorPortal} />
           <Route path="/accept-invite" component={AcceptInvite} />
           <Route path="/connection-error" component={ConnectionError} />
-          <Route path="/privacy" component={Privacy} />
-          <Route path="/terms" component={Terms} />
 
           {/* Admin */}
           <Route path="/qashivo-admin" component={QashivoAdminDashboard} />
