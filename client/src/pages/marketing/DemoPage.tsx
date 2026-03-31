@@ -254,6 +254,7 @@ export default function DemoPage() {
   const [callDuration, setCallDuration] = useState(0);
   const [results, setResults] = useState<CallResults>(SAMPLE_DATA);
   const [fallbackMsg, setFallbackMsg] = useState("");
+  const [showResults, setShowResults] = useState(false);
 
   const reportRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval>>();
@@ -292,6 +293,7 @@ export default function DemoPage() {
             setResults(fullResults);
           }
           setCallState("post-call");
+          setShowResults(true);
           // Scroll to report
           setTimeout(() => {
             reportRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -358,6 +360,7 @@ export default function DemoPage() {
           setResults(await resResults.json());
         }
         setCallState("post-call");
+        setShowResults(true);
         setTimeout(() => {
           reportRef.current?.scrollIntoView({ behavior: "smooth" });
         }, 500);
@@ -367,6 +370,7 @@ export default function DemoPage() {
         "We couldn't connect the call right now. Here's a sample intelligence report from a recent Qashivo call."
       );
       setCallState("fallback");
+      setShowResults(true);
     }
   }, [name, phone]);
 
@@ -375,9 +379,10 @@ export default function DemoPage() {
     setFallbackMsg("");
     setCallId(null);
     setCallDuration(0);
+    setShowResults(false);
   };
 
-  const showReport = callState === "post-call" || callState === "fallback";
+  const showReport = showResults;
 
   return (
     <MarketingLayout currentPage="/demo">
@@ -630,7 +635,9 @@ export default function DemoPage() {
         )}
 
         {/* ── CALL INTELLIGENCE REPORT ─────────────────────────────────────── */}
-        <section ref={reportRef}>
+        {showResults && (
+        <div ref={reportRef} className="fade-in-entry">
+        <section>
           {/* Header bar */}
           <div className="bg-[#F8FAFC] border border-slate-200/60 rounded-3xl p-10 mb-10 flex flex-col md:flex-row justify-between items-start md:items-center shadow-sm">
             <div>
@@ -974,6 +981,8 @@ export default function DemoPage() {
             </div>
           </div>
         </section>
+        </div>
+        )}
       </main>
     </MarketingLayout>
   );
