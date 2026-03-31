@@ -5,8 +5,12 @@ import { generateJSON } from "../services/llm/claude.js";
 // Sample data returned when Retell is unavailable or call hasn't completed
 const SAMPLE_REPORT = {
   intentScore: 78,
+  intentSummary: "Confirmed liquidity for Friday settlement.",
   sentiment: "Cooperative",
+  sentimentPosition: 82,
+  sentimentQuote: "Switching to backup portal for faster auth.",
   commitmentLevel: "Medium High",
+  commitmentType: "Verbal Promise",
   cashflowImpact: {
     amount: 12450,
     currency: "GBP",
@@ -96,8 +100,12 @@ function parseRetellTranscriptString(transcript: string): Array<{ role: string; 
 
 interface DemoAnalysis {
   intentScore: number;
+  intentSummary: string;
   sentiment: string;
+  sentimentPosition: number;
+  sentimentQuote: string;
   commitmentLevel: string;
+  commitmentType: string;
   cashflowImpact: { amount: number; currency: string; expectedDays: number; signal: string };
   recommendedActions: Array<{ type: string; title: string; description: string; icon: string; color: string }>;
   riskInsights: string;
@@ -112,9 +120,13 @@ Analyze the following call transcript between an AI collection agent and a debto
 
 Return a JSON object with these fields:
 - intentScore: number 0-100. How likely is the debtor to pay? Based on verbal commitments, tone, and specificity of payment promises.
+- intentSummary: string. One short sentence (max 60 chars) summarizing the payment intent evidence from the conversation. E.g. "Agreed two-payment plan, first instalment Friday." Must reference what was actually said.
 - sentiment: string. One of: "Cooperative", "Neutral", "Defensive", "Hostile", "Evasive", "Apologetic"
+- sentimentPosition: number 0-100. Where on the Resistant (0) to Cooperative (100) scale the debtor sits based on the conversation.
+- sentimentQuote: string. A SHORT direct quote (max 80 chars) from the debtor that best illustrates their sentiment. Use their actual words from the transcript.
 - commitmentLevel: string. One of: "High", "Medium High", "Medium", "Medium Low", "Low", "None"
-- cashflowImpact: object with { amount: number (the invoice amount discussed, default 12450), currency: "GBP", expectedDays: number (estimated days until payment based on conversation), signal: one of "RECOVERY_SIGNAL", "AT_RISK", "UNLIKELY" }
+- commitmentType: string. The type of commitment made. E.g. "Payment Plan", "Verbal Promise", "Written Commitment", "Partial Payment", "Callback Agreed", "No Commitment". Based on what the debtor actually agreed to.
+- cashflowImpact: object with { amount: number (the total amount expected to be recovered based on the conversation — if a payment plan was agreed, use the total, not just one instalment), currency: "GBP", expectedDays: number (estimated days until FIRST payment based on the conversation), signal: one of "RECOVERY_SIGNAL", "AT_RISK", "UNLIKELY" }
 - recommendedActions: array of 2-3 objects, each: { type: "Automated"|"Scheduled"|"Manual", title: string (short action name), description: string (1 sentence), icon: string (Google Material Symbol name like "mail", "calendar_month", "phone", "gavel", "payments"), color: "teal"|"amber" }
 - riskInsights: string. 1-2 sentences about risk factors or patterns observed in the conversation.
 - transcriptBadges: array of objects { messageIndex: number (0-based index of the message in the transcript), badges: array of { label: string (2-3 words), type: "teal"|"amber"|"green"|"red", icon: string (Material Symbol) } }. Add badges to 2-4 key moments in the conversation — intent signals, commitments, objections, risk flags.
@@ -372,7 +384,14 @@ export function registerDemoRoutes(app: Express) {
                     updates.intentScore = analysis.intentScore;
                     updates.sentiment = analysis.sentiment;
                     updates.commitmentLevel = analysis.commitmentLevel;
-                    updates.cashflowImpact = analysis.cashflowImpact;
+                    // Pack card-specific text into cashflowImpact jsonb
+                    updates.cashflowImpact = {
+                      ...analysis.cashflowImpact,
+                      intentSummary: analysis.intentSummary,
+                      sentimentPosition: analysis.sentimentPosition,
+                      sentimentQuote: analysis.sentimentQuote,
+                      commitmentType: analysis.commitmentType,
+                    };
                     updates.recommendedActions = analysis.recommendedActions;
                     updates.riskInsights = analysis.riskInsights;
 
@@ -445,17 +464,26 @@ export function registerDemoRoutes(app: Express) {
         return res.status(404).json({ message: "Call not found" });
       }
 
+      const cfImpact = (call.cashflowImpact as any) ?? SAMPLE_REPORT.cashflowImpact;
       return res.json({
         callId: call.id,
         status: call.status,
         callerName: call.callerName,
         transcript: call.transcript ?? SAMPLE_REPORT.transcript,
         intentScore: call.intentScore ?? SAMPLE_REPORT.intentScore,
+        intentSummary: cfImpact.intentSummary ?? SAMPLE_REPORT.intentSummary,
         sentiment: call.sentiment ?? SAMPLE_REPORT.sentiment,
+        sentimentPosition: cfImpact.sentimentPosition ?? SAMPLE_REPORT.sentimentPosition,
+        sentimentQuote: cfImpact.sentimentQuote ?? SAMPLE_REPORT.sentimentQuote,
         commitmentLevel:
           call.commitmentLevel ?? SAMPLE_REPORT.commitmentLevel,
-        cashflowImpact:
-          call.cashflowImpact ?? SAMPLE_REPORT.cashflowImpact,
+        commitmentType: cfImpact.commitmentType ?? SAMPLE_REPORT.commitmentType,
+        cashflowImpact: {
+          amount: cfImpact.amount ?? SAMPLE_REPORT.cashflowImpact.amount,
+          currency: cfImpact.currency ?? SAMPLE_REPORT.cashflowImpact.currency,
+          expectedDays: cfImpact.expectedDays ?? SAMPLE_REPORT.cashflowImpact.expectedDays,
+          signal: cfImpact.signal ?? SAMPLE_REPORT.cashflowImpact.signal,
+        },
         recommendedActions:
           call.recommendedActions ?? SAMPLE_REPORT.recommendedActions,
         riskInsights: call.riskInsights ?? SAMPLE_REPORT.riskInsights,

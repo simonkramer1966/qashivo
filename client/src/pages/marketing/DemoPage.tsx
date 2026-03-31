@@ -765,10 +765,10 @@ export default function DemoPage() {
                 </div>
                 <div>
                   <span className="text-brand-teal font-bold text-sm block">
-                    High Conf.
+                    {results.intentScore >= 70 ? "High Conf." : results.intentScore >= 40 ? "Medium Conf." : "Low Conf."}
                   </span>
                   <p className="text-[11px] text-slate-500 leading-normal mt-1">
-                    Confirmed liquidity for Friday settlement.
+                    {results.intentSummary ?? "Confirmed liquidity for Friday settlement."}
                   </p>
                 </div>
               </div>
@@ -787,11 +787,11 @@ export default function DemoPage() {
                 <div className="w-full h-2.5 bg-slate-100 rounded-full relative">
                   <div
                     className="absolute top-1/2 -translate-y-1/2 w-5 h-5 bg-brand-teal rounded-full ring-4 ring-brand-teal/20 transition-all duration-[1.5s] ease-out shadow-lg shadow-brand-teal/30"
-                    style={{ left: showReport ? "82%" : "50%" }}
+                    style={{ left: showReport ? `${results.sentimentPosition ?? 82}%` : "50%" }}
                   />
                 </div>
                 <p className="text-xs text-slate-500 italic leading-relaxed">
-                  "Switching to backup portal for faster auth."
+                  "{results.sentimentQuote ?? "Switching to backup portal for faster auth."}"
                 </p>
               </div>
             </div>
@@ -812,7 +812,7 @@ export default function DemoPage() {
                     {results.commitmentLevel}
                   </span>
                   <span className="text-[10px] font-bold text-slate-400">
-                    Verbal Promise
+                    {results.commitmentType ?? "Verbal Promise"}
                   </span>
                 </div>
               </div>
@@ -836,11 +836,17 @@ export default function DemoPage() {
                     minimumFractionDigits: 2,
                   }) ?? "0.00"}
                 </div>
-                <div className="mt-4 inline-flex items-center px-3 py-1 rounded-lg text-[10px] font-bold bg-brand-teal/10 text-brand-teal border border-brand-teal/20">
+                <div className={`mt-4 inline-flex items-center px-3 py-1 rounded-lg text-[10px] font-bold border ${
+                  results.cashflowImpact?.signal === "UNLIKELY"
+                    ? "bg-red-50 text-red-600 border-red-200"
+                    : results.cashflowImpact?.signal === "AT_RISK"
+                    ? "bg-amber-50 text-amber-600 border-amber-200"
+                    : "bg-brand-teal/10 text-brand-teal border-brand-teal/20"
+                }`}>
                   <span className="material-symbols-outlined text-[14px] mr-1">
-                    trending_up
+                    {results.cashflowImpact?.signal === "UNLIKELY" ? "trending_down" : results.cashflowImpact?.signal === "AT_RISK" ? "warning" : "trending_up"}
                   </span>
-                  RECOVERY SIGNAL
+                  {(results.cashflowImpact?.signal ?? "RECOVERY_SIGNAL").replace(/_/g, " ")}
                 </div>
                 <p className="text-[11px] text-slate-500 mt-4 leading-relaxed font-medium">
                   Expected realization within {results.cashflowImpact?.expectedDays ?? "—"}{" "}
