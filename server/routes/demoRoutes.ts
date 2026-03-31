@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { storage } from "../storage";
+import { generateJSON } from "../services/llm/claude.js";
 
 // Sample data returned when Retell is unavailable or call hasn't completed
 const SAMPLE_REPORT = {
@@ -64,6 +65,67 @@ const SAMPLE_REPORT = {
     '"ERP Migration" has been cited 3 times in 12 months. Recurring friction point. Transition to Direct Debit suggested.',
   callDurationSeconds: 96,
 };
+
+/** Convert seconds (e.g. 14.32) to a readable timestamp like "00:14" */
+function formatSecondsToTimestamp(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+}
+
+/** Parse Retell's plain-text transcript string into structured messages.
+ *  Format is typically "Agent: ...\nUser: ..." */
+function parseRetellTranscriptString(transcript: string): Array<{ role: string; text: string; timestamp: string }> {
+  const lines = transcript.split("\n").filter((l) => l.trim());
+  const messages: Array<{ role: string; text: string; timestamp: string }> = [];
+  for (const line of lines) {
+    const match = line.match(/^(Agent|User):\s*(.+)/i);
+    if (match) {
+      messages.push({
+        role: match[1].toLowerCase() === "agent" ? "agent" : "debtor",
+        text: match[2].trim(),
+        timestamp: "",
+      });
+    } else if (messages.length > 0) {
+      // Continuation of previous message
+      messages[messages.length - 1].text += " " + line.trim();
+    }
+  }
+  return messages;
+}
+
+interface DemoAnalysis {
+  intentScore: number;
+  sentiment: string;
+  commitmentLevel: string;
+  cashflowImpact: { amount: number; currency: string; expectedDays: number; signal: string };
+  recommendedActions: Array<{ type: string; title: string; description: string; icon: string; color: string }>;
+  riskInsights: string;
+  transcriptBadges?: Array<{ messageIndex: number; badges: Array<{ label: string; type: string; icon: string }> }>;
+}
+
+/** Use Claude to analyze a real call transcript and produce the intelligence report */
+async function analyzeTranscriptWithClaude(transcriptText: string): Promise<DemoAnalysis> {
+  return generateJSON<DemoAnalysis>({
+    system: `You are a credit control AI analyst for Qashivo, a UK accounts receivable platform.
+Analyze the following call transcript between an AI collection agent and a debtor. The call was about collecting on an overdue invoice for £12,450 from Williams Logistics.
+
+Return a JSON object with these fields:
+- intentScore: number 0-100. How likely is the debtor to pay? Based on verbal commitments, tone, and specificity of payment promises.
+- sentiment: string. One of: "Cooperative", "Neutral", "Defensive", "Hostile", "Evasive", "Apologetic"
+- commitmentLevel: string. One of: "High", "Medium High", "Medium", "Medium Low", "Low", "None"
+- cashflowImpact: object with { amount: number (the invoice amount discussed, default 12450), currency: "GBP", expectedDays: number (estimated days until payment based on conversation), signal: one of "RECOVERY_SIGNAL", "AT_RISK", "UNLIKELY" }
+- recommendedActions: array of 2-3 objects, each: { type: "Automated"|"Scheduled"|"Manual", title: string (short action name), description: string (1 sentence), icon: string (Google Material Symbol name like "mail", "calendar_month", "phone", "gavel", "payments"), color: "teal"|"amber" }
+- riskInsights: string. 1-2 sentences about risk factors or patterns observed in the conversation.
+- transcriptBadges: array of objects { messageIndex: number (0-based index of the message in the transcript), badges: array of { label: string (2-3 words), type: "teal"|"amber"|"green"|"red", icon: string (Material Symbol) } }. Add badges to 2-4 key moments in the conversation — intent signals, commitments, objections, risk flags.
+
+Be specific and grounded in what was actually said. Do not invent details not in the transcript.`,
+    prompt: transcriptText,
+    model: "fast",
+    temperature: 0.2,
+    maxTokens: 2048,
+  });
+}
 
 export function registerDemoRoutes(app: Express) {
   console.log("[DEMO] Registering demo routes — env check:", {
@@ -253,31 +315,79 @@ export function registerDemoRoutes(app: Express) {
               const updates: any = { status: mappedStatus };
               if (mappedStatus === "completed") {
                 updates.completedAt = new Date();
-                if (retellCall.transcript && Array.isArray(retellCall.transcript)) {
-                  updates.transcript = retellCall.transcript.map((msg: any) => ({
+
+                // Log the full Retell post-call response for debugging
+                console.log("[DEMO] Full Retell post-call response:", JSON.stringify(retellCall, null, 2));
+
+                // Parse transcript — Retell returns transcript_object (array) and transcript (string)
+                if (retellCall.transcript_object && Array.isArray(retellCall.transcript_object)) {
+                  updates.transcript = retellCall.transcript_object.map((msg: any, idx: number) => ({
                     role: msg.role === "agent" ? "agent" : "debtor",
-                    text: msg.content || msg.text || "",
-                    timestamp: msg.timestamp || "",
+                    text: msg.content || "",
+                    timestamp: msg.words?.[0]?.start != null
+                      ? formatSecondsToTimestamp(msg.words[0].start)
+                      : "",
                   }));
+                } else if (typeof retellCall.transcript === "string" && retellCall.transcript.trim()) {
+                  // Fall back to parsing the plain-text transcript string
+                  updates.transcript = parseRetellTranscriptString(retellCall.transcript);
                 } else {
                   updates.transcript = SAMPLE_REPORT.transcript;
                 }
-                if (retellCall.call_analysis) {
-                  updates.intentScore =
-                    retellCall.call_analysis.intent_score ?? SAMPLE_REPORT.intentScore;
-                  updates.sentiment =
-                    retellCall.call_analysis.sentiment ?? SAMPLE_REPORT.sentiment;
-                  updates.commitmentLevel =
-                    retellCall.call_analysis.commitment_level ?? SAMPLE_REPORT.commitmentLevel;
-                  updates.cashflowImpact = SAMPLE_REPORT.cashflowImpact;
-                  updates.recommendedActions = SAMPLE_REPORT.recommendedActions;
-                  updates.riskInsights =
-                    retellCall.call_analysis.risk_insights ?? SAMPLE_REPORT.riskInsights;
-                }
+
                 if (retellCall.duration_ms) {
                   updates.callDurationSeconds = Math.round(
                     retellCall.duration_ms / 1000
                   );
+                }
+
+                // Use Claude to analyze the real transcript instead of hardcoded sample data
+                const hasRealTranscript = updates.transcript !== SAMPLE_REPORT.transcript;
+                if (hasRealTranscript && updates.transcript.length > 0) {
+                  try {
+                    const transcriptText = updates.transcript
+                      .map((m: any) => `${m.role === "agent" ? "AGENT" : "DEBTOR"}: ${m.text}`)
+                      .join("\n");
+
+                    console.log("[DEMO] Sending transcript to Claude for analysis...");
+                    const analysis = await analyzeTranscriptWithClaude(transcriptText);
+                    console.log("[DEMO] Claude analysis result:", JSON.stringify(analysis, null, 2));
+
+                    updates.intentScore = analysis.intentScore;
+                    updates.sentiment = analysis.sentiment;
+                    updates.commitmentLevel = analysis.commitmentLevel;
+                    updates.cashflowImpact = analysis.cashflowImpact;
+                    updates.recommendedActions = analysis.recommendedActions;
+                    updates.riskInsights = analysis.riskInsights;
+
+                    // Add badges to transcript messages based on Claude analysis
+                    if (analysis.transcriptBadges && Array.isArray(analysis.transcriptBadges)) {
+                      for (const badge of analysis.transcriptBadges) {
+                        if (badge.messageIndex >= 0 && badge.messageIndex < updates.transcript.length) {
+                          if (!updates.transcript[badge.messageIndex].badges) {
+                            updates.transcript[badge.messageIndex].badges = [];
+                          }
+                          updates.transcript[badge.messageIndex].badges.push(...badge.badges);
+                        }
+                      }
+                    }
+                  } catch (analysisErr: any) {
+                    console.error("[DEMO] Claude analysis failed, using sample analysis:", analysisErr?.message);
+                    updates.intentScore = SAMPLE_REPORT.intentScore;
+                    updates.sentiment = SAMPLE_REPORT.sentiment;
+                    updates.commitmentLevel = SAMPLE_REPORT.commitmentLevel;
+                    updates.cashflowImpact = SAMPLE_REPORT.cashflowImpact;
+                    updates.recommendedActions = SAMPLE_REPORT.recommendedActions;
+                    updates.riskInsights = SAMPLE_REPORT.riskInsights;
+                  }
+                } else {
+                  // No real transcript — use sample analysis
+                  updates.intentScore = SAMPLE_REPORT.intentScore;
+                  updates.sentiment = SAMPLE_REPORT.sentiment;
+                  updates.commitmentLevel = SAMPLE_REPORT.commitmentLevel;
+                  updates.cashflowImpact = SAMPLE_REPORT.cashflowImpact;
+                  updates.recommendedActions = SAMPLE_REPORT.recommendedActions;
+                  updates.riskInsights = SAMPLE_REPORT.riskInsights;
                 }
               }
               await storage.updateDemoCall(call.id, updates);
