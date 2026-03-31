@@ -253,8 +253,14 @@ export function registerDemoRoutes(app: Express) {
               const updates: any = { status: mappedStatus };
               if (mappedStatus === "completed") {
                 updates.completedAt = new Date();
-                if (retellCall.transcript) {
-                  updates.transcript = retellCall.transcript;
+                if (retellCall.transcript && Array.isArray(retellCall.transcript)) {
+                  updates.transcript = retellCall.transcript.map((msg: any) => ({
+                    role: msg.role === "agent" ? "agent" : "debtor",
+                    text: msg.content || msg.text || "",
+                    timestamp: msg.timestamp || "",
+                  }));
+                } else {
+                  updates.transcript = SAMPLE_REPORT.transcript;
                 }
                 if (retellCall.call_analysis) {
                   updates.intentScore =

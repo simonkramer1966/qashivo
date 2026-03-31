@@ -832,9 +832,9 @@ export default function DemoPage() {
               <div className="mt-6">
                 <div className="text-3xl font-headline font-black text-slate-900 tracking-tight">
                   {"\u00a3"}
-                  {results.cashflowImpact.amount.toLocaleString("en-GB", {
+                  {results.cashflowImpact?.amount?.toLocaleString("en-GB", {
                     minimumFractionDigits: 2,
-                  })}
+                  }) ?? "0.00"}
                 </div>
                 <div className="mt-4 inline-flex items-center px-3 py-1 rounded-lg text-[10px] font-bold bg-brand-teal/10 text-brand-teal border border-brand-teal/20">
                   <span className="material-symbols-outlined text-[14px] mr-1">
@@ -843,7 +843,7 @@ export default function DemoPage() {
                   RECOVERY SIGNAL
                 </div>
                 <p className="text-[11px] text-slate-500 mt-4 leading-relaxed font-medium">
-                  Expected realization within {results.cashflowImpact.expectedDays}{" "}
+                  Expected realization within {results.cashflowImpact?.expectedDays ?? "—"}{" "}
                   days based on historical behavior.
                 </p>
               </div>
@@ -866,7 +866,7 @@ export default function DemoPage() {
                 </div>
               </div>
               <div className="space-y-10 max-h-[700px] overflow-y-auto scroll-custom pr-4">
-                {results.transcript.map((msg, i) => (
+                {Array.isArray(results.transcript) && results.transcript.map((msg, i) => (
                   <div
                     key={i}
                     className={`space-y-3 ${
@@ -940,7 +940,7 @@ export default function DemoPage() {
                 Intelligence Actions
               </h2>
               <div className="space-y-4">
-                {results.recommendedActions.map((action, i) => (
+                {Array.isArray(results.recommendedActions) && results.recommendedActions.map((action, i) => (
                   <div
                     key={i}
                     className={`bg-white p-6 rounded-2xl border-l-4 shadow-sm ${
