@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Sheet,
@@ -182,11 +182,12 @@ export default function SendEmailDrawer({
     return suggestions;
   }, [persons, primaryEmail, contact]);
 
-  // CC suggestions exclude emails already in To
-  const ccSuggestions = useMemo(() => {
-    const toSet = new Set(toRecipients.map((e) => e.toLowerCase()));
-    return personSuggestions.filter((s) => !toSet.has(s.email.toLowerCase()));
-  }, [personSuggestions, toRecipients]);
+  // Fix To: pre-population when contact data loads after drawer opens
+  useEffect(() => {
+    if (open && primaryEmail && toRecipients.length === 0) {
+      setToRecipients([primaryEmail]);
+    }
+  }, [open, primaryEmail]);
 
   const selectedTotal = useMemo(
     () =>
@@ -395,13 +396,15 @@ export default function SendEmailDrawer({
                   value={toRecipients}
                   onChange={setToRecipients}
                   suggestions={personSuggestions}
+                  otherFieldEmails={ccRecipients}
                   placeholder="Recipient email…"
                 />
                 <RecipientChipInput
                   label="CC"
                   value={ccRecipients}
                   onChange={setCcRecipients}
-                  suggestions={ccSuggestions}
+                  suggestions={personSuggestions}
+                  otherFieldEmails={toRecipients}
                   placeholder="CC…"
                 />
 

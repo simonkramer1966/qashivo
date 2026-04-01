@@ -3,8 +3,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { X, Plus } from "lucide-react";
+import ContactPickerPanel from "./ContactPickerPanel";
 
-interface Suggestion {
+export interface Suggestion {
   name: string;
   email: string;
   role?: string;
@@ -14,6 +15,7 @@ interface RecipientChipInputProps {
   value: string[];
   onChange: (emails: string[]) => void;
   suggestions?: Suggestion[];
+  otherFieldEmails?: string[];
   placeholder?: string;
   label: string;
 }
@@ -24,6 +26,7 @@ export default function RecipientChipInput({
   value,
   onChange,
   suggestions = [],
+  otherFieldEmails = [],
   placeholder = "Add email…",
   label,
 }: RecipientChipInputProps) {
@@ -53,10 +56,6 @@ export default function RecipientChipInput({
     }
   };
 
-  const unusedSuggestions = suggestions.filter(
-    (s) => s.email && !value.includes(s.email.toLowerCase())
-  );
-
   return (
     <div className="space-y-1">
       <label className="text-xs text-muted-foreground font-medium">{label}</label>
@@ -83,7 +82,7 @@ export default function RecipientChipInput({
           placeholder={value.length === 0 ? placeholder : ""}
           className="flex-1 min-w-[120px] bg-transparent text-sm outline-none placeholder:text-muted-foreground"
         />
-        {unusedSuggestions.length > 0 && (
+        {suggestions.length > 0 && (
           <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
             <PopoverTrigger asChild>
               <Button
@@ -95,28 +94,20 @@ export default function RecipientChipInput({
                 <Plus className="h-3 w-3 mr-0.5" /> Add
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-72 p-1" align="start">
-              {unusedSuggestions.map((s) => (
-                <button
-                  key={s.email}
-                  type="button"
-                  onClick={() => {
-                    addEmail(s.email);
-                    setPopoverOpen(false);
-                  }}
-                  className="w-full flex items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted text-left"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{s.name}</p>
-                    <p className="text-xs text-muted-foreground truncate">{s.email}</p>
-                  </div>
-                  {s.role && (
-                    <Badge variant="outline" className="text-[10px] shrink-0">
-                      {s.role}
-                    </Badge>
-                  )}
-                </button>
-              ))}
+            <PopoverContent className="w-80 p-0" align="start">
+              <ContactPickerPanel
+                suggestions={suggestions}
+                selectedEmails={value}
+                otherFieldEmails={otherFieldEmails}
+                otherFieldLabel={label === "To" ? "CC" : "To"}
+                onConfirm={(selected) => {
+                  const suggestionEmails = new Set(suggestions.map((s) => s.email.toLowerCase()));
+                  const manualEmails = value.filter((e) => !suggestionEmails.has(e));
+                  onChange([...manualEmails, ...selected]);
+                  setPopoverOpen(false);
+                }}
+                onCancel={() => setPopoverOpen(false)}
+              />
             </PopoverContent>
           </Popover>
         )}
