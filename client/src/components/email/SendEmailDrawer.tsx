@@ -14,12 +14,6 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -156,10 +150,11 @@ export default function SendEmailDrawer({
   const [blocked, setBlocked] = useState<{ blocked: boolean; reason?: string } | null>(null);
 
   // --- Derived ---
-  // Resolve the real debtor email: prefer primary credit control person, then AR overlay, then Xero email.
-  // This ensures the To field always shows the real recipient, not any test redirect.
+  // Resolve the real debtor email for display in To field.
+  // Priority: arContactEmail (user-set AR overlay) > primary credit control person > Xero email.
+  // Test mode redirect happens server-side at send time only — never substitute here.
   const primaryCreditControlEmail = persons?.find((p) => p.isPrimaryCreditControl)?.email;
-  const primaryEmail = primaryCreditControlEmail ?? contact?.arContactEmail ?? contact?.email ?? "";
+  const primaryEmail = contact?.arContactEmail ?? primaryCreditControlEmail ?? contact?.email ?? "";
 
   // Build suggestions from persons + AR overlay. Real debtor emails only.
   const personSuggestions = useMemo(() => {
@@ -416,7 +411,6 @@ export default function SendEmailDrawer({
                 <ToneSlider
                   value={tone}
                   onChange={setTone}
-                  disabled={mode === "generated" || mode === "manual"}
                 />
 
                 {/* ---- LPI toggle ---- */}
@@ -431,16 +425,21 @@ export default function SendEmailDrawer({
                           {gbp.format(metrics.totalLPI)} accruing at {metrics.lpiAnnualRate}% p.a.
                         </p>
                       )}
+                      {metrics.lpiEnabled && metrics.totalLPI === 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          No interest accruing yet
+                        </p>
+                      )}
                       {!metrics.lpiEnabled && (
                         <p className="text-xs text-muted-foreground">
-                          Globally disabled
+                          LPI not enabled — turn on in Settings &gt; Playbook
                         </p>
                       )}
                     </div>
                     <Switch
                       checked={lpiOverride}
                       onCheckedChange={setLpiOverride}
-                      disabled={!metrics.lpiEnabled || mode === "generated" || mode === "manual"}
+                      disabled={!metrics.lpiEnabled}
                     />
                   </div>
                 )}
@@ -456,7 +455,6 @@ export default function SendEmailDrawer({
                     placeholder="Optional instructions for the AI, e.g. 'Mention we spoke on the phone last week'…"
                     className="min-h-[60px] text-sm"
                     rows={2}
-                    disabled={mode === "generated" || mode === "manual"}
                   />
                 </div>
 
@@ -543,23 +541,18 @@ export default function SendEmailDrawer({
                 )}
 
                 {/* ---- Attachments ---- */}
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <label className="flex items-center gap-2 text-sm py-1 px-2 opacity-50 cursor-not-allowed">
-                        <input
-                          type="checkbox"
-                          checked={attachStatement}
-                          onChange={() => {}}
-                          disabled
-                          className="rounded"
-                        />
-                        Attach statement
-                      </label>
-                    </TooltipTrigger>
-                    <TooltipContent>Coming soon</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <label className="flex items-center gap-2 text-sm py-1 px-2 rounded hover:bg-muted cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={attachStatement}
+                    onChange={(e) => setAttachStatement(e.target.checked)}
+                    className="rounded"
+                  />
+                  Attach statement
+                  {attachStatement && (
+                    <span className="text-xs text-muted-foreground">(PDF generation coming soon)</span>
+                  )}
+                </label>
 
                 <Separator />
 

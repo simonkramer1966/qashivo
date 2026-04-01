@@ -22,7 +22,7 @@ import {
   attentionItems, outcomes, activityLogs, collectionPolicies, paymentPlans,
   emailMessages, customerContactPersons, scheduledReports,
   cachedXeroOverpayments, cachedXeroPrepayments, cachedXeroCreditNotes, cachedXeroContacts,
-  activityEvents, riskScores,
+  activityEvents, riskScores, agentPersonas,
 } from "@shared/schema";
 import { computeNextRunAt } from "../services/reportScheduler";
 import { REPORT_TYPE_LABELS, type ReportType } from "../services/reportGenerator";
@@ -4397,7 +4397,7 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
       const grossTotal = chaseableTotal + disputedTotal;
 
       // Gather context: recent activity, payment stats, promises, tenant (for LPI)
-      const [recentActivity, paidInvoicesResult, openPromises, draftTenant] = await Promise.all([
+      const [recentActivity, paidInvoicesResult, openPromises, draftTenant, draftPersona] = await Promise.all([
         db.select()
           .from(activityEvents)
           .where(and(
@@ -4423,6 +4423,11 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
           .orderBy(desc(paymentPromises.createdAt))
           .limit(1),
         storage.getTenant(tenantId),
+        db.select()
+          .from(agentPersonas)
+          .where(and(eq(agentPersonas.tenantId, tenantId), eq(agentPersonas.isActive, true)))
+          .limit(1)
+          .then(rows => rows[0] ?? null),
       ]);
 
       // Calculate avg days to pay for tone selection
@@ -4496,11 +4501,24 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
         ? ''
         : `\nWrite the ENTIRE ${type === 'email' ? 'email body' : 'SMS'} in ${draftLangName}. The debtor speaks ${draftLangName}. Keep the email signature in English (do not translate names, titles, or company name).`;
 
-      const systemPrompt = `You are a professional credit controller writing on behalf of a business. Generate a ${type === 'email' ? 'collection email' : 'collection SMS (max 160 characters)'} for a debtor.
+      // Build persona sign-off instruction
+      const personaSignoff = draftPersona && type === 'email'
+        ? `\nEMAIL SIGNATURE (always end the email with this — do not use a generic sign-off like "Best regards"):
+${draftPersona.emailSignatureName}
+${draftPersona.emailSignatureTitle}
+${draftPersona.emailSignatureCompany}${draftPersona.emailSignaturePhone ? `\nTel: ${draftPersona.emailSignaturePhone}` : ''}`
+        : '';
+
+      const personaIdentity = draftPersona
+        ? `You are ${draftPersona.personaName}, ${draftPersona.jobTitle} at ${draftPersona.emailSignatureCompany}.`
+        : `You are a professional credit controller writing on behalf of a business.`;
+
+      const systemPrompt = `${personaIdentity} Generate a ${type === 'email' ? 'collection email' : 'collection SMS (max 160 characters)'} for a debtor.
 Format all monetary amounts in ${draftCurrency} (${getCurrencySymbol(draftCurrency)}).${languageInstruction}
 
 ${toneInstruction}
 ${disputeContext}
+${personaSignoff}
 
 The debtor must believe this is written by a real person, not a template or AI. Use natural language. Be specific about amounts and dates. Do not use placeholder text.`;
 
