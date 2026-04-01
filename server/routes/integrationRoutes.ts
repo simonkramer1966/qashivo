@@ -1361,13 +1361,19 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
         let orgName: string | null = conn?.connectionName || null;
 
         if (p.name === 'xero' && tenant) {
-          // Use tenants table as source of truth for Xero connection health
+          // Two-signal status: use BOTH health check status AND last sync time.
+          // A recent successful sync proves the connection works, even if the
+          // health check's supplementary org-info call failed.
           const status = tenant.xeroConnectionStatus;
-          if (status === 'connected') {
+          const syncTime = tenant.xeroLastSyncAt ? new Date(tenant.xeroLastSyncAt) : null;
+          const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000);
+          const recentSync = syncTime && syncTime > sixHoursAgo;
+
+          if (recentSync || status === 'connected') {
             connectionStatus = 'active';
           } else if (status === 'expired') {
             connectionStatus = 'expired';
-          } else if (status === 'error') {
+          } else if (status === 'error' || status === 'disconnected') {
             connectionStatus = 'error';
           } else if (conn?.isConnected) {
             // Fallback: connected in providerConnections but no health check status yet
@@ -1402,7 +1408,7 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
           connectionStatus,
           orgName,
           lastSyncAt,
-          lastError: conn?.lastError || (p.name === 'xero' ? tenant?.xeroHealthCheckError : null) || null,
+          lastError: connectionStatus === 'active' ? null : (conn?.lastError || (p.name === 'xero' ? tenant?.xeroHealthCheckError : null) || null),
           errorCount: conn?.errorCount || 0,
         };
       });

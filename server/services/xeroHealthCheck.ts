@@ -103,24 +103,29 @@ export class XeroHealthCheckService {
       // Token refresh succeeded - try a lightweight API call to verify and get org info
       const orgInfo = await this.getOrganisationInfo(refreshedTokens.accessToken, refreshedTokens.tenantId);
 
-      if (orgInfo.isConnected) {
-        // Update health check status and organisation name if available
-        await db
-          .update(tenants)
-          .set({
-            xeroConnectionStatus: 'connected',
-            xeroLastHealthCheck: new Date(),
-            xeroHealthCheckError: null,
-            ...(orgInfo.organisationName && { xeroOrganisationName: orgInfo.organisationName }),
-            updatedAt: new Date(),
-          })
-          .where(eq(tenants.id, tenant.id));
+      // Token refresh succeeded — the connection is working.
+      // Org info is supplementary; its failure does NOT mean we're disconnected.
+      const updateFields: Record<string, unknown> = {
+        xeroConnectionStatus: 'connected',
+        xeroLastHealthCheck: new Date(),
+        xeroHealthCheckError: null,
+        updatedAt: new Date(),
+      };
 
+      if (orgInfo.isConnected) {
+        if (orgInfo.organisationName) {
+          updateFields.xeroOrganisationName = orgInfo.organisationName;
+        }
         console.log(`✅ Xero connection HEALTHY for tenant: ${tenant.name}${orgInfo.organisationName ? ` (${orgInfo.organisationName})` : ''}`);
       } else {
-        await this.updateConnectionStatus(tenant.id, 'error', 'API verification failed');
-        console.log(`⚠️ Xero connection ERROR for tenant: ${tenant.name} (API call failed)`);
+        // Org info call failed but token refresh succeeded — still connected
+        console.warn(`⚠️ Xero org info call failed for tenant: ${tenant.name} (token refresh OK — connection is fine)`);
       }
+
+      await db
+        .update(tenants)
+        .set(updateFields)
+        .where(eq(tenants.id, tenant.id));
     } catch (error) {
       // Sanitize error message to avoid exposing sensitive OAuth details
       const rawError = error instanceof Error ? error.message : 'Unknown error';

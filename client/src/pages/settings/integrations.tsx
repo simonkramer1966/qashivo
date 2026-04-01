@@ -266,8 +266,19 @@ function AccountingTab() {
               </div>
             </div>
 
-            {status.connectionStatus === "error" && status.lastError && (
+            {status.connectionStatus === "error" && status.lastError && !status.lastSyncAt && (
               <p className="text-sm text-red-600">{status.lastError}</p>
+            )}
+            {status.connectionStatus === "error" && status.lastSyncAt && (
+              <p className="text-sm text-emerald-600">
+                Sync working · last synced{" "}
+                {new Date(status.lastSyncAt).toLocaleString("en-GB", {
+                  day: "numeric",
+                  month: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </p>
             )}
 
             <div className="flex flex-wrap gap-2">
