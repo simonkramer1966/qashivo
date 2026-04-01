@@ -484,17 +484,28 @@ export function registerActionCentreRoutes(app: Express): void {
         });
       }
 
-      // Return communication mode info so frontend can show appropriate toast
-      const { checkCollectionActions } = await import("../services/collectionsAutomation");
-      const generatedActions = await checkCollectionActions(user.tenantId);
+      // Generate actions via the full daily plan pipeline (scores, LLM content, compliance)
+      const { generateDailyPlan } = await import("../services/dailyPlanGenerator");
+      const plan = await generateDailyPlan(user.tenantId, req.user.id, true);
 
-      console.log(`[ACTION-CENTRE] Agent run-now — ${generatedActions.length} actions generated for tenant ${user.tenantId} (mode: ${mode})`);
+      // Trigger message pre-generation in background
+      if (plan.actions.length > 0) {
+        const { messagePreGenerator } = await import("../services/messagePreGenerator");
+        const actionIds = plan.actions.map((a: any) => a.id);
+        messagePreGenerator.preGenerateForActions(actionIds)
+          .then(result => {
+            console.log(`[ACTION-CENTRE] Pre-generated messages: ${result.generated} generated, ${result.failed} failed, ${result.skipped} skipped`);
+          })
+          .catch(err => console.error("[ACTION-CENTRE] Message pre-generation failed:", err));
+      }
+
+      console.log(`[ACTION-CENTRE] Agent run-now — ${plan.actions.length} actions generated for tenant ${user.tenantId} (mode: ${mode})`);
 
       res.json({
         success: true,
-        generated: generatedActions.length,
+        generated: plan.actions.length,
         communicationMode: mode,
-        message: `${generatedActions.length} new emails generated and queued for approval`,
+        message: `${plan.actions.length} new emails generated and queued for approval`,
       });
     } catch (error: any) {
       console.error("Error running agent:", error);
