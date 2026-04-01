@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { Treemap, ResponsiveContainer } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import DebtorPopup from "./DebtorPopup";
 import { OVERDUE_COLORS, getCellColor, getTextColor } from "./colors";
 import type { HeatmapDebtor } from "./DebtorHeatmap";
@@ -44,8 +45,11 @@ function TreemapCell(props: TreemapCellProps) {
 
   if (width <= 0 || height <= 0) return null;
 
-  const color = getCellColor(oldestOverdueDays ?? 0);
-  const textColor = getTextColor(oldestOverdueDays ?? 0);
+  const overdueOnly = props.overdueOnly as boolean;
+  const isGreyed = overdueOnly && (!oldestOverdueDays || oldestOverdueDays <= 0);
+  const color = isGreyed ? "#E8E8E8" : getCellColor(oldestOverdueDays ?? 0);
+  const textColor = isGreyed ? "#999999" : getTextColor(oldestOverdueDays ?? 0);
+  const fillOpacity = isGreyed ? 0.4 : 1;
   const showText = width > 60 && height > 28;
   const maxChars = Math.floor(width / 7);
 
@@ -61,6 +65,7 @@ function TreemapCell(props: TreemapCellProps) {
         strokeWidth={2}
         rx={2}
         ry={2}
+        opacity={fillOpacity}
         style={{ cursor: "pointer" }}
         onClick={() => onCellClick(id)}
         onMouseEnter={() =>
@@ -104,6 +109,7 @@ export default function DebtorTreemap({ debtors, isLoading }: DebtorTreemapProps
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [hoveredDebtor, setHoveredDebtor] = useState<HeatmapDebtor | null>(null);
   const [popupPos, setPopupPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [overdueOnly, setOverdueOnly] = useState(false);
 
   const handleCellClick = useCallback(
     (id: string) => navigate(`/qollections/debtors/${id}`),
@@ -176,10 +182,20 @@ export default function DebtorTreemap({ debtors, isLoading }: DebtorTreemapProps
           <div>
             <CardTitle className="text-sm font-semibold">Debtor Treemap</CardTitle>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {debtors.length} debtor{debtors.length !== 1 ? "s" : ""} · cell size = outstanding amount · colour = days overdue
+              {overdueOnly
+                ? `${debtors.filter((d) => d.oldestOverdueDays > 0).length} debtors overdue of ${debtors.length}`
+                : `${debtors.length} debtor${debtors.length !== 1 ? "s" : ""}`}
+              {" · cell size = outstanding amount · colour = days overdue"}
             </p>
           </div>
-          <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Switch id="overdue-toggle" checked={overdueOnly} onCheckedChange={setOverdueOnly} />
+              <label htmlFor="overdue-toggle" className="text-xs text-muted-foreground cursor-pointer">
+                Show only overdue
+              </label>
+            </div>
+            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
             <span>Current</span>
             {OVERDUE_COLORS.map((c) => (
               <span
@@ -189,6 +205,7 @@ export default function DebtorTreemap({ debtors, isLoading }: DebtorTreemapProps
               />
             ))}
             <span>90d+ overdue</span>
+            </div>
           </div>
         </div>
       </CardHeader>
@@ -206,6 +223,7 @@ export default function DebtorTreemap({ debtors, isLoading }: DebtorTreemapProps
                   onCellClick={handleCellClick}
                   onCellEnter={handleCellEnter}
                   onCellLeave={handleCellLeave}
+                  overdueOnly={overdueOnly}
                 />
               }
             />
