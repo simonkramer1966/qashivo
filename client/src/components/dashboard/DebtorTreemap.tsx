@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
 import { Treemap, ResponsiveContainer } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,8 +27,9 @@ interface TreemapCellProps {
   oldestOverdueDays: number;
   totalOutstanding: number;
   id: string;
+  arTotal: number;
   onCellClick: (id: string) => void;
-  onCellEnter: (debtor: HeatmapDebtor, rect: { x: number; y: number; width: number; height: number }) => void;
+  onCellEnter: (debtor: HeatmapDebtor, rect: { x: number; y: number; width: number; height: number }, arTotal: number) => void;
   onCellLeave: () => void;
   // All original debtor fields passed through by recharts
   [key: string]: any;
@@ -37,7 +38,7 @@ interface TreemapCellProps {
 function TreemapCell(props: TreemapCellProps) {
   const {
     x, y, width, height,
-    name, oldestOverdueDays, totalOutstanding, id,
+    name, oldestOverdueDays, totalOutstanding, id, arTotal,
     onCellClick, onCellEnter, onCellLeave,
     // extract debtor fields for popup
     overdueAmount, riskBand, riskScore, paymentBehaviour, invoiceCount,
@@ -52,6 +53,7 @@ function TreemapCell(props: TreemapCellProps) {
   const fillOpacity = isGreyed ? 0.4 : 1;
   const showText = width > 60 && height > 28;
   const maxChars = Math.floor(width / 7);
+  const pct = arTotal > 0 ? ((totalOutstanding / arTotal) * 100).toFixed(1) : "0.0";
 
   return (
     <g>
@@ -71,7 +73,8 @@ function TreemapCell(props: TreemapCellProps) {
         onMouseEnter={() =>
           onCellEnter(
             { id, name, totalOutstanding, overdueAmount, oldestOverdueDays, riskBand, riskScore, paymentBehaviour, invoiceCount },
-            { x, y, width, height }
+            { x, y, width, height },
+            arTotal
           )
         }
         onMouseLeave={onCellLeave}
@@ -96,7 +99,7 @@ function TreemapCell(props: TreemapCellProps) {
             opacity={0.8}
             style={{ pointerEvents: "none" }}
           >
-            {fmt(totalOutstanding)}
+            {fmt(totalOutstanding)} · {pct}%
           </text>
         </>
       )}
@@ -108,6 +111,7 @@ export default function DebtorTreemap({ debtors, isLoading }: DebtorTreemapProps
   const [, navigate] = useLocation();
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [hoveredDebtor, setHoveredDebtor] = useState<HeatmapDebtor | null>(null);
+  const [hoveredArTotal, setHoveredArTotal] = useState(0);
   const [popupPos, setPopupPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [overdueOnly, setOverdueOnly] = useState(false);
 
@@ -117,7 +121,7 @@ export default function DebtorTreemap({ debtors, isLoading }: DebtorTreemapProps
   );
 
   const handleCellEnter = useCallback(
-    (debtor: HeatmapDebtor, rect: { x: number; y: number; width: number; height: number }) => {
+    (debtor: HeatmapDebtor, rect: { x: number; y: number; width: number; height: number }, total: number) => {
       const wrapperRect = wrapperRef.current?.getBoundingClientRect();
       if (!wrapperRect) return;
 
@@ -134,6 +138,7 @@ export default function DebtorTreemap({ debtors, isLoading }: DebtorTreemapProps
         y,
       });
       setHoveredDebtor(debtor);
+      setHoveredArTotal(total);
     },
     []
   );
@@ -174,6 +179,11 @@ export default function DebtorTreemap({ debtors, isLoading }: DebtorTreemapProps
       ...d,
       size: d.totalOutstanding,
     }));
+
+  const arTotal = useMemo(
+    () => treemapData.reduce((sum, d) => sum + d.totalOutstanding, 0),
+    [treemapData]
+  );
 
   return (
     <Card>
@@ -220,6 +230,7 @@ export default function DebtorTreemap({ debtors, isLoading }: DebtorTreemapProps
                 <TreemapCell
                   x={0} y={0} width={0} height={0}
                   name="" oldestOverdueDays={0} totalOutstanding={0} id=""
+                  arTotal={arTotal}
                   onCellClick={handleCellClick}
                   onCellEnter={handleCellEnter}
                   onCellLeave={handleCellLeave}
@@ -233,6 +244,7 @@ export default function DebtorTreemap({ debtors, isLoading }: DebtorTreemapProps
             debtor={hoveredDebtor!}
             position={popupPos}
             visible={!!hoveredDebtor}
+            arTotal={hoveredArTotal}
           />
         </div>
       </CardContent>

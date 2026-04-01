@@ -16,9 +16,10 @@ interface DebtorPopupProps {
   debtor: DebtorPopupData;
   position: { x: number; y: number };
   visible: boolean;
+  arTotal?: number;
 }
 
-export default function DebtorPopup({ debtor, position, visible }: DebtorPopupProps) {
+export default function DebtorPopup({ debtor, position, visible, arTotal }: DebtorPopupProps) {
   if (!visible) return null;
 
   return (
@@ -32,6 +33,12 @@ export default function DebtorPopup({ debtor, position, visible }: DebtorPopupPr
           <span className="text-muted-foreground">Outstanding</span>
           <span className="font-medium">{fmt(debtor.totalOutstanding)}</span>
         </div>
+        {arTotal != null && arTotal > 0 && (
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">% of total</span>
+            <span>{((debtor.totalOutstanding / arTotal) * 100).toFixed(1)}% of AR</span>
+          </div>
+        )}
         <div className="flex justify-between">
           <span className="text-muted-foreground">Overdue</span>
           {debtor.overdueAmount > 0 ? (
