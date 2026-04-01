@@ -130,7 +130,9 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
       return res.json();
     },
     onSuccess: (data: { generated: number; communicationMode: string }) => {
-      if (data.communicationMode === "testing") {
+      if (data.generated === 0) {
+        toast({ title: "No new emails generated", description: "All eligible debtors were recently contacted or are within cooldown period." });
+      } else if (data.communicationMode === "testing") {
         toast({ title: `${data.generated} new emails generated`, description: "Running in test mode — emails will be sent to test addresses, not real debtors." });
       } else {
         toast({ title: `${data.generated} new emails generated and queued for approval` });
@@ -175,18 +177,6 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
 
   const actions = data?.actions ?? [];
 
-  if (actions.length === 0) {
-    return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <Check className="mb-3 h-10 w-10 text-green-500" />
-          <h3 className="text-lg font-semibold">All clear</h3>
-          <p className="text-sm text-muted-foreground">No actions waiting for approval.</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <div className="space-y-3">
       {/* Action bar */}
@@ -205,40 +195,42 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
           )}
           {runAgentMutation.isPending ? "Generating..." : "Run agent now"}
         </Button>
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10"
-              disabled={clearQueueMutation.isPending || actions.length === 0}
-            >
-              {clearQueueMutation.isPending ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Trash2 className="h-3.5 w-3.5" />
-              )}
-              Clear queue
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Clear approval queue?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This will cancel all {actions.length} pending items. This cannot be undone. The agent will generate new emails on the next scheduled run.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                onClick={() => clearQueueMutation.mutate()}
+        {actions.length > 0 && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10"
+                disabled={clearQueueMutation.isPending}
               >
+                {clearQueueMutation.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="h-3.5 w-3.5" />
+                )}
                 Clear queue
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Clear approval queue?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will cancel all {actions.length} pending items. This cannot be undone. The agent will generate new emails on the next scheduled run.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  onClick={() => clearQueueMutation.mutate()}
+                >
+                  Clear queue
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
       </div>
 
       {/* Live Mode Warning */}
@@ -259,6 +251,15 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
         </AlertDialogContent>
       </AlertDialog>
 
+      {actions.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <Check className="mb-3 h-10 w-10 text-green-500" />
+            <h3 className="text-lg font-semibold">All clear</h3>
+            <p className="text-sm text-muted-foreground">No actions waiting for approval.</p>
+          </CardContent>
+        </Card>
+      ) : (
       <Table>
         <TableHeader>
           <TableRow>
@@ -368,6 +369,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
           ))}
         </TableBody>
       </Table>
+      )}
     </div>
   );
 }
