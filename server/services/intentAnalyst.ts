@@ -1,6 +1,6 @@
 import { generateJSON } from "./llm/claude";
 import { db } from "../db";
-import { inboundMessages, actions, contacts, invoices, paymentPlans, paymentPlanInvoices, users, outcomes, emailClarifications, tenants, emailMessages, customerContactPersons } from "@shared/schema";
+import { inboundMessages, actions, contacts, invoices, paymentPlans, paymentPlanInvoices, users, outcomes, emailClarifications, tenants, emailMessages, customerContactPersons, forecastUserAdjustments } from "@shared/schema";
 import { eq, and, desc, inArray, asc, sql } from "drizzle-orm";
 import { getPromiseReliabilityService } from "./promiseReliabilityService.js";
 import { emailClarificationService } from "./emailClarificationService.js";
@@ -476,10 +476,12 @@ CRITICAL EXCEPTIONS — do NOT flag ambiguity when:
         
         // Create promise record if this is a promise_to_pay intent with high confidence
         // (Legacy table - kept for backwards compatibility)
-        if (analysis.intentType === 'promise_to_pay' && 
+        if (analysis.intentType === 'promise_to_pay' &&
             analysis.confidence >= this.CONFIDENCE_THRESHOLD &&
             message.contactId && message.invoiceId) {
           await this.createPromiseFromIntent(message, analysis, context);
+          // Also create a forecastUserAdjustment so this promise feeds into cashflow forecasting
+          await this.createForecastAdjustmentFromPromise(message, analysis, context);
         }
         
         // Handle payment plan requests - update invoice outcome and create notification
@@ -1151,6 +1153,75 @@ CRITICAL EXCEPTIONS — do NOT flag ambiguity when:
     }
   }
   
+  /**
+   * Create a forecastUserAdjustment record from a promise-to-pay intent.
+   * This bridges the inbound reply chain into the cashflow forecast so
+   * the weekly CFO review can include expected inflows from debtor promises.
+   */
+  private async createForecastAdjustmentFromPromise(
+    message: typeof inboundMessages.$inferSelect,
+    analysis: IntentAnalysisResult,
+    context: any,
+  ): Promise<void> {
+    try {
+      if (!message.contactId || !message.invoiceId) return;
+
+      // Resolve promised date
+      let promisedDate: Date | null = null;
+      for (const dateStr of (analysis.extractedEntities.dates || [])) {
+        promisedDate = this.parsePromisedDate(dateStr);
+        if (promisedDate) break;
+      }
+      if (!promisedDate) {
+        promisedDate = new Date();
+        promisedDate.setDate(promisedDate.getDate() + 7);
+      }
+
+      // Resolve amount: extracted amount > invoice balance > 0
+      let amount = 0;
+      for (const amountStr of (analysis.extractedEntities.amounts || [])) {
+        const parsed = this.parseAmount(amountStr);
+        if (parsed !== undefined && parsed > 0) { amount = parsed; break; }
+      }
+      if (amount === 0 && context?.invoiceAmount) {
+        amount = typeof context.invoiceAmount === 'string'
+          ? parseFloat(context.invoiceAmount) || 0
+          : context.invoiceAmount;
+      }
+      if (amount <= 0) return; // Nothing to forecast
+
+      // Load contact name for description
+      const [contact] = await db.select({ name: contacts.name, companyName: contacts.companyName })
+        .from(contacts)
+        .where(eq(contacts.id, message.contactId))
+        .limit(1);
+      const debtorName = contact?.companyName || contact?.name || 'Unknown';
+
+      // Set expiry 3 months from now
+      const expiryDate = new Date();
+      expiryDate.setMonth(expiryDate.getMonth() + 3);
+
+      await db.insert(forecastUserAdjustments).values({
+        tenantId: message.tenantId,
+        category: 'revenue_change',
+        description: `Promise to pay from ${debtorName} — extracted from inbound reply`,
+        amount: amount.toFixed(2),
+        timingType: 'one_off_date',
+        startDate: promisedDate,
+        enteredDate: new Date(),
+        expiryDate,
+        affects: 'inflows',
+        source: 'inbound_reply',
+        followUpPriority: 'medium',
+        followUpStatus: 'pending',
+      });
+
+      console.log(`✅ Forecast adjustment created: ${debtorName} — £${amount.toFixed(2)} expected ${promisedDate.toLocaleDateString()}`);
+    } catch (error) {
+      console.error('❌ Error creating forecast adjustment from promise:', error);
+    }
+  }
+
   /**
    * Parse a date string from natural language
    * Handles common B2B payment date expressions

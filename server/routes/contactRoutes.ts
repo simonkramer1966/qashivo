@@ -2302,10 +2302,15 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
         }
       }).returning();
 
-      // Create timeline event
-      const userName = user.firstName || user.lastName 
-        ? `${user.firstName || ''} ${user.lastName || ''}`.trim() 
-        : user.email;
+      // Create timeline event — use agent persona name (the debtor-facing identity),
+      // not the logged-in user's name, since the email appears to come from the persona.
+      const [activePersona] = await db.select({
+        name: agentPersonas.emailSignatureName,
+      }).from(agentPersonas)
+        .where(and(eq(agentPersonas.tenantId, user.tenantId), eq(agentPersonas.isActive, true)))
+        .limit(1);
+      const senderDisplayName = activePersona?.name
+        || (user.firstName || user.lastName ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : user.email);
 
       await db.insert(timelineEvents).values({
         tenantId: user.tenantId,
@@ -2318,7 +2323,7 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
         body: body,
         status: 'sent',
         createdByUserId: user.id,
-        createdByName: userName,
+        createdByName: senderDisplayName,
         metadata: {
           templateType,
           messageId: result.messageId,
