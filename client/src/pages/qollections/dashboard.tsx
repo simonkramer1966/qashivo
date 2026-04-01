@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useLocation } from "wouter";
 import DebtorTreemap from "@/components/dashboard/DebtorTreemap";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
 
 // ── Types ──────────────────────────────────────────────────
 
@@ -278,7 +279,9 @@ export default function QollectionsDashboard() {
         </div>
 
         {/* ── Debtor Treemap ── */}
-        <DebtorTreemap debtors={debtors} isLoading={debtorsLoading} />
+        <ErrorBoundary>
+          <DebtorTreemap debtors={debtors} isLoading={debtorsLoading} />
+        </ErrorBoundary>
 
         {/* ── Debtor List ── */}
         <Card>

@@ -145,6 +145,20 @@ export default function DebtorTreemap({ debtors, isLoading }: DebtorTreemapProps
 
   const handleCellLeave = useCallback(() => setHoveredDebtor(null), []);
 
+  // Compute treemapData and arTotal BEFORE any conditional returns (Rules of Hooks)
+  const treemapData = useMemo(
+    () =>
+      debtors
+        .filter((d) => d.totalOutstanding > 0)
+        .map((d) => ({ ...d, size: d.totalOutstanding })),
+    [debtors]
+  );
+
+  const arTotal = useMemo(
+    () => treemapData.reduce((sum, d) => sum + d.totalOutstanding, 0),
+    [treemapData]
+  );
+
   if (isLoading) {
     return (
       <Card>
@@ -172,18 +186,6 @@ export default function DebtorTreemap({ debtors, isLoading }: DebtorTreemapProps
       </Card>
     );
   }
-
-  const treemapData = debtors
-    .filter((d) => d.totalOutstanding > 0)
-    .map((d) => ({
-      ...d,
-      size: d.totalOutstanding,
-    }));
-
-  const arTotal = useMemo(
-    () => treemapData.reduce((sum, d) => sum + d.totalOutstanding, 0),
-    [treemapData]
-  );
 
   return (
     <Card>
