@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Sheet,
   SheetContent,
@@ -124,6 +124,17 @@ export default function SendEmailDrawer({
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Fetch communication mode for test mode indicator
+  const { data: commMode } = useQuery<{
+    mode: string;
+    testContactName: string;
+    testEmails: string[];
+    testPhones: string[];
+  }>({
+    queryKey: ["/api/communications/mode"],
+  });
+  const isTestMode = commMode?.mode === "testing" || commMode?.mode === "soft_live";
+
   // --- State ---
   const [mode, setMode] = useState<DrawerMode>("composing");
   const [toRecipients, setToRecipients] = useState<string[]>([]);
@@ -145,8 +156,12 @@ export default function SendEmailDrawer({
   const [blocked, setBlocked] = useState<{ blocked: boolean; reason?: string } | null>(null);
 
   // --- Derived ---
-  const primaryEmail = contact?.arContactEmail ?? contact?.email ?? "";
+  // Resolve the real debtor email: prefer primary credit control person, then AR overlay, then Xero email.
+  // This ensures the To field always shows the real recipient, not any test redirect.
+  const primaryCreditControlEmail = persons?.find((p) => p.isPrimaryCreditControl)?.email;
+  const primaryEmail = primaryCreditControlEmail ?? contact?.arContactEmail ?? contact?.email ?? "";
 
+  // Build suggestions from persons + AR overlay. Real debtor emails only.
   const personSuggestions = useMemo(() => {
     const suggestions: { name: string; email: string; role?: string }[] = [];
     if (persons) {
@@ -171,6 +186,12 @@ export default function SendEmailDrawer({
     }
     return suggestions;
   }, [persons, primaryEmail, contact]);
+
+  // CC suggestions exclude emails already in To
+  const ccSuggestions = useMemo(() => {
+    const toSet = new Set(toRecipients.map((e) => e.toLowerCase()));
+    return personSuggestions.filter((s) => !toSet.has(s.email.toLowerCase()));
+  }, [personSuggestions, toRecipients]);
 
   const selectedTotal = useMemo(
     () =>
@@ -340,7 +361,6 @@ export default function SendEmailDrawer({
 
   // --- Render ---
 
-  const isLoading = draftMutation.isPending || fetchInvoicesMutation.isPending;
   const canSend =
     !sendEmailMutation.isPending &&
     toRecipients.length > 0 &&
@@ -386,7 +406,7 @@ export default function SendEmailDrawer({
                   label="CC"
                   value={ccRecipients}
                   onChange={setCcRecipients}
-                  suggestions={personSuggestions}
+                  suggestions={ccSuggestions}
                   placeholder="CC…"
                 />
 
@@ -551,19 +571,28 @@ export default function SendEmailDrawer({
                         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                         <span className="text-sm text-muted-foreground">Generating email…</span>
                       </div>
-                    ) : (
+                    ) : chaseableInvoices.length > 0 && selectedInvoiceIds.size === 0 ? (
                       <>
                         <p className="text-sm text-muted-foreground">
-                          Configure above, then generate
+                          Select at least one invoice to generate an email
                         </p>
-                        <Button
-                          onClick={handleGenerate}
-                          disabled={selectedInvoiceIds.size === 0 || fetchInvoicesMutation.isPending}
-                        >
+                        <Button disabled>
                           <Sparkles className="h-4 w-4 mr-1.5" />
                           Generate email
                         </Button>
                       </>
+                    ) : (
+                      <Button
+                        onClick={handleGenerate}
+                        disabled={fetchInvoicesMutation.isPending}
+                      >
+                        {fetchInvoicesMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
+                        ) : (
+                          <Sparkles className="h-4 w-4 mr-1.5" />
+                        )}
+                        Generate email
+                      </Button>
                     )}
                   </div>
                 )}
@@ -657,6 +686,12 @@ export default function SendEmailDrawer({
                     <Button variant="outline" size="sm" onClick={handleSwitchToGenerate}>
                       <Sparkles className="h-3 w-3 mr-1" /> Generate instead
                     </Button>
+                  )}
+
+                  {isTestMode && (
+                    <Badge variant="outline" className="text-[10px] text-amber-600 border-amber-300">
+                      TEST MODE
+                    </Badge>
                   )}
 
                   <Button
