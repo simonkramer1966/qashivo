@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useLocation } from "wouter";
 import DebtorHeatmap from "@/components/dashboard/DebtorHeatmap";
+import DebtorTreemap from "@/components/dashboard/DebtorTreemap";
 
 // ── Types ──────────────────────────────────────────────────
 
@@ -278,7 +279,10 @@ export default function QollectionsDashboard() {
         </div>
 
         {/* ── Debtor Heatmap ── */}
-        <DebtorHeatmap />
+        <DebtorHeatmap debtors={debtors} isLoading={debtorsLoading} />
+
+        {/* ── Debtor Treemap ── */}
+        <DebtorTreemap debtors={debtors} isLoading={debtorsLoading} />
 
         {/* ── Debtor List ── */}
         <Card>
