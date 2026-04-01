@@ -4340,7 +4340,7 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
 
       const { id } = req.params;
       const tenantId = user.tenantId;
-      const { type, invoiceIds } = req.body;
+      const { type, invoiceIds, tone, lpiOverride, brief } = req.body;
 
       if (!type || !['email', 'sms'].includes(type)) {
         return res.status(400).json({ message: "type must be 'email' or 'sms'" });
@@ -4450,18 +4450,28 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
       const workflowStages = chaseable.map(inv => inv.workflowState || 'pre_due');
       const hasPreLegal = workflowStages.some(s => s === 'pre_legal');
 
-      // Build tone instruction
+      // Build tone instruction — use explicit tone override if provided, else auto-determine
+      const TONE_MAP: Record<string, string> = {
+        friendly: "Tone: FRIENDLY. Assume this is an oversight. Be warm and helpful while clearly stating what is owed.",
+        professional: "Tone: POLITE BUT CLEAR. Reference payment terms. Be professional and straightforward.",
+        firm: "Tone: FIRM. Reference previous communications and set a specific payment deadline. Be direct about expectations.",
+        formal: "Tone: FORMAL. This is a serious matter. Reference that formal action may follow if payment is not received. Be professional but unambiguous about consequences.",
+        legal: "Tone: LEGAL. Reference the Late Payment of Commercial Debts (Interest) Act 1998 and potential legal proceedings. Be precise, factual, and unambiguous. This is a final notice before escalation.",
+      };
+
       let toneInstruction = "";
-      if (promiseBreached) {
+      if (typeof tone === 'string' && TONE_MAP[tone]) {
+        toneInstruction = TONE_MAP[tone];
+      } else if (promiseBreached) {
         toneInstruction = "Tone: DIRECT. The debtor has broken a payment commitment. Reference the broken promise specifically and set a clear, non-negotiable payment deadline.";
       } else if (hasPreLegal) {
-        toneInstruction = "Tone: FORMAL. This account is at the pre-legal stage. Reference that formal action may follow if payment is not received. Be professional but unambiguous about consequences.";
+        toneInstruction = TONE_MAP['formal'];
       } else if (avgDaysToPay !== null && avgDaysToPay > 30 || maxReminderCount >= 3) {
-        toneInstruction = "Tone: FIRM. This debtor has a history of late payment or has been chased multiple times. Reference previous communications and set a specific payment deadline.";
+        toneInstruction = TONE_MAP['firm'];
       } else if (avgDaysToPay !== null && avgDaysToPay > 0) {
-        toneInstruction = "Tone: POLITE BUT CLEAR. Reference payment terms. Be professional and straightforward.";
+        toneInstruction = TONE_MAP['professional'];
       } else {
-        toneInstruction = "Tone: FRIENDLY. Assume this is an oversight. Be warm and helpful while clearly stating what is owed.";
+        toneInstruction = TONE_MAP['friendly'];
       }
 
       // Resolve language & currency for this contact
@@ -4511,7 +4521,9 @@ ${(() => {
           boeBaseRate: parseFloat(draftTenant?.boeBaseRate || '4.50'),
           interestMarkup: parseFloat(draftTenant?.interestMarkup || '8.00'),
           gracePeriodDays: (contact as any).lpiGracePeriodDays ?? draftTenant?.interestGracePeriod ?? 7,
-          enabled: (draftTenant?.useLatePamentLegislation ?? false) && ((contact as any).lpiEnabled ?? true),
+          enabled: typeof lpiOverride === 'boolean'
+            ? lpiOverride
+            : (draftTenant?.useLatePamentLegislation ?? false) && ((contact as any).lpiEnabled ?? true),
         };
         if (!draftLpiConfig.enabled) return '';
         const lpiResult = calculateBatchLPI(chaseable.filter(inv => inv.dueDate && new Date(inv.dueDate) < now).map(inv => ({
@@ -4527,6 +4539,7 @@ ${(() => {
         lines.push(`\nInclude a paragraph about the right to charge interest under the Act. State the rate and accrued amount. Keep factual and professional.`);
         return lines.join('\n');
       })()}
+${brief ? `\nADDITIONAL INSTRUCTIONS FROM USER:\n${brief}` : ''}
 ${type === 'email' ? 'Generate a JSON object with "subject" (string) and "body" (string, plain text with line breaks).' : 'Generate a JSON object with "message" (string, max 160 characters).'}`;
 
       const draft = await generateJSON<Record<string, string>>({
@@ -4547,6 +4560,7 @@ ${type === 'email' ? 'Generate a JSON object with "subject" (string) and "body" 
           amount: parseFloat(inv.amount || '0'),
           amountPaid: parseFloat(inv.amountPaid || '0'),
           dueDate: inv.dueDate,
+          daysOverdue: inv.dueDate ? Math.max(0, Math.floor((now.getTime() - new Date(inv.dueDate).getTime()) / (1000 * 60 * 60 * 24))) : 0,
         })),
         disputed: disputed.map(inv => ({
           id: inv.id,

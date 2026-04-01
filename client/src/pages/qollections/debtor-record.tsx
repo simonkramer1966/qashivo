@@ -98,6 +98,7 @@ import {
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import SendEmailDrawer from "@/components/email/SendEmailDrawer";
 import { CURRENCIES, SUPPORTED_LANGUAGES, getLanguageName, getCurrencySymbol } from "@shared/currencies";
 
 // ---------------------------------------------------------------------------
@@ -367,10 +368,7 @@ export default function DebtorRecord() {
   const [disputeDialogOpen, setDisputeDialogOpen] = useState(false);
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
 
-  // --- Email sheet state ---
-  const [emailSubject, setEmailSubject] = useState("");
-  const [emailBody, setEmailBody] = useState("");
-  const [emailChaseableSelected, setEmailChaseableSelected] = useState<Set<string>>(new Set());
+  // (Email sheet state moved to SendEmailDrawer component)
 
   // --- SMS sheet state ---
   const [smsMessage, setSmsMessage] = useState("");
@@ -552,26 +550,7 @@ export default function DebtorRecord() {
     },
   });
 
-  const sendEmailMutation = useMutation({
-    mutationFn: async (payload: {
-      subject: string;
-      body: string;
-      templateType: string;
-      recipientEmail: string;
-    }) => {
-      const res = await apiRequest("POST", `/api/contacts/${contactId}/send-email`, payload);
-      return res.json();
-    },
-    onSuccess: () => {
-      toast({ title: "Email sent successfully" });
-      setEmailSheetOpen(false);
-      queryClient.invalidateQueries({ queryKey: ["debtor-activity", contactId] });
-      queryClient.invalidateQueries({ queryKey: ["debtor-profile", contactId] });
-    },
-    onError: (err: Error) => {
-      toast({ title: "Failed to send email", description: err.message, variant: "destructive" });
-    },
-  });
+  // (sendEmailMutation moved to SendEmailDrawer component)
 
   const sendSmsMutation = useMutation({
     mutationFn: async (payload: { body: string; templateType: string; recipientPhone: string }) => {
@@ -969,24 +948,7 @@ export default function DebtorRecord() {
 
   const openEmailSheet = useCallback(() => {
     setEmailSheetOpen(true);
-    setEmailSubject("");
-    setEmailBody("");
-    setEmailChaseableSelected(new Set());
-    draftMutation.mutate(
-      { type: "email" },
-      {
-        onSuccess: (data) => {
-          if (data.draft) {
-            setEmailSubject(data.draft.subject ?? "");
-            setEmailBody(data.draft.body ?? "");
-          }
-          if (data.chaseable) {
-            setEmailChaseableSelected(new Set(data.chaseable.map((c) => c.id)));
-          }
-        },
-      }
-    );
-  }, [contactId]);
+  }, []);
 
   const openSmsSheet = useCallback(() => {
     setSmsSheetOpen(true);
@@ -1035,26 +997,7 @@ export default function DebtorRecord() {
     setNoteText("");
   }, []);
 
-  const handleSendEmail = useCallback(() => {
-    const recipientEmail =
-      contact?.arContactEmail ?? contact?.email ?? "";
-    if (!recipientEmail) {
-      toast({ title: "No email address found", variant: "destructive" });
-      return;
-    }
-    sendEmailMutation.mutate({
-      subject: emailSubject,
-      body: emailBody,
-      templateType: "chase",
-      recipientEmail,
-    });
-    logActivityMutation.mutate({
-      eventType: "email_sent",
-      category: "Communications",
-      title: `Email sent: ${emailSubject}`,
-      direction: "outbound",
-    });
-  }, [emailSubject, emailBody, contact]);
+  // (handleSendEmail moved to SendEmailDrawer component)
 
   const handleSendSms = useCallback(() => {
     const recipientPhone =
@@ -3027,183 +2970,23 @@ export default function DebtorRecord() {
         {/* ================================================================= */}
 
         {/* ---- Email Sheet ---- */}
-        <Sheet open={emailSheetOpen} onOpenChange={setEmailSheetOpen}>
-          <SheetContent className="sm:max-w-lg w-full overflow-y-auto">
-            <SheetHeader>
-              <SheetTitle>Send Email</SheetTitle>
-              <SheetDescription>
-                AI drafted · edit as needed
-              </SheetDescription>
-            </SheetHeader>
-
-            <div className="space-y-4 mt-4">
-              {draftMutation.isPending ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  <span className="ml-2 text-sm text-muted-foreground">
-                    Drafting email...
-                  </span>
-                </div>
-              ) : draftMutation.data?.blocked ? (
-                <div className="rounded-md bg-amber-50 border border-amber-200 p-4">
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4 text-amber-600" />
-                    <p className="text-sm font-medium text-amber-800">
-                      Communication blocked
-                    </p>
-                  </div>
-                  <p className="text-sm text-amber-700 mt-1">
-                    {draftMutation.data.reason}
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <div>
-                    <label className="text-xs text-muted-foreground">Subject</label>
-                    <Input
-                      value={emailSubject}
-                      onChange={(e) => setEmailSubject(e.target.value)}
-                      placeholder="Email subject"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-muted-foreground">Body</label>
-                    <Textarea
-                      value={emailBody}
-                      onChange={(e) => setEmailBody(e.target.value)}
-                      placeholder="Email body"
-                      className="min-h-[200px] font-mono text-sm"
-                    />
-                  </div>
-
-                  {/* Invoice summary */}
-                  {draftMutation.data?.summary && (
-                    <div className="rounded-md bg-muted p-3 text-sm">
-                      <p>
-                        Chasing{" "}
-                        <span className="font-semibold">
-                          {gbp.format(draftMutation.data.summary.chaseableTotal)}
-                        </span>
-                        {" · "}
-                        <span className="text-amber-600">
-                          {gbp.format(draftMutation.data.summary.disputedTotal)} under dispute
-                        </span>
-                        {" · "}
-                        {gbp.format(draftMutation.data.summary.grossTotal)} total
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Chaseable invoices */}
-                  {draftMutation.data?.chaseable &&
-                    draftMutation.data.chaseable.length > 0 && (
-                      <div className="space-y-1">
-                        <p className="text-xs text-muted-foreground font-medium uppercase">
-                          Chaseable Invoices
-                        </p>
-                        {draftMutation.data.chaseable.map((inv) => (
-                          <label
-                            key={inv.id}
-                            className="flex items-center gap-2 text-sm py-1 px-2 rounded hover:bg-muted cursor-pointer"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={emailChaseableSelected.has(inv.id)}
-                              onChange={(e) => {
-                                const next = new Set(emailChaseableSelected);
-                                if (e.target.checked) next.add(inv.id);
-                                else next.delete(inv.id);
-                                setEmailChaseableSelected(next);
-                              }}
-                              className="rounded"
-                            />
-                            <span className="font-medium">{inv.invoiceNumber}</span>
-                            <span className="tabular-nums">{gbp.format(inv.amount)}</span>
-                            <span className="text-muted-foreground">
-                              {inv.daysOverdue}d overdue
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                    )}
-
-                  {/* Disputed invoices */}
-                  {draftMutation.data?.disputed &&
-                    draftMutation.data.disputed.length > 0 && (
-                      <div className="space-y-1">
-                        <p className="text-xs text-muted-foreground font-medium uppercase">
-                          Disputed Invoices (not included)
-                        </p>
-                        {draftMutation.data.disputed.map((inv) => (
-                          <div
-                            key={inv.id}
-                            className="flex items-center gap-2 text-sm py-1 px-2 opacity-50"
-                          >
-                            <input
-                              type="checkbox"
-                              disabled
-                              checked={false}
-                              className="rounded"
-                            />
-                            <span className="font-medium">{inv.invoiceNumber}</span>
-                            <span className="tabular-nums">{gbp.format(inv.amount)}</span>
-                            <Badge variant="outline" className="text-[10px]">
-                              Under dispute
-                            </Badge>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        draftMutation.mutate(
-                          { type: "email" },
-                          {
-                            onSuccess: (data) => {
-                              if (data.draft) {
-                                setEmailSubject(data.draft.subject ?? "");
-                                setEmailBody(data.draft.body ?? "");
-                              }
-                              if (data.chaseable) {
-                                setEmailChaseableSelected(
-                                  new Set(data.chaseable.map((c) => c.id))
-                                );
-                              }
-                            },
-                          }
-                        );
-                      }}
-                      disabled={draftMutation.isPending}
-                    >
-                      <RefreshCw className="h-3 w-3 mr-1" /> Regenerate
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={handleSendEmail}
-                      disabled={
-                        sendEmailMutation.isPending ||
-                        draftMutation.data?.blocked === true ||
-                        !emailSubject.trim() ||
-                        !emailBody.trim()
-                      }
-                    >
-                      {sendEmailMutation.isPending ? (
-                        <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                      ) : (
-                        <Send className="h-3 w-3 mr-1" />
-                      )}
-                      Send
-                    </Button>
-                  </div>
-                </>
-              )}
-            </div>
-          </SheetContent>
-        </Sheet>
+        <SendEmailDrawer
+          open={emailSheetOpen}
+          onOpenChange={setEmailSheetOpen}
+          contactId={contactId}
+          contact={contact}
+          persons={personsQuery.data}
+          metrics={metricsQuery.data ? {
+            lpiEnabled: metricsQuery.data.lpiEnabled,
+            totalLPI: metricsQuery.data.totalLPI,
+            lpiRate: metricsQuery.data.lpiRate,
+            lpiAnnualRate: metricsQuery.data.lpiAnnualRate,
+          } : null}
+          onEmailSent={() => {
+            queryClient.invalidateQueries({ queryKey: ["debtor-activity", contactId] });
+            queryClient.invalidateQueries({ queryKey: ["debtor-profile", contactId] });
+          }}
+        />
 
         {/* ---- SMS Sheet ---- */}
         <Sheet open={smsSheetOpen} onOpenChange={setSmsSheetOpen}>
