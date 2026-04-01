@@ -2171,8 +2171,18 @@ export default function DebtorRecord() {
               </Card>
             ) : (
               <div className="space-y-2">
-                {(activityQuery.data?.events ?? []).map((evt) => (
-                  <Card key={evt.id} className="p-3">
+                {(activityQuery.data?.events ?? []).map((evt) => {
+                  const isInbound = evt.direction?.toLowerCase() === 'inbound';
+                  return (
+                  <Card
+                    key={evt.id}
+                    className="p-3"
+                    style={isInbound ? {
+                      backgroundColor: '#EAF3DE',
+                      borderLeft: '2px solid #639922',
+                      borderRadius: '0 var(--radius) var(--radius) 0',
+                    } : undefined}
+                  >
                     <div className="flex items-start gap-3">
                       <div className="mt-0.5 text-muted-foreground">
                         {categoryIcon(evt.category)}
@@ -2181,7 +2191,15 @@ export default function DebtorRecord() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-medium text-sm">{evt.title}</span>
                           {evt.direction && (
-                            <Badge variant="outline" className="text-[10px]">
+                            <Badge
+                              variant="outline"
+                              className="text-[10px]"
+                              style={isInbound ? {
+                                backgroundColor: '#EAF3DE',
+                                color: '#27500A',
+                                border: '0.5px solid #639922',
+                              } : undefined}
+                            >
                               {evt.direction}
                             </Badge>
                           )}
@@ -2205,7 +2223,8 @@ export default function DebtorRecord() {
                       </div>
                     </div>
                   </Card>
-                ))}
+                  );
+                })}
 
                 {activityQuery.data?.hasMore && (
                   <div className="text-center py-2">

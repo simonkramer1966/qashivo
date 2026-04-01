@@ -3946,24 +3946,38 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
         return 'System';
       }
 
+      // Look up agent persona name for system-generated outbound events
+      const [persona] = await db.select({ name: agentPersonas.emailSignatureName })
+        .from(agentPersonas)
+        .where(and(eq(agentPersonas.tenantId, tenantId), eq(agentPersonas.isActive, true)))
+        .limit(1);
+      const personaName = persona?.name || null;
+
       // Map timeline_events to unified activity shape
       const tlMapped = tlRows
         .filter(tl => !category || channelToCategory(tl.channel) === category)
-        .map(tl => ({
-          id: tl.id,
-          eventType: tl.channel,
-          category: channelToCategory(tl.channel),
-          title: tl.summary,
-          description: tl.preview || tl.subject || null,
-          triggeredBy: tl.createdByName || tl.createdByType || 'system',
-          direction: tl.direction === 'internal' ? null : tl.direction,
-          linkedInvoiceId: tl.invoiceId,
-          linkedWorkflowId: null,
-          linkedDisputeId: null,
-          metadata: tl.outcomeType ? { outcomeType: tl.outcomeType } : null,
-          createdAt: tl.occurredAt,
-          _source: 'timeline' as const,
-        }));
+        .map(tl => {
+          // For agent-sent outbound emails, show persona name instead of user name
+          let displayTriggeredBy = tl.createdByName || tl.createdByType || 'system';
+          if (tl.createdByType === 'system' && tl.direction === 'outbound' && personaName) {
+            displayTriggeredBy = personaName;
+          }
+          return {
+            id: tl.id,
+            eventType: tl.channel,
+            category: channelToCategory(tl.channel),
+            title: tl.summary,
+            description: tl.preview || tl.subject || null,
+            triggeredBy: displayTriggeredBy,
+            direction: tl.direction === 'internal' ? null : tl.direction,
+            linkedInvoiceId: tl.invoiceId,
+            linkedWorkflowId: null,
+            linkedDisputeId: null,
+            metadata: tl.outcomeType ? { outcomeType: tl.outcomeType } : null,
+            createdAt: tl.occurredAt,
+            _source: 'timeline' as const,
+          };
+        });
 
       // 3. Synthesize events from invoices (created + paid)
       const shouldIncludeInvoices = !category || category === 'Payments' || category === 'System';
