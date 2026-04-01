@@ -93,6 +93,14 @@ export default function WeeklyReview() {
     },
   });
 
+  // Must be above early returns to satisfy React's rules of hooks
+  const cleanedSummary = useMemo(() => {
+    if (!review?.summaryText) return "";
+    return review.summaryText
+      .replace(/^#+ .*(?:review|summary|collection).*\n*/i, "")
+      .trim();
+  }, [review?.summaryText]);
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -136,13 +144,6 @@ export default function WeeklyReview() {
 
   const keyNumbers = review.keyNumbers;
   const debtorFocus = review.debtorFocus || [];
-
-  // Strip redundant LLM-generated title line (e.g. "# Weekly Cash Collection Review")
-  const cleanedSummary = useMemo(() => {
-    return review.summaryText
-      .replace(/^#+ .*(?:review|summary|collection).*\n*/i, "")
-      .trim();
-  }, [review.summaryText]);
 
   return (
     <div className="space-y-6">
