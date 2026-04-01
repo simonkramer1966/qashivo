@@ -4345,7 +4345,7 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
 
       const { id } = req.params;
       const tenantId = user.tenantId;
-      const { type, invoiceIds, tone, lpiOverride, brief } = req.body;
+      const { type, invoiceIds, tone, lpiOverride, brief, primaryRecipientName } = req.body;
 
       if (!type || !['email', 'sms'].includes(type)) {
         return res.status(400).json({ message: "type must be 'email' or 'sms'" });
@@ -4527,7 +4527,19 @@ ${personaSignoff}
 
 The debtor must believe this is written by a real person, not a template or AI. Use natural language. Be specific about amounts and dates. Do not use placeholder text.`;
 
+      // Build salutation instruction from the primary recipient name
+      const salutationName = (() => {
+        if (!primaryRecipientName) return contact.companyName || contact.name || '';
+        // If full name (first + last), use first name only for salutation
+        const parts = primaryRecipientName.trim().split(/\s+/);
+        if (parts.length >= 2 && !primaryRecipientName.toLowerCase().includes('team') && !primaryRecipientName.toLowerCase().includes('accounts')) {
+          return parts[0]; // First name only
+        }
+        return primaryRecipientName;
+      })();
+
       const userPrompt = `Contact: ${contact.name}${contact.companyName ? ` (${contact.companyName})` : ''}
+Address the email to: ${salutationName}. Use "Dear ${salutationName}," as the salutation. Never use "Hi there," or "Dear Sir/Madam,".
 
 Outstanding invoices to chase (${formatCurrencyForPrompt(chaseableTotal, draftCurrency)} total):
 ${invoiceLines}

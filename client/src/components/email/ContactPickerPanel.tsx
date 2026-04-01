@@ -123,12 +123,13 @@ export default function ContactPickerPanel({
                 const checked = pendingSelection.has(emailKey);
 
                 return (
-                  <button
+                  <div
                     key={s.email}
-                    type="button"
-                    disabled={inOther}
+                    role="button"
+                    tabIndex={inOther ? -1 : 0}
                     onClick={() => !inOther && toggleEmail(s.email)}
-                    className="w-full flex items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
+                    onKeyDown={(e) => { if ((e.key === "Enter" || e.key === " ") && !inOther) { e.preventDefault(); toggleEmail(s.email); } }}
+                    className={`w-full flex items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-muted cursor-pointer ${inOther ? "opacity-50 cursor-not-allowed" : ""}`}
                   >
                     <Checkbox
                       checked={checked}
@@ -149,7 +150,7 @@ export default function ContactPickerPanel({
                         {s.role}
                       </Badge>
                     ) : null}
-                  </button>
+                  </div>
                 );
               })}
             </div>

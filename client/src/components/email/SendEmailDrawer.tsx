@@ -151,10 +151,12 @@ export default function SendEmailDrawer({
 
   // --- Derived ---
   // Resolve the real debtor email for display in To field.
-  // Priority: arContactEmail (user-set AR overlay) > primary credit control person > Xero email.
+  // Priority: primary credit control person (most specific) > arContactEmail (AR overlay) > Xero email.
   // Test mode redirect happens server-side at send time only — never substitute here.
-  const primaryCreditControlEmail = persons?.find((p) => p.isPrimaryCreditControl)?.email;
-  const primaryEmail = contact?.arContactEmail ?? primaryCreditControlEmail ?? contact?.email ?? "";
+  const primaryCreditControlPerson = persons?.find((p) => p.isPrimaryCreditControl);
+  const primaryCreditControlEmail = primaryCreditControlPerson?.email;
+  const primaryEmail = primaryCreditControlEmail ?? contact?.arContactEmail ?? contact?.email ?? "";
+  const primaryRecipientName = primaryCreditControlPerson?.name ?? contact?.arContactName ?? contact?.name ?? "";
 
   // Build suggestions from persons + AR overlay. Real debtor emails only.
   const personSuggestions = useMemo(() => {
@@ -260,12 +262,20 @@ export default function SendEmailDrawer({
 
   const draftMutation = useMutation({
     mutationFn: async () => {
+      // Resolve the name of the first To: recipient for the email salutation
+      const firstToEmail = toRecipients[0]?.toLowerCase();
+      const firstToSuggestion = firstToEmail
+        ? personSuggestions.find((s) => s.email.toLowerCase() === firstToEmail)
+        : undefined;
+      const recipientName = firstToSuggestion?.name || primaryRecipientName || contact?.companyName || contact?.name || "";
+
       const res = await apiRequest("POST", `/api/contacts/${contactId}/draft-communication`, {
         type: "email",
         invoiceIds: Array.from(selectedInvoiceIds),
         tone: TONE_KEYS[tone],
         lpiOverride,
         brief: brief.trim() || undefined,
+        primaryRecipientName: recipientName || undefined,
       });
       return res.json() as Promise<DraftResponse>;
     },
@@ -371,7 +381,7 @@ export default function SendEmailDrawer({
           <SheetHeader>
             <SheetTitle>Send email</SheetTitle>
             <SheetDescription>
-              {contact?.name}
+              {contact?.companyName || contact?.name}
               {primaryEmail ? ` · ${primaryEmail}` : ""}
             </SheetDescription>
           </SheetHeader>
