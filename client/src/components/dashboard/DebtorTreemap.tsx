@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
-import { hierarchy, treemap, treemapSquarify } from "d3-hierarchy";
+import { Treemap, ResponsiveContainer } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import DebtorPopup from "./DebtorPopup";
@@ -17,56 +17,122 @@ interface DebtorTreemapProps {
   isLoading: boolean;
 }
 
+interface TreemapCellProps {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  name: string;
+  oldestOverdueDays: number;
+  totalOutstanding: number;
+  id: string;
+  onCellClick: (id: string) => void;
+  onCellEnter: (debtor: HeatmapDebtor, rect: { x: number; y: number; width: number; height: number }) => void;
+  onCellLeave: () => void;
+  // All original debtor fields passed through by recharts
+  [key: string]: any;
+}
+
+function TreemapCell(props: TreemapCellProps) {
+  const {
+    x, y, width, height,
+    name, oldestOverdueDays, totalOutstanding, id,
+    onCellClick, onCellEnter, onCellLeave,
+    // extract debtor fields for popup
+    overdueAmount, riskBand, riskScore, paymentBehaviour, invoiceCount,
+  } = props;
+
+  if (width <= 0 || height <= 0) return null;
+
+  const color = getCellColor(oldestOverdueDays ?? 0);
+  const textColor = getTextColor(oldestOverdueDays ?? 0);
+  const showText = width > 60 && height > 28;
+  const maxChars = Math.floor(width / 7);
+
+  return (
+    <g>
+      <rect
+        x={x}
+        y={y}
+        width={width}
+        height={height}
+        fill={color}
+        stroke="#FFFFFF"
+        strokeWidth={2}
+        rx={2}
+        ry={2}
+        style={{ cursor: "pointer" }}
+        onClick={() => onCellClick(id)}
+        onMouseEnter={() =>
+          onCellEnter(
+            { id, name, totalOutstanding, overdueAmount, oldestOverdueDays, riskBand, riskScore, paymentBehaviour, invoiceCount },
+            { x, y, width, height }
+          )
+        }
+        onMouseLeave={onCellLeave}
+      />
+      {showText && (
+        <>
+          <text
+            x={x + 6}
+            y={y + 16}
+            fill={textColor}
+            fontSize={11}
+            fontWeight={500}
+            style={{ pointerEvents: "none" }}
+          >
+            {name.length > maxChars ? name.slice(0, maxChars) + "…" : name}
+          </text>
+          <text
+            x={x + 6}
+            y={y + 29}
+            fill={textColor}
+            fontSize={10}
+            opacity={0.8}
+            style={{ pointerEvents: "none" }}
+          >
+            {fmt(totalOutstanding)}
+          </text>
+        </>
+      )}
+    </g>
+  );
+}
+
 export default function DebtorTreemap({ debtors, isLoading }: DebtorTreemapProps) {
   const [, navigate] = useLocation();
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(0);
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const [hoveredDebtor, setHoveredDebtor] = useState<HeatmapDebtor | null>(null);
   const [popupPos, setPopupPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const ro = new ResizeObserver((entries) => {
-      setWidth(entries[0].contentRect.width);
-    });
-    ro.observe(containerRef.current);
-    return () => ro.disconnect();
-  }, []);
+  const handleCellClick = useCallback(
+    (id: string) => navigate(`/qollections/debtors/${id}`),
+    [navigate]
+  );
 
-  const leaves = useMemo(() => {
-    if (width <= 0 || debtors.length === 0) return [];
+  const handleCellEnter = useCallback(
+    (debtor: HeatmapDebtor, rect: { x: number; y: number; width: number; height: number }) => {
+      const wrapperRect = wrapperRef.current?.getBoundingClientRect();
+      if (!wrapperRect) return;
 
-    const root = hierarchy<{ children?: HeatmapDebtor[] }>({ children: debtors })
-      .sum((d) => (d as any).totalOutstanding ?? 0)
-      .sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
+      const spaceRight = wrapperRect.width - (rect.x + rect.width);
+      const side = spaceRight > 230 ? "right" : "left";
 
-    treemap<{ children?: HeatmapDebtor[] }>()
-      .size([width, TREEMAP_HEIGHT])
-      .tile(treemapSquarify)
-      .padding(2)(root);
+      let y = rect.y;
+      if (TREEMAP_HEIGHT - rect.y < 160) {
+        y = Math.max(0, y - 100);
+      }
 
-    return root.leaves();
-  }, [debtors, width]);
+      setPopupPos({
+        x: side === "right" ? rect.x + rect.width + 8 : rect.x - 228,
+        y,
+      });
+      setHoveredDebtor(debtor);
+    },
+    []
+  );
 
-  const handleMouseEnter = (debtor: HeatmapDebtor, e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const containerRect = containerRef.current?.getBoundingClientRect();
-    if (!containerRect) return;
-
-    const spaceRight = containerRect.right - rect.right;
-    const side = spaceRight > 220 ? "right" : "left";
-
-    let y = rect.top - containerRect.top;
-    if (containerRect.bottom - rect.bottom < 160) {
-      y = Math.max(0, y - 100);
-    }
-
-    setPopupPos({
-      x: side === "right" ? rect.right - containerRect.left + 8 : rect.left - containerRect.left - 228,
-      y,
-    });
-    setHoveredDebtor(debtor);
-  };
+  const handleCellLeave = useCallback(() => setHoveredDebtor(null), []);
 
   if (isLoading) {
     return (
@@ -96,6 +162,13 @@ export default function DebtorTreemap({ debtors, isLoading }: DebtorTreemapProps
     );
   }
 
+  const treemapData = debtors
+    .filter((d) => d.totalOutstanding > 0)
+    .map((d) => ({
+      ...d,
+      size: d.totalOutstanding,
+    }));
+
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -119,47 +192,24 @@ export default function DebtorTreemap({ debtors, isLoading }: DebtorTreemapProps
           </div>
         </div>
       </CardHeader>
-      <CardContent className="p-0">
-        <div ref={containerRef} className="relative mx-6 mb-6" style={{ height: TREEMAP_HEIGHT }}>
-          {width > 0 && leaves.map((leaf) => {
-            const d = leaf.data as HeatmapDebtor;
-            const x0 = leaf.x0 ?? 0;
-            const y0 = leaf.y0 ?? 0;
-            const x1 = leaf.x1 ?? 0;
-            const y1 = leaf.y1 ?? 0;
-            const cellW = x1 - x0;
-            const cellH = y1 - y0;
-            const showText = cellW > 60 && cellH > 30;
-
-            return (
-              <div
-                key={d.id}
-                className="absolute cursor-pointer transition-opacity hover:opacity-80 overflow-hidden"
-                style={{
-                  left: x0,
-                  top: y0,
-                  width: cellW,
-                  height: cellH,
-                  backgroundColor: getCellColor(d.oldestOverdueDays),
-                  borderRadius: 2,
-                }}
-                onClick={() => navigate(`/qollections/debtors/${d.id}`)}
-                onMouseEnter={(e) => handleMouseEnter(d, e)}
-                onMouseLeave={() => setHoveredDebtor(null)}
-              >
-                {showText && (
-                  <div className="p-1.5" style={{ color: getTextColor(d.oldestOverdueDays) }}>
-                    <div className="truncate" style={{ fontSize: 11, fontWeight: 500, lineHeight: "14px" }}>
-                      {d.name}
-                    </div>
-                    <div className="truncate opacity-80" style={{ fontSize: 10, lineHeight: "13px" }}>
-                      {fmt(d.totalOutstanding)}
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+      <CardContent>
+        <div ref={wrapperRef} className="relative">
+          <ResponsiveContainer width="100%" height={TREEMAP_HEIGHT}>
+            <Treemap
+              data={treemapData}
+              dataKey="size"
+              aspectRatio={1}
+              content={
+                <TreemapCell
+                  x={0} y={0} width={0} height={0}
+                  name="" oldestOverdueDays={0} totalOutstanding={0} id=""
+                  onCellClick={handleCellClick}
+                  onCellEnter={handleCellEnter}
+                  onCellLeave={handleCellLeave}
+                />
+              }
+            />
+          </ResponsiveContainer>
 
           <DebtorPopup
             debtor={hoveredDebtor!}
