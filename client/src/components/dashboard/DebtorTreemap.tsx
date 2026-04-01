@@ -7,7 +7,7 @@ import DebtorPopup from "./DebtorPopup";
 import { OVERDUE_COLORS, getCellColor, getTextColor } from "./colors";
 import type { HeatmapDebtor } from "./DebtorHeatmap";
 
-const TREEMAP_HEIGHT = 320;
+const TREEMAP_HEIGHT = 640;
 
 const fmt = (amount: number) =>
   new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(amount);
