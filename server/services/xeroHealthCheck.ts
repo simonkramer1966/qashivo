@@ -100,31 +100,24 @@ export class XeroHealthCheckService {
         })
         .where(eq(tenants.id, tenant.id));
 
-      // Token refresh succeeded - try a lightweight API call to verify and get org info
-      const orgInfo = await this.getOrganisationInfo(refreshedTokens.accessToken, refreshedTokens.tenantId);
+      // Token refresh succeeded — verify API access with a lightweight invoice ping
+      const apiOk = await this.verifyApiAccess(refreshedTokens.accessToken, refreshedTokens.tenantId);
 
-      // Token refresh succeeded — the connection is working.
-      // Org info is supplementary; its failure does NOT mean we're disconnected.
-      const updateFields: Record<string, unknown> = {
-        xeroConnectionStatus: 'connected',
-        xeroLastHealthCheck: new Date(),
-        xeroHealthCheckError: null,
-        updatedAt: new Date(),
-      };
-
-      if (orgInfo.isConnected) {
-        if (orgInfo.organisationName) {
-          updateFields.xeroOrganisationName = orgInfo.organisationName;
-        }
-        console.log(`✅ Xero connection HEALTHY for tenant: ${tenant.name}${orgInfo.organisationName ? ` (${orgInfo.organisationName})` : ''}`);
+      if (apiOk) {
+        console.log(`✅ Xero connection HEALTHY for tenant: ${tenant.name}`);
       } else {
-        // Org info call failed but token refresh succeeded — still connected
-        console.warn(`⚠️ Xero org info call failed for tenant: ${tenant.name} (token refresh OK — connection is fine)`);
+        // API ping failed but token refresh succeeded — still connected
+        console.warn(`⚠️ Xero API ping failed for tenant: ${tenant.name} (token refresh OK — connection is fine)`);
       }
 
       await db
         .update(tenants)
-        .set(updateFields)
+        .set({
+          xeroConnectionStatus: 'connected',
+          xeroLastHealthCheck: new Date(),
+          xeroHealthCheckError: null,
+          updatedAt: new Date(),
+        })
         .where(eq(tenants.id, tenant.id));
     } catch (error) {
       // Sanitize error message to avoid exposing sensitive OAuth details
@@ -164,38 +157,18 @@ export class XeroHealthCheckService {
     return sanitized.length > 100 ? sanitized.substring(0, 100) + '...' : sanitized;
   }
 
-  private async getOrganisationInfo(accessToken: string, tenantId: string): Promise<{
-    isConnected: boolean;
-    organisationName?: string;
-  }> {
+  private async verifyApiAccess(accessToken: string, tenantId: string): Promise<boolean> {
     try {
-      // Lightweight API call - get organisation info
-      const response = await fetch('https://api.xero.com/api.xro/2.0/Organisation', {
+      const response = await fetch('https://api.xero.com/api.xro/2.0/Invoices?page=1&pageSize=1', {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
           'Xero-tenant-id': tenantId,
           'Accept': 'application/json',
         },
       });
-
-      if (!response.ok) {
-        return { isConnected: false };
-      }
-
-      // Try to extract organisation name from response
-      try {
-        const data = await response.json();
-        const orgName = data?.Organisations?.[0]?.Name;
-        return { 
-          isConnected: true,
-          organisationName: orgName || undefined
-        };
-      } catch {
-        return { isConnected: true };
-      }
-    } catch (error) {
-      console.error('Error testing Xero API:', error);
-      return { isConnected: false };
+      return response.ok;
+    } catch {
+      return false;
     }
   }
 
