@@ -12,6 +12,9 @@
 import { generateJSON } from "./llm/claude";
 import { ToneProfile, PlaybookStage, ReasonCode, TemplateId } from "./playbookEngine";
 import { cleanEmailContent, cleanSmsContent } from "./messagePostProcessor";
+import { canAttemptGeneration, recordSuccess, recordFailure, CircuitOpenError } from "./llmCircuitBreaker";
+import { validateGeneratedMessage } from "./llmOutputValidator";
+import { getTemplateFallback, buildTemplateContext } from "./templateFallback";
 
 export interface InvoiceDetail {
   invoiceNumber: string;
@@ -60,106 +63,249 @@ export interface GeneratedMessage {
   body: string;
   callToAction?: string;
   voiceScript?: string;
+  generationMethod?: 'llm' | 'template_fallback';
+}
+
+export interface GenerationOptions {
+  tenantId?: string;
+  toneLevel?: string;
 }
 
 class AIMessageGenerator {
   /**
-   * Generate a personalized email message
+   * Generate a personalized email message.
+   * Gap 9: Circuit breaker + output validation + template fallback.
    */
   async generateEmail(
     context: MessageContext,
-    toneSettings: ToneSettings
+    toneSettings: ToneSettings,
+    options?: GenerationOptions,
   ): Promise<GeneratedMessage> {
+    const { tenantId, toneLevel } = options || {};
+
+    // Circuit breaker check
+    if (tenantId) {
+      const decision = canAttemptGeneration(tenantId);
+      if (!decision.allowed) {
+        if (decision.useTemplate) {
+          try {
+            const ctx = await buildTemplateContext(context, tenantId);
+            const template = getTemplateFallback('email', toneLevel || 'professional', ctx);
+            if (template) {
+              console.log(`[CircuitBreaker] Using email template fallback for tenant ${tenantId}`);
+              return { ...template, body: cleanEmailContent(template.body) };
+            }
+          } catch (templateErr) {
+            console.error('[CircuitBreaker] Template fallback failed, using hardcoded fallback:', templateErr);
+          }
+          // If template building fails, fall through to hardcoded fallback
+          const fallback = this.getFallbackEmail(context, toneSettings);
+          return { ...fallback, body: cleanEmailContent(fallback.body), generationMethod: 'template_fallback' };
+        }
+        throw new CircuitOpenError(`Circuit open for tenant ${tenantId}: ${decision.reason}`);
+      }
+    }
+
     const hasMultipleInvoices = (context.invoiceCount && context.invoiceCount > 1) ||
                                  (context.invoiceDetails && context.invoiceDetails.length > 1);
     const systemPrompt = this.buildEmailSystemPrompt(toneSettings, hasMultipleInvoices);
     const userPrompt = this.buildEmailUserPrompt(context, toneSettings);
 
+    const invoiceRefs = this.collectInvoiceRefs(context);
+
     try {
-      const result = await generateJSON<any>({
-        system: systemPrompt,
-        prompt: userPrompt,
-        model: "fast",
-        temperature: 0.7,
-      });
-      
-      // Post-process to ensure proper HTML paragraph formatting
+      const result = await this.callLLMWithRetry(systemPrompt, userPrompt, tenantId);
       const rawBody = result.body || this.getDefaultEmailBody(context, toneSettings);
-      
-      return {
-        subject: result.subject || this.getDefaultSubject(context, toneSettings),
-        body: cleanEmailContent(rawBody),
-        callToAction: result.callToAction
-      };
-    } catch (error) {
+      const subject = result.subject || this.getDefaultSubject(context, toneSettings);
+      const body = cleanEmailContent(rawBody);
+
+      // Validate output
+      const validation = validateGeneratedMessage(
+        body, 'email', context.customerName, toneLevel || 'professional', invoiceRefs
+      );
+      if (!validation.valid) {
+        console.warn(`[OutputValidator] Email validation failed (attempt 1): ${validation.failures.join('; ')}`);
+        // Regenerate once
+        const retry = await this.callLLMWithRetry(systemPrompt, userPrompt, tenantId);
+        const retryBody = cleanEmailContent(retry.body || this.getDefaultEmailBody(context, toneSettings));
+        const retryValidation = validateGeneratedMessage(
+          retryBody, 'email', context.customerName, toneLevel || 'professional', invoiceRefs
+        );
+        if (!retryValidation.valid) {
+          console.error(`[OutputValidator] Email validation failed (attempt 2): ${retryValidation.failures.join('; ')}`);
+          if (tenantId) recordFailure(tenantId);
+          throw new Error(`Output validation failed: ${retryValidation.failures.join('; ')}`);
+        }
+        if (tenantId) recordSuccess(tenantId);
+        return { subject: retry.subject || subject, body: retryBody, callToAction: retry.callToAction, generationMethod: 'llm' };
+      }
+
+      if (tenantId) recordSuccess(tenantId);
+      return { subject, body, callToAction: result.callToAction, generationMethod: 'llm' };
+    } catch (error: any) {
+      if (error instanceof CircuitOpenError) throw error;
       console.error('AI email generation failed, using fallback:', error);
       const fallback = this.getFallbackEmail(context, toneSettings);
-      return {
-        ...fallback,
-        body: cleanEmailContent(fallback.body)
-      };
+      return { ...fallback, body: cleanEmailContent(fallback.body) };
     }
   }
 
   /**
-   * Generate a personalized SMS message
+   * Generate a personalized SMS message.
+   * Gap 9: Circuit breaker + output validation + template fallback.
    */
   async generateSMS(
     context: MessageContext,
-    toneSettings: ToneSettings
+    toneSettings: ToneSettings,
+    options?: GenerationOptions,
   ): Promise<GeneratedMessage> {
+    const { tenantId, toneLevel } = options || {};
+
+    // Circuit breaker check
+    if (tenantId) {
+      const decision = canAttemptGeneration(tenantId);
+      if (!decision.allowed) {
+        if (decision.useTemplate) {
+          try {
+            const ctx = await buildTemplateContext(context, tenantId);
+            const template = getTemplateFallback('sms', toneLevel || 'professional', ctx);
+            if (template) {
+              console.log(`[CircuitBreaker] Using SMS template fallback for tenant ${tenantId}`);
+              return { ...template, body: cleanSmsContent(template.body) };
+            }
+          } catch (templateErr) {
+            console.error('[CircuitBreaker] SMS template fallback failed:', templateErr);
+          }
+          const fallback = this.getFallbackSMS(context, toneSettings);
+          return { ...fallback, body: cleanSmsContent(fallback.body), generationMethod: 'template_fallback' };
+        }
+        throw new CircuitOpenError(`Circuit open for tenant ${tenantId}: ${decision.reason}`);
+      }
+    }
+
     const systemPrompt = this.buildSMSSystemPrompt(toneSettings);
     const userPrompt = this.buildSMSUserPrompt(context, toneSettings);
+    const invoiceRefs = this.collectInvoiceRefs(context);
 
     try {
-      const result = await generateJSON<any>({
-        system: systemPrompt,
-        prompt: userPrompt,
-        model: "fast",
-        temperature: 0.7,
-      });
-
-      // Post-process to ensure proper line break formatting
+      const result = await this.callLLMWithRetry(systemPrompt, userPrompt, tenantId);
       const rawBody = result.body || this.getDefaultSMSBody(context, toneSettings);
-      
-      return {
-        body: cleanSmsContent(rawBody)
-      };
-    } catch (error) {
+      const body = cleanSmsContent(rawBody);
+
+      // Validate output
+      const validation = validateGeneratedMessage(
+        body, 'sms', context.customerName, toneLevel || 'professional', invoiceRefs
+      );
+      if (!validation.valid) {
+        console.warn(`[OutputValidator] SMS validation failed (attempt 1): ${validation.failures.join('; ')}`);
+        const retry = await this.callLLMWithRetry(systemPrompt, userPrompt, tenantId);
+        const retryBody = cleanSmsContent(retry.body || this.getDefaultSMSBody(context, toneSettings));
+        const retryValidation = validateGeneratedMessage(
+          retryBody, 'sms', context.customerName, toneLevel || 'professional', invoiceRefs
+        );
+        if (!retryValidation.valid) {
+          console.error(`[OutputValidator] SMS validation failed (attempt 2): ${retryValidation.failures.join('; ')}`);
+          if (tenantId) recordFailure(tenantId);
+          throw new Error(`SMS output validation failed: ${retryValidation.failures.join('; ')}`);
+        }
+        if (tenantId) recordSuccess(tenantId);
+        return { body: retryBody, generationMethod: 'llm' };
+      }
+
+      if (tenantId) recordSuccess(tenantId);
+      return { body, generationMethod: 'llm' };
+    } catch (error: any) {
+      if (error instanceof CircuitOpenError) throw error;
       console.error('AI SMS generation failed, using fallback:', error);
       const fallback = this.getFallbackSMS(context, toneSettings);
-      return {
-        body: cleanSmsContent(fallback.body)
-      };
+      return { body: cleanSmsContent(fallback.body) };
     }
   }
 
   /**
-   * Generate a personalized voice call script for Retell AI
+   * Generate a personalized voice call script for Retell AI.
+   * Gap 9: Circuit breaker (no template fallback for voice).
    */
   async generateVoiceScript(
     context: MessageContext,
-    toneSettings: ToneSettings
+    toneSettings: ToneSettings,
+    options?: GenerationOptions,
   ): Promise<GeneratedMessage> {
+    const { tenantId } = options || {};
+
+    // Circuit breaker check — voice is NOT templated
+    if (tenantId) {
+      const decision = canAttemptGeneration(tenantId);
+      if (!decision.allowed) {
+        throw new CircuitOpenError(`Circuit open for tenant ${tenantId}: ${decision.reason} (voice not templated)`);
+      }
+    }
+
     const systemPrompt = this.buildVoiceSystemPrompt(toneSettings);
     const userPrompt = this.buildVoiceUserPrompt(context, toneSettings);
 
     try {
-      const result = await generateJSON<any>({
+      const result = await this.callLLMWithRetry(systemPrompt, userPrompt, tenantId);
+      if (tenantId) recordSuccess(tenantId);
+      return {
+        voiceScript: result.voiceScript || this.getDefaultVoiceScript(context, toneSettings),
+        body: result.voiceScript || '',
+        generationMethod: 'llm',
+      };
+    } catch (error: any) {
+      if (error instanceof CircuitOpenError) throw error;
+      console.error('AI voice script generation failed, using fallback:', error);
+      return this.getFallbackVoiceScript(context, toneSettings);
+    }
+  }
+
+  /**
+   * Call LLM with a single retry on failure (10s delay).
+   * Records failure on the circuit breaker if both attempts fail.
+   */
+  private async callLLMWithRetry(
+    systemPrompt: string,
+    userPrompt: string,
+    tenantId?: string,
+  ): Promise<any> {
+    try {
+      return await generateJSON<any>({
         system: systemPrompt,
         prompt: userPrompt,
         model: "fast",
         temperature: 0.7,
       });
-
-      return {
-        voiceScript: result.voiceScript || this.getDefaultVoiceScript(context, toneSettings),
-        body: result.voiceScript || ''
-      };
-    } catch (error) {
-      console.error('AI voice script generation failed, using fallback:', error);
-      return this.getFallbackVoiceScript(context, toneSettings);
+    } catch (firstError) {
+      console.warn('[LLM] First attempt failed, retrying in 10s...', (firstError as Error).message);
+      await new Promise(resolve => setTimeout(resolve, 10_000));
+      try {
+        return await generateJSON<any>({
+          system: systemPrompt,
+          prompt: userPrompt,
+          model: "fast",
+          temperature: 0.7,
+        });
+      } catch (secondError) {
+        if (tenantId) recordFailure(tenantId);
+        throw secondError;
+      }
     }
+  }
+
+  /**
+   * Collect invoice references for output validation.
+   */
+  private collectInvoiceRefs(context: MessageContext): string[] {
+    const refs: string[] = [];
+    if (context.invoiceNumber && context.invoiceNumber !== 'N/A') {
+      refs.push(context.invoiceNumber);
+    }
+    if (context.invoiceDetails) {
+      for (const inv of context.invoiceDetails) {
+        if (inv.invoiceNumber) refs.push(inv.invoiceNumber);
+      }
+    }
+    return refs;
   }
 
   private buildEmailSystemPrompt(toneSettings: ToneSettings, hasMultipleInvoices: boolean = false): string {

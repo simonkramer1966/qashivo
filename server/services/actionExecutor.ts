@@ -6,6 +6,7 @@ import { sendSMS } from "./vonage";
 // RetellService import removed — voice calls now go through sendVoiceCall() wrapper
 import { websocketService } from "./websocketService";
 import { aiMessageGenerator, type MessageContext, type ToneSettings } from "./aiMessageGenerator";
+import { CircuitOpenError } from "./llmCircuitBreaker";
 import { ToneProfile, PlaybookStage } from "./playbookEngine";
 import { messagePreGenerator } from "./messagePreGenerator";
 import { resolvePrimaryEmail, resolvePrimarySmsNumber } from "./contactEmailResolver";
@@ -132,9 +133,16 @@ export class ActionExecutor {
             console.error(`❌ Failed ${action.type} action for ${contact.name}: ${result.error}`);
           }
         } catch (error: any) {
+          // Gap 9: Circuit open — leave action queued for retry on next executor run
+          if (error instanceof CircuitOpenError) {
+            await db.update(actions).set({ status: 'scheduled' }).where(eq(actions.id, action.id));
+            console.log(`[CircuitBreaker] Skipping action ${action.id} — circuit open, will retry`);
+            continue;
+          }
+
           await db
             .update(actions)
-            .set({ 
+            .set({
               status: 'failed',
               metadata: {
                 ...(action.metadata || {}),
@@ -236,6 +244,13 @@ export class ActionExecutor {
             console.error(`❌ Failed ${action.type} action for ${contact.name}: ${result.error}`);
           }
         } catch (error: any) {
+          // Gap 9: Circuit open — leave action queued for retry
+          if (error instanceof CircuitOpenError) {
+            await db.update(actions).set({ status: 'scheduled' }).where(eq(actions.id, action.id));
+            console.log(`[CircuitBreaker] Skipping action ${action.id} — circuit open, will retry`);
+            continue;
+          }
+
           await db.update(actions)
             .set({
               status: 'failed',
@@ -505,12 +520,19 @@ export class ActionExecutor {
           usedPreGenerated = true;
         } else {
           console.log(`🤖 Generating AI email for ${contact.name}${contextChanged ? ' (context changed)' : ''}...`);
-          const generated = await aiMessageGenerator.generateEmail(messageContext, toneSettings);
+          const generated = await aiMessageGenerator.generateEmail(messageContext, toneSettings, {
+            tenantId: action.tenantId,
+            toneLevel: action.agentToneLevel || 'professional',
+          });
           emailContent = {
             subject: generated.subject || 'Payment Reminder',
             body: generated.body
           };
-          console.log(`✅ AI email generated with subject: ${emailContent.subject}`);
+          // Write generationMethod to action record
+          if (generated.generationMethod) {
+            await db.update(actions).set({ generationMethod: generated.generationMethod }).where(eq(actions.id, action.id));
+          }
+          console.log(`✅ AI email generated (${generated.generationMethod || 'llm'}) with subject: ${emailContent.subject}`);
         }
       }
 
@@ -629,9 +651,15 @@ export class ActionExecutor {
           usedPreGenerated = true;
         } else {
           console.log(`🤖 Generating AI SMS for ${contact.name}${contextChanged ? ' (context changed)' : ''}...`);
-          const generated = await aiMessageGenerator.generateSMS(messageContext, toneSettings);
+          const generated = await aiMessageGenerator.generateSMS(messageContext, toneSettings, {
+            tenantId: action.tenantId,
+            toneLevel: action.agentToneLevel || 'professional',
+          });
           message = generated.body;
-          console.log(`✅ AI SMS generated: ${message.substring(0, 50)}...`);
+          if (generated.generationMethod) {
+            await db.update(actions).set({ generationMethod: generated.generationMethod }).where(eq(actions.id, action.id));
+          }
+          console.log(`✅ AI SMS generated (${generated.generationMethod || 'llm'}): ${message.substring(0, 50)}...`);
         }
       }
 
@@ -688,7 +716,10 @@ export class ActionExecutor {
         console.log(`🤖 Generating AI WhatsApp message for ${contact.name}...`);
         const messageContext = this.buildMessageContext(action, contact, invoice, tenant);
         const toneSettings = this.buildToneSettings(action);
-        const generated = await aiMessageGenerator.generateSMS(messageContext, toneSettings);
+        const generated = await aiMessageGenerator.generateSMS(messageContext, toneSettings, {
+          tenantId: action.tenantId,
+          toneLevel: action.agentToneLevel || 'professional',
+        });
         message = generated.body;
         console.log(`✅ AI WhatsApp message generated`);
       }
@@ -752,9 +783,15 @@ export class ActionExecutor {
           usedPreGenerated = true;
         } else {
           console.log(`🤖 Generating AI voice script for ${contact.name}${contextChanged ? ' (context changed)' : ''}...`);
-          const generated = await aiMessageGenerator.generateVoiceScript(messageContext, toneSettings);
+          const generated = await aiMessageGenerator.generateVoiceScript(messageContext, toneSettings, {
+            tenantId: action.tenantId,
+            toneLevel: action.agentToneLevel || 'professional',
+          });
           openingScript = generated.voiceScript;
-          console.log(`✅ AI voice script generated`);
+          if (generated.generationMethod) {
+            await db.update(actions).set({ generationMethod: generated.generationMethod }).where(eq(actions.id, action.id));
+          }
+          console.log(`✅ AI voice script generated (${generated.generationMethod || 'llm'})`);
         }
       }
 

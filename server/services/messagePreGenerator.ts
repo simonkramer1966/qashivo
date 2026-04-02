@@ -2,6 +2,7 @@ import { db } from '../db';
 import { eq, and, inArray, sql } from 'drizzle-orm';
 import { actions, messageDrafts, contacts, invoices, tenants } from '@shared/schema';
 import { aiMessageGenerator, MessageContext, ToneSettings, InvoiceDetail } from './aiMessageGenerator';
+import { CircuitOpenError } from './llmCircuitBreaker';
 import { ToneProfile, PlaybookStage } from './playbookEngine';
 import crypto from 'crypto';
 
@@ -107,17 +108,21 @@ export class MessagePreGenerationService {
     }
 
     try {
+      const genOptions = {
+        tenantId: action.tenantId,
+        toneLevel: action.agentToneLevel || 'professional',
+      };
       let generatedContent: { subject?: string; body?: string; voiceScript?: string; callToAction?: string };
-      
+
       switch (channel) {
         case 'email':
-          generatedContent = await aiMessageGenerator.generateEmail(messageContext, toneSettings);
+          generatedContent = await aiMessageGenerator.generateEmail(messageContext, toneSettings, genOptions);
           break;
         case 'sms':
-          generatedContent = await aiMessageGenerator.generateSMS(messageContext, toneSettings);
+          generatedContent = await aiMessageGenerator.generateSMS(messageContext, toneSettings, genOptions);
           break;
         case 'voice':
-          generatedContent = await aiMessageGenerator.generateVoiceScript(messageContext, toneSettings);
+          generatedContent = await aiMessageGenerator.generateVoiceScript(messageContext, toneSettings, genOptions);
           break;
         default:
           return 'skipped';
@@ -154,8 +159,14 @@ export class MessagePreGenerationService {
 
       return 'generated';
     } catch (error: any) {
+      // Gap 9: Circuit open — skip pre-generation gracefully (advisory, not critical)
+      if (error instanceof CircuitOpenError) {
+        console.log(`[CircuitBreaker] Pre-generation skipped for action ${action.id}: ${error.message}`);
+        return 'skipped';
+      }
+
       console.error(`AI generation failed for action ${action.id}:`, error.message);
-      
+
       if (existingDraft.length > 0) {
         await db.update(messageDrafts)
           .set({ status: 'failed', errorMessage: error.message, updatedAt: new Date() })

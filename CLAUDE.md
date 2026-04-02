@@ -124,6 +124,7 @@ The wrappers enforce Off / Testing / Soft Live / Live modes and **fail closed on
 - **No pre-action 30-day response window — FIXED (Gap 10)**: `setLegalResponseWindowIfNeeded()` sets `legalResponseWindowEnd` on contacts when a Legal tone action completes. Gap 4 validation gate blocks both active AND expired-unresolved windows. Daily `legalWindowJob` creates day-25 expiry warnings and day-30 expiry events (deduped). `POST /api/contacts/:id/legal-window/resolve` endpoint (manager+ role) supports `resume_collections`, `refer_debt_recovery`, and `extend_window`. Xero sync auto-clears window on full settlement.
 - **Bank transactions not synced**: xero.ts has getBankTransactions() API methods but xeroSync.ts never calls them. bankTransactionsCount hardcoded to 0. Table truncated on initial sync but never repopulated. See CHARLIE_ENGINEERING_SPEC.md Gap 14.
 - **Data Health doesn't detect hard bounces**: Hard bounce timeline events are created (Gap 8) but GET /api/settings/data-health only checks static contact fields (email populated, phone populated, generic email patterns). Needs query extension to check for email_hard_bounce timeline events and downgrade readiness status to "Needs Email".
+- **Circuit breaker admin SMS alerts non-functional**: `llmCircuitBreaker.ts` `notifyAdmins()` attempts to send SMS alerts to tenant admins, but the `users` table has no `phone` column. SMS notifications will silently fail until a phone field is added to the users schema. Email notifications work fine.
 
 ---
 

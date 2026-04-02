@@ -23,6 +23,9 @@ interface SMSParams {
   message: string;
   from?: string;
   tenantId: string;
+  // systemBypass: true — for system-to-admin alerts only (circuit breaker notifications).
+  // Never use for debtor-facing messages.
+  systemBypass?: boolean;
 }
 
 export async function sendSMS(params: SMSParams & {
@@ -65,7 +68,10 @@ export async function sendSMS(params: SMSParams & {
 
     // SECURITY: Communication mode enforcement — MUST happen before any send
     // tenantId is required — every SMS must go through mode check
-    try {
+    // systemBypass skips mode check — for system-to-admin alerts only
+    if (params.systemBypass) {
+      console.log(`📱 [SmsSystemBypass] Sending admin alert SMS to ${to} (bypassing mode check)`);
+    } else try {
       const { db } = await import('../db.js');
       const { tenants } = await import('../../shared/schema.js');
       const { eq } = await import('drizzle-orm');

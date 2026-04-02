@@ -38,7 +38,7 @@ export async function generateText(opts: GenerateTextOptions): Promise<string> {
     temperature,
     system,
     messages: [{ role: "user", content: prompt }],
-  });
+  }, { timeout: 30_000 });
 
   const block = response.content[0];
   if (block.type !== "text") {
@@ -75,7 +75,7 @@ export async function generateConversation(opts: GenerateConversationOptions): P
     temperature,
     system,
     messages,
-  });
+  }, { timeout: 30_000 });
 
   const block = response.content[0];
   if (block.type !== "text") {
@@ -100,7 +100,7 @@ export async function streamConversation(
     temperature,
     system,
     messages,
-  });
+  }, { timeout: 30_000 });
 
   let fullText = "";
 
