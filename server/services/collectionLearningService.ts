@@ -55,7 +55,114 @@ export interface LearningInsights {
 export class CollectionLearningService {
 
   /**
-   * Get or create a customer learning profile
+   * Gap 6: Get segment-level channel effectiveness priors from similar debtors.
+   * Fallback chain: same segment+size → same segment → same size → system defaults
+   */
+  private async getSegmentPriors(
+    tenantId: string,
+    contact: typeof contacts.$inferSelect,
+  ): Promise<{ email: number; sms: number; voice: number; confidence: number }> {
+    const SYSTEM_DEFAULTS = { email: 0.6, sms: 0.5, voice: 0.4, confidence: 0.1 };
+    const MIN_COHORT_SIZE = 5;
+
+    // Determine size band from credit limit
+    const creditLimit = contact.creditLimit ? parseFloat(String(contact.creditLimit)) : 0;
+    let sizeBand: string;
+    if (creditLimit < 10000) sizeBand = "small";
+    else if (creditLimit < 50000) sizeBand = "medium";
+    else sizeBand = "large";
+
+    // Determine segment from risk score (mirrors charlieDecisionEngine.determineCustomerSegment)
+    const behaviorScore = contact.riskScore ? 100 - Number(contact.riskScore) : 50;
+    let segment: string;
+    if (contact.createdAt && (Date.now() - contact.createdAt.getTime()) < 90 * 24 * 60 * 60 * 1000) {
+      segment = "new_customer";
+    } else if (behaviorScore >= 80) {
+      segment = "good_payer";
+    } else if (behaviorScore <= 30) {
+      segment = "chronic_late_payer";
+    } else if (creditLimit > 50000) {
+      segment = "enterprise";
+    } else if (creditLimit < 5000) {
+      segment = "small_business";
+    } else {
+      segment = "standard";
+    }
+
+    // Try: same segment + same size
+    let priors = await this.querySegmentPriors(tenantId, segment, sizeBand, MIN_COHORT_SIZE);
+    if (priors) return { ...priors, confidence: 0.2 };
+
+    // Try: same segment, any size
+    priors = await this.querySegmentPriors(tenantId, segment, null, MIN_COHORT_SIZE);
+    if (priors) return { ...priors, confidence: 0.15 };
+
+    // Try: any segment, same size
+    priors = await this.querySegmentPriors(tenantId, null, sizeBand, MIN_COHORT_SIZE);
+    if (priors) return { ...priors, confidence: 0.15 };
+
+    return SYSTEM_DEFAULTS;
+  }
+
+  private async querySegmentPriors(
+    tenantId: string,
+    _segment: string | null,
+    _sizeBand: string | null,
+    minCohort: number,
+  ): Promise<{ email: number; sms: number; voice: number } | null> {
+    try {
+      // Query mature profiles (learningConfidence > 0.5) in the same tenant
+      const result = await db
+        .select({
+          avgEmail: sql<string>`AVG(CAST(${customerLearningProfiles.emailEffectiveness} AS numeric))`,
+          avgSms: sql<string>`AVG(CAST(${customerLearningProfiles.smsEffectiveness} AS numeric))`,
+          avgVoice: sql<string>`AVG(CAST(${customerLearningProfiles.voiceEffectiveness} AS numeric))`,
+          count: sql<number>`COUNT(*)::int`,
+        })
+        .from(customerLearningProfiles)
+        .innerJoin(contacts, eq(contacts.id, customerLearningProfiles.contactId))
+        .where(
+          and(
+            eq(customerLearningProfiles.tenantId, tenantId),
+            sql`CAST(${customerLearningProfiles.learningConfidence} AS numeric) > 0.5`,
+            // Segment filter: use risk score as proxy for segment
+            ...(_segment === "good_payer"
+              ? [sql`(${contacts.riskScore} IS NOT NULL AND ${contacts.riskScore} <= 20)`]
+              : _segment === "chronic_late_payer"
+                ? [sql`(${contacts.riskScore} IS NOT NULL AND ${contacts.riskScore} >= 70)`]
+                : _segment === "enterprise"
+                  ? [sql`CAST(${contacts.creditLimit} AS numeric) > 50000`]
+                  : _segment === "small_business"
+                    ? [sql`CAST(${contacts.creditLimit} AS numeric) < 5000`]
+                    : []),
+            // Size band filter
+            ...(_sizeBand === "small"
+              ? [sql`(${contacts.creditLimit} IS NULL OR CAST(${contacts.creditLimit} AS numeric) < 10000)`]
+              : _sizeBand === "medium"
+                ? [sql`CAST(${contacts.creditLimit} AS numeric) >= 10000 AND CAST(${contacts.creditLimit} AS numeric) < 50000`]
+                : _sizeBand === "large"
+                  ? [sql`CAST(${contacts.creditLimit} AS numeric) >= 50000`]
+                  : []),
+          ),
+        );
+
+      if (result[0]?.count >= minCohort) {
+        return {
+          email: parseFloat(result[0].avgEmail) || 0.6,
+          sms: parseFloat(result[0].avgSms) || 0.5,
+          voice: parseFloat(result[0].avgVoice) || 0.4,
+        };
+      }
+    } catch (err) {
+      console.warn("[ColdStart] Segment prior query failed:", err);
+    }
+
+    return null;
+  }
+
+  /**
+   * Get or create a customer learning profile.
+   * Gap 6: New profiles inherit segment priors from similar debtors instead of flat 0.5.
    */
   async getOrCreateCustomerProfile(contactId: string, tenantId: string): Promise<CustomerLearningProfile> {
     try {
@@ -71,17 +178,25 @@ export class CollectionLearningService {
         return existingProfile;
       }
 
-      // Create new profile with neutral defaults
+      // Gap 6: Fetch contact to determine segment priors
+      let priors = { email: 0.5, sms: 0.5, voice: 0.5, confidence: 0.1 };
+      try {
+        const [contact] = await db.select().from(contacts).where(eq(contacts.id, contactId)).limit(1);
+        if (contact) {
+          priors = await this.getSegmentPriors(tenantId, contact);
+        }
+      } catch { /* fall back to defaults */ }
+
       const newProfile: InsertCustomerLearningProfile = {
         tenantId,
         contactId,
-        emailEffectiveness: "0.5",
-        smsEffectiveness: "0.5", 
-        voiceEffectiveness: "0.5",
+        emailEffectiveness: priors.email.toFixed(4),
+        smsEffectiveness: priors.sms.toFixed(4),
+        voiceEffectiveness: priors.voice.toFixed(4),
         totalInteractions: 0,
         successfulActions: 0,
         paymentReliability: "0.5",
-        learningConfidence: "0.1",
+        learningConfidence: priors.confidence.toFixed(2),
       };
 
       const [createdProfile] = await db

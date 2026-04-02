@@ -12,6 +12,7 @@ import {
   decimal,
   boolean,
   unique,
+  uniqueIndex,
   date,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
@@ -248,6 +249,51 @@ export const contacts = pgTable("contacts", {
   index("idx_contacts_next_touch").on(table.nextTouchNotBefore),
   index("idx_contacts_exception").on(table.isException),
   index("idx_contacts_debtor_group").on(table.debtorGroupId),
+]);
+
+// Gap 6: Debtor Intelligence — Companies House enrichment + credit risk scoring
+export const debtorIntelligence = pgTable("debtor_intelligence", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id),
+
+  // Companies House data
+  companyStatus: varchar("company_status"),           // active, dormant, dissolved, administration
+  companiesHouseNumber: varchar("companies_house_number"),
+  industryCode: varchar("industry_code"),              // SIC code(s)
+  industrySector: varchar("industry_sector"),           // human-readable
+  companyAge: integer("company_age"),                   // years since incorporation
+  incorporationDate: timestamp("incorporation_date"),
+  sizeClassification: varchar("size_classification"),   // micro, small, medium, large
+  filingHealth: decimal("filing_health", { precision: 5, scale: 2 }),
+  lateFilingCount: integer("late_filing_count"),
+  directorCount: integer("director_count"),
+  directorStability: decimal("director_stability", { precision: 5, scale: 2 }),
+  registeredAddress: text("registered_address"),
+
+  // CCJ data (future)
+  ccjCount: integer("ccj_count").default(0),
+  ccjTotal: decimal("ccj_total", { precision: 12, scale: 2 }),
+
+  // Risk flags
+  insolvencyRisk: boolean("insolvency_risk").default(false),
+
+  // AI web search data (future)
+  newsSignals: jsonb("news_signals"),
+
+  // Composite outputs
+  aiRiskSummary: text("ai_risk_summary"),
+  creditRiskScore: integer("credit_risk_score"),        // 0-100
+
+  // Metadata
+  enrichedAt: timestamp("enriched_at"),
+  enrichmentSource: jsonb("enrichment_source"),         // which sources were queried
+  enrichmentStatus: varchar("enrichment_status"),       // pending, complete, partial, failed
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("idx_debtor_intelligence_tenant_contact").on(table.tenantId, table.contactId),
 ]);
 
 // Contact Notes table
@@ -1825,6 +1871,17 @@ export const debtorGroupsRelations = relations(debtorGroups, ({ one, many }) => 
   contacts: many(contacts),
 }));
 
+export const debtorIntelligenceRelations = relations(debtorIntelligence, ({ one }) => ({
+  contact: one(contacts, {
+    fields: [debtorIntelligence.contactId],
+    references: [contacts.id],
+  }),
+  tenant: one(tenants, {
+    fields: [debtorIntelligence.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
 export const contactNotesRelations = relations(contactNotes, ({ one }) => ({
   contact: one(contacts, {
     fields: [contactNotes.contactId],
@@ -2632,6 +2689,12 @@ export const insertDebtorGroupSchema = createInsertSchema(debtorGroups).omit({
   updatedAt: true,
 });
 
+export const insertDebtorIntelligenceSchema = createInsertSchema(debtorIntelligence).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertContactNoteSchema = createInsertSchema(contactNotes).omit({
   id: true,
   createdAt: true,
@@ -2940,6 +3003,8 @@ export type InsertContact = z.infer<typeof insertContactSchema>;
 export type Contact = typeof contacts.$inferSelect;
 export type InsertDebtorGroup = z.infer<typeof insertDebtorGroupSchema>;
 export type DebtorGroup = typeof debtorGroups.$inferSelect;
+export type InsertDebtorIntelligence = z.infer<typeof insertDebtorIntelligenceSchema>;
+export type DebtorIntelligence = typeof debtorIntelligence.$inferSelect;
 export type InsertCachedXeroInvoice = z.infer<typeof insertCachedXeroInvoiceSchema>;
 export type CachedXeroInvoice = typeof cachedXeroInvoices.$inferSelect;
 export type InsertCachedXeroContact = z.infer<typeof insertCachedXeroContactSchema>;

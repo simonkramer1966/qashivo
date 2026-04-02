@@ -323,6 +323,7 @@ export class XeroSyncService {
 
       let contactsCreated = 0;
       let contactsUpdated = 0;
+      const newContactsForEnrichment: Array<{ id: string; name: string }> = []; // Gap 6
 
       for (const [xeroContactId, contactInfo] of Array.from(uniqueContactIds.entries())) {
         try {
@@ -355,6 +356,7 @@ export class XeroSyncService {
             } catch (seedErr) {
               console.warn(`  Schedule assign failed for ${newContact.id}:`, seedErr);
             }
+            newContactsForEnrichment.push({ id: newContact.id, name: contactInfo.name }); // Gap 6
             contactsCreated++;
           }
         } catch (err: any) {
@@ -364,6 +366,15 @@ export class XeroSyncService {
 
       const totalContacts = contactsCreated + contactsUpdated;
       console.log(`✅ Contacts: ${contactsCreated} created, ${contactsUpdated} updated (${totalContacts} total)`);
+
+      // Gap 6: Fire-and-forget enrichment for new contacts
+      if (newContactsForEnrichment.length > 0) {
+        import('./debtorEnrichmentService').then(({ enrichNewContacts }) => {
+          enrichNewContacts(tenantId, newContactsForEnrichment).catch((err) =>
+            console.warn('[Enrichment] Background enrichment failed:', err),
+          );
+        }).catch(() => { /* non-fatal */ });
+      }
       onProgress?.({ contactCount: totalContacts, invoiceCount: totalInvoicesCount });
 
       // ── Step 3b: Upsert Xero ContactPersons into customer_contact_persons ──
@@ -499,6 +510,12 @@ export class XeroSyncService {
               } catch (seedErr) {
                 console.warn(`  Schedule assign failed for ${newContact.id}:`, seedErr);
               }
+              // Gap 6: Queue enrichment for credit-only contacts
+              import('./debtorEnrichmentService').then(({ enrichDebtor }) => {
+                enrichDebtor(tenantId, newContact.id, name).catch((err) =>
+                  console.warn(`[Enrichment] Credit contact enrichment failed for ${name}:`, err),
+                );
+              }).catch(() => { /* non-fatal */ });
               console.log(`  ✅ Imported credit-only contact: ${name}`);
             }
           } catch (batchErr: any) {

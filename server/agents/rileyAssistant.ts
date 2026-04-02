@@ -252,6 +252,39 @@ export async function buildDebtorContext(contactId: string, tenantId: string): P
       }
     }
 
+    // Gap 6: Debtor intelligence enrichment context
+    try {
+      const { db: dbEnrich } = await import("../db");
+      const { debtorIntelligence } = await import("@shared/schema");
+      const { eq: eqEnrich, and: andEnrich } = await import("drizzle-orm");
+
+      const [intel] = await dbEnrich
+        .select()
+        .from(debtorIntelligence)
+        .where(andEnrich(
+          eqEnrich(debtorIntelligence.contactId, contactId),
+          eqEnrich(debtorIntelligence.tenantId, tenantId),
+        ))
+        .limit(1);
+
+      if (intel) {
+        lines.push("");
+        lines.push("COMPANY INTELLIGENCE:");
+        const parts: string[] = [];
+        if (intel.companyStatus) parts.push(`status: ${intel.companyStatus}`);
+        if (intel.companyAge !== null) parts.push(`${intel.companyAge} years old`);
+        if (intel.industrySector) parts.push(`sector: ${intel.industrySector}`);
+        if (intel.sizeClassification) parts.push(`size: ${intel.sizeClassification}`);
+        if (intel.companiesHouseNumber) parts.push(`CH# ${intel.companiesHouseNumber}`);
+        if (intel.creditRiskScore !== null) parts.push(`credit risk score: ${intel.creditRiskScore}/100`);
+        if (intel.lateFilingCount && intel.lateFilingCount > 0) parts.push(`${intel.lateFilingCount} late filings`);
+        if (intel.insolvencyRisk) parts.push("WARNING: insolvency risk detected");
+        if (parts.length > 0) lines.push(parts.join(", "));
+        if (intel.aiRiskSummary) lines.push(`Risk assessment: ${intel.aiRiskSummary}`);
+        if (intel.registeredAddress) lines.push(`Registered: ${intel.registeredAddress}`);
+      }
+    } catch { /* graceful — enrichment context is supplementary */ }
+
     // Gap 7: Payment distribution forecast
     try {
       const { db } = await import("../db");
