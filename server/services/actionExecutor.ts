@@ -1,6 +1,7 @@
 import { eq, and, lte, sql, isNotNull, inArray } from "drizzle-orm";
 import { db } from "../db";
-import { actions, contacts, invoices, tenants, messageDrafts, emailMessages, timelineEvents } from "@shared/schema";
+import { actions, contacts, invoices, tenants, messageDrafts, emailMessages, timelineEvents, customerBehaviorSignals } from "@shared/schema";
+import { fitDistribution, estimatePaymentProbability } from "./paymentDistribution";
 import { sendEmail } from "./sendgrid";
 import { sendSMS } from "./vonage";
 // RetellService import removed — voice calls now go through sendVoiceCall() wrapper
@@ -300,7 +301,53 @@ export class ActionExecutor {
       return { valid: false, reason: 'probable_payment_detected' };
     }
 
-    // 3. Invoice-level checks — fresh DB read to catch changes since planning
+    // 3. P(Pay) defensive check — if debtor has statistically likely paid by now, flag for review
+    // Gap 14 Phase 1 Approach 1: works without bank transaction matching
+    if (contact.id) {
+      try {
+        const [signals] = await db
+          .select({
+            medianDaysToPay: customerBehaviorSignals.medianDaysToPay,
+            p75DaysToPay: customerBehaviorSignals.p75DaysToPay,
+            volatility: customerBehaviorSignals.volatility,
+            trend: customerBehaviorSignals.trend,
+          })
+          .from(customerBehaviorSignals)
+          .where(
+            and(
+              eq(customerBehaviorSignals.contactId, contact.id),
+              eq(customerBehaviorSignals.tenantId, action.tenantId),
+            ),
+          )
+          .limit(1);
+
+        if (signals?.medianDaysToPay) {
+          const params = fitDistribution(
+            parseFloat(String(signals.medianDaysToPay)),
+            signals.p75DaysToPay ? parseFloat(String(signals.p75DaysToPay)) : null,
+            signals.volatility ? parseFloat(String(signals.volatility)) : null,
+            signals.trend ? parseFloat(String(signals.trend)) : null,
+          );
+          // Calculate how many days the oldest invoice is overdue
+          const oldestDaysOverdue = action.metadata?.daysOverdue || 0;
+          if (oldestDaysOverdue > 0) {
+            // Probability debtor has already paid (CDF at current day)
+            const pAlreadyPaid = estimatePaymentProbability(oldestDaysOverdue, 0, params);
+            // If > 60%, they've statistically likely paid — flag for human review
+            if (pAlreadyPaid > 0.60) {
+              return {
+                valid: false,
+                reason: `ppay_likely_paid_${Math.round(pAlreadyPaid * 100)}pct`,
+              };
+            }
+          }
+        }
+      } catch {
+        // Non-fatal: if P(Pay) check fails, proceed with action
+      }
+    }
+
+    // 4. Invoice-level checks — fresh DB read to catch changes since planning
     const actionInvoiceIds: string[] = action.invoiceIds?.length
       ? action.invoiceIds
       : (action.invoiceId ? [action.invoiceId] : []);
@@ -323,17 +370,17 @@ export class ActionExecutor {
       return true;
     });
 
-    // 4. All invoices excluded
+    // 5. All invoices excluded
     if (validInvoices.length === 0) {
       return { valid: false, reason: 'all_invoices_excluded' };
     }
 
-    // 5. Any invoices removed from bundle — cancel for replan (LLM content may reference removed invoices)
+    // 6. Any invoices removed from bundle — cancel for replan (LLM content may reference removed invoices)
     if (validInvoices.length < actionInvoiceIds.length) {
       return { valid: false, reason: 'bundle_modified_requires_replan' };
     }
 
-    // 6. Remaining total below minimum chase threshold
+    // 7. Remaining total below minimum chase threshold
     const totalAmount = validInvoices.reduce((sum, inv) => sum + Number(inv.amount || 0), 0);
     const minThreshold = parseFloat(tenant?.minimumChaseThreshold || '50');
     if (totalAmount < minThreshold) {

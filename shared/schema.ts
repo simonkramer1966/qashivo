@@ -296,6 +296,25 @@ export const debtorIntelligence = pgTable("debtor_intelligence", {
   uniqueIndex("idx_debtor_intelligence_tenant_contact").on(table.tenantId, table.contactId),
 ]);
 
+// Gap 14: Probable payments — unreconciled bank transaction matches against outstanding invoices
+export const probablePayments = pgTable("probable_payments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  contactId: varchar("contact_id").references(() => contacts.id),
+  invoiceId: varchar("invoice_id").references(() => invoices.id),
+  bankTransactionId: varchar("bank_transaction_id").notNull(), // Xero bank transaction ID
+  transactionDate: timestamp("transaction_date").notNull(),
+  transactionAmount: decimal("transaction_amount", { precision: 10, scale: 2 }).notNull(),
+  transactionReference: text("transaction_reference"),
+  matchConfidence: varchar("match_confidence").notNull(), // high, medium, low
+  matchReason: text("match_reason").notNull(), // why matched
+  status: varchar("status").default("pending").notNull(), // pending, confirmed, rejected, expired
+  confirmedBy: varchar("confirmed_by"), // user_manual, open_banking, xero_reconciliation
+  confirmedAt: timestamp("confirmed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Contact Notes table
 export const contactNotes = pgTable("contact_notes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1882,6 +1901,21 @@ export const debtorIntelligenceRelations = relations(debtorIntelligence, ({ one 
   }),
 }));
 
+export const probablePaymentsRelations = relations(probablePayments, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [probablePayments.tenantId],
+    references: [tenants.id],
+  }),
+  contact: one(contacts, {
+    fields: [probablePayments.contactId],
+    references: [contacts.id],
+  }),
+  invoice: one(invoices, {
+    fields: [probablePayments.invoiceId],
+    references: [invoices.id],
+  }),
+}));
+
 export const contactNotesRelations = relations(contactNotes, ({ one }) => ({
   contact: one(contacts, {
     fields: [contactNotes.contactId],
@@ -3385,6 +3419,15 @@ export type SyncState = typeof syncState.$inferSelect;
 export type InsertSyncState = z.infer<typeof insertSyncStateSchema>;
 export type ProviderConnection = typeof providerConnections.$inferSelect;
 export type InsertProviderConnection = z.infer<typeof insertProviderConnectionSchema>;
+
+// Gap 14: Probable payments schema + types
+export const insertProbablePaymentSchema = createInsertSchema(probablePayments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type ProbablePayment = typeof probablePayments.$inferSelect;
+export type InsertProbablePayment = z.infer<typeof insertProbablePaymentSchema>;
 
 // Zod schemas for health scoring
 export const insertInvoiceHealthScoreSchema = createInsertSchema(invoiceHealthScores).omit({

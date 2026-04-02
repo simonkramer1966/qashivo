@@ -1,9 +1,10 @@
 import { db, pool } from "../db";
-import { tenants, cachedXeroInvoices, cachedXeroContacts, cachedXeroOverpayments, cachedXeroPrepayments, cachedXeroCreditNotes, contacts, invoices, syncState, customerContactPersons, timelineEvents } from "@shared/schema";
+import { tenants, cachedXeroInvoices, cachedXeroContacts, cachedXeroOverpayments, cachedXeroPrepayments, cachedXeroCreditNotes, contacts, invoices, syncState, customerContactPersons, timelineEvents, bankTransactions, bankAccounts } from "@shared/schema";
 import { eq, and, sql, inArray } from "drizzle-orm";
 import { xeroService } from "./xero";
 import { attentionItemService } from "./attentionItemService";
 import { assignContactToDefaultSchedule } from "./strategySeeder";
+import { matchBankTransactionsToInvoices, storeMatchResults } from "./probablePaymentService";
 
 export type SyncMode = 'initial' | 'ongoing';
 
@@ -768,6 +769,32 @@ export class XeroSyncService {
         console.warn(`[xeroSync] Error checking legal windows after sync:`, err);
       }
 
+      // Gap 14: Clear probable payment flags for contacts where all invoices are now paid
+      try {
+        const contactsWithProbablePayment = allContacts.filter(c => c.probablePaymentDetected);
+        if (contactsWithProbablePayment.length > 0) {
+          const paidContactIds: string[] = [];
+          for (const contact of contactsWithProbablePayment) {
+            const [unpaid] = await db.select({ id: invoices.id })
+              .from(invoices)
+              .where(and(
+                eq(invoices.tenantId, tenantId),
+                eq(invoices.contactId, contact.id),
+                sql`LOWER(${invoices.status}) NOT IN ('paid', 'void', 'voided', 'deleted', 'draft')`,
+              ))
+              .limit(1);
+            if (!unpaid) paidContactIds.push(contact.id);
+          }
+          if (paidContactIds.length > 0) {
+            const { clearConfirmedPayments } = await import('./probablePaymentService');
+            await clearConfirmedPayments(tenantId, paidContactIds);
+            console.log(`[ProbablePayment] Auto-cleared ${paidContactIds.length} contacts — all invoices paid`);
+          }
+        }
+      } catch (err) {
+        console.warn(`[xeroSync] Error clearing probable payments after sync:`, err);
+      }
+
       return { processed, created, updated, failed };
     } catch (error) {
       console.error("Fatal error in processCachedInvoices:", error);
@@ -1204,13 +1231,21 @@ export class XeroSyncService {
         console.warn('Failed to create data quality attention items:', error);
       }
 
+      // Gap 14: Sync unreconciled bank transactions + run probable payment matching
+      let bankTxCount = 0;
+      try {
+        bankTxCount = await this.syncBankTransactionsAndMatch(tenantId);
+      } catch (error) {
+        console.warn('[XeroSync] Bank transaction sync failed (non-fatal):', error);
+      }
+
       return {
         success: true,
         contactsCount: result.contactsCount,
         invoicesCount: result.invoicesCount,
         billsCount: 0,
         bankAccountsCount: 0,
-        bankTransactionsCount: 0,
+        bankTransactionsCount: bankTxCount,
         filteredCount: result.contactsCount,
         syncMode: mode,
       };
@@ -1230,5 +1265,160 @@ export class XeroSyncService {
     } finally {
       await this.releaseSyncLock(tenantId);
     }
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // Gap 14: Bank Transaction Sync + Probable Payment Matching
+  // ══════════════════════════════════════════════════════════════════
+
+  /**
+   * Fetch unreconciled RECEIVE bank transactions from Xero,
+   * store them in bank_transactions table, and run matching
+   * algorithm against outstanding invoices.
+   *
+   * IMPORTANT: Xero data used for operational inference only.
+   * No bank transaction data feeds into learning models.
+   */
+  private async syncBankTransactionsAndMatch(tenantId: string): Promise<number> {
+    const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
+    if (!tenant?.xeroAccessToken || !tenant.xeroTenantId) return 0;
+
+    const tokens = {
+      accessToken: tenant.xeroAccessToken,
+      refreshToken: tenant.xeroRefreshToken!,
+      expiresAt: tenant.xeroExpiresAt || new Date(Date.now() + 30 * 60 * 1000),
+      tenantId: tenant.xeroTenantId,
+    };
+
+    // Fetch unreconciled RECEIVE transactions from last 90 days
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
+    console.log(`[XeroSync] Fetching bank transactions for tenant ${tenantId}...`);
+    const rawTransactions = await xeroService.getBankTransactions(tokens, {
+      dateFrom: ninetyDaysAgo,
+      transactionType: 'RECEIVE',
+      reconciled: false,
+    }, tenantId);
+
+    if (rawTransactions.length === 0) {
+      console.log(`[XeroSync] No unreconciled RECEIVE transactions found`);
+      return 0;
+    }
+
+    console.log(`[XeroSync] Found ${rawTransactions.length} unreconciled RECEIVE transactions`);
+
+    // Ensure bank accounts exist for FK references (cache Xero AccountID → internal ID)
+    const bankAccountCache = new Map<string, string>();
+    const existingAccounts = await db
+      .select({ id: bankAccounts.id, xeroAccountId: bankAccounts.xeroAccountId })
+      .from(bankAccounts)
+      .where(eq(bankAccounts.tenantId, tenantId));
+    for (const acc of existingAccounts) {
+      if (acc.xeroAccountId) bankAccountCache.set(acc.xeroAccountId, acc.id);
+    }
+
+    // Store raw transactions in bank_transactions table (upsert by xeroTransactionId)
+    let storedCount = 0;
+    for (const tx of rawTransactions) {
+      try {
+        const txDate = tx.DateString.startsWith('/Date(')
+          ? new Date(parseInt(tx.DateString.replace(/\/Date\((\d+)\+?\d*\)\//, '$1'), 10))
+          : new Date(tx.DateString);
+
+        // Resolve bank account FK — create if missing
+        const xeroBankAccId = (tx as any).BankAccount?.AccountID || tx.BankAccountID || '';
+        let internalBankAccId = bankAccountCache.get(xeroBankAccId);
+        if (!internalBankAccId && xeroBankAccId) {
+          // Create a placeholder bank account
+          const [newAcc] = await db.insert(bankAccounts).values({
+            tenantId,
+            xeroAccountId: xeroBankAccId,
+            name: (tx as any).BankAccount?.Name || 'Xero Bank Account',
+            accountType: 'checking',
+            currency: tx.CurrencyCode || 'GBP',
+          }).returning({ id: bankAccounts.id });
+          if (newAcc) {
+            internalBankAccId = newAcc.id;
+            bankAccountCache.set(xeroBankAccId, newAcc.id);
+          }
+        }
+        if (!internalBankAccId) continue; // Can't store without a bank account FK
+
+        // Look up internal contact ID from Xero ContactID
+        let internalContactId: string | null = null;
+        if (tx.Contact?.ContactID) {
+          const [matchedContact] = await db
+            .select({ id: contacts.id })
+            .from(contacts)
+            .where(
+              and(
+                eq(contacts.tenantId, tenantId),
+                eq(contacts.xeroContactId, tx.Contact.ContactID),
+              ),
+            )
+            .limit(1);
+          internalContactId = matchedContact?.id || null;
+        }
+
+        // Upsert by xeroTransactionId
+        const existing = await db
+          .select({ id: bankTransactions.id })
+          .from(bankTransactions)
+          .where(
+            and(
+              eq(bankTransactions.tenantId, tenantId),
+              eq(bankTransactions.xeroTransactionId, tx.BankTransactionID),
+            ),
+          )
+          .limit(1);
+
+        if (existing.length > 0) {
+          await db.update(bankTransactions).set({
+            amount: String(tx.Total),
+            isReconciled: tx.IsReconciled,
+            reference: tx.Reference || null,
+            contactId: internalContactId,
+            updatedAt: new Date(),
+          }).where(eq(bankTransactions.id, existing[0].id));
+        } else {
+          await db.insert(bankTransactions).values({
+            tenantId,
+            bankAccountId: internalBankAccId,
+            xeroTransactionId: tx.BankTransactionID,
+            transactionDate: txDate,
+            amount: String(tx.Total),
+            type: 'credit', // RECEIVE = credit (money in)
+            description: tx.Reference || null,
+            reference: tx.Reference || null,
+            contactId: internalContactId,
+            isReconciled: tx.IsReconciled,
+            metadata: {
+              xeroCurrencyCode: tx.CurrencyCode,
+              xeroSubTotal: tx.SubTotal,
+              xeroTotalTax: tx.TotalTax,
+              xeroContactName: tx.Contact?.Name,
+              xeroContactId: tx.Contact?.ContactID,
+            },
+          });
+          storedCount++;
+        }
+      } catch (err: any) {
+        console.warn(`[XeroSync] Failed to store bank transaction ${tx.BankTransactionID}:`, err.message);
+      }
+    }
+
+    if (storedCount > 0) {
+      console.log(`[XeroSync] Stored ${storedCount} new bank transactions`);
+    }
+
+    // Run matching algorithm
+    const matches = await matchBankTransactionsToInvoices(tenantId, rawTransactions);
+    if (matches.length > 0) {
+      const stored = await storeMatchResults(tenantId, matches);
+      console.log(`[XeroSync] Probable payment matching: ${matches.length} matches found, ${stored} stored`);
+    }
+
+    return rawTransactions.length;
   }
 }

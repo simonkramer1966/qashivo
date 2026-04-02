@@ -16,7 +16,7 @@ import {
   type Invoice, type Contact, type ContactNote, type Bill, type BankAccount,
   type BankTransaction, type Budget, type ExchangeRate, type ActionItem,
   type ActionLog, type PaymentPromise,
-  invoices, contacts, actions, disputes, bankTransactions, customerLearningProfiles,
+  invoices, contacts, actions, disputes, bankTransactions, customerLearningProfiles, probablePayments,
   inboundMessages, smsMessages, investorLeads, onboardingProgress, messageDrafts,
   tenants, paymentPromises, promisesToPay, smeClients, contactNotes, timelineEvents,
   attentionItems, outcomes, activityLogs, collectionPolicies, paymentPlans,
@@ -4812,6 +4812,127 @@ ${type === 'email' ? 'Generate a JSON object with "subject" (string) and "body" 
       } catch (error) {
         console.error("Error resolving legal window:", error);
         res.status(500).json({ message: "Failed to resolve legal window" });
+      }
+    }
+  );
+
+  // ─── Gap 14: Probable payment resolution ───
+  app.post("/api/contacts/:id/probable-payment/resolve",
+    isAuthenticated,
+    withRBACContext,
+    withMinimumRole("manager"),
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        const tenantId = (req as any).rbac?.tenantId;
+        const user = (req as any).user;
+        const { action, probablePaymentId } = req.body as {
+          action: 'confirm' | 'reject';
+          probablePaymentId?: string;
+        };
+
+        if (!tenantId) return res.status(403).json({ message: "No tenant context" });
+        if (!action || !['confirm', 'reject'].includes(action)) {
+          return res.status(400).json({ message: "Invalid action. Must be: confirm or reject" });
+        }
+
+        // Verify contact exists and belongs to tenant
+        const [contact] = await db.select({ id: contacts.id, name: contacts.name })
+          .from(contacts)
+          .where(and(eq(contacts.id, id), eq(contacts.tenantId, tenantId)))
+          .limit(1);
+        if (!contact) return res.status(404).json({ message: "Contact not found" });
+
+        const now = new Date();
+        const resolvedBy = user?.firstName || user?.email || 'user';
+
+        if (probablePaymentId) {
+          // Resolve a specific probable payment
+          await db.update(probablePayments).set({
+            status: action === 'confirm' ? 'confirmed' : 'rejected',
+            confirmedBy: 'user_manual',
+            confirmedAt: now,
+            updatedAt: now,
+          }).where(
+            and(
+              eq(probablePayments.id, probablePaymentId),
+              eq(probablePayments.tenantId, tenantId),
+            ),
+          );
+        } else {
+          // Resolve all pending probable payments for this contact
+          await db.update(probablePayments).set({
+            status: action === 'confirm' ? 'confirmed' : 'rejected',
+            confirmedBy: 'user_manual',
+            confirmedAt: now,
+            updatedAt: now,
+          }).where(
+            and(
+              eq(probablePayments.contactId, id),
+              eq(probablePayments.tenantId, tenantId),
+              eq(probablePayments.status, 'pending'),
+            ),
+          );
+        }
+
+        // Clear the flag on the contact if rejecting (payment wasn't real)
+        // or if confirming (payment confirmed, no longer "probable")
+        await db.update(contacts).set({
+          probablePaymentDetected: false,
+          probablePaymentConfidence: null,
+          probablePaymentDetectedAt: null,
+          updatedAt: now,
+        }).where(and(eq(contacts.id, id), eq(contacts.tenantId, tenantId)));
+
+        // Timeline event for audit trail
+        await db.insert(timelineEvents).values({
+          tenantId,
+          customerId: id,
+          occurredAt: now,
+          direction: 'internal',
+          channel: 'system',
+          summary: `Probable payment ${action}ed by ${resolvedBy}`,
+          preview: action === 'confirm'
+            ? `Payment confirmed. Chasing resumes for future invoices.`
+            : `Payment rejected — not a real payment. Chasing will resume.`,
+          createdByType: 'user',
+          createdByUserId: user?.id,
+          createdByName: resolvedBy,
+        });
+
+        res.json({ success: true, action, message: `Probable payment ${action}ed.` });
+      } catch (error) {
+        console.error("Error resolving probable payment:", error);
+        res.status(500).json({ message: "Failed to resolve probable payment" });
+      }
+    }
+  );
+
+  // ─── Gap 14: Get probable payments for a contact ───
+  app.get("/api/contacts/:id/probable-payments",
+    isAuthenticated,
+    withRBACContext,
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        const tenantId = (req as any).rbac?.tenantId;
+        if (!tenantId) return res.status(403).json({ message: "No tenant context" });
+
+        const payments = await db.select()
+          .from(probablePayments)
+          .where(
+            and(
+              eq(probablePayments.contactId, id),
+              eq(probablePayments.tenantId, tenantId),
+            ),
+          )
+          .orderBy(sql`${probablePayments.createdAt} DESC`)
+          .limit(50);
+
+        res.json(payments);
+      } catch (error) {
+        console.error("Error fetching probable payments:", error);
+        res.status(500).json({ message: "Failed to fetch probable payments" });
       }
     }
   );
