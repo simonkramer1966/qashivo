@@ -1,6 +1,6 @@
 import { db } from "../db";
-import { invoices, contacts, actions, tenants, collectionSchedules, workflows, schedulerState, customerPreferences } from "@shared/schema";
-import { eq, and, desc, gt, lt, isNull, or, sql } from "drizzle-orm";
+import { invoices, contacts, actions, tenants, collectionSchedules, workflows, schedulerState, customerPreferences, customerBehaviorSignals, customerLearningProfiles } from "@shared/schema";
+import { eq, and, desc, gt, lt, isNull, or, sql, inArray } from "drizzle-orm";
 import { invoiceStateMachine, CharlieInvoiceState, CHARLIE_STATES } from "./invoiceStateMachine";
 import { 
   charliePlaybook, 
@@ -1058,6 +1058,104 @@ export async function recomputeUrgency(
   }
 }
 
+/**
+ * Gap 3: Calculate per-debtor urgency weights based on contribution to DSO problem + trend.
+ * Called after the tenant-level base urgency is calculated.
+ * Writes results to customerLearningProfiles for downstream consumers.
+ */
+async function calculatePerDebtorUrgency(
+  tenantId: string,
+  baseUrgency: number,
+): Promise<number> {
+  // Get all debtors with overdue amounts
+  const overdueDebtors = await db.select({
+    contactId: invoices.contactId,
+    overdueAmount: sql<number>`SUM(CASE WHEN ${invoices.dueDate} < now() THEN (CAST(${invoices.amount} AS numeric) - CAST(COALESCE(${invoices.amountPaid}, '0') AS numeric)) ELSE 0 END)`,
+  })
+    .from(invoices)
+    .where(and(
+      eq(invoices.tenantId, tenantId),
+      sql`LOWER(${invoices.status}) NOT IN ('paid', 'void', 'voided', 'deleted', 'draft')`,
+    ))
+    .groupBy(invoices.contactId);
+
+  const totalOverdue = overdueDebtors.reduce((sum, d) => sum + (Number(d.overdueAmount) || 0), 0);
+
+  if (totalOverdue <= 0 || overdueDebtors.length === 0) {
+    return 0;
+  }
+
+  // Average contribution weight normalised to 1.0
+  const avgContribution = 1 / overdueDebtors.length;
+
+  // Get trend data from customerBehaviorSignals
+  const contactIds = overdueDebtors.map(d => d.contactId).filter(Boolean) as string[];
+  const trends = contactIds.length > 0 ? await db.select({
+    contactId: customerBehaviorSignals.contactId,
+    trend: customerBehaviorSignals.trend,
+  })
+    .from(customerBehaviorSignals)
+    .where(and(
+      eq(customerBehaviorSignals.tenantId, tenantId),
+      inArray(customerBehaviorSignals.contactId, contactIds),
+    )) : [];
+
+  const trendMap = new Map(trends.map(t => [t.contactId, parseFloat(String(t.trend || '0'))]));
+
+  let updated = 0;
+  for (const debtor of overdueDebtors) {
+    if (!debtor.contactId) continue;
+
+    // Contribution weight: normalised so average = 1.0
+    const rawContribution = (Number(debtor.overdueAmount) || 0) / totalOverdue;
+    const contributionWeight = rawContribution / avgContribution;
+
+    // Trend multiplier: deteriorating → more pressure (1.0–1.5), improving → less (0.5–1.0)
+    const trend = trendMap.get(debtor.contactId) || 0;
+    let trendMultiplier: number;
+    if (trend > 0) {
+      trendMultiplier = Math.min(1.5, 1.0 + (trend * 0.1));
+    } else if (trend < 0) {
+      trendMultiplier = Math.max(0.5, 1.0 + (trend * 0.1));
+    } else {
+      trendMultiplier = 1.0;
+    }
+
+    const debtorUrgency = baseUrgency * contributionWeight * trendMultiplier;
+
+    // Write to customerLearningProfiles (upsert-style: update if exists)
+    const existing = await db.query.customerLearningProfiles.findFirst({
+      where: and(
+        eq(customerLearningProfiles.tenantId, tenantId),
+        eq(customerLearningProfiles.contactId, debtor.contactId),
+      ),
+      columns: { id: true },
+    });
+
+    if (existing) {
+      await db.update(customerLearningProfiles).set({
+        debtorUrgency: debtorUrgency.toFixed(4),
+        contributionWeight: contributionWeight.toFixed(4),
+        trendMultiplier: trendMultiplier.toFixed(2),
+        urgencyUpdatedAt: new Date(),
+      }).where(eq(customerLearningProfiles.id, existing.id));
+    } else {
+      await db.insert(customerLearningProfiles).values({
+        tenantId,
+        contactId: debtor.contactId,
+        debtorUrgency: debtorUrgency.toFixed(4),
+        contributionWeight: contributionWeight.toFixed(4),
+        trendMultiplier: trendMultiplier.toFixed(2),
+        urgencyUpdatedAt: new Date(),
+      });
+    }
+    updated++;
+  }
+
+  console.log(`[Portfolio Controller] Per-debtor urgency: ${updated} debtors weighted for tenant ${tenantId}`);
+  return updated;
+}
+
 export async function runNightly(): Promise<{
   processedTenants: number;
   adjustedTenants: number;
@@ -1088,10 +1186,15 @@ export async function runNightly(): Promise<{
       try {
         const result = await recomputeUrgency(tenantId);
         processedTenants++;
-        
+
         if (result.adjusted) {
           adjustedTenants++;
         }
+
+        // Gap 3: Calculate per-debtor urgency weights
+        await calculatePerDebtorUrgency(tenantId, result.urgencyFactor).catch(err => {
+          console.error(`[Portfolio Controller] Per-debtor urgency failed for ${tenantId}:`, err);
+        });
 
         console.log(
           `[Portfolio Controller] ✓ Tenant ${tenantId}: ` +

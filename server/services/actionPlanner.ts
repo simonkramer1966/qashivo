@@ -9,6 +9,7 @@ import {
   actions,
   customerBehaviorSignals,
   customerPreferences,
+  customerLearningProfiles,
 } from "@shared/schema";
 import { CollectionLearningService } from "./collectionLearningService";
 import { 
@@ -378,13 +379,22 @@ export class ActionPlanner {
         promiseToPayAt: invoice.promiseToPayDate ? new Date(invoice.promiseToPayDate) : undefined,
       };
 
-      // Get tenant urgency factor (from tenants table if exists, otherwise use settings)
-      const urgencyFactor = adaptiveSettings.urgencyFactor || 0.5;
+      // Gap 3: Use per-debtor urgency if available, else fall back to flat tenant urgency
+      const debtorProfile = await db.query.customerLearningProfiles.findFirst({
+        where: and(
+          eq(customerLearningProfiles.contactId, contact.id),
+          eq(customerLearningProfiles.tenantId, tenantId),
+        ),
+        columns: { debtorUrgency: true },
+      });
+      const urgencyFactor = debtorProfile?.debtorUrgency
+        ? Number(debtorProfile.debtorUrgency)
+        : Number(adaptiveSettings.urgencyFactor || 0.5);
 
       // Build adaptive settings
       const settings: AdaptiveSettings = {
         targetDSO: adaptiveSettings.targetDSO || 45,
-        urgencyFactor: Number(urgencyFactor),
+        urgencyFactor,
         quietHours: adaptiveSettings.quietHours || [22, 8],
         maxDailyTouches: adaptiveSettings.maxDailyTouches || 3,
       };
@@ -820,9 +830,21 @@ export async function planAdaptiveActions(
           const smsOk = (debtorPrefs2?.smsEnabled !== false) && !!contact.phone;
           const voiceOk = (debtorPrefs2?.voiceEnabled !== false) && !!contact.phone;
 
+          // Gap 3: Use per-debtor urgency if available
+          const debtorProfile2 = await db.query.customerLearningProfiles.findFirst({
+            where: and(
+              eq(customerLearningProfiles.contactId, contactId),
+              eq(customerLearningProfiles.tenantId, tenantId),
+            ),
+            columns: { debtorUrgency: true },
+          });
+          const perDebtorSettings = debtorProfile2?.debtorUrgency
+            ? { ...adaptiveSettings, urgencyFactor: Number(debtorProfile2.debtorUrgency) }
+            : adaptiveSettings;
+
           const ctx: ScheduleActionContext = {
             tenantId,
-            settings: adaptiveSettings,
+            settings: perDebtorSettings,
             customer: {
               segment: "default",
               channelPrefs: {

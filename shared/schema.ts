@@ -2256,6 +2256,12 @@ export const customerLearningProfiles = pgTable("customer_learning_profiles", {
   lastEngagementDate: timestamp("last_engagement_date"),
   engagementScore: decimal("engagement_score", { precision: 5, scale: 2 }), // 0-100
   
+  // Gap 3: Per-debtor urgency weighting
+  debtorUrgency: decimal("debtor_urgency", { precision: 5, scale: 4 }),       // final per-debtor urgency factor
+  contributionWeight: decimal("contribution_weight", { precision: 5, scale: 4 }), // this debtor's share of overdue problem (avg = 1.0)
+  trendMultiplier: decimal("trend_multiplier", { precision: 3, scale: 2 }),    // deteriorating > 1.0, improving < 1.0
+  urgencyUpdatedAt: timestamp("urgency_updated_at"),
+
   // Metadata
   lastUpdated: timestamp("last_updated").defaultNow(),
   lastCalculatedAt: timestamp("last_calculated_at").defaultNow(),
