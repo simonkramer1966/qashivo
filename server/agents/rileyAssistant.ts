@@ -418,6 +418,39 @@ async function buildDebtorsListContext(tenantId: string): Promise<string> {
     }
   } catch { /* graceful */ }
 
+  // Gap 12: Debtor group context + suggestions
+  try {
+    const { debtorGroups } = await import("@shared/schema");
+    const { detectPotentialGroups } = await import("../routes/debtorGroupRoutes");
+
+    // Show existing groups
+    const groups = await db
+      .select({
+        groupName: debtorGroups.groupName,
+        memberCount: sql<number>`count(${contacts.id})`.as('member_count'),
+      })
+      .from(debtorGroups)
+      .leftJoin(contacts, eq(contacts.debtorGroupId, debtorGroups.id))
+      .where(eq(debtorGroups.tenantId, tenantId))
+      .groupBy(debtorGroups.id, debtorGroups.groupName);
+
+    if (groups.length > 0) {
+      lines.push("\nDebtor groups:");
+      for (const g of groups) {
+        lines.push(`- ${g.groupName}: ${g.memberCount} linked debtor${g.memberCount !== 1 ? 's' : ''}`);
+      }
+    }
+
+    // Suggest potential groupings
+    const suggestions = await detectPotentialGroups(tenantId);
+    if (suggestions.length > 0) {
+      lines.push("\nPotential debtor groupings detected:");
+      for (const s of suggestions.slice(0, 5)) {
+        lines.push(`- ${s.suggestedGroupName}: ${s.reason} (${s.contactNames.join(', ')})`);
+      }
+    }
+  } catch { /* graceful */ }
+
   return lines.join("\n");
 }
 

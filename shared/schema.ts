@@ -155,6 +155,16 @@ export const tenants = pgTable("tenants", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Gap 12: Debtor Groups — link related contacts (e.g. subsidiaries sharing same AP department)
+export const debtorGroups = pgTable("debtor_groups", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  groupName: varchar("group_name").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Contacts table (supports both customers and vendors)
 export const contacts = pgTable("contacts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -223,6 +233,9 @@ export const contacts = pgTable("contacts", {
   exceptionFlaggedAt: timestamp("exception_flagged_at"),
   exceptionResolvedAt: timestamp("exception_resolved_at"),
 
+  // Gap 12: Debtor grouping
+  debtorGroupId: varchar("debtor_group_id").references(() => debtorGroups.id),
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
@@ -234,6 +247,7 @@ export const contacts = pgTable("contacts", {
   index("idx_contacts_playbook_stage").on(table.playbookStage),
   index("idx_contacts_next_touch").on(table.nextTouchNotBefore),
   index("idx_contacts_exception").on(table.isException),
+  index("idx_contacts_debtor_group").on(table.debtorGroupId),
 ]);
 
 // Contact Notes table
@@ -1791,12 +1805,24 @@ export const contactsRelations = relations(contacts, ({ one, many }) => ({
     fields: [contacts.tenantId],
     references: [tenants.id],
   }),
+  debtorGroup: one(debtorGroups, {
+    fields: [contacts.debtorGroupId],
+    references: [debtorGroups.id],
+  }),
   invoices: many(invoices),
   bills: many(bills), // When contact is a vendor
   bankTransactions: many(bankTransactions),
   actions: many(actions),
   voiceCalls: many(voiceCalls),
   notes: many(contactNotes),
+}));
+
+export const debtorGroupsRelations = relations(debtorGroups, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [debtorGroups.tenantId],
+    references: [tenants.id],
+  }),
+  contacts: many(contacts),
 }));
 
 export const contactNotesRelations = relations(contactNotes, ({ one }) => ({
@@ -2600,6 +2626,12 @@ export const insertContactSchema = createInsertSchema(contacts).omit({
   updatedAt: true,
 });
 
+export const insertDebtorGroupSchema = createInsertSchema(debtorGroups).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertContactNoteSchema = createInsertSchema(contactNotes).omit({
   id: true,
   createdAt: true,
@@ -2906,6 +2938,8 @@ export type InsertTenant = z.infer<typeof insertTenantSchema>;
 export type Tenant = typeof tenants.$inferSelect;
 export type InsertContact = z.infer<typeof insertContactSchema>;
 export type Contact = typeof contacts.$inferSelect;
+export type InsertDebtorGroup = z.infer<typeof insertDebtorGroupSchema>;
+export type DebtorGroup = typeof debtorGroups.$inferSelect;
 export type InsertCachedXeroInvoice = z.infer<typeof insertCachedXeroInvoiceSchema>;
 export type CachedXeroInvoice = typeof cachedXeroInvoices.$inferSelect;
 export type InsertCachedXeroContact = z.infer<typeof insertCachedXeroContactSchema>;

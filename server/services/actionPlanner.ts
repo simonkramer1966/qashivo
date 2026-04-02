@@ -1,4 +1,4 @@
-import { eq, and, lte, gte, sql } from "drizzle-orm";
+import { eq, and, lte, gte, sql, inArray, isNotNull } from "drizzle-orm";
 import { db } from "../db";
 import {
   invoices,
@@ -10,6 +10,7 @@ import {
   customerBehaviorSignals,
   customerPreferences,
   customerLearningProfiles,
+  debtorGroups,
 } from "@shared/schema";
 import { CollectionLearningService } from "./collectionLearningService";
 import { 
@@ -972,10 +973,14 @@ export async function planAdaptiveActions(
       }
     }
 
+    // Gap 12: Enforce debtor group tone consistency + same-day conflict detection
+    const groupCancelled = await enforceDebtorGroupConsistency(tenantId);
+
     console.log(
       `[PLAN] Complete: ${invoicesProcessed} processed, ${actionsCreated} created, ` +
       `${skipped.disputed} disputed, ${skipped.lowPriority} low priority, ` +
-      `${skipped.recentAction} recent action`
+      `${skipped.recentAction} recent action` +
+      (groupCancelled > 0 ? `, ${groupCancelled} cancelled (debtor group conflicts)` : '')
     );
 
     return {
@@ -986,5 +991,109 @@ export async function planAdaptiveActions(
   } catch (error) {
     console.error(`[PLAN] Error planning actions for tenant ${tenantId}:`, error);
     throw error;
+  }
+}
+
+// ── Gap 12: Debtor Group Consistency Enforcement ──────────────
+
+const TONE_ORDER = ['friendly', 'professional', 'firm', 'formal', 'legal'];
+
+/**
+ * Post-planning sweep: find scheduled actions that belong to grouped contacts,
+ * enforce tone consistency (highest tone wins), and cancel same-day duplicates
+ * (keep highest priority, cancel the rest).
+ *
+ * Returns the number of cancelled actions.
+ */
+async function enforceDebtorGroupConsistency(tenantId: string): Promise<number> {
+  try {
+    // Find today's scheduled actions for grouped contacts
+    const today = new Date();
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const todayEnd = new Date(todayStart);
+    todayEnd.setDate(todayEnd.getDate() + 1);
+
+    const groupedActions = await db
+      .select({
+        actionId: actions.id,
+        contactId: actions.contactId,
+        debtorGroupId: contacts.debtorGroupId,
+        groupName: debtorGroups.groupName,
+        agentToneLevel: actions.agentToneLevel,
+        priority: actions.priority,
+        scheduledFor: actions.scheduledFor,
+      })
+      .from(actions)
+      .innerJoin(contacts, eq(actions.contactId, contacts.id))
+      .innerJoin(debtorGroups, eq(contacts.debtorGroupId, debtorGroups.id))
+      .where(and(
+        eq(actions.tenantId, tenantId),
+        eq(actions.status, 'scheduled'),
+        gte(actions.scheduledFor, todayStart),
+        lte(actions.scheduledFor, todayEnd),
+        isNotNull(contacts.debtorGroupId),
+      ));
+
+    if (groupedActions.length === 0) return 0;
+
+    // Group by debtorGroupId
+    const byGroup = new Map<string, typeof groupedActions>();
+    for (const a of groupedActions) {
+      const gid = a.debtorGroupId!;
+      if (!byGroup.has(gid)) byGroup.set(gid, []);
+      byGroup.get(gid)!.push(a);
+    }
+
+    let totalCancelled = 0;
+
+    for (const [groupId, groupActions] of Array.from(byGroup.entries())) {
+      if (groupActions.length <= 1) {
+        // Single action in group — no conflict, but still enforce tone consistency
+        // (tone should match highest tone from any recent group action)
+        continue;
+      }
+
+      // Find the highest tone in this group's actions
+      let highestToneIndex = 0;
+      for (const a of groupActions) {
+        const idx = TONE_ORDER.indexOf((a.agentToneLevel || 'friendly').toLowerCase());
+        if (idx > highestToneIndex) highestToneIndex = idx;
+      }
+      const groupTone = TONE_ORDER[highestToneIndex];
+
+      // Sort by priority descending — keep the highest priority action
+      const sorted = [...groupActions].sort((a, b) => (b.priority || 0) - (a.priority || 0));
+      const [kept, ...duplicates] = sorted;
+
+      // Update kept action's tone to the group-consistent tone
+      await db
+        .update(actions)
+        .set({ agentToneLevel: groupTone })
+        .where(eq(actions.id, kept.actionId));
+
+      // Cancel duplicate actions
+      if (duplicates.length > 0) {
+        const dupIds = duplicates.map(d => d.actionId);
+        await db
+          .update(actions)
+          .set({
+            status: 'cancelled',
+            cancellationReason: 'debtor_group_same_day_conflict',
+          })
+          .where(inArray(actions.id, dupIds));
+
+        totalCancelled += duplicates.length;
+        console.log(
+          `[DebtorGroup] Group "${groupActions[0].groupName}" (${groupId}): ` +
+          `aligned ${groupActions.length} actions to tone "${groupTone}", ` +
+          `kept action for ${kept.contactId}, cancelled ${duplicates.length}`
+        );
+      }
+    }
+
+    return totalCancelled;
+  } catch (error) {
+    console.error('[DebtorGroup] Error enforcing group consistency:', error);
+    return 0; // Non-fatal — don't break planning if group enforcement fails
   }
 }

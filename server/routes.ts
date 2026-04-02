@@ -285,6 +285,7 @@ import { registerMiscRoutes } from "./routes/miscRoutes";
 import { registerActionCentreRoutes } from "./routes/actionCentreRoutes";
 import { registerRileyRoutes } from "./routes/rileyRoutes";
 import { registerWeeklyReviewRoutes } from "./routes/weeklyReviewRoutes";
+import { registerDebtorGroupRoutes } from "./routes/debtorGroupRoutes";
 import { registerQuizRoutes } from "./routes/quizRoutes";
 import { registerDemoRoutes } from "./routes/demoRoutes";
 import { ForecastEngine, type ForecastConfig, type ForecastScenario } from "../shared/forecast";
@@ -651,6 +652,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerActionCentreRoutes(app);
   registerRileyRoutes(app);
   registerWeeklyReviewRoutes(app);
+  registerDebtorGroupRoutes(app);
   registerQuizRoutes(app);
   registerDemoRoutes(app);
 
