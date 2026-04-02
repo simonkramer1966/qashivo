@@ -2211,8 +2211,10 @@ export const customerLearningProfiles = pgTable("customer_learning_profiles", {
   promisesKept: integer("promises_kept").default(0),
   promisesBroken: integer("promises_broken").default(0),
   promisesPartiallyKept: integer("promises_partially_kept").default(0),
-  promiseReliabilityScore: decimal("promise_reliability_score", { precision: 5, scale: 2 }), // 0-100
-  
+  promiseReliabilityScore: decimal("promise_reliability_score", { precision: 5, scale: 2 }), // 0-100 (Bayesian-adjusted)
+  prsRaw: decimal("prs_raw", { precision: 5, scale: 2 }),           // Pre-Bayesian recency-weighted score
+  prsConfidence: decimal("prs_confidence", { precision: 3, scale: 2 }), // weighted_n / (weighted_n + k), 0-1
+
   // Rolling windows for trend analysis
   prsLast30Days: decimal("prs_last_30_days", { precision: 5, scale: 2 }),
   prsLast90Days: decimal("prs_last_90_days", { precision: 5, scale: 2 }),

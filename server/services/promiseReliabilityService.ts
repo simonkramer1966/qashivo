@@ -1,21 +1,20 @@
 /**
  * Promise Reliability Service
- * 
+ *
  * Core behavioral intelligence: Tracks customer promise-keeping behavior and calculates
  * Promise Reliability Score (PRS) - the foundation of institutional memory.
- * 
- * MVP-01 to MVP-05: Promise Reliability Score
- * - Track all promises made (payment dates, callbacks, disputes)
- * - Record outcomes (kept, broken, partially kept)
- * - Calculate reliability ratios per customer
- * - Detect behavioral patterns (serial promiser, reliable late payer)
+ *
+ * v2.0: Recency-weighted PRS with Bayesian regression to population mean.
+ *   - 90-day half-life decay on promise weights
+ *   - Bayesian prior (k=3) regresses thin-data debtors toward tenant mean or system default (60)
+ *   - prsRaw (pre-Bayesian) and prsConfidence (0-1) stored for transparency
  */
 
 import { db } from '../db.js';
-import { 
-  paymentPromises, 
-  customerLearningProfiles, 
-  contacts, 
+import {
+  paymentPromises,
+  customerLearningProfiles,
+  contacts,
   invoices,
   type PaymentPromise,
   type CustomerLearningProfile
@@ -33,7 +32,9 @@ export interface PromiseEvaluationInput {
 
 export interface PRSCalculationResult {
   contactId: string;
-  promiseReliabilityScore: number; // 0-100
+  promiseReliabilityScore: number; // 0-100 (Bayesian-adjusted)
+  prsRaw: number | null;          // Pre-Bayesian recency-weighted score
+  prsConfidence: number;           // 0-1 confidence signal
   totalPromises: number;
   promisesKept: number;
   promisesBroken: number;
@@ -48,6 +49,13 @@ export interface PRSCalculationResult {
     isNewCustomer: boolean;
   };
 }
+
+// Bayesian prior strength — equivalent to ~3 promises worth of evidence
+const BAYESIAN_K = 3;
+// System default prior when tenant has insufficient data
+const SYSTEM_DEFAULT_PRIOR = 60;
+// Minimum tenant debtors with PRS data to use tenant mean as prior
+const MIN_TENANT_DEBTORS_FOR_MEAN = 10;
 
 export class PromiseReliabilityService {
   /**
@@ -156,8 +164,101 @@ export class PromiseReliabilityService {
     return updatedPromise;
   }
 
+  // --- Recency weighting helpers ---
+
   /**
-   * Calculate Promise Reliability Score for a customer
+   * Calculate recency weight for a promise. Half-life = 90 days.
+   * A promise resolved today has weight 1.0; at 90 days, weight = 0.5.
+   */
+  private calculatePromiseWeight(resolvedDate: Date): number {
+    const daysSinceResolution = Math.max(0,
+      (Date.now() - resolvedDate.getTime()) / (1000 * 60 * 60 * 24)
+    );
+    return 1 / (1 + daysSinceResolution / 90);
+  }
+
+  /**
+   * Calculate recency-weighted PRS from an array of resolved promises.
+   * kept=100, partially_kept=50, broken=0.
+   */
+  private calculateWeightedPRS(resolvedPromises: PaymentPromise[]): { rawPRS: number | null; totalWeight: number } {
+    if (resolvedPromises.length === 0) return { rawPRS: null, totalWeight: 0 };
+
+    let weightedScore = 0;
+    let totalWeight = 0;
+
+    for (const promise of resolvedPromises) {
+      const resolvedDate = promise.evaluatedAt
+        ? new Date(promise.evaluatedAt)
+        : (promise.updatedAt ? new Date(promise.updatedAt) : new Date());
+      const weight = this.calculatePromiseWeight(resolvedDate);
+      totalWeight += weight;
+
+      if (promise.status === 'kept') {
+        weightedScore += weight * 100;
+      } else if (promise.status === 'partially_kept') {
+        weightedScore += weight * 50;
+      }
+      // broken contributes 0
+    }
+
+    return {
+      rawPRS: totalWeight > 0 ? weightedScore / totalWeight : null,
+      totalWeight,
+    };
+  }
+
+  // --- Bayesian adjustment ---
+
+  /**
+   * Get the average PRS across all debtors for a tenant.
+   * Returns null if fewer than MIN_TENANT_DEBTORS_FOR_MEAN debtors have PRS data.
+   */
+  private async getTenantPopulationMeanPRS(tenantId: string): Promise<number | null> {
+    const result = await db.select({
+      avgPRS: sql<string>`AVG(${customerLearningProfiles.promiseReliabilityScore})`,
+      debtorCount: sql<number>`COUNT(*)::int`,
+    })
+    .from(customerLearningProfiles)
+    .where(and(
+      eq(customerLearningProfiles.tenantId, tenantId),
+      sql`${customerLearningProfiles.promiseReliabilityScore} IS NOT NULL`,
+      sql`${customerLearningProfiles.promiseReliabilityScore} > 0`,
+    ));
+
+    if (result[0]?.debtorCount >= MIN_TENANT_DEBTORS_FOR_MEAN) {
+      return parseFloat(result[0].avgPRS);
+    }
+    return null;
+  }
+
+  /**
+   * Apply Bayesian regression toward prior.
+   * adjustedPRS = (totalWeight * rawPRS + K * prior) / (totalWeight + K)
+   * confidence = totalWeight / (totalWeight + K)
+   */
+  private applyBayesianAdjustment(
+    rawPRS: number | null,
+    totalWeight: number,
+    priorPRS: number,
+  ): { adjustedPRS: number; confidence: number } {
+    if (rawPRS === null) {
+      return { adjustedPRS: priorPRS, confidence: 0 };
+    }
+
+    const adjustedPRS = (totalWeight * rawPRS + BAYESIAN_K * priorPRS) / (totalWeight + BAYESIAN_K);
+    const confidence = totalWeight / (totalWeight + BAYESIAN_K);
+
+    return {
+      adjustedPRS: Math.round(adjustedPRS * 100) / 100,
+      confidence: Math.round(confidence * 100) / 100,
+    };
+  }
+
+  // --- Core PRS calculation ---
+
+  /**
+   * Calculate Promise Reliability Score for a customer (v2.0: recency-weighted + Bayesian)
    */
   async calculatePRS(tenantId: string, contactId: string): Promise<PRSCalculationResult> {
     // Get all promises for this customer
@@ -172,46 +273,42 @@ export class PromiseReliabilityService {
       )
       .orderBy(desc(paymentPromises.createdAt));
 
-    // CRITICAL FIX: Only count RESOLVED promises in PRS calculation
-    // Open promises should not drag down the score
-    const resolvedPromises = allPromises.filter((p: PaymentPromise) => 
+    // Only count RESOLVED promises in PRS calculation
+    const resolvedPromises = allPromises.filter((p: PaymentPromise) =>
       p.status === 'kept' || p.status === 'broken' || p.status === 'partially_kept'
     );
-    
+
     const totalPromises = resolvedPromises.length;
     const promisesKept = resolvedPromises.filter((p: PaymentPromise) => p.status === 'kept').length;
     const promisesBroken = resolvedPromises.filter((p: PaymentPromise) => p.status === 'broken').length;
     const promisesPartiallyKept = resolvedPromises.filter((p: PaymentPromise) => p.status === 'partially_kept').length;
 
-    // Calculate overall PRS (0-100)
-    // Formula: (kept * 100 + partially_kept * 50) / total RESOLVED promises
-    let overallPRS = 0;
-    if (totalPromises > 0) {
-      const weightedScore = (promisesKept * 100) + (promisesPartiallyKept * 50);
-      overallPRS = Math.round(weightedScore / totalPromises);
-    }
+    // Determine Bayesian prior: tenant population mean or system default
+    const tenantMean = await this.getTenantPopulationMeanPRS(tenantId);
+    const priorPRS = tenantMean !== null ? tenantMean : SYSTEM_DEFAULT_PRIOR;
 
-    // Calculate rolling window scores
-    const now = new Date();
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-    const twelveMonthsAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+    // Calculate recency-weighted raw PRS + Bayesian adjustment
+    const { rawPRS, totalWeight } = this.calculateWeightedPRS(resolvedPromises);
+    const { adjustedPRS, confidence } = this.applyBayesianAdjustment(rawPRS, totalWeight, priorPRS);
 
-    const prsLast30Days = this.calculatePRSForPeriod(allPromises, thirtyDaysAgo);
-    const prsLast90Days = this.calculatePRSForPeriod(allPromises, ninetyDaysAgo);
-    const prsLast12Months = this.calculatePRSForPeriod(allPromises, twelveMonthsAgo);
+    // Calculate rolling window scores (each window also Bayesian-adjusted)
+    const prsLast30Days = this.calculatePRSForWindow(resolvedPromises, 30, priorPRS);
+    const prsLast90Days = this.calculatePRSForWindow(resolvedPromises, 90, priorPRS);
+    const prsLast12Months = this.calculatePRSForWindow(resolvedPromises, 365, priorPRS);
 
-    // Determine behavioral flags
+    // Determine behavioral flags using Bayesian-adjusted PRS
     const behavioralFlags = this.determineBehavioralFlags(
       allPromises,
-      overallPRS,
+      adjustedPRS,
       prsLast30Days,
       prsLast90Days
     );
 
     return {
       contactId,
-      promiseReliabilityScore: overallPRS,
+      promiseReliabilityScore: adjustedPRS,
+      prsRaw: rawPRS !== null ? Math.round(rawPRS * 100) / 100 : null,
+      prsConfidence: confidence,
       totalPromises,
       promisesKept,
       promisesBroken,
@@ -224,25 +321,23 @@ export class PromiseReliabilityService {
   }
 
   /**
-   * Calculate PRS for a specific time period
+   * Calculate recency-weighted + Bayesian PRS for a rolling window.
+   * Uses evaluatedAt (fallback updatedAt) for period filtering — the resolution date, not creation date.
    */
-  private calculatePRSForPeriod(promises: PaymentPromise[], startDate: Date): number {
-    // CRITICAL FIX: Only count RESOLVED promises in period calculation
-    const periodPromises = promises.filter((p: PaymentPromise) => {
-      const createdAt = p.createdAt ? new Date(p.createdAt) : new Date();
-      const isInPeriod = createdAt >= startDate;
-      const isResolved = p.status === 'kept' || p.status === 'broken' || p.status === 'partially_kept';
-      return isInPeriod && isResolved;
+  private calculatePRSForWindow(resolvedPromises: PaymentPromise[], windowDays: number, priorPRS: number): number {
+    const cutoff = Date.now() - windowDays * 24 * 60 * 60 * 1000;
+
+    const windowPromises = resolvedPromises.filter(p => {
+      const resolvedDate = p.evaluatedAt
+        ? new Date(p.evaluatedAt)
+        : (p.updatedAt ? new Date(p.updatedAt) : new Date());
+      return resolvedDate.getTime() >= cutoff;
     });
 
-    if (periodPromises.length === 0) return 0;
+    const { rawPRS: windowRaw, totalWeight: windowWeight } = this.calculateWeightedPRS(windowPromises);
+    const { adjustedPRS: windowPRS } = this.applyBayesianAdjustment(windowRaw, windowWeight, priorPRS);
 
-    const kept = periodPromises.filter((p: PaymentPromise) => p.status === 'kept').length;
-    const partiallyKept = periodPromises.filter((p: PaymentPromise) => p.status === 'partially_kept').length;
-    const total = periodPromises.length;
-
-    const weightedScore = (kept * 100) + (partiallyKept * 50);
-    return Math.round(weightedScore / total);
+    return windowPRS;
   }
 
   /**
@@ -250,29 +345,28 @@ export class PromiseReliabilityService {
    */
   private determineBehavioralFlags(
     promises: PaymentPromise[],
-    overallPRS: number,
+    adjustedPRS: number,
     prsLast30Days: number,
     prsLast90Days: number
   ): PRSCalculationResult['behavioralFlags'] {
     const allPromises = promises.filter((p: PaymentPromise) => p.status !== 'cancelled');
     const totalPromises = allPromises.length;
-    
-    // CRITICAL FIX: Check most recent promise's sequence number (not count of flagged promises)
-    // to trigger serial promiser flag at the 3rd promise
+
+    // Check most recent promise's sequence number to trigger serial promiser flag at 3rd promise
     const latestPromise = allPromises.length > 0 ? allPromises[0] : null; // Already sorted by desc(createdAt)
     const highestSequence = latestPromise?.promiseSequence || 0;
 
     // Serial Promiser: Makes multiple promises (3+) with low success rate
-    const isSerialPromiser = highestSequence >= 3 && overallPRS < 60;
+    const isSerialPromiser = highestSequence >= 3 && adjustedPRS < 60;
 
     // Reliable Late Payer: Low promise score but eventually pays
     const hasPaymentHistory = promises.some(p => p.status === 'kept' || p.status === 'partially_kept');
-    const isReliableLatePayer = overallPRS >= 40 && overallPRS < 70 && hasPaymentHistory;
+    const isReliableLatePayer = adjustedPRS >= 40 && adjustedPRS < 70 && hasPaymentHistory;
 
     // Relationship Deteriorating: PRS declining over time
-    const isRelationshipDeteriorating = 
-      prsLast30Days > 0 && 
-      prsLast90Days > 0 && 
+    const isRelationshipDeteriorating =
+      prsLast30Days > 0 &&
+      prsLast90Days > 0 &&
       prsLast30Days < prsLast90Days - 15; // 15+ point drop
 
     // New Customer: Less than 3 promises tracked
@@ -306,6 +400,8 @@ export class PromiseReliabilityService {
       promisesBroken: prsResult.promisesBroken,
       promisesPartiallyKept: prsResult.promisesPartiallyKept,
       promiseReliabilityScore: prsResult.promiseReliabilityScore.toString(),
+      prsRaw: prsResult.prsRaw !== null ? prsResult.prsRaw.toFixed(2) : null,
+      prsConfidence: prsResult.prsConfidence.toFixed(2),
       prsLast30Days: prsResult.prsLast30Days.toString(),
       prsLast90Days: prsResult.prsLast90Days.toString(),
       prsLast12Months: prsResult.prsLast12Months.toString(),
@@ -315,6 +411,7 @@ export class PromiseReliabilityService {
       isNewCustomer: prsResult.behavioralFlags.isNewCustomer,
       lastCalculatedAt: new Date(),
       lastUpdated: new Date(),
+      calculationVersion: '2.0',
     };
 
     if (profile) {
@@ -377,6 +474,8 @@ export class PromiseReliabilityService {
     return {
       contactId,
       promiseReliabilityScore: parseFloat(profile.promiseReliabilityScore || '0'),
+      prsRaw: profile.prsRaw ? parseFloat(profile.prsRaw) : null,
+      prsConfidence: parseFloat(profile.prsConfidence || '0'),
       totalPromises: profile.totalPromisesMade || 0,
       promisesKept: profile.promisesKept || 0,
       promisesBroken: profile.promisesBroken || 0,
