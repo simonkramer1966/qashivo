@@ -1,5 +1,5 @@
 import { db, pool } from "../db";
-import { tenants, cachedXeroInvoices, cachedXeroContacts, cachedXeroOverpayments, cachedXeroPrepayments, cachedXeroCreditNotes, contacts, invoices, syncState, customerContactPersons } from "@shared/schema";
+import { tenants, cachedXeroInvoices, cachedXeroContacts, cachedXeroOverpayments, cachedXeroPrepayments, cachedXeroCreditNotes, contacts, invoices, syncState, customerContactPersons, timelineEvents } from "@shared/schema";
 import { eq, and, sql, inArray } from "drizzle-orm";
 import { xeroService } from "./xero";
 import { attentionItemService } from "./attentionItemService";
@@ -695,6 +695,44 @@ export class XeroSyncService {
 
       const processed = created + updated;
       console.log(`  Upsert summary: ${created} created, ${updated} updated, ${failed} failed, ${cachedInvoices.length - processed - failed} skipped`);
+
+      // Gap 10: Clear legal response window for contacts where all invoices are now paid
+      try {
+        const contactsWithWindow = allContacts.filter(c => c.legalResponseWindowEnd);
+        for (const contact of contactsWithWindow) {
+          const [unpaid] = await db.select({ id: invoices.id })
+            .from(invoices)
+            .where(and(
+              eq(invoices.tenantId, tenantId),
+              eq(invoices.contactId, contact.id),
+              sql`LOWER(${invoices.status}) NOT IN ('paid', 'void', 'voided', 'deleted', 'draft')`,
+            ))
+            .limit(1);
+
+          if (!unpaid) {
+            await db.update(contacts).set({
+              legalResponseWindowEnd: null,
+              updatedAt: new Date(),
+            }).where(eq(contacts.id, contact.id));
+
+            await db.insert(timelineEvents).values({
+              tenantId,
+              customerId: contact.id,
+              occurredAt: new Date(),
+              direction: 'internal',
+              channel: 'system',
+              summary: `Legal response window auto-cleared — all invoices settled.`,
+              preview: `Full payment received. Automated collections unblocked.`,
+              createdByType: 'system',
+            });
+
+            console.log(`⚖️ [Legal] Window auto-cleared for ${contact.name} — all invoices paid`);
+          }
+        }
+      } catch (err) {
+        console.warn(`[xeroSync] Error checking legal windows after sync:`, err);
+      }
+
       return { processed, created, updated, failed };
     } catch (error) {
       console.error("Fatal error in processCachedInvoices:", error);

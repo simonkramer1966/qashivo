@@ -16,6 +16,7 @@ import { portfolioController } from "../services/portfolioController";
 import { startDsoSnapshotJob } from "../jobs/dsoSnapshotJob";
 import { startXeroReconciliationJob } from "../jobs/xeroReconciliationJob";
 import { startWeeklyReviewJob } from "../jobs/weeklyReviewJob";
+import { startLegalWindowJob } from "../jobs/legalWindowJob";
 import { batchProcessor } from "../services/batchProcessor";
 import { db } from "../db";
 import { tenants, providerConnections } from "@shared/schema";
@@ -203,6 +204,13 @@ export async function startAll(): Promise<void> {
     console.log("[startup] weekly review job scheduled");
   } catch (error) {
     console.error("[startup] weekly review job failed:", error);
+  }
+
+  try {
+    startLegalWindowJob();
+    console.log("[startup] legal window job scheduled");
+  } catch (error) {
+    console.error("[startup] legal window job failed:", error);
   }
 }
 

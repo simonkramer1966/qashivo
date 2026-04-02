@@ -1,5 +1,5 @@
 /**
- * Tone Escalation Engine — Sprint 4.2
+ * Tone Escalation Engine — Sprint 4.2 + Gap 5
  *
  * Determines the correct tone level for a debtor based on multiple signals:
  * - Days overdue
@@ -9,6 +9,9 @@
  * - Whether debtor was previously a good payer
  * - Tenant style (GENTLE / STANDARD / FIRM)
  * - Vulnerable debtor ceiling
+ * - Tone history + velocity cap (Gap 5)
+ * - No-response escalation pressure (Gap 5)
+ * - Significant payment override (Gap 5)
  *
  * The 5 tone levels (in escalation order):
  *   Friendly → Professional → Firm → Formal → Legal
@@ -21,8 +24,10 @@ import {
   tenants,
   actions,
   inboundMessages,
+  emailMessages,
+  invoices,
 } from "@shared/schema";
-import { eq, and, desc, gte } from "drizzle-orm";
+import { eq, and, desc, gte, isNotNull, sql } from "drizzle-orm";
 import { getPromiseReliabilityService } from "./promiseReliabilityService";
 
 // ── Types ───────────────────────────────────────────────────────────────────
@@ -56,6 +61,9 @@ export interface ToneEscalationResult {
     isSerialPromiser: boolean;
     lastInboundDaysAgo: number | null;
     wasGoodPayer: boolean;
+    lastToneLevel: string | null;
+    consecutiveNoResponseCount: number;
+    velocityCapped: boolean;
   };
 }
 
@@ -107,6 +115,12 @@ const UNRELIABLE_PRS_THRESHOLD = 40;
 /** PRS threshold above which debtor is considered a previously good payer */
 const GOOD_PAYER_PRS_THRESHOLD = 70;
 
+/** Gap 5: Default consecutive unanswered contacts before escalation pressure */
+const DEFAULT_NO_RESPONSE_THRESHOLD = 4;
+
+/** Gap 5: Default payment fraction that triggers tone baseline reset */
+const DEFAULT_SIGNIFICANT_PAYMENT_THRESHOLD = 0.50;
+
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 function toneIndex(tone: ToneLevel): number {
@@ -127,6 +141,114 @@ function stepDown(tone: ToneLevel, steps: number = 1): ToneLevel {
   return TONE_ORDER[idx];
 }
 
+// ── Gap 5: History & Payment Helpers ────────────────────────────────────────
+
+/**
+ * Get the most recent completed action with a tone level for this debtor.
+ * Excludes failed deliveries (Gap 8 compatibility).
+ */
+async function getLastSentAction(tenantId: string, contactId: string) {
+  const result = await db.select({
+    agentToneLevel: actions.agentToneLevel,
+    completedAt: actions.completedAt,
+  })
+  .from(actions)
+  .where(and(
+    eq(actions.tenantId, tenantId),
+    eq(actions.contactId, contactId),
+    eq(actions.status, 'completed'),
+    isNotNull(actions.agentToneLevel),
+    isNotNull(actions.completedAt),
+    // Include NULL deliveryStatus (pre-Gap 8 actions) + exclude failed deliveries
+    sql`(${actions.deliveryStatus} IS NULL OR ${actions.deliveryStatus} NOT IN ('failed', 'failed_permanent', 'bounced'))`,
+  ))
+  .orderBy(desc(actions.completedAt))
+  .limit(1);
+
+  return result[0] || null;
+}
+
+/**
+ * Count consecutive outbound actions with no inbound email response.
+ * Checks last 10 completed actions (newest first), stops at first response found.
+ * V1 limitation: only tracks email responses, not phone/SMS.
+ */
+async function getConsecutiveNoResponseCount(tenantId: string, contactId: string): Promise<number> {
+  const recentActions = await db.select({
+    id: actions.id,
+    completedAt: actions.completedAt,
+  })
+  .from(actions)
+  .where(and(
+    eq(actions.tenantId, tenantId),
+    eq(actions.contactId, contactId),
+    eq(actions.status, 'completed'),
+    isNotNull(actions.completedAt),
+    sql`(${actions.deliveryStatus} IS NULL OR ${actions.deliveryStatus} NOT IN ('failed', 'failed_permanent', 'bounced'))`,
+  ))
+  .orderBy(desc(actions.completedAt))
+  .limit(10);
+
+  let count = 0;
+  for (const action of recentActions) {
+    if (!action.completedAt) continue;
+
+    const reply = await db.select({ id: emailMessages.id })
+      .from(emailMessages)
+      .where(and(
+        eq(emailMessages.contactId, contactId),
+        eq(emailMessages.direction, 'INBOUND'),
+        gte(emailMessages.createdAt, action.completedAt),
+      ))
+      .limit(1);
+
+    if (reply.length > 0) break;
+    count++;
+  }
+  return count;
+}
+
+/**
+ * Check if invoices paid since sinceDate represent ≥ threshold fraction
+ * of the pre-payment outstanding amount.
+ */
+async function checkSignificantPayment(
+  tenantId: string, contactId: string, sinceDate: Date, threshold: number,
+): Promise<boolean> {
+  // Invoices paid since last action
+  const recentlyPaid = await db.select({ amountPaid: invoices.amountPaid })
+    .from(invoices)
+    .where(and(
+      eq(invoices.tenantId, tenantId),
+      eq(invoices.contactId, contactId),
+      eq(invoices.status, 'paid'),
+      gte(invoices.paidDate, sinceDate),
+    ));
+
+  if (recentlyPaid.length === 0) return false;
+
+  const paidAmount = recentlyPaid.reduce((sum, inv) => sum + parseFloat(inv.amountPaid || '0'), 0);
+
+  // Current outstanding (unpaid invoices)
+  const unpaid = await db.select({ amount: invoices.amount, amountPaid: invoices.amountPaid })
+    .from(invoices)
+    .where(and(
+      eq(invoices.tenantId, tenantId),
+      eq(invoices.contactId, contactId),
+      sql`${invoices.status} NOT IN ('paid', 'void', 'voided', 'deleted', 'draft')`,
+    ));
+
+  const currentOutstanding = unpaid.reduce(
+    (sum, inv) => sum + (parseFloat(inv.amount || '0') - parseFloat(inv.amountPaid || '0')), 0
+  );
+
+  // Reconstruct pre-payment outstanding
+  const prePaymentOutstanding = currentOutstanding + paidAmount;
+  if (prePaymentOutstanding <= 0) return false;
+
+  return (paidAmount / prePaymentOutstanding) >= threshold;
+}
+
 // ── Engine ──────────────────────────────────────────────────────────────────
 
 /**
@@ -139,6 +261,8 @@ function stepDown(tone: ToneLevel, steps: number = 1): ToneLevel {
  *    - Broken promise (serial promiser) → skip forward one level
  *    - Previously reliable payer, first time late → hold at Friendly longer
  *    - Relationship deteriorating → step forward one level
+ *    - No-response escalation (Gap 5) → step forward if ≥ threshold consecutive
+ * 2.5. Velocity cap (Gap 5): max ±1 step from last sent tone
  * 3. Apply hard caps:
  *    - isPotentiallyVulnerable → cap at Professional
  *    - Legal tone only if tenant has NOT set style to GENTLE
@@ -148,13 +272,15 @@ export async function determineTone(input: ToneEscalationInput): Promise<ToneEsc
   const reasons: string[] = [];
 
   // ── Load signals in parallel ──────────────────────────────────────────
-  const [contact, tenant, signals, lastInbound, prsResult] = await Promise.all([
+  const [contact, tenant, signals, lastInbound, prsResult, lastAction, noResponseCount] = await Promise.all([
     db.select({
       isPotentiallyVulnerable: contacts.isPotentiallyVulnerable,
     }).from(contacts).where(and(eq(contacts.id, contactId), eq(contacts.tenantId, tenantId))).limit(1).then(r => r[0]),
 
     db.select({
       tenantStyle: tenants.tenantStyle,
+      noResponseEscalationThreshold: tenants.noResponseEscalationThreshold,
+      significantPaymentThreshold: tenants.significantPaymentThreshold,
     }).from(tenants).where(eq(tenants.id, tenantId)).limit(1).then(r => r[0]),
 
     db.select({
@@ -176,11 +302,21 @@ export async function determineTone(input: ToneEscalationInput): Promise<ToneEsc
 
     // Promise reliability
     getPromiseReliabilityService().getCustomerPRSSummary(tenantId, contactId).catch(() => null),
+
+    // Gap 5: Last sent action with tone level
+    getLastSentAction(tenantId, contactId),
+
+    // Gap 5: Consecutive unanswered outbound contacts
+    getConsecutiveNoResponseCount(tenantId, contactId),
   ]);
 
   const isPotentiallyVulnerable = contact?.isPotentiallyVulnerable ?? false;
   const tenantStyle = ((tenant?.tenantStyle || "STANDARD") as TenantStyleSetting);
   const thresholds = ESCALATION_THRESHOLDS[tenantStyle] || ESCALATION_THRESHOLDS.STANDARD;
+
+  // Gap 5: Extract tenant settings
+  const noResponseThreshold = tenant?.noResponseEscalationThreshold ?? DEFAULT_NO_RESPONSE_THRESHOLD;
+  const sigPaymentThreshold = parseFloat(String(tenant?.significantPaymentThreshold ?? DEFAULT_SIGNIFICANT_PAYMENT_THRESHOLD));
 
   // Calculate days since last inbound
   let lastInboundDaysAgo: number | null = null;
@@ -262,7 +398,45 @@ export async function determineTone(input: ToneEscalationInput): Promise<ToneEsc
     reasons.push(`Relationship deteriorating → escalated from ${before} to ${tone}`);
   }
 
+  // 2f. No-response escalation pressure (Gap 5) — consecutive unanswered outbound contacts
+  if (noResponseCount >= noResponseThreshold) {
+    const before = tone;
+    tone = stepUp(tone);
+    reasons.push(`${noResponseCount} consecutive contacts with no response (threshold: ${noResponseThreshold}) → escalated from ${before} to ${tone}`);
+  }
+
   const uncappedTone = tone;
+
+  // ── Step 2.5: Velocity Cap (Gap 5) ──────────────────────────────────
+  // Max ±1 step from last sent tone. Skipped on first contact.
+
+  if (lastAction?.agentToneLevel) {
+    let effectiveLastTone = lastAction.agentToneLevel as ToneLevel;
+
+    // Significant payment override: reset baseline to Professional (downward bypass only)
+    if (lastAction.completedAt) {
+      const hasSigPayment = await checkSignificantPayment(
+        tenantId, contactId, lastAction.completedAt, sigPaymentThreshold,
+      );
+      if (hasSigPayment) {
+        effectiveLastTone = 'professional';
+        reasons.push(`Significant payment (≥${sigPaymentThreshold * 100}% of outstanding) → baseline reset to professional`);
+      }
+    }
+
+    const lastIdx = toneIndex(effectiveLastTone);
+    const calcIdx = toneIndex(tone);
+
+    if (calcIdx > lastIdx + 1) {
+      tone = TONE_ORDER[lastIdx + 1];
+      reasons.push(`Velocity cap: ${uncappedTone} exceeds ${effectiveLastTone}+1 → capped to ${tone}`);
+    } else if (calcIdx < lastIdx - 1) {
+      tone = TONE_ORDER[Math.max(0, lastIdx - 1)];
+      reasons.push(`Velocity cap: ${uncappedTone} below ${effectiveLastTone}-1 → capped to ${tone}`);
+    }
+  } else {
+    reasons.push("First contact — no velocity cap applied");
+  }
 
   // ── Step 3: Hard caps ─────────────────────────────────────────────────
 
@@ -299,6 +473,9 @@ export async function determineTone(input: ToneEscalationInput): Promise<ToneEsc
       isSerialPromiser,
       lastInboundDaysAgo,
       wasGoodPayer,
+      lastToneLevel: lastAction?.agentToneLevel || null,
+      consecutiveNoResponseCount: noResponseCount,
+      velocityCapped: tone !== uncappedTone && lastAction?.agentToneLevel != null,
     },
   };
 }

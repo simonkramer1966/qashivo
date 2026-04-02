@@ -668,6 +668,10 @@ export async function planAdaptiveActions(
 
     const minScoreThreshold = Number(settings.minScoreThreshold || 40);
 
+    // Gap 4: Fetch tenant for minimum chase threshold
+    const [tenantRecord] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+    const minChaseThreshold = parseFloat(tenantRecord?.minimumChaseThreshold || '50');
+
     // Get overdue invoices with behavior signals
     const today = new Date();
     const overdueInvoices = await db
@@ -829,6 +833,12 @@ export async function planAdaptiveActions(
           const invoiceIds = scoredInvoices.map(si => si.invoice.id);
           const invoiceNumbers = scoredInvoices.map(si => si.invoice.invoiceNumber).join(', ');
           const totalAmount = scoredInvoices.reduce((sum, si) => sum + Number(si.invoice.amount || 0), 0);
+
+          // Gap 4: Skip if consolidated total below minimum chase threshold
+          if (totalAmount < minChaseThreshold) {
+            console.log(`[PLAN] Skipping ${scoredInvoices[0]?.invoice?.contactId}: £${totalAmount.toFixed(2)} below £${minChaseThreshold} threshold`);
+            continue;
+          }
 
           // Create bundled action with all invoice IDs — route through batch/approval queue
           const { proposeAction } = await import('./batchProcessor');

@@ -125,7 +125,10 @@ export const tenants = pgTable("tenants", {
   contactWindowDays: integer("contact_window_days").default(14), // Contact frequency window in days
   businessHoursStart: varchar("business_hours_start").default("08:00"), // Earliest time for voice calls
   businessHoursEnd: varchar("business_hours_end").default("18:00"), // Latest time for voice calls
-  
+  minimumChaseThreshold: decimal("minimum_chase_threshold", { precision: 10, scale: 2 }).default('50.00'), // Gap 4: Skip chasing if consolidated total below this amount (GBP)
+  noResponseEscalationThreshold: integer("no_response_escalation_threshold").default(4), // Gap 5: Consecutive unanswered contacts before escalation pressure
+  significantPaymentThreshold: decimal("significant_payment_threshold", { precision: 3, scale: 2 }).default("0.50"), // Gap 5: Payment fraction that triggers tone reset (0.50 = 50%)
+
   emailProvider: varchar("email_provider"),
   emailConnectedAddress: varchar("email_connected_address"),
   emailAccessToken: text("email_access_token"),

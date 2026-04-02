@@ -1624,6 +1624,32 @@ Guidelines:
         }
       }
 
+      // Get contact detail for debtor summary strip
+      let contactEmail = '';
+      let contactPhone = '';
+      let riskBand = '';
+      let totalOutstanding = 0;
+      let contactIdForLink = action.contactId || '';
+      if (action.contactId) {
+        const contact = await storage.getContact(action.contactId, user.tenantId);
+        if (contact) {
+          contactEmail = contact.arContactEmail || contact.email || '';
+          contactPhone = contact.arContactPhone || contact.phone || '';
+          riskBand = contact.riskBand || '';
+          // totalOutstanding = all unpaid invoices (not just overdue)
+          const allUnpaid = await db
+            .select({ total: sql<string>`COALESCE(SUM(${invoices.amount} - COALESCE(${invoices.amountPaid}, 0)), 0)` })
+            .from(invoices)
+            .where(and(
+              eq(invoices.tenantId, user.tenantId),
+              eq(invoices.contactId, action.contactId),
+              sql`${invoices.status} NOT IN ('paid', 'cancelled', 'void')`,
+              sql`COALESCE(${invoices.amountPaid}, 0) < ${invoices.amount}`,
+            ));
+          totalOutstanding = Number(allUnpaid[0]?.total || 0);
+        }
+      }
+
       res.json({
         actionType: action.type,
         subject,
@@ -1631,9 +1657,18 @@ Guidelines:
         invoices: invoicesWithOverdue,
         contactName,
         companyName,
+        contactEmail,
+        contactPhone,
+        contactId: contactIdForLink,
+        riskBand,
+        totalOutstanding: new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(totalOutstanding),
         totalOverdue: new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(totalOverdue),
         invoiceCount: invoicesWithOverdue.length,
-        isAiGenerated: usedPreGeneratedDraft
+        isAiGenerated: usedPreGeneratedDraft,
+        confidenceScore: action.confidenceScore,
+        priority: action.priority,
+        agentReasoning: action.agentReasoning,
+        createdAt: action.createdAt,
       });
     } catch (error) {
       console.error("Error fetching action preview:", error);

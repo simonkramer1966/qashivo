@@ -21,10 +21,11 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Check, X, Clock, Mail, MessageSquare, Phone, ChevronDown, ChevronUp,
-  ArrowRight, Eye, RefreshCw, Trash2, Loader2,
+  Check, X, Clock, Mail, MessageSquare, Phone,
+  RefreshCw, Trash2, Loader2,
 } from "lucide-react";
 import { formatRelativeTime, normalizeChannel } from "./utils";
+import { ApprovalPreviewSheet } from "./ApprovalPreviewSheet";
 
 interface ApprovalAction {
   id: string;
@@ -34,6 +35,8 @@ interface ApprovalAction {
   actionSummary: string | null;
   content: string | null;
   contactId: string | null;
+  contactName: string | null;
+  companyName: string | null;
   priority: number | null;
   confidenceScore: string | null;
   agentReasoning: string | null;
@@ -65,7 +68,7 @@ interface ApprovalsTabProps {
 export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [previewId, setPreviewId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery<{
     actions: ApprovalAction[];
@@ -274,102 +277,92 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
         </TableHeader>
         <TableBody>
           {actions.map((action) => (
-            <>
-              <TableRow
-                key={action.id}
-                className="cursor-pointer hover:bg-muted/50"
-                onClick={() => setExpandedId(expandedId === action.id ? null : action.id)}
-              >
-                <TableCell>
-                  <ChannelIcon type={action.type} />
-                </TableCell>
-                <TableCell>
-                  <div className="font-medium text-sm">
-                    {action.actionSummary || action.subject || `${action.type} action`}
+            <TableRow
+              key={action.id}
+              className="cursor-pointer hover:bg-muted/50"
+              onClick={() => setPreviewId(action.id)}
+            >
+              <TableCell>
+                <ChannelIcon type={action.type} />
+              </TableCell>
+              <TableCell>
+                {(action.companyName || action.contactName) && (
+                  <div className="text-[11px] font-medium" style={{ color: "var(--color-text-secondary, hsl(var(--muted-foreground)))" }}>
+                    {action.companyName || action.contactName}
                   </div>
-                  {action.status === "pending" && (
-                    <Badge variant="outline" className="mt-0.5 text-xs">pending</Badge>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <span className="text-xs text-muted-foreground capitalize">
-                    {action.agentType || "collections"}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <ConfidenceBadge score={action.confidenceScore} />
-                </TableCell>
-                <TableCell className="text-right">
-                  <span className="text-sm font-mono">{action.priority ?? 50}</span>
-                </TableCell>
-                <TableCell>
-                  <span className="text-xs text-muted-foreground">
-                    {formatRelativeTime(action.createdAt)}
-                  </span>
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 text-green-600 hover:text-green-700 hover:bg-green-50"
-                      onClick={() => approveMutation.mutate(action.id)}
-                      disabled={approveMutation.isPending}
-                    >
-                      <Check className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 text-red-600 hover:text-red-700 hover:bg-red-50"
-                      onClick={() => rejectMutation.mutate({ actionId: action.id })}
-                      disabled={rejectMutation.isPending}
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 text-muted-foreground"
-                      onClick={() => deferMutation.mutate(action.id)}
-                      disabled={deferMutation.isPending}
-                    >
-                      <Clock className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-              {expandedId === action.id && (
-                <TableRow key={`${action.id}-detail`}>
-                  <TableCell colSpan={7} className="bg-muted/30 p-4">
-                    <div className="space-y-2">
-                      {action.agentReasoning && (
-                        <div>
-                          <span className="text-xs font-semibold text-muted-foreground">AI Reasoning</span>
-                          <p className="text-sm mt-1">{action.agentReasoning}</p>
-                        </div>
-                      )}
-                      {action.subject && (
-                        <div>
-                          <span className="text-xs font-semibold text-muted-foreground">Subject</span>
-                          <p className="text-sm mt-1">{action.subject}</p>
-                        </div>
-                      )}
-                      {action.content && (
-                        <div>
-                          <span className="text-xs font-semibold text-muted-foreground">Content Preview</span>
-                          <p className="text-sm mt-1 whitespace-pre-wrap line-clamp-6">{action.content}</p>
-                        </div>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )}
-            </>
+                )}
+                <div className="text-[13px] font-medium truncate max-w-[60ch]" style={{ color: "var(--color-text-primary, hsl(var(--foreground)))" }}>
+                  {action.actionSummary || action.subject || `${action.type} action`}
+                </div>
+                {action.status === "pending" && (
+                  <Badge variant="outline" className="mt-0.5 text-xs">pending</Badge>
+                )}
+              </TableCell>
+              <TableCell>
+                <span className="text-xs text-muted-foreground capitalize">
+                  {action.agentType || "collections"}
+                </span>
+              </TableCell>
+              <TableCell>
+                <ConfidenceBadge score={action.confidenceScore} />
+              </TableCell>
+              <TableCell className="text-right">
+                <span className="text-sm font-mono">{action.priority ?? 50}</span>
+              </TableCell>
+              <TableCell>
+                <span className="text-xs text-muted-foreground">
+                  {formatRelativeTime(action.createdAt)}
+                </span>
+              </TableCell>
+              <TableCell className="text-right">
+                <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 text-green-600 hover:text-green-700 hover:bg-green-50"
+                    onClick={() => approveMutation.mutate(action.id)}
+                    disabled={approveMutation.isPending}
+                  >
+                    <Check className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 text-red-600 hover:text-red-700 hover:bg-red-50"
+                    onClick={() => rejectMutation.mutate({ actionId: action.id })}
+                    disabled={rejectMutation.isPending}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 text-muted-foreground"
+                    onClick={() => deferMutation.mutate(action.id)}
+                    disabled={deferMutation.isPending}
+                  >
+                    <Clock className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
           ))}
         </TableBody>
       </Table>
       )}
+
+      {/* Preview sheet — lazy-loads full detail when a row is clicked */}
+      <ApprovalPreviewSheet
+        actionId={previewId}
+        open={!!previewId}
+        onOpenChange={(open) => { if (!open) setPreviewId(null); }}
+        onApprove={(id) => { approveMutation.mutate(id); setPreviewId(null); }}
+        onReject={(id) => { rejectMutation.mutate({ actionId: id }); setPreviewId(null); }}
+        onDefer={(id) => { deferMutation.mutate(id); setPreviewId(null); }}
+        approvePending={approveMutation.isPending}
+        rejectPending={rejectMutation.isPending}
+        deferPending={deferMutation.isPending}
+      />
     </div>
   );
 }

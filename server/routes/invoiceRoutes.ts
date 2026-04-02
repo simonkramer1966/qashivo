@@ -604,6 +604,7 @@ export function registerInvoiceRoutes(app: Express): void {
         const smsResult = await vonageService.sendSMS({
           to: contact.phone,
           message: thankYouMessage,
+          tenantId: user.tenantId,
         });
 
         // Log the SMS action
@@ -803,6 +804,7 @@ export function registerInvoiceRoutes(app: Express): void {
         message: message,
         invoiceId: invoice.id,
         customerId: invoice.contactId,
+        tenantId: user.tenantId,
       });
 
       if (result.success) {

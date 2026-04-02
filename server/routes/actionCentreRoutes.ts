@@ -20,26 +20,51 @@ export function registerActionCentreRoutes(app: Express): void {
       const limit = parseInt(req.query.limit as string) || 50;
       const offset = (page - 1) * limit;
 
+      // Join contacts for company name; filter out aged debt (>365 days overdue)
       const rows = await db
-        .select()
+        .select({
+          action: actions,
+          contactName: contacts.name,
+          companyName: contacts.companyName,
+        })
         .from(actions)
+        .leftJoin(contacts, eq(actions.contactId, contacts.id))
+        .leftJoin(invoices, eq(actions.invoiceId, invoices.id))
         .where(
           and(
             eq(actions.tenantId, user.tenantId),
             inArray(actions.status, ["pending_approval", "pending"]),
+            or(
+              isNull(actions.invoiceId),
+              isNull(invoices.dueDate),
+              sql`${invoices.dueDate} > now() - interval '365 days'`,
+            ),
           )
         )
         .orderBy(desc(actions.priority), actions.createdAt)
         .limit(limit)
         .offset(offset);
 
+      // Flatten: spread action fields + add contactName/companyName
+      const flatRows = rows.map(r => ({
+        ...r.action,
+        contactName: r.contactName || null,
+        companyName: r.companyName || null,
+      }));
+
       const [countResult] = await db
         .select({ count: sql<number>`count(*)::int` })
         .from(actions)
+        .leftJoin(invoices, eq(actions.invoiceId, invoices.id))
         .where(
           and(
             eq(actions.tenantId, user.tenantId),
             inArray(actions.status, ["pending_approval", "pending"]),
+            or(
+              isNull(actions.invoiceId),
+              isNull(invoices.dueDate),
+              sql`${invoices.dueDate} > now() - interval '365 days'`,
+            ),
           )
         );
 
@@ -47,7 +72,7 @@ export function registerActionCentreRoutes(app: Express): void {
       const batch = await batchProcessor.getCurrentBatch(user.tenantId);
 
       res.json({
-        actions: rows,
+        actions: flatRows,
         total: countResult?.count ?? 0,
         page,
         limit,
@@ -1052,6 +1077,104 @@ export function registerActionCentreRoutes(app: Express): void {
       res.json({ contact: updated });
     } catch (error: any) {
       console.error("Error updating contact exception:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ── GET /api/communications/mode ─────────────────────────────
+  // Read current communication mode + test addresses for the tenant
+  app.get("/api/communications/mode", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const [tenant] = await db
+        .select({
+          communicationMode: tenants.communicationMode,
+          testEmails: tenants.testEmails,
+          testPhones: tenants.testPhones,
+          testContactName: tenants.testContactName,
+        })
+        .from(tenants)
+        .where(eq(tenants.id, user.tenantId));
+
+      if (!tenant) return res.status(404).json({ message: "Tenant not found" });
+
+      res.json({
+        communicationMode: tenant.communicationMode || 'testing',
+        testEmails: tenant.testEmails || [],
+        testPhones: tenant.testPhones || [],
+        testContactName: tenant.testContactName || '',
+      });
+    } catch (error: any) {
+      console.error("Error fetching communication mode:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ── PUT /api/communications/mode ─────────────────────────────
+  // Update communication mode + test addresses for the tenant
+  app.put("/api/communications/mode", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const schema = z.object({
+        communicationMode: z.enum(['off', 'testing', 'soft_live', 'live']),
+        testEmails: z.array(z.string().email()).optional(),
+        testPhones: z.array(z.string().min(1)).optional(),
+        testContactName: z.string().optional(),
+      });
+
+      const parsed = schema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid request", errors: parsed.error.flatten() });
+      }
+
+      const { communicationMode, testEmails, testPhones, testContactName } = parsed.data;
+
+      // When setting testing or soft_live, require at least one test email AND one test phone
+      if (communicationMode === 'testing' || communicationMode === 'soft_live') {
+        if (!testEmails?.length && !testPhones?.length) {
+          // Check existing values on the tenant
+          const [existing] = await db
+            .select({ testEmails: tenants.testEmails, testPhones: tenants.testPhones })
+            .from(tenants)
+            .where(eq(tenants.id, user.tenantId));
+
+          const existingEmails = (existing?.testEmails as string[] | null) || [];
+          const existingPhones = (existing?.testPhones as string[] | null) || [];
+          const finalEmails = testEmails?.length ? testEmails : existingEmails;
+          const finalPhones = testPhones?.length ? testPhones : existingPhones;
+
+          if (!finalEmails.length || !finalPhones.length) {
+            return res.status(400).json({
+              message: `${communicationMode} mode requires at least one test email and one test phone number configured`,
+            });
+          }
+        }
+      }
+
+      const updates: Record<string, any> = { communicationMode };
+      if (testEmails !== undefined) updates.testEmails = testEmails;
+      if (testPhones !== undefined) updates.testPhones = testPhones;
+      if (testContactName !== undefined) updates.testContactName = testContactName;
+
+      await db
+        .update(tenants)
+        .set(updates)
+        .where(eq(tenants.id, user.tenantId));
+
+      console.log(`🔧 [CommMode] Tenant ${user.tenantId} updated: mode=${communicationMode} testEmails=${(testEmails || []).length} testPhones=${(testPhones || []).length}`);
+
+      res.json({
+        communicationMode,
+        testEmails: updates.testEmails,
+        testPhones: updates.testPhones,
+        testContactName: updates.testContactName,
+      });
+    } catch (error: any) {
+      console.error("Error updating communication mode:", error);
       res.status(500).json({ message: error.message });
     }
   });

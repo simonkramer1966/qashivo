@@ -90,16 +90,18 @@ export async function sendVoiceCall(params: SendVoiceCallParams): Promise<VoiceC
     // MODE: TESTING or SOFT_LIVE — redirect to test phone
     if (mode === 'testing' || mode === 'soft_live') {
       const testPhones = tenant?.testPhones as string[] | null;
-      if (testPhones?.length) {
-        const originalTo = actualTo;
-        actualTo = testPhones[0];
-        const testContactNameOverride = tenant?.testContactName as string | null;
-        if (testContactNameOverride) {
-          actualContactName = testContactNameOverride;
-        }
-        const modeLabel = mode === 'testing' ? 'TEST' : 'SOFT LIVE';
-        console.log(`🧪 [VoiceCommMode] ${modeLabel} redirect from ${originalTo} → ${actualTo}`);
+      if (!testPhones?.length) {
+        console.error(`🚫 [VoiceCommMode] BLOCKED — ${mode} mode but no test phone numbers configured for tenant ${tenantId}`);
+        throw new Error(`No test phone numbers configured for ${mode} mode`);
       }
+      const originalTo = actualTo;
+      actualTo = testPhones[0];
+      const testContactNameOverride = tenant?.testContactName as string | null;
+      if (testContactNameOverride) {
+        actualContactName = testContactNameOverride;
+      }
+      const modeLabel = mode === 'testing' ? 'TEST' : 'SOFT LIVE';
+      console.log(`🧪 [VoiceCommMode] ${modeLabel} redirect from ${originalTo} → ${actualTo}`);
     }
 
     // MODE: LIVE — send to real recipient, no modification

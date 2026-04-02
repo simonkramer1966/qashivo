@@ -2466,7 +2466,8 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
       
       const result = await sendSMS({
         to: normalizedPhone,
-        message: body
+        message: body,
+        tenantId: user.tenantId,
       });
 
       if (!result.success) {
@@ -4713,4 +4714,105 @@ ${type === 'email' ? 'Generate a JSON object with "subject" (string) and "body" 
       res.status(500).json({ message: "Failed to log dispute" });
     }
   });
+
+  // ─── Gap 10: Legal response window resolution ───
+  app.post("/api/contacts/:id/legal-window/resolve",
+    isAuthenticated,
+    withRBACContext,
+    withMinimumRole("manager"),
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        const tenantId = (req as any).rbac?.tenantId;
+        const user = (req as any).user;
+        const { action } = req.body as { action: 'resume_collections' | 'refer_debt_recovery' | 'extend_window' };
+
+        if (!tenantId) return res.status(403).json({ message: "No tenant context" });
+        if (!action || !['resume_collections', 'refer_debt_recovery', 'extend_window'].includes(action)) {
+          return res.status(400).json({ message: "Invalid action. Must be: resume_collections, refer_debt_recovery, or extend_window" });
+        }
+
+        // Verify contact exists and belongs to tenant
+        const [contact] = await db.select({ id: contacts.id, name: contacts.name, legalResponseWindowEnd: contacts.legalResponseWindowEnd })
+          .from(contacts)
+          .where(and(eq(contacts.id, id), eq(contacts.tenantId, tenantId)))
+          .limit(1);
+
+        if (!contact) return res.status(404).json({ message: "Contact not found" });
+        if (!contact.legalResponseWindowEnd) return res.status(400).json({ message: "No active legal response window for this contact" });
+
+        const resolvedBy = user?.firstName || user?.email || 'user';
+        const now = new Date();
+
+        if (action === 'resume_collections') {
+          await db.update(contacts).set({
+            legalResponseWindowEnd: null,
+            updatedAt: now,
+          }).where(eq(contacts.id, id));
+
+          await db.insert(timelineEvents).values({
+            tenantId,
+            customerId: id,
+            occurredAt: now,
+            direction: 'internal',
+            channel: 'system',
+            summary: `Legal response window resolved — resuming automated collections.`,
+            preview: `Window resolved by ${resolvedBy}. Charlie will resume contact.`,
+            createdByType: 'user',
+            createdByUserId: user?.id,
+            createdByName: resolvedBy,
+          });
+
+          return res.json({ success: true, action: 'resume_collections', message: 'Legal window cleared. Automated collections will resume.' });
+        }
+
+        if (action === 'refer_debt_recovery') {
+          // Keep window set — blocks Charlie permanently until manually cleared
+          await db.insert(timelineEvents).values({
+            tenantId,
+            customerId: id,
+            occurredAt: now,
+            direction: 'internal',
+            channel: 'system',
+            summary: `Debtor referred to debt recovery. Legal response window remains active.`,
+            preview: `Referred by ${resolvedBy}. No further automated contact.`,
+            createdByType: 'user',
+            createdByUserId: user?.id,
+            createdByName: resolvedBy,
+            outcomeType: 'other',
+          });
+
+          return res.json({ success: true, action: 'refer_debt_recovery', message: 'Debtor referred to debt recovery. Automated contact remains blocked.' });
+        }
+
+        if (action === 'extend_window') {
+          const newWindowEnd = new Date();
+          newWindowEnd.setDate(newWindowEnd.getDate() + 30);
+
+          await db.update(contacts).set({
+            legalResponseWindowEnd: newWindowEnd,
+            updatedAt: now,
+          }).where(eq(contacts.id, id));
+
+          await db.insert(timelineEvents).values({
+            tenantId,
+            customerId: id,
+            occurredAt: now,
+            direction: 'internal',
+            channel: 'system',
+            summary: `Legal response window extended 30 days (new expiry ${newWindowEnd.toISOString().split('T')[0]}).`,
+            preview: `Extended by ${resolvedBy}. No automated contact until ${newWindowEnd.toISOString().split('T')[0]}.`,
+            createdByType: 'user',
+            createdByUserId: user?.id,
+            createdByName: resolvedBy,
+          });
+
+          return res.json({ success: true, action: 'extend_window', newWindowEnd: newWindowEnd.toISOString(), message: 'Legal window extended by 30 days.' });
+        }
+      } catch (error) {
+        console.error("Error resolving legal window:", error);
+        res.status(500).json({ message: "Failed to resolve legal window" });
+      }
+    }
+  );
 }

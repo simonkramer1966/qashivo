@@ -1,6 +1,6 @@
 import { eq, and, lte, sql, isNotNull, inArray } from "drizzle-orm";
 import { db } from "../db";
-import { actions, contacts, invoices, tenants, messageDrafts, emailMessages } from "@shared/schema";
+import { actions, contacts, invoices, tenants, messageDrafts, emailMessages, timelineEvents } from "@shared/schema";
 import { sendEmail } from "./sendgrid";
 import { sendSMS } from "./vonage";
 // RetellService import removed — voice calls now go through sendVoiceCall() wrapper
@@ -76,6 +76,18 @@ export class ActionExecutor {
         const { action, contact, invoice, tenant } = record;
 
         try {
+          // Gap 4: Execution-time re-validation gate
+          const validation = await this.validateActionBeforeExecution(action, contact, tenant);
+          if (!validation.valid) {
+            await db.update(actions).set({
+              status: 'cancelled',
+              cancellationReason: validation.reason,
+              updatedAt: new Date(),
+            }).where(eq(actions.id, action.id));
+            console.log(`[Executor] Action ${action.id} cancelled: ${validation.reason}`);
+            continue;
+          }
+
           // Update status to executing
           await db
             .update(actions)
@@ -99,7 +111,10 @@ export class ActionExecutor {
               .where(eq(actions.id, action.id));
             successCount++;
             console.log(`✅ Executed ${action.type} action for ${contact.name}`);
-            
+
+            // Gap 10: Set legal response window if this was a Legal tone action
+            await setLegalResponseWindowIfNeeded(action.id, action.contactId, action.tenantId, action.agentToneLevel);
+
             // Broadcast real-time update to connected clients
             websocketService.broadcastActionCompleted(action.tenantId, action.id, action.type);
           } else {
@@ -177,6 +192,18 @@ export class ActionExecutor {
         const { action, contact, invoice, tenant } = record;
 
         try {
+          // Gap 4: Execution-time re-validation gate
+          const validation = await this.validateActionBeforeExecution(action, contact, tenant);
+          if (!validation.valid) {
+            await db.update(actions).set({
+              status: 'cancelled',
+              cancellationReason: validation.reason,
+              updatedAt: new Date(),
+            }).where(eq(actions.id, action.id));
+            console.log(`[Executor] Action ${action.id} cancelled at execution: ${validation.reason}`);
+            continue;
+          }
+
           await db.update(actions)
             .set({ status: 'executing' })
             .where(eq(actions.id, action.id));
@@ -193,6 +220,10 @@ export class ActionExecutor {
               .where(eq(actions.id, action.id));
             successCount++;
             console.log(`✅ Immediately executed ${action.type} action for ${contact.name}`);
+
+            // Gap 10: Set legal response window if this was a Legal tone action
+            await setLegalResponseWindowIfNeeded(action.id, action.contactId, action.tenantId, action.agentToneLevel);
+
             websocketService.broadcastActionCompleted(action.tenantId, action.id, action.type);
           } else {
             await db.update(actions)
@@ -223,6 +254,78 @@ export class ActionExecutor {
     }
 
     return { successCount, errorCount };
+  }
+
+  /**
+   * Gap 4: Validate action is still valid before execution.
+   * Checks legal response windows, probable payments, invoice status changes,
+   * and minimum chase threshold. Cancels stale actions instead of sending
+   * outdated content.
+   */
+  private async validateActionBeforeExecution(
+    action: any,
+    contact: any,
+    tenant: any
+  ): Promise<{ valid: boolean; reason?: string }> {
+    // 1. Legal response window — do not contact during statutory response period
+    // Gap 10: Block both active windows AND expired-but-unresolved windows
+    if (contact.legalResponseWindowEnd) {
+      const windowEnd = new Date(contact.legalResponseWindowEnd);
+      if (windowEnd > new Date()) {
+        return { valid: false, reason: 'legal_response_window_active' };
+      } else {
+        // Window expired but user hasn't resolved — block until explicit decision
+        return { valid: false, reason: 'legal_response_window_expired_pending_resolution' };
+      }
+    }
+
+    // 2. Probable payment detected — hold off if medium/high confidence
+    if (contact.probablePaymentDetected &&
+        ['high', 'medium'].includes(contact.probablePaymentConfidence)) {
+      return { valid: false, reason: 'probable_payment_detected' };
+    }
+
+    // 3. Invoice-level checks — fresh DB read to catch changes since planning
+    const actionInvoiceIds: string[] = action.invoiceIds?.length
+      ? action.invoiceIds
+      : (action.invoiceId ? [action.invoiceId] : []);
+
+    if (actionInvoiceIds.length === 0) {
+      // No invoices tied to this action (shouldn't happen, but safe to proceed)
+      return { valid: true };
+    }
+
+    const freshInvoices = await db
+      .select()
+      .from(invoices)
+      .where(inArray(invoices.id, actionInvoiceIds));
+
+    const excludedStatuses = ['paid', 'void', 'voided', 'deleted'];
+    const validInvoices = freshInvoices.filter(inv => {
+      if (excludedStatuses.includes(inv.status || '')) return false;
+      if (inv.pauseState) return false; // dispute, ptp, payment_plan
+      if (inv.isOnHold) return false;
+      return true;
+    });
+
+    // 4. All invoices excluded
+    if (validInvoices.length === 0) {
+      return { valid: false, reason: 'all_invoices_excluded' };
+    }
+
+    // 5. Any invoices removed from bundle — cancel for replan (LLM content may reference removed invoices)
+    if (validInvoices.length < actionInvoiceIds.length) {
+      return { valid: false, reason: 'bundle_modified_requires_replan' };
+    }
+
+    // 6. Remaining total below minimum chase threshold
+    const totalAmount = validInvoices.reduce((sum, inv) => sum + Number(inv.amount || 0), 0);
+    const minThreshold = parseFloat(tenant?.minimumChaseThreshold || '50');
+    if (totalAmount < minThreshold) {
+      return { valid: false, reason: 'below_minimum_chase_threshold' };
+    }
+
+    return { valid: true };
   }
 
   /**
@@ -815,6 +918,47 @@ export class ActionExecutor {
       }
     }
   }
+}
+
+/**
+ * Gap 10: Set 30-day legal response window when a Legal tone action is successfully sent.
+ * Called from ActionExecutor completion paths after successful delivery.
+ */
+export async function setLegalResponseWindowIfNeeded(
+  actionId: string,
+  contactId: string,
+  tenantId: string,
+  agentToneLevel: string | null,
+): Promise<void> {
+  if (agentToneLevel !== 'legal') return;
+
+  const windowEnd = new Date();
+  windowEnd.setDate(windowEnd.getDate() + 30);
+
+  await db.update(contacts).set({
+    legalResponseWindowEnd: windowEnd,
+    updatedAt: new Date(),
+  }).where(and(eq(contacts.id, contactId), eq(contacts.tenantId, tenantId)));
+
+  // Record in timeline for audit trail
+  try {
+    await db.insert(timelineEvents).values({
+      tenantId,
+      customerId: contactId,
+      occurredAt: new Date(),
+      direction: 'internal',
+      channel: 'system',
+      summary: `Pre-action 30-day response window started (expires ${windowEnd.toISOString().split('T')[0]})`,
+      preview: `Legal Letter Before Action sent. No automated contact until ${windowEnd.toISOString().split('T')[0]}.`,
+      status: 'sent',
+      actionId,
+      createdByType: 'system',
+    });
+  } catch (err) {
+    console.warn(`[Legal] Failed to record timeline event for legal window:`, err);
+  }
+
+  console.log(`⚖️ [Legal] 30-day response window set for contact ${contactId}, expires ${windowEnd.toISOString()}`);
 }
 
 // Export singleton instance

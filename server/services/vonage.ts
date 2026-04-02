@@ -22,7 +22,7 @@ interface SMSParams {
   to: string;
   message: string;
   from?: string;
-  tenantId?: string;
+  tenantId: string;
 }
 
 export async function sendSMS(params: SMSParams & {
@@ -64,43 +64,44 @@ export async function sendSMS(params: SMSParams & {
     let text = params.message;
 
     // SECURITY: Communication mode enforcement — MUST happen before any send
-    if (params.tenantId) {
-      try {
-        const { db } = await import('../db.js');
-        const { tenants } = await import('../../shared/schema.js');
-        const { eq } = await import('drizzle-orm');
-        const [tenant] = await db.select({
-          communicationMode: tenants.communicationMode,
-          testPhones: tenants.testPhones,
-        }).from(tenants).where(eq(tenants.id, params.tenantId));
+    // tenantId is required — every SMS must go through mode check
+    try {
+      const { db } = await import('../db.js');
+      const { tenants } = await import('../../shared/schema.js');
+      const { eq } = await import('drizzle-orm');
+      const [tenant] = await db.select({
+        communicationMode: tenants.communicationMode,
+        testPhones: tenants.testPhones,
+      }).from(tenants).where(eq(tenants.id, params.tenantId));
 
-        const mode = tenant?.communicationMode || 'testing'; // Default to testing, not live
+      const mode = tenant?.communicationMode || 'testing'; // Default to testing, not live
 
-        console.log(`📱 [SmsCommMode] tenant=${params.tenantId} mode=${mode} intendedRecipient=${to}`);
+      console.log(`📱 [SmsCommMode] tenant=${params.tenantId} mode=${mode} intendedRecipient=${to}`);
 
-        if (mode === 'off') {
-          console.log(`🚫 [SmsCommMode] BLOCKED — mode is OFF for tenant ${params.tenantId}`);
-          return { success: false, error: 'Communication mode is OFF — all outbound blocked' };
+      if (mode === 'off') {
+        console.log(`🚫 [SmsCommMode] BLOCKED — mode is OFF for tenant ${params.tenantId}`);
+        return { success: false, error: 'Communication mode is OFF — all outbound blocked' };
+      }
+
+      if (mode === 'testing' || mode === 'soft_live') {
+        const testPhones = tenant?.testPhones as string[] | null;
+        if (!testPhones?.length) {
+          console.error(`🚫 [SmsCommMode] BLOCKED — ${mode} mode but no test phone numbers configured for tenant ${params.tenantId}`);
+          return { success: false, error: `No test phone numbers configured for ${mode} mode` };
         }
-
-        if (mode === 'testing' || mode === 'soft_live') {
-          const testPhones = tenant?.testPhones as string[] | null;
-          if (testPhones?.length) {
-            const originalTo = to;
-            to = testPhones[0];
-            const modeLabel = mode === 'testing' ? 'TEST' : 'SOFT LIVE';
-            text = `[${modeLabel}] Original recipient: ${originalTo}\n\n${text}`;
-            console.log(`🧪 [SmsCommMode] ${modeLabel} redirect from ${originalTo} → ${to}`);
-          }
-        }
-        // mode === 'live' — send to real recipient, no modification
-      } catch (err) {
-        console.warn('[SmsSafetyNet] Could not check communication mode:', err);
-        // In production, block if we can't verify
-        if (process.env.NODE_ENV === 'production') {
-          console.error('🚫 [SmsSafetyNet] BLOCKING SMS — cannot verify communication mode in production');
-          return { success: false, error: 'Cannot verify communication mode — SMS blocked for safety' };
-        }
+        const originalTo = to;
+        to = testPhones[0];
+        const modeLabel = mode === 'testing' ? 'TEST' : 'SOFT LIVE';
+        text = `[${modeLabel}] Original recipient: ${originalTo}\n\n${text}`;
+        console.log(`🧪 [SmsCommMode] ${modeLabel} redirect from ${originalTo} → ${to}`);
+      }
+      // mode === 'live' — send to real recipient, no modification
+    } catch (err) {
+      console.warn('[SmsSafetyNet] Could not check communication mode:', err);
+      // Fail closed — block if we can't verify
+      if (process.env.NODE_ENV === 'production') {
+        console.error('🚫 [SmsSafetyNet] BLOCKING SMS — cannot verify communication mode in production');
+        return { success: false, error: 'Cannot verify communication mode — SMS blocked for safety' };
       }
     }
 
@@ -148,7 +149,7 @@ export async function sendPaymentReminderSMS(
     invoiceNumber: string;
     amount: number;
     daysPastDue: number;
-    tenantId?: string;
+    tenantId: string;
   }
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const message = `Hi ${contactData.name}, this is a friendly reminder that Invoice ${contactData.invoiceNumber} for £${contactData.amount} is ${contactData.daysPastDue} days past due. Please contact us to arrange payment. Thank you!`;
@@ -167,7 +168,7 @@ export async function sendUrgentPaymentNotice(
     invoiceNumber: string;
     amount: number;
     daysPastDue: number;
-    tenantId?: string;
+    tenantId: string;
   }
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const message = `URGENT: ${contactData.name}, Invoice ${contactData.invoiceNumber} (£${contactData.amount}) is ${contactData.daysPastDue} days overdue. Immediate payment required to avoid further action. Please call us today.`;
@@ -182,8 +183,8 @@ export async function sendUrgentPaymentNotice(
 export async function sendCustomSMS(
   to: string,
   message: string,
+  tenantId: string,
   from?: string,
-  tenantId?: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   return await sendSMS({ to, message, from, tenantId });
 }

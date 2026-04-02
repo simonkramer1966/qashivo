@@ -409,8 +409,10 @@ export async function registerSettingsRoutes(app: Express): Promise<void> {
       const allowedFields = [
         'approvalMode', 'approvalTimeoutHours', 'executionTime', 'executionTimezone',
         'dailyLimits', 'minConfidence', 'exceptionRules', 'channelCooldowns',
-        'businessHoursStart', 'businessHoursEnd', 'maxTouchesPerWindow', 
-        'contactWindowDays', 'tenantStyle', 'collectionsAutomationEnabled'
+        'businessHoursStart', 'businessHoursEnd', 'maxTouchesPerWindow',
+        'contactWindowDays', 'tenantStyle', 'collectionsAutomationEnabled',
+        'minimumChaseThreshold',
+        'noResponseEscalationThreshold', 'significantPaymentThreshold'
       ];
 
       const nestedFields = ['dailyLimits', 'minConfidence', 'exceptionRules', 'channelCooldowns'];

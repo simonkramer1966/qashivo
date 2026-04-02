@@ -350,9 +350,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/public/sales-enquiry', async (req, res) => {
     try {
       const data = salesEnquirySchema.parse(req.body);
-      
-      // Import sendEmail function
-      const { sendEmail } = await import('./services/sendgrid');
+
+      // Import emailService directly — public form, no tenant context.
+      // System emails bypass communication mode enforcement intentionally.
+      const { emailService } = await import('./services/sendgrid');
       
       // Qashivo contact email and base URL
       const qashivoEmail = 'hello@qashivo.com';
@@ -454,24 +455,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         </html>
       `;
       
-      // Send email to Qashivo team
-      const teamEmailResult = await sendEmail({
-        to: qashivoEmail,
-        from: qashivoEmail,
+      // Send email to Qashivo team (system email — no tenant mode check)
+      const teamEmailResult = await emailService.sendEmail({
+        to: [{ email: qashivoEmail }],
+        from: { email: qashivoEmail },
         subject: `[Qashivo] ${enquiryTypeLabel} from ${data.name}`,
-        html: teamEmailHtml,
-        text: `New ${enquiryTypeLabel}\n\nName: ${data.name}\nEmail: ${data.email}\n${data.company ? `Company: ${data.company}\n` : ''}${data.phone ? `Phone: ${data.phone}\n` : ''}\nMessage:\n${data.message}`,
-        replyTo: data.email
+        htmlContent: teamEmailHtml,
+        textContent: `New ${enquiryTypeLabel}\n\nName: ${data.name}\nEmail: ${data.email}\n${data.company ? `Company: ${data.company}\n` : ''}${data.phone ? `Phone: ${data.phone}\n` : ''}\nMessage:\n${data.message}`,
+        replyTo: { email: data.email },
       });
-      
+
       // Send confirmation email to the submitter (don't block on failure)
-      const confirmationResult = await sendEmail({
-        to: data.email,
-        from: qashivoEmail,
+      const confirmationResult = await emailService.sendEmail({
+        to: [{ email: data.email }],
+        from: { email: qashivoEmail },
         subject: `Thanks for contacting Qashivo - We'll be in touch soon`,
-        html: confirmationEmailHtml,
-        text: `Thank you for getting in touch, ${data.name.split(' ')[0]}!\n\nWe've received your ${enquiryTypeLabel.toLowerCase()} and a member of our team will be in touch shortly.\n\nYour message:\n${data.message}\n\nIn the meantime, why not explore what Qashivo can do for your business at https://www.qashivo.com/demo\n\n---\nNexus KPI Limited. Built in London. Backed by innovation.\nhttps://www.qashivo.com`,
-        trackClicks: false
+        htmlContent: confirmationEmailHtml,
+        textContent: `Thank you for getting in touch, ${data.name.split(' ')[0]}!\n\nWe've received your ${enquiryTypeLabel.toLowerCase()} and a member of our team will be in touch shortly.\n\nYour message:\n${data.message}\n\nIn the meantime, why not explore what Qashivo can do for your business at https://www.qashivo.com/demo\n\n---\nNexus KPI Limited. Built in London. Backed by innovation.\nhttps://www.qashivo.com`,
+        trackClicks: false,
       });
       
       if (!confirmationResult.success) {
@@ -508,7 +509,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const data = contactFormSchema.parse(req.body);
 
-      const { sendEmail } = await import('./services/sendgrid');
+      // System email — no tenant context. Bypass communication mode enforcement.
+      const { emailService } = await import('./services/sendgrid');
 
       const qashivoEmail = 'hello@qashivo.com';
       const baseUrl = process.env.SITE_BASE_URL || 'https://www.qashivo.com';
@@ -588,23 +590,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const confirmationEmailText = `Hi ${firstName},\n\nThanks for getting in touch. We've received your message and will get back to you within 4 business hours.\n\nIn the meantime, have you taken our free Cashflow Health Check?\n${baseUrl}/cashflow-health-check\n\nBest,\nThe Qashivo Team`;
 
-      // Send email to Qashivo team
-      const teamEmailResult = await sendEmail({
-        to: qashivoEmail,
-        from: qashivoEmail,
+      // Send email to Qashivo team (system email — no tenant mode check)
+      const teamEmailResult = await emailService.sendEmail({
+        to: [{ email: qashivoEmail }],
+        from: { email: qashivoEmail },
         subject: `New Contact Form Submission from ${data.fullName}`,
-        html: teamEmailHtml,
-        text: teamEmailText,
-        replyTo: data.workEmail,
+        htmlContent: teamEmailHtml,
+        textContent: teamEmailText,
+        replyTo: { email: data.workEmail },
       });
 
-      // Send confirmation email to submitter
-      const confirmationResult = await sendEmail({
-        to: data.workEmail,
-        from: qashivoEmail,
+      // Send confirmation email to submitter (system email — no tenant mode check)
+      const confirmationResult = await emailService.sendEmail({
+        to: [{ email: data.workEmail }],
+        from: { email: qashivoEmail },
         subject: 'Thanks for contacting Qashivo',
-        html: confirmationEmailHtml,
-        text: confirmationEmailText,
+        htmlContent: confirmationEmailHtml,
+        textContent: confirmationEmailText,
         trackClicks: false,
       });
 
@@ -1031,7 +1033,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             </div>
             <p><em>Generated by Nexus AR Collections System using Collection Workflow Senders</em></p>
           </div>
-        `
+        `,
+        tenantId: user!.tenantId!,
       });
 
       if (testEmailSent) {
@@ -6586,12 +6589,33 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       const lead = await storage.updateInvestorLead(leadId, updateData);
       
       // Send SMS via Vonage with investor demo message (HARDCODED for demo)
-      const { sendCustomSMS } = await import('./services/vonage.js');
-      
+      // SAFETY: This is the investor demo endpoint — no tenant context.
+      // Uses Vonage directly, bypassing communication mode enforcement.
+      // See CLAUDE.md "Outbound Communications Safety > Exceptions".
+      const Vonage = await import('@vonage/server-sdk');
+      const vonageApiKey = process.env.VONAGE_API_KEY || '';
+      const vonageApiSecret = process.env.VONAGE_API_SECRET || '';
+      const vonageFromNumber = process.env.VONAGE_PHONE_NUMBER || '';
+
       const displayName = name || lead.name;
       const smsMessage = `Hi ${displayName}! 👋 This is Qashivo's AI.\n\nYou have an overdue invoice of £5,000 (15 days past due).\n\nReply:\n• PLAN - Set up payment plan\n• DISPUTE - Raise a concern\n• PAID - Confirm payment\n\nThis demonstrates our AI intent detection.`;
-      
-      const smsResult = await sendCustomSMS(phone, smsMessage);
+
+      let smsResult: { success: boolean; messageId?: string; error?: string };
+
+      // Check demo mode first — if enabled, skip real send
+      const { demoModeService } = await import('./services/demoModeService.js');
+      if (demoModeService.isEnabled()) {
+        smsResult = { success: true, messageId: 'demo-mock-sms-' + Date.now() };
+      } else if (!vonageApiKey || !vonageApiSecret) {
+        smsResult = { success: true, messageId: 'mock-vonage-id' };
+      } else {
+        const demoVonage = new Vonage.Vonage({ apiKey: vonageApiKey, apiSecret: vonageApiSecret });
+        const response = await demoVonage.sms.send({ to: phone, from: vonageFromNumber, text: smsMessage });
+        const msg = response.messages?.[0];
+        smsResult = msg?.status === '0'
+          ? { success: true, messageId: msg.messageId }
+          : { success: false, error: msg?.errorText || 'Failed to send SMS' };
+      }
       
       console.log(`📱 Investor demo SMS sent to ${lead.name}:`, smsResult);
       
