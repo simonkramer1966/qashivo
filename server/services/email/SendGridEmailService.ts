@@ -508,6 +508,11 @@ export class SendGridEmailService extends EmailService {
       }
     }
 
+    // Gap 8: Pass custom_args for webhook delivery tracking
+    if (message.customArgs && Object.keys(message.customArgs).length > 0) {
+      sendGridMessage.custom_args = message.customArgs;
+    }
+
     return sendGridMessage;
   }
 

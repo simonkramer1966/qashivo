@@ -802,7 +802,10 @@ export function registerWebhookRoutes(app: Express) {
           invoice_id
         } = event;
 
-        if (!tenant_id) continue;
+        if (!tenant_id) {
+          console.warn(`[SendGrid Events] Event received WITHOUT custom args — type=${eventType} sg_message_id=${sg_message_id || 'unknown'} email=${email || 'unknown'}. This email was sent before custom_args were added.`);
+          continue;
+        }
 
         const idempotencyKey = eventBus.generateIdempotencyKey(
           tenant_id,
@@ -822,6 +825,8 @@ export function registerWebhookRoutes(app: Express) {
           providerMessageId: sg_message_id,
           payload: event,
           eventTimestamp: new Date(timestamp * 1000),
+        }).then(() => {
+          console.log(`[SendGrid Events] Processed: type=${eventType} action=${action_id || 'unknown'} contact=${contact_id || 'unknown'}`);
         }).catch(err => console.error('Failed to log SendGrid outcome:', err));
       }
 

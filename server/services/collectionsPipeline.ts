@@ -399,14 +399,18 @@ async function deliverEmail(
       text: textBody,
       replyTo: replyToEmail,
       tenantId,
+      actionId: actionId,
+      contactId: contactId,
     });
 
-    // Update action status
+    // Update action status + Gap 8 delivery tracking
     await db
       .update(actions)
       .set({
         status: sendResult.success ? "completed" : "failed",
         completedAt: sendResult.success ? new Date() : undefined,
+        deliveryStatus: sendResult.success ? 'sent' : 'failed',
+        providerMessageId: sendResult.messageId,
         updatedAt: new Date(),
       })
       .where(eq(actions.id, actionId));

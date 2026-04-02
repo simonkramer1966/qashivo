@@ -8,7 +8,7 @@
  */
 
 import { db } from "../../db";
-import { eq, and, gte, desc, inArray } from "drizzle-orm";
+import { eq, and, gte, desc, inArray, or, isNull, notInArray, sql } from "drizzle-orm";
 import {
   tenants,
   contacts,
@@ -103,6 +103,10 @@ export async function checkCompliance(input: ComplianceInput): Promise<Complianc
       eq(actions.contactId, input.contactId),
       gte(actions.createdAt, windowStart),
       inArray(actions.status, SENT_STATUSES),
+      or(
+        isNull(actions.deliveryStatus),
+        notInArray(actions.deliveryStatus, ['failed', 'failed_permanent', 'bounced']),
+      ),
     ));
 
   const outboundCount = recentActions.filter(a =>

@@ -100,6 +100,9 @@ export interface EmailMessage {
   
   // Provider-specific settings
   providerSettings?: Record<string, any>;
+
+  // Custom args for webhook tracking (SendGrid custom_args)
+  customArgs?: Record<string, string>;
 }
 
 export interface BulkEmailMessage {

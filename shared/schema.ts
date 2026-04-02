@@ -201,6 +201,13 @@ export const contacts = pgTable("contacts", {
   lpiEnabled: boolean("lpi_enabled").default(true), // Whether LPI is enabled for this contact
   lpiGracePeriodDays: integer("lpi_grace_period_days").default(7), // Grace period before interest starts accruing
 
+  // Gap 10: Legal response window
+  legalResponseWindowEnd: timestamp("legal_response_window_end"),
+  // Gap 14: Probable payment detection
+  probablePaymentDetected: boolean("probable_payment_detected").default(false),
+  probablePaymentConfidence: varchar("probable_payment_confidence"),
+  probablePaymentDetectedAt: timestamp("probable_payment_detected_at"),
+
   // Exception flagging
   isException: boolean("is_exception").default(false),
   exceptionType: text("exception_type"), // dispute, unresponsive, wants_human, compliance_failure, distress, service_issue, missing_po, insolvency_risk, other
@@ -806,6 +813,17 @@ export const actions = pgTable("actions", {
   agentToneLevel: varchar("agent_tone_level"), // friendly | professional | firm | formal | legal
   agentChannel: varchar("agent_channel"), // email | sms | voice | internal
   complianceResult: varchar("compliance_result"), // approved | blocked | regenerated | queued
+
+  // Gap 8: Delivery confirmation + dead letter handling
+  providerMessageId: varchar("provider_message_id"),
+  deliveryStatus: varchar("delivery_status"), // sent | delivered | bounced | failed | failed_permanent
+  deliveryConfirmedAt: timestamp("delivery_confirmed_at"),
+  deliveryRawPayload: jsonb("delivery_raw_payload"),
+  retryCount: integer("retry_count").default(0),
+  retryOf: varchar("retry_of"), // FK to original action ID if this is a retry
+  voiceContactRecord: jsonb("voice_contact_record"), // Retell AI call evidence
+  generationMethod: varchar("generation_method").default('llm'), // llm | template_fallback
+  cancellationReason: varchar("cancellation_reason"),
 
   // Action Centre: batch & rejection tracking
   batchId: varchar("batch_id"),

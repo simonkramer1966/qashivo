@@ -34,13 +34,15 @@ Read /docs/QASHIVO_CONTEXT.md completely. It is the canonical product specificat
 - See Section 8A for bank proof points
 - See `docs/QASHIVO_CONTEXT_ADDENDUM_v4.2.md` Sections 20-23 for Riley, Data Health, onboarding, Xero architecture
 - See `docs/MVP_V1.1_BUILD_SPEC.md` for Sprint 5-8 breakdown
+- See `CHARLIE_ENGINEERING_SPEC.md` for Charlie decision engine hardening — 14 gaps, schema changes, template fallbacks, verification queries. This is the authoritative implementation brief for all Charlie improvements.
+- See `DISPUTE_RESOLUTION_SPEC.md` (to be created) for statutory dispute workflow driven by UK "Time to Pay Up" legislation
 
 ## Critical Rules
 1. Every communication is LLM-generated in the agent's persona voice. NO templates. If it reads like a template, it's wrong.
 2. Compliance Agent (rule-based v1) gates ALL outbound communications before delivery.
 3. Multi-tenant data isolation must be maintained — never leak data between tenants.
 4. Default currency is GBP. UK-first market.
-5. Open Banking payment data trains models. Accounting platform data does NOT. See Section 5A.
+5. Open Banking payment data trains models. Accounting platform data does NOT. See Section 5A. This is a hard architectural boundary — Xero bank transaction data can be used for operational inference (matching payments to invoices) but NEVER for model training. See CHARLIE_ENGINEERING_SPEC.md Gap 14 for the two-source architecture.
 6. The debtor must believe the agent is human.
 7. AR overlay fields (arContactEmail, arContactPhone, arContactName, arNotes) are SACRED — never overwrite during any sync operation. This is Qashivo-owned data, a core stickiness factor, and a data asset for the bank buyer.
 8. Make targeted edits, not full rebuilds, unless Simon explicitly asks for a rebuild.
@@ -91,6 +93,7 @@ The wrappers enforce Off / Testing / Soft Live / Live modes and **fail closed on
 - Sprint 6: Debtor Detail page + row navigation + three-dot menus
 - Sprint 7: Riley AI Assistant (chat widget, conversations, intelligence extraction, onboarding)
 - Sprint 8: Weekly CFO Review (Qashflow tab, review generation, proactive notifications)
+- Charlie Hardening: 14 gaps per CHARLIE_ENGINEERING_SPEC.md (delivery confirmation, PRS Bayesian, execution-time revalidation, tone velocity cap, pre-action compliance, circuit breaker, channel preferences, feedback loop, portfolio controller, P(Pay) log-normal, debtor grouping, seasonal patterns, unreconciled payment detection, cold start + enrichment). Implementation priority order defined in spec.
 
 ---
 
@@ -98,6 +101,8 @@ The wrappers enforce Off / Testing / Soft Live / Live modes and **fail closed on
 
 <!-- ADD NEW ENTRIES AT THE TOP — format: YYYY-MM-DD: What changed -->
 
+- 2026-04-02: Gap 8 implemented — Dead letter handling + delivery confirmation. Custom args (tenant_id, action_id, contact_id, invoice_id) now attached to all SendGrid outbound emails. Webhook receiver logs warnings for legacy emails without custom args. Event bus processDeliveryOutcome() updates action delivery status on delivered/bounce/dropped events. Hard bounces create timeline events for Data Health. Retry logic (max 2 retries, 5m/30m delay) in actionExecutor. Touch counting queries in actionPlanner and complianceEngine exclude failed deliveries. Schema: added voiceContactRecord (jsonb) to actions table.
+- 2026-04-02: CHARLIE_ENGINEERING_SPEC.md v1.1 created — 14 gaps covering Charlie decision engine hardening. Full audit of tone escalation, PRS, delivery pipeline, P(Pay) model, portfolio controller, channel effectiveness, cold start. Identified SendGrid webhook pipeline non-functional (plumbing exists, nothing flows). Identified bank transaction sync not wired. Pre-action 30-day compliance gap found. New tables specified: debtorIntelligence, debtorGroups, probablePayments. New fields on actions, contacts, tenants tables. Template fallback messages for LLM circuit breaker. UK "Time to Pay Up" legislation (24 March 2026) factored in — separate DISPUTE_RESOLUTION_SPEC.md to be created.
 - 2026-03-22: Added voice wrapper for Retell communication mode enforcement. Completed comms mode audit across all outbound channels.
 
 ---
@@ -110,6 +115,11 @@ The wrappers enforce Off / Testing / Soft Live / Live modes and **fail closed on
 - **Xero redirect URI**: Still references REPLIT_DOMAINS in xero.ts constructor — needs APP_URL
 - **Old sync code**: syncContactsToDatabase may still exist — needs deletion if unused
 - **Invoice sync incomplete**: syncInvoicesAndContacts may not be writing to both cached_xero_invoices AND main invoices table
+- **SendGrid delivery webhooks — FIXED (Gap 8)**: Custom args now attached, webhook events flow through event bus to update action delivery status. Remaining limitation: connected email (Gmail/Outlook OAuth) path has no delivery tracking — no equivalent to SendGrid custom_args or webhooks. Also: `processed`, `unsubscribe`, `spamreport`, `group_unsubscribe`, `group_resubscribe` events are not handled (recorded in contactOutcomes but not in DELIVERY_EVENT_TYPES). Data Health endpoint does not yet query timeline events for hard bounce signals — the auto-flip creates the event but Data Health only checks static contact fields.
+- **Tone escalation engine stateless**: toneEscalationEngine.ts recalculates tone from scratch each cycle without reading agentToneLevel from prior actions. Allows erratic tone jumps. See CHARLIE_ENGINEERING_SPEC.md Gap 5.
+- **PRS no sample size guard**: A debtor with 1 kept promise scores PRS 100, identical to 20 kept promises. See CHARLIE_ENGINEERING_SPEC.md Gap 2.
+- **No pre-action 30-day response window**: No hard constraint prevents Charlie from contacting a debtor during the statutory 30-day response period after a Legal tone Letter Before Action. Compliance risk. See CHARLIE_ENGINEERING_SPEC.md Gap 10.
+- **Bank transactions not synced**: xero.ts has getBankTransactions() API methods but xeroSync.ts never calls them. bankTransactionsCount hardcoded to 0. Table truncated on initial sync but never repopulated. See CHARLIE_ENGINEERING_SPEC.md Gap 14.
 
 ---
 
@@ -126,6 +136,18 @@ The wrappers enforce Off / Testing / Soft Live / Live modes and **fail closed on
 - **Replit remnants**: Old code may reference REPLIT_DOMAINS, Replit-specific env vars, or Replit file paths. Replace with APP_URL and Railway equivalents. All @replit packages have been removed.
 - **Drizzle schema is large**: ~92 tables. When making schema changes, check for FK dependencies before adding/removing columns. Large schemas may need manual SQL via scripts to avoid drizzle-kit column type conflicts.
 - **AI layer is thin**: The current AI integration (charlieDecisionEngine, charliePlaybook, intentAnalyst, actionPlanner) is acknowledged as too thin/bolted-on. Future architecture moves toward five distinct agents with shared state and orchestration.
+- **Silent error swallowing pattern**: Multiple places in the codebase use catch blocks that silently discard errors (e.g., SendGrid webhook handler line 805 `if (!tenant_id) continue`). This caused the entire delivery event pipeline to fail silently. When debugging persistent issues, write diagnostic scripts before attempting fixes. Always add observability logging in catch blocks.
+- **Connected email has no delivery tracking**: Gmail/Outlook OAuth path in ConnectedEmailService.ts sends email but has no webhook infrastructure, no custom_args equivalent, and no way to track delivery/bounce/open/click. All delivery tracking is SendGrid-only.
+- **Data Health is static-field-only**: The `/api/settings/data-health` endpoint only checks contact fields (email populated, phone populated, generic email patterns). It does NOT query timelineEvents. Hard bounce timeline events from Gap 8 won't change Data Health readiness until the endpoint is extended.
+- **Half-built pipelines**: A recurring pattern — infrastructure exists (tables, interfaces, service methods) but is never wired into the runtime flow. Confirmed cases: SendGrid delivery webhooks (custom args missing), bank transaction sync (API methods exist, never called), communicationOutcomeProcessor (exists, no subscribers). Before assuming a feature works, trace the data flow end-to-end.
+
+### Charlie decision engine (from full audit)
+- **Consolidation is sound**: actionPlanner.ts (lines 618-898) correctly filters invoices individually before bundling. Only invoices that pass exclusion checks enter consolidated actions.
+- **agentToneLevel already stored**: actions table has agentToneLevel (varchar) at line 806 of schema.ts. The tone engine writes it but never reads it back.
+- **Channel effectiveness scores never update**: customerLearningProfiles stores emailEffectiveness, smsEffectiveness, voiceEffectiveness (0-1, default 0.5). collectionLearningService.ts has getOrCreateCustomerProfile(). But communicationOutcomeProcessor is not wired to update these scores. The EMA formula (newScore = oldScore x 0.8 + thisInteraction x 0.2) exists in documentation but nothing triggers it.
+- **P(Pay) uses 3 of 6 available signals**: adaptive-scheduler.ts estimateProbabilityOfPayment() uses medianDaysToPay, channel reply rates, weekdayEffect. Ignores p75DaysToPay, volatility, trend.
+- **Portfolio urgency applied uniformly**: portfolioController.ts calculates tenant-level urgency factor but applies it identically to all debtors regardless of their contribution to the DSO problem.
+- **Xero API training prohibition**: March 2026 developer terms prohibit using Xero API data for AI/ML training. Architecture must position AI as inference on customer-owned data. Open Banking data (via TrueLayer/Yapily) has no such restriction — all model training should use Open Banking data.
 
 ### Sync conventions
 - **Invoice-first sync**: Fetch invoices from Xero → extract contacts from invoice data → batch-fetch contact details. This is the correct sync path (xeroSync.ts), NOT the old syncContactsToDatabase.
@@ -241,6 +263,9 @@ Started from `server/startup/orchestrator.ts`. All fire-and-forget async calls m
 - `rileyConversations` — conversation history between Riley and users (Sprint 7)
 - `forecastUserAdjustments` — cashflow inputs from Riley conversations (Sprint 7)
 - `weeklyReviews` — generated CFO review content (Sprint 8)
+- `debtorIntelligence` — AI enrichment data from Companies House, CCJ register, web search (Charlie spec Gap 6)
+- `debtorGroups` — linked debtor entities sharing AP department or ownership (Charlie spec Gap 12)
+- `probablePayments` — unreconciled bank transaction matches against outstanding invoices (Charlie spec Gap 14)
 
 ## Important Conventions
 - TypeScript ESM throughout — no CommonJS `require()`

@@ -66,7 +66,11 @@ async function enforceCommunicationMode(params: {
   // MODE: TESTING — redirect to test addresses
   if (mode === 'testing') {
     const testEmails = tenant?.testEmails as string[] | null;
-    if (testEmails?.length && !subject.startsWith('[TEST]')) {
+    if (!testEmails?.length) {
+      console.error(`🚫 [CommMode] BLOCKED — testing mode but no test email addresses configured for tenant ${params.tenantId}`);
+      return { allowed: false, to, subject, html, text, mode, error: 'No test email addresses configured for testing mode' };
+    }
+    if (!subject.startsWith('[TEST]')) {
       const originalTo = to;
       to = testEmails[0];
       subject = `[TEST] ${subject}`;
@@ -85,7 +89,11 @@ async function enforceCommunicationMode(params: {
   //       If opted in → send to real recipient. If not → redirect to test address.
   if (mode === 'soft_live') {
     const testEmails = tenant?.testEmails as string[] | null;
-    if (testEmails?.length && !subject.startsWith('[SOFT LIVE]')) {
+    if (!testEmails?.length) {
+      console.error(`🚫 [CommMode] BLOCKED — soft_live mode but no test email addresses configured for tenant ${params.tenantId}`);
+      return { allowed: false, to, subject, html, text, mode, error: 'No test email addresses configured for soft_live mode' };
+    }
+    if (!subject.startsWith('[SOFT LIVE]')) {
       const originalTo = to;
       to = testEmails[0];
       subject = `[SOFT LIVE] ${subject}`;
@@ -118,7 +126,9 @@ export async function sendEmail(params: {
   invoiceId?: string;
   customerId?: string;
   trackClicks?: boolean;
-  tenantId?: string;
+  tenantId: string;
+  actionId?: string;
+  contactId?: string;
 }): Promise<{ success: boolean; messageId?: string; error?: string; actualTo?: string; actualSubject?: string; actualCc?: string[] }> {
   try {
     // 1. Demo mode check (short-circuits everything)
@@ -142,83 +152,78 @@ export async function sendEmail(params: {
     // 2. COMMUNICATION MODE ENFORCEMENT — must happen BEFORE any send path
     //    This is the security-critical check. It runs before connected email,
     //    before SendGrid, before anything that touches the wire.
-    if (params.tenantId) {
-      try {
-        const modeResult = await enforceCommunicationMode({
-          tenantId: params.tenantId,
-          to: params.to,
-          subject: params.subject,
-          html: params.html,
-          text: params.text,
-        });
+    //    tenantId is required — every email must go through mode check.
+    try {
+      const modeResult = await enforceCommunicationMode({
+        tenantId: params.tenantId,
+        to: params.to,
+        subject: params.subject,
+        html: params.html,
+        text: params.text,
+      });
 
-        if (!modeResult.allowed) {
-          // Mode is OFF — hard block
-          throw new Error(modeResult.error || 'Communication mode is OFF');
-        }
-
-        // Apply any mode transformations (test redirect, subject prefix, etc.)
-        params.to = modeResult.to;
-        params.subject = modeResult.subject;
-        params.html = modeResult.html;
-        params.text = modeResult.text;
-
-        // CC handling: suppress in testing/soft_live, pass through in live
-        if (modeResult.mode !== 'live' && params.cc?.length) {
-          const suppressedCc = params.cc.join(', ');
-          const ccNote = `<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:8px 16px;margin-bottom:12px;font-size:12px;color:#92400e;"><strong>CC suppressed (${modeResult.mode} mode)</strong>: ${suppressedCc}</div>`;
-          params.html = ccNote + params.html;
-          if (params.text) {
-            params.text = `[CC suppressed (${modeResult.mode} mode): ${suppressedCc}]\n\n${params.text}`;
-          }
-          console.log(`🧪 [CommMode] CC suppressed in ${modeResult.mode} mode: ${suppressedCc}`);
-          params.cc = [];
-        }
-      } catch (err: any) {
-        if (err.message?.includes('Communication mode is OFF')) {
-          // Re-throw mode-off errors — these are intentional blocks
-          return { success: false, error: err.message };
-        }
-        console.warn('[EmailSafetyNet] Could not check communication mode:', err);
-        // If we can't verify the mode, block in production as a safety measure
-        if (process.env.NODE_ENV === 'production') {
-          console.error('🚫 [EmailSafetyNet] BLOCKING email — cannot verify communication mode in production');
-          return { success: false, error: 'Cannot verify communication mode — email blocked for safety' };
-        }
+      if (!modeResult.allowed) {
+        // Mode is OFF — hard block
+        throw new Error(modeResult.error || 'Communication mode is OFF');
       }
-    } else {
-      console.log(`📧 [EmailRouting] No tenantId provided — system/internal email, no mode check`);
+
+      // Apply any mode transformations (test redirect, subject prefix, etc.)
+      params.to = modeResult.to;
+      params.subject = modeResult.subject;
+      params.html = modeResult.html;
+      params.text = modeResult.text;
+
+      // CC handling: suppress in testing/soft_live, pass through in live
+      if (modeResult.mode !== 'live' && params.cc?.length) {
+        const suppressedCc = params.cc.join(', ');
+        const ccNote = `<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:8px 16px;margin-bottom:12px;font-size:12px;color:#92400e;"><strong>CC suppressed (${modeResult.mode} mode)</strong>: ${suppressedCc}</div>`;
+        params.html = ccNote + params.html;
+        if (params.text) {
+          params.text = `[CC suppressed (${modeResult.mode} mode): ${suppressedCc}]\n\n${params.text}`;
+        }
+        console.log(`🧪 [CommMode] CC suppressed in ${modeResult.mode} mode: ${suppressedCc}`);
+        params.cc = [];
+      }
+    } catch (err: any) {
+      if (err.message?.includes('Communication mode is OFF')) {
+        // Re-throw mode-off errors — these are intentional blocks
+        return { success: false, error: err.message };
+      }
+      console.warn('[EmailSafetyNet] Could not check communication mode:', err);
+      // Fail closed — block in production if we can't verify
+      if (process.env.NODE_ENV === 'production') {
+        console.error('🚫 [EmailSafetyNet] BLOCKING email — cannot verify communication mode in production');
+        return { success: false, error: 'Cannot verify communication mode — email blocked for safety' };
+      }
     }
 
     // 3. Connected email routing (mode has already been enforced above)
-    if (params.tenantId) {
-      try {
-        const { isEmailConnected, sendViaConnectedAccount } = await import('./email/ConnectedEmailService.js');
-        const connected = await isEmailConnected(params.tenantId);
-        console.log(`📧 [EmailRouting] tenantId=${params.tenantId}, connected=${connected}`);
-        if (connected) {
-          console.log(`📧 [EmailRouting] Sending via connected email account for tenant ${params.tenantId}`);
-          const connectedResult = await sendViaConnectedAccount({
-            tenantId: params.tenantId,
-            to: params.to, // Already transformed by mode enforcement
-            cc: params.cc, // Already suppressed in non-live modes
-            subject: params.subject,
-            htmlBody: params.html,
-            textBody: params.text,
-            replyTo: params.replyTo,
-            headers: params.headers,
-          });
-          if (connectedResult.success) {
-            console.log(`✅ [EmailRouting] Email sent via connected account, messageId: ${connectedResult.messageId}`);
-            return connectedResult;
-          }
-          console.warn(`⚠️ [EmailRouting] Connected email send failed, falling back to SendGrid: ${connectedResult.error}`);
-        } else {
-          console.log(`📧 [EmailRouting] No connected email for tenant ${params.tenantId}, using SendGrid`);
+    try {
+      const { isEmailConnected, sendViaConnectedAccount } = await import('./email/ConnectedEmailService.js');
+      const connected = await isEmailConnected(params.tenantId);
+      console.log(`📧 [EmailRouting] tenantId=${params.tenantId}, connected=${connected}`);
+      if (connected) {
+        console.log(`📧 [EmailRouting] Sending via connected email account for tenant ${params.tenantId}`);
+        const connectedResult = await sendViaConnectedAccount({
+          tenantId: params.tenantId,
+          to: params.to, // Already transformed by mode enforcement
+          cc: params.cc, // Already suppressed in non-live modes
+          subject: params.subject,
+          htmlBody: params.html,
+          textBody: params.text,
+          replyTo: params.replyTo,
+          headers: params.headers,
+        });
+        if (connectedResult.success) {
+          console.log(`✅ [EmailRouting] Email sent via connected account, messageId: ${connectedResult.messageId}`);
+          return connectedResult;
         }
-      } catch (routingErr: any) {
-        console.error(`❌ [EmailRouting] Error checking connected email, falling back to SendGrid:`, routingErr.message);
+        console.warn(`⚠️ [EmailRouting] Connected email send failed, falling back to SendGrid: ${connectedResult.error}`);
+      } else {
+        console.log(`📧 [EmailRouting] No connected email for tenant ${params.tenantId}, using SendGrid`);
       }
+    } catch (routingErr: any) {
+      console.error(`❌ [EmailRouting] Error checking connected email, falling back to SendGrid:`, routingErr.message);
     }
 
     // 4. SendGrid dispatch (mode already enforced, params already transformed)
@@ -234,6 +239,13 @@ export async function sendEmail(params: {
       replyTo: params.replyTo ? { email: params.replyTo } : undefined,
       customHeaders: params.headers,
       trackClicks: params.trackClicks,
+      // Gap 8: Attach custom args for SendGrid webhook delivery tracking
+      customArgs: {
+        tenant_id: params.tenantId,
+        ...(params.actionId && { action_id: params.actionId }),
+        ...(params.contactId || params.customerId ? { contact_id: (params.contactId || params.customerId)! } : {}),
+        ...(params.invoiceId && { invoice_id: params.invoiceId }),
+      },
     };
 
     const result = await emailService.sendEmail(message);
@@ -258,7 +270,7 @@ export async function sendReminderEmail(params: {
   subject: string;
   html: string;
   text?: string;
-  tenantId?: string;
+  tenantId: string;
 }): Promise<{ success: boolean; messageId?: string; error?: string }> {
   return await sendEmail(params);
 }
@@ -270,11 +282,11 @@ export async function sendBulkEmails(params: {
   html: string;
   text?: string;
   recipients: Array<{ email: string; name?: string }>;
-  tenantId?: string;
+  tenantId: string;
 }): Promise<boolean> {
   try {
     // SECURITY: Enforce communication mode for bulk sends
-    if (params.tenantId) {
+    {
       const modeResult = await enforceCommunicationMode({
         tenantId: params.tenantId,
         to: params.recipients[0]?.email || 'unknown',
@@ -326,7 +338,7 @@ export async function sendEmailWithAttachment(params: {
   subject: string;
   html: string;
   text?: string;
-  tenantId?: string;
+  tenantId: string;
   attachments?: Array<{
     filename: string;
     content: Buffer;
@@ -335,25 +347,23 @@ export async function sendEmailWithAttachment(params: {
 }): Promise<boolean> {
   try {
     // SECURITY: Enforce communication mode for attachment emails
-    if (params.tenantId) {
-      const modeResult = await enforceCommunicationMode({
-        tenantId: params.tenantId,
-        to: params.to,
-        subject: params.subject,
-        html: params.html,
-        text: params.text,
-      });
+    const modeResult = await enforceCommunicationMode({
+      tenantId: params.tenantId,
+      to: params.to,
+      subject: params.subject,
+      html: params.html,
+      text: params.text,
+    });
 
-      if (!modeResult.allowed) {
-        console.log(`🚫 [AttachmentEmail] Blocked — communication mode is OFF for tenant ${params.tenantId}`);
-        return false;
-      }
-
-      params.to = modeResult.to;
-      params.subject = modeResult.subject;
-      params.html = modeResult.html;
-      params.text = modeResult.text;
+    if (!modeResult.allowed) {
+      console.log(`🚫 [AttachmentEmail] Blocked — communication mode is OFF for tenant ${params.tenantId}`);
+      return false;
     }
+
+    params.to = modeResult.to;
+    params.subject = modeResult.subject;
+    params.html = modeResult.html;
+    params.text = modeResult.text;
 
     const message: EmailMessage = {
       to: [{ email: params.to }],

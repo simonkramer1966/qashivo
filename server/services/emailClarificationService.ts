@@ -139,9 +139,10 @@ class EmailClarificationService {
         subject,
         html: htmlContent,
         text: textContent,
-        tenantId: context.tenantId
+        tenantId: context.tenantId,
+        contactId: context.contactId,
       });
-      
+
       if (!result.success) {
         console.error(`❌ Failed to send clarification email: ${result.error}`);
         return { success: false, error: result.error };
@@ -235,9 +236,11 @@ class EmailClarificationService {
         subject,
         html: htmlContent,
         text: textContent,
-        tenantId: context.tenantId
+        tenantId: context.tenantId,
+        contactId: context.contactId,
+        invoiceId: context.invoiceId,
       });
-      
+
       if (!result.success) {
         console.error(`❌ Failed to send confirmation email: ${result.error}`);
         return { success: false, error: result.error };
@@ -1112,7 +1115,8 @@ ${htmlBody}
         subject,
         html: htmlContent,
         text: textContent,
-        tenantId: context.tenantId
+        tenantId: context.tenantId,
+        contactId: context.contactId,
       });
 
       if (!result.success) {
@@ -1464,7 +1468,9 @@ ${htmlBody}
         subject,
         html: htmlContent,
         text: textContent,
-        tenantId: context.tenantId
+        tenantId: context.tenantId,
+        contactId: context.contactId,
+        actionId: context.actionId,
       });
 
       if (!result.success) {

@@ -431,8 +431,22 @@ export class ActionExecutor {
         subject: emailContent.subject,
         html: emailContent.body,
         text: textBody,
-        tenantId: action.tenantId
+        tenantId: action.tenantId,
+        actionId: action.id,
+        contactId: contact.id,
+        invoiceId: invoice?.id,
       });
+
+      // Gap 8: Track delivery status on the action record
+      if (result?.success) {
+        await db.update(actions).set({
+          deliveryStatus: 'sent',
+          providerMessageId: result.messageId,
+          updatedAt: new Date(),
+        }).where(eq(actions.id, action.id));
+      } else {
+        await this.handleSendFailure(action, result?.error);
+      }
 
       if (usedPreGenerated) {
         await messagePreGenerator.markDraftUsed(action.id);
@@ -528,6 +542,7 @@ export class ActionExecutor {
       const result = await sendSMS({
         to: recipientPhone,
         message: message,
+        tenantId: action.tenantId,
       });
 
       if (usedPreGenerated && result.success) {
@@ -579,6 +594,7 @@ export class ActionExecutor {
         to: contact.phone,
         message: message,
         from: process.env.VONAGE_WHATSAPP_NUMBER || process.env.VONAGE_PHONE_NUMBER,
+        tenantId: action.tenantId,
       });
 
       return { 
@@ -731,6 +747,73 @@ export class ActionExecutor {
     }
 
     return result;
+  }
+
+  /**
+   * Gap 8: Handle synchronous send failures with retry logic
+   * Max 2 retries: first after 5 minutes, second after 30 minutes.
+   */
+  private async handleSendFailure(action: any, error?: string): Promise<void> {
+    const currentRetryCount = action.retryCount || 0;
+
+    if (currentRetryCount < 2) {
+      const delayMinutes = currentRetryCount === 0 ? 5 : 30;
+      const retryScheduledFor = new Date(Date.now() + delayMinutes * 60 * 1000);
+
+      // Create a retry action by cloning the failed one
+      try {
+        await db.insert(actions).values({
+          tenantId: action.tenantId,
+          invoiceId: action.invoiceId,
+          contactId: action.contactId,
+          type: action.type,
+          subject: action.subject,
+          content: action.content,
+          scheduledFor: retryScheduledFor,
+          status: 'scheduled',
+          approvedBy: action.approvedBy,
+          approvedAt: action.approvedAt,
+          agentType: action.agentType || 'collections',
+          actionSummary: `[RETRY ${currentRetryCount + 1}] ${action.actionSummary || action.subject || ''}`,
+          retryOf: action.id,
+          retryCount: currentRetryCount + 1,
+          agentToneLevel: action.agentToneLevel,
+          agentChannel: action.agentChannel,
+          metadata: action.metadata,
+          priority: action.priority,
+        });
+      } catch (insertErr) {
+        console.error(`[Retry] Failed to create retry action for ${action.id}:`, insertErr);
+      }
+
+      // Mark original as failed (not permanent — retry pending)
+      await db.update(actions).set({
+        deliveryStatus: 'failed',
+        retryCount: currentRetryCount + 1,
+        updatedAt: new Date(),
+      }).where(eq(actions.id, action.id));
+
+      console.log(`[Retry] Action ${action.id} failed, retry ${currentRetryCount + 1} scheduled in ${delayMinutes}m`);
+    } else {
+      // Retries exhausted
+      await db.update(actions).set({
+        deliveryStatus: 'failed_permanent',
+        retryCount: currentRetryCount,
+        updatedAt: new Date(),
+      }).where(eq(actions.id, action.id));
+
+      console.log(`[Retry] Action ${action.id} failed permanently after ${currentRetryCount} retries`);
+
+      // Record hard bounce for Data Health
+      if (action.contactId) {
+        try {
+          const { eventBus } = await import('../lib/event-bus');
+          await (eventBus as any).handleHardBounce(action.tenantId, action.contactId);
+        } catch (err) {
+          console.error('[Retry] Failed to record hard bounce (non-fatal):', err);
+        }
+      }
+    }
   }
 }
 

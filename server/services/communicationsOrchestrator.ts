@@ -279,7 +279,9 @@ class CommunicationsOrchestrator {
         from: `${fromName} <${fromEmail}>`,
         invoiceId: request.invoiceIds?.[0],
         customerId: request.contactId,
-        tenantId: request.tenantId
+        tenantId: request.tenantId,
+        actionId: request.actionId,
+        contactId: request.contactId,
       });
       
       if (!result.success) {
@@ -330,6 +332,7 @@ class CommunicationsOrchestrator {
         message: request.content,
         invoiceId: request.invoiceIds?.[0],
         customerId: request.contactId,
+        tenantId: request.tenantId,
       });
       
       return {

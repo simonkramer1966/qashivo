@@ -1,9 +1,9 @@
 /**
  * Event Bus Service
- * 
+ *
  * Unified event publishing system for outcome tracking and decision explainability.
  * Handles idempotency to prevent duplicate events from webhook retries.
- * 
+ *
  * Event Types:
  * - contact.attempted: Outbound contact initiated
  * - contact.outcome: Webhook result (delivered, opened, replied, etc.)
@@ -14,11 +14,11 @@
  */
 
 import { db } from "../db";
-import { contactOutcomes, policyDecisions } from "@shared/schema";
+import { contactOutcomes, policyDecisions, actions, timelineEvents } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
 // Event Types
-export type EventType = 
+export type EventType =
   | 'contact.attempted'
   | 'contact.outcome'
   | 'payment.recorded'
@@ -65,6 +65,12 @@ export interface PolicyDecisionEvent {
   decisionContext?: Record<string, any>;
 }
 
+// Delivery event types that should trigger action status updates
+const DELIVERY_EVENT_TYPES = new Set([
+  'delivered', 'open', 'opened', 'click', 'clicked',
+  'bounce', 'bounced', 'dropped', 'deferred', 'failed',
+]);
+
 class EventBusService {
   /**
    * Publish a contact outcome event
@@ -100,9 +106,80 @@ class EventBusService {
       });
 
       console.log(`📊 Event published: ${event.type} [${event.idempotencyKey}]`);
+
+      // Gap 8: Process delivery outcomes to update action status
+      if (event.actionId && event.outcome && DELIVERY_EVENT_TYPES.has(event.outcome.toLowerCase())) {
+        await this.processDeliveryOutcome(event).catch(err => {
+          console.error('[EventBus] Failed to process delivery outcome (non-fatal):', err);
+        });
+      }
     } catch (error) {
       console.error(`❌ Failed to publish contact outcome event:`, error);
       throw error;
+    }
+  }
+
+  /**
+   * Gap 8: Process delivery webhook events and update action delivery status
+   */
+  private async processDeliveryOutcome(event: ContactOutcomeEvent): Promise<void> {
+    if (!event.actionId) return;
+
+    const outcome = (event.outcome || '').toLowerCase();
+
+    let deliveryStatus: string | undefined;
+    if (outcome === 'delivered') {
+      deliveryStatus = 'delivered';
+    } else if (outcome === 'bounce' || outcome === 'bounced') {
+      const bounceType = event.payload?.type;
+      deliveryStatus = bounceType === 'hard' ? 'failed_permanent' : 'bounced';
+    } else if (outcome === 'dropped') {
+      deliveryStatus = 'failed_permanent';
+    } else if (outcome === 'deferred') {
+      console.log(`[DeliveryStatus] Deferred event for action ${event.actionId} — keeping current status`);
+      return;
+    } else {
+      // open, click etc. — don't change delivery status
+      return;
+    }
+
+    await db.update(actions).set({
+      deliveryStatus,
+      deliveryConfirmedAt: new Date(),
+      deliveryRawPayload: event.payload,
+      providerMessageId: event.providerMessageId,
+      updatedAt: new Date(),
+    }).where(eq(actions.id, event.actionId));
+
+    console.log(`[DeliveryStatus] Action ${event.actionId} → ${deliveryStatus}`);
+
+    // Hard bounce → record in timeline for Data Health visibility
+    if (deliveryStatus === 'failed_permanent' && event.contactId) {
+      await this.handleHardBounce(event.tenantId, event.contactId);
+    }
+  }
+
+  /**
+   * Gap 8: Record hard bounce as timeline event for Data Health surfacing
+   */
+  private async handleHardBounce(tenantId: string, contactId: string): Promise<void> {
+    try {
+      await db.insert(timelineEvents).values({
+        tenantId,
+        customerId: contactId,
+        occurredAt: new Date(),
+        direction: 'internal',
+        channel: 'system',
+        summary: 'Email hard bounced — address may be invalid. Check Data Health.',
+        outcomeType: 'no_response',
+        provider: 'sendgrid',
+        status: 'failed',
+        outcomeExtracted: { autoDetected: true, source: 'sendgrid_webhook', eventType: 'email_hard_bounce' },
+      });
+
+      console.log(`[DataHealth] Hard bounce recorded for contact ${contactId} — will surface in Data Health`);
+    } catch (err) {
+      console.error('[DataHealth] Hard bounce recording failed (non-fatal):', err);
     }
   }
 

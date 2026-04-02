@@ -314,7 +314,8 @@ export class ActionPlanner {
           and(
             eq(actions.contactId, contact.id),
             eq(actions.invoiceId, invoice.id),
-            sql`${actions.status} IN ('completed', 'sent')`
+            sql`${actions.status} IN ('completed', 'sent')`,
+            sql`(${actions.deliveryStatus} IS NULL OR ${actions.deliveryStatus} NOT IN ('failed', 'failed_permanent', 'bounced'))`
           )
         )
         .orderBy(sql`${actions.completedAt} DESC NULLS LAST`)
