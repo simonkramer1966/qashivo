@@ -1,6 +1,7 @@
 import { storage } from "../storage";
 import { generateText } from "./llm/claude";
 import type { Invoice, Contact, WeeklyReview } from "@shared/schema";
+import { fitDistribution, getPaymentForecast } from "./paymentDistribution";
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -64,10 +65,16 @@ function addDays(dateStr: string, days: number): string {
 
 /**
  * Group overdue invoices by contact and calculate per-debtor scenarios.
+ *
+ * Gap 7: Uses log-normal distribution to produce data-driven three-scenario
+ * forecasts instead of hardcoded multipliers (optimistic=due date,
+ * expected=avg, pessimistic=1.5×avg). The distribution incorporates
+ * medianDaysToPay, p75DaysToPay, volatility, and trend from behavior signals.
  */
 function buildDebtorScenarios(
   overdueInvoices: (Invoice & { contact: Contact })[],
   globalAvgDaysToPay: number,
+  behaviorSignalsByContact?: Map<string, { medianDaysToPay: number | null; p75DaysToPay: number | null; volatility: number | null; trend: number | null }>,
 ): DebtorScenario[] {
   const byContact: Record<string, { contact: Contact; invoices: Invoice[] }> = {};
 
@@ -95,6 +102,18 @@ function buildDebtorScenarios(
     // Use contact-level avgDaysToPay if available, else global
     const avg = (contact as any).avgDaysToPay ?? globalAvgDaysToPay;
 
+    // Gap 7: Use log-normal distribution for scenario dates
+    const signals = behaviorSignalsByContact?.get(contactId);
+    const median = signals?.medianDaysToPay ?? avg ?? null;
+    const params = fitDistribution(
+      median ? Number(median) : null,
+      signals?.p75DaysToPay ? Number(signals.p75DaysToPay) : null,
+      signals?.volatility ? Number(signals.volatility) : null,
+      signals?.trend ? Number(signals.trend) : null,
+    );
+    const dataConfidence = median ? 0.8 : 0.3;
+    const forecast = getPaymentForecast(params, dataConfidence);
+
     scenarios.push({
       contactId,
       contactName: contact.name || "Unknown",
@@ -102,12 +121,9 @@ function buildDebtorScenarios(
       invoiceCount: invoices.length,
       oldestDueDate,
       avgDaysToPay: avg || null,
-      optimisticDate: oldestDueDate, // pays on original due date
-      expectedDate: addDays(oldestDueDate, avg || globalAvgDaysToPay),
-      pessimisticDate: addDays(
-        oldestDueDate,
-        (avg || globalAvgDaysToPay) * 1.5,
-      ),
+      optimisticDate: addDays(oldestDueDate, forecast.optimisticDate),
+      expectedDate: addDays(oldestDueDate, forecast.expectedDate),
+      pessimisticDate: addDays(oldestDueDate, forecast.pessimisticDate),
     });
   }
 
@@ -197,6 +213,60 @@ Keep the tone professional but accessible — this is for a business owner, not 
 Use GBP (£) for all amounts. Be specific with numbers, not vague.`;
 }
 
+// ── Gap 7: Behavior Signal Fetch for Distribution Forecasting ──
+
+/**
+ * Bulk-fetch customerBehaviorSignals for all contacts in the overdue invoice set.
+ * Returns a Map keyed by contactId with the distribution-relevant fields.
+ */
+async function fetchBehaviorSignalsForContacts(
+  tenantId: string,
+  overdueInvoices: (Invoice & { contact: Contact })[],
+): Promise<Map<string, { medianDaysToPay: number | null; p75DaysToPay: number | null; volatility: number | null; trend: number | null }>> {
+  const result = new Map<string, { medianDaysToPay: number | null; p75DaysToPay: number | null; volatility: number | null; trend: number | null }>();
+
+  const contactIds = Array.from(new Set(overdueInvoices.map(inv => inv.contactId).filter(Boolean) as string[]));
+  if (contactIds.length === 0) return result;
+
+  try {
+    const { db } = await import("../db");
+    const { customerBehaviorSignals } = await import("@shared/schema");
+    const { eq, and, inArray } = await import("drizzle-orm");
+
+    const signals = await db
+      .select({
+        contactId: customerBehaviorSignals.contactId,
+        medianDaysToPay: customerBehaviorSignals.medianDaysToPay,
+        p75DaysToPay: customerBehaviorSignals.p75DaysToPay,
+        volatility: customerBehaviorSignals.volatility,
+        trend: customerBehaviorSignals.trend,
+      })
+      .from(customerBehaviorSignals)
+      .where(
+        and(
+          eq(customerBehaviorSignals.tenantId, tenantId),
+          inArray(customerBehaviorSignals.contactId, contactIds),
+        ),
+      );
+
+    for (const s of signals) {
+      if (s.contactId) {
+        result.set(s.contactId, {
+          medianDaysToPay: s.medianDaysToPay ? Number(s.medianDaysToPay) : null,
+          p75DaysToPay: s.p75DaysToPay ? Number(s.p75DaysToPay) : null,
+          volatility: s.volatility ? Number(s.volatility) : null,
+          trend: s.trend ? Number(s.trend) : null,
+        });
+      }
+    }
+  } catch (err) {
+    console.error("[WeeklyReview] Failed to fetch behavior signals for distribution forecasting:", err);
+    // Fall back to cold-start priors — buildDebtorScenarios handles missing signals
+  }
+
+  return result;
+}
+
 // ── Main Generation Function ─────────────────────────────────
 
 export async function generateWeeklyReview(
@@ -215,10 +285,14 @@ export async function generateWeeklyReview(
       storage.getActions(tenantId, 50),
     ]);
 
-  // Build debtor scenarios
+  // Gap 7: Fetch behavior signals for distribution-based forecasting
+  const behaviorSignals = await fetchBehaviorSignalsForContacts(tenantId, overdueInvoices);
+
+  // Build debtor scenarios (Gap 7: with log-normal distribution data)
   const debtorScenarios = buildDebtorScenarios(
     overdueInvoices,
     metrics.avgDaysToPay || 30,
+    behaviorSignals,
   );
 
   // Build three-scenario cashflow estimates

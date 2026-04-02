@@ -13,6 +13,7 @@
 import { addHours, isBefore, differenceInDays } from "date-fns";
 import type { CustomerBehaviorSignal } from "@shared/schema";
 import { eventBus } from "./event-bus";
+import { fitDistribution, estimatePaymentProbability } from "../services/paymentDistribution";
 
 export type Channel = "email" | "sms" | "whatsapp" | "call";
 
@@ -220,7 +221,14 @@ export function scheduleNextTouch(
 
 /**
  * Estimate probability of payment if contacted at time t via channel k
- * Uses customer behavior history, invoice characteristics, and timing factors
+ *
+ * Gap 7: Uses a log-normal distribution fitted from debtor payment history
+ * (medianDaysToPay, p75DaysToPay, volatility, trend) instead of a sigmoid.
+ * This produces distribution-aware timing — debtors with high volatility
+ * spread probability over a wider window, deteriorating trend shifts the
+ * curve right, and p75 data tightens/widens the spread.
+ *
+ * Additive modifiers (channel boost, amount penalty, weekday, PTP) are preserved.
  */
 function estimateProbabilityOfPayment(
   customer: CustomerContext,
@@ -229,24 +237,21 @@ function estimateProbabilityOfPayment(
   channel: Channel
 ): number {
   const behavior = customer.behavior;
-  
-  // Base probability from payment lag history
-  let base = 0.3; // Default for new customers
-  
-  if (behavior && behavior.medianDaysToPay) {
-    const medianLag = Number(behavior.medianDaysToPay);
-    const ageDays = invoice.ageDays;
-    
-    // Sigmoid curve: probability increases as invoice ages toward median payment time
-    const relativeAge = ageDays / medianLag;
-    base = sigmoid(2.0 * relativeAge - 1.5); // Peaks around median lag
-  } else {
-    // Cold start: use segment priors from SEGMENT_PRIORS constant
-    const segment = customer.segment || "default";
-    const priors = SEGMENT_PRIORS[segment] || SEGMENT_PRIORS.default;
-    base = priors.pPayBase;
-  }
-  
+  const segment = customer.segment || "default";
+  const hoursFromNow = Math.max(1, (time.getTime() - Date.now()) / (1000 * 60 * 60));
+
+  // Fit log-normal distribution from debtor's payment history
+  const params = fitDistribution(
+    behavior?.medianDaysToPay ? parseFloat(String(behavior.medianDaysToPay)) : null,
+    behavior?.p75DaysToPay ? parseFloat(String(behavior.p75DaysToPay)) : null,
+    behavior?.volatility ? parseFloat(String(behavior.volatility)) : null,
+    behavior?.trend ? parseFloat(String(behavior.trend)) : null,
+    segment,
+  );
+
+  // Base probability from log-normal distribution
+  let base = estimatePaymentProbability(invoice.ageDays, hoursFromNow, params);
+
   // Channel effectiveness boost
   let channelBoost = 0.05; // Default
   if (behavior) {
@@ -258,10 +263,10 @@ function estimateProbabilityOfPayment(
     };
     channelBoost = (rates[channel] || 0.05) * 0.6; // Scale channel response rate
   }
-  
+
   // Amount sensitivity penalty (larger invoices paid slower)
   const amountPenalty = Math.min(0.25, Math.log10(Math.max(1, invoice.amount)) / 20);
-  
+
   // Weekday effect
   const weekday = time.getDay();
   let weekdayAdj = 0;
@@ -269,10 +274,10 @@ function estimateProbabilityOfPayment(
     const effects = behavior.weekdayEffect as number[];
     weekdayAdj = (effects[weekday] || 1.0) - 1.0; // Convert multiplier to adjustment
   }
-  
+
   // Promise to pay boost
   const ptpBoost = invoice.promiseToPayAt && isBefore(time, invoice.promiseToPayAt) ? 0.15 : 0;
-  
+
   return clamp(base + channelBoost - amountPenalty + weekdayAdj + ptpBoost, 0, 1);
 }
 
@@ -477,40 +482,11 @@ function buildReasoning(
 }
 
 /**
- * Sigmoid activation function: smooth S-curve from 0 to 1
- */
-function sigmoid(z: number): number {
-  return 1 / (1 + Math.exp(-z));
-}
-
-/**
  * Clamp value between min and max
  */
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
-
-/**
- * Segment priors for cold start (new customers with no history)
- */
-export const SEGMENT_PRIORS: Record<string, { pPayBase: number; expectedDaysToPay: number }> = {
-  small_business: {
-    pPayBase: 0.25,
-    expectedDaysToPay: 21
-  },
-  enterprise: {
-    pPayBase: 0.15,
-    expectedDaysToPay: 45
-  },
-  freelancer: {
-    pPayBase: 0.35,
-    expectedDaysToPay: 14
-  },
-  default: {
-    pPayBase: 0.2,
-    expectedDaysToPay: 30
-  }
-};
 
 /**
  * Log policy decision to event bus for explainability and audit

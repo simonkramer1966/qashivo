@@ -252,6 +252,41 @@ export async function buildDebtorContext(contactId: string, tenantId: string): P
       }
     }
 
+    // Gap 7: Payment distribution forecast
+    try {
+      const { db } = await import("../db");
+      const { customerBehaviorSignals } = await import("@shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+      const { fitDistribution, describeDistribution, getPaymentForecast } = await import("../services/paymentDistribution");
+
+      const [signals] = await db
+        .select()
+        .from(customerBehaviorSignals)
+        .where(and(
+          eq(customerBehaviorSignals.contactId, contactId),
+          eq(customerBehaviorSignals.tenantId, tenantId),
+        ))
+        .limit(1);
+
+      if (signals?.medianDaysToPay) {
+        const params = fitDistribution(
+          Number(signals.medianDaysToPay),
+          signals.p75DaysToPay ? Number(signals.p75DaysToPay) : null,
+          signals.volatility ? Number(signals.volatility) : null,
+          signals.trend ? Number(signals.trend) : null,
+        );
+        const description = describeDistribution(params);
+        const forecast = getPaymentForecast(params, 0.8);
+        lines.push("");
+        lines.push(`PAYMENT PATTERN: Based on their history, this debtor ${description}. Forecast: optimistic day ${forecast.optimisticDate}, expected day ${forecast.expectedDate}, pessimistic day ${forecast.pessimisticDate}.`);
+        if (signals.trend && Number(signals.trend) > 0.5) {
+          lines.push(`⚠ Payment trend is deteriorating (trend: +${Number(signals.trend).toFixed(1)}). This debtor is paying slower over time.`);
+        } else if (signals.trend && Number(signals.trend) < -0.5) {
+          lines.push(`Payment trend is improving (trend: ${Number(signals.trend).toFixed(1)}). This debtor is paying faster over time.`);
+        }
+      }
+    } catch { /* graceful — distribution context is supplementary */ }
+
     return lines.join("\n");
   } catch (error) {
     console.error(`[Riley] buildDebtorContext failed for ${contactId}:`, error);
