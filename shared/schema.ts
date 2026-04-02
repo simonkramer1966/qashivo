@@ -129,6 +129,11 @@ export const tenants = pgTable("tenants", {
   noResponseEscalationThreshold: integer("no_response_escalation_threshold").default(4), // Gap 5: Consecutive unanswered contacts before escalation pressure
   significantPaymentThreshold: decimal("significant_payment_threshold", { precision: 3, scale: 2 }).default("0.50"), // Gap 5: Payment fraction that triggers tone reset (0.50 = 50%)
 
+  // Gap 1: Payment attribution settings
+  paymentAttributionFullCreditHours: integer("payment_attribution_full_credit_hours").default(48), // Hours after action for full credit (1.0)
+  paymentAttributionPartialCreditDays: integer("payment_attribution_partial_credit_days").default(7), // Days after action for partial credit (0.5)
+  paymentAttributionSameDayExcluded: boolean("payment_attribution_same_day_excluded").default(true), // Exclude same-day payments (debtor likely already initiated)
+
   emailProvider: varchar("email_provider"),
   emailConnectedAddress: varchar("email_connected_address"),
   emailAccessToken: text("email_access_token"),

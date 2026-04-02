@@ -113,6 +113,13 @@ class EventBusService {
           console.error('[EventBus] Failed to process delivery outcome (non-fatal):', err);
         });
       }
+
+      // Gap 1: Process effectiveness updates from delivery/engagement events
+      if (event.actionId && event.contactId && event.tenantId && event.outcome) {
+        await this.processEffectivenessUpdate(event).catch(err => {
+          console.error('[EventBus] Failed to process effectiveness update (non-fatal):', err);
+        });
+      }
     } catch (error) {
       console.error(`❌ Failed to publish contact outcome event:`, error);
       throw error;
@@ -180,6 +187,60 @@ class EventBusService {
       console.log(`[DataHealth] Hard bounce recorded for contact ${contactId} — will surface in Data Health`);
     } catch (err) {
       console.error('[DataHealth] Hard bounce recording failed (non-fatal):', err);
+    }
+  }
+
+  /**
+   * Gap 1: Process delivery/engagement events into channel effectiveness updates.
+   * Uses delta approach — each event type adds its incremental signal contribution.
+   */
+  private async processEffectivenessUpdate(event: ContactOutcomeEvent): Promise<void> {
+    if (!event.contactId || !event.tenantId) return;
+
+    const outcome = (event.outcome || '').toLowerCase();
+
+    // Look up the action to determine channel
+    const action = await db.select({ type: actions.type })
+      .from(actions).where(eq(actions.id, event.actionId!)).limit(1);
+    if (!action[0]) return;
+
+    const { mapActionTypeToChannel, calculateInteractionEffectiveness, updateChannelEffectiveness, handleHardBounceEffectiveness } = await import('../services/channelEffectivenessService');
+    const channel = mapActionTypeToChannel(action[0].type);
+    if (!channel) return;
+
+    if (outcome === 'delivered') {
+      // Delivered: calculate base effectiveness (no engagement, no payment yet)
+      const effectiveness = calculateInteractionEffectiveness({
+        delivered: true, opened: false, clicked: false, replied: false, paymentAttribution: 0,
+      });
+      await updateChannelEffectiveness(event.tenantId, event.contactId, channel, effectiveness);
+    } else if (outcome === 'bounce' || outcome === 'bounced' || outcome === 'dropped') {
+      const isHard = event.payload?.type === 'hard' || outcome === 'dropped';
+      if (isHard && channel === 'email') {
+        await handleHardBounceEffectiveness(event.tenantId, event.contactId);
+      } else {
+        // Soft bounce — small negative signal
+        const effectiveness = calculateInteractionEffectiveness({
+          delivered: false, opened: false, clicked: false, replied: false, paymentAttribution: 0,
+        });
+        await updateChannelEffectiveness(event.tenantId, event.contactId, channel, effectiveness);
+      }
+    } else if (outcome === 'open' || outcome === 'opened') {
+      // Open: delta-based increment (delivered+opened vs delivered-only)
+      const effectiveness = calculateInteractionEffectiveness({
+        delivered: true, opened: true, clicked: false, replied: false, paymentAttribution: 0,
+      });
+      await updateChannelEffectiveness(event.tenantId, event.contactId, channel, effectiveness);
+    } else if (outcome === 'click' || outcome === 'clicked') {
+      const effectiveness = calculateInteractionEffectiveness({
+        delivered: true, opened: true, clicked: true, replied: false, paymentAttribution: 0,
+      });
+      await updateChannelEffectiveness(event.tenantId, event.contactId, channel, effectiveness);
+    } else if (outcome === 'replied' || outcome === 'reply') {
+      const effectiveness = calculateInteractionEffectiveness({
+        delivered: true, opened: true, clicked: false, replied: true, paymentAttribution: 0,
+      });
+      await updateChannelEffectiveness(event.tenantId, event.contactId, channel, effectiveness);
     }
   }
 

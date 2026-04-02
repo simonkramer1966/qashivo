@@ -577,13 +577,15 @@ export class XeroSyncService {
       // Pre-load existing invoices for O(1) upsert lookup
       // Use a Set to track seen xeroInvoiceIds and skip duplicates
       const existingInvoices = await db
-        .select({ id: invoices.id, xeroInvoiceId: invoices.xeroInvoiceId })
+        .select({ id: invoices.id, xeroInvoiceId: invoices.xeroInvoiceId, invoiceStatus: invoices.invoiceStatus })
         .from(invoices)
         .where(and(eq(invoices.tenantId, tenantId), sql`${invoices.xeroInvoiceId} IS NOT NULL`));
       const existingByXeroId = new Map<string, string>();
+      const existingStatusByXeroId = new Map<string, string | null>();
       for (const inv of existingInvoices) {
         if (inv.xeroInvoiceId && !existingByXeroId.has(inv.xeroInvoiceId)) {
           existingByXeroId.set(inv.xeroInvoiceId, inv.id);
+          existingStatusByXeroId.set(inv.xeroInvoiceId, inv.invoiceStatus);
         }
       }
 
@@ -626,6 +628,10 @@ export class XeroSyncService {
           const effectiveAmountPaid = Math.max(0, totalAmount - xeroAmountDue).toFixed(2);
 
           if (existingId) {
+            // Gap 1: Detect invoice transition to PAID for payment attribution
+            const previousStatus = existingStatusByXeroId.get(cachedInv.xeroInvoiceId);
+            const isNewlyPaid = invoiceStatus === 'PAID' && previousStatus !== 'PAID';
+
             // Update Xero-sourced fields ONLY — preserve AR overlay fields
             await db.update(invoices).set({
               contactId: contact.id,
@@ -642,6 +648,18 @@ export class XeroSyncService {
               updatedAt: new Date(),
             }).where(eq(invoices.id, existingId));
             updated++;
+
+            // Gap 1: Trigger payment attribution when invoice transitions to paid
+            if (isNewlyPaid) {
+              try {
+                const { processPaymentAttribution } = await import('./channelEffectivenessService');
+                const paidDate = cachedInv.paidDate ? new Date(cachedInv.paidDate) : new Date();
+                await processPaymentAttribution(tenantId, contact.id, paidDate);
+              } catch (attrErr) {
+                console.warn(`[Attribution] Failed for invoice ${cachedInv.invoiceNumber}: ${(attrErr as Error).message}`);
+                // Non-fatal — sync continues
+              }
+            }
           } else {
             // Double-check no duplicate exists (guard against Map collision from prior duplicates)
             const [alreadyExists] = await db.select({ id: invoices.id }).from(invoices)

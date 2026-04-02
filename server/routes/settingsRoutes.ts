@@ -412,7 +412,8 @@ export async function registerSettingsRoutes(app: Express): Promise<void> {
         'businessHoursStart', 'businessHoursEnd', 'maxTouchesPerWindow',
         'contactWindowDays', 'tenantStyle', 'collectionsAutomationEnabled',
         'minimumChaseThreshold',
-        'noResponseEscalationThreshold', 'significantPaymentThreshold'
+        'noResponseEscalationThreshold', 'significantPaymentThreshold',
+        'paymentAttributionFullCreditHours', 'paymentAttributionPartialCreditDays', 'paymentAttributionSameDayExcluded'
       ];
 
       const nestedFields = ['dailyLimits', 'minConfidence', 'exceptionRules', 'channelCooldowns'];
