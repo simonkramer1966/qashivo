@@ -25,6 +25,28 @@ export interface PaymentForecast {
   confidence: number;       // 0-1 based on data quality
 }
 
+// ── Gap 13: Seasonal Payment Patterns ──────────────────────────
+
+export interface SeasonalAdjustment {
+  month: number;         // 1-12
+  adjustmentType: 'slow' | 'fast' | 'year_end';
+  source: 'riley' | 'learned';
+  confidence: number;
+}
+
+// Mu adjustments per type — shifts expected payment date
+const SEASONAL_MU_ADJUSTMENTS: Record<string, number> = {
+  slow: 0.15,       // shifts expected payment ~15% later
+  fast: -0.15,      // shifts expected payment ~15% earlier
+  year_end: -0.20,  // stronger pull-forward effect (year-end payment runs)
+};
+
+const MONTH_MAP: Record<string, number> = {
+  january: 1, february: 2, march: 3, april: 4,
+  may: 5, june: 6, july: 7, august: 8,
+  september: 9, october: 10, november: 11, december: 12,
+};
+
 // ── Cold-start segment priors ──────────────────────────────────
 // These priors reflect UK SME payment reality as of 2026.
 // They should be reviewed and updated as the "Time to Pay Up"
@@ -90,7 +112,8 @@ function logNormalQuantile(p: number, mu: number, sigma: number): number {
  * Fit log-normal distribution parameters from debtor payment history.
  *
  * Uses medianDaysToPay as the central tendency, trend to shift the curve,
- * and p75DaysToPay (or volatility) to determine spread.
+ * p75DaysToPay (or volatility) to determine spread, and seasonal adjustments
+ * to shift the curve based on the current month (Gap 13).
  */
 export function fitDistribution(
   medianDaysToPay: number | null,
@@ -98,17 +121,23 @@ export function fitDistribution(
   volatility: number | null,
   trend: number | null,
   segment?: string,
+  seasonalAdjustments?: SeasonalAdjustment[],
 ): DistributionParams {
-  // Cold start: use segment priors
+  // Cold start: use segment priors (seasonal still applies)
   if (!medianDaysToPay || medianDaysToPay <= 0) {
     const prior = SEGMENT_PRIORS[segment || 'default'] || SEGMENT_PRIORS.default;
-    return prior;
+    // Apply seasonal adjustment even to cold-start priors
+    const seasonalMu = applySeasonalShift(prior.mu, seasonalAdjustments);
+    return { mu: seasonalMu, sigma: prior.sigma };
   }
 
   // Mu: trend-adjusted median
   const trendAdjustment = (trend || 0) * TREND_WEIGHT;
   const adjustedMedian = Math.max(1, medianDaysToPay + trendAdjustment);
-  const mu = Math.log(adjustedMedian);
+  let mu = Math.log(adjustedMedian);
+
+  // Gap 13: Apply seasonal adjustment for current month
+  mu = applySeasonalShift(mu, seasonalAdjustments);
 
   // Sigma: derived from p75 if available, otherwise from volatility
   let sigma: number;
@@ -127,6 +156,23 @@ export function fitDistribution(
   sigma = Math.max(0.1, Math.min(1.5, sigma));
 
   return { mu, sigma };
+}
+
+/**
+ * Apply seasonal mu shift for the current month.
+ */
+function applySeasonalShift(mu: number, adjustments?: SeasonalAdjustment[]): number {
+  if (!adjustments || adjustments.length === 0) return mu;
+
+  const currentMonth = new Date().getMonth() + 1; // 1-12
+  const currentAdjustments = adjustments.filter(a => a.month === currentMonth);
+
+  for (const adj of currentAdjustments) {
+    const muShift = SEASONAL_MU_ADJUSTMENTS[adj.adjustmentType] || 0;
+    mu += muShift;
+  }
+
+  return mu;
 }
 
 // ── Main API functions ─────────────────────────────────────────
@@ -194,6 +240,7 @@ export function forecastInvoicePayment(
   volatility: number | null,
   trend: number | null,
   segment?: string,
+  seasonalAdjustments?: SeasonalAdjustment[],
 ): {
   invoiceAmount: number;
   optimisticDate: string;
@@ -201,7 +248,7 @@ export function forecastInvoicePayment(
   pessimisticDate: string;
   confidence: number;
 } {
-  const params = fitDistribution(medianDaysToPay, p75DaysToPay, volatility, trend, segment);
+  const params = fitDistribution(medianDaysToPay, p75DaysToPay, volatility, trend, segment, seasonalAdjustments);
   const dataConfidence = medianDaysToPay ? 0.8 : 0.3;
   const forecast = getPaymentForecast(params, dataConfidence);
 
@@ -220,4 +267,164 @@ export function forecastInvoicePayment(
     pessimisticDate: addDaysToDate(dueDate, forecast.pessimisticDate),
     confidence: forecast.confidence,
   };
+}
+
+// ── Gap 13: Seasonal Adjustment Lookup ─────────────────────────
+
+/**
+ * Fetch seasonal patterns from aiFacts for a debtor and/or tenant-wide.
+ * Returns merged adjustments: debtor-specific facts + tenant-wide facts.
+ */
+export async function getSeasonalAdjustments(
+  tenantId: string,
+  contactId?: string,
+): Promise<SeasonalAdjustment[]> {
+  try {
+    const { db } = await import("../db");
+    const { aiFacts } = await import("@shared/schema");
+    const { eq, and, or, isNull } = await import("drizzle-orm");
+
+    const facts = await db
+      .select({
+        entityType: aiFacts.entityType,
+        entityId: aiFacts.entityId,
+        factKey: aiFacts.factKey,
+        factValue: aiFacts.factValue,
+        confidence: aiFacts.confidence,
+        source: aiFacts.source,
+      })
+      .from(aiFacts)
+      .where(and(
+        eq(aiFacts.tenantId, tenantId),
+        eq(aiFacts.category, 'seasonal_pattern'),
+        eq(aiFacts.isActive, true),
+        or(
+          // Debtor-specific patterns
+          contactId ? eq(aiFacts.entityId, contactId) : undefined,
+          // Tenant-wide patterns (no entityId)
+          isNull(aiFacts.entityId),
+        ),
+      ));
+
+    return facts
+      .filter(f => f.factValue && MONTH_MAP[f.factValue.toLowerCase()])
+      .map(f => ({
+        month: MONTH_MAP[f.factValue!.toLowerCase()],
+        adjustmentType: f.factKey === 'slow_month' ? 'slow' as const
+          : f.factKey === 'year_end_month' ? 'year_end' as const
+          : 'fast' as const,
+        source: (f.source?.includes('riley') ? 'riley' : 'learned') as 'riley' | 'learned',
+        confidence: parseFloat(String(f.confidence || '1')),
+      }));
+  } catch (error) {
+    console.error('[SeasonalPatterns] Failed to fetch seasonal adjustments:', error);
+    return []; // Non-fatal — planning continues without seasonal data
+  }
+}
+
+/**
+ * Calculate learned seasonal patterns from payment history.
+ * Requires 12+ months of data and 2+ data points per month.
+ * Returns months that deviate >20% from the overall average.
+ */
+export async function calculateLearnedSeasonalPatterns(
+  tenantId: string,
+  contactId: string,
+): Promise<SeasonalAdjustment[]> {
+  try {
+    const { db } = await import("../db");
+    const { invoices } = await import("@shared/schema");
+    const { eq, and, isNotNull, sql } = await import("drizzle-orm");
+
+    const payments = await db
+      .select({
+        paidDate: invoices.paidDate,
+        dueDate: invoices.dueDate,
+      })
+      .from(invoices)
+      .where(and(
+        eq(invoices.tenantId, tenantId),
+        eq(invoices.contactId, contactId),
+        eq(invoices.status, 'paid'),
+        isNotNull(invoices.paidDate),
+        isNotNull(invoices.dueDate),
+        sql`${invoices.paidDate} > now() - interval '18 months'`,
+      ));
+
+    if (payments.length < 12) return []; // Not enough data
+
+    // Calculate days-to-pay per invoice, grouped by month of payment
+    const monthlyDays: Record<number, number[]> = {};
+    for (const p of payments) {
+      if (!p.paidDate || !p.dueDate) continue;
+      const daysToPay = Math.max(0,
+        (new Date(p.paidDate).getTime() - new Date(p.dueDate).getTime()) / (1000 * 60 * 60 * 24),
+      );
+      const month = new Date(p.paidDate).getMonth() + 1;
+      if (!monthlyDays[month]) monthlyDays[month] = [];
+      monthlyDays[month].push(daysToPay);
+    }
+
+    // Calculate overall average
+    const allDays = Object.values(monthlyDays).flat();
+    const overallAvg = allDays.reduce((a, b) => a + b, 0) / allDays.length;
+    if (overallAvg <= 0) return [];
+
+    // Identify months that deviate significantly from average
+    const adjustments: SeasonalAdjustment[] = [];
+    for (const [monthStr, days] of Object.entries(monthlyDays)) {
+      const month = parseInt(monthStr);
+      if (days.length < 2) continue; // Need at least 2 data points per month
+
+      const monthAvg = days.reduce((a, b) => a + b, 0) / days.length;
+      const factor = monthAvg / overallAvg;
+
+      if (factor > 1.2) {
+        adjustments.push({
+          month,
+          adjustmentType: 'slow',
+          source: 'learned',
+          confidence: Math.min(0.9, days.length / 10),
+        });
+      } else if (factor < 0.8) {
+        adjustments.push({
+          month,
+          adjustmentType: 'fast',
+          source: 'learned',
+          confidence: Math.min(0.9, days.length / 10),
+        });
+      }
+    }
+
+    return adjustments;
+  } catch (error) {
+    console.error('[SeasonalPatterns] Failed to calculate learned patterns:', error);
+    return [];
+  }
+}
+
+/**
+ * Merge Riley-captured and learned seasonal patterns.
+ * Learned patterns override Riley facts for the same month when learningConfidence > 0.7.
+ */
+export async function getEffectiveSeasonalAdjustments(
+  tenantId: string,
+  contactId?: string,
+  learningConfidence?: number,
+): Promise<SeasonalAdjustment[]> {
+  const rileyPatterns = await getSeasonalAdjustments(tenantId, contactId);
+
+  // Only calculate learned patterns if contact specified and sufficient confidence
+  let learnedPatterns: SeasonalAdjustment[] = [];
+  if (contactId && (learningConfidence ?? 0) > 0.7) {
+    learnedPatterns = await calculateLearnedSeasonalPatterns(tenantId, contactId);
+  }
+
+  if (learnedPatterns.length === 0) return rileyPatterns;
+
+  // Merge: learned overrides riley for the same month
+  const learnedMonths = new Set(learnedPatterns.map(l => l.month));
+  const rileyOnly = rileyPatterns.filter(r => !learnedMonths.has(r.month));
+
+  return [...learnedPatterns, ...rileyOnly];
 }

@@ -22,6 +22,7 @@ import {
   type Channel 
 } from "../lib/adaptive-scheduler";
 import { differenceInDays } from "date-fns";
+import { getEffectiveSeasonalAdjustments, type SeasonalAdjustment } from "./paymentDistribution";
 
 // Utility: Format currency for display
 function formatCurrency(amount: number): string {
@@ -302,6 +303,12 @@ export class ActionPlanner {
       const smsAllowed = (debtorPrefs?.smsEnabled !== false) && !!contact.phone;
       const voiceAllowed = (debtorPrefs?.voiceEnabled !== false) && !!contact.phone;
 
+      // Gap 13: Fetch seasonal adjustments for this contact
+      let seasonalAdj: SeasonalAdjustment[] = [];
+      try {
+        seasonalAdj = await getEffectiveSeasonalAdjustments(tenantId, contact.id);
+      } catch { /* non-fatal */ }
+
       // Build customer context
       const customerContext: CustomerContext = {
         segment: behavior?.segment || contact.segment || "default",
@@ -312,6 +319,7 @@ export class ActionPlanner {
           call: voiceAllowed,
           whatsapp: smsAllowed, // WhatsApp follows SMS preference
         },
+        seasonalAdjustments: seasonalAdj,
       };
 
       // Build invoice context
@@ -778,7 +786,13 @@ export async function planAdaptiveActions(
     // Process each contact (may have multiple invoices)
     for (const [contactId, contactInvoices] of Array.from(invoicesByContact.entries())) {
       const { contact, behavior } = contactInvoices[0]; // Same contact for all
-      
+
+      // Gap 13: Fetch seasonal adjustments once per contact (used in both scheduling paths)
+      let seasonalAdj: SeasonalAdjustment[] = [];
+      try {
+        seasonalAdj = await getEffectiveSeasonalAdjustments(tenantId, contactId);
+      } catch { /* non-fatal */ }
+
       // Score all invoices for this contact
       const scoredInvoices = [];
       
@@ -855,6 +869,7 @@ export async function planAdaptiveActions(
                 call: voiceOk,
               },
               behavior: behavior || undefined,
+              seasonalAdjustments: seasonalAdj, // Gap 13
             },
             invoice: {
               amount: Number(invoice.amount || 0),

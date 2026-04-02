@@ -1,7 +1,7 @@
 import { storage } from "../storage";
 import { generateText } from "./llm/claude";
 import type { Invoice, Contact, WeeklyReview } from "@shared/schema";
-import { fitDistribution, getPaymentForecast } from "./paymentDistribution";
+import { fitDistribution, getPaymentForecast, getSeasonalAdjustments, type SeasonalAdjustment } from "./paymentDistribution";
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -75,6 +75,7 @@ function buildDebtorScenarios(
   overdueInvoices: (Invoice & { contact: Contact })[],
   globalAvgDaysToPay: number,
   behaviorSignalsByContact?: Map<string, { medianDaysToPay: number | null; p75DaysToPay: number | null; volatility: number | null; trend: number | null }>,
+  seasonalByContact?: Map<string, SeasonalAdjustment[]>,
 ): DebtorScenario[] {
   const byContact: Record<string, { contact: Contact; invoices: Invoice[] }> = {};
 
@@ -105,11 +106,14 @@ function buildDebtorScenarios(
     // Gap 7: Use log-normal distribution for scenario dates
     const signals = behaviorSignalsByContact?.get(contactId);
     const median = signals?.medianDaysToPay ?? avg ?? null;
+    const contactSeasonal = seasonalByContact?.get(contactId);
     const params = fitDistribution(
       median ? Number(median) : null,
       signals?.p75DaysToPay ? Number(signals.p75DaysToPay) : null,
       signals?.volatility ? Number(signals.volatility) : null,
       signals?.trend ? Number(signals.trend) : null,
+      undefined,
+      contactSeasonal, // Gap 13
     );
     const dataConfidence = median ? 0.8 : 0.3;
     const forecast = getPaymentForecast(params, dataConfidence);
@@ -288,11 +292,29 @@ export async function generateWeeklyReview(
   // Gap 7: Fetch behavior signals for distribution-based forecasting
   const behaviorSignals = await fetchBehaviorSignalsForContacts(tenantId, overdueInvoices);
 
-  // Build debtor scenarios (Gap 7: with log-normal distribution data)
+  // Gap 13: Fetch seasonal adjustments for overdue contacts
+  const seasonalByContact = new Map<string, SeasonalAdjustment[]>();
+  try {
+    // Fetch tenant-wide seasonal patterns once
+    const tenantSeasonal = await getSeasonalAdjustments(tenantId);
+    const contactIds = Array.from(new Set(overdueInvoices.map(inv => inv.contactId).filter(Boolean) as string[]));
+    for (const cid of contactIds) {
+      // Debtor-specific patterns merged with tenant-wide
+      const debtorSeasonal = await getSeasonalAdjustments(tenantId, cid);
+      // Combine: debtor-specific patterns + tenant-wide patterns not overridden
+      const debtorMonths = new Set(debtorSeasonal.filter(s => s.month).map(s => s.month));
+      const tenantOnly = tenantSeasonal.filter(s => !debtorMonths.has(s.month));
+      const merged = [...debtorSeasonal, ...tenantOnly];
+      if (merged.length > 0) seasonalByContact.set(cid, merged);
+    }
+  } catch { /* non-fatal */ }
+
+  // Build debtor scenarios (Gap 7 + Gap 13: with distribution + seasonal data)
   const debtorScenarios = buildDebtorScenarios(
     overdueInvoices,
     metrics.avgDaysToPay || 30,
     behaviorSignals,
+    seasonalByContact,
   );
 
   // Build three-scenario cashflow estimates

@@ -13,7 +13,7 @@
 import { addHours, isBefore, differenceInDays } from "date-fns";
 import type { CustomerBehaviorSignal } from "@shared/schema";
 import { eventBus } from "./event-bus";
-import { fitDistribution, estimatePaymentProbability } from "../services/paymentDistribution";
+import { fitDistribution, estimatePaymentProbability, type SeasonalAdjustment } from "../services/paymentDistribution";
 
 export type Channel = "email" | "sms" | "whatsapp" | "call";
 
@@ -28,6 +28,7 @@ export interface CustomerContext {
   segment: string; // "small_business", "enterprise", "freelancer"
   channelPrefs: Partial<Record<Channel, boolean>>; // Channel opt-outs
   behavior?: CustomerBehaviorSignal; // Historical behavioral signals (null for new customers)
+  seasonalAdjustments?: SeasonalAdjustment[]; // Gap 13: monthly payment pattern shifts
 }
 
 export interface InvoiceContext {
@@ -247,6 +248,7 @@ function estimateProbabilityOfPayment(
     behavior?.volatility ? parseFloat(String(behavior.volatility)) : null,
     behavior?.trend ? parseFloat(String(behavior.trend)) : null,
     segment,
+    customer.seasonalAdjustments, // Gap 13
   );
 
   // Base probability from log-normal distribution

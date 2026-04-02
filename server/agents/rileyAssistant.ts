@@ -269,11 +269,17 @@ export async function buildDebtorContext(contactId: string, tenantId: string): P
         .limit(1);
 
       if (signals?.medianDaysToPay) {
+        // Gap 13: Fetch seasonal adjustments for this debtor
+        const { getEffectiveSeasonalAdjustments } = await import("../services/paymentDistribution");
+        const seasonalAdj = await getEffectiveSeasonalAdjustments(tenantId, contactId);
+
         const params = fitDistribution(
           Number(signals.medianDaysToPay),
           signals.p75DaysToPay ? Number(signals.p75DaysToPay) : null,
           signals.volatility ? Number(signals.volatility) : null,
           signals.trend ? Number(signals.trend) : null,
+          undefined,
+          seasonalAdj,
         );
         const description = describeDistribution(params);
         const forecast = getPaymentForecast(params, 0.8);
@@ -283,6 +289,14 @@ export async function buildDebtorContext(contactId: string, tenantId: string): P
           lines.push(`⚠ Payment trend is deteriorating (trend: +${Number(signals.trend).toFixed(1)}). This debtor is paying slower over time.`);
         } else if (signals.trend && Number(signals.trend) < -0.5) {
           lines.push(`Payment trend is improving (trend: ${Number(signals.trend).toFixed(1)}). This debtor is paying faster over time.`);
+        }
+        // Gap 13: Note seasonal effects
+        const currentMonth = new Date().getMonth() + 1;
+        const activeSeasonalForNow = seasonalAdj.filter(a => a.month === currentMonth);
+        if (activeSeasonalForNow.length > 0) {
+          const monthNames = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+          const types = activeSeasonalForNow.map(a => a.adjustmentType === 'slow' ? 'slower payments' : a.adjustmentType === 'year_end' ? 'year-end acceleration' : 'faster payments');
+          lines.push(`Seasonal note: ${monthNames[currentMonth]} typically shows ${types.join(' and ')} for this debtor.`);
         }
       }
     } catch { /* graceful — distribution context is supplementary */ }
@@ -803,6 +817,7 @@ After Xero syncs, review the top debtors and ask targeted questions:
 - Preferred contact and any sensitivities
 - Payment quirks or special arrangements
 - Any debtors to avoid chasing
+- Seasonal patterns: "Are there any months where your clients typically pay slower or faster? For example, many businesses see slower payments in December or a rush before financial year-end."
 
 For weekly review setup, ask: "When would you like your weekly cashflow catch-up? Most clients like Monday mornings or Friday afternoons."
 
@@ -1146,6 +1161,16 @@ Return JSON with these arrays (any can be empty):
 - facts[]: Business intelligence learned. Each: { category, entityType?, entityId?, factKey, factValue, confidence }
   Categories: "debtor_relationship", "payment_behaviour", "business_context", "seasonal_pattern", "cashflow_input", "finance_preference", "industry_norm", "internal_policy", "contact_intel"
   Confidence: 1.0 if user stated directly, 0.7 if reasonably inferred, 0.5 if speculative.
+
+  SEASONAL PATTERNS (category="seasonal_pattern"):
+  If the user mentions any seasonal, monthly, or cyclical payment behaviour, extract it.
+  - "December is always slow" → entityType="tenant", factKey="slow_month", factValue="december", confidence=1.0
+  - "They pay everything before their March year-end" → entityType="debtor", entityId=contactId, factKey="fast_month", factValue="march" AND factKey="year_end_month", factValue="march"
+  - "Construction clients delay in winter" → entityType="tenant", factKey="slow_month", factValue="december" (repeat for january, february)
+  - "Q4 is always tight for them" → entityType="debtor", factKey="slow_month", factValue="october" (repeat for november, december)
+  factKey must be one of: "slow_month", "fast_month", "year_end_month", "seasonal_note"
+  factValue must be the month name in lowercase (january–december) except for "seasonal_note" which is free text.
+  Do NOT extract day-of-week or time-of-day patterns here — those are weekday patterns, not seasonal.
 
 - forecastInputs[]: Cashflow-relevant items. Each: { category, description, amount, timingType, startDate?, endDate?, affects }
   Categories: "revenue_change", "cost_change", "hiring", "capex", "tax", "other"
