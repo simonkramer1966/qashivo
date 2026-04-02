@@ -1086,8 +1086,11 @@ Return JSON with these arrays (any can be empty):
   Only include if a specific amount or estimate was mentioned.
 
 - debtorUpdates[]: AR overlay updates. Each: { contactId, field, value }
-  Fields: "arNotes", "arContactEmail", "arContactPhone", "preferredContactMethod", "paymentTerms"
+  Fields: "arNotes", "arContactEmail", "arContactPhone", "preferredContactMethod", "paymentTerms", "channelPreference"
   Only include if the user explicitly asked to update a debtor's info and a contactId is identifiable.
+  For channelPreference: if the user or debtor states a communication preference (e.g. "don't call them", "email only", "stop sending SMS"),
+  set field="channelPreference" and value as JSON: {"emailEnabled": true/false, "smsEnabled": true/false, "voiceEnabled": true/false, "notes": "<what was said>"}.
+  "don't call" → voiceEnabled=false. "email only" → smsEnabled=false, voiceEnabled=false. "stop SMS" → smsEnabled=false.
 
 - actionRequests[]: Actions the user asked Riley to perform. Each: { type, entityId?, details }
   Types: "pause_debtor", "resume_debtor", "change_tone", "add_note", "send_email", "other"
@@ -1198,11 +1201,27 @@ export async function extractIntelligence(
         "preferredContactMethod",
         "paymentTerms",
         "notes",
+        "channelPreference",
       ]);
 
       for (const update of result.debtorUpdates) {
         if (!update.contactId || !safeFields.has(update.field)) continue;
         try {
+          // Gap 11: Channel preference updates go to customerPreferences table
+          if (update.field === "channelPreference") {
+            const prefValue = typeof update.value === 'string' ? JSON.parse(update.value) : update.value;
+            const { customerTimelineService } = await import('../services/customerTimelineService');
+            await customerTimelineService.updatePreferences(tenantId, update.contactId, {
+              emailEnabled: prefValue.emailEnabled ?? true,
+              smsEnabled: prefValue.smsEnabled ?? true,
+              voiceEnabled: prefValue.voiceEnabled ?? true,
+              channelPreferenceSource: 'riley_conversation',
+              channelPreferenceNotes: prefValue.notes || `Extracted from Riley conversation ${conversationId}`,
+            });
+            console.log(`[Riley] Channel preference updated for contact ${update.contactId}: ${JSON.stringify(prefValue)}`);
+            continue;
+          }
+
           const fieldUpdate: Record<string, any> = {};
           if (update.field === "paymentTerms") {
             fieldUpdate[update.field] = parseInt(update.value, 10);

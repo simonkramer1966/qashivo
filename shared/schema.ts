@@ -1679,7 +1679,11 @@ export const customerPreferences = pgTable("customer_preferences", {
   bestContactWindowStart: varchar("best_contact_window_start"), // e.g. "09:00"
   bestContactWindowEnd: varchar("best_contact_window_end"), // e.g. "17:00"
   bestContactDays: jsonb("best_contact_days"), // e.g. ["monday", "tuesday", "wednesday", "thursday", "friday"]
-  
+
+  // Gap 11: Channel preference provenance
+  channelPreferenceSource: varchar("channel_preference_source"), // 'user_manual' | 'riley_conversation' | 'call_transcript'
+  channelPreferenceNotes: text("channel_preference_notes"), // e.g. "Debtor requested email only during call on 15 March"
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [

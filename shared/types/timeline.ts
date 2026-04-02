@@ -147,6 +147,9 @@ export interface CustomerPreferences {
   bestContactWindowEnd?: string;
   bestContactDays?: string[];
   workflowId?: string | null;
+  // Gap 11: Channel preference provenance
+  channelPreferenceSource?: string | null; // 'user_manual' | 'riley_conversation' | 'call_transcript'
+  channelPreferenceNotes?: string | null;
 }
 
 export function getConfidenceLabel(confidence: number, requiresReview?: boolean): string {

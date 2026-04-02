@@ -1,13 +1,14 @@
 import { eq, and, lte, gte, sql } from "drizzle-orm";
 import { db } from "../db";
-import { 
-  invoices, 
-  contacts, 
-  collectionSchedules, 
-  customerScheduleAssignments, 
+import {
+  invoices,
+  contacts,
+  collectionSchedules,
+  customerScheduleAssignments,
   tenants,
   actions,
-  customerBehaviorSignals 
+  customerBehaviorSignals,
+  customerPreferences,
 } from "@shared/schema";
 import { CollectionLearningService } from "./collectionLearningService";
 import { 
@@ -287,15 +288,27 @@ export class ActionPlanner {
 
       const behavior = behaviorSignals[0] || null;
 
+      // Gap 11: Fetch debtor channel preference overrides
+      const debtorPrefs = await db.query.customerPreferences.findFirst({
+        where: and(
+          eq(customerPreferences.contactId, contact.id),
+          eq(customerPreferences.tenantId, tenantId),
+        ),
+        columns: { emailEnabled: true, smsEnabled: true, voiceEnabled: true },
+      });
+      const emailAllowed = (debtorPrefs?.emailEnabled !== false) && !!contact.email;
+      const smsAllowed = (debtorPrefs?.smsEnabled !== false) && !!contact.phone;
+      const voiceAllowed = (debtorPrefs?.voiceEnabled !== false) && !!contact.phone;
+
       // Build customer context
       const customerContext: CustomerContext = {
         segment: behavior?.segment || contact.segment || "default",
         behavior: behavior || undefined,
         channelPrefs: {
-          email: contact.email ? true : false,
-          sms: contact.phone ? true : false,
-          call: contact.phone ? true : false,
-          whatsapp: contact.phone ? true : false,
+          email: emailAllowed,
+          sms: smsAllowed,
+          call: voiceAllowed,
+          whatsapp: smsAllowed, // WhatsApp follows SMS preference
         },
       };
 
@@ -542,6 +555,20 @@ export class ActionPlanner {
           firstAction.tenantId
         );
 
+        // Gap 11: Fetch debtor channel preference overrides for AI optimization
+        const debtorPrefs = await db.query.customerPreferences.findFirst({
+          where: and(
+            eq(customerPreferences.contactId, contactId),
+            eq(customerPreferences.tenantId, firstAction.tenantId),
+          ),
+          columns: { emailEnabled: true, smsEnabled: true, voiceEnabled: true },
+        });
+        const channelAllowed = {
+          email: debtorPrefs?.emailEnabled !== false,
+          sms: debtorPrefs?.smsEnabled !== false,
+          voice: debtorPrefs?.voiceEnabled !== false,
+        };
+
         // Determine best channel based on effectiveness scores
         const channelEffectiveness = {
           email: parseFloat(profile.emailEffectiveness || '0.5'),
@@ -554,16 +581,36 @@ export class ActionPlanner {
           const confidence = parseFloat(profile.learningConfidence || '0.1');
           if (confidence > 0.7) {
             const currentEffectiveness = channelEffectiveness[action.actionType as keyof typeof channelEffectiveness] || 0.5;
-            
+
             // If current channel is less than 30% effective, switch to best channel
             if (currentEffectiveness < 0.3) {
+              // Gap 11: Only consider channels that are allowed by debtor preference
               const bestChannel = Object.entries(channelEffectiveness)
-                .sort((a, b) => b[1] - a[1])[0][0] as 'email' | 'sms' | 'voice';
-              
-              console.log(`🔄 AI Override: Switching ${action.actionType} to ${bestChannel} for contact ${contactId}`);
-              action.actionType = bestChannel;
-              action.metadata.aiOverride = true;
-              action.metadata.originalChannel = contactActions[0].actionType;
+                .filter(([ch]) => channelAllowed[ch as keyof typeof channelAllowed])
+                .sort((a, b) => b[1] - a[1])[0]?.[0] as 'email' | 'sms' | 'voice' | undefined;
+
+              if (bestChannel) {
+                console.log(`🔄 AI Override: Switching ${action.actionType} to ${bestChannel} for contact ${contactId}`);
+                action.actionType = bestChannel;
+                action.metadata.aiOverride = true;
+                action.metadata.originalChannel = contactActions[0].actionType;
+              }
+            }
+          }
+
+          // Gap 11: Final safety check — if action channel is disabled, fall to allowed channel
+          const actionChannel = action.actionType as 'email' | 'sms' | 'voice';
+          if (channelAllowed[actionChannel] === false) {
+            const fallbackOrder: Array<'email' | 'sms' | 'voice'> = ['email', 'sms', 'voice'];
+            const fallback = fallbackOrder.find(ch => channelAllowed[ch]);
+            if (fallback) {
+              console.log(`📢 [ChannelPreference] ${actionChannel} disabled for contact ${contactId}, falling back to ${fallback}`);
+              action.metadata.originalChannel = action.actionType;
+              action.metadata.channelPreferenceOverride = true;
+              action.actionType = fallback;
+            } else {
+              console.log(`🚫 [ChannelPreference] All channels disabled for contact ${contactId} — action will be skipped`);
+              action.metadata.allChannelsDisabled = true;
             }
           }
 
@@ -761,16 +808,28 @@ export async function planAdaptiveActions(
             (today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)
           );
 
+          // Gap 11: Fetch debtor channel preference overrides
+          const debtorPrefs2 = await db.query.customerPreferences.findFirst({
+            where: and(
+              eq(customerPreferences.contactId, contactId),
+              eq(customerPreferences.tenantId, tenantId),
+            ),
+            columns: { emailEnabled: true, smsEnabled: true, voiceEnabled: true },
+          });
+          const emailOk = (debtorPrefs2?.emailEnabled !== false) && !!contact.email;
+          const smsOk = (debtorPrefs2?.smsEnabled !== false) && !!contact.phone;
+          const voiceOk = (debtorPrefs2?.voiceEnabled !== false) && !!contact.phone;
+
           const ctx: ScheduleActionContext = {
             tenantId,
             settings: adaptiveSettings,
             customer: {
               segment: "default",
               channelPrefs: {
-                email: !!contact.email,
-                sms: !!contact.phone,
-                whatsapp: false,
-                call: !!contact.phone,
+                email: emailOk,
+                sms: smsOk,
+                whatsapp: smsOk,
+                call: voiceOk,
               },
               behavior: behavior || undefined,
             },

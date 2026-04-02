@@ -328,9 +328,15 @@ export default function CustomerDetailPage() {
   const handleToggle = (field: keyof CustomerPreferences, value: boolean) => {
     if (!canEdit) return;
     const previousPrefs = { ...localPrefs };
-    const newPrefs = { ...localPrefs, [field]: value };
+    const isChannelField = field === 'emailEnabled' || field === 'smsEnabled' || field === 'voiceEnabled';
+    const updates: Partial<CustomerPreferences> = { [field]: value };
+    // Gap 11: Auto-set source when channel toggles are changed via UI
+    if (isChannelField) {
+      updates.channelPreferenceSource = 'user_manual';
+    }
+    const newPrefs = { ...localPrefs, ...updates };
     setLocalPrefs(newPrefs);
-    updatePreferencesMutation.mutate({ [field]: value }, {
+    updatePreferencesMutation.mutate(updates, {
       onError: () => setLocalPrefs(previousPrefs)
     });
   };
@@ -759,6 +765,20 @@ export default function CustomerDetailPage() {
                         disabled={!canEdit || updatePreferencesMutation.isPending}
                       />
                     </div>
+                    {/* Gap 11: Channel preference provenance */}
+                    {localPrefs.channelPreferenceSource && (
+                      <p className="text-[10px] text-muted-foreground mt-2">
+                        Source: {localPrefs.channelPreferenceSource === 'user_manual' ? 'Manual' :
+                                localPrefs.channelPreferenceSource === 'riley_conversation' ? 'Riley' :
+                                localPrefs.channelPreferenceSource === 'call_transcript' ? 'Call transcript' :
+                                localPrefs.channelPreferenceSource}
+                      </p>
+                    )}
+                    {localPrefs.channelPreferenceNotes && (
+                      <p className="text-[10px] text-muted-foreground italic mt-1">
+                        {localPrefs.channelPreferenceNotes}
+                      </p>
+                    )}
                   </div>
 
                   {/* Column 2: Best Contact Window */}

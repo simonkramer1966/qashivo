@@ -1,5 +1,5 @@
 import { db } from "../db";
-import { invoices, contacts, actions, tenants, collectionSchedules, workflows, schedulerState } from "@shared/schema";
+import { invoices, contacts, actions, tenants, collectionSchedules, workflows, schedulerState, customerPreferences } from "@shared/schema";
 import { eq, and, desc, gt, lt, isNull, or, sql } from "drizzle-orm";
 import { invoiceStateMachine, CharlieInvoiceState, CHARLIE_STATES } from "./invoiceStateMachine";
 import { 
@@ -158,7 +158,7 @@ class CharlieDecisionEngine {
     }
     
     // Select channel
-    const { channel, reason: channelReason } = this.selectChannel(
+    let { channel, reason: channelReason } = this.selectChannel(
       invoice,
       contact,
       charlieState,
@@ -166,7 +166,23 @@ class CharlieDecisionEngine {
       daysSinceLastContact,
       customerSegment
     );
-    
+
+    // Gap 11: Apply debtor channel preference hard overrides
+    if (channel !== 'none') {
+      const channelPrefs = await this.getChannelPreferences(contact.id, tenantId);
+      const override = this.applyChannelPreferenceOverride(channel, channelPrefs);
+      if (override === null) {
+        // No channels enabled — cannot contact this debtor
+        console.log(`🚫 [ChannelPreference] All channels disabled for contact ${contact.id} (${contact.name}) — skipping`);
+        channel = 'none';
+        channelReason = 'All channels disabled by debtor preference';
+      } else if (override.overridden) {
+        console.log(`📢 [ChannelPreference] ${override.reason}`);
+        channel = override.channel;
+        channelReason = override.reason!;
+      }
+    }
+
     // Check escalation triggers
     const { shouldEscalate, trigger: escalationTrigger } = this.checkEscalation(
       invoice,
@@ -576,7 +592,66 @@ class CharlieDecisionEngine {
     
     return { channel: 'none', reason: 'No valid contact channel available' };
   }
-  
+
+  /**
+   * Gap 11: Apply debtor channel preference hard overrides.
+   * These CANNOT be bypassed by escalation logic, urgency, portfolio pressure, or any other signal.
+   * Null/undefined channel fields default to enabled (true) — backwards compatible.
+   * Fallback order: email → sms → voice.
+   */
+  private applyChannelPreferenceOverride(
+    selectedChannel: CharlieChannel,
+    prefs: { emailEnabled: boolean | null; smsEnabled: boolean | null; voiceEnabled: boolean | null } | null,
+  ): { channel: CharlieChannel; overridden: boolean; reason?: string } | null {
+    // No preferences record or 'none' channel — pass through
+    if (!prefs || selectedChannel === 'none') {
+      return { channel: selectedChannel, overridden: false };
+    }
+
+    const enabled = {
+      email: prefs.emailEnabled !== false,  // null/undefined → true
+      sms: prefs.smsEnabled !== false,
+      voice: prefs.voiceEnabled !== false,
+    };
+
+    // Selected channel is allowed
+    if (enabled[selectedChannel]) {
+      return { channel: selectedChannel, overridden: false };
+    }
+
+    // Selected channel is disabled — fall to next available
+    const fallbackOrder: Array<'email' | 'sms' | 'voice'> = ['email', 'sms', 'voice'];
+    for (const fallback of fallbackOrder) {
+      if (enabled[fallback]) {
+        return {
+          channel: fallback,
+          overridden: true,
+          reason: `${selectedChannel} disabled by debtor preference, falling back to ${fallback}`,
+        };
+      }
+    }
+
+    // No channels enabled — cannot contact this debtor
+    return null;
+  }
+
+  /**
+   * Gap 11: Fetch channel preferences for a contact from customerPreferences table.
+   */
+  private async getChannelPreferences(
+    contactId: string,
+    tenantId: string,
+  ): Promise<{ emailEnabled: boolean | null; smsEnabled: boolean | null; voiceEnabled: boolean | null } | null> {
+    const prefs = await db.query.customerPreferences.findFirst({
+      where: and(
+        eq(customerPreferences.contactId, contactId),
+        eq(customerPreferences.tenantId, tenantId),
+      ),
+      columns: { emailEnabled: true, smsEnabled: true, voiceEnabled: true },
+    });
+    return prefs || null;
+  }
+
   /**
    * Check escalation triggers (Section 10)
    * 

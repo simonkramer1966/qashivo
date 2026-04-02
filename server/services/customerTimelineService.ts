@@ -672,7 +672,9 @@ export class CustomerTimelineService {
       bestContactWindowStart: prefs?.bestContactWindowStart || "09:00",
       bestContactWindowEnd: prefs?.bestContactWindowEnd || "17:30",
       bestContactDays: (prefs?.bestContactDays as string[] | undefined) || defaultDays,
-      workflowId: contact?.workflowId || null
+      workflowId: contact?.workflowId || null,
+      channelPreferenceSource: prefs?.channelPreferenceSource || null,
+      channelPreferenceNotes: prefs?.channelPreferenceNotes || null,
     };
   }
 
@@ -711,6 +713,12 @@ export class CustomerTimelineService {
     if (updates.bestContactDays !== undefined) {
       updateData.bestContactDays = updates.bestContactDays || null;
     }
+    if (updates.channelPreferenceSource !== undefined) {
+      updateData.channelPreferenceSource = updates.channelPreferenceSource || null;
+    }
+    if (updates.channelPreferenceNotes !== undefined) {
+      updateData.channelPreferenceNotes = updates.channelPreferenceNotes || null;
+    }
 
     // Handle workflowId update on the contacts table (not customerPreferences)
     if (updates.workflowId !== undefined) {
@@ -739,6 +747,8 @@ export class CustomerTimelineService {
         bestContactWindowStart: updates.bestContactWindowStart || null,
         bestContactWindowEnd: updates.bestContactWindowEnd || null,
         bestContactDays: updates.bestContactDays || null,
+        channelPreferenceSource: updates.channelPreferenceSource || null,
+        channelPreferenceNotes: updates.channelPreferenceNotes || null,
         updatedAt: new Date()
       });
     }
