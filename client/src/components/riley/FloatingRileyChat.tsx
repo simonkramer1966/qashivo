@@ -113,6 +113,18 @@ function TypingIndicator() {
 
 // ── SSE streaming helper ────────────────────────────────────
 
+async function getClerkToken(): Promise<string | undefined> {
+  try {
+    const clerk = (window as any).Clerk;
+    if (clerk?.session) {
+      return await clerk.session.getToken();
+    }
+  } catch {
+    // Clerk not initialised yet
+  }
+  return undefined;
+}
+
 async function sendStreamingMessage(
   body: Record<string, unknown>,
   callbacks: {
@@ -122,9 +134,15 @@ async function sendStreamingMessage(
     onError: (error: string) => void;
   },
 ): Promise<void> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const token = await getClerkToken();
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   const response = await fetch("/api/riley/message", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify({ ...body, stream: true }),
     credentials: "include",
   });
