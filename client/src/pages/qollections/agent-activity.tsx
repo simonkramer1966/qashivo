@@ -1,7 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import AppShell from "@/components/layout/app-shell";
-import { Badge } from "@/components/ui/badge";
 import CountdownBanner from "@/components/action-centre/CountdownBanner";
 import ModeSelector from "@/components/action-centre/ModeSelector";
 import OverviewTab from "@/components/action-centre/OverviewTab";
@@ -19,6 +18,17 @@ interface TenantSettings {
 
 type MainTab = "overview" | "approvals" | "vip" | "actioned" | "exceptions";
 type ExceptionSubTab = "triage" | "simple" | "moderate" | "complex" | "strategic";
+
+// Classify exception complexity (mirrors ExceptionsTab logic)
+function classifyException(reason: string | null): ExceptionSubTab {
+  if (!reason) return "triage";
+  const r = reason.toLowerCase();
+  if (r.includes("vip") || r.includes("strategic") || r.includes("high_value")) return "strategic";
+  if (r.includes("dispute") || r.includes("compliance") || r.includes("insolvency")) return "complex";
+  if (r.includes("low_confidence") || r.includes("unresponsive")) return "moderate";
+  if (r.includes("first_contact")) return "simple";
+  return "triage";
+}
 
 // Exception sub-tab configuration
 const EXCEPTION_SUB_TABS: { value: ExceptionSubTab; label: string }[] = [
@@ -44,7 +54,11 @@ export default function QollectionsAgentActivity() {
     refetchInterval: 15_000,
   });
 
-  const { data: exceptionsData } = useQuery<{ totalExceptions: number; totalPatterns: number }>({
+  const { data: exceptionsData } = useQuery<{
+    exceptionActions: Array<{ exceptionReason: string | null }>;
+    totalExceptions: number;
+    totalPatterns: number;
+  }>({
     queryKey: ["/api/action-centre/exceptions"],
     refetchInterval: 30_000,
   });
@@ -58,6 +72,20 @@ export default function QollectionsAgentActivity() {
   const approvalCount = approvalsData?.total ?? 0;
   const exceptionCount = (exceptionsData?.totalExceptions ?? 0) + (exceptionsData?.totalPatterns ?? 0);
   const vipCount = vipData?.total ?? 0;
+
+  // Compute per-sub-tab exception counts
+  const exceptionSubCounts = useMemo(() => {
+    const counts: Record<ExceptionSubTab, number> = { triage: 0, simple: 0, moderate: 0, complex: 0, strategic: 0 };
+    const actions = exceptionsData?.exceptionActions ?? [];
+    // Triage = all unresolved
+    counts.triage = actions.length + (exceptionsData?.totalPatterns ?? 0);
+    for (const a of actions) {
+      const cat = classifyException(a.exceptionReason);
+      counts[cat]++;
+    }
+    return counts;
+  }, [exceptionsData]);
+
   const showApprovals = approvalMode !== "full_auto";
   const showCountdown = approvalMode === "auto_after_timeout";
 
@@ -90,22 +118,12 @@ export default function QollectionsAgentActivity() {
 
             {showApprovals && (
               <TabButton active={activeTab === "approvals"} onClick={() => handleMainTabClick("approvals")}>
-                Queue
-                {approvalCount > 0 && (
-                  <Badge variant="secondary" className="ml-1.5 h-5 min-w-[20px] px-1.5 text-[10px]">
-                    {approvalCount}
-                  </Badge>
-                )}
+                Queue ({approvalCount})
               </TabButton>
             )}
 
             <TabButton active={activeTab === "vip"} onClick={() => handleMainTabClick("vip")}>
-              VIP
-              {vipCount > 0 && (
-                <Badge variant="secondary" className="ml-1.5 h-5 min-w-[20px] px-1.5 text-[10px]">
-                  {vipCount}
-                </Badge>
-              )}
+              VIP ({vipCount})
             </TabButton>
 
             <TabButton active={activeTab === "actioned"} onClick={() => handleMainTabClick("actioned")}>
@@ -113,12 +131,7 @@ export default function QollectionsAgentActivity() {
             </TabButton>
 
             <TabButton active={activeTab === "exceptions"} onClick={() => handleMainTabClick("exceptions")}>
-              Exceptions
-              {exceptionCount > 0 && (
-                <Badge variant="destructive" className="ml-1.5 h-5 min-w-[20px] px-1.5 text-[10px]">
-                  {exceptionCount}
-                </Badge>
-              )}
+              Exceptions ({exceptionCount})
             </TabButton>
 
             {/* Sub-tabs flow to the right when exceptions is active */}
@@ -133,7 +146,7 @@ export default function QollectionsAgentActivity() {
                     active={exceptionSubTab === sub.value}
                     onClick={() => setExceptionSubTab(sub.value)}
                   >
-                    {sub.label}
+                    {sub.label} ({exceptionSubCounts[sub.value]})
                   </SubTabButton>
                 ))}
               </>

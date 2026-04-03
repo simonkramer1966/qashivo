@@ -208,13 +208,13 @@ export default function ApprovalDrawer({
                   {normalizeChannel(action.type)} · <span className="capitalize">{currentTone}</span> · {confidence !== null ? `${confidence}% confidence` : "—"}
                 </p>
               </div>
-              <DropdownMenu>
+              <DropdownMenu modal={false}>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="h-8 w-8 p-0 flex-shrink-0">
                     <MoreVertical className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+                <DropdownMenuContent align="end" className="z-[60]">
                   <DropdownMenuLabel>Actions</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => onMenuAction("vip")}>
@@ -264,8 +264,20 @@ export default function ApprovalDrawer({
                   // Open edit mode — close drawer and dispatch edit event
                   onOpenChange(false);
                   // Dispatch a custom event for edit-before-send
+                  // Convert HTML to plain text preserving line breaks
+                  const plainBody = body
+                    .replace(/<br\s*\/?>/gi, "\n")
+                    .replace(/<\/p>/gi, "\n\n")
+                    .replace(/<\/div>/gi, "\n")
+                    .replace(/<[^>]+>/g, "")
+                    .replace(/&amp;/g, "&")
+                    .replace(/&lt;/g, "<")
+                    .replace(/&gt;/g, ">")
+                    .replace(/&nbsp;/g, " ")
+                    .replace(/\n{3,}/g, "\n\n")
+                    .trim();
                   window.dispatchEvent(new CustomEvent("approval:edit", {
-                    detail: { actionId: action.id, subject, body: body.replace(/<[^>]+>/g, "") },
+                    detail: { actionId: action.id, subject, body: plainBody },
                   }));
                 }}
               >
@@ -314,7 +326,7 @@ export default function ApprovalDrawer({
             {/* SECTION 4 — Tone override */}
             <div className="border-t border-slate-100 pt-3">
               <p className="text-[11px] text-slate-400 mb-2">Tone</p>
-              <Popover>
+              <Popover modal>
                 <PopoverTrigger asChild>
                   <button
                     className={cn(
@@ -326,7 +338,7 @@ export default function ApprovalDrawer({
                     <ChevronDown className="h-3 w-3 ml-1" />
                   </button>
                 </PopoverTrigger>
-                <PopoverContent className="w-40 p-1" align="start">
+                <PopoverContent className="w-40 p-1 z-[60]" align="start">
                   {TONE_LEVELS.map(t => (
                     <button
                       key={t}
@@ -416,9 +428,14 @@ export default function ApprovalDrawer({
               variant="ghost"
               className="w-full h-8 gap-1.5 text-violet-600 hover:text-violet-700 text-xs"
               onClick={() => {
+                const channel = normalizeChannel(action.type);
+                const toneReason = action.priorContactCount === 0
+                  ? "First contact"
+                  : action.agentReasoning?.slice(0, 80) || currentTone;
+                const prs = action.prsScore !== null ? `PRS ${Math.round(action.prsScore)} (${prsLabel(action.prsScore)})` : "no PRS data";
                 window.dispatchEvent(new CustomEvent("riley:open", {
                   detail: {
-                    message: `I'm reviewing a queued action for ${action.companyName || action.contactName}. They have ${action.daysOverdue} days overdue invoices totalling ${formatAmount(action.totalAmount)}. What should I know before deciding whether to approve this?`,
+                    message: `I'm reviewing a queued action for ${action.companyName || action.contactName}. Charlie has proposed a ${currentTone} tone ${channel} with the following reasoning: ${action.daysOverdue} days overdue, ${action.priorContactCount} prior contacts, ${prs}, best channel ${channel}. The tone reason is: ${toneReason}. The email subject is: "${subject}". Should I approve this action, change the tone, or is there anything about this debtor I should know first?`,
                     context: { relatedEntityType: "contact", relatedEntityId: action.contactId },
                   },
                 }));
@@ -434,6 +451,32 @@ export default function ApprovalDrawer({
 }
 
 // ── Invoice List (lazy-loaded) ──────────────────────────────
+
+function safeFormatDate(d: string | null | undefined): string {
+  if (!d) return "—";
+  const date = new Date(d);
+  if (isNaN(date.getTime())) {
+    // Try parsing UK locale format (dd/mm/yyyy)
+    const parts = d.split("/");
+    if (parts.length === 3) {
+      const parsed = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+      if (!isNaN(parsed.getTime())) {
+        return parsed.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+      }
+    }
+    return "—";
+  }
+  return date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+}
+
+function safeFormatAmount(amount: string | number | null | undefined): string {
+  if (amount == null) return "£0";
+  // If already formatted as currency string (e.g. "£1,234.56"), use as-is
+  if (typeof amount === "string" && amount.includes("£")) return amount;
+  const n = typeof amount === "string" ? parseFloat(amount.replace(/[^0-9.-]/g, "")) : amount;
+  if (isNaN(n)) return "£0";
+  return formatAmount(n);
+}
 
 function InvoiceList({ actionId, enabled }: { actionId: string; enabled: boolean }) {
   const { data } = useQuery<{
@@ -457,13 +500,11 @@ function InvoiceList({ actionId, enabled }: { actionId: string; enabled: boolean
         <div key={i} className="flex items-baseline gap-2 text-[12px] text-slate-600">
           <span className="font-medium">{inv.invoiceNumber}</span>
           <span className="text-slate-400">·</span>
-          <span className="tabular-nums">{formatAmount(parseFloat(inv.amount || "0"))}</span>
+          <span className="tabular-nums">{safeFormatAmount(inv.amount)}</span>
           <span className="text-slate-400">·</span>
           <span className="tabular-nums text-slate-400">{inv.daysOverdue}d overdue</span>
           <span className="text-slate-400">·</span>
-          <span className="text-slate-400">
-            {new Date(inv.dueDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
-          </span>
+          <span className="text-slate-400">{safeFormatDate(inv.dueDate)}</span>
         </div>
       ))}
     </div>

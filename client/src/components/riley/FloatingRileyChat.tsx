@@ -504,7 +504,7 @@ export default function FloatingRileyChat() {
     <>
       {/* Chat panel */}
       {isOpen && (
-        <div className="fixed bottom-20 right-4 z-50 flex h-[min(600px,calc(100vh-120px))] w-[min(400px,calc(100vw-32px))] flex-col overflow-hidden rounded-xl border bg-background shadow-2xl">
+        <div className="fixed bottom-20 right-4 z-[60] flex h-[min(600px,calc(100vh-120px))] w-[min(400px,calc(100vw-32px))] flex-col overflow-hidden rounded-xl border bg-background shadow-2xl">
           {/* Header */}
           <div className="flex items-center justify-between border-b bg-primary/5 px-4 py-3">
             <div className="flex items-center gap-2.5">
@@ -599,7 +599,7 @@ export default function FloatingRileyChat() {
       {/* Floating bubble */}
       <button
         onClick={isOpen ? () => setIsOpen(false) : handleExpand}
-        className="fixed bottom-4 right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
+        className="fixed bottom-4 right-4 z-[60] flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
         aria-label={isOpen ? "Close Riley chat" : "Open Riley chat"}
       >
         {isOpen ? (

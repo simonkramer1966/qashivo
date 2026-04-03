@@ -1047,7 +1047,8 @@ function EditBeforeSendDialog({
           ref={textareaRef}
           value={body}
           onChange={(e) => setBody(e.target.value)}
-          className="text-sm min-h-[150px] resize-none"
+          className="text-sm min-h-[150px] resize-none font-sans leading-relaxed"
+          style={{ whiteSpace: "pre-wrap" }}
         />
         <div className="flex gap-2 justify-end">
           <Button variant="ghost" size="sm" onClick={onCancel}>Cancel</Button>
