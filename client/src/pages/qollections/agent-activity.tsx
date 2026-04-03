@@ -9,6 +9,12 @@ import ActionedTab from "@/components/action-centre/ActionedTab";
 import ExceptionsTab from "@/components/action-centre/ExceptionsTab";
 import VipTab from "@/components/action-centre/VipTab";
 import { cn } from "@/lib/utils";
+import {
+  type ExceptionSubTab,
+  EXCEPTION_SUB_TABS,
+  VALID_EXCEPTION_SUBS,
+  classifyException,
+} from "@/lib/exceptionConfig";
 
 const MODE_LABELS: Record<string, string> = {
   manual: "Manual",
@@ -23,29 +29,8 @@ interface TenantSettings {
 }
 
 type MainTab = "summary" | "queue" | "vip" | "activity" | "exceptions";
-type ExceptionSubTab = "simple" | "moderate" | "complex" | "strategic";
 
 const VALID_TABS = new Set<MainTab>(["summary", "queue", "vip", "activity", "exceptions"]);
-const VALID_SUBS = new Set<ExceptionSubTab>(["simple", "moderate", "complex", "strategic"]);
-
-// Classify exception complexity (mirrors ExceptionsTab logic)
-function classifyException(reason: string | null): ExceptionSubTab | null {
-  if (!reason) return null;
-  const r = reason.toLowerCase();
-  if (r.includes("vip") || r.includes("strategic") || r.includes("high_value")) return "strategic";
-  if (r.includes("dispute") || r.includes("compliance") || r.includes("insolvency")) return "complex";
-  if (r.includes("low_confidence") || r.includes("unresponsive")) return "moderate";
-  if (r.includes("first_contact")) return "simple";
-  return null;
-}
-
-// Exception sub-tab configuration
-const EXCEPTION_SUB_TABS: { value: ExceptionSubTab; label: string }[] = [
-  { value: "simple", label: "Simple" },
-  { value: "moderate", label: "Moderate" },
-  { value: "complex", label: "Complex" },
-  { value: "strategic", label: "Strategic" },
-];
 
 // Parse search string into params
 function parseSearch(search: string): URLSearchParams {
@@ -61,7 +46,7 @@ export default function QollectionsAgentActivity() {
   const rawTab = params.get("tab") as MainTab | null;
   const activeTab: MainTab = rawTab && VALID_TABS.has(rawTab) ? rawTab : "queue";
   const rawSub = params.get("sub") as ExceptionSubTab | null;
-  const exceptionSubTab: ExceptionSubTab | null = rawSub && VALID_SUBS.has(rawSub) ? rawSub : null;
+  const exceptionSubTab: ExceptionSubTab | null = rawSub && VALID_EXCEPTION_SUBS.has(rawSub) ? rawSub : null;
 
   // Navigate by updating URL params
   const setTab = (tab: MainTab) => {
@@ -109,7 +94,7 @@ export default function QollectionsAgentActivity() {
 
   // Compute per-sub-tab exception counts
   const exceptionSubCounts = useMemo(() => {
-    const counts: Record<ExceptionSubTab, number> = { simple: 0, moderate: 0, complex: 0, strategic: 0 };
+    const counts: Record<ExceptionSubTab, number> = { collections: 0, debtor_situations: 0, other: 0 };
     const actions = exceptionsData?.exceptionActions ?? [];
     for (const a of actions) {
       const cat = classifyException(a.exceptionReason);

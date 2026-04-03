@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/table";
 import { AlertTriangle, TrendingDown, CheckCircle2 } from "lucide-react";
 import { formatRelativeTime } from "./utils";
+import { type ExceptionSubTab, classifyException, EXCEPTION_SUB_TABS } from "@/lib/exceptionConfig";
 
 interface ExceptionAction {
   id: string;
@@ -30,19 +31,6 @@ interface RejectionPattern {
   lastOccurredAt: string | null;
   suggestedAdjustment: string | null;
   status: string | null;
-}
-
-type ExceptionSubTab = "simple" | "moderate" | "complex" | "strategic";
-
-// Classify exception complexity based on reason
-function classifyException(reason: string | null): ExceptionSubTab | null {
-  if (!reason) return null;
-  const r = reason.toLowerCase();
-  if (r.includes("vip") || r.includes("strategic") || r.includes("high_value")) return "strategic";
-  if (r.includes("dispute") || r.includes("compliance") || r.includes("insolvency")) return "complex";
-  if (r.includes("low_confidence") || r.includes("unresponsive")) return "moderate";
-  if (r.includes("first_contact")) return "simple";
-  return null;
 }
 
 interface ExceptionsTabProps {
@@ -99,7 +87,7 @@ export default function ExceptionsTab({ subTab }: ExceptionsTabProps) {
           <CheckCircle2 className="mb-3 h-10 w-10 text-green-500" />
           <h3 className="text-lg font-semibold">No exceptions</h3>
           <p className="text-sm text-muted-foreground">
-            {!subTab ? "All actions are running smoothly." : `No ${subTab} exceptions right now.`}
+            {!subTab ? "All actions are running smoothly." : `No ${EXCEPTION_SUB_TABS.find(t => t.value === subTab)?.label?.toLowerCase() ?? subTab} exceptions right now.`}
           </p>
         </CardContent>
       </Card>
@@ -173,7 +161,7 @@ export default function ExceptionsTab({ subTab }: ExceptionsTabProps) {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <AlertTriangle className="h-4 w-4 text-red-600" />
-              {!subTab ? "Exception Actions" : `${subTab.charAt(0).toUpperCase() + subTab.slice(1)} Exceptions`} ({exceptions.length})
+              {!subTab ? "Exception Actions" : `${EXCEPTION_SUB_TABS.find(t => t.value === subTab)?.label ?? subTab} Exceptions`} ({exceptions.length})
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
