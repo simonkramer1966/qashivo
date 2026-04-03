@@ -537,6 +537,20 @@ export class XeroSyncService {
       });
       await db.update(tenants).set({ xeroLastSyncAt: new Date() }).where(eq(tenants.id, tenantId));
 
+      // Fire-and-forget: baseline impact snapshot on first successful sync
+      if (isInitial) {
+        db.update(tenants)
+          .set({ firstXeroConnectedAt: new Date() })
+          .where(eq(tenants.id, tenantId))
+          .catch(() => {});
+
+        import('./impactSnapshotService').then(({ calculateAndStoreSnapshot }) => {
+          calculateAndStoreSnapshot(tenantId, 'baseline').catch(err =>
+            console.warn('[Impact] Baseline snapshot failed:', err)
+          );
+        }).catch(() => {});
+      }
+
       const totalApiCalls = (currentPage - 1) + Math.ceil(uniqueContactIds.size / 50);
       console.log(`📊 Total Xero API calls: ${totalApiCalls}`);
 

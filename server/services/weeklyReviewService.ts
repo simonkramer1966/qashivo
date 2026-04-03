@@ -176,6 +176,7 @@ function buildCFOPrompt(params: {
   topDebtors: DebtorScenario[];
   dsoTrend: Array<{ date: unknown; dso: unknown }>;
   previousSummary: string | null;
+  impactContext: string | null;
 }): string {
   return `You are the CFO advisor for a UK SME. Write a weekly cash collection review.
 
@@ -186,6 +187,7 @@ DATA CONTEXT:
 - Top Debtors (by amount owed): ${JSON.stringify(params.topDebtors.slice(0, 8))}
 - DSO Trend (last 4 weeks): ${JSON.stringify(params.dsoTrend.slice(-4))}
 ${params.previousSummary ? `- Previous Review Summary: ${params.previousSummary.slice(0, 500)}` : "- No previous review available."}
+${params.impactContext ? `- ${params.impactContext}` : ""}
 
 INSTRUCTIONS:
 Write a plain-English weekly review in 3-4 paragraphs covering:
@@ -279,7 +281,7 @@ export async function generateWeeklyReview(
   const { weekStart, weekEnd } = getWeekBounds();
 
   // Assemble data context in parallel
-  const [metrics, overdueInvoices, dsoSnapshots, forecastAdjustments, previousReview, _recentActions] =
+  const [metrics, overdueInvoices, dsoSnapshots, forecastAdjustments, previousReview, _recentActions, impactSummary] =
     await Promise.all([
       storage.getInvoiceMetrics(tenantId),
       storage.getOverdueInvoices(tenantId),
@@ -287,6 +289,7 @@ export async function generateWeeklyReview(
       storage.listForecastAdjustments(tenantId),
       storage.getLatestWeeklyReview(tenantId),
       storage.getActions(tenantId, 50),
+      import('./impactSnapshotService').then(m => m.getImpactSummary(tenantId)).catch(() => null),
     ]);
 
   // Gap 7: Fetch behavior signals for distribution-based forecasting
@@ -329,6 +332,18 @@ export async function generateWeeklyReview(
     dso: Number(s.dsoValue),
   }));
 
+  // Build impact context for the prompt
+  let impactContext: string | null = null;
+  if (impactSummary?.latest && impactSummary.baseline) {
+    const latest = impactSummary.latest;
+    const dsoImp = Number(latest.dsoImprovement ?? 0);
+    const wcReleased = Number(latest.workingCapitalReleased ?? 0);
+    const days = impactSummary.daysSinceConnect ?? 0;
+    if (dsoImp !== 0 || wcReleased !== 0) {
+      impactContext = `Working Capital Impact (${days} days since connection): DSO improvement ${dsoImp} days, working capital released £${Math.round(wcReleased).toLocaleString("en-GB")}, collection rate ${latest.collectionRate}%`;
+    }
+  }
+
   // Call Claude with CFO review prompt
   const prompt = buildCFOPrompt({
     weekStart,
@@ -347,6 +362,7 @@ export async function generateWeeklyReview(
     topDebtors: debtorScenarios,
     dsoTrend,
     previousSummary: previousReview?.summaryText || null,
+    impactContext,
   });
 
   const response = await generateText({

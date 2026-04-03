@@ -10,6 +10,7 @@ import {
   CalendarClock,
   Users,
   TrendingUp,
+  TrendingDown,
   ArrowUpDown,
   BarChart3,
   MoreVertical,
@@ -118,6 +119,15 @@ export default function QollectionsDashboard() {
     refetchInterval: 300000,
   });
 
+  const { data: impact } = useQuery<{
+    baseline: any;
+    latest: any;
+    daysSinceConnect: number | null;
+  }>({
+    queryKey: ["/api/impact/summary"],
+    refetchInterval: 300000,
+  });
+
   // Sorting
   const toggleSort = (field: SortField) => {
     if (sortField === field) setSortDir(sortDir === "asc" ? "desc" : "asc");
@@ -169,13 +179,27 @@ export default function QollectionsDashboard() {
             icon={<CalendarClock className="h-4 w-4" />}
             loading={summaryLoading}
           />
-          <KpiCard
-            title="Total Debtors"
-            value={String(summary?.totalDebtors ?? 0)}
-            subtitle="With outstanding balance"
-            icon={<Users className="h-4 w-4" />}
-            loading={summaryLoading}
-          />
+          {impact?.latest?.workingCapitalReleased ? (
+            <KpiCard
+              title="Capital Released"
+              value={fmt(Number(impact.latest.workingCapitalReleased))}
+              subtitle={`${Math.abs(Number(impact.latest.dsoImprovement ?? 0))} day DSO improvement`}
+              icon={Number(impact.latest.dsoImprovement) > 0
+                ? <TrendingDown className="h-4 w-4" />
+                : <TrendingUp className="h-4 w-4" />
+              }
+              loading={false}
+              accent={Number(impact.latest.dsoImprovement) > 0 ? "positive" : undefined}
+            />
+          ) : (
+            <KpiCard
+              title="Total Debtors"
+              value={String(summary?.totalDebtors ?? 0)}
+              subtitle="With outstanding balance"
+              icon={<Users className="h-4 w-4" />}
+              loading={summaryLoading}
+            />
+          )}
         </div>
 
         {/* ── Ageing + DSO Trend ── */}
@@ -406,14 +430,20 @@ function EmptyState({ icon, message }: { icon: React.ReactNode; message: string 
 }
 
 function KpiCard({ title, value, subtitle, icon, loading, accent }: {
-  title: string; value: string; subtitle: string; icon: React.ReactNode; loading: boolean; accent?: "destructive";
+  title: string; value: string; subtitle: string; icon: React.ReactNode; loading: boolean; accent?: "destructive" | "positive";
 }) {
+  const iconBg = accent === "destructive" ? "bg-rose-50 text-rose-500"
+    : accent === "positive" ? "bg-emerald-50 text-emerald-600"
+    : "bg-primary/10 text-primary";
+  const valueCls = accent === "destructive" ? "text-rose-600"
+    : accent === "positive" ? "text-emerald-600"
+    : "text-foreground";
   return (
     <Card>
       <CardContent className="pt-5 pb-4">
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{title}</span>
-          <div className={`p-1.5 rounded-md ${accent === "destructive" ? "bg-rose-50 text-rose-500" : "bg-primary/10 text-primary"}`}>
+          <div className={`p-1.5 rounded-md ${iconBg}`}>
             {icon}
           </div>
         </div>
@@ -424,7 +454,7 @@ function KpiCard({ title, value, subtitle, icon, loading, accent }: {
           </div>
         ) : (
           <>
-            <div className={`text-xl font-bold tracking-tight ${accent === "destructive" ? "text-rose-600" : "text-foreground"}`}>{value}</div>
+            <div className={`text-xl font-bold tracking-tight ${valueCls}`}>{value}</div>
             <div className="text-xs text-muted-foreground mt-0.5">{subtitle}</div>
           </>
         )}

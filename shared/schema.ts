@@ -147,6 +147,9 @@ export const tenants = pgTable("tenants", {
   // Default AI persona for this tenant (FK to agent_personas — defined later in file, so no inline .references())
   defaultPersonaId: varchar("default_persona_id"),
 
+  // Impact tracking
+  firstXeroConnectedAt: timestamp("first_xero_connected_at"),
+
   // Riley weekly review scheduling
   rileyReviewDay: text("riley_review_day"), // e.g. "monday"
   rileyReviewTime: text("riley_review_time"), // e.g. "09:00"
@@ -6180,3 +6183,47 @@ export const insertDemoCallSchema = createInsertSchema(demoCalls).omit({
 
 export type DemoCall = typeof demoCalls.$inferSelect;
 export type InsertDemoCall = z.infer<typeof insertDemoCallSchema>;
+
+// ── Working Capital Impact Tracking ──────────────────────────────
+export const tenantImpactSnapshots = pgTable("tenant_impact_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  snapshotType: varchar("snapshot_type").notNull(), // baseline, 30_day, 90_day, manual
+  snapshotDate: timestamp("snapshot_date").notNull(),
+  dso: decimal("dso", { precision: 10, scale: 2 }),
+  avgDaysToPay: decimal("avg_days_to_pay", { precision: 10, scale: 2 }),
+  avgPaymentTerms: decimal("avg_payment_terms", { precision: 10, scale: 2 }),
+  daysVsTerms: decimal("days_vs_terms", { precision: 10, scale: 2 }),
+  totalOutstanding: decimal("total_outstanding", { precision: 15, scale: 2 }),
+  totalOverdue: decimal("total_overdue", { precision: 15, scale: 2 }),
+  overduePercentage: decimal("overdue_percentage", { precision: 7, scale: 2 }),
+  totalInvoiced12m: decimal("total_invoiced_12m", { precision: 15, scale: 2 }),
+  avgDailyRevenue: decimal("avg_daily_revenue", { precision: 15, scale: 2 }),
+  debtorCount: integer("debtor_count"),
+  invoiceCount: integer("invoice_count"),
+  collectionRate: decimal("collection_rate", { precision: 7, scale: 2 }),
+  // Comparison fields (populated on 30/90 day + manual snapshots)
+  baselineSnapshotId: varchar("baseline_snapshot_id"),
+  dsoImprovement: decimal("dso_improvement", { precision: 10, scale: 2 }),
+  workingCapitalReleased: decimal("working_capital_released", { precision: 15, scale: 2 }),
+  workingCapitalReleasedPct: decimal("working_capital_released_pct", { precision: 7, scale: 2 }),
+  daysVsTermsImprovement: decimal("days_vs_terms_improvement", { precision: 10, scale: 2 }),
+  collectionRateImprovement: decimal("collection_rate_improvement", { precision: 7, scale: 2 }),
+  // Riley narrative
+  rileySummary: text("riley_summary"),
+  rileyGeneratedAt: timestamp("riley_generated_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_impact_snapshots_tenant_date").on(table.tenantId, table.snapshotDate),
+  index("idx_impact_snapshots_tenant_type").on(table.tenantId, table.snapshotType),
+]);
+
+export const insertImpactSnapshotSchema = createInsertSchema(tenantImpactSnapshots).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type TenantImpactSnapshot = typeof tenantImpactSnapshots.$inferSelect;
+export type InsertImpactSnapshot = z.infer<typeof insertImpactSnapshotSchema>;

@@ -111,7 +111,7 @@ type MetricColor = "blue" | "green" | "amber" | "red" | "muted";
 
 function SectionDivider({ label }: { label: string }) {
   return (
-    <div className="flex items-center gap-2 py-1.5">
+    <div className="flex items-center gap-2 mt-4 mb-1.5 first:mt-0">
       <span className="text-[11px] font-medium uppercase tracking-[0.05em] text-muted-foreground/70">
         {label}
       </span>

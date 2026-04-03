@@ -26,6 +26,7 @@ import {
   ClipboardList,
   Home,
   HeartPulse,
+  Target,
 } from "lucide-react";
 import {
   Tooltip,
@@ -63,6 +64,7 @@ const navigationPillars: NavPillar[] = [
       { name: "Invoices", href: "/qollections/invoices", icon: FileText },
       { name: "Action Centre", href: "/qollections/agent-activity", icon: Activity },
       { name: "Disputes", href: "/qollections/disputes", icon: AlertTriangle },
+      { name: "Impact", href: "/qollections/impact", icon: Target },
       { name: "Reports", href: "/qollections/reports", icon: BarChart3 },
     ],
   },

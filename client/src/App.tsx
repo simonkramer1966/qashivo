@@ -32,6 +32,7 @@ const QollectionsInvoices = lazy(() => import("@/pages/qollections/invoices"));
 const QollectionsAgentActivity = lazy(() => import("@/pages/qollections/agent-activity"));
 const QollectionsDisputes = lazy(() => import("@/pages/qollections/disputes"));
 const QollectionsReports = lazy(() => import("@/pages/qollections/reports"));
+const QollectionsImpact = lazy(() => import("@/pages/qollections/impact"));
 // Pillar pages — Qashflow, Qapital, Agent Team
 const QashflowPage = lazy(() => import("@/pages/qashflow/index"));
 const QapitalPage = lazy(() => import("@/pages/qapital/index"));
@@ -234,6 +235,7 @@ function Router() {
           <Route path="/qollections/invoices" component={QollectionsInvoices} />
           <Route path="/qollections/agent-activity" component={QollectionsAgentActivity} />
           <Route path="/qollections/disputes" component={QollectionsDisputes} />
+          <Route path="/qollections/impact" component={QollectionsImpact} />
           <Route path="/qollections/reports" component={QollectionsReports} />
           <Route path="/qollections" component={QollectionsDashboard} />
 

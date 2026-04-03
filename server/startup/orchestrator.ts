@@ -18,6 +18,7 @@ import { startXeroReconciliationJob } from "../jobs/xeroReconciliationJob";
 import { startWeeklyReviewJob } from "../jobs/weeklyReviewJob";
 import { startLegalWindowJob } from "../jobs/legalWindowJob";
 import { startEnrichmentJob } from "../jobs/enrichmentJob";
+import { startImpactScheduler } from "../jobs/impactScheduler";
 import { batchProcessor } from "../services/batchProcessor";
 import { db } from "../db";
 import { tenants, providerConnections } from "@shared/schema";
@@ -219,6 +220,13 @@ export async function startAll(): Promise<void> {
     console.log("[startup] enrichment job scheduled");
   } catch (error) {
     console.error("[startup] enrichment job failed:", error);
+  }
+
+  try {
+    startImpactScheduler();
+    console.log("[startup] impact scheduler started");
+  } catch (error) {
+    console.error("[startup] impact scheduler failed:", error);
   }
 }
 
