@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatRelativeTime, normalizeChannel, formatCurrencyCompact } from "./utils";
+import ApprovalDrawer from "./ApprovalDrawer";
 
 // ── Types ───────────────────────────────────────────────────
 
@@ -195,344 +196,6 @@ function ConfidenceWithTooltip({ score }: { score: string | null }) {
   );
 }
 
-// ── Defer Panel ─────────────────────────────────────────────
-
-function DeferPanel({
-  onConfirm,
-  onCancel,
-  isPending,
-}: {
-  onConfirm: (reason: string, until: Date, note: string) => void;
-  onCancel: () => void;
-  isPending: boolean;
-}) {
-  const [reason, setReason] = useState("");
-  const [duration, setDuration] = useState("");
-  const [customDate, setCustomDate] = useState("");
-  const [note, setNote] = useState("");
-
-  const deferDate = useMemo(() => {
-    if (duration === "custom") return customDate ? new Date(customDate) : null;
-    const match = DEFER_DURATIONS.find(d => d.label === duration);
-    return match ? addDays(new Date(), match.days) : null;
-  }, [duration, customDate]);
-
-  const canSubmit = reason && deferDate;
-
-  return (
-    <div className="border-t border-amber-200 bg-amber-50/50 p-3 space-y-2" onClick={(e) => e.stopPropagation()}>
-      <div className="flex gap-2">
-        <Select value={reason} onValueChange={setReason}>
-          <SelectTrigger className="h-8 text-xs flex-1"><SelectValue placeholder="Reason..." /></SelectTrigger>
-          <SelectContent>
-            {DEFER_REASONS.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={duration} onValueChange={setDuration}>
-          <SelectTrigger className="h-8 text-xs flex-1"><SelectValue placeholder="Until when..." /></SelectTrigger>
-          <SelectContent>
-            {DEFER_DURATIONS.map(d => (
-              <SelectItem key={d.label} value={d.days === -1 ? "custom" : d.label}>{d.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      {duration === "custom" && (
-        <Input
-          type="date"
-          className="h-8 text-xs"
-          value={customDate}
-          onChange={(e) => setCustomDate(e.target.value)}
-          min={new Date().toISOString().split("T")[0]}
-        />
-      )}
-      <Input
-        placeholder="Optional note..."
-        className="h-8 text-xs"
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-      />
-      <div className="flex gap-2 justify-end">
-        <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={onCancel}>Cancel</Button>
-        <Button
-          size="sm"
-          className="h-7 text-xs bg-amber-600 hover:bg-amber-700 text-white"
-          disabled={!canSubmit || isPending}
-          onClick={() => deferDate && onConfirm(reason, deferDate, note)}
-        >
-          {isPending ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
-          Defer
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-// ── Reject Panel ────────────────────────────────────────────
-
-function RejectPanel({
-  onConfirm,
-  onCancel,
-  isPending,
-}: {
-  onConfirm: (reason: string, category: string, note: string) => void;
-  onCancel: () => void;
-  isPending: boolean;
-}) {
-  const [reason, setReason] = useState("");
-  const [note, setNote] = useState("");
-
-  return (
-    <div className="border-t border-red-200 bg-red-50/50 p-3 space-y-2" onClick={(e) => e.stopPropagation()}>
-      <Select value={reason} onValueChange={setReason}>
-        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Rejection reason..." /></SelectTrigger>
-        <SelectContent>
-          {REJECT_REASONS.map(r => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
-        </SelectContent>
-      </Select>
-      <Input
-        placeholder="Optional note..."
-        className="h-8 text-xs"
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-      />
-      <div className="flex gap-2 justify-end">
-        <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={onCancel}>Cancel</Button>
-        <Button
-          size="sm"
-          className="h-7 text-xs bg-red-600 hover:bg-red-700 text-white"
-          disabled={!reason || isPending}
-          onClick={() => {
-            const label = REJECT_REASONS.find(r => r.value === reason)?.label || reason;
-            onConfirm(label, reason, note);
-          }}
-        >
-          {isPending ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
-          Reject
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-// ── Email Editor (Part 4) ───────────────────────────────────
-
-function EmailEditor({
-  initialSubject,
-  initialBody,
-  onApproveWithEdits,
-  onCancel,
-  isPending,
-}: {
-  initialSubject: string;
-  initialBody: string;
-  onApproveWithEdits: (subject: string, body: string) => void;
-  onCancel: () => void;
-  isPending: boolean;
-}) {
-  const [subject, setSubject] = useState(initialSubject);
-  const [body, setBody] = useState(initialBody);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = textareaRef.current.scrollHeight + "px";
-    }
-  }, [body]);
-
-  return (
-    <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
-      <Input
-        value={subject}
-        onChange={(e) => setSubject(e.target.value)}
-        className="text-xs font-medium"
-        placeholder="Subject line"
-      />
-      <div className="relative">
-        <Textarea
-          ref={textareaRef}
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          className="text-xs min-h-[100px] resize-none"
-        />
-        <span className="absolute bottom-1 right-2 text-[10px] text-muted-foreground">
-          {body.length} chars
-        </span>
-      </div>
-      <div className="flex gap-2 justify-end">
-        <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={onCancel}>Cancel edits</Button>
-        <Button
-          size="sm"
-          className="h-7 text-xs bg-green-600 hover:bg-green-700 text-white"
-          disabled={isPending}
-          onClick={() => onApproveWithEdits(subject, body)}
-        >
-          {isPending ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
-          Approve with edits
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-// ── Expanded Row Content (Part 2) ───────────────────────────
-
-function ExpandedContent({
-  action,
-  onApprove,
-  onDefer,
-  onReject,
-  onApproveWithEdits,
-  approvePending,
-  deferPending,
-  rejectPending,
-}: {
-  action: EnrichedAction;
-  onApprove: () => void;
-  onDefer: (reason: string, until: Date, note: string) => void;
-  onReject: (reason: string, category: string, note: string) => void;
-  onApproveWithEdits: (subject: string, body: string) => void;
-  approvePending: boolean;
-  deferPending: boolean;
-  rejectPending: boolean;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [showDefer, setShowDefer] = useState(false);
-  const [showReject, setShowReject] = useState(false);
-
-  // Lazy-load full preview data
-  const { data: preview } = useQuery<{
-    subject: string;
-    content: string;
-    agentReasoning: string | null;
-    contactName: string;
-    companyName: string;
-    contactEmail: string;
-  }>({
-    queryKey: [`/api/actions/${action.id}/preview`],
-    enabled: true,
-  });
-
-  const subject = preview?.subject || action.subject || "";
-  const body = preview?.content || action.content || "";
-  const reasoning = preview?.agentReasoning || action.agentReasoning || "";
-
-  const handleAskRiley = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    window.dispatchEvent(new CustomEvent("riley:open", {
-      detail: {
-        message: `I'm reviewing a queued action for ${action.companyName || action.contactName}. They have ${action.daysOverdue} days overdue invoices totalling ${formatAmount(action.totalAmount)}. What should I know before deciding whether to approve this?`,
-        context: { relatedEntityType: "contact", relatedEntityId: action.contactId },
-      },
-    }));
-  };
-
-  return (
-    <div className="px-4 pb-4 pt-1 space-y-3 border-t border-slate-100 bg-slate-50/50" onClick={(e) => e.stopPropagation()}>
-      {/* Section A — Email preview or editor */}
-      {editing ? (
-        <EmailEditor
-          initialSubject={subject}
-          initialBody={body.replace(/<[^>]+>/g, "")}
-          onApproveWithEdits={onApproveWithEdits}
-          onCancel={() => setEditing(false)}
-          isPending={approvePending}
-        />
-      ) : (
-        <div className="space-y-1">
-          <div className="text-xs font-medium text-slate-700">{subject}</div>
-          <div
-            className="text-xs text-muted-foreground leading-relaxed max-h-[4.5em] overflow-hidden relative"
-            style={{ WebkitMaskImage: "linear-gradient(to bottom, black 60%, transparent 100%)", maskImage: "linear-gradient(to bottom, black 60%, transparent 100%)" }}
-            dangerouslySetInnerHTML={{ __html: body }}
-          />
-          <button
-            className="text-[11px] text-blue-600 hover:text-blue-800 mt-1"
-            onClick={(e) => { e.stopPropagation(); setEditing(true); }}
-          >
-            Edit before sending
-          </button>
-        </div>
-      )}
-
-      {/* Section B — Charlie's reasoning strip */}
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted-foreground bg-white rounded-md px-3 py-2 border">
-        <span>
-          <span className={cn(
-            "font-medium",
-            action.daysOverdue > 60 ? "text-red-600" : action.daysOverdue > 30 ? "text-amber-600" : "text-slate-700"
-          )}>
-            {action.daysOverdue}d
-          </span>{" "}overdue
-        </span>
-        <span>
-          {action.priorContactCount === 0 ? "First chase" : `${action.priorContactCount} prior contacts`}
-          {action.priorContactCount > 0 && " · no response"}
-        </span>
-        <span>PRS {action.prsScore !== null ? Math.round(action.prsScore) : "—"} <span className="text-muted-foreground/70">({prsLabel(action.prsScore)})</span></span>
-        {reasoning && <span className="text-muted-foreground/80 italic">{reasoning.length > 80 ? reasoning.slice(0, 80) + "..." : reasoning}</span>}
-      </div>
-
-      {/* Section C — Action footer */}
-      {!showDefer && !showReject && (
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            className="h-8 bg-green-600 hover:bg-green-700 text-white gap-1"
-            onClick={(e) => { e.stopPropagation(); onApprove(); }}
-            disabled={approvePending}
-          >
-            {approvePending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-            Approve
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-8 gap-1"
-            onClick={(e) => { e.stopPropagation(); setShowDefer(true); }}
-          >
-            <Clock className="h-3.5 w-3.5" /> Defer
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-8 gap-1 text-red-600 hover:text-red-700 border-red-200 hover:bg-red-50"
-            onClick={(e) => { e.stopPropagation(); setShowReject(true); }}
-          >
-            <X className="h-3.5 w-3.5" /> Reject
-          </Button>
-          <div className="flex-1" />
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-8 gap-1 text-violet-600 hover:text-violet-700"
-            onClick={handleAskRiley}
-          >
-            <Sparkles className="h-3.5 w-3.5" /> Ask Riley
-          </Button>
-        </div>
-      )}
-
-      {showDefer && (
-        <DeferPanel
-          onConfirm={(reason, until, note) => { onDefer(reason, until, note); setShowDefer(false); }}
-          onCancel={() => setShowDefer(false)}
-          isPending={deferPending}
-        />
-      )}
-
-      {showReject && (
-        <RejectPanel
-          onConfirm={(reason, category, note) => { onReject(reason, category, note); setShowReject(false); }}
-          onCancel={() => setShowReject(false)}
-          isPending={rejectPending}
-        />
-      )}
-    </div>
-  );
-}
-
 // ── Main Component ──────────────────────────────────────────
 
 interface ApprovalsTabProps {
@@ -542,7 +205,8 @@ interface ApprovalsTabProps {
 export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [drawerActionId, setDrawerActionId] = useState<string | null>(null);
+  const [editAction, setEditAction] = useState<{ id: string; subject: string; body: string } | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [sortField, setSortField] = useState<SortField>("priority");
   const [focusedIndex, setFocusedIndex] = useState(-1);
@@ -550,6 +214,18 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
   const [showShortcutHints, setShowShortcutHints] = useState(true);
   const [showLiveWarning, setShowLiveWarning] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Listen for edit-before-send event from drawer
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.actionId) {
+        setEditAction({ id: detail.actionId, subject: detail.subject || "", body: detail.body || "" });
+      }
+    };
+    window.addEventListener("approval:edit", handler);
+    return () => window.removeEventListener("approval:edit", handler);
+  }, []);
 
   // ── Data fetching ──────────────────────────────────────────
 
@@ -713,22 +389,22 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
   const handleApprove = (id: string) => {
     const toneOverride = toneOverrides.get(id);
     approveMutation.mutate({ actionId: id, toneOverride });
-    setExpandedId(null);
+    setDrawerActionId(null);
   };
 
   const handleDefer = (id: string, reason: string, until: Date, note: string) => {
     deferMutation.mutate({ actionId: id, reason, deferredUntil: until.toISOString(), note });
-    setExpandedId(null);
+    setDrawerActionId(null);
   };
 
   const handleReject = (id: string, reason: string, category: string, note: string) => {
     rejectMutation.mutate({ actionId: id, reason, category, note });
-    setExpandedId(null);
+    setDrawerActionId(null);
   };
 
   const handleApproveWithEdits = (id: string, subject: string, body: string) => {
     approveMutation.mutate({ actionId: id, editedSubject: subject, editedBody: body });
-    setExpandedId(null);
+    setDrawerActionId(null);
   };
 
   const handleToneChange = (id: string, tone: ToneLevel) => {
@@ -776,7 +452,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
           break;
         case " ":
           e.preventDefault();
-          if (focused) setExpandedId(prev => prev === focused.id ? null : focused.id);
+          if (focused) setDrawerActionId(prev => prev === focused.id ? null : focused.id);
           break;
         case "a":
           if (e.shiftKey) {
@@ -790,24 +466,24 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
         case "d":
           if (focused) {
             e.preventDefault();
-            setExpandedId(focused.id);
+            setDrawerActionId(focused.id);
           }
           break;
         case "r":
           if (focused) {
             e.preventDefault();
-            setExpandedId(focused.id);
+            setDrawerActionId(focused.id);
           }
           break;
         case "Escape":
-          setExpandedId(null);
+          setDrawerActionId(null);
           break;
       }
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [actions, focusedIndex, expandedId]);
+  }, [actions, focusedIndex, drawerActionId]);
 
   // ── Loading state ──────────────────────────────────────────
 
@@ -988,11 +664,9 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
       ) : (
         <div className="space-y-1">
           {actions.map((action, idx) => {
-            const isExpanded = expandedId === action.id;
             const isSelected = selectedIds.has(action.id);
             const isFocused = focusedIndex === idx;
             const currentTone = toneOverrides.get(action.id) || action.agentToneLevel || "professional";
-            const toneChanged = toneOverrides.has(action.id);
 
             return (
               <div
@@ -1000,15 +674,14 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
                 className={cn(
                   "rounded-lg border bg-white transition-all",
                   isFocused && "ring-2 ring-primary/30",
-                  isExpanded && "border-slate-300 shadow-sm",
-                  !isExpanded && "hover:bg-muted/30",
+                  "hover:bg-muted/30",
                 )}
               >
                 {/* Row — Part 1 */}
                 <div
                   className="flex items-center gap-3 px-3 py-2.5 cursor-pointer"
                   onClick={() => {
-                    setExpandedId(prev => prev === action.id ? null : action.id);
+                    setDrawerActionId(prev => prev === action.id ? null : action.id);
                     setFocusedIndex(idx);
                   }}
                 >
@@ -1070,7 +743,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
                         ))}
                       </PopoverContent>
                     </Popover>
-                    {toneChanged && (
+                    {toneOverrides.has(action.id) && (
                       <span className="text-[10px] text-amber-600">changed</span>
                     )}
                     <ConfidenceWithTooltip score={action.confidenceScore} />
@@ -1091,7 +764,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
                       size="sm"
                       variant="ghost"
                       className="h-7 w-7 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                      onClick={() => setExpandedId(action.id)}
+                      onClick={() => setDrawerActionId(action.id)}
                     >
                       <Clock className="h-3.5 w-3.5" />
                     </Button>
@@ -1099,26 +772,13 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
                       size="sm"
                       variant="ghost"
                       className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                      onClick={() => setExpandedId(action.id)}
+                      onClick={() => setDrawerActionId(action.id)}
                     >
                       <X className="h-3.5 w-3.5" />
                     </Button>
                   </div>
                 </div>
 
-                {/* Expanded content — Part 2 */}
-                {isExpanded && (
-                  <ExpandedContent
-                    action={action}
-                    onApprove={() => handleApprove(action.id)}
-                    onDefer={(reason, until, note) => handleDefer(action.id, reason, until, note)}
-                    onReject={(reason, category, note) => handleReject(action.id, reason, category, note)}
-                    onApproveWithEdits={(subject, body) => handleApproveWithEdits(action.id, subject, body)}
-                    approvePending={approveMutation.isPending}
-                    deferPending={deferMutation.isPending}
-                    rejectPending={rejectMutation.isPending}
-                  />
-                )}
               </div>
             );
           })}
@@ -1134,6 +794,103 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
           </button>
         </div>
       )}
+
+      {/* Approval drawer */}
+      {(() => {
+        const drawerAction = actions.find(a => a.id === drawerActionId) || null;
+        const drawerTone = drawerActionId ? (toneOverrides.get(drawerActionId) || drawerAction?.agentToneLevel || "professional") : "professional";
+        const drawerToneChanged = drawerActionId ? toneOverrides.has(drawerActionId) : false;
+        return (
+          <ApprovalDrawer
+            open={!!drawerActionId}
+            onOpenChange={(open) => { if (!open) setDrawerActionId(null); }}
+            action={drawerAction}
+            currentTone={drawerTone}
+            toneChanged={drawerToneChanged}
+            onToneChange={(tone) => drawerActionId && handleToneChange(drawerActionId, tone)}
+            onApprove={() => drawerActionId && handleApprove(drawerActionId)}
+            onDefer={(reason, until, note) => drawerActionId && handleDefer(drawerActionId, reason, until, note)}
+            onReject={(reason, category, note) => drawerActionId && handleReject(drawerActionId, reason, category, note)}
+            onApproveWithEdits={(subject, body) => drawerActionId && handleApproveWithEdits(drawerActionId, subject, body)}
+            approvePending={approveMutation.isPending}
+            deferPending={deferMutation.isPending}
+            rejectPending={rejectMutation.isPending}
+          />
+        );
+      })()}
+
+      {/* Edit before send dialog */}
+      {editAction && (
+        <EditBeforeSendDialog
+          initialSubject={editAction.subject}
+          initialBody={editAction.body}
+          onApprove={(subject, body) => {
+            handleApproveWithEdits(editAction.id, subject, body);
+            setEditAction(null);
+          }}
+          onCancel={() => setEditAction(null)}
+          isPending={approveMutation.isPending}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Edit Before Send Dialog ─────────────────────────────────
+
+function EditBeforeSendDialog({
+  initialSubject,
+  initialBody,
+  onApprove,
+  onCancel,
+  isPending,
+}: {
+  initialSubject: string;
+  initialBody: string;
+  onApprove: (subject: string, body: string) => void;
+  onCancel: () => void;
+  isPending: boolean;
+}) {
+  const [subject, setSubject] = useState(initialSubject);
+  const [body, setBody] = useState(initialBody);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = textareaRef.current.scrollHeight + "px";
+    }
+  }, [body]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 p-5 space-y-3">
+        <h3 className="text-sm font-semibold">Edit before sending</h3>
+        <Input
+          value={subject}
+          onChange={(e) => setSubject(e.target.value)}
+          className="text-sm font-medium"
+          placeholder="Subject line"
+        />
+        <Textarea
+          ref={textareaRef}
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          className="text-sm min-h-[150px] resize-none"
+        />
+        <div className="flex gap-2 justify-end">
+          <Button variant="ghost" size="sm" onClick={onCancel}>Cancel</Button>
+          <Button
+            size="sm"
+            className="bg-green-600 hover:bg-green-700 text-white gap-1"
+            disabled={isPending}
+            onClick={() => onApprove(subject, body)}
+          >
+            {isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+            Approve with edits
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
