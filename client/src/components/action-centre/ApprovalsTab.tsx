@@ -936,7 +936,13 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
       {vipTarget && (
         <VipPromotionDialog
           open={!!vipTarget}
-          onOpenChange={(open) => { if (!open) setVipTarget(null); }}
+          onOpenChange={(open) => {
+            if (!open) {
+              setVipTarget(null);
+              // Close drawer — the VIP contact's row will disappear
+              setDrawerActionId(null);
+            }
+          }}
           contactId={vipTarget.id}
           companyName={vipTarget.name}
         />
@@ -1002,7 +1008,7 @@ function AddNoteDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md z-[60]">
         <DialogHeader>
           <DialogTitle>Add note — {companyName}</DialogTitle>
           <DialogDescription>

@@ -50,10 +50,14 @@ export function VipPromotionDialog({
   const [note, setNote] = useState("");
 
   const mutation = useMutation({
-    mutationFn: () =>
-      apiRequest("POST", `/api/contacts/${contactId}/vip/promote`, { reason, note }),
-    onSuccess: () => {
-      toast({ title: `${companyName} moved to VIP` });
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/contacts/${contactId}/vip/promote`, { reason, note });
+      return res.json();
+    },
+    onSuccess: (data: { cancelledCount?: number }) => {
+      const cancelled = data?.cancelledCount ?? 0;
+      const suffix = cancelled > 0 ? ` — ${cancelled} action${cancelled !== 1 ? "s" : ""} cancelled` : "";
+      toast({ title: `${companyName} moved to VIP${suffix}` });
       queryClient.invalidateQueries({ queryKey: ["/api/action-centre"] });
       queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/debtors"] });
@@ -68,7 +72,7 @@ export function VipPromotionDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md z-[60]">
         <DialogHeader>
           <DialogTitle>Move {companyName} to VIP</DialogTitle>
           <DialogDescription>

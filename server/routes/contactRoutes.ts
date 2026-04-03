@@ -4965,6 +4965,29 @@ ${type === 'email' ? 'Generate a JSON object with "subject" (string) and "body" 
 
       // Secondary operations — non-blocking
       const warnings: string[] = [];
+      let cancelledCount = 0;
+
+      // Cancel all pending actions for this contact
+      try {
+        const result = await db
+          .update(actions)
+          .set({
+            status: "cancelled",
+            cancellationReason: "contact_marked_vip",
+            updatedAt: now,
+          })
+          .where(
+            and(
+              eq(actions.contactId, contactId),
+              eq(actions.tenantId, user.tenantId),
+              inArray(actions.status, ["pending", "pending_approval", "scheduled", "queued"]),
+            )
+          );
+        cancelledCount = (result as any).rowCount ?? 0;
+      } catch (err: any) {
+        console.error("[VIP] Action cancellation failed:", err.message);
+        warnings.push("Action cancellation failed");
+      }
 
       // Disable all automated channels
       try {
@@ -5040,7 +5063,7 @@ ${type === 'email' ? 'Generate a JSON object with "subject" (string) and "body" 
         warnings.push("Timeline event failed");
       }
 
-      res.json({ message: "Contact promoted to VIP", contactId, warnings: warnings.length ? warnings : undefined });
+      res.json({ message: "Contact promoted to VIP", contactId, cancelledCount, warnings: warnings.length ? warnings : undefined });
     } catch (error: any) {
       console.error("[VIP] Promote error:", {
         contactId: req.params.contactId,
