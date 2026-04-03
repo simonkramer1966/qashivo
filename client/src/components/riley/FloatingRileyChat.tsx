@@ -408,8 +408,9 @@ export default function FloatingRileyChat() {
           setIsWaitingForFirstDelta(false);
         },
 
-        onError() {
+        onError(errorMsg) {
           stopFlushing();
+          console.error("[Riley] Stream error:", errorMsg);
           const partialText = streamBufferRef.current;
           if (partialText) {
             // Keep what we got, mark as interrupted

@@ -115,8 +115,15 @@ export function registerRileyRoutes(app: Express): void {
           );
         },
 
-        onError(error) {
-          console.error("[Riley] Stream error:", error);
+        onError(error: any) {
+          console.error("[Riley] Stream error:", {
+            message: error?.message,
+            status: error?.status,
+            statusCode: error?.statusCode,
+            type: error?.type || error?.error?.type,
+            name: error?.name,
+            stack: error?.stack?.split("\n").slice(0, 5).join("\n"),
+          });
           writeSse({ error: "Response generation failed" });
           res.end();
         },
@@ -125,10 +132,16 @@ export function registerRileyRoutes(app: Express): void {
       // Send conversationId immediately so client can track it
       writeSse({ conversationId: convId });
 
-    } catch (error) {
-      console.error("[Riley] Error processing message:", error);
+    } catch (error: any) {
+      console.error("[Riley] Error processing message:", {
+        message: error?.message,
+        status: error?.status,
+        type: error?.type || error?.error?.type,
+        stack: error?.stack?.split("\n").slice(0, 5).join("\n"),
+      });
       // If headers already sent (streaming started), just end
       if (res.headersSent) {
+        try { res.write(`data: ${JSON.stringify({ error: "Response generation failed" })}\n\n`); } catch {}
         res.end();
       } else {
         res.status(500).json({ message: "Failed to process message" });
@@ -208,6 +221,36 @@ export function registerRileyRoutes(app: Express): void {
     } catch (error) {
       console.error("[Riley] Error fetching proactive suggestions:", error);
       res.status(500).json({ message: "Failed to fetch suggestions" });
+    }
+  });
+
+  // ── GET /api/riley/health ─────────────────────────────────────
+  // Quick diagnostic — is the Anthropic API reachable?
+  app.get("/api/riley/health", isAuthenticated, async (_req: any, res) => {
+    const hasKey = !!process.env.ANTHROPIC_API_KEY;
+    const keyPrefix = process.env.ANTHROPIC_API_KEY?.substring(0, 10) || "NOT SET";
+
+    if (!hasKey) {
+      return res.json({ status: "error", reason: "ANTHROPIC_API_KEY not set", keyPrefix });
+    }
+
+    try {
+      const { generateText } = await import("../services/llm/claude");
+      const result = await generateText({
+        system: "Reply with exactly: ok",
+        prompt: "health check",
+        model: "fast",
+        maxTokens: 5,
+      });
+      res.json({ status: "ok", response: result.trim(), keyPrefix });
+    } catch (error: any) {
+      res.json({
+        status: "error",
+        reason: error?.message || "Unknown error",
+        errorStatus: error?.status,
+        errorType: error?.type || error?.error?.type,
+        keyPrefix,
+      });
     }
   });
 }
