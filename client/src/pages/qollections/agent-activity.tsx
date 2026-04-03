@@ -118,6 +118,9 @@ export default function QollectionsAgentActivity() {
     return counts;
   }, [exceptionsData]);
 
+  const tabLabel = (label: string, count: number) =>
+    count > 0 ? `${label} (${count})` : label;
+
   const showApprovals = approvalMode !== "full_auto";
   const showCountdown = approvalMode === "auto_after_timeout";
 
@@ -146,12 +149,12 @@ export default function QollectionsAgentActivity() {
 
             {showApprovals && (
               <TabButton active={activeTab === "queue"} onClick={() => setTab("queue")}>
-                Queue ({approvalCount})
+                {tabLabel("Queue", approvalCount)}
               </TabButton>
             )}
 
             <TabButton active={activeTab === "vip"} onClick={() => setTab("vip")}>
-              VIP ({vipCount})
+              {tabLabel("VIP", vipCount)}
             </TabButton>
 
             <TabButton active={activeTab === "activity"} onClick={() => setTab("activity")}>
@@ -159,7 +162,7 @@ export default function QollectionsAgentActivity() {
             </TabButton>
 
             <TabButton active={activeTab === "exceptions"} onClick={() => setTab("exceptions")}>
-              Exceptions ({exceptionCount})
+              {tabLabel("Exceptions", exceptionCount)}
             </TabButton>
 
             {/* Sub-tabs flow to the right when exceptions is active */}
@@ -174,7 +177,7 @@ export default function QollectionsAgentActivity() {
                     active={exceptionSubTab === sub.value}
                     onClick={() => setSubTab(sub.value)}
                   >
-                    {sub.label} ({exceptionSubCounts[sub.value]})
+                    {tabLabel(sub.label, exceptionSubCounts[sub.value])}
                   </SubTabButton>
                 ))}
               </>
