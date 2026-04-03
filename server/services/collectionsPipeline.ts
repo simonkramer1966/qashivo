@@ -460,10 +460,7 @@ async function deliverEmail(
     // Fetch escalation contacts for auto-CC
     const escalationCc = await getEscalationCc(tenantId, contactId);
 
-    // Replace portal link placeholder
-    const portalBaseUrl = process.env.PORTAL_BASE_URL || `${process.env.APP_URL || "https://app.qashivo.com"}/portal`;
-    const portalLink = `${portalBaseUrl}/${tenantId}/${contactId}`;
-    const finalBody = email.body.replace(/\{\{PORTAL_LINK\}\}/g, portalLink);
+    const finalBody = email.body;
 
     // Find or create conversation for threading
     const conversationId = await findOrCreateConversation(tenantId, contactId, email.subject);

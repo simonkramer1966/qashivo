@@ -31,7 +31,7 @@ export default function VipTab() {
   const [, navigate] = useLocation();
   const [returnTarget, setReturnTarget] = useState<{ id: string; name: string } | null>(null);
 
-  const { data, isLoading } = useQuery<{ contacts: VipContact[]; total: number }>({
+  const { data, isLoading, error } = useQuery<{ contacts: VipContact[]; total: number }>({
     queryKey: ["/api/contacts/vip"],
     refetchInterval: 30_000,
   });
@@ -41,6 +41,18 @@ export default function VipTab() {
       <div className="space-y-3">
         {[1, 2, 3].map(i => <Skeleton key={i} className="h-16 w-full" />)}
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+          <AlertTriangle className="mb-3 h-10 w-10 text-destructive" />
+          <h3 className="text-lg font-semibold">Failed to load VIP debtors</h3>
+          <p className="text-sm text-muted-foreground">{(error as Error).message}</p>
+        </CardContent>
+      </Card>
     );
   }
 

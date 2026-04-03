@@ -424,9 +424,9 @@ export default function QollectionsDebtors() {
                         rightLabel="Overdue"
                         currentSort={sort}
                         onSort={setSort}
-                        className="w-[140px]"
+                        className="w-[180px]"
                       />
-                      <SortableHeader column="invoiceCount" label="Invoices" currentSort={sort} onSort={setSort} className="w-[80px]" />
+                      <SortableHeader column="invoiceCount" label="Invoices" currentSort={sort} onSort={setSort} className="w-[72px]" />
                       <SortableHeader column="oldestOverdueDays" label="Days Overdue" currentSort={sort} onSort={setSort} className="w-[110px]" />
                       <SortableHeader column="lastContactDate" label="Last Contact" currentSort={sort} onSort={setSort} className="w-[110px]" />
                       <SortableHeader column="nextActionDate" label="Next Action" currentSort={sort} onSort={setSort} className="w-[110px]" />

@@ -233,6 +233,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
   const [sortField, setSortField] = useState<SortField>("priority");
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const [toneOverrides, setToneOverrides] = useState<Map<string, ToneLevel>>(new Map());
+  const [regeneratedIds, setRegeneratedIds] = useState<Set<string>>(new Set());
   const [showShortcutHints, setShowShortcutHints] = useState(true);
   const [showLiveWarning, setShowLiveWarning] = useState(false);
   const [justCleared, setJustCleared] = useState(false);
@@ -271,27 +272,41 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
   // ── Mutations ──────────────────────────────────────────────
 
   const approveMutation = useMutation({
-    mutationFn: async ({ actionId, editedSubject, editedBody, toneOverride }: {
+    mutationFn: async ({ actionId, editedSubject, editedBody }: {
       actionId: string;
       editedSubject?: string;
       editedBody?: string;
-      toneOverride?: string;
     }) => {
-      // If tone was overridden, regenerate first
-      if (toneOverride) {
-        await apiRequest("POST", `/api/actions/${actionId}/tone-override`, { tone: toneOverride });
-      }
       return apiRequest("POST", `/api/actions/${actionId}/approve`, {
         editedSubject,
         editedBody,
       });
     },
-    onSuccess: () => {
+    onSuccess: (_, { actionId }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/action-centre"] });
+      // Clean up regeneration state
+      setRegeneratedIds(prev => { const next = new Set(prev); next.delete(actionId); return next; });
+      setToneOverrides(prev => { const next = new Map(prev); next.delete(actionId); return next; });
       toast({ title: "Action approved and sent" });
     },
     onError: () => {
       toast({ title: "Approval failed", variant: "destructive" });
+    },
+  });
+
+  const regenerateMutation = useMutation({
+    mutationFn: async ({ actionId, tone }: { actionId: string; tone: string }) => {
+      const res = await apiRequest("POST", `/api/actions/${actionId}/tone-override`, { tone });
+      return res.json();
+    },
+    onSuccess: (_, { actionId }) => {
+      setRegeneratedIds(prev => new Set(prev).add(actionId));
+      // Invalidate preview to fetch regenerated content
+      queryClient.invalidateQueries({ queryKey: [`/api/actions/${actionId}/preview`] });
+      toast({ title: "Email regenerated" });
+    },
+    onError: () => {
+      toast({ title: "Regeneration failed", variant: "destructive" });
     },
   });
 
@@ -465,9 +480,28 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
   // ── Action handlers ────────────────────────────────────────
 
   const handleApprove = (id: string) => {
-    const toneOverride = toneOverrides.get(id);
-    approveMutation.mutate({ actionId: id, toneOverride });
+    approveMutation.mutate({ actionId: id });
     setDrawerActionId(null);
+  };
+
+  const handleRegenerate = (id: string) => {
+    const tone = toneOverrides.get(id);
+    if (!tone) return;
+    regenerateMutation.mutate({ actionId: id, tone });
+  };
+
+  const handleRevert = (id: string) => {
+    const action = rawActions.find(a => a.id === id);
+    const originalTone = action?.agentToneLevel || "professional";
+    // Regenerate back to original tone
+    regenerateMutation.mutate({ actionId: id, tone: originalTone }, {
+      onSuccess: () => {
+        // Remove tone override and regenerated flag
+        setToneOverrides(prev => { const next = new Map(prev); next.delete(id); return next; });
+        setRegeneratedIds(prev => { const next = new Set(prev); next.delete(id); return next; });
+        queryClient.invalidateQueries({ queryKey: [`/api/actions/${id}/preview`] });
+      },
+    });
   };
 
   const handleDefer = (id: string, reason: string, until: Date, note: string) => {
@@ -486,7 +520,16 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
   };
 
   const handleToneChange = (id: string, tone: ToneLevel) => {
-    setToneOverrides(prev => new Map(prev).set(id, tone));
+    const action = rawActions.find(a => a.id === id);
+    const originalTone = action?.agentToneLevel || "professional";
+    if (tone === originalTone) {
+      // Selecting original tone — remove override
+      setToneOverrides(prev => { const next = new Map(prev); next.delete(id); return next; });
+    } else {
+      setToneOverrides(prev => new Map(prev).set(id, tone));
+    }
+    // Clear regenerated state — new tone needs fresh regeneration
+    setRegeneratedIds(prev => { const next = new Set(prev); next.delete(id); return next; });
   };
 
   const handleMenuAction = (action: EnrichedAction, item: string) => {
@@ -939,8 +982,12 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
             action={drawerAction}
             currentTone={drawerTone}
             toneChanged={drawerToneChanged}
+            isRegenerated={drawerActionId ? regeneratedIds.has(drawerActionId) : false}
+            isRegenerating={regenerateMutation.isPending && regenerateMutation.variables?.actionId === drawerActionId}
             onToneChange={(tone) => drawerActionId && handleToneChange(drawerActionId, tone)}
             onApprove={() => drawerActionId && handleApprove(drawerActionId)}
+            onRegenerate={() => drawerActionId && handleRegenerate(drawerActionId)}
+            onRevert={() => drawerActionId && handleRevert(drawerActionId)}
             onDefer={(reason, until, note) => drawerActionId && handleDefer(drawerActionId, reason, until, note)}
             onReject={(reason, category, note) => drawerActionId && handleReject(drawerActionId, reason, category, note)}
             onApproveWithEdits={(subject, body) => drawerActionId && handleApproveWithEdits(drawerActionId, subject, body)}

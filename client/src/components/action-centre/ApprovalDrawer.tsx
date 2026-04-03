@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Check, X, Clock, ChevronDown, Loader2, Sparkles, ArrowRight,
-  MoreVertical, Eye, StickyNote, PauseCircle, Star,
+  MoreVertical, Eye, StickyNote, PauseCircle, Star, RotateCcw, RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrencyCompact } from "./utils";
@@ -136,8 +136,12 @@ interface ApprovalDrawerProps {
   action: EnrichedAction | null;
   currentTone: string;
   toneChanged: boolean;
+  isRegenerated: boolean;
+  isRegenerating: boolean;
   onToneChange: (tone: ToneLevel) => void;
   onApprove: () => void;
+  onRegenerate: () => void;
+  onRevert: () => void;
   onDefer: (reason: string, until: Date, note: string) => void;
   onReject: (reason: string, category: string, note: string) => void;
   onApproveWithEdits: (subject: string, body: string) => void;
@@ -153,8 +157,12 @@ export default function ApprovalDrawer({
   action,
   currentTone,
   toneChanged,
+  isRegenerated,
+  isRegenerating,
   onToneChange,
   onApprove,
+  onRegenerate,
+  onRevert,
   onDefer,
   onReject,
   onApproveWithEdits,
@@ -251,20 +259,42 @@ export default function ApprovalDrawer({
                 <p className="text-[11px] text-slate-400 mb-1">Subject</p>
                 <p className="text-[13px] font-medium text-slate-800">{subject}</p>
               </div>
-              <div>
+              <div className="relative">
                 <p className="text-[11px] text-slate-400 mb-1">Body</p>
+                {/* State 2: tone changed but not yet regenerated — dim overlay */}
+                {toneChanged && !isRegenerated && (
+                  <div className="absolute inset-0 top-5 bg-amber-50/60 rounded pointer-events-none z-10" />
+                )}
                 <div
-                  className="text-[13px] leading-[1.6] text-foreground whitespace-pre-wrap [&_p]:m-0 [&_p]:text-[13px] [&_p]:leading-[1.6] [&_br]:leading-[1.6]"
+                  className={cn(
+                    "text-[13px] leading-[1.6] text-foreground whitespace-pre-wrap [&_p]:m-0 [&_p]:text-[13px] [&_p]:leading-[1.6] [&_br]:leading-[1.6]",
+                    toneChanged && !isRegenerated && "opacity-60",
+                  )}
                   dangerouslySetInnerHTML={{ __html: body }}
                 />
+                {toneChanged && !isRegenerated && (
+                  <p className="text-[11px] text-amber-600 mt-2">
+                    Tone changed to {currentTone} — click Regenerate to update the email
+                  </p>
+                )}
+                {isRegenerated && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <p className="text-[11px] text-green-600">
+                      Regenerated at {currentTone} tone
+                    </p>
+                    <button
+                      className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
+                      onClick={onRevert}
+                    >
+                      <RotateCcw className="h-3 w-3" /> Revert to original
+                    </button>
+                  </div>
+                )}
               </div>
               <button
                 className="inline-flex items-center gap-1 text-[12px] text-blue-600 hover:text-blue-800 font-medium"
                 onClick={() => {
-                  // Open edit mode — close drawer and dispatch edit event
                   onOpenChange(false);
-                  // Dispatch a custom event for edit-before-send
-                  // Convert HTML to plain text preserving line breaks
                   const plainBody = body
                     .replace(/<br\s*\/?>/gi, "\n")
                     .replace(/<\/p>/gi, "\n\n")
@@ -353,9 +383,14 @@ export default function ApprovalDrawer({
                   ))}
                 </PopoverContent>
               </Popover>
-              {toneChanged && (
+              {toneChanged && !isRegenerated && (
                 <p className="text-[11px] text-amber-600 mt-1.5">
-                  Email will be regenerated with {currentTone} tone when approved
+                  Tone changed — regeneration required
+                </p>
+              )}
+              {isRegenerated && (
+                <p className="text-[11px] text-green-600 mt-1.5">
+                  Regenerated
                 </p>
               )}
             </div>
@@ -389,14 +424,25 @@ export default function ApprovalDrawer({
               >
                 <Clock className="h-3.5 w-3.5" /> Defer
               </Button>
-              <Button
-                className="flex-1 h-9 gap-1.5 bg-green-600 hover:bg-green-700 text-white"
-                onClick={onApprove}
-                disabled={approvePending}
-              >
-                {approvePending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-                Approve
-              </Button>
+              {toneChanged && !isRegenerated ? (
+                <Button
+                  className="flex-1 h-9 gap-1.5 bg-violet-600 hover:bg-violet-700 text-white"
+                  onClick={onRegenerate}
+                  disabled={isRegenerating}
+                >
+                  {isRegenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                  {isRegenerating ? "Regenerating..." : "Regenerate"}
+                </Button>
+              ) : (
+                <Button
+                  className="flex-1 h-9 gap-1.5 bg-green-600 hover:bg-green-700 text-white"
+                  onClick={onApprove}
+                  disabled={approvePending}
+                >
+                  {approvePending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                  Approve
+                </Button>
+              )}
             </div>
           )}
 

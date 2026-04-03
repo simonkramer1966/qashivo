@@ -106,7 +106,6 @@ export function buildSystemPrompt(
   }
   lines.push(`- Be conversational and natural — never use template language like "[Customer Name]" or "[Invoice Number]".`);
   lines.push(`- Reference specific invoice details and any prior conversation history provided.`);
-  lines.push(`- Include the placeholder {{PORTAL_LINK}} where the debtor can view and pay their invoices online.`);
   lines.push(`- Never threaten legal action unless the action context is "final_notice" and tone is "formal".`);
   lines.push(`- Never disclose other debtors' names, amounts, or any confidential information.`);
   lines.push(`- Never use aggressive, harassing, or profane language.`);
@@ -248,7 +247,6 @@ export function buildUserPrompt(
   sections.push(`INSTRUCTION:`);
   sections.push(`Generate a collection email with a subject line and body.`);
   sections.push(`Address the email to ${debtor.contactName}.`);
-  sections.push(`Include {{PORTAL_LINK}} where the debtor can view and pay online.`);
   sections.push(`Sign off as your persona (use the email signature provided in your identity).`);
   sections.push(`Reference specific invoice details and any prior conversation.`);
   if (action.actionType === "pre_due_reminder") {

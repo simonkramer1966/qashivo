@@ -380,6 +380,77 @@ export function registerContactRoutes(app: Express): void {
     }
   });
 
+  // ── Static /api/contacts/* routes ──────────────────────────
+  // IMPORTANT: All literal path segments (vip, overdue, credit-check) must be
+  // registered BEFORE /api/contacts/:id, otherwise Express matches the literal
+  // word as the :id parameter and the real endpoint is never reached.
+
+  app.get("/api/contacts/overdue", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const allInvoices = await storage.getInvoices(user.tenantId, 1000);
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const overdueContactIds = new Set<string>();
+      allInvoices.forEach(invoice => {
+        const invoiceDueDate = new Date(invoice.dueDate);
+        const isOverdue = (invoice.status === 'overdue' || invoice.status === 'pending') && invoiceDueDate < thirtyDaysAgo;
+        if (isOverdue) {
+          overdueContactIds.add(invoice.contactId);
+        }
+      });
+
+      const allContacts = await storage.getContacts(user.tenantId);
+      const overdueContacts = allContacts.filter(contact =>
+        overdueContactIds.has(contact.id)
+      );
+
+      res.json(overdueContacts);
+    } catch (error) {
+      console.error("Error fetching overdue contacts:", error);
+      res.status(500).json({ message: "Failed to fetch overdue contacts" });
+    }
+  });
+
+  app.get("/api/contacts/vip", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const vipContacts = await db
+        .select({
+          id: contacts.id,
+          name: contacts.name,
+          companyName: contacts.companyName,
+          email: contacts.email,
+          vipReason: contacts.vipReason,
+          vipNote: contacts.vipNote,
+          vipFlaggedAt: contacts.vipFlaggedAt,
+          totalOutstanding: sql<string>`coalesce(sum(
+            case when ${invoices.status} not in ('paid', 'void', 'voided', 'deleted', 'draft')
+            then cast(${invoices.amount} as numeric) - cast(coalesce(${invoices.amountPaid}, '0') as numeric)
+            else 0 end
+          ), 0)::text`,
+          overdueCount: sql<number>`count(case when ${invoices.dueDate} < now() and ${invoices.status} not in ('paid', 'void', 'voided', 'deleted', 'draft') then 1 end)::int`,
+        })
+        .from(contacts)
+        .leftJoin(invoices, and(eq(invoices.contactId, contacts.id), eq(invoices.tenantId, contacts.tenantId)))
+        .where(and(eq(contacts.tenantId, user.tenantId), eq(contacts.isVip, true)))
+        .groupBy(contacts.id)
+        .orderBy(desc(contacts.vipFlaggedAt));
+
+      res.json({ contacts: vipContacts, total: vipContacts.length });
+    } catch (error: any) {
+      console.error("Error fetching VIP contacts:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get("/api/contacts/:id", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -395,7 +466,7 @@ export function registerContactRoutes(app: Express): void {
 
       const contacts = await storage.getContacts(user.tenantId);
       const contact = contacts.find(c => c.id === id);
-      
+
       if (!contact) {
         return res.status(404).json({ message: "Contact not found" });
       }
@@ -789,45 +860,6 @@ export function registerContactRoutes(app: Express): void {
     } catch (error) {
       console.error("Error updating contact:", error);
       res.status(500).json({ message: "Failed to update contact" });
-    }
-  });
-
-  app.get("/api/contacts/overdue", isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      // Get all invoices for the tenant
-      const allInvoices = await storage.getInvoices(user.tenantId, 1000);
-      
-      // Calculate 30 days ago
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      
-      // Find contacts with invoices overdue by more than 30 days
-      const overdueContactIds = new Set<string>();
-      
-      allInvoices.forEach(invoice => {
-        const invoiceDueDate = new Date(invoice.dueDate);
-        const isOverdue = (invoice.status === 'overdue' || invoice.status === 'pending') && invoiceDueDate < thirtyDaysAgo;
-        
-        if (isOverdue) {
-          overdueContactIds.add(invoice.contactId);
-        }
-      });
-      
-      // Get all contacts and filter to those with significantly overdue invoices
-      const allContacts = await storage.getContacts(user.tenantId);
-      const overdueContacts = allContacts.filter(contact => 
-        overdueContactIds.has(contact.id)
-      );
-      
-      res.json(overdueContacts);
-    } catch (error) {
-      console.error("Error fetching overdue contacts:", error);
-      res.status(500).json({ message: "Failed to fetch overdue contacts" });
     }
   });
 
@@ -5221,38 +5253,4 @@ ${type === 'email' ? 'Generate a JSON object with "subject" (string) and "body" 
     }
   });
 
-  // ── GET VIP contacts ────────────────────────────────────────
-  app.get("/api/contacts/vip", isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
-
-      const vipContacts = await db
-        .select({
-          id: contacts.id,
-          name: contacts.name,
-          companyName: contacts.companyName,
-          email: contacts.email,
-          vipReason: contacts.vipReason,
-          vipNote: contacts.vipNote,
-          vipFlaggedAt: contacts.vipFlaggedAt,
-          totalOutstanding: sql<string>`coalesce(sum(
-            case when ${invoices.status} not in ('paid', 'void', 'voided', 'deleted', 'draft')
-            then cast(${invoices.amount} as numeric) - cast(coalesce(${invoices.amountPaid}, '0') as numeric)
-            else 0 end
-          ), 0)::text`,
-          overdueCount: sql<number>`count(case when ${invoices.dueDate} < now() and ${invoices.status} not in ('paid', 'void', 'voided', 'deleted', 'draft') then 1 end)::int`,
-        })
-        .from(contacts)
-        .leftJoin(invoices, and(eq(invoices.contactId, contacts.id), eq(invoices.tenantId, contacts.tenantId)))
-        .where(and(eq(contacts.tenantId, user.tenantId), eq(contacts.isVip, true)))
-        .groupBy(contacts.id)
-        .orderBy(desc(contacts.vipFlaggedAt));
-
-      res.json({ contacts: vipContacts, total: vipContacts.length });
-    } catch (error: any) {
-      console.error("Error fetching VIP contacts:", error);
-      res.status(500).json({ message: error.message });
-    }
-  });
 }
