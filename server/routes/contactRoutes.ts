@@ -4950,7 +4950,7 @@ ${type === 'email' ? 'Generate a JSON object with "subject" (string) and "body" 
 
       const now = new Date();
 
-      // Set VIP on contact
+      // Core operation — must succeed
       await db
         .update(contacts)
         .set({
@@ -4963,69 +4963,92 @@ ${type === 'email' ? 'Generate a JSON object with "subject" (string) and "body" 
         })
         .where(and(eq(contacts.id, contactId), eq(contacts.tenantId, user.tenantId)));
 
+      // Secondary operations — non-blocking
+      const warnings: string[] = [];
+
       // Disable all automated channels
-      await db
-        .update(customerPreferences)
-        .set({
-          emailEnabled: false,
-          smsEnabled: false,
-          voiceEnabled: false,
-          channelPreferenceSource: "vip_promotion",
-          channelPreferenceNotes: `VIP — ${reason}`,
-          updatedAt: now,
-        })
-        .where(and(eq(customerPreferences.contactId, contactId), eq(customerPreferences.tenantId, user.tenantId)));
+      try {
+        await db
+          .update(customerPreferences)
+          .set({
+            emailEnabled: false,
+            smsEnabled: false,
+            voiceEnabled: false,
+            channelPreferenceSource: "vip_promotion",
+            channelPreferenceNotes: `VIP — ${reason}`,
+            updatedAt: now,
+          })
+          .where(and(eq(customerPreferences.contactId, contactId), eq(customerPreferences.tenantId, user.tenantId)));
+      } catch (err: any) {
+        console.error("[VIP] Channel disable failed:", err.message);
+        warnings.push("Channel disable failed");
+      }
 
       // Write aiFacts for Charlie + Riley
-      const factBase = {
-        tenantId: user.tenantId,
-        entityType: "contact" as const,
-        entityId: contactId,
-        source: "user_manual",
-        confidence: "1.0",
-        isActive: true,
-        createdAt: now,
-        updatedAt: now,
-      };
+      try {
+        const factBase = {
+          tenantId: user.tenantId,
+          entityType: "contact" as const,
+          entityId: contactId,
+          source: "user_manual",
+          confidence: "1.0",
+          isActive: true,
+          createdAt: now,
+          updatedAt: now,
+        };
 
-      await db.insert(aiFacts).values([
-        {
-          id: crypto.randomUUID(),
-          ...factBase,
-          category: "internal_policy",
-          title: "VIP status",
-          content: `${reason}${note ? " — " + note : ""}`,
-          factKey: "vip_status",
-          factValue: `${reason}${note ? " — " + note : ""}`,
-        },
-        {
-          id: crypto.randomUUID(),
-          ...factBase,
-          category: "internal_policy",
-          title: "Auto chase disabled",
-          content: `Automated chasing disabled — VIP: ${reason}`,
-          factKey: "auto_chase_disabled",
-          factValue: `true — reason: ${reason}`,
-        },
-      ]);
+        await db.insert(aiFacts).values([
+          {
+            id: crypto.randomUUID(),
+            ...factBase,
+            category: "internal_policy",
+            title: "VIP status",
+            content: `${reason}${note ? " — " + note : ""}`,
+            factKey: "vip_status",
+            factValue: `${reason}${note ? " — " + note : ""}`,
+          },
+          {
+            id: crypto.randomUUID(),
+            ...factBase,
+            category: "internal_policy",
+            title: "Auto chase disabled",
+            content: `Automated chasing disabled — VIP: ${reason}`,
+            factKey: "auto_chase_disabled",
+            factValue: `true — reason: ${reason}`,
+          },
+        ]);
+      } catch (err: any) {
+        console.error("[VIP] aiFacts write failed:", err.message);
+        warnings.push("AI facts write failed");
+      }
 
       // Timeline event
-      await db.insert(timelineEvents).values({
-        id: crypto.randomUUID(),
-        tenantId: user.tenantId,
-        customerId: contactId,
-        channel: "internal",
-        direction: "internal",
-        summary: `Promoted to VIP: ${reason}${note ? " — " + note : ""}`,
-        createdByName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email,
-        createdByType: "user",
-        createdAt: now,
-      });
+      try {
+        await db.insert(timelineEvents).values({
+          id: crypto.randomUUID(),
+          tenantId: user.tenantId,
+          customerId: contactId,
+          channel: "internal",
+          direction: "internal",
+          summary: `Promoted to VIP: ${reason}${note ? " — " + note : ""}`,
+          createdByName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email,
+          createdByType: "user",
+          createdAt: now,
+        });
+      } catch (err: any) {
+        console.error("[VIP] Timeline event failed:", err.message);
+        warnings.push("Timeline event failed");
+      }
 
-      res.json({ message: "Contact promoted to VIP", contactId });
+      res.json({ message: "Contact promoted to VIP", contactId, warnings: warnings.length ? warnings : undefined });
     } catch (error: any) {
-      console.error("Error promoting to VIP:", error);
-      res.status(500).json({ message: error.message });
+      console.error("[VIP] Promote error:", {
+        contactId: req.params.contactId,
+        tenantId: (await storage.getUser(req.user?.id).catch(() => null))?.tenantId,
+        error: error.message,
+        stack: error.stack?.split("\n").slice(0, 5).join("\n"),
+      });
+      res.status(500).json({ message: "Failed to promote to VIP", detail: error.message });
     }
   });
 
@@ -5054,99 +5077,124 @@ ${type === 'email' ? 'Generate a JSON object with "subject" (string) and "body" 
         })
         .where(and(eq(contacts.id, contactId), eq(contacts.tenantId, user.tenantId)));
 
+      const warnings: string[] = [];
+
       // Re-enable channels
-      await db
-        .update(customerPreferences)
-        .set({
-          emailEnabled: true,
-          smsEnabled: true,
-          voiceEnabled: true,
-          channelPreferenceSource: "vip_return",
-          channelPreferenceNotes: `Returned from VIP: ${reason}`,
+      try {
+        await db
+          .update(customerPreferences)
+          .set({
+            emailEnabled: true,
+            smsEnabled: true,
+            voiceEnabled: true,
+            channelPreferenceSource: "vip_return",
+            channelPreferenceNotes: `Returned from VIP: ${reason}`,
+            updatedAt: now,
+          })
+          .where(and(eq(customerPreferences.contactId, contactId), eq(customerPreferences.tenantId, user.tenantId)));
+      } catch (err: any) {
+        console.error("[VIP] Channel re-enable failed:", err.message);
+        warnings.push("Channel re-enable failed");
+      }
+
+      // Supersede previous VIP aiFacts + write return facts
+      try {
+        await db
+          .update(aiFacts)
+          .set({ isActive: false, updatedAt: now })
+          .where(
+            and(
+              eq(aiFacts.tenantId, user.tenantId),
+              eq(aiFacts.entityId, contactId),
+              eq(aiFacts.category, "internal_policy"),
+              sql`${aiFacts.factKey} IN ('vip_status', 'auto_chase_disabled')`,
+              eq(aiFacts.isActive, true),
+            )
+          );
+
+        const factBase = {
+          tenantId: user.tenantId,
+          entityType: "contact" as const,
+          entityId: contactId,
+          source: "user_manual",
+          confidence: "1.0",
+          isActive: true,
+          createdAt: now,
           updatedAt: now,
-        })
-        .where(and(eq(customerPreferences.contactId, contactId), eq(customerPreferences.tenantId, user.tenantId)));
+        };
 
-      // Supersede previous VIP aiFacts
-      await db
-        .update(aiFacts)
-        .set({ isActive: false, updatedAt: now })
-        .where(
-          and(
-            eq(aiFacts.tenantId, user.tenantId),
-            eq(aiFacts.entityId, contactId),
-            eq(aiFacts.category, "internal_policy"),
-            sql`${aiFacts.factKey} IN ('vip_status', 'auto_chase_disabled')`,
-            eq(aiFacts.isActive, true),
-          )
-        );
-
-      // Write return facts
-      const factBase = {
-        tenantId: user.tenantId,
-        entityType: "contact" as const,
-        entityId: contactId,
-        source: "user_manual",
-        confidence: "1.0",
-        isActive: true,
-        createdAt: now,
-        updatedAt: now,
-      };
-
-      await db.insert(aiFacts).values([
-        {
-          id: crypto.randomUUID(),
-          ...factBase,
-          category: "internal_policy",
-          title: "VIP status returned",
-          content: `Returned to pool: ${reason}${note ? " — " + note : ""}`,
-          factKey: "vip_status",
-          factValue: `returned to pool — reason: ${reason}`,
-        },
-        {
-          id: crypto.randomUUID(),
-          ...factBase,
-          category: "internal_policy",
-          title: "Auto chase re-enabled",
-          content: `Automated chasing re-enabled: ${reason}`,
-          factKey: "auto_chase_disabled",
-          factValue: `false — returned: ${reason}`,
-        },
-      ]);
+        await db.insert(aiFacts).values([
+          {
+            id: crypto.randomUUID(),
+            ...factBase,
+            category: "internal_policy",
+            title: "VIP status returned",
+            content: `Returned to pool: ${reason}${note ? " — " + note : ""}`,
+            factKey: "vip_status",
+            factValue: `returned to pool — reason: ${reason}`,
+          },
+          {
+            id: crypto.randomUUID(),
+            ...factBase,
+            category: "internal_policy",
+            title: "Auto chase re-enabled",
+            content: `Automated chasing re-enabled: ${reason}`,
+            factKey: "auto_chase_disabled",
+            factValue: `false — returned: ${reason}`,
+          },
+        ]);
+      } catch (err: any) {
+        console.error("[VIP] aiFacts write failed:", err.message);
+        warnings.push("AI facts write failed");
+      }
 
       // If resume from scratch, reset learning profile tone
       if (resumeMode === "scratch") {
-        await db
-          .update(customerLearningProfiles)
-          .set({
-            calculationVersion: "reset",
-            updatedAt: now,
-          })
-          .where(
-            and(
-              eq(customerLearningProfiles.contactId, contactId),
-              eq(customerLearningProfiles.tenantId, user.tenantId),
-            )
-          );
+        try {
+          await db
+            .update(customerLearningProfiles)
+            .set({
+              calculationVersion: "reset",
+              updatedAt: now,
+            })
+            .where(
+              and(
+                eq(customerLearningProfiles.contactId, contactId),
+                eq(customerLearningProfiles.tenantId, user.tenantId),
+              )
+            );
+        } catch (err: any) {
+          console.error("[VIP] Learning profile reset failed:", err.message);
+          warnings.push("Learning profile reset failed");
+        }
       }
 
       // Timeline event
-      await db.insert(timelineEvents).values({
-        id: crypto.randomUUID(),
-        tenantId: user.tenantId,
-        customerId: contactId,
-        channel: "internal",
-        direction: "internal",
-        summary: `Returned from VIP to automated chasing: ${reason}${note ? " — " + note : ""}. Resume mode: ${resumeMode === "scratch" ? "from scratch" : "where left off"}.`,
-        createdByName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email,
-        createdByType: "user",
-        createdAt: now,
-      });
+      try {
+        await db.insert(timelineEvents).values({
+          id: crypto.randomUUID(),
+          tenantId: user.tenantId,
+          customerId: contactId,
+          channel: "internal",
+          direction: "internal",
+          summary: `Returned from VIP to automated chasing: ${reason}${note ? " — " + note : ""}. Resume mode: ${resumeMode === "scratch" ? "from scratch" : "where left off"}.`,
+          createdByName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email,
+          createdByType: "user",
+          createdAt: now,
+        });
+      } catch (err: any) {
+        console.error("[VIP] Timeline event failed:", err.message);
+        warnings.push("Timeline event failed");
+      }
 
-      res.json({ message: "Contact returned to main pool", contactId, resumeMode });
+      res.json({ message: "Contact returned to main pool", contactId, resumeMode, warnings: warnings.length ? warnings : undefined });
     } catch (error: any) {
-      console.error("Error returning from VIP:", error);
-      res.status(500).json({ message: error.message });
+      console.error("[VIP] Return error:", {
+        contactId: req.params.contactId,
+        error: error.message,
+        stack: error.stack?.split("\n").slice(0, 5).join("\n"),
+      });
+      res.status(500).json({ message: "Failed to return from VIP", detail: error.message });
     }
   });
 
