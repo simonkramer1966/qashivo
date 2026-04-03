@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect, useCallback } from "react";
-import { useLocation } from "wouter";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useLocation, useSearch } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useDrawer } from "@/contexts/DrawerContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { X, Send, MessageCircle } from "lucide-react";
@@ -9,13 +10,13 @@ import { X, Send, MessageCircle } from "lucide-react";
 // ── Route → human-readable context mapping ──────────────────
 
 const ROUTE_LABELS: Record<string, string> = {
-  "/qollections/debtors": "Debtors list",
+  "/qollections/debtors": "Debtors",
   "/qollections/invoices": "Invoices",
-  "/qollections/agent-activity": "Agent Activity",
+  "/qollections/agent-activity": "Action Centre",
   "/qollections/disputes": "Disputes",
   "/qollections/reports": "Reports",
-  "/qollections": "Qollections Dashboard",
-  "/qashflow": "Qashflow",
+  "/qollections": "Dashboard",
+  "/qashflow": "Cashflow",
   "/qapital": "Qapital",
   "/agent-team": "Agent Team",
   "/settings/agent-personas": "Agent Personas",
@@ -26,7 +27,7 @@ const ROUTE_LABELS: Record<string, string> = {
   "/settings/data-health": "Data Health",
 };
 
-function getPageContext(path: string): string {
+function getPageName(path: string): string {
   // Exact match first
   if (ROUTE_LABELS[path]) return ROUTE_LABELS[path];
   // Debtor detail page
@@ -38,6 +39,34 @@ function getPageContext(path: string): string {
     if (path.startsWith(route)) return label;
   }
   return "Qashivo";
+}
+
+const TAB_LABELS: Record<string, string> = {
+  summary: "Summary", queue: "Queue", vip: "VIP",
+  activity: "Activity", exceptions: "Exceptions",
+};
+
+function buildViewingLabel(
+  path: string,
+  search: string,
+  drawerEntityName: string | null,
+): string {
+  const pageName = getPageName(path);
+  const params = new URLSearchParams(search.startsWith("?") ? search : `?${search}`);
+  const tab = params.get("tab");
+  const sub = params.get("sub");
+
+  let label = pageName;
+  if (tab && TAB_LABELS[tab]) {
+    label += ` — ${TAB_LABELS[tab]}`;
+  }
+  if (sub) {
+    label += ` (${sub.charAt(0).toUpperCase() + sub.slice(1)})`;
+  }
+  if (drawerEntityName) {
+    label += ` — ${drawerEntityName}`;
+  }
+  return label;
 }
 
 /** Extract entity type and ID from the current route for deep context injection */
@@ -201,6 +230,8 @@ async function sendStreamingMessage(
 
 export default function FloatingRileyChat() {
   const [location] = useLocation();
+  const search = useSearch();
+  const { drawer } = useDrawer();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
@@ -380,10 +411,27 @@ export default function FloatingRileyChat() {
       }
     };
 
+    // Build extended page context
+    const params = new URLSearchParams(search.startsWith("?") ? search : `?${search}`);
+    const extendedContext = {
+      route: location,
+      pageName: getPageName(location),
+      activeTab: params.get("tab") || null,
+      activeSubTab: params.get("sub") || null,
+      drawerOpen: drawer.isOpen,
+      drawerType: drawer.type,
+      drawerEntityId: drawer.entityId,
+      drawerEntityName: drawer.entityName,
+      drawerMetadata: drawer.metadata,
+      contactId: (drawer.isOpen ? (drawer.metadata?.contactId as string) : null) || entity.relatedEntityId || null,
+      contactName: drawer.isOpen ? drawer.entityName : null,
+    };
+
     sendStreamingMessage(
       {
         message: text,
         pageContext: location,
+        extendedContext,
         topic: getTopic(location),
         conversationId,
         ...entity,
@@ -530,8 +578,8 @@ export default function FloatingRileyChat() {
 
           {/* Context pill */}
           <div className="border-b px-4 py-1.5">
-            <span className="inline-block rounded-full bg-muted px-2.5 py-0.5 text-[11px] text-muted-foreground">
-              Viewing: {getPageContext(location)}
+            <span className="inline-block rounded-full bg-muted px-2.5 py-0.5 text-[11px] text-muted-foreground truncate max-w-full">
+              Viewing: {buildViewingLabel(location, search, drawer.isOpen ? drawer.entityName : null)}
             </span>
           </div>
 

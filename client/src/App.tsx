@@ -10,6 +10,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import PageLoader from "@/components/PageLoader";
 import AdminShell from "@/components/AdminShell";
 import FloatingRileyChat from "@/components/riley/FloatingRileyChat";
+import { DrawerProvider } from "@/contexts/DrawerContext";
 import type { OnboardingStatus } from "@/components/OnboardingWizard";
 
 // Lazy-loaded pages
@@ -297,10 +298,12 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Suspense fallback={<PageLoader />}>
-          <Router />
-          <Toaster />
-        </Suspense>
+        <DrawerProvider>
+          <Suspense fallback={<PageLoader />}>
+            <Router />
+            <Toaster />
+          </Suspense>
+        </DrawerProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

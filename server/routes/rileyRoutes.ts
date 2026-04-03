@@ -32,6 +32,7 @@ export function registerRileyRoutes(app: Express): void {
       const {
         message,
         pageContext,
+        extendedContext,
         topic,
         conversationId,
         relatedEntityType,
@@ -56,6 +57,7 @@ export function registerRileyRoutes(app: Express): void {
           conversationId: conversationId || null,
           userMessage: message.trim(),
           pageContext: pageContext || "unknown",
+          extendedContext: extendedContext || undefined,
           topic: resolvedTopic,
           relatedEntityType: relatedEntityType || undefined,
           relatedEntityId: relatedEntityId || undefined,
@@ -97,6 +99,7 @@ export function registerRileyRoutes(app: Express): void {
         conversationId: conversationId || null,
         userMessage: message.trim(),
         pageContext: pageContext || "unknown",
+        extendedContext: extendedContext || undefined,
         topic: resolvedTopic,
         relatedEntityType: relatedEntityType || undefined,
         relatedEntityId: relatedEntityId || undefined,

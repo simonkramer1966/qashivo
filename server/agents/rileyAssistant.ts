@@ -35,6 +35,20 @@ export type RileyTopic =
   | "onboarding"
   | "weekly_review";
 
+export interface ExtendedPageContext {
+  route: string;
+  pageName: string;
+  activeTab: string | null;
+  activeSubTab: string | null;
+  drawerOpen: boolean;
+  drawerType: string | null;
+  drawerEntityId: string | null;
+  drawerEntityName: string | null;
+  drawerMetadata: Record<string, unknown> | null;
+  contactId: string | null;
+  contactName: string | null;
+}
+
 export interface RileyContext {
   userName: string;
   userRole: string;
@@ -344,6 +358,50 @@ export async function buildDebtorContext(contactId: string, tenantId: string): P
 /**
  * Build page-aware context based on the current route the user is viewing.
  */
+function buildContextNarrative(ext: ExtendedPageContext | undefined): string {
+  if (!ext) return "";
+
+  const parts: string[] = [];
+
+  // Location
+  let location = `The user is on the ${ext.pageName} page`;
+  if (ext.activeTab) {
+    const tabLabel = ext.activeTab.charAt(0).toUpperCase() + ext.activeTab.slice(1);
+    location += `, ${tabLabel} tab`;
+  }
+  if (ext.activeSubTab) {
+    const subLabel = ext.activeSubTab.charAt(0).toUpperCase() + ext.activeSubTab.slice(1);
+    location += `, ${subLabel} view`;
+  }
+  parts.push(location + ".");
+
+  // Drawer context
+  if (ext.drawerOpen && ext.drawerType) {
+    const meta = ext.drawerMetadata || {};
+    switch (ext.drawerType) {
+      case "queue_item":
+        parts.push(
+          `They have the queue preview drawer open for ${ext.drawerEntityName || "a debtor"}. ` +
+          `Proposed action: ${meta.channel || "email"} · ${meta.tone || "professional"} tone · ` +
+          `£${Number(meta.amount || 0).toLocaleString("en-GB", { minimumFractionDigits: 2 })} · ` +
+          `${meta.daysOverdue || 0} days overdue` +
+          (meta.priorContactCount === 0 ? " · first chase" : ` · ${meta.priorContactCount} prior contacts`) +
+          (meta.subject ? `. Subject: "${meta.subject}"` : "") + "."
+        );
+        break;
+      case "email_compose":
+        parts.push(`They are composing an email to ${ext.drawerEntityName || "a debtor"}.`);
+        break;
+      default:
+        if (ext.drawerEntityName) {
+          parts.push(`They have a ${ext.drawerType} drawer open for ${ext.drawerEntityName}.`);
+        }
+    }
+  }
+
+  return parts.join(" ");
+}
+
 async function buildPageContext(
   pageContext: string,
   tenantId: string,
@@ -978,6 +1036,7 @@ export async function getRileyResponse(params: {
   conversationId: string | null;
   userMessage: string;
   pageContext: string;
+  extendedContext?: ExtendedPageContext;
   topic: RileyTopic;
   relatedEntityType?: string;
   relatedEntityId?: string;
@@ -988,6 +1047,7 @@ export async function getRileyResponse(params: {
     conversationId,
     userMessage,
     pageContext,
+    extendedContext,
     topic,
     relatedEntityType,
     relatedEntityId,
@@ -1010,7 +1070,7 @@ export async function getRileyResponse(params: {
   }
 
   // 2. Fetch context in parallel
-  const [user, tenantSnapshot, relevantFacts, pageContextBlock] = await Promise.all([
+  const [user, tenantSnapshot, relevantFacts, rawPageContext] = await Promise.all([
     storage.getUser(userId),
     getTenantSnapshot(tenantId),
     storage.listAiFacts(
@@ -1020,6 +1080,12 @@ export async function getRileyResponse(params: {
     buildPageContext(pageContext, tenantId, relatedEntityType, relatedEntityId),
   ]);
 
+  // Prepend context narrative from extended context
+  const contextNarrative = buildContextNarrative(extendedContext);
+  const pageContextBlock = contextNarrative
+    ? [contextNarrative, rawPageContext].filter(Boolean).join("\n\n")
+    : rawPageContext;
+
   const userName =
     [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "User";
   const userRole = user?.role || "owner";
@@ -1028,7 +1094,7 @@ export async function getRileyResponse(params: {
   const systemPrompt = buildRileySystemPrompt({
     userName,
     userRole,
-    pageContext,
+    pageContext: extendedContext?.pageName || pageContext,
     topic,
     isOnboarding: topic === "onboarding",
     tenantSnapshot,
@@ -1082,6 +1148,7 @@ export async function getRileyResponseStreaming(params: {
   conversationId: string | null;
   userMessage: string;
   pageContext: string;
+  extendedContext?: ExtendedPageContext;
   topic: RileyTopic;
   relatedEntityType?: string;
   relatedEntityId?: string;
@@ -1094,6 +1161,7 @@ export async function getRileyResponseStreaming(params: {
     userId,
     userMessage,
     pageContext,
+    extendedContext,
     topic,
     relatedEntityType,
     relatedEntityId,
@@ -1119,12 +1187,18 @@ export async function getRileyResponseStreaming(params: {
   }
 
   // 2. Fetch context in parallel
-  const [user, tenantSnapshot, relevantFacts, pageContextBlock] = await Promise.all([
+  const [user, tenantSnapshot, relevantFacts, rawPageContext] = await Promise.all([
     storage.getUser(userId),
     getTenantSnapshot(tenantId),
     storage.listAiFacts(tenantId, relatedEntityId || undefined),
     buildPageContext(pageContext, tenantId, relatedEntityType, relatedEntityId),
   ]);
+
+  // Prepend context narrative from extended context
+  const contextNarrative = buildContextNarrative(extendedContext);
+  const pageContextBlock = contextNarrative
+    ? [contextNarrative, rawPageContext].filter(Boolean).join("\n\n")
+    : rawPageContext;
 
   const userName =
     [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "User";
@@ -1134,7 +1208,7 @@ export async function getRileyResponseStreaming(params: {
   const systemPrompt = buildRileySystemPrompt({
     userName,
     userRole,
-    pageContext,
+    pageContext: extendedContext?.pageName || pageContext,
     topic,
     isOnboarding: topic === "onboarding",
     tenantSnapshot,

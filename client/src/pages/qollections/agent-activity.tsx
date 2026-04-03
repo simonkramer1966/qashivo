@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useSearch, useLocation } from "wouter";
 import AppShell from "@/components/layout/app-shell";
 import CountdownBanner from "@/components/action-centre/CountdownBanner";
 import ModeSelector from "@/components/action-centre/ModeSelector";
@@ -16,8 +17,11 @@ interface TenantSettings {
   approvalTimeoutHours: number;
 }
 
-type MainTab = "overview" | "approvals" | "vip" | "actioned" | "exceptions";
+type MainTab = "summary" | "queue" | "vip" | "activity" | "exceptions";
 type ExceptionSubTab = "triage" | "simple" | "moderate" | "complex" | "strategic";
+
+const VALID_TABS = new Set<MainTab>(["summary", "queue", "vip", "activity", "exceptions"]);
+const VALID_SUBS = new Set<ExceptionSubTab>(["triage", "simple", "moderate", "complex", "strategic"]);
 
 // Classify exception complexity (mirrors ExceptionsTab logic)
 function classifyException(reason: string | null): ExceptionSubTab {
@@ -39,9 +43,36 @@ const EXCEPTION_SUB_TABS: { value: ExceptionSubTab; label: string }[] = [
   { value: "strategic", label: "Strategic" },
 ];
 
+// Parse search string into params
+function parseSearch(search: string): URLSearchParams {
+  return new URLSearchParams(search.startsWith("?") ? search : `?${search}`);
+}
+
 export default function QollectionsAgentActivity() {
-  const [activeTab, setActiveTab] = useState<MainTab>("overview");
-  const [exceptionSubTab, setExceptionSubTab] = useState<ExceptionSubTab>("triage");
+  const search = useSearch();
+  const [, navigate] = useLocation();
+  const params = useMemo(() => parseSearch(search), [search]);
+
+  // Read tab state from URL
+  const rawTab = params.get("tab") as MainTab | null;
+  const activeTab: MainTab = rawTab && VALID_TABS.has(rawTab) ? rawTab : "queue";
+  const rawSub = params.get("sub") as ExceptionSubTab | null;
+  const exceptionSubTab: ExceptionSubTab = rawSub && VALID_SUBS.has(rawSub) ? rawSub : "triage";
+
+  // Navigate by updating URL params
+  const setTab = (tab: MainTab) => {
+    const p = new URLSearchParams();
+    p.set("tab", tab);
+    if (tab === "exceptions") p.set("sub", "triage");
+    navigate(`/qollections/agent-activity?${p.toString()}`, { replace: true });
+  };
+
+  const setSubTab = (sub: ExceptionSubTab) => {
+    const p = new URLSearchParams();
+    p.set("tab", "exceptions");
+    p.set("sub", sub);
+    navigate(`/qollections/agent-activity?${p.toString()}`, { replace: true });
+  };
 
   // Fetch tenant settings for mode-aware rendering
   const { data: context } = useQuery<{ tenant: TenantSettings }>({
@@ -89,13 +120,6 @@ export default function QollectionsAgentActivity() {
   const showApprovals = approvalMode !== "full_auto";
   const showCountdown = approvalMode === "auto_after_timeout";
 
-  const handleMainTabClick = (tab: MainTab) => {
-    if (tab === "exceptions" && activeTab !== "exceptions") {
-      setExceptionSubTab("triage");
-    }
-    setActiveTab(tab);
-  };
-
   return (
     <AppShell title="Action Centre" subtitle="Review, approve and track agent actions">
       <div className="space-y-4">
@@ -112,25 +136,25 @@ export default function QollectionsAgentActivity() {
         <div className="overflow-x-auto scrollbar-hide">
           <div className="inline-flex h-9 items-center rounded-lg bg-muted p-1 text-muted-foreground min-w-full">
             {/* Main tabs */}
-            <TabButton active={activeTab === "overview"} onClick={() => handleMainTabClick("overview")}>
+            <TabButton active={activeTab === "summary"} onClick={() => setTab("summary")}>
               Summary
             </TabButton>
 
             {showApprovals && (
-              <TabButton active={activeTab === "approvals"} onClick={() => handleMainTabClick("approvals")}>
+              <TabButton active={activeTab === "queue"} onClick={() => setTab("queue")}>
                 Queue ({approvalCount})
               </TabButton>
             )}
 
-            <TabButton active={activeTab === "vip"} onClick={() => handleMainTabClick("vip")}>
+            <TabButton active={activeTab === "vip"} onClick={() => setTab("vip")}>
               VIP ({vipCount})
             </TabButton>
 
-            <TabButton active={activeTab === "actioned"} onClick={() => handleMainTabClick("actioned")}>
+            <TabButton active={activeTab === "activity"} onClick={() => setTab("activity")}>
               Activity
             </TabButton>
 
-            <TabButton active={activeTab === "exceptions"} onClick={() => handleMainTabClick("exceptions")}>
+            <TabButton active={activeTab === "exceptions"} onClick={() => setTab("exceptions")}>
               Exceptions ({exceptionCount})
             </TabButton>
 
@@ -144,7 +168,7 @@ export default function QollectionsAgentActivity() {
                   <SubTabButton
                     key={sub.value}
                     active={exceptionSubTab === sub.value}
-                    onClick={() => setExceptionSubTab(sub.value)}
+                    onClick={() => setSubTab(sub.value)}
                   >
                     {sub.label} ({exceptionSubCounts[sub.value]})
                   </SubTabButton>
@@ -156,10 +180,10 @@ export default function QollectionsAgentActivity() {
 
         {/* Tab content */}
         <div className="mt-4">
-          {activeTab === "overview" && <OverviewTab />}
-          {activeTab === "approvals" && showApprovals && <ApprovalsTab />}
+          {activeTab === "summary" && <OverviewTab />}
+          {activeTab === "queue" && showApprovals && <ApprovalsTab />}
           {activeTab === "vip" && <VipTab />}
-          {activeTab === "actioned" && <ActionedTab />}
+          {activeTab === "activity" && <ActionedTab />}
           {activeTab === "exceptions" && <ExceptionsTab subTab={exceptionSubTab} />}
         </div>
       </div>

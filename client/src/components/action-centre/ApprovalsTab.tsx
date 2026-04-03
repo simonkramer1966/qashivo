@@ -56,6 +56,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
+import { useDrawer } from "@/contexts/DrawerContext";
 import { formatRelativeTime, normalizeChannel, formatCurrencyCompact } from "./utils";
 import ApprovalDrawer from "./ApprovalDrawer";
 import { VipPromotionDialog } from "./VipPromotionDialog";
@@ -225,6 +226,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
+  const { openDrawer, closeDrawer } = useDrawer();
   const [drawerActionId, setDrawerActionId] = useState<string | null>(null);
   const [editAction, setEditAction] = useState<{ id: string; subject: string; body: string } | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -411,6 +413,28 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
 
   const totalQueuedAmount = useMemo(() => actions.reduce((s, a) => s + a.totalAmount, 0), [actions]);
   const uniqueDebtors = useMemo(() => new Set(actions.map(a => a.contactId).filter(Boolean)).size, [actions]);
+
+  // Sync DrawerContext with local drawerActionId
+  useEffect(() => {
+    if (drawerActionId) {
+      const action = rawActions.find(a => a.id === drawerActionId);
+      if (action) {
+        openDrawer("queue_item", action.id, action.companyName || action.contactName || null, {
+          contactId: action.contactId,
+          channel: normalizeChannel(action.type),
+          tone: toneOverrides.get(action.id) || action.agentToneLevel || "professional",
+          amount: action.totalAmount,
+          daysOverdue: action.daysOverdue,
+          subject: action.subject,
+          priorContactCount: action.priorContactCount,
+          prsScore: action.prsScore,
+          invoiceCount: action.invoiceCount,
+        });
+      }
+    } else {
+      closeDrawer();
+    }
+  }, [drawerActionId]);
 
   // ── Selection helpers ──────────────────────────────────────
 
