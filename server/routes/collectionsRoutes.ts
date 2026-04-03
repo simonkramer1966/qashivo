@@ -21,7 +21,7 @@ import {
   tenants, paymentPromises, promisesToPay, smeClients, contactNotes, timelineEvents,
   attentionItems, outcomes, activityLogs, collectionPolicies, paymentPlans,
   emailMessages, customerContactPersons, scheduledReports,
-  complianceChecks,
+  complianceChecks, aiFacts, customerPreferences,
 } from "@shared/schema";
 import { computeNextRunAt } from "../services/reportScheduler";
 import { REPORT_TYPE_LABELS, type ReportType } from "../services/reportGenerator";
@@ -3988,6 +3988,8 @@ Payment required immediately to avoid collection action. Contact us NOW.`
           .set({
             subject: editedSubject || action.subject,
             content: editedBody || action.content,
+            editedByUser: true,
+            editedAt: new Date(),
             updatedAt: new Date(),
           })
           .where(eq(actions.id, actionId));
@@ -4065,6 +4067,74 @@ Payment required immediately to avoid collection action. Contact us NOW.`
           contactId: rejectedAction.contactId ?? undefined,
         }).catch((err: any) => console.error("[reject] pattern detection failed:", err))
       );
+
+      // Part 15: Charlie learning from tone-related rejections
+      if (rejectedAction.contactId && (category === "wrong_tone" || category === "too_aggressive")) {
+        // Log tone feedback for future tone selection
+        (async () => {
+          try {
+            await db.insert(aiFacts).values({
+              id: crypto.randomUUID(),
+              tenantId: user.tenantId!,
+              entityType: "contact",
+              entityId: rejectedAction.contactId!,
+              category: "tone_feedback",
+              title: `Tone rejection: ${category}`,
+              content: `User rejected ${rejectedAction.agentToneLevel} tone as ${category === "wrong_tone" ? "wrong tone" : "too aggressive"}`,
+              factKey: "rejection_tone_override",
+              factValue: JSON.stringify({
+                suggestedTone: rejectedAction.agentToneLevel,
+                reason: category,
+                rejectedAt: now.toISOString(),
+              }),
+              source: "user_rejection",
+              confidence: "1.0",
+              isActive: true,
+              createdAt: now,
+              updatedAt: now,
+            });
+          } catch (err: any) {
+            console.error("[reject] tone feedback save failed:", err.message);
+          }
+        })();
+      }
+
+      // Flag debtor as do-not-chase when rejected with relationship reason
+      if (rejectedAction.contactId && category === "relationship_do_not_chase") {
+        (async () => {
+          try {
+            // Disable all channels in preferences (effective do-not-chase)
+            await db
+              .update(customerPreferences)
+              .set({ emailEnabled: false, smsEnabled: false, voiceEnabled: false, channelPreferenceSource: "user_rejection", channelPreferenceNotes: "Relationship — do not chase (set via rejection)", updatedAt: now })
+              .where(
+                and(
+                  eq(customerPreferences.tenantId, user.tenantId!),
+                  eq(customerPreferences.contactId, rejectedAction.contactId!),
+                )
+              );
+            // Log AI fact
+            await db.insert(aiFacts).values({
+              id: crypto.randomUUID(),
+              tenantId: user.tenantId!,
+              entityType: "contact",
+              entityId: rejectedAction.contactId!,
+              category: "internal_policy",
+              title: "Do not chase",
+              content: "User flagged this debtor as relationship — do not chase via action rejection",
+              factKey: "do_not_chase",
+              factValue: "true",
+              source: "user_rejection",
+              confidence: "1.0",
+              isActive: true,
+              createdAt: now,
+              updatedAt: now,
+            });
+          } catch (err: any) {
+            console.error("[reject] do-not-chase save failed:", err.message);
+          }
+        })();
+      }
 
       res.json({ message: "Action rejected", actionId });
     } catch (error: any) {

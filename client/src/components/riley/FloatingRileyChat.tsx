@@ -264,6 +264,21 @@ export default function FloatingRileyChat() {
     }
   }, [isOpen]);
 
+  // Listen for external "riley:open" events (e.g. Ask Riley from Action Centre)
+  useEffect(() => {
+    function handleRileyOpen(e: Event) {
+      const detail = (e as CustomEvent).detail;
+      if (!detail?.message) return;
+      setIsOpen(true);
+      setHasShownGreeting(true);
+      // Pre-fill the input so user can edit or press Enter to send
+      setInputValue(detail.message);
+      setTimeout(() => inputRef.current?.focus(), 150);
+    }
+    window.addEventListener("riley:open", handleRileyOpen);
+    return () => window.removeEventListener("riley:open", handleRileyOpen);
+  }, []);
+
   // Show greeting or proactive suggestion on expand
   const handleExpand = useCallback(() => {
     setIsOpen(true);

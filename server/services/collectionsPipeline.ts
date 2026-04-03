@@ -345,6 +345,92 @@ export async function processAutoApprovals(): Promise<number> {
   return processed;
 }
 
+// ── Tone override & regeneration ────────────────────────────
+
+/**
+ * Regenerate a pending action's email content at a different tone level.
+ * Used by the tone-override UI control in the Approvals tab.
+ */
+export async function regenerateAtTone(
+  actionId: string,
+  newTone: string,
+  userId: string,
+): Promise<{ regenerated: boolean; subject?: string }> {
+  const [action] = await db
+    .select()
+    .from(actions)
+    .where(eq(actions.id, actionId))
+    .limit(1);
+
+  if (!action) throw new Error("Action not found");
+  if (!action.contactId) throw new Error("Action has no contactId");
+
+  // Map tone level to action type
+  const toneToActionType: Record<string, ActionContext["actionType"]> = {
+    friendly: "pre_due_reminder",
+    professional: "follow_up",
+    firm: "escalation",
+    formal: "final_notice",
+    legal: "final_notice",
+  };
+
+  // Build action context at the requested tone
+  const actionContext: ActionContext = {
+    toneLevel: newTone as ActionContext["toneLevel"],
+    actionType: toneToActionType[newTone] || "follow_up",
+    daysSinceLastContact: 0, // Not critical for regeneration — LLM uses context
+    touchCount: 0,
+  };
+
+  // Generate new email via the collections agent LLM
+  const emailResult = await generateCollectionEmail(
+    action.tenantId,
+    action.contactId,
+    actionContext,
+  );
+
+  if (!emailResult.body) {
+    throw new Error("LLM returned empty email body during regeneration");
+  }
+
+  // Run compliance on the regenerated content
+  const compliance = await checkCompliance({
+    tenantId: action.tenantId,
+    contactId: action.contactId,
+    actionId,
+    emailSubject: emailResult.subject,
+    emailBody: emailResult.body,
+    toneLevel: newTone as "friendly" | "professional" | "firm" | "formal",
+    agentReasoning: emailResult.agentReasoning,
+  });
+
+  if (!compliance.approved) {
+    throw new Error(`Compliance blocked regenerated email: ${compliance.violations?.join("; ") || "unknown"}`);
+  }
+
+  // Update the action with regenerated content
+  await db
+    .update(actions)
+    .set({
+      subject: emailResult.subject,
+      content: emailResult.body,
+      agentToneLevel: newTone,
+      agentReasoning: emailResult.agentReasoning,
+      editedByUser: true,
+      editedAt: new Date(),
+      complianceResult: "approved",
+      metadata: sql`jsonb_set(
+        COALESCE(${actions.metadata}, '{}'),
+        '{toneOverride}',
+        ${JSON.stringify({ from: action.agentToneLevel, to: newTone, by: userId, at: new Date().toISOString() })}::jsonb
+      )`,
+      updatedAt: new Date(),
+    })
+    .where(eq(actions.id, actionId));
+
+  return { regenerated: true, subject: emailResult.subject };
+}
+
 // ── Email delivery ──────────────────────────────────────────
 
 async function deliverEmail(

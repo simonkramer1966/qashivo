@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { isAuthenticated } from "../auth";
 import { storage } from "../storage";
 import { db } from "../db";
-import { actions, actionBatches, rejectionPatterns, tenants, messageDrafts, contacts, invoices, disputes, complianceChecks, emailMessages, promisesToPay, paymentPlans } from "@shared/schema";
+import { actions, actionBatches, rejectionPatterns, tenants, messageDrafts, contacts, invoices, disputes, complianceChecks, emailMessages, promisesToPay, paymentPlans, customerLearningProfiles, inboundMessages, paymentPromises, aiFacts, customerPreferences } from "@shared/schema";
 import { eq, and, inArray, desc, sql, or, gte, lte, count, sum, not, isNull, between } from "drizzle-orm";
 import { batchProcessor } from "../services/batchProcessor";
 import { z } from "zod";
@@ -45,12 +45,78 @@ export function registerActionCentreRoutes(app: Express): void {
         .limit(limit)
         .offset(offset);
 
-      // Flatten: spread action fields + add contactName/companyName
-      const flatRows = rows.map(r => ({
-        ...r.action,
-        contactName: r.contactName || null,
-        companyName: r.companyName || null,
-      }));
+      // Enrich each action with debtor context for the queue display
+      const contactIds = Array.from(new Set(rows.filter(r => r.action.contactId).map(r => r.action.contactId!)));
+
+      // Batch-fetch learning profiles for PRS scores
+      const profiles = contactIds.length > 0
+        ? await db.select({
+            contactId: customerLearningProfiles.contactId,
+            prs: customerLearningProfiles.promiseReliabilityScore,
+            prsRaw: customerLearningProfiles.prsRaw,
+          }).from(customerLearningProfiles).where(
+            and(
+              eq(customerLearningProfiles.tenantId, user.tenantId),
+              inArray(customerLearningProfiles.contactId, contactIds),
+            )
+          )
+        : [];
+      const profileMap = new Map(profiles.map(p => [p.contactId, p]));
+
+      // Batch-fetch prior contact counts (completed actions per contact)
+      const priorCounts = contactIds.length > 0
+        ? await db.select({
+            contactId: actions.contactId,
+            count: sql<number>`count(*)::int`,
+          }).from(actions).where(
+            and(
+              eq(actions.tenantId, user.tenantId),
+              inArray(actions.contactId, contactIds),
+              inArray(actions.status, ["sent", "completed"]),
+            )
+          ).groupBy(actions.contactId)
+        : [];
+      const priorCountMap = new Map(priorCounts.map(p => [p.contactId, p.count]));
+
+      // Batch-fetch overdue invoice totals per contact
+      const now = new Date();
+      const contactInvoiceStats = contactIds.length > 0
+        ? await db.select({
+            contactId: invoices.contactId,
+            totalAmount: sql<string>`coalesce(sum(cast(${invoices.amount} as numeric) - cast(coalesce(${invoices.amountPaid}, '0') as numeric)), 0)::text`,
+            invoiceCount: sql<number>`count(*)::int`,
+            oldestDueDate: sql<string>`min(${invoices.dueDate})::text`,
+          }).from(invoices).where(
+            and(
+              eq(invoices.tenantId, user.tenantId),
+              inArray(invoices.contactId, contactIds),
+              not(inArray(invoices.status, ["paid", "void", "voided", "deleted", "draft"])),
+            )
+          ).groupBy(invoices.contactId)
+        : [];
+      const invoiceStatsMap = new Map(contactInvoiceStats.map(s => [s.contactId, s]));
+
+      // Flatten: spread action fields + add enriched context
+      const flatRows = rows.map(r => {
+        const cid = r.action.contactId;
+        const profile = cid ? profileMap.get(cid) : null;
+        const priorCount = cid ? (priorCountMap.get(cid) ?? 0) : 0;
+        const invStats = cid ? invoiceStatsMap.get(cid) : null;
+        const oldestDue = invStats?.oldestDueDate ? new Date(invStats.oldestDueDate) : null;
+        const daysOverdue = oldestDue ? Math.max(0, Math.floor((now.getTime() - oldestDue.getTime()) / (1000 * 60 * 60 * 24))) : 0;
+
+        return {
+          ...r.action,
+          contactName: r.contactName || null,
+          companyName: r.companyName || null,
+          // Enriched fields for queue display
+          daysOverdue,
+          priorContactCount: priorCount,
+          prsScore: profile?.prs ? Number(profile.prs) : null,
+          totalAmount: invStats ? parseFloat(invStats.totalAmount) : 0,
+          invoiceCount: invStats?.invoiceCount ?? 0,
+        };
+      });
 
       const [countResult] = await db
         .select({ count: sql<number>`count(*)::int` })
@@ -174,13 +240,14 @@ export function registerActionCentreRoutes(app: Express): void {
   });
 
   // ── POST /api/actions/:actionId/defer ─────────────────────────
-  // Defer an action to the next batch
+  // Defer an action — optionally with reason, duration, and note
   app.post("/api/actions/:actionId/defer", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
 
       const { actionId } = req.params;
+      const { reason, deferredUntil, note } = req.body || {};
       const now = new Date();
 
       // Get the action first
@@ -191,7 +258,7 @@ export function registerActionCentreRoutes(app: Express): void {
           and(
             eq(actions.id, actionId),
             eq(actions.tenantId, user.tenantId),
-            eq(actions.status, "pending_approval"),
+            inArray(actions.status, ["pending_approval", "pending"]),
           )
         )
         .limit(1);
@@ -202,7 +269,6 @@ export function registerActionCentreRoutes(app: Express): void {
 
       // Get or create next batch for deferral
       const nextBatch = await batchProcessor.getOrCreateCurrentBatch(user.tenantId);
-      // If the action is in the same batch, we need a new one after this one
       const deferredToBatchId = action.batchId !== nextBatch.id ? nextBatch.id : nextBatch.id;
 
       await db
@@ -212,6 +278,9 @@ export function registerActionCentreRoutes(app: Express): void {
           deferredBy: user.id,
           deferredAt: now,
           deferredToBatchId,
+          deferReason: reason || null,
+          deferredUntil: deferredUntil ? new Date(deferredUntil) : null,
+          deferNote: note || null,
           updatedAt: now,
         })
         .where(eq(actions.id, actionId));
@@ -226,6 +295,147 @@ export function registerActionCentreRoutes(app: Express): void {
       res.json({ message: "Action deferred", actionId, deferredToBatchId });
     } catch (error: any) {
       console.error("Error deferring action:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ── GET /api/action-centre/yesterday-summary ────────────────────
+  // Quick summary strip: what happened in the last 24 hours
+  app.get("/api/action-centre/yesterday-summary", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      yesterday.setHours(0, 0, 0, 0);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // Sent actions yesterday
+      const [sentResult] = await db
+        .select({ count: count() })
+        .from(actions)
+        .where(
+          and(
+            eq(actions.tenantId, user.tenantId),
+            inArray(actions.status, ["sent", "completed"]),
+            gte(actions.updatedAt, yesterday),
+            lte(actions.updatedAt, today),
+          )
+        );
+
+      // Inbound responses yesterday
+      const [responsesResult] = await db
+        .select({ count: count() })
+        .from(inboundMessages)
+        .where(
+          and(
+            eq(inboundMessages.tenantId, user.tenantId),
+            gte(inboundMessages.createdAt, yesterday),
+            lte(inboundMessages.createdAt, today),
+          )
+        );
+
+      // Payment promises created yesterday
+      const [promisesResult] = await db
+        .select({ count: count() })
+        .from(paymentPromises)
+        .where(
+          and(
+            eq(paymentPromises.tenantId, user.tenantId),
+            gte(paymentPromises.createdAt, yesterday),
+            lte(paymentPromises.createdAt, today),
+          )
+        );
+
+      // Invoices paid yesterday (amount sum)
+      const [paidResult] = await db
+        .select({
+          count: count(),
+          total: sum(invoices.amount),
+        })
+        .from(invoices)
+        .where(
+          and(
+            eq(invoices.tenantId, user.tenantId),
+            eq(invoices.status, "paid"),
+            gte(invoices.updatedAt, yesterday),
+            lte(invoices.updatedAt, today),
+          )
+        );
+
+      res.json({
+        sent: sentResult?.count ?? 0,
+        responses: responsesResult?.count ?? 0,
+        promises: promisesResult?.count ?? 0,
+        paid: {
+          count: paidResult?.count ?? 0,
+          total: parseFloat(String(paidResult?.total ?? "0")),
+        },
+      });
+    } catch (error: any) {
+      console.error("Error fetching yesterday summary:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ── POST /api/actions/:actionId/tone-override ───────────────────
+  // Override the agent tone and regenerate email content
+  app.post("/api/actions/:actionId/tone-override", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const { actionId } = req.params;
+      const { tone } = req.body;
+      const validTones = ["friendly", "professional", "firm", "formal", "legal"];
+      if (!tone || !validTones.includes(tone)) {
+        return res.status(400).json({ message: `Invalid tone. Must be one of: ${validTones.join(", ")}` });
+      }
+
+      const [action] = await db
+        .select()
+        .from(actions)
+        .where(
+          and(
+            eq(actions.id, actionId),
+            eq(actions.tenantId, user.tenantId),
+            inArray(actions.status, ["pending_approval", "pending"]),
+          )
+        )
+        .limit(1);
+
+      if (!action) {
+        return res.status(404).json({ message: "Action not found or not pending approval" });
+      }
+
+      // If tone is already the same, no regeneration needed
+      if (action.agentToneLevel === tone) {
+        return res.json({ message: "Tone unchanged", actionId, tone });
+      }
+
+      // Regenerate email at new tone using collections agent
+      try {
+        const { regenerateAtTone } = await import("../services/collectionsPipeline");
+        const result = await regenerateAtTone(actionId, tone, user.id);
+        res.json({ message: "Tone overridden and email regenerated", actionId, tone, ...result });
+      } catch (regenErr: any) {
+        // If regeneration fails, still update the tone level as a fallback
+        console.warn("[tone-override] regeneration failed, updating tone only:", regenErr.message);
+        await db
+          .update(actions)
+          .set({
+            agentToneLevel: tone,
+            editedByUser: true,
+            editedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(actions.id, actionId));
+        res.json({ message: "Tone updated (regeneration unavailable)", actionId, tone, regenerated: false });
+      }
+    } catch (error: any) {
+      console.error("Error overriding tone:", error);
       res.status(500).json({ message: error.message });
     }
   });

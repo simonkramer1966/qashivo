@@ -924,6 +924,13 @@ export const actions = pgTable("actions", {
   deferredBy: varchar("deferred_by").references(() => users.id),
   deferredAt: timestamp("deferred_at"),
   deferredToBatchId: varchar("deferred_to_batch_id"),
+  deferredUntil: timestamp("deferred_until"),
+  deferReason: varchar("defer_reason"),
+  deferNote: text("defer_note"),
+
+  // Edit tracking — when user edits content before approving
+  editedByUser: boolean("edited_by_user").default(false),
+  editedAt: timestamp("edited_at"),
 
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
