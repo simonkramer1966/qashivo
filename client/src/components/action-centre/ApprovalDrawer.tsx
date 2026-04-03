@@ -22,7 +22,16 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Check, X, Clock, ChevronDown, Loader2, Sparkles, ArrowRight,
+  MoreVertical, Eye, StickyNote, PauseCircle, Star,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrencyCompact } from "./utils";
@@ -132,6 +141,7 @@ interface ApprovalDrawerProps {
   onDefer: (reason: string, until: Date, note: string) => void;
   onReject: (reason: string, category: string, note: string) => void;
   onApproveWithEdits: (subject: string, body: string) => void;
+  onMenuAction: (item: string) => void;
   approvePending: boolean;
   deferPending: boolean;
   rejectPending: boolean;
@@ -148,6 +158,7 @@ export default function ApprovalDrawer({
   onDefer,
   onReject,
   onApproveWithEdits,
+  onMenuAction,
   approvePending,
   deferPending,
   rejectPending,
@@ -188,13 +199,39 @@ export default function ApprovalDrawer({
         <ScrollArea className="flex-1">
           <div className="p-5 space-y-4">
             {/* HEADER */}
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900 leading-tight">
-                {action.companyName || action.contactName || "Unknown debtor"}
-              </h2>
-              <p className="text-[13px] text-muted-foreground mt-0.5">
-                {normalizeChannel(action.type)} · <span className="capitalize">{currentTone}</span> · {confidence !== null ? `${confidence}% confidence` : "—"}
-              </p>
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900 leading-tight">
+                  {action.companyName || action.contactName || "Unknown debtor"}
+                </h2>
+                <p className="text-[13px] text-muted-foreground mt-0.5">
+                  {normalizeChannel(action.type)} · <span className="capitalize">{currentTone}</span> · {confidence !== null ? `${confidence}% confidence` : "—"}
+                </p>
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 flex-shrink-0">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => onMenuAction("vip")}>
+                    <Star className="h-4 w-4 mr-2" /> Mark as VIP
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onMenuAction("view")}>
+                    <Eye className="h-4 w-4 mr-2" /> View debtor detail
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onMenuAction("note")}>
+                    <StickyNote className="h-4 w-4 mr-2" /> Add note
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => onMenuAction("hold")}>
+                    <PauseCircle className="h-4 w-4 mr-2" /> Put on hold
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
             {/* SECTION 1 — Recipients */}

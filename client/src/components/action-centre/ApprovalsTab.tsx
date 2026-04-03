@@ -33,13 +33,32 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Check, X, Clock, Mail, MessageSquare, Phone,
   RefreshCw, Trash2, Loader2, Info, ChevronDown,
-  Sparkles, ArrowUpDown,
+  Sparkles, ArrowUpDown, MoreVertical, Eye, StickyNote,
+  PauseCircle, Star,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLocation } from "wouter";
 import { formatRelativeTime, normalizeChannel, formatCurrencyCompact } from "./utils";
 import ApprovalDrawer from "./ApprovalDrawer";
+import { VipPromotionDialog } from "./VipPromotionDialog";
 
 // ── Types ───────────────────────────────────────────────────
 
@@ -205,6 +224,7 @@ interface ApprovalsTabProps {
 export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, navigate] = useLocation();
   const [drawerActionId, setDrawerActionId] = useState<string | null>(null);
   const [editAction, setEditAction] = useState<{ id: string; subject: string; body: string } | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -213,6 +233,8 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
   const [toneOverrides, setToneOverrides] = useState<Map<string, ToneLevel>>(new Map());
   const [showShortcutHints, setShowShortcutHints] = useState(true);
   const [showLiveWarning, setShowLiveWarning] = useState(false);
+  const [vipTarget, setVipTarget] = useState<{ id: string; name: string } | null>(null);
+  const [noteTarget, setNoteTarget] = useState<{ contactId: string; companyName: string } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Listen for edit-before-send event from drawer
@@ -324,6 +346,30 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
     onError: (err: Error) => toast({ title: "Agent run failed", description: err.message, variant: "destructive" }),
   });
 
+  const holdMutation = useMutation({
+    mutationFn: async ({ contactId, actionId }: { contactId: string; actionId: string }) => {
+      // Set manualBlocked on the contact
+      await apiRequest("PATCH", `/api/contacts/${contactId}`, { manualBlocked: true });
+      // Cancel this queued action
+      await apiRequest("POST", `/api/actions/${actionId}/reject`, {
+        reason: "Debtor put on hold",
+        category: "debtor_on_hold",
+        note: "Manually held from approval queue",
+      });
+    },
+    onSuccess: (_, { contactId }) => {
+      const action = actions.find(a => a.contactId === contactId);
+      const name = action?.companyName || action?.contactName || "Contact";
+      queryClient.invalidateQueries({ queryKey: ["/api/action-centre"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
+      toast({ title: `${name} put on hold — Charlie will not contact them` });
+      setDrawerActionId(null);
+    },
+    onError: () => {
+      toast({ title: "Failed to put on hold", variant: "destructive" });
+    },
+  });
+
   // Bulk approve
   const bulkApproveMutation = useMutation({
     mutationFn: async (ids: string[]) => {
@@ -409,6 +455,24 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
 
   const handleToneChange = (id: string, tone: ToneLevel) => {
     setToneOverrides(prev => new Map(prev).set(id, tone));
+  };
+
+  const handleMenuAction = (action: EnrichedAction, item: string) => {
+    if (!action.contactId) return;
+    switch (item) {
+      case "vip":
+        setVipTarget({ id: action.contactId, name: action.companyName || action.contactName || "Unknown" });
+        break;
+      case "view":
+        navigate(`/qollections/debtors/${action.contactId}`);
+        break;
+      case "note":
+        setNoteTarget({ contactId: action.contactId, companyName: action.companyName || action.contactName || "Unknown" });
+        break;
+      case "hold":
+        holdMutation.mutate({ contactId: action.contactId, actionId: action.id });
+        break;
+    }
   };
 
   const handleRunAgent = async () => {
@@ -776,6 +840,30 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
                     >
                       <X className="h-3.5 w-3.5" />
                     </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                          <MoreVertical className="h-3.5 w-3.5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleMenuAction(action, "vip")}>
+                          <Star className="h-4 w-4 mr-2" /> Mark as VIP
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleMenuAction(action, "view")}>
+                          <Eye className="h-4 w-4 mr-2" /> View debtor detail
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleMenuAction(action, "note")}>
+                          <StickyNote className="h-4 w-4 mr-2" /> Add note
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleMenuAction(action, "hold")}>
+                          <PauseCircle className="h-4 w-4 mr-2" /> Put on hold
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
 
@@ -812,12 +900,33 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
             onDefer={(reason, until, note) => drawerActionId && handleDefer(drawerActionId, reason, until, note)}
             onReject={(reason, category, note) => drawerActionId && handleReject(drawerActionId, reason, category, note)}
             onApproveWithEdits={(subject, body) => drawerActionId && handleApproveWithEdits(drawerActionId, subject, body)}
+            onMenuAction={(item) => drawerAction && handleMenuAction(drawerAction, item)}
             approvePending={approveMutation.isPending}
             deferPending={deferMutation.isPending}
             rejectPending={rejectMutation.isPending}
           />
         );
       })()}
+
+      {/* VIP promotion dialog */}
+      {vipTarget && (
+        <VipPromotionDialog
+          open={!!vipTarget}
+          onOpenChange={(open) => { if (!open) setVipTarget(null); }}
+          contactId={vipTarget.id}
+          companyName={vipTarget.name}
+        />
+      )}
+
+      {/* Add note dialog */}
+      {noteTarget && (
+        <AddNoteDialog
+          open={!!noteTarget}
+          onOpenChange={(open) => { if (!open) setNoteTarget(null); }}
+          contactId={noteTarget.contactId}
+          companyName={noteTarget.companyName}
+        />
+      )}
 
       {/* Edit before send dialog */}
       {editAction && (
@@ -833,6 +942,68 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
         />
       )}
     </div>
+  );
+}
+
+// ── Add Note Dialog ─────────────────────────────────────────
+
+function AddNoteDialog({
+  open,
+  onOpenChange,
+  contactId,
+  companyName,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  contactId: string;
+  companyName: string;
+}) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [body, setBody] = useState("");
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      apiRequest("POST", `/api/contacts/${contactId}/timeline/notes`, { body: body.trim() }),
+    onSuccess: () => {
+      toast({ title: `Note added to ${companyName}` });
+      queryClient.invalidateQueries({ queryKey: ["/api/action-centre"] });
+      onOpenChange(false);
+      setBody("");
+    },
+    onError: () => {
+      toast({ title: "Failed to add note", variant: "destructive" });
+    },
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add note — {companyName}</DialogTitle>
+          <DialogDescription>
+            This note will appear on the debtor's timeline.
+          </DialogDescription>
+        </DialogHeader>
+        <Textarea
+          placeholder="Type your note..."
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          className="min-h-[100px] text-sm"
+          autoFocus
+        />
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button
+            disabled={!body.trim() || mutation.isPending}
+            onClick={() => mutation.mutate()}
+          >
+            {mutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
+            Save note
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

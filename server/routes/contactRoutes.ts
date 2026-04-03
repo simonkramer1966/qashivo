@@ -777,6 +777,7 @@ export function registerContactRoutes(app: Express): void {
       if (req.body.lpiGracePeriodDays !== undefined) updates.lpiGracePeriodDays = req.body.lpiGracePeriodDays;
       if (req.body.preferredCurrency !== undefined) updates.preferredCurrency = req.body.preferredCurrency || null;
       if (req.body.preferredLanguage !== undefined) updates.preferredLanguage = req.body.preferredLanguage || null;
+      if (req.body.manualBlocked !== undefined) updates.manualBlocked = !!req.body.manualBlocked;
 
       if (Object.keys(updates).length === 0) {
         return res.status(400).json({ message: "No valid fields to update" });
