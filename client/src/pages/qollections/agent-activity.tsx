@@ -23,25 +23,24 @@ interface TenantSettings {
 }
 
 type MainTab = "summary" | "queue" | "vip" | "activity" | "exceptions";
-type ExceptionSubTab = "triage" | "simple" | "moderate" | "complex" | "strategic";
+type ExceptionSubTab = "simple" | "moderate" | "complex" | "strategic";
 
 const VALID_TABS = new Set<MainTab>(["summary", "queue", "vip", "activity", "exceptions"]);
-const VALID_SUBS = new Set<ExceptionSubTab>(["triage", "simple", "moderate", "complex", "strategic"]);
+const VALID_SUBS = new Set<ExceptionSubTab>(["simple", "moderate", "complex", "strategic"]);
 
 // Classify exception complexity (mirrors ExceptionsTab logic)
-function classifyException(reason: string | null): ExceptionSubTab {
-  if (!reason) return "triage";
+function classifyException(reason: string | null): ExceptionSubTab | null {
+  if (!reason) return null;
   const r = reason.toLowerCase();
   if (r.includes("vip") || r.includes("strategic") || r.includes("high_value")) return "strategic";
   if (r.includes("dispute") || r.includes("compliance") || r.includes("insolvency")) return "complex";
   if (r.includes("low_confidence") || r.includes("unresponsive")) return "moderate";
   if (r.includes("first_contact")) return "simple";
-  return "triage";
+  return null;
 }
 
 // Exception sub-tab configuration
 const EXCEPTION_SUB_TABS: { value: ExceptionSubTab; label: string }[] = [
-  { value: "triage", label: "Triage" },
   { value: "simple", label: "Simple" },
   { value: "moderate", label: "Moderate" },
   { value: "complex", label: "Complex" },
@@ -62,13 +61,12 @@ export default function QollectionsAgentActivity() {
   const rawTab = params.get("tab") as MainTab | null;
   const activeTab: MainTab = rawTab && VALID_TABS.has(rawTab) ? rawTab : "queue";
   const rawSub = params.get("sub") as ExceptionSubTab | null;
-  const exceptionSubTab: ExceptionSubTab = rawSub && VALID_SUBS.has(rawSub) ? rawSub : "triage";
+  const exceptionSubTab: ExceptionSubTab | null = rawSub && VALID_SUBS.has(rawSub) ? rawSub : null;
 
   // Navigate by updating URL params
   const setTab = (tab: MainTab) => {
     const p = new URLSearchParams();
     p.set("tab", tab);
-    if (tab === "exceptions") p.set("sub", "triage");
     navigate(`/qollections/agent-activity?${p.toString()}`, { replace: true });
   };
 
@@ -111,13 +109,11 @@ export default function QollectionsAgentActivity() {
 
   // Compute per-sub-tab exception counts
   const exceptionSubCounts = useMemo(() => {
-    const counts: Record<ExceptionSubTab, number> = { triage: 0, simple: 0, moderate: 0, complex: 0, strategic: 0 };
+    const counts: Record<ExceptionSubTab, number> = { simple: 0, moderate: 0, complex: 0, strategic: 0 };
     const actions = exceptionsData?.exceptionActions ?? [];
-    // Triage = all unresolved
-    counts.triage = actions.length + (exceptionsData?.totalPatterns ?? 0);
     for (const a of actions) {
       const cat = classifyException(a.exceptionReason);
-      counts[cat]++;
+      if (cat) counts[cat]++;
     }
     return counts;
   }, [exceptionsData]);
@@ -192,7 +188,7 @@ export default function QollectionsAgentActivity() {
           {activeTab === "queue" && showApprovals && <ApprovalsTab />}
           {activeTab === "vip" && <VipTab />}
           {activeTab === "activity" && <ActionedTab />}
-          {activeTab === "exceptions" && <ExceptionsTab subTab={exceptionSubTab} />}
+          {activeTab === "exceptions" && <ExceptionsTab subTab={exceptionSubTab ?? undefined} />}
         </div>
       </div>
     </AppShell>

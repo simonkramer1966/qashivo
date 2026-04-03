@@ -32,24 +32,24 @@ interface RejectionPattern {
   status: string | null;
 }
 
-type ExceptionSubTab = "triage" | "simple" | "moderate" | "complex" | "strategic";
+type ExceptionSubTab = "simple" | "moderate" | "complex" | "strategic";
 
 // Classify exception complexity based on reason
-function classifyException(reason: string | null): ExceptionSubTab {
-  if (!reason) return "triage";
+function classifyException(reason: string | null): ExceptionSubTab | null {
+  if (!reason) return null;
   const r = reason.toLowerCase();
   if (r.includes("vip") || r.includes("strategic") || r.includes("high_value")) return "strategic";
   if (r.includes("dispute") || r.includes("compliance") || r.includes("insolvency")) return "complex";
   if (r.includes("low_confidence") || r.includes("unresponsive")) return "moderate";
   if (r.includes("first_contact")) return "simple";
-  return "triage";
+  return null;
 }
 
 interface ExceptionsTabProps {
   subTab?: ExceptionSubTab;
 }
 
-export default function ExceptionsTab({ subTab = "triage" }: ExceptionsTabProps) {
+export default function ExceptionsTab({ subTab }: ExceptionsTabProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -85,12 +85,12 @@ export default function ExceptionsTab({ subTab = "triage" }: ExceptionsTabProps)
   const allExceptions = data?.exceptionActions ?? [];
   const patterns = data?.rejectionPatterns ?? [];
 
-  // Filter exceptions by sub-tab classification
-  const exceptions = subTab === "triage"
-    ? allExceptions // Triage shows everything (unclassified landing)
-    : allExceptions.filter(e => classifyException(e.exceptionReason) === subTab);
+  // Filter exceptions by sub-tab classification (no sub-tab = show all)
+  const exceptions = subTab
+    ? allExceptions.filter(e => classifyException(e.exceptionReason) === subTab)
+    : allExceptions;
 
-  const isEmpty = exceptions.length === 0 && (subTab === "triage" ? patterns.length === 0 : true);
+  const isEmpty = exceptions.length === 0 && (!subTab ? patterns.length === 0 : true);
 
   if (isEmpty) {
     return (
@@ -99,7 +99,7 @@ export default function ExceptionsTab({ subTab = "triage" }: ExceptionsTabProps)
           <CheckCircle2 className="mb-3 h-10 w-10 text-green-500" />
           <h3 className="text-lg font-semibold">No exceptions</h3>
           <p className="text-sm text-muted-foreground">
-            {subTab === "triage" ? "All actions are running smoothly." : `No ${subTab} exceptions right now.`}
+            {!subTab ? "All actions are running smoothly." : `No ${subTab} exceptions right now.`}
           </p>
         </CardContent>
       </Card>
@@ -108,8 +108,8 @@ export default function ExceptionsTab({ subTab = "triage" }: ExceptionsTabProps)
 
   return (
     <div className="space-y-6">
-      {/* Rejection Patterns — only show in Triage view */}
-      {subTab === "triage" && patterns.length > 0 && (
+      {/* Rejection Patterns — show when no sub-tab filter (all exceptions view) */}
+      {!subTab && patterns.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
@@ -173,7 +173,7 @@ export default function ExceptionsTab({ subTab = "triage" }: ExceptionsTabProps)
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <AlertTriangle className="h-4 w-4 text-red-600" />
-              {subTab === "triage" ? "Exception Actions" : `${subTab.charAt(0).toUpperCase() + subTab.slice(1)} Exceptions`} ({exceptions.length})
+              {!subTab ? "Exception Actions" : `${subTab.charAt(0).toUpperCase() + subTab.slice(1)} Exceptions`} ({exceptions.length})
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
