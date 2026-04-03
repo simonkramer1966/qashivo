@@ -31,6 +31,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SortableHeader, type SortState } from "@/components/ui/sortable-header";
 
 interface InvoiceRow {
   id: string;
@@ -114,20 +115,33 @@ function daysOverdueDisplay(days: number, status: string) {
 
 type StatusFilter = "all" | "overdue" | "paid" | "pending";
 
+// Map SortableHeader field names to API sortBy values
+const SORT_FIELD_MAP: Record<string, string> = {
+  invoiceNumber: "invoiceNumber",
+  customer: "customer",
+  amount: "amount",
+  status: "status",
+  dueDate: "dueDate",
+  daysOverdue: "daysOverdue",
+};
+
+const DEFAULT_SORT: SortState = { field: "dueDate", dir: "desc" };
+
 export default function QollectionsInvoices() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [page, setPage] = useState(1);
+  const [sort, setSort] = useState<SortState>(DEFAULT_SORT);
 
-  // Reset to page 1 when filters change
-  useEffect(() => { setPage(1); }, [searchQuery, statusFilter]);
+  // Reset to page 1 when filters or sort change
+  useEffect(() => { setPage(1); }, [searchQuery, statusFilter, sort.field, sort.dir]);
 
   // Build server-side query params
   const queryParams: Record<string, string> = {
     page: String(page),
     limit: String(PAGE_SIZE),
-    sortBy: "dueDate",
-    sortDir: "desc",
+    sortBy: sort.dir ? (SORT_FIELD_MAP[sort.field] || "dueDate") : "dueDate",
+    sortDir: sort.dir || "desc",
   };
   if (statusFilter !== "all") queryParams.status = statusFilter;
   if (searchQuery.trim()) queryParams.search = searchQuery.trim();
@@ -259,14 +273,14 @@ export default function QollectionsInvoices() {
                 <TableBody>
                   {Array.from({ length: 8 }).map((_, i) => (
                     <TableRow key={i}>
-                      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-28" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-10" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-20 rounded-full" /></TableCell>
+                      <TableCell className="py-3 px-3"><Skeleton className="h-3.5 w-20" /></TableCell>
+                      <TableCell className="py-3 px-3"><Skeleton className="h-3.5 w-28" /></TableCell>
+                      <TableCell className="py-3 px-3"><Skeleton className="h-3.5 w-16" /></TableCell>
+                      <TableCell className="py-3 px-3"><Skeleton className="h-3.5 w-16" /></TableCell>
+                      <TableCell className="py-3 px-3"><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
+                      <TableCell className="py-3 px-3"><Skeleton className="h-3.5 w-20" /></TableCell>
+                      <TableCell className="py-3 px-3"><Skeleton className="h-3.5 w-10" /></TableCell>
+                      <TableCell className="py-3 px-3"><Skeleton className="h-5 w-20 rounded-full" /></TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -286,14 +300,14 @@ export default function QollectionsInvoices() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Invoice</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                      <TableHead className="text-right">Paid</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Due Date</TableHead>
-                      <TableHead>Days Overdue</TableHead>
-                      <TableHead>Stage</TableHead>
+                      <SortableHeader column="invoiceNumber" label="Invoice" currentSort={sort} onSort={setSort} />
+                      <SortableHeader column="customer" label="Customer" currentSort={sort} onSort={setSort} />
+                      <SortableHeader column="amount" label="Amount" currentSort={sort} onSort={setSort} className="text-right" />
+                      <TableHead className="text-right px-3">Paid</TableHead>
+                      <SortableHeader column="status" label="Status" currentSort={sort} onSort={setSort} />
+                      <SortableHeader column="dueDate" label="Due Date" currentSort={sort} onSort={setSort} />
+                      <SortableHeader column="daysOverdue" label="Days Overdue" currentSort={sort} onSort={setSort} />
+                      <TableHead className="px-3">Stage</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -301,24 +315,24 @@ export default function QollectionsInvoices() {
                       const days = inv.overdueCategoryInfo?.daysOverdue ?? inv.daysOverdue ?? 0;
                       return (
                         <TableRow key={inv.id} className="hover:bg-muted/50">
-                          <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
-                          <TableCell className="text-muted-foreground">
+                          <TableCell className="py-3 px-3 text-sm font-medium">{inv.invoiceNumber}</TableCell>
+                          <TableCell className="py-3 px-3 text-sm text-muted-foreground">
                             {inv.contact?.name || "—"}
                           </TableCell>
-                          <TableCell className="text-right font-bold">{formatAmount(inv.amount)}</TableCell>
-                          <TableCell className="text-right text-muted-foreground">
+                          <TableCell className="py-3 px-3 text-sm text-right font-bold">{formatAmount(inv.amount)}</TableCell>
+                          <TableCell className="py-3 px-3 text-sm text-right text-muted-foreground">
                             {formatAmount(inv.amountPaid)}
                           </TableCell>
-                          <TableCell>{statusBadge(inv.status)}</TableCell>
-                          <TableCell className="text-muted-foreground">
+                          <TableCell className="py-3 px-3">{statusBadge(inv.status)}</TableCell>
+                          <TableCell className="py-3 px-3 text-sm text-muted-foreground">
                             {new Date(inv.dueDate).toLocaleDateString("en-GB", {
                               day: "numeric",
                               month: "short",
                               year: "numeric",
                             })}
                           </TableCell>
-                          <TableCell>{daysOverdueDisplay(days, inv.status)}</TableCell>
-                          <TableCell>{stageBadge(inv.collectionStage)}</TableCell>
+                          <TableCell className="py-3 px-3">{daysOverdueDisplay(days, inv.status)}</TableCell>
+                          <TableCell className="py-3 px-3">{stageBadge(inv.collectionStage)}</TableCell>
                         </TableRow>
                       );
                     })}

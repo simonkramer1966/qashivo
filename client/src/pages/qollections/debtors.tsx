@@ -46,6 +46,12 @@ import {
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
+import {
+  SortableHeader,
+  DualSortHeader,
+  type SortState,
+  nextSortState,
+} from "@/components/ui/sortable-header";
 
 interface Debtor {
   id: string;
@@ -104,13 +110,43 @@ function daysOverdueColor(days: number): string {
 }
 
 type StatusFilter = "all" | "active" | "overdue";
-type SortOption = "outstanding" | "overdue_days" | "invoices" | "name";
+
+const DEFAULT_SORT: SortState = { field: "totalOutstanding", dir: "desc" };
+
+function compareDebtors(a: Debtor, b: Debtor, sort: SortState): number {
+  if (!sort.dir) return 0;
+  const mul = sort.dir === "asc" ? 1 : -1;
+  switch (sort.field) {
+    case "name":
+      return mul * a.name.localeCompare(b.name);
+    case "totalOutstanding":
+      return mul * (a.totalOutstanding - b.totalOutstanding);
+    case "overdueAmount":
+      return mul * (a.overdueAmount - b.overdueAmount);
+    case "invoiceCount":
+      return mul * (a.invoiceCount - b.invoiceCount);
+    case "oldestOverdueDays":
+      return mul * (a.oldestOverdueDays - b.oldestOverdueDays);
+    case "lastContactDate": {
+      const da = a.lastContactDate ? new Date(a.lastContactDate).getTime() : 0;
+      const db = b.lastContactDate ? new Date(b.lastContactDate).getTime() : 0;
+      return mul * (da - db);
+    }
+    case "nextActionDate": {
+      const da = a.nextActionDate ? new Date(a.nextActionDate).getTime() : 0;
+      const db = b.nextActionDate ? new Date(b.nextActionDate).getTime() : 0;
+      return mul * (da - db);
+    }
+    default:
+      return 0;
+  }
+}
 
 export default function QollectionsDebtors() {
   const [, navigate] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [sortBy, setSortBy] = useState<SortOption>("outstanding");
+  const [sort, setSort] = useState<SortState>(DEFAULT_SORT);
   const [page, setPage] = useState(0);
 
   const { data: debtorsResponse, isLoading } = useQuery<{ debtors: Debtor[]; unmatchedCredits: number }>({
@@ -143,28 +179,17 @@ export default function QollectionsDebtors() {
     }
 
     // Sort
-    switch (sortBy) {
-      case "outstanding":
-        result.sort((a, b) => b.totalOutstanding - a.totalOutstanding);
-        break;
-      case "overdue_days":
-        result.sort((a, b) => b.oldestOverdueDays - a.oldestOverdueDays);
-        break;
-      case "invoices":
-        result.sort((a, b) => b.invoiceCount - a.invoiceCount);
-        break;
-      case "name":
-        result.sort((a, b) => a.name.localeCompare(b.name));
-        break;
+    if (sort.dir) {
+      result.sort((a, b) => compareDebtors(a, b, sort));
     }
 
     return result;
-  }, [debtors, searchQuery, statusFilter, sortBy]);
+  }, [debtors, searchQuery, statusFilter, sort]);
 
   // Reset to first page when filters change
   useMemo(() => {
     setPage(0);
-  }, [searchQuery, statusFilter, sortBy]);
+  }, [searchQuery, statusFilter, sort]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paged = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
@@ -228,39 +253,19 @@ export default function QollectionsDebtors() {
                   className="pl-9"
                 />
               </div>
-              <div className="flex gap-3">
-                <Select
-                  value={statusFilter}
-                  onValueChange={(v) => setStatusFilter(v as StatusFilter)}
-                >
-                  <SelectTrigger className="w-[140px]">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="overdue">Overdue</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={sortBy}
-                  onValueChange={(v) => setSortBy(v as SortOption)}
-                >
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Sort by" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="outstanding">
-                      Highest Outstanding
-                    </SelectItem>
-                    <SelectItem value="overdue_days">
-                      Most Overdue Days
-                    </SelectItem>
-                    <SelectItem value="invoices">Most Invoices</SelectItem>
-                    <SelectItem value="name">Name A-Z</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <Select
+                value={statusFilter}
+                onValueChange={(v) => setStatusFilter(v as StatusFilter)}
+              >
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="overdue">Overdue</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
@@ -371,24 +376,24 @@ export default function QollectionsDebtors() {
                 <TableBody>
                   {Array.from({ length: 8 }).map((_, i) => (
                     <TableRow key={i}>
-                      <TableCell>
-                        <Skeleton className="mb-1 h-4 w-32" />
+                      <TableCell className="py-3 px-3">
+                        <Skeleton className="mb-1 h-3.5 w-32" />
                         <Skeleton className="h-3 w-44" />
                       </TableCell>
-                      <TableCell>
-                        <Skeleton className="h-4 w-20" />
+                      <TableCell className="py-3 px-3">
+                        <Skeleton className="h-3.5 w-20" />
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-3 px-3">
                         <Skeleton className="h-5 w-8" />
                       </TableCell>
-                      <TableCell>
-                        <Skeleton className="h-4 w-10" />
+                      <TableCell className="py-3 px-3">
+                        <Skeleton className="h-3.5 w-10" />
                       </TableCell>
-                      <TableCell>
-                        <Skeleton className="h-4 w-16" />
+                      <TableCell className="py-3 px-3">
+                        <Skeleton className="h-3.5 w-16" />
                       </TableCell>
-                      <TableCell>
-                        <Skeleton className="h-4 w-16" />
+                      <TableCell className="py-3 px-3">
+                        <Skeleton className="h-3.5 w-16" />
                       </TableCell>
                     </TableRow>
                   ))}
@@ -409,12 +414,19 @@ export default function QollectionsDebtors() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Outstanding</TableHead>
-                      <TableHead>Invoices</TableHead>
-                      <TableHead>Days Overdue</TableHead>
-                      <TableHead>Last Contact</TableHead>
-                      <TableHead>Next Action</TableHead>
+                      <SortableHeader column="name" label="Customer" currentSort={sort} onSort={setSort} />
+                      <DualSortHeader
+                        leftColumn="totalOutstanding"
+                        leftLabel="Outstanding"
+                        rightColumn="overdueAmount"
+                        rightLabel="Overdue"
+                        currentSort={sort}
+                        onSort={setSort}
+                      />
+                      <SortableHeader column="invoiceCount" label="Invoices" currentSort={sort} onSort={setSort} />
+                      <SortableHeader column="oldestOverdueDays" label="Days Overdue" currentSort={sort} onSort={setSort} />
+                      <SortableHeader column="lastContactDate" label="Last Contact" currentSort={sort} onSort={setSort} />
+                      <SortableHeader column="nextActionDate" label="Next Action" currentSort={sort} onSort={setSort} />
                       <TableHead className="w-10" />
                     </TableRow>
                   </TableHeader>
@@ -425,15 +437,15 @@ export default function QollectionsDebtors() {
                         className="cursor-pointer hover:bg-muted/50"
                         onClick={() => navigate(`/qollections/debtors/${debtor.id}`)}
                       >
-                        <TableCell>
+                        <TableCell className="py-3 px-3">
                           <div>
-                            <p className="font-medium">{debtor.name}</p>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-sm font-medium leading-tight">{debtor.name}</p>
+                            <p className="text-xs text-muted-foreground">
                               {debtor.email}
                             </p>
                           </div>
                         </TableCell>
-                        <TableCell className={cn("font-bold", debtor.hasCredit && "text-green-600")}>
+                        <TableCell className={cn("py-3 px-3 text-sm font-bold", debtor.hasCredit && "text-green-600")}>
                           {formatGBP(debtor.totalOutstanding)}
                           {debtor.hasCredit && (
                             <Badge variant="outline" className="ml-2 text-xs bg-green-500/10 text-green-700 border-green-300">
@@ -446,28 +458,28 @@ export default function QollectionsDebtors() {
                             </div>
                           )}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="py-3 px-3">
                           <Badge variant="secondary">
                             {debtor.invoiceCount}
                           </Badge>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="py-3 px-3">
                           <span
                             className={cn(
-                              "font-medium",
+                              "text-sm font-medium",
                               daysOverdueColor(debtor.oldestOverdueDays),
                             )}
                           >
                             {debtor.oldestOverdueDays}
                           </span>
                         </TableCell>
-                        <TableCell className="text-muted-foreground">
+                        <TableCell className="py-3 px-3 text-sm text-muted-foreground">
                           {relativeDate(debtor.lastContactDate)}
                         </TableCell>
-                        <TableCell className="text-muted-foreground">
+                        <TableCell className="py-3 px-3 text-sm text-muted-foreground">
                           {formatDate(debtor.nextActionDate)}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="py-3 px-3">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>

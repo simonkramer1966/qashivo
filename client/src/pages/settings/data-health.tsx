@@ -38,6 +38,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useLocation } from "wouter";
+import { ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { type SortState, nextSortState } from "@/components/ui/sortable-header";
 
 interface ContactHealth {
   id: string;
@@ -78,6 +80,30 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.
   needs_attention: { label: 'Needs Attention', color: 'bg-red-100 text-red-800', icon: ShieldAlert },
 };
 
+function DhSortTh({ field, label, sort, onSort, className = "" }: {
+  field: string; label: string; sort: SortState; onSort: (s: SortState) => void; className?: string;
+}) {
+  const active = sort.field === field && sort.dir !== null;
+  return (
+    <th className={`py-3 px-3 ${className}`}>
+      <button
+        type="button"
+        onClick={() => onSort(nextSortState(sort, field))}
+        className={`inline-flex items-center gap-1 text-xs font-medium transition-colors cursor-pointer ${active ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+      >
+        {label}
+        {active && sort.dir === "asc" ? (
+          <ArrowUp className="h-3 w-3" />
+        ) : active && sort.dir === "desc" ? (
+          <ArrowDown className="h-3 w-3" />
+        ) : (
+          <ArrowUpDown className="h-3 w-3 opacity-40" />
+        )}
+      </button>
+    </th>
+  );
+}
+
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount);
 }
@@ -89,8 +115,7 @@ export default function SettingsDataHealth() {
   const [searchQuery, setSearchQuery] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<{ email: string; phone: string }>({ email: '', phone: '' });
-  const [sortField, setSortField] = useState<'name' | 'totalOutstanding' | 'oldestOverdueDays'>('totalOutstanding');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [sort, setSort] = useState<SortState>({ field: "totalOutstanding", dir: "desc" });
 
   const { data, isLoading } = useQuery<DataHealthResponse>({
     queryKey: ["/api/settings/data-health"],
@@ -130,27 +155,19 @@ export default function SettingsDataHealth() {
         (c.email && c.email.toLowerCase().includes(q))
       );
     }
-    filtered = [...filtered].sort((a, b) => {
-      const aVal = a[sortField] ?? '';
-      const bVal = b[sortField] ?? '';
-      if (typeof aVal === 'number' && typeof bVal === 'number') {
-        return sortDir === 'asc' ? aVal - bVal : bVal - aVal;
-      }
-      return sortDir === 'asc'
-        ? String(aVal).localeCompare(String(bVal))
-        : String(bVal).localeCompare(String(aVal));
-    });
-    return filtered;
-  }, [data?.contacts, activeFilter, searchQuery, sortField, sortDir]);
-
-  const handleSort = (field: typeof sortField) => {
-    if (sortField === field) {
-      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDir('desc');
+    if (sort.dir && sort.field) {
+      const mul = sort.dir === "asc" ? 1 : -1;
+      filtered = [...filtered].sort((a, b) => {
+        const aVal = (a as any)[sort.field] ?? '';
+        const bVal = (b as any)[sort.field] ?? '';
+        if (typeof aVal === 'number' && typeof bVal === 'number') {
+          return mul * (aVal - bVal);
+        }
+        return mul * String(aVal).localeCompare(String(bVal));
+      });
     }
-  };
+    return filtered;
+  }, [data?.contacts, activeFilter, searchQuery, sort]);
 
   const startEdit = (contact: ContactHealth) => {
     setEditingId(contact.id);
@@ -238,27 +255,21 @@ export default function SettingsDataHealth() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-muted/50">
-                    <th className="text-left p-3 cursor-pointer hover:bg-muted" onClick={() => handleSort('name')}>
-                      Name {sortField === 'name' && (sortDir === 'asc' ? '↑' : '↓')}
-                    </th>
-                    <th className="text-left p-3">Status</th>
-                    <th className="text-left p-3">Email</th>
-                    <th className="text-left p-3">Phone</th>
-                    <th className="text-right p-3 cursor-pointer hover:bg-muted" onClick={() => handleSort('totalOutstanding')}>
-                      Outstanding {sortField === 'totalOutstanding' && (sortDir === 'asc' ? '↑' : '↓')}
-                    </th>
-                    <th className="text-right p-3">Overdue</th>
-                    <th className="text-right p-3 cursor-pointer hover:bg-muted" onClick={() => handleSort('oldestOverdueDays')}>
-                      Days {sortField === 'oldestOverdueDays' && (sortDir === 'asc' ? '↑' : '↓')}
-                    </th>
-                    <th className="text-center p-3">Edit</th>
-                    <th className="w-10 p-3" />
+                    <DhSortTh field="name" label="Name" sort={sort} onSort={setSort} />
+                    <th className="text-left py-3 px-3 text-xs font-medium text-muted-foreground">Status</th>
+                    <th className="text-left py-3 px-3 text-xs font-medium text-muted-foreground">Email</th>
+                    <th className="text-left py-3 px-3 text-xs font-medium text-muted-foreground">Phone</th>
+                    <DhSortTh field="totalOutstanding" label="Outstanding" sort={sort} onSort={setSort} className="text-right" />
+                    <DhSortTh field="totalOverdue" label="Overdue" sort={sort} onSort={setSort} className="text-right" />
+                    <DhSortTh field="oldestOverdueDays" label="Days" sort={sort} onSort={setSort} className="text-right" />
+                    <th className="text-center py-3 px-3 text-xs font-medium text-muted-foreground">Edit</th>
+                    <th className="w-10 py-3 px-3" />
                   </tr>
                 </thead>
                 <tbody>
                   {filteredContacts.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="text-center p-8 text-muted-foreground">
+                      <td colSpan={9} className="text-center py-8 px-3 text-muted-foreground">
                         No debtors found for this filter.
                       </td>
                     </tr>
@@ -269,13 +280,13 @@ export default function SettingsDataHealth() {
 
                       return (
                         <tr key={contact.id} className="border-b hover:bg-muted/30 cursor-pointer" onClick={() => navigate(`/qollections/debtors/${contact.id}`)}>
-                          <td className="p-3">
+                          <td className="py-3 px-3">
                             <div className="font-medium">{contact.name}</div>
                             {contact.companyName && (
                               <div className="text-xs text-muted-foreground">{contact.companyName}</div>
                             )}
                           </td>
-                          <td className="p-3">
+                          <td className="py-3 px-3">
                             {config && (
                               <Badge variant="secondary" className={config.color}>
                                 {config.label}
@@ -310,17 +321,17 @@ export default function SettingsDataHealth() {
                               </span>
                             )}
                           </td>
-                          <td className="p-3 text-right font-medium">
+                          <td className="py-3 px-3 text-right font-medium">
                             {formatCurrency(contact.totalOutstanding)}
                           </td>
-                          <td className="p-3 text-right">
+                          <td className="py-3 px-3 text-right">
                             {contact.totalOverdue > 0 ? (
                               <span className="text-red-600 font-medium">{formatCurrency(contact.totalOverdue)}</span>
                             ) : (
                               <span className="text-muted-foreground">-</span>
                             )}
                           </td>
-                          <td className="p-3 text-right">
+                          <td className="py-3 px-3 text-right">
                             {contact.oldestOverdueDays > 0 ? (
                               <span className={contact.oldestOverdueDays > 90 ? 'text-red-600 font-medium' : contact.oldestOverdueDays > 30 ? 'text-amber-600' : ''}>
                                 {contact.oldestOverdueDays}d
@@ -329,7 +340,7 @@ export default function SettingsDataHealth() {
                               <span className="text-muted-foreground">-</span>
                             )}
                           </td>
-                          <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
+                          <td className="py-3 px-3 text-center" onClick={(e) => e.stopPropagation()}>
                             {isEditing ? (
                               <div className="flex items-center justify-center gap-1">
                                 <Button

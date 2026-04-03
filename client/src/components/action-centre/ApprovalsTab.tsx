@@ -20,6 +20,7 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { SortableHeader, type SortState } from "@/components/ui/sortable-header";
 import {
   Check, X, Clock, Mail, MessageSquare, Phone,
   RefreshCw, Trash2, Loader2,
@@ -69,6 +70,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [previewId, setPreviewId] = useState<string | null>(null);
+  const [sort, setSort] = useState<SortState>({ field: "createdAt", dir: "desc" });
 
   const { data, isLoading } = useQuery<{
     actions: ApprovalAction[];
@@ -178,7 +180,26 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
     );
   }
 
-  const actions = data?.actions ?? [];
+  const rawActions = data?.actions ?? [];
+  const actions = [...rawActions].sort((a, b) => {
+    if (!sort.dir) return 0;
+    const mul = sort.dir === "asc" ? 1 : -1;
+    switch (sort.field) {
+      case "action":
+        return mul * (a.companyName || a.contactName || "").localeCompare(b.companyName || b.contactName || "");
+      case "confidence": {
+        const ca = parseFloat(a.confidenceScore || "0");
+        const cb = parseFloat(b.confidenceScore || "0");
+        return mul * (ca - cb);
+      }
+      case "priority":
+        return mul * ((a.priority ?? 50) - (b.priority ?? 50));
+      case "createdAt":
+        return mul * (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      default:
+        return 0;
+    }
+  });
 
   return (
     <div className="space-y-3">
@@ -266,13 +287,13 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-10"></TableHead>
-            <TableHead>Action</TableHead>
-            <TableHead>Agent</TableHead>
-            <TableHead>Confidence</TableHead>
-            <TableHead className="text-right">Priority</TableHead>
-            <TableHead>Created</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            <TableHead className="w-10 px-3"></TableHead>
+            <SortableHeader column="action" label="Action" currentSort={sort} onSort={setSort} />
+            <TableHead className="px-3">Agent</TableHead>
+            <SortableHeader column="confidence" label="Confidence" currentSort={sort} onSort={setSort} />
+            <SortableHeader column="priority" label="Priority" currentSort={sort} onSort={setSort} className="text-right" />
+            <SortableHeader column="createdAt" label="Created" currentSort={sort} onSort={setSort} />
+            <TableHead className="text-right px-3">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -282,39 +303,39 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
               className="cursor-pointer hover:bg-muted/50"
               onClick={() => setPreviewId(action.id)}
             >
-              <TableCell>
+              <TableCell className="py-3 px-3">
                 <ChannelIcon type={action.type} />
               </TableCell>
-              <TableCell>
+              <TableCell className="py-3 px-3">
                 {(action.companyName || action.contactName) && (
-                  <div className="text-[11px] font-medium" style={{ color: "var(--color-text-secondary, hsl(var(--muted-foreground)))" }}>
+                  <div className="text-[11px] font-medium text-muted-foreground">
                     {action.companyName || action.contactName}
                   </div>
                 )}
-                <div className="text-[13px] font-medium truncate max-w-[60ch]" style={{ color: "var(--color-text-primary, hsl(var(--foreground)))" }}>
+                <div className="text-[13px] font-medium truncate max-w-[60ch]">
                   {action.actionSummary || action.subject || `${action.type} action`}
                 </div>
                 {action.status === "pending" && (
                   <Badge variant="outline" className="mt-0.5 text-xs">pending</Badge>
                 )}
               </TableCell>
-              <TableCell>
+              <TableCell className="py-3 px-3">
                 <span className="text-xs text-muted-foreground capitalize">
                   {action.agentType || "collections"}
                 </span>
               </TableCell>
-              <TableCell>
+              <TableCell className="py-3 px-3">
                 <ConfidenceBadge score={action.confidenceScore} />
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="py-3 px-3 text-right">
                 <span className="text-sm font-mono">{action.priority ?? 50}</span>
               </TableCell>
-              <TableCell>
+              <TableCell className="py-3 px-3">
                 <span className="text-xs text-muted-foreground">
                   {formatRelativeTime(action.createdAt)}
                 </span>
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="py-3 px-3 text-right">
                 <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                   <Button
                     size="sm"
