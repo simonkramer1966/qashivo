@@ -362,7 +362,6 @@ export default function QollectionsDebtors() {
                   <TableRow>
                     <TableHead>Customer</TableHead>
                     <TableHead>Outstanding</TableHead>
-                    <TableHead>Overdue</TableHead>
                     <TableHead>Invoices</TableHead>
                     <TableHead>Days Overdue</TableHead>
                     <TableHead>Last Contact</TableHead>
@@ -375,9 +374,6 @@ export default function QollectionsDebtors() {
                       <TableCell>
                         <Skeleton className="mb-1 h-4 w-32" />
                         <Skeleton className="h-3 w-44" />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton className="h-4 w-20" />
                       </TableCell>
                       <TableCell>
                         <Skeleton className="h-4 w-20" />
@@ -415,7 +411,6 @@ export default function QollectionsDebtors() {
                     <TableRow>
                       <TableHead>Customer</TableHead>
                       <TableHead>Outstanding</TableHead>
-                      <TableHead>Overdue</TableHead>
                       <TableHead>Invoices</TableHead>
                       <TableHead>Days Overdue</TableHead>
                       <TableHead>Last Contact</TableHead>
@@ -445,14 +440,11 @@ export default function QollectionsDebtors() {
                               Credit
                             </Badge>
                           )}
-                        </TableCell>
-                        <TableCell
-                          className={cn(
-                            "font-medium",
-                            debtor.overdueAmount > 0 && "text-red-600",
+                          {debtor.overdueAmount > 0 && (
+                            <div className="text-xs font-normal text-rose-600">
+                              {formatGBP(debtor.overdueAmount)} overdue
+                            </div>
                           )}
-                        >
-                          {formatGBP(debtor.overdueAmount)}
                         </TableCell>
                         <TableCell>
                           <Badge variant="secondary">
