@@ -46,6 +46,7 @@ import {
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
+import { VipPromotionDialog } from "@/components/action-centre/VipPromotionDialog";
 import {
   SortableHeader,
   DualSortHeader,
@@ -148,6 +149,7 @@ export default function QollectionsDebtors() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [sort, setSort] = useState<SortState>(DEFAULT_SORT);
   const [page, setPage] = useState(0);
+  const [vipTarget, setVipTarget] = useState<{ id: string; name: string } | null>(null);
 
   const { data: debtorsResponse, isLoading } = useQuery<{ debtors: Debtor[]; unmatchedCredits: number }>({
     queryKey: ["/api/qollections/debtors"],
@@ -502,7 +504,7 @@ export default function QollectionsDebtors() {
                               <DropdownMenuItem>
                                 <PauseCircle className="h-4 w-4 mr-2" /> Put On Hold
                               </DropdownMenuItem>
-                              <DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setVipTarget({ id: debtor.id, name: debtor.name })}>
                                 <Star className="h-4 w-4 mr-2" /> Mark as VIP
                               </DropdownMenuItem>
                             </DropdownMenuContent>
@@ -548,6 +550,14 @@ export default function QollectionsDebtors() {
           </CardContent>
         </Card>
       </div>
+      {vipTarget && (
+        <VipPromotionDialog
+          open={!!vipTarget}
+          onOpenChange={(open) => { if (!open) setVipTarget(null); }}
+          contactId={vipTarget.id}
+          companyName={vipTarget.name}
+        />
+      )}
     </AppShell>
   );
 }

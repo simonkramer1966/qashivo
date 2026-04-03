@@ -22,7 +22,7 @@ import {
   attentionItems, outcomes, activityLogs, collectionPolicies, paymentPlans,
   emailMessages, customerContactPersons, scheduledReports,
   cachedXeroOverpayments, cachedXeroPrepayments, cachedXeroCreditNotes, cachedXeroContacts,
-  activityEvents, riskScores, agentPersonas,
+  activityEvents, riskScores, agentPersonas, aiFacts, customerPreferences,
 } from "@shared/schema";
 import { computeNextRunAt } from "../services/reportScheduler";
 import { REPORT_TYPE_LABELS, type ReportType } from "../services/reportGenerator";
@@ -4936,4 +4936,251 @@ ${type === 'email' ? 'Generate a JSON object with "subject" (string) and "body" 
       }
     }
   );
+
+  // ── VIP Promote ─────────────────────────────────────────────
+  app.post("/api/contacts/:contactId/vip/promote", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const { contactId } = req.params;
+      const { reason, note } = req.body;
+      if (!reason) return res.status(400).json({ message: "Reason is required" });
+
+      const now = new Date();
+
+      // Set VIP on contact
+      await db
+        .update(contacts)
+        .set({
+          isVip: true,
+          vipReason: reason,
+          vipNote: note || null,
+          vipFlaggedAt: now,
+          vipFlaggedBy: user.id,
+          updatedAt: now,
+        })
+        .where(and(eq(contacts.id, contactId), eq(contacts.tenantId, user.tenantId)));
+
+      // Disable all automated channels
+      await db
+        .update(customerPreferences)
+        .set({
+          emailEnabled: false,
+          smsEnabled: false,
+          voiceEnabled: false,
+          channelPreferenceSource: "vip_promotion",
+          channelPreferenceNotes: `VIP — ${reason}`,
+          updatedAt: now,
+        })
+        .where(and(eq(customerPreferences.contactId, contactId), eq(customerPreferences.tenantId, user.tenantId)));
+
+      // Write aiFacts for Charlie + Riley
+      const factBase = {
+        tenantId: user.tenantId,
+        entityType: "contact" as const,
+        entityId: contactId,
+        source: "user_manual",
+        confidence: "1.0",
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      await db.insert(aiFacts).values([
+        {
+          id: crypto.randomUUID(),
+          ...factBase,
+          category: "internal_policy",
+          title: "VIP status",
+          content: `${reason}${note ? " — " + note : ""}`,
+          factKey: "vip_status",
+          factValue: `${reason}${note ? " — " + note : ""}`,
+        },
+        {
+          id: crypto.randomUUID(),
+          ...factBase,
+          category: "internal_policy",
+          title: "Auto chase disabled",
+          content: `Automated chasing disabled — VIP: ${reason}`,
+          factKey: "auto_chase_disabled",
+          factValue: `true — reason: ${reason}`,
+        },
+      ]);
+
+      // Timeline event
+      await db.insert(timelineEvents).values({
+        id: crypto.randomUUID(),
+        tenantId: user.tenantId,
+        customerId: contactId,
+        channel: "internal",
+        direction: "internal",
+        summary: `Promoted to VIP: ${reason}${note ? " — " + note : ""}`,
+        createdByName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email,
+        createdByType: "user",
+        createdAt: now,
+      });
+
+      res.json({ message: "Contact promoted to VIP", contactId });
+    } catch (error: any) {
+      console.error("Error promoting to VIP:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ── VIP Return to main pool ─────────────────────────────────
+  app.post("/api/contacts/:contactId/vip/return", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const { contactId } = req.params;
+      const { reason, note, resumeMode } = req.body;
+      if (!reason) return res.status(400).json({ message: "Reason is required" });
+
+      const now = new Date();
+
+      // Clear VIP, record return metadata
+      await db
+        .update(contacts)
+        .set({
+          isVip: false,
+          vipReturnedAt: now,
+          vipReturnReason: reason,
+          vipReturnNote: note || null,
+          vipReturnedBy: user.id,
+          updatedAt: now,
+        })
+        .where(and(eq(contacts.id, contactId), eq(contacts.tenantId, user.tenantId)));
+
+      // Re-enable channels
+      await db
+        .update(customerPreferences)
+        .set({
+          emailEnabled: true,
+          smsEnabled: true,
+          voiceEnabled: true,
+          channelPreferenceSource: "vip_return",
+          channelPreferenceNotes: `Returned from VIP: ${reason}`,
+          updatedAt: now,
+        })
+        .where(and(eq(customerPreferences.contactId, contactId), eq(customerPreferences.tenantId, user.tenantId)));
+
+      // Supersede previous VIP aiFacts
+      await db
+        .update(aiFacts)
+        .set({ isActive: false, updatedAt: now })
+        .where(
+          and(
+            eq(aiFacts.tenantId, user.tenantId),
+            eq(aiFacts.entityId, contactId),
+            eq(aiFacts.category, "internal_policy"),
+            sql`${aiFacts.factKey} IN ('vip_status', 'auto_chase_disabled')`,
+            eq(aiFacts.isActive, true),
+          )
+        );
+
+      // Write return facts
+      const factBase = {
+        tenantId: user.tenantId,
+        entityType: "contact" as const,
+        entityId: contactId,
+        source: "user_manual",
+        confidence: "1.0",
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      await db.insert(aiFacts).values([
+        {
+          id: crypto.randomUUID(),
+          ...factBase,
+          category: "internal_policy",
+          title: "VIP status returned",
+          content: `Returned to pool: ${reason}${note ? " — " + note : ""}`,
+          factKey: "vip_status",
+          factValue: `returned to pool — reason: ${reason}`,
+        },
+        {
+          id: crypto.randomUUID(),
+          ...factBase,
+          category: "internal_policy",
+          title: "Auto chase re-enabled",
+          content: `Automated chasing re-enabled: ${reason}`,
+          factKey: "auto_chase_disabled",
+          factValue: `false — returned: ${reason}`,
+        },
+      ]);
+
+      // If resume from scratch, reset learning profile tone
+      if (resumeMode === "scratch") {
+        await db
+          .update(customerLearningProfiles)
+          .set({
+            calculationVersion: "reset",
+            updatedAt: now,
+          })
+          .where(
+            and(
+              eq(customerLearningProfiles.contactId, contactId),
+              eq(customerLearningProfiles.tenantId, user.tenantId),
+            )
+          );
+      }
+
+      // Timeline event
+      await db.insert(timelineEvents).values({
+        id: crypto.randomUUID(),
+        tenantId: user.tenantId,
+        customerId: contactId,
+        channel: "internal",
+        direction: "internal",
+        summary: `Returned from VIP to automated chasing: ${reason}${note ? " — " + note : ""}. Resume mode: ${resumeMode === "scratch" ? "from scratch" : "where left off"}.`,
+        createdByName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email,
+        createdByType: "user",
+        createdAt: now,
+      });
+
+      res.json({ message: "Contact returned to main pool", contactId, resumeMode });
+    } catch (error: any) {
+      console.error("Error returning from VIP:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ── GET VIP contacts ────────────────────────────────────────
+  app.get("/api/contacts/vip", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const vipContacts = await db
+        .select({
+          id: contacts.id,
+          name: contacts.name,
+          companyName: contacts.companyName,
+          email: contacts.email,
+          vipReason: contacts.vipReason,
+          vipNote: contacts.vipNote,
+          vipFlaggedAt: contacts.vipFlaggedAt,
+          totalOutstanding: sql<string>`coalesce(sum(
+            case when ${invoices.status} not in ('paid', 'void', 'voided', 'deleted', 'draft')
+            then cast(${invoices.amount} as numeric) - cast(coalesce(${invoices.amountPaid}, '0') as numeric)
+            else 0 end
+          ), 0)::text`,
+          overdueCount: sql<number>`count(case when ${invoices.dueDate} < now() and ${invoices.status} not in ('paid', 'void', 'voided', 'deleted', 'draft') then 1 end)::int`,
+        })
+        .from(contacts)
+        .leftJoin(invoices, and(eq(invoices.contactId, contacts.id), eq(invoices.tenantId, contacts.tenantId)))
+        .where(and(eq(contacts.tenantId, user.tenantId), eq(contacts.isVip, true)))
+        .groupBy(contacts.id)
+        .orderBy(desc(contacts.vipFlaggedAt));
+
+      res.json({ contacts: vipContacts, total: vipContacts.length });
+    } catch (error: any) {
+      console.error("Error fetching VIP contacts:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
 }

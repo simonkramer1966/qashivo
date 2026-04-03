@@ -4099,11 +4099,24 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         })();
       }
 
-      // Flag debtor as do-not-chase when rejected with relationship reason
+      // Flag debtor as VIP + do-not-chase when rejected with relationship reason
       if (rejectedAction.contactId && category === "relationship_do_not_chase") {
         (async () => {
           try {
-            // Disable all channels in preferences (effective do-not-chase)
+            // Set VIP on contact
+            await db
+              .update(contacts)
+              .set({
+                isVip: true,
+                vipReason: "Relationship — do not chase",
+                vipNote: reason || null,
+                vipFlaggedAt: now,
+                vipFlaggedBy: user.id,
+                updatedAt: now,
+              })
+              .where(and(eq(contacts.id, rejectedAction.contactId!), eq(contacts.tenantId, user.tenantId!)));
+
+            // Disable all channels in preferences
             await db
               .update(customerPreferences)
               .set({ emailEnabled: false, smsEnabled: false, voiceEnabled: false, channelPreferenceSource: "user_rejection", channelPreferenceNotes: "Relationship — do not chase (set via rejection)", updatedAt: now })
@@ -4113,25 +4126,44 @@ Payment required immediately to avoid collection action. Contact us NOW.`
                   eq(customerPreferences.contactId, rejectedAction.contactId!),
                 )
               );
-            // Log AI fact
-            await db.insert(aiFacts).values({
-              id: crypto.randomUUID(),
-              tenantId: user.tenantId!,
-              entityType: "contact",
-              entityId: rejectedAction.contactId!,
-              category: "internal_policy",
-              title: "Do not chase",
-              content: "User flagged this debtor as relationship — do not chase via action rejection",
-              factKey: "do_not_chase",
-              factValue: "true",
-              source: "user_rejection",
-              confidence: "1.0",
-              isActive: true,
-              createdAt: now,
-              updatedAt: now,
-            });
+
+            // Log AI facts
+            await db.insert(aiFacts).values([
+              {
+                id: crypto.randomUUID(),
+                tenantId: user.tenantId!,
+                entityType: "contact",
+                entityId: rejectedAction.contactId!,
+                category: "internal_policy",
+                title: "VIP status",
+                content: "Relationship — do not chase (promoted via action rejection)",
+                factKey: "vip_status",
+                factValue: "Relationship — do not chase",
+                source: "user_rejection",
+                confidence: "1.0",
+                isActive: true,
+                createdAt: now,
+                updatedAt: now,
+              },
+              {
+                id: crypto.randomUUID(),
+                tenantId: user.tenantId!,
+                entityType: "contact",
+                entityId: rejectedAction.contactId!,
+                category: "internal_policy",
+                title: "Auto chase disabled",
+                content: "Automated chasing disabled — relationship do not chase",
+                factKey: "auto_chase_disabled",
+                factValue: "true — reason: Relationship — do not chase",
+                source: "user_rejection",
+                confidence: "1.0",
+                isActive: true,
+                createdAt: now,
+                updatedAt: now,
+              },
+            ]);
           } catch (err: any) {
-            console.error("[reject] do-not-chase save failed:", err.message);
+            console.error("[reject] VIP/do-not-chase save failed:", err.message);
           }
         })();
       }

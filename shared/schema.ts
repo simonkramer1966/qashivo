@@ -227,6 +227,17 @@ export const contacts = pgTable("contacts", {
   probablePaymentConfidence: varchar("probable_payment_confidence"),
   probablePaymentDetectedAt: timestamp("probable_payment_detected_at"),
 
+  // VIP status
+  isVip: boolean("is_vip").default(false),
+  vipReason: varchar("vip_reason"),
+  vipNote: text("vip_note"),
+  vipFlaggedAt: timestamp("vip_flagged_at"),
+  vipFlaggedBy: varchar("vip_flagged_by"),
+  vipReturnedAt: timestamp("vip_returned_at"),
+  vipReturnReason: varchar("vip_return_reason"),
+  vipReturnNote: text("vip_return_note"),
+  vipReturnedBy: varchar("vip_returned_by"),
+
   // Exception flagging
   isException: boolean("is_exception").default(false),
   exceptionType: text("exception_type"), // dispute, unresponsive, wants_human, compliance_failure, distress, service_issue, missing_po, insolvency_risk, other

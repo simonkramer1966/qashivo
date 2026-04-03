@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { AlertTriangle, TrendingDown, CheckCircle2, Eye } from "lucide-react";
+import { AlertTriangle, TrendingDown, CheckCircle2 } from "lucide-react";
 import { formatRelativeTime } from "./utils";
 
 interface ExceptionAction {
@@ -32,7 +32,24 @@ interface RejectionPattern {
   status: string | null;
 }
 
-export default function ExceptionsTab() {
+type ExceptionSubTab = "triage" | "simple" | "moderate" | "complex" | "strategic";
+
+// Classify exception complexity based on reason
+function classifyException(reason: string | null): ExceptionSubTab {
+  if (!reason) return "triage";
+  const r = reason.toLowerCase();
+  if (r.includes("vip") || r.includes("strategic") || r.includes("high_value")) return "strategic";
+  if (r.includes("dispute") || r.includes("compliance") || r.includes("insolvency")) return "complex";
+  if (r.includes("low_confidence") || r.includes("unresponsive")) return "moderate";
+  if (r.includes("first_contact")) return "simple";
+  return "triage";
+}
+
+interface ExceptionsTabProps {
+  subTab?: ExceptionSubTab;
+}
+
+export default function ExceptionsTab({ subTab = "triage" }: ExceptionsTabProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -65,9 +82,15 @@ export default function ExceptionsTab() {
     );
   }
 
-  const exceptions = data?.exceptionActions ?? [];
+  const allExceptions = data?.exceptionActions ?? [];
   const patterns = data?.rejectionPatterns ?? [];
-  const isEmpty = exceptions.length === 0 && patterns.length === 0;
+
+  // Filter exceptions by sub-tab classification
+  const exceptions = subTab === "triage"
+    ? allExceptions // Triage shows everything (unclassified landing)
+    : allExceptions.filter(e => classifyException(e.exceptionReason) === subTab);
+
+  const isEmpty = exceptions.length === 0 && (subTab === "triage" ? patterns.length === 0 : true);
 
   if (isEmpty) {
     return (
@@ -75,7 +98,9 @@ export default function ExceptionsTab() {
         <CardContent className="flex flex-col items-center justify-center py-12 text-center">
           <CheckCircle2 className="mb-3 h-10 w-10 text-green-500" />
           <h3 className="text-lg font-semibold">No exceptions</h3>
-          <p className="text-sm text-muted-foreground">All actions are running smoothly.</p>
+          <p className="text-sm text-muted-foreground">
+            {subTab === "triage" ? "All actions are running smoothly." : `No ${subTab} exceptions right now.`}
+          </p>
         </CardContent>
       </Card>
     );
@@ -83,8 +108,8 @@ export default function ExceptionsTab() {
 
   return (
     <div className="space-y-6">
-      {/* Rejection Patterns */}
-      {patterns.length > 0 && (
+      {/* Rejection Patterns — only show in Triage view */}
+      {subTab === "triage" && patterns.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
@@ -148,7 +173,7 @@ export default function ExceptionsTab() {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <AlertTriangle className="h-4 w-4 text-red-600" />
-              Exception Actions ({exceptions.length})
+              {subTab === "triage" ? "Exception Actions" : `${subTab.charAt(0).toUpperCase() + subTab.slice(1)} Exceptions`} ({exceptions.length})
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
