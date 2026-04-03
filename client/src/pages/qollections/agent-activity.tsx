@@ -236,10 +236,10 @@ function SubTabButton({
   return (
     <button
       className={cn(
-        "inline-flex items-center justify-center whitespace-nowrap rounded-md px-2.5 py-1 text-xs font-medium transition-all",
+        "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-[13px] font-medium transition-all",
         active
-          ? "bg-background text-foreground shadow-sm"
-          : "text-muted-foreground/70 hover:bg-background/50 hover:text-foreground",
+          ? "text-muted-foreground"
+          : "text-muted-foreground/50 hover:text-muted-foreground/70",
       )}
       onClick={onClick}
     >
