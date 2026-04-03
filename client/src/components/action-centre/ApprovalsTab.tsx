@@ -235,6 +235,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
   const [toneOverrides, setToneOverrides] = useState<Map<string, ToneLevel>>(new Map());
   const [showShortcutHints, setShowShortcutHints] = useState(true);
   const [showLiveWarning, setShowLiveWarning] = useState(false);
+  const [justCleared, setJustCleared] = useState(false);
   const [vipTarget, setVipTarget] = useState<{ id: string; name: string } | null>(null);
   const [noteTarget, setNoteTarget] = useState<{ contactId: string; companyName: string } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -325,7 +326,8 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
     },
     onSuccess: (data: { cancelled: number }) => {
       toast({ title: `Queue cleared — ${data.cancelled} items cancelled` });
-      queryClient.invalidateQueries({ queryKey: ["/api/action-centre"] });
+      setJustCleared(true);
+      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/approvals"] });
     },
     onError: () => toast({ title: "Failed to clear queue", variant: "destructive" }),
   });
@@ -413,6 +415,12 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
 
   const totalQueuedAmount = useMemo(() => actions.reduce((s, a) => s + a.totalAmount, 0), [actions]);
   const uniqueDebtors = useMemo(() => new Set(actions.map(a => a.contactId).filter(Boolean)).size, [actions]);
+  const showRunAgent = actions.length === 0 || justCleared;
+
+  // Reset justCleared when new items arrive
+  useEffect(() => {
+    if (actions.length > 0) setJustCleared(false);
+  }, [actions.length]);
 
   // Sync DrawerContext with local drawerActionId
   useEffect(() => {
@@ -649,16 +657,18 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5 h-7 text-xs"
-            onClick={handleRunAgent}
-            disabled={runAgentMutation.isPending}
-          >
-            {runAgentMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
-            {runAgentMutation.isPending ? "Generating..." : "Run agent now"}
-          </Button>
+          {showRunAgent && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 h-7 text-xs"
+              onClick={handleRunAgent}
+              disabled={runAgentMutation.isPending}
+            >
+              {runAgentMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+              {runAgentMutation.isPending ? "Generating..." : "Run agent now"}
+            </Button>
+          )}
           {actions.length > 0 && (
             <>
               <AlertDialog>
@@ -745,8 +755,18 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <Check className="mb-3 h-10 w-10 text-green-500" />
-            <h3 className="text-lg font-semibold">All clear</h3>
-            <p className="text-sm text-muted-foreground">No actions waiting for approval.</p>
+            <h3 className="text-lg font-semibold">Queue is clear</h3>
+            <p className="text-sm text-muted-foreground mb-4">All actions have been reviewed.</p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={handleRunAgent}
+              disabled={runAgentMutation.isPending}
+            >
+              {runAgentMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+              {runAgentMutation.isPending ? "Generating..." : "Run agent now"}
+            </Button>
           </CardContent>
         </Card>
       ) : (
