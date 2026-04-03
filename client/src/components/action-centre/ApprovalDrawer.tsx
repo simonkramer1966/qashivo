@@ -254,7 +254,7 @@ export default function ApprovalDrawer({
               <div>
                 <p className="text-[11px] text-slate-400 mb-1">Body</p>
                 <div
-                  className="text-[13px] text-slate-700 leading-relaxed whitespace-pre-wrap"
+                  className="text-[13px] leading-[1.6] text-foreground whitespace-pre-wrap [&_p]:m-0 [&_p]:text-[13px] [&_p]:leading-[1.6] [&_br]:leading-[1.6]"
                   dangerouslySetInnerHTML={{ __html: body }}
                 />
               </div>

@@ -72,7 +72,7 @@ export function VipPromotionDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md z-[60]">
+      <DialogContent className="sm:max-w-md z-[60] overflow-visible">
         <DialogHeader>
           <DialogTitle>Move {companyName} to VIP</DialogTitle>
           <DialogDescription>
@@ -84,7 +84,7 @@ export function VipPromotionDialog({
             <SelectTrigger className="text-sm">
               <SelectValue placeholder="Select a reason..." />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="z-[70]" position="popper" side="bottom">
               {VIP_REASONS.map(r => (
                 <SelectItem key={r} value={r}>{r}</SelectItem>
               ))}
