@@ -142,33 +142,37 @@ export default function QollectionsAgentActivity() {
         {/* Custom tab bar with flowing exception sub-tabs */}
         <div className="overflow-x-auto scrollbar-hide">
           <div className="inline-flex h-9 items-center rounded-lg bg-muted p-1 text-muted-foreground min-w-full">
-            {/* Main tabs */}
-            <TabButton active={activeTab === "summary"} onClick={() => setTab("summary")}>
-              Summary
-            </TabButton>
-
-            {showApprovals && (
-              <TabButton active={activeTab === "queue"} onClick={() => setTab("queue")}>
-                {tabLabel("Queue", approvalCount)}
+            {/* Main tabs — grid ensures all columns match the widest */}
+            <div className={cn(
+              "grid auto-cols-[1fr] grid-flow-col",
+              showApprovals ? "grid-cols-5" : "grid-cols-4",
+            )}>
+              <TabButton active={activeTab === "summary"} onClick={() => setTab("summary")}>
+                Summary
               </TabButton>
-            )}
 
-            <TabButton active={activeTab === "vip"} onClick={() => setTab("vip")}>
-              {tabLabel("VIP", vipCount)}
-            </TabButton>
+              {showApprovals && (
+                <TabButton active={activeTab === "queue"} onClick={() => setTab("queue")}>
+                  {tabLabel("Queue", approvalCount)}
+                </TabButton>
+              )}
 
-            <TabButton active={activeTab === "activity"} onClick={() => setTab("activity")}>
-              Activity
-            </TabButton>
+              <TabButton active={activeTab === "vip"} onClick={() => setTab("vip")}>
+                {tabLabel("VIP", vipCount)}
+              </TabButton>
 
-            <TabButton active={activeTab === "exceptions"} onClick={() => setTab("exceptions")}>
-              {tabLabel("Exceptions", exceptionCount)}
-            </TabButton>
+              <TabButton active={activeTab === "activity"} onClick={() => setTab("activity")}>
+                Activity
+              </TabButton>
+
+              <TabButton active={activeTab === "exceptions"} onClick={() => setTab("exceptions")}>
+                {tabLabel("Exceptions", exceptionCount)}
+              </TabButton>
+            </div>
 
             {/* Sub-tabs flow to the right when exceptions is active */}
             {activeTab === "exceptions" && (
               <>
-                {/* Separator */}
                 <div className="mx-1 h-4 w-px bg-border/50" />
 
                 {EXCEPTION_SUB_TABS.map(sub => (
@@ -212,7 +216,7 @@ function TabButton({
   return (
     <button
       className={cn(
-        "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-[13px] font-medium transition-all",
+        "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-[13px] font-medium transition-all w-full text-center",
         active
           ? "bg-background text-foreground shadow-sm"
           : "hover:bg-background/50 hover:text-foreground",

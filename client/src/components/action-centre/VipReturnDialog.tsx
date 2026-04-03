@@ -57,9 +57,9 @@ export function VipReturnDialog({
       apiRequest("POST", `/api/contacts/${contactId}/vip/return`, { reason, note, resumeMode }),
     onSuccess: () => {
       toast({ title: `${companyName} returned to automated chasing` });
-      queryClient.invalidateQueries({ queryKey: ["/api/action-centre"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/debtors"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/contacts/vip"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/approvals"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/summary"] });
       onOpenChange(false);
       setReason("");
       setNote("");
@@ -72,7 +72,7 @@ export function VipReturnDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md z-[60] overflow-visible">
         <DialogHeader>
           <DialogTitle>Return {companyName} to automated chasing</DialogTitle>
           <DialogDescription>
@@ -84,7 +84,7 @@ export function VipReturnDialog({
             <SelectTrigger className="text-sm">
               <SelectValue placeholder="What changed?" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="z-[70]" position="popper" side="bottom">
               {RETURN_REASONS.map(r => (
                 <SelectItem key={r} value={r}>{r}</SelectItem>
               ))}
