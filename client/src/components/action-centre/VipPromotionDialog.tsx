@@ -58,9 +58,10 @@ export function VipPromotionDialog({
       const cancelled = data?.cancelledCount ?? 0;
       const suffix = cancelled > 0 ? ` — ${cancelled} action${cancelled !== 1 ? "s" : ""} cancelled` : "";
       toast({ title: `${companyName} moved to VIP${suffix}` });
-      queryClient.invalidateQueries({ queryKey: ["/api/action-centre"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/debtors"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/approvals"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/exceptions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/summary"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/contacts/vip"] });
       onOpenChange(false);
       setReason("");
       setNote("");
