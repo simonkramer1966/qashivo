@@ -112,7 +112,7 @@ type MetricColor = "blue" | "green" | "amber" | "red" | "muted";
 function SectionDivider({ label }: { label: string }) {
   return (
     <div className="flex items-center gap-2 py-1.5">
-      <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+      <span className="text-[11px] font-medium uppercase tracking-[0.05em] text-muted-foreground/70">
         {label}
       </span>
       <div className="flex-1 border-t border-border" />
@@ -439,7 +439,7 @@ export default function OverviewTab() {
       {/* Three columns */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* ---- QUEUED ---- */}
-        <Card className="border-l-4 border-l-blue-500">
+        <Card className="flex flex-col border-l-4 border-l-blue-500">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -451,7 +451,8 @@ export default function OverviewTab() {
               </Badge>
             </div>
           </CardHeader>
-          <CardContent className="space-y-0.5 pb-3">
+          <CardContent className="flex-1 space-y-0.5 pb-3">
+            <SectionDivider label="Communications queued" />
             <MetricRow
               icon={<Mail className="h-3.5 w-3.5" />}
               label="Emails awaiting approval"
@@ -531,7 +532,7 @@ export default function OverviewTab() {
         </Card>
 
         {/* ---- ACTIONED ---- */}
-        <Card className="border-l-4 border-l-emerald-500">
+        <Card className="flex flex-col border-l-4 border-l-emerald-500">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -543,7 +544,7 @@ export default function OverviewTab() {
               </Badge>
             </div>
           </CardHeader>
-          <CardContent className="space-y-0.5 pb-3">
+          <CardContent className="flex-1 space-y-0.5 pb-3">
             <SectionDivider label="Communications sent" />
 
             <MetricRow
@@ -593,10 +594,21 @@ export default function OverviewTab() {
               color="green"
             />
           </CardContent>
+          <div className="border-t px-4 py-3">
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full"
+              onClick={() => openDrilldown("actioned_all", "Activity report")}
+            >
+              <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+              View full report
+            </Button>
+          </div>
         </Card>
 
         {/* ---- EXCEPTIONS ---- */}
-        <Card className="border-l-4 border-l-red-500">
+        <Card className="flex flex-col border-l-4 border-l-red-500">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -608,7 +620,7 @@ export default function OverviewTab() {
               </Badge>
             </div>
           </CardHeader>
-          <CardContent className="space-y-0.5 pb-3">
+          <CardContent className="flex-1 space-y-0.5 pb-3">
             <SectionDivider label="Collections" />
 
             <MetricRow
