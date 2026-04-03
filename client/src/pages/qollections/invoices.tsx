@@ -297,17 +297,17 @@ export default function QollectionsInvoices() {
               </div>
             ) : (
               <>
-                <Table>
+                <Table className="table-fixed">
                   <TableHeader>
                     <TableRow>
-                      <SortableHeader column="invoiceNumber" label="Invoice" currentSort={sort} onSort={setSort} />
+                      <SortableHeader column="invoiceNumber" label="Invoice" currentSort={sort} onSort={setSort} className="w-[120px]" />
                       <SortableHeader column="customer" label="Customer" currentSort={sort} onSort={setSort} />
-                      <SortableHeader column="amount" label="Amount" currentSort={sort} onSort={setSort} className="text-right" />
-                      <TableHead className="text-right px-3">Paid</TableHead>
-                      <SortableHeader column="status" label="Status" currentSort={sort} onSort={setSort} />
-                      <SortableHeader column="dueDate" label="Due Date" currentSort={sort} onSort={setSort} />
-                      <SortableHeader column="daysOverdue" label="Days Overdue" currentSort={sort} onSort={setSort} />
-                      <TableHead className="px-3">Stage</TableHead>
+                      <SortableHeader column="amount" label="Amount" currentSort={sort} onSort={setSort} className="w-[110px] text-right" />
+                      <TableHead className="w-[90px] text-right px-3">Paid</TableHead>
+                      <SortableHeader column="status" label="Status" currentSort={sort} onSort={setSort} className="w-[100px]" />
+                      <SortableHeader column="dueDate" label="Due Date" currentSort={sort} onSort={setSort} className="w-[110px]" />
+                      <SortableHeader column="daysOverdue" label="Days Overdue" currentSort={sort} onSort={setSort} className="w-[110px]" />
+                      <TableHead className="w-[100px] px-3">Stage</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -316,7 +316,7 @@ export default function QollectionsInvoices() {
                       return (
                         <TableRow key={inv.id} className="hover:bg-muted/50">
                           <TableCell className="py-3 px-3 text-sm font-medium">{inv.invoiceNumber}</TableCell>
-                          <TableCell className="py-3 px-3 text-sm text-muted-foreground">
+                          <TableCell className="py-3 px-3 text-sm text-muted-foreground truncate">
                             {inv.contact?.name || "—"}
                           </TableCell>
                           <TableCell className="py-3 px-3 text-sm text-right font-bold">{formatAmount(inv.amount)}</TableCell>

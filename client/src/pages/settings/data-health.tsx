@@ -252,18 +252,18 @@ export default function SettingsDataHealth() {
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm table-fixed">
                 <thead>
                   <tr className="border-b bg-muted/50">
                     <DhSortTh field="name" label="Name" sort={sort} onSort={setSort} />
-                    <th className="text-left py-3 px-3 text-xs font-medium text-muted-foreground">Status</th>
-                    <th className="text-left py-3 px-3 text-xs font-medium text-muted-foreground">Email</th>
-                    <th className="text-left py-3 px-3 text-xs font-medium text-muted-foreground">Phone</th>
-                    <DhSortTh field="totalOutstanding" label="Outstanding" sort={sort} onSort={setSort} className="text-right" />
-                    <DhSortTh field="totalOverdue" label="Overdue" sort={sort} onSort={setSort} className="text-right" />
-                    <DhSortTh field="oldestOverdueDays" label="Days" sort={sort} onSort={setSort} className="text-right" />
-                    <th className="text-center py-3 px-3 text-xs font-medium text-muted-foreground">Edit</th>
-                    <th className="w-10 py-3 px-3" />
+                    <th className="w-[100px] text-left py-3 px-3 text-xs font-medium text-muted-foreground">Status</th>
+                    <th className="w-[180px] text-left py-3 px-3 text-xs font-medium text-muted-foreground">Email</th>
+                    <th className="w-[130px] text-left py-3 px-3 text-xs font-medium text-muted-foreground">Phone</th>
+                    <DhSortTh field="totalOutstanding" label="Outstanding" sort={sort} onSort={setSort} className="w-[110px] text-right" />
+                    <DhSortTh field="totalOverdue" label="Overdue" sort={sort} onSort={setSort} className="w-[100px] text-right" />
+                    <DhSortTh field="oldestOverdueDays" label="Days" sort={sort} onSort={setSort} className="w-[70px] text-right" />
+                    <th className="w-[60px] text-center py-3 px-3 text-xs font-medium text-muted-foreground">Edit</th>
+                    <th className="w-[40px] py-3 px-3" />
                   </tr>
                 </thead>
                 <tbody>
@@ -281,9 +281,9 @@ export default function SettingsDataHealth() {
                       return (
                         <tr key={contact.id} className="border-b hover:bg-muted/30 cursor-pointer" onClick={() => navigate(`/qollections/debtors/${contact.id}`)}>
                           <td className="py-3 px-3">
-                            <div className="font-medium">{contact.name}</div>
+                            <div className="font-medium truncate">{contact.name}</div>
                             {contact.companyName && (
-                              <div className="text-xs text-muted-foreground">{contact.companyName}</div>
+                              <div className="text-xs text-muted-foreground truncate">{contact.companyName}</div>
                             )}
                           </td>
                           <td className="py-3 px-3">

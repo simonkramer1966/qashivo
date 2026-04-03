@@ -413,7 +413,7 @@ export default function QollectionsDebtors() {
               </div>
             ) : (
               <>
-                <Table>
+                <Table className="table-fixed">
                   <TableHeader>
                     <TableRow>
                       <SortableHeader column="name" label="Customer" currentSort={sort} onSort={setSort} />
@@ -424,12 +424,13 @@ export default function QollectionsDebtors() {
                         rightLabel="Overdue"
                         currentSort={sort}
                         onSort={setSort}
+                        className="w-[140px]"
                       />
-                      <SortableHeader column="invoiceCount" label="Invoices" currentSort={sort} onSort={setSort} />
-                      <SortableHeader column="oldestOverdueDays" label="Days Overdue" currentSort={sort} onSort={setSort} />
-                      <SortableHeader column="lastContactDate" label="Last Contact" currentSort={sort} onSort={setSort} />
-                      <SortableHeader column="nextActionDate" label="Next Action" currentSort={sort} onSort={setSort} />
-                      <TableHead className="w-10" />
+                      <SortableHeader column="invoiceCount" label="Invoices" currentSort={sort} onSort={setSort} className="w-[80px]" />
+                      <SortableHeader column="oldestOverdueDays" label="Days Overdue" currentSort={sort} onSort={setSort} className="w-[110px]" />
+                      <SortableHeader column="lastContactDate" label="Last Contact" currentSort={sort} onSort={setSort} className="w-[110px]" />
+                      <SortableHeader column="nextActionDate" label="Next Action" currentSort={sort} onSort={setSort} className="w-[110px]" />
+                      <TableHead className="w-[48px]" />
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -440,9 +441,9 @@ export default function QollectionsDebtors() {
                         onClick={() => navigate(`/qollections/debtors/${debtor.id}`)}
                       >
                         <TableCell className="py-3 px-3">
-                          <div>
-                            <p className="text-sm font-medium leading-tight">{debtor.name}</p>
-                            <p className="text-xs text-muted-foreground">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium leading-tight truncate">{debtor.name}</p>
+                            <p className="text-xs text-muted-foreground truncate">
                               {debtor.email}
                             </p>
                           </div>
