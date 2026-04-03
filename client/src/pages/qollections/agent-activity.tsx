@@ -1,15 +1,20 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useSearch, useLocation } from "wouter";
+import { useSearch, useLocation, Link } from "wouter";
 import AppShell from "@/components/layout/app-shell";
 import CountdownBanner from "@/components/action-centre/CountdownBanner";
-import ModeSelector from "@/components/action-centre/ModeSelector";
 import OverviewTab from "@/components/action-centre/OverviewTab";
 import ApprovalsTab from "@/components/action-centre/ApprovalsTab";
 import ActionedTab from "@/components/action-centre/ActionedTab";
 import ExceptionsTab from "@/components/action-centre/ExceptionsTab";
 import VipTab from "@/components/action-centre/VipTab";
 import { cn } from "@/lib/utils";
+
+const MODE_LABELS: Record<string, string> = {
+  manual: "Manual",
+  auto_after_timeout: "Semi-Auto",
+  full_auto: "Full Auto",
+};
 
 interface TenantSettings {
   approvalMode: string;
@@ -123,13 +128,16 @@ export default function QollectionsAgentActivity() {
   return (
     <AppShell title="Action Centre" subtitle="Review, approve and track agent actions">
       <div className="space-y-4">
-        {/* Header row: mode selector */}
+        {/* Read-only mode indicator + countdown banner */}
         <div className="flex items-center justify-between">
           <div />
-          <ModeSelector currentMode={approvalMode} />
+          <span className="text-xs text-muted-foreground">
+            Mode: {MODE_LABELS[approvalMode] ?? approvalMode}{" "}
+            <Link href="/settings/autonomy-rules" className="text-primary hover:underline">
+              Change in Settings &rarr;
+            </Link>
+          </span>
         </div>
-
-        {/* Countdown banner for semi-auto mode */}
         {showCountdown && <CountdownBanner />}
 
         {/* Custom tab bar with flowing exception sub-tabs */}
