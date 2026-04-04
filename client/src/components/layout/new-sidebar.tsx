@@ -11,7 +11,6 @@ import {
   ChevronRight,
   Gauge,
   Users,
-  FileText,
   TrendingUp,
   Bot,
   Settings,
@@ -60,9 +59,8 @@ const navigationPillars: NavPillar[] = [
     icon: ClipboardList,
     children: [
       { name: "Dashboard", href: "/qollections", icon: Gauge },
-      { name: "Debtors", href: "/qollections/debtors", icon: Users },
-      { name: "Invoices", href: "/qollections/invoices", icon: FileText },
       { name: "Action Centre", href: "/qollections/agent-activity", icon: Activity },
+      { name: "Debtors", href: "/qollections/debtors", icon: Users },
       { name: "Disputes", href: "/qollections/disputes", icon: AlertTriangle },
       { name: "Impact", href: "/qollections/impact", icon: Target },
       { name: "Reports", href: "/qollections/reports", icon: BarChart3 },

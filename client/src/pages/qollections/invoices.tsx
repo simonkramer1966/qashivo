@@ -1,3 +1,5 @@
+// REMOVED FROM NAV — invoices accessed via Debtor Detail page.
+// Delete this file if not needed after 30 days. (Flagged: 2026-04-04)
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import AppShell from "@/components/layout/app-shell";

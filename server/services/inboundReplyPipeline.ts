@@ -338,7 +338,9 @@ async function deliverThreadedReply(
     const fromName = tenant.name
       ? `${tenant.name} via Qashivo`
       : "Qashivo Credit Control";
-    const textBody = finalBody.replace(/<[^>]*>/g, "");
+    const { formatEmailHtml } = await import("./emailFormatter");
+    const htmlBody = formatEmailHtml(finalBody);
+    const textBody = email.body; // LLM output is already clean plain text
 
     // Send via SendGrid with threading headers
     console.log(`[InboundReply] Sending threaded reply to ${recipientEmail}`);
@@ -346,7 +348,7 @@ async function deliverThreadedReply(
       to: recipientEmail,
       from: `${fromName} <${fromEmail}>`,
       subject,
-      html: finalBody,
+      html: htmlBody,
       text: textBody,
       headers: Object.keys(headers).length > 0 ? headers : undefined,
       tenantId,
@@ -379,7 +381,7 @@ async function deliverThreadedReply(
         fromName,
         subject,
         textBody,
-        htmlBody: finalBody,
+        htmlBody: htmlBody,
         threadKey,
         inReplyTo: headers["In-Reply-To"] || null,
         references: headers["References"] || null,
@@ -403,7 +405,7 @@ async function deliverThreadedReply(
         summary: `AI reply to debtor email: "${subject}"`,
         preview: textBody.substring(0, 240),
         subject,
-        body: finalBody,
+        body: htmlBody,
         status: sendResult.success ? "sent" : "failed",
         provider: "sendgrid",
         providerMessageId: sendResult.messageId || null,

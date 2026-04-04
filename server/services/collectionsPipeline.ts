@@ -460,7 +460,9 @@ async function deliverEmail(
     // Fetch escalation contacts for auto-CC
     const escalationCc = await getEscalationCc(tenantId, contactId);
 
-    const finalBody = email.body;
+    const { formatEmailHtml } = await import("./emailFormatter");
+    const htmlBody = formatEmailHtml(email.body);
+    const textBody = email.body; // LLM output is already clean plain text
 
     // Find or create conversation for threading
     const conversationId = await findOrCreateConversation(tenantId, contactId, email.subject);
@@ -470,7 +472,6 @@ async function deliverEmail(
     // Send via SendGrid
     const fromEmail = process.env.SENDGRID_FROM_EMAIL || "cc@qashivo.com";
     const fromName = tenant.name ? `${tenant.name} via Qashivo` : "Qashivo Credit Control";
-    const textBody = finalBody.replace(/<[^>]*>/g, "");
 
     console.log(`[Pipeline] Sending email to ${recipientEmail} (replyTo: ${replyToEmail}, cc: ${escalationCc.length ? escalationCc.join(', ') : 'none'})`);
     const sendResult = await sendEmail({
@@ -478,7 +479,7 @@ async function deliverEmail(
       cc: escalationCc.length ? escalationCc : undefined,
       from: `${fromName} <${fromEmail}>`,
       subject: email.subject,
-      html: finalBody,
+      html: htmlBody,
       text: textBody,
       replyTo: replyToEmail,
       tenantId,
@@ -514,7 +515,7 @@ async function deliverEmail(
         fromName,
         subject: sendResult.actualSubject || email.subject,
         textBody,
-        htmlBody: finalBody,
+        htmlBody: htmlBody,
         ccRecipients: sendResult.actualCc?.length ? sendResult.actualCc : null,
         replyToken: `${tenantId}.${conversationId}.${emailMessageId}`,
         status: sendResult.success ? "SENT" : "FAILED",
@@ -539,7 +540,7 @@ async function deliverEmail(
         summary: `AI-generated collection email: "${email.subject}"`,
         preview: textBody.substring(0, 240),
         subject: email.subject,
-        body: finalBody,
+        body: htmlBody,
         status: sendResult.success ? "sent" : "failed",
         provider: "sendgrid",
         providerMessageId: sendResult.messageId || null,
@@ -556,7 +557,7 @@ async function deliverEmail(
         actionId,
         status: "sent",
         subject: email.subject,
-        body: finalBody,
+        body: htmlBody,
         agentReasoning: email.agentReasoning,
       };
     } else {

@@ -585,22 +585,26 @@ export class ActionExecutor {
       const fromEmail = process.env.SENDGRID_FROM_EMAIL || 'noreply@qashivo.com';
       const fromName = tenant.name ? `${tenant.name} via Qashivo` : 'Qashivo Credit Control';
 
+      // Convert LLM plain text to proper HTML email
+      const { formatEmailHtml } = await import('./emailFormatter');
+      const htmlBody = formatEmailHtml(emailContent.body);
+      const textBody = emailContent.body; // LLM output is already clean plain text
+
       // Testing mode: prefix subject and add original recipient note
       const isTestMode = !!(contact as any)._originalEmail;
       const originalEmail = (contact as any)._originalEmail;
+      let finalHtml = htmlBody;
       if (isTestMode) {
         emailContent.subject = `[TEST] ${emailContent.subject}`;
         const testBanner = `<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#92400e;"><strong>TEST MODE</strong> — Original recipient: ${originalEmail} (${(contact as any)._originalName || 'Unknown'})</div>`;
-        emailContent.body = testBanner + emailContent.body;
+        finalHtml = testBanner + finalHtml;
       }
-
-      const textBody = emailContent.body.replace(/<[^>]*>/g, '');
 
       const result = await sendEmail({
         to: recipientEmail,
         from: `${fromName} <${fromEmail}>`,
         subject: emailContent.subject,
-        html: emailContent.body,
+        html: finalHtml,
         text: textBody,
         tenantId: action.tenantId,
         actionId: action.id,

@@ -28,7 +28,8 @@ const InvestorInterest = lazy(() => import("@/pages/investor-interest"));
 const QollectionsDashboard = lazy(() => import("@/pages/qollections/dashboard"));
 const QollectionsDebtors = lazy(() => import("@/pages/qollections/debtors"));
 const DebtorRecord = lazy(() => import("@/pages/qollections/debtor-record"));
-const QollectionsInvoices = lazy(() => import("@/pages/qollections/invoices"));
+// REMOVED FROM NAV — invoices accessed via Debtor Detail page.
+// const QollectionsInvoices = lazy(() => import("@/pages/qollections/invoices"));
 const QollectionsAgentActivity = lazy(() => import("@/pages/qollections/agent-activity"));
 const QollectionsDisputes = lazy(() => import("@/pages/qollections/disputes"));
 const QollectionsReports = lazy(() => import("@/pages/qollections/reports"));
@@ -232,7 +233,7 @@ function Router() {
           {/* Pillar routes — Qollections */}
           <Route path="/qollections/debtors/:id" component={DebtorRecord} />
           <Route path="/qollections/debtors" component={QollectionsDebtors} />
-          <Route path="/qollections/invoices" component={QollectionsInvoices} />
+          <Route path="/qollections/invoices">{() => <Redirect to="/qollections/debtors" />}</Route>
           <Route path="/qollections/agent-activity" component={QollectionsAgentActivity} />
           <Route path="/qollections/disputes" component={QollectionsDisputes} />
           <Route path="/qollections/impact" component={QollectionsImpact} />
