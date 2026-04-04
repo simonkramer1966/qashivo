@@ -111,7 +111,7 @@ type MetricColor = "blue" | "green" | "amber" | "red" | "muted";
 
 function SectionDivider({ label }: { label: string }) {
   return (
-    <div className="flex items-center gap-2 mt-4 mb-1.5">
+    <div className="flex items-center gap-2 !mt-4 !mb-1.5">
       <span className="text-[11px] font-medium uppercase tracking-[0.05em] text-muted-foreground/70">
         {label}
       </span>
@@ -451,54 +451,56 @@ export default function OverviewTab() {
               </Badge>
             </div>
           </CardHeader>
-          <CardContent className="flex-1 space-y-0.5 pb-3">
-            <SectionDivider label="Communications queued" />
-            <MetricRow
-              icon={<Mail className="h-3.5 w-3.5" />}
-              label="Emails awaiting approval"
-              count={queued.emails}
-              color="blue"
-              onClick={() => openDrilldown("queued_emails", "Emails awaiting approval")}
-            />
-            <MetricRow
-              icon={<MessageSquare className="h-3.5 w-3.5" />}
-              label="SMS awaiting approval"
-              count={queued.sms}
-              color="blue"
-              onClick={() => openDrilldown("queued_sms", "SMS awaiting approval")}
-            />
-            <MetricRow
-              icon={<Phone className="h-3.5 w-3.5" />}
-              label="Calls awaiting approval"
-              count={queued.calls}
-              color="blue"
-              onClick={() => openDrilldown("queued_calls", "Calls awaiting approval")}
-            />
-
-            <SectionDivider label="By urgency" />
-
-            <MetricRow
-              icon={<Clock className="h-3.5 w-3.5" />}
-              label="Waiting > 24 hours"
-              count={queued.waitingOver24h}
-              color="amber"
-              onClick={() => openDrilldown("queued_waiting_24h", "Waiting > 24 hours")}
-            />
-            <MetricRow
-              icon={<AlertTriangle className="h-3.5 w-3.5" />}
-              label="Debtors > 60 days overdue"
-              count={queued.debtorsOver60DaysOverdue}
-              color="amber"
-              onClick={() =>
-                openDrilldown("queued_over_60_days", "Debtors > 60 days overdue")
-              }
-            />
-            <MetricRow
-              icon={<span className="h-3.5 w-3.5" />}
-              label="Total value queued"
-              count={formatGBP(queued.totalValueQueued)}
-              color="muted"
-            />
+          <CardContent className="flex-1 pb-3">
+            <div className="min-h-[12.5rem] space-y-0.5">
+              <SectionDivider label="Communications queued" />
+              <MetricRow
+                icon={<Mail className="h-3.5 w-3.5" />}
+                label="Emails awaiting approval"
+                count={queued.emails}
+                color="blue"
+                onClick={() => openDrilldown("queued_emails", "Emails awaiting approval")}
+              />
+              <MetricRow
+                icon={<MessageSquare className="h-3.5 w-3.5" />}
+                label="SMS awaiting approval"
+                count={queued.sms}
+                color="blue"
+                onClick={() => openDrilldown("queued_sms", "SMS awaiting approval")}
+              />
+              <MetricRow
+                icon={<Phone className="h-3.5 w-3.5" />}
+                label="Calls awaiting approval"
+                count={queued.calls}
+                color="blue"
+                onClick={() => openDrilldown("queued_calls", "Calls awaiting approval")}
+              />
+            </div>
+            <div className="space-y-0.5">
+              <SectionDivider label="By urgency" />
+              <MetricRow
+                icon={<Clock className="h-3.5 w-3.5" />}
+                label="Waiting > 24 hours"
+                count={queued.waitingOver24h}
+                color="amber"
+                onClick={() => openDrilldown("queued_waiting_24h", "Waiting > 24 hours")}
+              />
+              <MetricRow
+                icon={<AlertTriangle className="h-3.5 w-3.5" />}
+                label="Debtors > 60 days overdue"
+                count={queued.debtorsOver60DaysOverdue}
+                color="amber"
+                onClick={() =>
+                  openDrilldown("queued_over_60_days", "Debtors > 60 days overdue")
+                }
+              />
+              <MetricRow
+                icon={<span className="h-3.5 w-3.5" />}
+                label="Total value queued"
+                count={formatGBP(queued.totalValueQueued)}
+                color="muted"
+              />
+            </div>
           </CardContent>
           <div className="border-t px-4 py-3 flex items-center gap-2">
             <Button
@@ -544,55 +546,56 @@ export default function OverviewTab() {
               </Badge>
             </div>
           </CardHeader>
-          <CardContent className="flex-1 space-y-0.5 pb-3">
-            <SectionDivider label="Communications sent" />
-
-            <MetricRow
-              icon={<Mail className="h-3.5 w-3.5" />}
-              label="Emails sent"
-              count={actioned.emailsSent}
-              color="green"
-              badge={{
-                value: actioned.emailsSentVsPrevious,
-                type: badgeType(actioned.emailsSentVsPrevious),
-              }}
-              onClick={() => openDrilldown("actioned_emails", "Emails sent")}
-            />
-            <MetricRow
-              icon={<MessageSquare className="h-3.5 w-3.5" />}
-              label="SMS sent"
-              count={actioned.smsSent}
-              color="green"
-              onClick={() => openDrilldown("actioned_sms", "SMS sent")}
-            />
-            <MetricRow
-              icon={<Phone className="h-3.5 w-3.5" />}
-              label="Voice calls made"
-              count={actioned.callsMade}
-              color="green"
-              onClick={() => openDrilldown("actioned_calls", "Voice calls made")}
-            />
-
-            <SectionDivider label="Outcomes" />
-
-            <MetricRow
-              icon={<CheckCircle2 className="h-3.5 w-3.5" />}
-              label="Promises to pay"
-              count={actioned.promisesToPay}
-              color="green"
-            />
-            <MetricRow
-              icon={<Shield className="h-3.5 w-3.5" />}
-              label="Payment plans agreed"
-              count={actioned.paymentPlansAgreed}
-              color="green"
-            />
-            <MetricRow
-              icon={<TrendingUp className="h-3.5 w-3.5" />}
-              label="Response rate"
-              count={`${actioned.responseRate}%`}
-              color="green"
-            />
+          <CardContent className="flex-1 pb-3">
+            <div className="min-h-[12.5rem] space-y-0.5">
+              <SectionDivider label="Communications sent" />
+              <MetricRow
+                icon={<Mail className="h-3.5 w-3.5" />}
+                label="Emails sent"
+                count={actioned.emailsSent}
+                color="green"
+                badge={{
+                  value: actioned.emailsSentVsPrevious,
+                  type: badgeType(actioned.emailsSentVsPrevious),
+                }}
+                onClick={() => openDrilldown("actioned_emails", "Emails sent")}
+              />
+              <MetricRow
+                icon={<MessageSquare className="h-3.5 w-3.5" />}
+                label="SMS sent"
+                count={actioned.smsSent}
+                color="green"
+                onClick={() => openDrilldown("actioned_sms", "SMS sent")}
+              />
+              <MetricRow
+                icon={<Phone className="h-3.5 w-3.5" />}
+                label="Voice calls made"
+                count={actioned.callsMade}
+                color="green"
+                onClick={() => openDrilldown("actioned_calls", "Voice calls made")}
+              />
+            </div>
+            <div className="space-y-0.5">
+              <SectionDivider label="Outcomes" />
+              <MetricRow
+                icon={<CheckCircle2 className="h-3.5 w-3.5" />}
+                label="Promises to pay"
+                count={actioned.promisesToPay}
+                color="green"
+              />
+              <MetricRow
+                icon={<Shield className="h-3.5 w-3.5" />}
+                label="Payment plans agreed"
+                count={actioned.paymentPlansAgreed}
+                color="green"
+              />
+              <MetricRow
+                icon={<TrendingUp className="h-3.5 w-3.5" />}
+                label="Response rate"
+                count={`${actioned.responseRate}%`}
+                color="green"
+              />
+            </div>
           </CardContent>
           <div className="border-t px-4 py-3">
             <Button
@@ -620,92 +623,93 @@ export default function OverviewTab() {
               </Badge>
             </div>
           </CardHeader>
-          <CardContent className="flex-1 space-y-0.5 pb-3">
-            <SectionDivider label="Collections" />
-
-            <MetricRow
-              icon={<Gavel className="h-3.5 w-3.5" />}
-              label="Disputed invoices"
-              count={exceptions.disputedInvoices}
-              color="red"
-              barWidth={barWidthFor(exceptions.disputedInvoices, exceptions.total)}
-              onClick={() => openDrilldown("exceptions_disputed", "Disputed invoices")}
-            />
-            <MetricRow
-              icon={<UserX className="h-3.5 w-3.5" />}
-              label="Unresponsive — end of flow"
-              count={exceptions.unresponsiveEndOfFlow}
-              color="red"
-              barWidth={barWidthFor(exceptions.unresponsiveEndOfFlow, exceptions.total)}
-              onClick={() =>
-                openDrilldown("exceptions_unresponsive", "Unresponsive — end of flow")
-              }
-            />
-            <MetricRow
-              icon={<Hand className="h-3.5 w-3.5" />}
-              label="Wants human contact"
-              count={exceptions.wantsHumanContact}
-              color="amber"
-              barWidth={barWidthFor(exceptions.wantsHumanContact, exceptions.total)}
-              onClick={() =>
-                openDrilldown("exceptions_human_contact", "Wants human contact")
-              }
-            />
-            <MetricRow
-              icon={<ShieldAlert className="h-3.5 w-3.5" />}
-              label="Compliance failures"
-              count={exceptions.complianceFailures}
-              color="amber"
-              barWidth={barWidthFor(exceptions.complianceFailures, exceptions.total)}
-              onClick={() =>
-                openDrilldown("exceptions_compliance", "Compliance failures")
-              }
-            />
-
-            <SectionDivider label="Debtor situations" />
-
-            <MetricRow
-              icon={<Heart className="h-3.5 w-3.5" />}
-              label="Distress — cashflow issues"
-              count={exceptions.distress}
-              color="red"
-              barWidth={barWidthFor(exceptions.distress, exceptions.total)}
-              onClick={() => openDrilldown("exceptions_distress", "Distress — cashflow issues")}
-            />
-            <MetricRow
-              icon={<Wrench className="h-3.5 w-3.5" />}
-              label="Service issue"
-              count={exceptions.serviceIssue}
-              color="amber"
-              barWidth={barWidthFor(exceptions.serviceIssue, exceptions.total)}
-              onClick={() => openDrilldown("exceptions_service", "Service issue")}
-            />
-            <MetricRow
-              icon={<FileQuestion className="h-3.5 w-3.5" />}
-              label="Missing PO / info"
-              count={exceptions.missingPO}
-              color="amber"
-              barWidth={barWidthFor(exceptions.missingPO, exceptions.total)}
-              onClick={() => openDrilldown("exceptions_missing_po", "Missing PO / info")}
-            />
-            <MetricRow
-              icon={<Skull className="h-3.5 w-3.5" />}
-              label="Insolvency risk"
-              count={exceptions.insolvencyRisk}
-              color="red"
-              barWidth={barWidthFor(exceptions.insolvencyRisk, exceptions.total)}
-              onClick={() => openDrilldown("exceptions_insolvency", "Insolvency risk")}
-            />
-
-            <SectionDivider label="Other" />
-
-            <MetricRow
-              icon={<HelpCircle className="h-3.5 w-3.5" />}
-              label="Other exceptions"
-              count={exceptions.other}
-              color="muted"
-              onClick={() => openDrilldown("exceptions_other", "Other exceptions")}
-            />
+          <CardContent className="flex-1 pb-3">
+            <div className="min-h-[12.5rem] space-y-0.5">
+              <SectionDivider label="Collections" />
+              <MetricRow
+                icon={<Gavel className="h-3.5 w-3.5" />}
+                label="Disputed invoices"
+                count={exceptions.disputedInvoices}
+                color="red"
+                barWidth={barWidthFor(exceptions.disputedInvoices, exceptions.total)}
+                onClick={() => openDrilldown("exceptions_disputed", "Disputed invoices")}
+              />
+              <MetricRow
+                icon={<UserX className="h-3.5 w-3.5" />}
+                label="Unresponsive — end of flow"
+                count={exceptions.unresponsiveEndOfFlow}
+                color="red"
+                barWidth={barWidthFor(exceptions.unresponsiveEndOfFlow, exceptions.total)}
+                onClick={() =>
+                  openDrilldown("exceptions_unresponsive", "Unresponsive — end of flow")
+                }
+              />
+              <MetricRow
+                icon={<Hand className="h-3.5 w-3.5" />}
+                label="Wants human contact"
+                count={exceptions.wantsHumanContact}
+                color="amber"
+                barWidth={barWidthFor(exceptions.wantsHumanContact, exceptions.total)}
+                onClick={() =>
+                  openDrilldown("exceptions_human_contact", "Wants human contact")
+                }
+              />
+              <MetricRow
+                icon={<ShieldAlert className="h-3.5 w-3.5" />}
+                label="Compliance failures"
+                count={exceptions.complianceFailures}
+                color="amber"
+                barWidth={barWidthFor(exceptions.complianceFailures, exceptions.total)}
+                onClick={() =>
+                  openDrilldown("exceptions_compliance", "Compliance failures")
+                }
+              />
+            </div>
+            <div className="space-y-0.5">
+              <SectionDivider label="Debtor situations" />
+              <MetricRow
+                icon={<Heart className="h-3.5 w-3.5" />}
+                label="Distress — cashflow issues"
+                count={exceptions.distress}
+                color="red"
+                barWidth={barWidthFor(exceptions.distress, exceptions.total)}
+                onClick={() => openDrilldown("exceptions_distress", "Distress — cashflow issues")}
+              />
+              <MetricRow
+                icon={<Wrench className="h-3.5 w-3.5" />}
+                label="Service issue"
+                count={exceptions.serviceIssue}
+                color="amber"
+                barWidth={barWidthFor(exceptions.serviceIssue, exceptions.total)}
+                onClick={() => openDrilldown("exceptions_service", "Service issue")}
+              />
+              <MetricRow
+                icon={<FileQuestion className="h-3.5 w-3.5" />}
+                label="Missing PO / info"
+                count={exceptions.missingPO}
+                color="amber"
+                barWidth={barWidthFor(exceptions.missingPO, exceptions.total)}
+                onClick={() => openDrilldown("exceptions_missing_po", "Missing PO / info")}
+              />
+              <MetricRow
+                icon={<Skull className="h-3.5 w-3.5" />}
+                label="Insolvency risk"
+                count={exceptions.insolvencyRisk}
+                color="red"
+                barWidth={barWidthFor(exceptions.insolvencyRisk, exceptions.total)}
+                onClick={() => openDrilldown("exceptions_insolvency", "Insolvency risk")}
+              />
+            </div>
+            <div className="space-y-0.5">
+              <SectionDivider label="Other" />
+              <MetricRow
+                icon={<HelpCircle className="h-3.5 w-3.5" />}
+                label="Other exceptions"
+                count={exceptions.other}
+                color="muted"
+                onClick={() => openDrilldown("exceptions_other", "Other exceptions")}
+              />
+            </div>
           </CardContent>
           <div className="border-t px-4 py-3">
             <Button
