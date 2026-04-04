@@ -1202,32 +1202,49 @@ export function registerActionCentreRoutes(app: Express): void {
   });
 
   // ── POST /api/approval-queue/approve-all ────────────────────
-  // Approve all pending actions in the queue
+  // Approve all pending actions and send immediately via pipeline
   app.post("/api/approval-queue/approve-all", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
 
-      const now = new Date();
-      const result = await db
-        .update(actions)
-        .set({
-          status: "sent",
-          approvedBy: user.id,
-          approvedAt: now,
-          updatedAt: now,
-        })
+      // Find all pending actions for this tenant
+      const pendingActions = await db
+        .select({ id: actions.id })
+        .from(actions)
         .where(
           and(
             eq(actions.tenantId, user.tenantId),
             inArray(actions.status, ["pending", "pending_approval"]),
           )
-        )
-        .returning({ id: actions.id });
+        );
 
-      console.log(`[ACTION-CENTRE] Approve all — ${result.length} actions approved for tenant ${user.tenantId}`);
+      if (pendingActions.length === 0) {
+        return res.json({ approved: 0 });
+      }
 
-      res.json({ approved: result.length });
+      // Send each action immediately via approveAndSend()
+      const { approveAndSend } = await import("../services/collectionsPipeline");
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const { id } of pendingActions) {
+        try {
+          const result = await approveAndSend(id, user.id);
+          if (result.status === "sent" || result.status === "completed") {
+            successCount++;
+          } else {
+            errorCount++;
+          }
+        } catch (err: any) {
+          console.error(`[ACTION-CENTRE] Approve-all failed for action ${id}:`, err.message);
+          errorCount++;
+        }
+      }
+
+      console.log(`[ACTION-CENTRE] Approve all — ${successCount} sent, ${errorCount} failed for tenant ${user.tenantId}`);
+
+      res.json({ approved: successCount, failed: errorCount });
     } catch (error: any) {
       console.error("Error approving all actions:", error);
       res.status(500).json({ message: error.message });

@@ -1676,50 +1676,8 @@ Guidelines:
     }
   });
 
-  app.post("/api/actions/:id/approve", isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      if (!user?.tenantId) {
-        return res.status(400).json({ message: "User not associated with a tenant" });
-      }
-
-      const { id } = req.params;
-
-      // Get existing action
-      const existingAction = await db
-        .select()
-        .from(actions)
-        .where(and(eq(actions.id, id), eq(actions.tenantId, user.tenantId)))
-        .limit(1);
-
-      if (!existingAction.length) {
-        return res.status(404).json({ message: "Action not found" });
-      }
-
-      const action = existingAction[0];
-
-      // Update status to scheduled and record who approved
-      await db
-        .update(actions)
-        .set({
-          status: "scheduled",
-          approvedBy: user.id,
-          approvedAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .where(eq(actions.id, id));
-
-      console.log(`✅ Action ${id} approved by ${user.firstName} ${user.lastName}`);
-
-      res.json({ 
-        message: "Action approved and scheduled",
-        actionId: id
-      });
-    } catch (error) {
-      console.error("Error approving action:", error);
-      res.status(500).json({ message: "Failed to approve action" });
-    }
-  });
+  // Old approve endpoint deleted — was shadowing Sprint 2.1 approve endpoint
+  // which calls approveAndSend() for immediate delivery. See line ~3966.
 
   app.patch("/api/actions/:id/edit", isAuthenticated, async (req: any, res) => {
     try {
@@ -4359,54 +4317,41 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      const { actionIds, scheduledFor } = req.body;
+      const { actionIds } = req.body;
 
       if (!actionIds || !Array.isArray(actionIds) || actionIds.length === 0) {
         return res.status(400).json({ message: "actionIds array is required" });
       }
 
-      // Get tenant for execution time
-      const tenant = await storage.getTenant(user.tenantId);
-      if (!tenant) {
-        return res.status(404).json({ message: "Tenant not found" });
+      // Send each action immediately via approveAndSend()
+      const { approveAndSend } = await import("../services/collectionsPipeline");
+
+      let successCount = 0;
+      let errorCount = 0;
+      const results: Array<{ actionId: string; status: string; error?: string }> = [];
+
+      for (const actionId of actionIds) {
+        try {
+          const result = await approveAndSend(actionId, user.id);
+          results.push(result);
+          if (result.status === "sent" || result.status === "completed") {
+            successCount++;
+          } else {
+            errorCount++;
+          }
+        } catch (err: any) {
+          errorCount++;
+          results.push({ actionId, status: "failed", error: err.message });
+        }
       }
 
-      // Calculate execution time
-      let execTime: Date;
-      if (scheduledFor) {
-        execTime = new Date(scheduledFor);
-      } else {
-        // Default to tomorrow at tenant's execution time
-        execTime = new Date();
-        execTime.setDate(execTime.getDate() + 1);
-        const [hours, minutes] = (tenant.executionTime || '09:00').split(':');
-        execTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-      }
-
-      // Bulk update actions
-      const result = await db.update(actions)
-        .set({
-          status: 'scheduled',
-          scheduledFor: execTime,
-          approvedBy: user.id,
-          approvedAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .where(
-          and(
-            eq(actions.tenantId, user.tenantId),
-            inArray(actions.id, actionIds),
-            eq(actions.status, 'pending_approval')
-          )
-        )
-        .returning();
-
-      console.log(`✅ Bulk approved ${result.length} actions`);
+      console.log(`✅ Bulk approved: ${successCount} sent, ${errorCount} failed`);
 
       res.json({
-        message: "Actions approved successfully",
-        approvedCount: result.length,
-        executionTime: execTime.toISOString(),
+        message: `${successCount} actions sent, ${errorCount} failed`,
+        approvedCount: successCount,
+        errorCount,
+        results,
       });
     } catch (error: any) {
       console.error("Error bulk approving actions:", error);
