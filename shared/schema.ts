@@ -129,6 +129,7 @@ export const tenants = pgTable("tenants", {
   minimumChaseThreshold: decimal("minimum_chase_threshold", { precision: 10, scale: 2 }).default('50.00'), // Gap 4: Skip chasing if consolidated total below this amount (GBP)
   noResponseEscalationThreshold: integer("no_response_escalation_threshold").default(4), // Gap 5: Consecutive unanswered contacts before escalation pressure
   significantPaymentThreshold: decimal("significant_payment_threshold", { precision: 3, scale: 2 }).default("0.50"), // Gap 5: Payment fraction that triggers tone reset (0.50 = 50%)
+  sendDelayMinutes: integer("send_delay_minutes").default(15), // Minutes to wait after approval before sending (0 = immediate)
   chaseDelayDays: integer("chase_delay_days").default(5), // Days past due before Charlie actively seeks a payment date (Phase 1 → Phase 2 transition)
   preDueDateDays: integer("pre_due_date_days").default(7), // Days before due date for pre-due courtesy reminder
   preDueDateMinAmount: decimal("pre_due_date_min_amount", { precision: 10, scale: 2 }).default("1000.00"), // Minimum invoice amount for pre-due reminders (GBP)

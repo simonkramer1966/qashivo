@@ -414,6 +414,7 @@ export async function registerSettingsRoutes(app: Express): Promise<void> {
         'minimumChaseThreshold',
         'noResponseEscalationThreshold', 'significantPaymentThreshold',
         'paymentAttributionFullCreditHours', 'paymentAttributionPartialCreditDays', 'paymentAttributionSameDayExcluded',
+        'sendDelayMinutes',
         'chaseDelayDays', 'preDueDateDays', 'preDueDateMinAmount'
       ];
 

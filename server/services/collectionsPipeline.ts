@@ -272,7 +272,33 @@ export async function approveAndSend(
     return { actionId, status: "failed", error: `Action is ${action.action.status}, not pending_approval` };
   }
 
-  // Mark as approved
+  // Check tenant's send delay setting
+  const sendDelayMinutes = action.tenant.sendDelayMinutes ?? 0;
+
+  if (sendDelayMinutes > 0) {
+    // Schedule for future delivery — executor will pick it up
+    const scheduledFor = new Date(Date.now() + sendDelayMinutes * 60_000);
+    await db
+      .update(actions)
+      .set({
+        status: "scheduled",
+        approvedBy: approvedBy,
+        approvedAt: new Date(),
+        scheduledFor,
+        updatedAt: new Date(),
+      })
+      .where(eq(actions.id, actionId));
+
+    console.log(`[Pipeline] Approved with ${sendDelayMinutes}min delay — scheduled for ${scheduledFor.toISOString()}`);
+    return {
+      actionId,
+      status: "pending_approval", // Return pending_approval status to UI (action is approved but not yet sent)
+      subject: action.action.subject || undefined,
+      body: action.action.content || undefined,
+    };
+  }
+
+  // No delay — send immediately (current behaviour)
   await db
     .update(actions)
     .set({

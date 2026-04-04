@@ -38,6 +38,7 @@ interface TenantSettings {
     flagDisputeKeywords: boolean;
     flagVipCustomers: boolean;
   };
+  sendDelayMinutes: number;
   chaseDelayDays: number;
   preDueDateDays: number;
   preDueDateMinAmount: string;
@@ -141,6 +142,7 @@ export default function SettingsAutonomyRules() {
   const [approvalMode, setApprovalMode] = useState<string | null>(null);
   const [timeoutHours, setTimeoutHours] = useState<number | null>(null);
   const [exceptionRules, setExceptionRules] = useState<TenantSettings["exceptionRules"] | null>(null);
+  const [sendDelayMinutes, setSendDelayMinutes] = useState<number | null>(null);
   const [chaseDelayDays, setChaseDelayDays] = useState<number | null>(null);
   const [preDueDateDays, setPreDueDateDays] = useState<number | null>(null);
   const [preDueDateMinAmount, setPreDueDateMinAmount] = useState<string | null>(null);
@@ -191,13 +193,14 @@ export default function SettingsAutonomyRules() {
     flagVipCustomers: true,
   };
 
+  const currentSendDelayMinutes = sendDelayMinutes ?? settings?.sendDelayMinutes ?? 15;
   const currentChaseDelayDays = chaseDelayDays ?? settings?.chaseDelayDays ?? 5;
   const currentPreDueDateDays = preDueDateDays ?? settings?.preDueDateDays ?? 7;
   const currentPreDueDateMinAmount = preDueDateMinAmount ?? settings?.preDueDateMinAmount ?? "1000.00";
 
   const hasChanges =
     approvalMode !== null || timeoutHours !== null || exceptionRules !== null ||
-    chaseDelayDays !== null || preDueDateDays !== null || preDueDateMinAmount !== null;
+    sendDelayMinutes !== null || chaseDelayDays !== null || preDueDateDays !== null || preDueDateMinAmount !== null;
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -205,6 +208,7 @@ export default function SettingsAutonomyRules() {
       if (approvalMode !== null) body.approvalMode = approvalMode;
       if (timeoutHours !== null) body.approvalTimeoutHours = timeoutHours;
       if (exceptionRules !== null) body.exceptionRules = exceptionRules;
+      if (sendDelayMinutes !== null) body.sendDelayMinutes = sendDelayMinutes;
       if (chaseDelayDays !== null) body.chaseDelayDays = chaseDelayDays;
       if (preDueDateDays !== null) body.preDueDateDays = preDueDateDays;
       if (preDueDateMinAmount !== null) body.preDueDateMinAmount = preDueDateMinAmount;
@@ -217,6 +221,7 @@ export default function SettingsAutonomyRules() {
       setApprovalMode(null);
       setTimeoutHours(null);
       setExceptionRules(null);
+      setSendDelayMinutes(null);
       setChaseDelayDays(null);
       setPreDueDateDays(null);
       setPreDueDateMinAmount(null);
@@ -392,6 +397,41 @@ export default function SettingsAutonomyRules() {
               </CardContent>
             </Card>
           )}
+
+          {/* Send Delay After Approval */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Timer className="h-5 w-5 text-primary" />
+                Send Delay After Approval
+              </CardTitle>
+              <CardDescription>
+                After you approve an action, it waits this long before sending. Review approved actions in the Scheduled tab and cancel if needed.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label>Delay period</Label>
+                <span className="text-sm font-medium text-foreground">
+                  {currentSendDelayMinutes === 0 ? "Immediate" : `${currentSendDelayMinutes} minutes`}
+                </span>
+              </div>
+              <Slider
+                value={[currentSendDelayMinutes]}
+                onValueChange={(v) => setSendDelayMinutes(v[0])}
+                min={0}
+                max={60}
+                step={5}
+                className="w-full"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Immediate</span>
+                <span>15 min</span>
+                <span>30 min</span>
+                <span>60 min</span>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Exception Rules */}
           <Card>

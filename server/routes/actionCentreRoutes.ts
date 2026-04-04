@@ -3,7 +3,7 @@ import { isAuthenticated } from "../auth";
 import { storage } from "../storage";
 import { db } from "../db";
 import { actions, actionBatches, rejectionPatterns, tenants, messageDrafts, contacts, invoices, disputes, complianceChecks, emailMessages, promisesToPay, paymentPlans, customerLearningProfiles, inboundMessages, paymentPromises, aiFacts, customerPreferences } from "@shared/schema";
-import { eq, and, inArray, desc, sql, or, gte, lte, count, sum, not, isNull, between } from "drizzle-orm";
+import { eq, and, inArray, desc, asc, sql, or, gte, lte, count, sum, not, isNull, isNotNull, between } from "drizzle-orm";
 import { batchProcessor } from "../services/batchProcessor";
 import { z } from "zod";
 
@@ -192,6 +192,126 @@ export function registerActionCentreRoutes(app: Express): void {
       });
     } catch (error: any) {
       console.error("Error fetching actioned items:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ── GET /api/action-centre/scheduled ─────────────────────────
+  // Approved-but-not-yet-sent actions for the Scheduled tab
+  app.get("/api/action-centre/scheduled", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const rows = await db
+        .select({
+          action: actions,
+          contactName: contacts.name,
+          companyName: contacts.companyName,
+        })
+        .from(actions)
+        .leftJoin(contacts, eq(actions.contactId, contacts.id))
+        .where(
+          and(
+            eq(actions.tenantId, user.tenantId),
+            eq(actions.status, "scheduled"),
+            or(
+              isNull(actions.deliveryStatus),
+              eq(actions.deliveryStatus, "pending"),
+            ),
+          )
+        )
+        .orderBy(asc(actions.scheduledFor))
+        .limit(100);
+
+      const items = rows.map(r => ({
+        ...r.action,
+        contactName: r.contactName,
+        companyName: r.companyName,
+      }));
+
+      res.json({
+        actions: items,
+        total: items.length,
+      });
+    } catch (error: any) {
+      console.error("Error fetching scheduled actions:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ── POST /api/actions/:actionId/cancel ──────────────────────
+  // Cancel a scheduled action before it's sent
+  app.post("/api/actions/:actionId/cancel", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const { actionId } = req.params;
+      const { reason } = req.body;
+
+      const [action] = await db
+        .select()
+        .from(actions)
+        .where(and(eq(actions.id, actionId), eq(actions.tenantId, user.tenantId)))
+        .limit(1);
+
+      if (!action) {
+        return res.status(404).json({ message: "Action not found" });
+      }
+      if (action.status !== "scheduled") {
+        return res.status(400).json({ message: `Cannot cancel action with status '${action.status}'` });
+      }
+
+      await db
+        .update(actions)
+        .set({
+          status: "cancelled",
+          cancellationReason: reason || "Cancelled by user from Scheduled tab",
+          updatedAt: new Date(),
+        })
+        .where(eq(actions.id, actionId));
+
+      res.json({ message: "Action cancelled", actionId });
+    } catch (error: any) {
+      console.error("Error cancelling action:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ── POST /api/actions/:actionId/send-now ────────────────────
+  // Move a scheduled action's send time to now
+  app.post("/api/actions/:actionId/send-now", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const { actionId } = req.params;
+
+      const [action] = await db
+        .select()
+        .from(actions)
+        .where(and(eq(actions.id, actionId), eq(actions.tenantId, user.tenantId)))
+        .limit(1);
+
+      if (!action) {
+        return res.status(404).json({ message: "Action not found" });
+      }
+      if (action.status !== "scheduled") {
+        return res.status(400).json({ message: `Cannot send-now action with status '${action.status}'` });
+      }
+
+      await db
+        .update(actions)
+        .set({
+          scheduledFor: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(actions.id, actionId));
+
+      res.json({ message: "Action moved to immediate send", actionId });
+    } catch (error: any) {
+      console.error("Error sending action now:", error);
       res.status(500).json({ message: error.message });
     }
   });
