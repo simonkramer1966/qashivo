@@ -693,6 +693,7 @@ export async function planAdaptiveActions(
     override: number;
     lowPriority: number;
     recentAction: number;
+    cooldown: number;
   };
 }> {
   console.log(`[PLAN] Planning adaptive actions for tenant ${tenantId}, schedule ${scheduleId}`);
@@ -720,7 +721,7 @@ export async function planAdaptiveActions(
       return {
         invoicesProcessed: 0,
         actionsCreated: 0,
-        skipped: { disputed: 0, override: 0, lowPriority: 0, recentAction: 0 },
+        skipped: { disputed: 0, override: 0, lowPriority: 0, recentAction: 0, cooldown: 0 },
       };
     }
 
@@ -781,11 +782,42 @@ export async function planAdaptiveActions(
       override: 0,
       lowPriority: 0,
       recentAction: 0,
+      cooldown: 0,
     };
+
+    // Pre-compute channel cooldown from tenant settings (same source as compliance engine)
+    const cooldowns = (tenantRecord?.channelCooldowns as { email?: number; sms?: number; voice?: number } | null) ?? { email: 3 };
+    const emailCooldownDays = cooldowns.email ?? 3;
 
     // Process each contact (may have multiple invoices)
     for (const [contactId, contactInvoices] of Array.from(invoicesByContact.entries())) {
       const { contact, behavior } = contactInvoices[0]; // Same contact for all
+
+      // Pre-filter: skip contact if within channel cooldown window
+      const cooldownStart = new Date();
+      cooldownStart.setDate(cooldownStart.getDate() - emailCooldownDays);
+      const SENT_STATUSES = ["completed", "sent", "delivered"];
+      const recentSent = await db
+        .select({ createdAt: actions.createdAt })
+        .from(actions)
+        .where(and(
+          eq(actions.tenantId, tenantId),
+          eq(actions.contactId, contactId),
+          eq(actions.type, "email"),
+          gte(actions.createdAt, cooldownStart),
+          inArray(actions.status, SENT_STATUSES),
+        ))
+        .limit(1);
+
+      if (recentSent.length > 0) {
+        const lastDate = recentSent[0].createdAt;
+        const daysSince = lastDate
+          ? Math.floor((Date.now() - lastDate.getTime()) / (1000 * 60 * 60 * 24))
+          : 0;
+        console.log(`[PLAN] Skipping ${contact.name} — last contact ${daysSince} day(s) ago, cooldown is ${emailCooldownDays} days`);
+        skipped.cooldown++;
+        continue;
+      }
 
       // Gap 13: Fetch seasonal adjustments once per contact (used in both scheduling paths)
       let seasonalAdj: SeasonalAdjustment[] = [];
@@ -994,7 +1026,7 @@ export async function planAdaptiveActions(
     console.log(
       `[PLAN] Complete: ${invoicesProcessed} processed, ${actionsCreated} created, ` +
       `${skipped.disputed} disputed, ${skipped.lowPriority} low priority, ` +
-      `${skipped.recentAction} recent action` +
+      `${skipped.recentAction} recent action, ${skipped.cooldown} cooldown` +
       (groupCancelled > 0 ? `, ${groupCancelled} cancelled (debtor group conflicts)` : '')
     );
 

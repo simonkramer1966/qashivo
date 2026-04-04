@@ -149,8 +149,8 @@ export async function checkCompliance(input: ComplianceInput): Promise<Complianc
   rulesChecked.push("time_of_day");
   const startHour = parseTime(tenant.businessHoursStart ?? "08:00");
   const endHour = parseTime(tenant.businessHoursEnd ?? "18:00");
-  const now = new Date();
-  const currentHour = now.getHours() + now.getMinutes() / 60;
+  const tenantTz = tenant.executionTimezone || "Europe/London";
+  const currentHour = getCurrentHourInTimezone(tenantTz);
 
   if (currentHour < startHour || currentHour >= endHour) {
     violations.push(`Time-of-day: current time outside business hours (${tenant.businessHoursStart ?? "08:00"}–${tenant.businessHoursEnd ?? "18:00"})`);
@@ -239,6 +239,31 @@ function parseTime(timeStr: string): number {
   return (hours || 0) + (minutes || 0) / 60;
 }
 
+function getCurrentHourInTimezone(tz: string): number {
+  try {
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: tz,
+      hour: "numeric",
+      minute: "numeric",
+      hour12: false,
+    }).formatToParts(new Date());
+    const hour = Number(parts.find((p) => p.type === "hour")?.value ?? 0);
+    const minute = Number(parts.find((p) => p.type === "minute")?.value ?? 0);
+    return hour + minute / 60;
+  } catch {
+    // Invalid timezone — fall back to Europe/London
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/London",
+      hour: "numeric",
+      minute: "numeric",
+      hour12: false,
+    }).formatToParts(new Date());
+    const hour = Number(parts.find((p) => p.type === "hour")?.value ?? 0);
+    const minute = Number(parts.find((p) => p.type === "minute")?.value ?? 0);
+    return hour + minute / 60;
+  }
+}
+
 function determineAction(violations: string[], _rulesChecked: string[]): ComplianceAction {
   if (violations.length === 0) return "send";
 
@@ -293,16 +318,29 @@ async function checkDataIsolation(
   for (const inv of otherInvoices) {
     // Skip the target debtor's own invoices
     if (inv.contactId === contactId) continue;
+    if (!inv.invoiceNumber) continue;
 
-    // Skip short invoice numbers (< 3 chars) — too many false positives
-    if (!inv.invoiceNumber || inv.invoiceNumber.length < 3) continue;
+    const num = inv.invoiceNumber.trim();
 
-    // Use word-boundary matching to avoid substring false positives
-    // e.g. invoice "123" shouldn't match "£1,234" or "12345"
-    const escaped = inv.invoiceNumber.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const pattern = new RegExp(`\\b${escaped}\\b`);
+    // Purely numeric invoice numbers need to be long enough to avoid
+    // matching amounts, dates, and other incidental numbers in the body.
+    // Alphanumeric prefixed numbers (e.g. "INV-109") are specific enough
+    // at any length.
+    const isNumericOnly = /^\d+$/.test(num);
+    if (isNumericOnly && num.length < 5) continue;
+    if (!isNumericOnly && num.length < 3) continue;
+
+    // Build a pattern that won't match inside larger numbers or currency amounts.
+    // For numeric-only: require non-digit (or start/end) on both sides so
+    // "109" won't match inside "£1,109" or "21090".
+    // For alphanumeric: standard word boundaries are sufficient.
+    const escaped = num.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const pattern = isNumericOnly
+      ? new RegExp(`(?<!\\d)${escaped}(?!\\d)`)
+      : new RegExp(`\\b${escaped}\\b`);
+
     if (pattern.test(content)) {
-      return `Data isolation: email references invoice "${inv.invoiceNumber}" which belongs to a different debtor`;
+      return `Data isolation: email references invoice "${num}" which belongs to a different debtor`;
     }
   }
 
