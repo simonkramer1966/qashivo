@@ -1,11 +1,11 @@
 import Anthropic from "@anthropic-ai/sdk";
 
 if (!process.env.ANTHROPIC_API_KEY) {
-  console.error("[Claude] WARNING: ANTHROPIC_API_KEY is not set. All LLM calls will fail.");
+  throw new Error("[Claude] ANTHROPIC_API_KEY is not set — server cannot start without it.");
 }
 
 const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY || "missing-key",
+  apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
 // Model tiers — adjust as needed

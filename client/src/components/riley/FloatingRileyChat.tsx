@@ -318,6 +318,10 @@ export default function FloatingRileyChat() {
     function handleRileyOpen(e: Event) {
       const detail = (e as CustomEvent).detail;
       if (!detail?.message) return;
+      // Start a fresh conversation with the action context
+      setMessages([]);
+      setConversationId(null);
+      localStorage.removeItem("riley_conversation_id");
       setIsOpen(true);
       setHasShownGreeting(true);
       // Pre-fill the input so user can edit or press Enter to send

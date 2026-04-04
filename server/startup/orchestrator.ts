@@ -26,6 +26,13 @@ import { eq, and, isNotNull } from "drizzle-orm";
 import { encryptToken, isEncrypted } from "../utils/tokenEncryption";
 
 export async function startAll(): Promise<void> {
+  // Phase 0 — Required env vars (fail early)
+  const required = ["DATABASE_URL", "ANTHROPIC_API_KEY"];
+  const missing = required.filter((k) => !process.env[k]);
+  if (missing.length > 0) {
+    throw new Error(`[startup] Missing required environment variables: ${missing.join(", ")}`);
+  }
+
   // Phase 0 — Bootstrap
   try {
     await ensureMasterAdminExists();

@@ -174,7 +174,7 @@ export function ActionDrawer({
   const canShowInvoiceList = overdueInvoices.length > 0;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={onOpenChange} modal={false}>
       <SheetContent 
         side="right" 
         className="w-full sm:max-w-md p-0 flex flex-col bg-white border-l border-slate-100"
