@@ -2053,11 +2053,15 @@ Guidelines:
         contactPhone: contact.phone,
       };
 
-      // Call Retell directly
-      const { createUnifiedRetellCall } = await import('../utils/retellCallHelper');
-      
-      const result = await createUnifiedRetellCall({
-        toNumber: contact.phone,
+      // SECURITY: Route through sendVoiceCall() for communication mode enforcement.
+      // Never call createUnifiedRetellCall() directly — it bypasses mode checks.
+      const { sendVoiceCall } = await import('../services/communications/sendVoiceCall');
+
+      const result = await sendVoiceCall({
+        tenantId: user.tenantId,
+        to: contact.phone,
+        contactName: contact.name || 'Customer',
+        agentId: process.env.RETELL_AGENT_ID || '',
         dynamicVariables,
         metadata: {
           actionId: id,
@@ -2080,12 +2084,14 @@ Guidelines:
         })
         .where(eq(actions.id, id));
 
-      res.json({ 
+      res.json({
         message: "Voice call initiated successfully",
         callId: result.callId,
         actionId: id,
-        toNumber: contact.phone,
+        toNumber: result.toNumber,
         status: result.status,
+        modeApplied: result.modeApplied,
+        originalRecipient: result.originalRecipient,
       });
     } catch (error) {
       console.error("Error initiating voice call:", error);

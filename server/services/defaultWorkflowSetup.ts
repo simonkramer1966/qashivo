@@ -27,9 +27,6 @@ This is a friendly reminder that you have {{invoiceCount}} invoice(s) totalling 
 
 We understand that invoices can sometimes be overlooked, so we wanted to bring this to your attention. If you've already arranged payment, please disregard this message.
 
-For your convenience, you can view and pay your invoices using our secure payment portal:
-{{paymentLink}}
-
 If you have any questions about these invoices or need to discuss payment arrangements, please don't hesitate to reach out.
 
 Kind regards,
@@ -55,8 +52,6 @@ We haven't received payment or heard back from you, and we'd like to resolve thi
 - There are any issues with the invoices that need addressing
 - You need to arrange a payment plan
 
-You can pay securely online here: {{paymentLink}}
-
 Please respond to this email or contact us at your earliest convenience so we can assist you.
 
 Best regards,
@@ -80,8 +75,6 @@ Despite our previous communications, we note that {{invoiceCount}} invoice(s) to
 We take our business relationship seriously and would like to resolve this matter without further escalation. Please arrange payment within the next 7 days or contact us immediately to discuss your situation.
 
 If there are any disputes or concerns regarding these invoices, please let us know so we can address them promptly.
-
-Pay securely online: {{paymentLink}}
 
 We look forward to hearing from you.
 
@@ -127,8 +120,6 @@ Please be aware that this may:
 - Impact our future business relationship
 
 To avoid these consequences, please arrange immediate payment or contact us today to discuss a resolution.
-
-Pay now: {{paymentLink}}
 
 This is our final attempt to resolve this matter directly before escalation.
 
@@ -177,7 +168,7 @@ export async function ensureDefaultTemplates(tenantId: string): Promise<string[]
         isDefault: template.isDefault,
         isActive: true,
         sendTiming: template.sendTiming,
-        variables: ["contactName", "invoiceNumber", "amount", "dueDate", "daysOverdue", "paymentLink", "companyName", "invoiceTable", "invoiceCount", "totalOverdue", "oldestInvoiceDays"]
+        variables: ["contactName", "invoiceNumber", "amount", "dueDate", "daysOverdue", "companyName", "invoiceTable", "invoiceCount", "totalOverdue", "oldestInvoiceDays"]
       });
     }
   }
@@ -221,7 +212,7 @@ async function ensureDefaultTemplatesFallback(tenantId: string): Promise<string[
       isDefault: template.isDefault,
       isActive: true,
       sendTiming: template.sendTiming,
-      variables: ["contactName", "invoiceNumber", "amount", "dueDate", "daysOverdue", "paymentLink", "companyName", "invoiceTable", "invoiceCount", "totalOverdue", "oldestInvoiceDays"]
+      variables: ["contactName", "invoiceNumber", "amount", "dueDate", "daysOverdue", "companyName", "invoiceTable", "invoiceCount", "totalOverdue", "oldestInvoiceDays"]
     }).returning();
     templateIds.push(created.id);
   }

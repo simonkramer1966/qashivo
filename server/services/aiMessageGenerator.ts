@@ -46,7 +46,6 @@ export interface MessageContext {
   tenantName: string;
   tenantPhone?: string;
   tenantEmail?: string;
-  paymentLink?: string;
 }
 
 export interface ToneSettings {
@@ -397,7 +396,6 @@ ${situationContext}
 
 Sender: ${context.tenantName}
 ${context.tenantPhone ? `Contact Phone: ${context.tenantPhone}` : ''}
-${context.paymentLink ? `Payment Link: ${context.paymentLink}` : ''}
 
 Generate a personalised, professional email.`;
   }

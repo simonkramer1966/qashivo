@@ -2309,6 +2309,19 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
         return GENERIC_EMAIL_PATTERNS.some(p => lower.startsWith(p));
       };
 
+      // Batch-fetch contacts with hard bounce timeline events (Gap 8)
+      const bouncedRows = await db
+        .select({ contactId: timelineEvents.customerId })
+        .from(timelineEvents)
+        .where(and(
+          eq(timelineEvents.tenantId, tenantId),
+          eq(timelineEvents.channel, 'system'),
+          eq(timelineEvents.status, 'failed'),
+          sql`${timelineEvents.outcomeExtracted}->>'eventType' = 'email_hard_bounce'`,
+        ))
+        .groupBy(timelineEvents.customerId);
+      const bouncedContactIds = new Set(bouncedRows.map(r => r.contactId));
+
       const now = new Date();
       const contactHealthData = allContacts.map((contact: any) => {
         const contactInvoices = allInvoices.filter((inv: any) => inv.contactId === contact.id);
@@ -2349,21 +2362,21 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
           const hasEmail = !!effectiveEmail;
           const hasPhone = !!effectivePhone;
           const hasGenericEmail = isGenericEmail(effectiveEmail);
+          const hasBounced = bouncedContactIds.has(contact.id);
 
           if (!hasEmail) missingFields.push('email');
           if (!hasPhone) missingFields.push('phone');
           if (hasGenericEmail) missingFields.push('generic_email');
+          if (hasBounced) missingFields.push('bounced');
 
-          if (hasEmail && !hasGenericEmail && hasPhone) {
-            readinessStatus = 'ready';
-          } else if (!hasEmail) {
+          if (!hasEmail || hasBounced) {
             readinessStatus = 'needs_email';
           } else if (hasGenericEmail) {
             readinessStatus = 'generic_email';
           } else if (!hasPhone) {
             readinessStatus = 'needs_phone';
           } else {
-            readinessStatus = 'needs_attention';
+            readinessStatus = 'ready';
           }
         }
 
@@ -2378,6 +2391,7 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
           arContactPhone: contact.arContactPhone,
           readinessStatus,
           missingFields,
+          bounced: bouncedContactIds.has(contact.id),
           totalOutstanding: Math.round(totalOutstanding * 100) / 100,
           totalOverdue: Math.round(totalOverdue * 100) / 100,
           invoiceCount: unpaidInvoices.length,
@@ -2394,6 +2408,7 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
         genericEmail: withOutstanding.filter((c: any) => c.readinessStatus === 'generic_email').length,
         needsPhone: withOutstanding.filter((c: any) => c.readinessStatus === 'needs_phone').length,
         needsAttention: withOutstanding.filter((c: any) => c.readinessStatus === 'needs_attention').length,
+        bounced: withOutstanding.filter((c: any) => c.bounced).length,
       };
 
       res.json({

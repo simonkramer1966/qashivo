@@ -193,8 +193,8 @@ USER PROMPT ASSEMBLY (per debtor, per action):
 │   ├── Days since last contact
 │   └── Touch count for this debtor
 └── INSTRUCTION: Generate email with subject line and body.
-    Include portal link placeholder: {{PORTAL_LINK}}
     Sign off as the persona.
+    (Portal link deferred to MVP v2 — debtor portal not yet built.)
     Do not use template language. Be conversational and natural.
     Reference specific invoice details and any prior conversation.
 ```
@@ -340,7 +340,7 @@ The existing portal has magic link auth, invoice display, PTP, dispute, and pay-
 |-------------|--------|
 | Persona header | Show agent persona: "Your account is managed by **Sarah Mitchell**, Credit Controller at ABC Recruitment" with optional avatar |
 | Company branding | Use `tenants.companyLogoUrl`, `tenants.brandPrimaryColor` for portal styling |
-| Portal link in emails | Agent emails include `{{PORTAL_LINK}}` → replaced with magic link URL at send time |
+| Portal link in emails | **Deferred to MVP v2** — portal link placeholder removed from all prompts and templates (4 April 2026). Will be re-added when debtor portal is production-ready. |
 | Intent signals from portal | All portal actions (acknowledge, PTP, dispute, pay-now, payment plan request) create entries in `customerBehaviorSignals` and `contactOutcomes` |
 
 **2.3 Onboarding Agent ("Riley")**

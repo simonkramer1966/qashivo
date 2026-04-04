@@ -24,7 +24,6 @@ interface EmailTemplateData {
   invoiceNumber?: string;
   amountDue?: string;
   dueDate?: string;
-  payLink?: string;
   tenantName: string;
 }
 
@@ -125,7 +124,6 @@ function applyTemplateVariables(template: string, data: EmailTemplateData): stri
   result = result.replace(/\{\{invoiceNumber\}\}/g, data.invoiceNumber || "");
   result = result.replace(/\{\{amountDue\}\}/g, data.amountDue || "");
   result = result.replace(/\{\{dueDate\}\}/g, data.dueDate || "");
-  result = result.replace(/\{\{payLink\}\}/g, data.payLink || "");
   result = result.replace(/\{\{tenantName\}\}/g, data.tenantName);
   return result;
 }
@@ -228,7 +226,6 @@ export async function sendActionEmail(actionId: string): Promise<SendActionEmail
       invoiceNumber: invoice?.invoiceNumber || undefined,
       amountDue: invoice?.amount ? formatAmount(invoice.amount) : undefined,
       dueDate: invoice?.dueDate ? formatDate(invoice.dueDate) : undefined,
-      payLink: (action.metadata as any)?.paymentLink,
       tenantName: tenant.name || "Accounts Team",
     };
 

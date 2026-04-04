@@ -355,7 +355,6 @@ export class MessagePreGenerationService {
       tenantName: tenant.name || 'Accounts Team',
       tenantPhone: tenant.phone,
       tenantEmail: tenant.email,
-      paymentLink: action.metadata?.paymentLink,
     };
   }
 

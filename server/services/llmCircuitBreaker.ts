@@ -192,7 +192,7 @@ async function notifyAdmins(tenantId: string, transition: 'open' | 'closed'): Pr
           console.error(`[CircuitBreaker] Failed to email admin ${admin.email}:`, emailErr);
         }
       }
-      // Note: Users table has no phone field. SMS admin alerts require a future schema addition.
+      // SMS notifications removed — no phone column on users table. Reinstate when user phone numbers are collected.
     }
   } catch (err) {
     console.error(`[CircuitBreaker] Error notifying admins for tenant ${tenantId}:`, err);

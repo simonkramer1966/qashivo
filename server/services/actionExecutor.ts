@@ -506,7 +506,6 @@ export class ActionExecutor {
       tenantName: tenant.name || 'Accounts Team',
       tenantPhone: tenant.phone,
       tenantEmail: tenant.email,
-      paymentLink: action.metadata?.paymentLink,
     };
   }
 

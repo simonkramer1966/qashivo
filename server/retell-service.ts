@@ -21,6 +21,7 @@ export interface CreateCallParams {
   agentId?: string;
   dynamicVariables?: Record<string, any>;
   metadata?: Record<string, any>;
+  tenantId?: string; // Required for communication mode enforcement. If omitted, call is allowed (for non-tenant demo paths).
 }
 
 export interface CallResult {
@@ -69,10 +70,34 @@ export class RetellService {
         };
       }
 
-      // Import and use the unified Retell call helper
+      // SECURITY: Route through sendVoiceCall() for communication mode enforcement
+      // when tenantId is available. Never call createUnifiedRetellCall() directly
+      // for tenant-scoped calls — it bypasses mode checks.
+      if (params.tenantId) {
+        const { sendVoiceCall } = await import('./services/communications/sendVoiceCall');
+        const voiceResult = await sendVoiceCall({
+          tenantId: params.tenantId,
+          to: params.toNumber,
+          contactName: params.dynamicVariables?.customerName || 'Customer',
+          agentId: params.agentId || process.env.RETELL_AGENT_ID || '',
+          fromNumber: params.fromNumber,
+          dynamicVariables: params.dynamicVariables,
+          metadata: { ...params.metadata, source: 'retell_service' },
+          context: 'RETELL_SERVICE',
+        });
+        return {
+          callId: voiceResult.callId,
+          agentId: voiceResult.agentId,
+          status: voiceResult.status,
+          fromNumber: voiceResult.fromNumber,
+          toNumber: voiceResult.toNumber,
+          direction: voiceResult.direction,
+        };
+      }
+
+      // No tenantId — non-tenant demo/system path. Use retell helper directly.
+      console.warn('[RetellService] No tenantId provided — bypassing communication mode enforcement');
       const { createUnifiedRetellCall } = await import('./utils/retellCallHelper');
-      
-      // Use unified call creation (handles all normalization, phone formatting, logging)
       const callResult = await createUnifiedRetellCall({
         fromNumber: params.fromNumber,
         toNumber: params.toNumber,
