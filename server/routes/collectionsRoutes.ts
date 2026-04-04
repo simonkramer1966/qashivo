@@ -4104,7 +4104,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         (async () => {
           try {
             // Set VIP on contact
-            await db
+            const [vipUpdated] = await db
               .update(contacts)
               .set({
                 isVip: true,
@@ -4114,7 +4114,12 @@ Payment required immediately to avoid collection action. Contact us NOW.`
                 vipFlaggedBy: user.id,
                 updatedAt: now,
               })
-              .where(and(eq(contacts.id, rejectedAction.contactId!), eq(contacts.tenantId, user.tenantId!)));
+              .where(and(eq(contacts.id, rejectedAction.contactId!), eq(contacts.tenantId, user.tenantId!)))
+              .returning({ id: contacts.id });
+
+            if (!vipUpdated) {
+              console.warn(`[reject] VIP update affected 0 rows — contact ${rejectedAction.contactId} not found in tenant ${user.tenantId}`);
+            }
 
             // Disable all channels in preferences
             await db

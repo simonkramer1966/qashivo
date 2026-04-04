@@ -4983,7 +4983,7 @@ ${type === 'email' ? 'Generate a JSON object with "subject" (string) and "body" 
       const now = new Date();
 
       // Core operation — must succeed
-      await db
+      const [updated] = await db
         .update(contacts)
         .set({
           isVip: true,
@@ -4993,7 +4993,12 @@ ${type === 'email' ? 'Generate a JSON object with "subject" (string) and "body" 
           vipFlaggedBy: user.id,
           updatedAt: now,
         })
-        .where(and(eq(contacts.id, contactId), eq(contacts.tenantId, user.tenantId)));
+        .where(and(eq(contacts.id, contactId), eq(contacts.tenantId, user.tenantId)))
+        .returning({ id: contacts.id });
+
+      if (!updated) {
+        return res.status(404).json({ error: "Contact not found or not in this tenant" });
+      }
 
       // Secondary operations — non-blocking
       const warnings: string[] = [];
