@@ -90,6 +90,13 @@ export class ActionExecutor {
             continue;
           }
 
+          // Compliance gate — ALL outbound must pass compliance before delivery
+          const complianceOutcome = await this.runComplianceGate(action);
+          if (complianceOutcome === 'blocked' || complianceOutcome === 'queued') {
+            if (complianceOutcome === 'blocked') errorCount++;
+            continue;
+          }
+
           // Update status to executing
           await db
             .update(actions)
@@ -210,6 +217,13 @@ export class ActionExecutor {
               updatedAt: new Date(),
             }).where(eq(actions.id, action.id));
             console.log(`[Executor] Action ${action.id} cancelled at execution: ${validation.reason}`);
+            continue;
+          }
+
+          // Compliance gate — ALL outbound must pass compliance before delivery
+          const complianceOutcome = await this.runComplianceGate(action);
+          if (complianceOutcome === 'blocked' || complianceOutcome === 'queued') {
+            if (complianceOutcome === 'blocked') errorCount++;
             continue;
           }
 
@@ -388,6 +402,104 @@ export class ActionExecutor {
     }
 
     return { valid: true };
+  }
+
+  /**
+   * Compliance gate — runs the compliance engine on outbound actions before delivery.
+   * Returns 'pass' | 'blocked' | 'queued'. Handles DB updates and timeline logging.
+   *
+   * This is a SAFETY-CRITICAL check. Without it, the executor path would deliver
+   * emails/SMS without frequency caps, time-of-day checks, prohibited language
+   * checks, or data isolation checks.
+   */
+  private async runComplianceGate(action: any): Promise<'pass' | 'blocked' | 'queued'> {
+    // Only check content-bearing channels (email, sms). Voice is a live call — no content to check.
+    if (action.type !== 'email' && action.type !== 'sms') {
+      return 'pass';
+    }
+
+    // Actions need content to check — if no content yet, pass through (content will be generated later)
+    if (!action.content && !action.subject) {
+      return 'pass';
+    }
+
+    try {
+      const { checkCompliance } = await import('./compliance/complianceEngine');
+      const compliance = await checkCompliance({
+        tenantId: action.tenantId,
+        contactId: action.contactId,
+        actionId: action.id,
+        emailSubject: action.subject || '',
+        emailBody: action.content || '',
+        toneLevel: action.agentToneLevel || 'professional',
+        agentReasoning: (action.metadata as any)?.agentReasoning,
+      });
+
+      if (compliance.action === 'send') {
+        return 'pass';
+      }
+
+      if (compliance.action === 'block' || compliance.action === 'regenerate') {
+        // Block the action — set status to failed with compliance reason
+        await db.update(actions).set({
+          status: 'failed',
+          cancellationReason: `compliance_blocked: ${compliance.violations.join('; ')}`,
+          metadata: {
+            ...(action.metadata || {}),
+            complianceBlocked: true,
+            complianceViolations: compliance.violations,
+          },
+          updatedAt: new Date(),
+        }).where(eq(actions.id, action.id));
+
+        // Log timeline event
+        try {
+          await db.insert(timelineEvents).values({
+            tenantId: action.tenantId,
+            customerId: action.contactId,
+            occurredAt: new Date(),
+            direction: 'system',
+            channel: 'system',
+            summary: `Compliance blocked ${action.type}: ${compliance.violations.join('; ')}`,
+            status: 'failed',
+            createdByType: 'system',
+            actionId: action.id,
+          });
+        } catch (err) {
+          console.warn(`[Executor] Failed to log compliance timeline event:`, err);
+        }
+
+        console.log(`🚫 [Executor] Compliance BLOCKED action ${action.id}: ${compliance.violations.join('; ')}`);
+        return 'blocked';
+      }
+
+      if (compliance.action === 'queue_for_approval') {
+        // Send back to approval queue for human review
+        await db.update(actions).set({
+          status: 'pending_approval',
+          metadata: {
+            ...(action.metadata || {}),
+            complianceQueued: true,
+            complianceViolations: compliance.violations,
+          },
+          updatedAt: new Date(),
+        }).where(eq(actions.id, action.id));
+
+        console.log(`⚠️  [Executor] Compliance QUEUED action ${action.id} for approval: ${compliance.violations.join('; ')}`);
+        return 'queued';
+      }
+
+      return 'pass';
+    } catch (err: any) {
+      // Fail closed — if compliance engine errors, do not send
+      console.error(`[Executor] Compliance engine error for action ${action.id}:`, err.message);
+      await db.update(actions).set({
+        status: 'failed',
+        cancellationReason: `compliance_error: ${err.message}`,
+        updatedAt: new Date(),
+      }).where(eq(actions.id, action.id));
+      return 'blocked';
+    }
   }
 
   /**
