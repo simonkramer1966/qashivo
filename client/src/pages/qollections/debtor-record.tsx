@@ -300,6 +300,115 @@ function ageingBadge(days: number): { label: string; colour: string } {
   return { label: "90d+", colour: "bg-red-200 text-red-900" };
 }
 
+// ── Event type visual config for Activity timeline ──────────────────────────
+
+interface EventTypeConfig {
+  icon: JSX.Element;
+  borderColor: string;   // Tailwind border-l color
+  bgColor: string;       // icon circle background
+  iconColor: string;     // icon foreground
+  label: string;
+}
+
+function getEventTypeConfig(eventType: string, direction?: string | null): EventTypeConfig {
+  const et = (eventType || "").toLowerCase();
+  // Outbound email
+  if (et === "email" && direction !== "inbound") return {
+    icon: <Mail className="h-3.5 w-3.5" />,
+    borderColor: "border-l-blue-500",
+    bgColor: "bg-blue-50",
+    iconColor: "text-blue-600",
+    label: "Email sent",
+  };
+  // Inbound email
+  if (et === "email" && direction === "inbound") return {
+    icon: <Mail className="h-3.5 w-3.5" />,
+    borderColor: "border-l-emerald-500",
+    bgColor: "bg-emerald-50",
+    iconColor: "text-emerald-600",
+    label: "Email received",
+  };
+  // SMS
+  if (et === "sms") return {
+    icon: <MessageSquare className="h-3.5 w-3.5" />,
+    borderColor: "border-l-violet-500",
+    bgColor: "bg-violet-50",
+    iconColor: "text-violet-600",
+    label: "SMS",
+  };
+  // Voice / phone call
+  if (et === "voice" || et === "call") return {
+    icon: <Phone className="h-3.5 w-3.5" />,
+    borderColor: "border-l-amber-500",
+    bgColor: "bg-amber-50",
+    iconColor: "text-amber-600",
+    label: "Voice call",
+  };
+  // Payment received
+  if (et === "payment_received" || et === "payment") return {
+    icon: <PoundSterling className="h-3.5 w-3.5" />,
+    borderColor: "border-l-green-600",
+    bgColor: "bg-green-50",
+    iconColor: "text-green-700",
+    label: "Payment",
+  };
+  // Promise to pay
+  if (et === "promise_to_pay" || et === "ptp") return {
+    icon: <Handshake className="h-3.5 w-3.5" />,
+    borderColor: "border-l-teal-500",
+    bgColor: "bg-teal-50",
+    iconColor: "text-teal-600",
+    label: "Promise to pay",
+  };
+  // Dispute
+  if (et === "dispute" || et === "dispute_raised" || et === "dispute_resolved") return {
+    icon: <Gavel className="h-3.5 w-3.5" />,
+    borderColor: "border-l-red-500",
+    bgColor: "bg-red-50",
+    iconColor: "text-red-600",
+    label: "Dispute",
+  };
+  // Invoice issued
+  if (et === "invoice_issued") return {
+    icon: <FileText className="h-3.5 w-3.5" />,
+    borderColor: "border-l-zinc-400",
+    bgColor: "bg-zinc-50",
+    iconColor: "text-zinc-500",
+    label: "Invoice issued",
+  };
+  // Note
+  if (et === "note" || et === "internal") return {
+    icon: <StickyNote className="h-3.5 w-3.5" />,
+    borderColor: "border-l-yellow-500",
+    bgColor: "bg-yellow-50",
+    iconColor: "text-yellow-600",
+    label: "Note",
+  };
+  // Risk / compliance
+  if (et === "risk" || et === "compliance_block" || et === "email_hard_bounce") return {
+    icon: <ShieldAlert className="h-3.5 w-3.5" />,
+    borderColor: "border-l-orange-500",
+    bgColor: "bg-orange-50",
+    iconColor: "text-orange-600",
+    label: "Risk alert",
+  };
+  // System / default
+  return {
+    icon: <Bot className="h-3.5 w-3.5" />,
+    borderColor: "border-l-zinc-300",
+    bgColor: "bg-zinc-50",
+    iconColor: "text-zinc-400",
+    label: "System",
+  };
+}
+
+/** Significant events get a subtle highlight background */
+function isSignificantEvent(eventType: string): boolean {
+  const sig = ["payment_received", "payment", "promise_to_pay", "ptp", "dispute", "dispute_raised"];
+  return sig.includes((eventType || "").toLowerCase());
+}
+
+/** Legacy category icon for backward compat — unused in new timeline */
 function categoryIcon(category: string) {
   switch (category) {
     case "Communications":
@@ -414,6 +523,7 @@ export default function DebtorRecord() {
   const [activityRange, setActivityRange] = useState("90d");
   const [activityDirection, setActivityDirection] = useState("All");
   const [activityPage, setActivityPage] = useState(1);
+  const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set());
 
   // --- Sort state for outstanding / paid tables ---
   const [outstandingSortKey, setOutstandingSortKey] = useState<string>("dueDate");
@@ -1547,25 +1657,7 @@ export default function DebtorRecord() {
             )}
           </Card>
 
-          {/* 8 - Open Invoices */}
-          <Card className="p-3">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">
-              Open Invoices
-            </p>
-            {metricsQuery.isLoading ? (
-              <Skeleton className="h-6 w-20 mt-1" />
-            ) : (
-              <p className="text-lg font-bold tabular-nums">
-                {metrics?.openInvoices.total ?? 0} Due
-                <span className={cn(
-                  "ml-1",
-                  (metrics?.openInvoices.overdue ?? 0) > 0 ? "text-red-600" : ""
-                )}>
-                  · {metrics?.openInvoices.overdue ?? 0} Overdue
-                </span>
-              </p>
-            )}
-          </Card>
+
 
           {/* 9 - Risk Score */}
           <Card className="p-3">
@@ -2108,10 +2200,10 @@ export default function DebtorRecord() {
           {/* TAB 2: Activity                                                 */}
           {/* ============================================================== */}
           <TabsContent value="activity" className="space-y-4 mt-4">
-            {/* Filters */}
-            <div className="flex flex-wrap gap-3 items-center">
+            {/* ── Filter bar ── */}
+            <div className="flex flex-wrap gap-2 items-center">
               <Select value={activityCategory} onValueChange={(v) => { setActivityCategory(v); setActivityPage(1); }}>
-                <SelectTrigger className="w-[160px]">
+                <SelectTrigger className="w-[160px] h-8 text-xs">
                   <SelectValue placeholder="Category" />
                 </SelectTrigger>
                 <SelectContent>
@@ -2127,7 +2219,7 @@ export default function DebtorRecord() {
               </Select>
 
               <Select value={activityRange} onValueChange={(v) => { setActivityRange(v); setActivityPage(1); }}>
-                <SelectTrigger className="w-[120px]">
+                <SelectTrigger className="w-[130px] h-8 text-xs">
                   <SelectValue placeholder="Time range" />
                 </SelectTrigger>
                 <SelectContent>
@@ -2139,22 +2231,34 @@ export default function DebtorRecord() {
               </Select>
 
               <Select value={activityDirection} onValueChange={(v) => { setActivityDirection(v); setActivityPage(1); }}>
-                <SelectTrigger className="w-[120px]">
+                <SelectTrigger className="w-[120px] h-8 text-xs">
                   <SelectValue placeholder="Direction" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="All">All</SelectItem>
+                  <SelectItem value="All">All directions</SelectItem>
                   <SelectItem value="outbound">Outbound</SelectItem>
                   <SelectItem value="inbound">Inbound</SelectItem>
                 </SelectContent>
               </Select>
+
+              {activityQuery.data && (
+                <span className="text-xs text-muted-foreground ml-auto">
+                  {activityQuery.data.total} event{activityQuery.data.total !== 1 ? "s" : ""}
+                </span>
+              )}
             </div>
 
-            {/* Feed */}
+            {/* ── Timeline feed ── */}
             {activityQuery.isLoading ? (
               <div className="space-y-3">
                 {Array.from({ length: 5 }).map((_, i) => (
-                  <Skeleton key={i} className="h-16 w-full" />
+                  <div key={i} className="flex gap-3">
+                    <Skeleton className="h-8 w-8 rounded-full shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-2/3" />
+                      <Skeleton className="h-3 w-1/2" />
+                    </div>
+                  </div>
                 ))}
               </div>
             ) : activityQuery.isError ? (
@@ -2164,73 +2268,135 @@ export default function DebtorRecord() {
                 </CardContent>
               </Card>
             ) : (activityQuery.data?.events ?? []).length === 0 ? (
-              <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  No activity recorded yet.
-                </CardContent>
-              </Card>
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="rounded-full bg-zinc-100 p-4 mb-4">
+                  <Activity className="h-6 w-6 text-zinc-400" />
+                </div>
+                <p className="text-sm font-medium text-zinc-700">No activity yet</p>
+                <p className="text-xs text-muted-foreground mt-1 max-w-xs">
+                  Communications, payments, and events will appear here once collection activity begins for this debtor.
+                </p>
+              </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {(activityQuery.data?.events ?? []).map((evt) => {
-                  const isInbound = evt.direction?.toLowerCase() === 'inbound';
+                  const config = getEventTypeConfig(evt.eventType, evt.direction);
+                  const significant = isSignificantEvent(evt.eventType);
+                  const isExpanded = expandedEvents.has(evt.id);
+                  const hasExpandableContent = evt.description && evt.description.length > 100;
+                  const toggleExpand = () => {
+                    setExpandedEvents(prev => {
+                      const next = new Set(prev);
+                      if (next.has(evt.id)) next.delete(evt.id); else next.add(evt.id);
+                      return next;
+                    });
+                  };
+
                   return (
-                  <Card
-                    key={evt.id}
-                    className="p-3"
-                    style={isInbound ? {
-                      backgroundColor: '#EAF3DE',
-                      borderLeft: '2px solid #639922',
-                      borderRadius: '0 var(--radius) var(--radius) 0',
-                    } : undefined}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="mt-0.5 text-muted-foreground">
-                        {categoryIcon(evt.category)}
+                    <div
+                      key={evt.id}
+                      className={cn(
+                        "relative flex gap-3 rounded-lg border border-zinc-200 px-3 py-2.5 transition-colors",
+                        "border-l-[3px]",
+                        config.borderColor,
+                        significant && "bg-zinc-50/80",
+                      )}
+                    >
+                      {/* Icon circle */}
+                      <div className={cn(
+                        "flex h-8 w-8 shrink-0 items-center justify-center rounded-full mt-0.5",
+                        config.bgColor,
+                        config.iconColor,
+                      )}>
+                        {config.icon}
                       </div>
+
+                      {/* Content */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-medium text-sm">{evt.title}</span>
+                        {/* Header row */}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className={cn("text-sm font-medium leading-tight", significant && "font-semibold")}>
+                            {evt.title}
+                          </span>
                           {evt.direction && (
                             <Badge
                               variant="outline"
-                              className="text-[10px]"
-                              style={isInbound ? {
-                                backgroundColor: '#EAF3DE',
-                                color: '#27500A',
-                                border: '0.5px solid #639922',
-                              } : undefined}
+                              className={cn(
+                                "text-[10px] px-1.5 py-0 h-4 font-normal",
+                                evt.direction === "inbound"
+                                  ? "border-emerald-300 text-emerald-700 bg-emerald-50"
+                                  : "border-blue-200 text-blue-600 bg-blue-50",
+                              )}
                             >
-                              {evt.direction}
+                              {evt.direction === "inbound" ? "Inbound" : "Outbound"}
                             </Badge>
                           )}
-                          <Badge variant="secondary" className="text-[10px]">
-                            {evt.category}
-                          </Badge>
+                          {evt.metadata?.outcomeType && (
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "text-[10px] px-1.5 py-0 h-4 font-normal",
+                                evt.metadata.outcomeType === "delivered" && "border-green-300 text-green-700",
+                                evt.metadata.outcomeType === "bounce" && "border-red-300 text-red-700",
+                                evt.metadata.outcomeType === "open" && "border-blue-300 text-blue-700",
+                              )}
+                            >
+                              {evt.metadata.outcomeType}
+                            </Badge>
+                          )}
                         </div>
+
+                        {/* Preview / description */}
                         {evt.description && (
-                          <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                            {evt.description}
-                          </p>
+                          <div className="mt-1">
+                            <p
+                              className={cn(
+                                "text-xs text-muted-foreground leading-relaxed",
+                                !isExpanded && "line-clamp-2",
+                              )}
+                            >
+                              {evt.description}
+                            </p>
+                            {hasExpandableContent && (
+                              <button
+                                onClick={toggleExpand}
+                                className="text-[11px] text-blue-600 hover:text-blue-800 mt-0.5 font-medium"
+                              >
+                                {isExpanded ? "Show less" : "Show more"}
+                              </button>
+                            )}
+                          </div>
                         )}
-                        <p className="text-xs text-muted-foreground mt-1">
+
+                        {/* Footer: time + agent */}
+                        <div className="flex items-center gap-2 mt-1.5 text-[11px] text-muted-foreground">
                           <span title={formatDateFull(evt.createdAt)}>
                             {relativeTime(evt.createdAt)}
                           </span>
                           {evt.triggeredBy && (
-                            <span> · {evt.triggeredBy}</span>
+                            <>
+                              <span className="text-zinc-300">·</span>
+                              <span>{evt.triggeredBy}</span>
+                            </>
                           )}
-                        </p>
+                          {evt.linkedInvoiceId && (
+                            <>
+                              <span className="text-zinc-300">·</span>
+                              <span className="text-blue-600">Invoice linked</span>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </Card>
                   );
                 })}
 
                 {activityQuery.data?.hasMore && (
-                  <div className="text-center py-2">
+                  <div className="text-center pt-2 pb-1">
                     <Button
                       variant="outline"
                       size="sm"
+                      className="text-xs h-7"
                       onClick={() => setActivityPage((p) => p + 1)}
                     >
                       Load more
@@ -2240,31 +2406,31 @@ export default function DebtorRecord() {
               </div>
             )}
 
-            {/* Recent Actions */}
+            {/* ── Recent Actions table ── */}
             {actionsQuery.data && Array.isArray(actionsQuery.data) && actionsQuery.data.length > 0 && (
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Recent Actions</CardTitle>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Recent Actions</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Date</TableHead>
+                        <TableHead className="text-xs">Type</TableHead>
+                        <TableHead className="text-xs">Status</TableHead>
+                        <TableHead className="text-xs">Date</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {(actionsQuery.data as any[]).slice(0, 20).map((action: any) => (
                         <TableRow key={action.id}>
-                          <TableCell className="font-medium">
+                          <TableCell className="text-xs font-medium py-2">
                             {action.actionType ?? action.type ?? "—"}
                           </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{action.status ?? "—"}</Badge>
+                          <TableCell className="py-2">
+                            <Badge variant="outline" className="text-[10px]">{action.status ?? "—"}</Badge>
                           </TableCell>
-                          <TableCell>{formatDate(action.createdAt)}</TableCell>
+                          <TableCell className="text-xs py-2">{formatDate(action.createdAt)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
