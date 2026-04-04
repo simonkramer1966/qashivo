@@ -55,6 +55,7 @@ import {
 } from "@/components/ui/select";
 import {
   ArrowLeft,
+  ArrowRight,
   Plus,
   Star,
   AlertCircle,
@@ -2296,7 +2297,7 @@ export default function DebtorRecord() {
                     <div
                       key={evt.id}
                       className={cn(
-                        "relative flex gap-3 rounded-lg border border-zinc-200 px-3 py-2.5 transition-colors",
+                        "relative flex items-center gap-3 rounded-lg border border-zinc-200 px-3 py-2.5 transition-colors",
                         "border-l-[3px]",
                         config.borderColor,
                         significant && "bg-zinc-50/80",
@@ -2304,7 +2305,7 @@ export default function DebtorRecord() {
                     >
                       {/* Icon circle */}
                       <div className={cn(
-                        "flex h-8 w-8 shrink-0 items-center justify-center rounded-full mt-0.5",
+                        "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
                         config.bgColor,
                         config.iconColor,
                       )}>
@@ -2318,19 +2319,6 @@ export default function DebtorRecord() {
                           <span className={cn("text-sm font-medium leading-tight", significant && "font-semibold")}>
                             {evt.title}
                           </span>
-                          {evt.direction && (
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                "text-[10px] px-1.5 py-0 h-4 font-normal",
-                                evt.direction === "inbound"
-                                  ? "border-emerald-300 text-emerald-700 bg-emerald-50"
-                                  : "border-blue-200 text-blue-600 bg-blue-50",
-                              )}
-                            >
-                              {evt.direction === "inbound" ? "Inbound" : "Outbound"}
-                            </Badge>
-                          )}
                           {evt.metadata?.outcomeType && (
                             <Badge
                               variant="outline"
@@ -2387,6 +2375,14 @@ export default function DebtorRecord() {
                           )}
                         </div>
                       </div>
+
+                      {/* Directional arrow — right edge */}
+                      {evt.direction === "outbound" && (
+                        <ArrowRight className="h-6 w-6 shrink-0 text-blue-500" />
+                      )}
+                      {evt.direction === "inbound" && (
+                        <ArrowLeft className="h-6 w-6 shrink-0 text-emerald-500" />
+                      )}
                     </div>
                   );
                 })}
