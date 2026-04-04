@@ -1,6 +1,7 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useInvalidateActionCentre } from "@/hooks/useInvalidateActionCentre";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,7 +40,7 @@ interface ExceptionsTabProps {
 
 export default function ExceptionsTab({ subTab }: ExceptionsTabProps) {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const invalidateActionCentre = useInvalidateActionCentre();
 
   const { data, isLoading } = useQuery<{
     exceptionActions: ExceptionAction[];
@@ -55,7 +56,7 @@ export default function ExceptionsTab({ subTab }: ExceptionsTabProps) {
     mutationFn: (patternId: string) =>
       apiRequest("POST", `/api/rejection-patterns/${patternId}/acknowledge`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/exceptions"] });
+      invalidateActionCentre();
       toast({ title: "Pattern acknowledged" });
     },
   });

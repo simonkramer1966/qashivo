@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useInvalidateActionCentre } from "@/hooks/useInvalidateActionCentre";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -243,7 +244,7 @@ function badgeType(value: number): "up" | "down" | "neutral" {
 
 export default function OverviewTab() {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const invalidateActionCentre = useInvalidateActionCentre();
 
   // Period state
   const [period, setPeriod] = useState<Period>("week");
@@ -276,6 +277,9 @@ export default function OverviewTab() {
   } = useQuery<SummaryData>({
     queryKey: ["/api/action-centre/summary", queryParams],
     refetchInterval: 60_000,
+    staleTime: 0,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 
   const { data: drilldownData, isLoading: drilldownLoading } = useQuery<DrilldownItem[]>({
@@ -298,7 +302,7 @@ export default function OverviewTab() {
     },
     onSuccess: () => {
       toast({ title: "All items approved", description: "Pending items will be sent shortly." });
-      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/summary"] });
+      invalidateActionCentre();
     },
     onError: (err: Error) => {
       toast({ title: "Approval failed", description: err.message, variant: "destructive" });
@@ -311,7 +315,7 @@ export default function OverviewTab() {
     },
     onSuccess: () => {
       toast({ title: "Queue cleared", description: "All pending items have been cancelled." });
-      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/summary"] });
+      invalidateActionCentre();
     },
     onError: (err: Error) => {
       toast({ title: "Clear failed", description: err.message, variant: "destructive" });

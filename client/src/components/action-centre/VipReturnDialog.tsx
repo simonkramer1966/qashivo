@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useInvalidateActionCentre } from "@/hooks/useInvalidateActionCentre";
 import {
   Dialog,
   DialogContent,
@@ -47,7 +48,7 @@ export function VipReturnDialog({
   companyName,
 }: VipReturnDialogProps) {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const invalidateActionCentre = useInvalidateActionCentre();
   const [reason, setReason] = useState("");
   const [note, setNote] = useState("");
   const [resumeMode, setResumeMode] = useState<"scratch" | "continue">("continue");
@@ -57,9 +58,7 @@ export function VipReturnDialog({
       apiRequest("POST", `/api/contacts/${contactId}/vip/return`, { reason, note, resumeMode }),
     onSuccess: () => {
       toast({ title: `${companyName} returned to automated chasing` });
-      queryClient.invalidateQueries({ queryKey: ["/api/contacts/vip"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/approvals"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/summary"] });
+      invalidateActionCentre();
       onOpenChange(false);
       setReason("");
       setNote("");

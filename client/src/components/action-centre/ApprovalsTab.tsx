@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useInvalidateActionCentre } from "@/hooks/useInvalidateActionCentre";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -225,6 +226,7 @@ interface ApprovalsTabProps {
 export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const invalidateActionCentre = useInvalidateActionCentre();
   const [, navigate] = useLocation();
   const { openDrawer, closeDrawer } = useDrawer();
   const [drawerActionId, setDrawerActionId] = useState<string | null>(null);
@@ -283,7 +285,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
       });
     },
     onSuccess: (_, { actionId }) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/action-centre"] });
+      invalidateActionCentre();
       // Clean up regeneration state
       setRegeneratedIds(prev => { const next = new Set(prev); next.delete(actionId); return next; });
       setToneOverrides(prev => { const next = new Map(prev); next.delete(actionId); return next; });
@@ -314,7 +316,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
     mutationFn: ({ actionId, reason, category, note }: { actionId: string; reason: string; category: string; note: string }) =>
       apiRequest("POST", `/api/actions/${actionId}/reject`, { reason, category, note }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/action-centre"] });
+      invalidateActionCentre();
       toast({ title: "Action rejected" });
     },
     onError: () => {
@@ -326,7 +328,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
     mutationFn: ({ actionId, reason, deferredUntil, note }: { actionId: string; reason: string; deferredUntil: string; note: string }) =>
       apiRequest("POST", `/api/actions/${actionId}/defer`, { reason, deferredUntil, note }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/action-centre"] });
+      invalidateActionCentre();
       toast({ title: "Action deferred" });
     },
     onError: () => {
@@ -342,7 +344,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
     onSuccess: (data: { cancelled: number }) => {
       toast({ title: `Queue cleared — ${data.cancelled} items cancelled` });
       setJustCleared(true);
-      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/approvals"] });
+      invalidateActionCentre();
     },
     onError: () => toast({ title: "Failed to clear queue", variant: "destructive" }),
   });
@@ -360,7 +362,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
       } else {
         toast({ title: `${data.generated} new emails queued for approval` });
       }
-      queryClient.invalidateQueries({ queryKey: ["/api/action-centre"] });
+      invalidateActionCentre();
     },
     onError: (err: Error) => toast({ title: "Agent run failed", description: err.message, variant: "destructive" }),
   });
@@ -379,7 +381,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
     onSuccess: (_, { contactId }) => {
       const action = actions.find(a => a.contactId === contactId);
       const name = action?.companyName || action?.contactName || "Contact";
-      queryClient.invalidateQueries({ queryKey: ["/api/action-centre"] });
+      invalidateActionCentre();
       queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
       toast({ title: `${name} put on hold — Charlie will not contact them` });
       setDrawerActionId(null);
@@ -401,7 +403,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/action-centre"] });
+      invalidateActionCentre();
       setSelectedIds(new Set());
       toast({ title: "Selected actions approved" });
     },
@@ -1056,7 +1058,7 @@ function AddNoteDialog({
   companyName: string;
 }) {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const invalidateActionCentre = useInvalidateActionCentre();
   const [body, setBody] = useState("");
 
   const mutation = useMutation({
@@ -1064,7 +1066,7 @@ function AddNoteDialog({
       apiRequest("POST", `/api/contacts/${contactId}/timeline/notes`, { body: body.trim() }),
     onSuccess: () => {
       toast({ title: `Note added to ${companyName}` });
-      queryClient.invalidateQueries({ queryKey: ["/api/action-centre"] });
+      invalidateActionCentre();
       onOpenChange(false);
       setBody("");
     },

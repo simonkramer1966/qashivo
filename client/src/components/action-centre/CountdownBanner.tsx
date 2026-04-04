@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Clock, Zap } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useInvalidateActionCentre } from "@/hooks/useInvalidateActionCentre";
 
 interface BatchInfo {
   id: string;
@@ -13,7 +14,7 @@ interface BatchInfo {
 
 export default function CountdownBanner() {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const invalidateActionCentre = useInvalidateActionCentre();
   const [timeLeft, setTimeLeft] = useState("");
 
   const { data } = useQuery<{ batch: BatchInfo | null }>({
@@ -25,7 +26,7 @@ export default function CountdownBanner() {
     mutationFn: () => apiRequest("POST", "/api/action-centre/batch/process-now"),
     onSuccess: () => {
       toast({ title: "Batch processed", description: "All pending actions have been sent." });
-      queryClient.invalidateQueries({ queryKey: ["/api/action-centre"] });
+      invalidateActionCentre();
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to process batch", variant: "destructive" });
