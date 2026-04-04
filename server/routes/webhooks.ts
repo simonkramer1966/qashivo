@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { generateJSON } from "../services/llm/claude";
 import { db } from "../db";
-import { inboundMessages, contacts, emailMessages, actions, invoices, timelineEvents, outcomes, conversations, tenants } from "@shared/schema";
+import { inboundMessages, contacts, emailMessages, actions, invoices, timelineEvents, outcomes, conversations, tenants, customerContactPersons, attentionItems } from "@shared/schema";
 import { intentAnalyst } from "../services/intentAnalyst";
 import { eq, or, and, desc, sql } from "drizzle-orm";
 import crypto from "crypto";
@@ -546,20 +546,87 @@ export function registerWebhookRoutes(app: Express) {
         return res.status(400).json({ error: 'Missing required fields' });
       }
 
-      // Normalize phone number
+      // Normalize phone number and generate search variants
       const fromPhone = normalizePhone(msisdn);
-      
-      // Find contact by phone
-      const [contact] = await db
+      const digits = fromPhone.replace(/\D/g, ''); // e.g. 447716273336
+      const localDigits = digits.startsWith('44') ? '0' + digits.slice(2) : digits; // e.g. 07716273336
+      const searchVariants = [fromPhone, digits, localDigits, '+' + digits];
+
+      // Search contacts.phone, then contacts.arContactPhone, then customerContactPersons
+      let contact: typeof contacts.$inferSelect | null = null;
+      let matchSource = '';
+
+      // (a) contacts.phone
+      const [phoneMatch] = await db
         .select()
         .from(contacts)
-        .where(eq(contacts.phone, fromPhone))
+        .where(or(...searchVariants.map(v => eq(contacts.phone, v))))
         .limit(1);
 
-      if (!contact) {
-        console.log(`⚠️  No contact found for phone: ${fromPhone}`);
-        return res.status(200).json({ message: 'No matching contact' });
+      if (phoneMatch) {
+        contact = phoneMatch;
+        matchSource = 'contacts.phone';
       }
+
+      // (b) contacts.arContactPhone
+      if (!contact) {
+        const [arMatch] = await db
+          .select()
+          .from(contacts)
+          .where(or(...searchVariants.map(v => eq(contacts.arContactPhone, v))))
+          .limit(1);
+
+        if (arMatch) {
+          contact = arMatch;
+          matchSource = 'contacts.arContactPhone';
+        }
+      }
+
+      // (c) customerContactPersons.phone or .smsNumber
+      if (!contact) {
+        const [personMatch] = await db
+          .select({ person: customerContactPersons, contact: contacts })
+          .from(customerContactPersons)
+          .innerJoin(contacts, eq(customerContactPersons.contactId, contacts.id))
+          .where(or(
+            ...searchVariants.map(v => eq(customerContactPersons.phone, v)),
+            ...searchVariants.map(v => eq(customerContactPersons.smsNumber, v)),
+          ))
+          .limit(1);
+
+        if (personMatch) {
+          contact = personMatch.contact;
+          matchSource = `customerContactPersons (${personMatch.person.name})`;
+        }
+      }
+
+      if (!contact) {
+        console.warn(`⚠️  Inbound SMS from unmatched number: ${fromPhone} — "${text.substring(0, 80)}"`);
+
+        // Create an attention item so the user sees it in Action Centre Exceptions
+        // We need at least one tenant to associate the exception with — use first active tenant
+        try {
+          const [anyTenant] = await db.select({ id: tenants.id }).from(tenants).limit(1);
+          if (anyTenant) {
+            await db.insert(attentionItems).values({
+              tenantId: anyTenant.id,
+              type: 'UNMATCHED_INBOUND_SMS',
+              severity: 'MEDIUM',
+              status: 'OPEN',
+              title: `SMS from unknown number: ${fromPhone}`,
+              description: `Inbound SMS received from ${fromPhone} but no matching contact found.\n\nMessage: "${text.substring(0, 200)}"`,
+              payloadJson: { fromPhone, text, vonageMessageId: messageId, timestamp, searchVariants },
+            });
+            console.log(`📋 Created attention item for unmatched SMS from ${fromPhone}`);
+          }
+        } catch (attErr) {
+          console.error('Failed to create attention item for unmatched SMS:', attErr);
+        }
+
+        return res.status(200).json({ message: 'No matching contact — exception logged' });
+      }
+
+      console.log(`📱 Matched inbound SMS to contact ${contact.name} (${contact.id}) via ${matchSource}`);
 
       // Store inbound message
       const [message] = await db
