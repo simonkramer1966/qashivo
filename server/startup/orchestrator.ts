@@ -132,7 +132,7 @@ export async function startAll(): Promise<void> {
 
   // Phase 2 — Background services
   try {
-    void collectionsScheduler;
+    collectionsScheduler.start();
     console.log("[startup] collections scheduler started");
   } catch (error) {
     console.error("[startup] collections scheduler failed:", error);
