@@ -326,6 +326,8 @@ class AIMessageGenerator {
 
 Your tone should be ${tone}
 
+YOUR OBJECTIVE: Get a payment date. Every email you write should make it easy for the debtor to respond with when they'll pay. Most debtors intend to pay — they're just busy or disorganised. Nudge them forward, don't threaten them. Make it EASY to reply — one question, one action needed.
+
 Guidelines:
 - Write in British English
 - Be concise but complete
@@ -432,6 +434,8 @@ Generate a personalised, professional email.`;
 
 ${guidance}
 
+OBJECTIVE: Get a payment date. Make it easy for the debtor to reply with when they'll pay.
+
 CRITICAL RULES:
 - HARD LIMIT: 160 characters maximum - count carefully before responding
 - Use ONLY total amount and invoice count - NEVER list invoice numbers
@@ -514,6 +518,8 @@ REMEMBER: Max 160 chars. No invoice numbers. Include phone if provided.`;
     return `You are generating a voice call script for an AI agent making collection calls for UK businesses.
 
 The tone should be ${tone}
+
+YOUR OBJECTIVE: Get a payment date. Guide the conversation toward the debtor confirming when they'll pay. Be helpful, not confrontational. Make it easy for them to give a date.
 
 Script Guidelines:
 - Write in natural, conversational British English

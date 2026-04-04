@@ -2,6 +2,12 @@
  * Collections Agent — LLM email generation service.
  * MVP v1 Build Spec Section 1.2.
  *
+ * CHARLIE'S OBJECTIVE: Get a payment date. Every communication exists to move
+ * the debtor from silence to a committed date.
+ * Phase 1 (0 to chaseDelayDays overdue): inform, don't chase.
+ * Phase 2 (chaseDelayDays+ overdue): elicit a date, escalate directness if
+ * silence continues. Never escalate hostility.
+ *
  * Assembles a dynamic prompt from persona, debtor profile, outstanding
  * invoices, and conversation history, then calls Claude to generate a
  * contextual, persona-consistent collection email.

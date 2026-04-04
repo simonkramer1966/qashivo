@@ -160,11 +160,11 @@ export class ActionPlanner {
           continue;
         }
 
-        // Calculate days overdue
+        // Calculate days overdue (negative = pre-due)
         const dueDate = new Date(invoice.dueDate);
         const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
 
-        // Skip if not actually overdue
+        // Skip pre-due invoices in static planner (pre-due handled by adaptive path only)
         if (daysOverdue < 0) {
           continue;
         }
@@ -735,12 +735,18 @@ export async function planAdaptiveActions(
 
     const minScoreThreshold = Number(settings.minScoreThreshold || 40);
 
-    // Gap 4: Fetch tenant for minimum chase threshold
+    // Gap 4: Fetch tenant for minimum chase threshold + collection timing settings
     const [tenantRecord] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
     const minChaseThreshold = parseFloat(tenantRecord?.minimumChaseThreshold || '50');
+    const chaseDelayDays = tenantRecord?.chaseDelayDays ?? 5;
+    const preDueDateDays = tenantRecord?.preDueDateDays ?? 7;
+    const preDueDateMinAmount = parseFloat(tenantRecord?.preDueDateMinAmount || '1000');
 
-    // Get overdue invoices with behavior signals
+    // Get overdue + pre-due invoices with behavior signals
+    // Include invoices due within preDueDateDays for Phase 1 pre-due nudges
     const today = new Date();
+    const preDueCutoff = new Date(today);
+    preDueCutoff.setDate(preDueCutoff.getDate() + preDueDateDays);
     const overdueInvoices = await db
       .select({
         invoice: invoices,
@@ -756,12 +762,12 @@ export async function planAdaptiveActions(
       .where(
         and(
           eq(invoices.tenantId, tenantId),
-          lte(invoices.dueDate, today),
+          lte(invoices.dueDate, preDueCutoff),
           sql`${invoices.status} NOT IN ('paid', 'cancelled')`
         )
       );
 
-    console.log(`[PLAN] Found ${overdueInvoices.length} overdue invoices`);
+    console.log(`[PLAN] Found ${overdueInvoices.length} overdue/pre-due invoices`);
 
     // Sprint 1: Group invoices by contact for safe bundling
     const invoicesByContact = new Map<string, typeof overdueInvoices>();
@@ -865,6 +871,15 @@ export async function planAdaptiveActions(
             (today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)
           );
 
+          // Two-phase collection logic
+          const isPreDue = ageDays < 0;
+          const phase: 'inform' | 'elicit_date' = ageDays <= chaseDelayDays ? 'inform' : 'elicit_date';
+
+          // Phase 1: Skip pre-due invoices below minimum amount threshold
+          if (isPreDue && Number(invoice.amount || 0) < preDueDateMinAmount) {
+            continue;
+          }
+
           // Gap 11: Fetch debtor channel preference overrides
           const debtorPrefs2 = await db.query.customerPreferences.findFirst({
             where: and(
@@ -951,6 +966,34 @@ export async function planAdaptiveActions(
         }
       }
 
+      // Two-phase enforcement: determine highest phase across all scored invoices
+      // Phase 2 wins if any invoice is Phase 2 (allows chasing when some are overdue)
+      const allPhases = scoredInvoices.map(si => {
+        const age = Math.ceil((today.getTime() - new Date(si.invoice.dueDate).getTime()) / 86400000);
+        return age > chaseDelayDays ? 'elicit_date' : 'inform';
+      });
+      const bundlePhase: 'inform' | 'elicit_date' = allPhases.includes('elicit_date') ? 'elicit_date' : 'inform';
+
+      // Phase 1 single-touch enforcement: if all invoices are Phase 1,
+      // skip if there's been ANY prior completed action for this contact
+      if (bundlePhase === 'inform' && scoredInvoices.length > 0) {
+        const SENT_STATUSES_PHASE = ["completed", "sent", "delivered"];
+        const priorAction = await db
+          .select({ id: actions.id })
+          .from(actions)
+          .where(and(
+            eq(actions.tenantId, tenantId),
+            eq(actions.contactId, contactId),
+            inArray(actions.status, SENT_STATUSES_PHASE),
+          ))
+          .limit(1);
+
+        if (priorAction.length > 0) {
+          console.log(`[PLAN] Phase 1 — skipping ${contact.name}: already nudged (one touch max)`);
+          continue;
+        }
+      }
+
       // Sprint 1: Create ONE bundled action for all invoices from this contact
       if (scoredInvoices.length > 0) {
         try {
@@ -971,9 +1014,13 @@ export async function planAdaptiveActions(
 
           // Create bundled action with all invoice IDs — route through batch/approval queue
           const { proposeAction } = await import('./batchProcessor');
-          const actionSubject = invoiceIds.length > 1
-            ? `Payment reminder for ${invoiceIds.length} overdue invoices`
-            : `Payment reminder for invoice ${highestPriority.invoice.invoiceNumber}`;
+          const actionSubject = bundlePhase === 'inform'
+            ? (invoiceIds.length > 1
+              ? `Courtesy reminder for ${invoiceIds.length} upcoming invoices`
+              : `Courtesy reminder for invoice ${highestPriority.invoice.invoiceNumber}`)
+            : (invoiceIds.length > 1
+              ? `Payment reminder for ${invoiceIds.length} overdue invoices`
+              : `Payment reminder for invoice ${highestPriority.invoice.invoiceNumber}`);
           await proposeAction({
             tenantId,
             contactId,
@@ -995,6 +1042,7 @@ export async function planAdaptiveActions(
               scheduleId,
               bundled: invoiceIds.length > 1,
               invoiceCount: invoiceIds.length,
+              collectionPhase: bundlePhase,
             },
             recommendedAt: today,
             recommendedBy: "adaptive",

@@ -413,7 +413,8 @@ export async function registerSettingsRoutes(app: Express): Promise<void> {
         'contactWindowDays', 'tenantStyle', 'collectionsAutomationEnabled',
         'minimumChaseThreshold',
         'noResponseEscalationThreshold', 'significantPaymentThreshold',
-        'paymentAttributionFullCreditHours', 'paymentAttributionPartialCreditDays', 'paymentAttributionSameDayExcluded'
+        'paymentAttributionFullCreditHours', 'paymentAttributionPartialCreditDays', 'paymentAttributionSameDayExcluded',
+        'chaseDelayDays', 'preDueDateDays', 'preDueDateMinAmount'
       ];
 
       const nestedFields = ['dailyLimits', 'minConfidence', 'exceptionRules', 'channelCooldowns'];

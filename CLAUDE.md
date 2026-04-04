@@ -101,6 +101,7 @@ The wrappers enforce Off / Testing / Soft Live / Live modes and **fail closed on
 
 <!-- ADD NEW ENTRIES AT THE TOP — format: YYYY-MM-DD: What changed -->
 
+- 2026-04-04: Two-phase collection model implemented. Phase 1 (Inform): invoice is new or recently overdue — one polite nudge only, do NOT ask for payment date, do NOT chase silence. Phase 2 (Elicit Date): invoice is significantly overdue — actively seek a specific payment date, end with clear question. Transition controlled by `chaseDelayDays` tenant setting (default 5). Three new tenant columns: `chaseDelayDays`, `preDueDateDays` (default 7, courtesy reminder before due), `preDueDateMinAmount` (default £1000). Phase flows through `ActionContext.phase` into all LLM prompts (collectionEmail.ts, aiMessageGenerator.ts for email/SMS/voice). Single-touch enforcement: Phase 1 contacts with any prior completed action are skipped. Pre-due invoices included in adaptive query when `preDueDateDays > 0` and amount exceeds minimum. Conversation brief service includes COLLECTION PHASE section. Settings UI added to Autonomy & Rules page (Collection Timing card with sliders + amount input). All debtor-facing prompts include LANGUAGE RULE prohibiting "promise to pay"/"PTP" — use "payment arrangement", "confirmed payment date" instead. Compliance engine enforces this via DEBTOR_FACING_PROHIBITED patterns.
 - 2026-04-04: CRITICAL FIX — ActionExecutor now runs compliance engine before delivery. New `runComplianceGate()` method checks email/SMS content through `complianceEngine.ts` (frequency caps, channel cooldowns, time-of-day, prohibited language, data isolation, vulnerability). Block → cancel action + timeline event. Queue_for_approval → revert to pending_approval for human review. Fail closed on compliance errors. Applied to both `executeScheduledActions()` and `executeActionsByIds()` paths. Voice calls skip content compliance (live calls). This was the last unguarded outbound path — all channels now pass through compliance before delivery.
 - 2026-04-04: FIX — Email formatting. New `emailFormatter.ts` converts LLM plain text to clean HTML email: double newlines → `<p>`, single newlines → `<br>`, bullet lines → `<ul><li>`. Wrapped in professional 600px template (Arial, line-height 1.6, no Qashivo branding per Critical Rule 6). Applied to all 4 email paths: collectionsPipeline.ts, actionExecutor.ts, inboundReplyPipeline.ts, emailCommunications.ts. Existing HTML content detected and passed through (just wrapped in template). SMS and voice unaffected (plain text / spoken text).
 - 2026-04-04: Sidebar restructured — Credit Control order is now Dashboard → Action Centre → Debtors → Disputes → Impact → Reports. Invoices page removed from navigation (invoices accessed via Debtor Detail page). Route /qollections/invoices redirects to /qollections/debtors. Page component file kept with deletion flag (30-day expiry).
@@ -343,6 +344,23 @@ SendGrid inbound webhook (/api/webhooks/sendgrid/inbound)
   → Agent generates contextual reply (same LLM pipeline)
   → Compliance check → approval flow → delivery via wrapper
   → Threading maintained via In-Reply-To/References (emailMessages)
+```
+
+### Two-phase collection model
+```
+Phase 1 (Inform) — daysOverdue ≤ chaseDelayDays (default 5)
+  → One polite nudge only. Do NOT ask for payment date.
+  → Do NOT follow up on silence. Single-touch enforcement.
+  → Pre-due reminders: preDueDateDays before due date, invoices > preDueDateMinAmount.
+
+Phase 2 (Elicit Date) — daysOverdue > chaseDelayDays
+  → Actively seek a specific payment date.
+  → End emails with clear question the debtor can answer in one sentence.
+  → Normal escalation ladder applies (follow_up → escalation → final_notice).
+
+Phase flows via ActionContext.phase → LLM prompts (collectionEmail, aiMessageGenerator).
+Tenant settings: chaseDelayDays, preDueDateDays, preDueDateMinAmount.
+UI: Settings > Autonomy & Rules > Collection Timing card.
 ```
 
 ### Agent architecture (current vs planned)

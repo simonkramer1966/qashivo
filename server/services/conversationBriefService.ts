@@ -23,6 +23,7 @@ import {
   invoices,
   emailMessages,
   actions,
+  tenants,
 } from "@shared/schema";
 
 // ── Types ────────────────────────────────────────────────────
@@ -70,6 +71,12 @@ export interface ConversationBriefData {
   };
   debtorIntel: string[];
   constraints: string[];
+  collectionPhase: {
+    phase: 'inform' | 'elicit_date';
+    chaseDelayDays: number;
+    oldestOverdueDays: number | null;
+    hasActiveArrangement: boolean;
+  };
 }
 
 // ── Per-run cache ────────────────────────────────────────────
@@ -116,6 +123,7 @@ export async function buildConversationBrief(
     recentEmails,
     recentActions,
     forecasts,
+    tenantRecord,
   ] = await Promise.all([
     loadContact(tenantId, contactId),
     loadTimeline(tenantId, contactId),
@@ -128,11 +136,14 @@ export async function buildConversationBrief(
     loadRecentEmails(tenantId, contactId),
     loadRecentActions(tenantId, contactId),
     loadActiveForecasts(tenantId, contactId),
+    db.select({ chaseDelayDays: tenants.chaseDelayDays }).from(tenants).where(eq(tenants.id, tenantId)).limit(1).then(r => r[0]),
   ]);
+
+  const chaseDelayDays = tenantRecord?.chaseDelayDays ?? 5;
 
   const data = assembleData(
     contact, timeline, promises, outstandingInvs, signals,
-    facts, prefs, intel, recentEmails, recentActions, forecasts,
+    facts, prefs, intel, recentEmails, recentActions, forecasts, chaseDelayDays,
   );
   const text = formatBriefText(data, contact);
 
@@ -308,6 +319,7 @@ function assembleData(
   recentEmails: any[],
   recentActions: any[],
   forecasts: any[],
+  chaseDelayDays: number,
 ): ConversationBriefData {
   const now = new Date();
 
@@ -450,6 +462,12 @@ function assembleData(
     },
     debtorIntel,
     constraints,
+    collectionPhase: {
+      phase: (oldestOverdueDays != null && oldestOverdueDays > chaseDelayDays) ? 'elicit_date' : 'inform',
+      chaseDelayDays,
+      oldestOverdueDays,
+      hasActiveArrangement: !!activePromise || unpaid.some((inv: any) => inv.pauseState === 'payment_plan'),
+    },
   };
 }
 
@@ -473,6 +491,17 @@ function formatBriefText(data: ConversationBriefData, contact: any): string {
   }
   if (data.relationshipSummary.specialInstructions) {
     lines.push(`- Special instructions: ${data.relationshipSummary.specialInstructions}`);
+  }
+  lines.push('');
+
+  // Collection phase
+  lines.push('COLLECTION PHASE:');
+  if (data.collectionPhase.hasActiveArrangement) {
+    lines.push('- Phase: ARRANGEMENT IN PLACE — debtor has committed to a payment date or plan. Monitor, do not chase.');
+  } else if (data.collectionPhase.phase === 'inform') {
+    lines.push(`- Phase: 1 (Inform) — invoice is new or within ${data.collectionPhase.chaseDelayDays}-day grace period. One polite nudge only. Do NOT chase silence.`);
+  } else {
+    lines.push(`- Phase: 2 (Elicit Date) — invoice is ${data.collectionPhase.oldestOverdueDays} days overdue (past ${data.collectionPhase.chaseDelayDays}-day grace period). Actively seek a specific payment date.`);
   }
   lines.push('');
 

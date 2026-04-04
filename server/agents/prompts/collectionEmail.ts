@@ -60,6 +60,7 @@ export interface ActionContext {
   toneLevel: "friendly" | "professional" | "firm" | "formal";
   daysSinceLastContact: number;
   touchCount: number;
+  phase?: "inform" | "elicit_date";
 }
 
 export interface PolicyConstraints {
@@ -91,6 +92,15 @@ export function buildSystemPrompt(
     lines.push(`SECTOR: ${persona.sectorContext}`);
     lines.push("");
   }
+
+  // Communication objective
+  lines.push(`COMMUNICATION OBJECTIVE:`);
+  lines.push(`Your single objective is to obtain a specific payment date from the debtor.`);
+  lines.push(`Most debtors intend to pay — they're just busy or disorganised. Your job is to nudge them forward, not threaten them.`);
+  lines.push(`- Phase 1 (Inform): The invoice is new or recently overdue. Send one polite nudge. Do NOT ask for a payment date. Do NOT follow up on silence.`);
+  lines.push(`- Phase 2 (Elicit Date): The invoice is significantly overdue. Actively seek a specific payment date. End with a clear, simple question the debtor can answer in one sentence.`);
+  lines.push(`The current phase is provided in the ACTION CONTEXT below.`);
+  lines.push(``);
 
   // Communication rules
   lines.push(`COMMUNICATION RULES:`);
@@ -257,6 +267,11 @@ export function buildUserPrompt(
   sections.push(`- Tone guidance: ${toneGuidance[action.toneLevel] || toneGuidance.professional}`);
   sections.push(`- Days since last contact: ${action.daysSinceLastContact}`);
   sections.push(`- Touch count for this debtor: ${action.touchCount}`);
+  if (action.phase) {
+    sections.push(`- Collection phase: ${action.phase === 'inform'
+      ? 'Phase 1 (Inform) — one nudge only, do not chase silence, do not ask for a payment date'
+      : 'Phase 2 (Elicit Date) — actively seek a specific payment date, end with a clear question'}`);
+  }
   sections.push("");
 
   // Instruction
@@ -265,6 +280,11 @@ export function buildUserPrompt(
   sections.push(`Address the email to ${debtor.contactName}.`);
   sections.push(`Sign off as your persona (use the email signature provided in your identity).`);
   sections.push(`Reference specific invoice details and any prior conversation.`);
+  if (action.phase === "inform") {
+    sections.push(`This is a Phase 1 informational nudge. Keep it brief and helpful. Do NOT ask when they will pay — just remind them the invoice exists. If this is pre-due, frame it as a courtesy heads-up.`);
+  } else if (action.phase === "elicit_date") {
+    sections.push(`This is a Phase 2 communication. Your primary goal is to obtain a specific payment date. End the email with a clear, simple question like "Could you let me know when we might expect payment?" Make it easy for the debtor to reply in one sentence.`);
+  }
   if (action.actionType === "pre_due_reminder") {
     sections.push(`This is a pre-due reminder — keep the tone light and helpful. The invoice is not yet overdue.`);
   } else if (action.actionType === "escalation") {

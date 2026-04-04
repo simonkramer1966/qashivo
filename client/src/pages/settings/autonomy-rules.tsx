@@ -38,6 +38,9 @@ interface TenantSettings {
     flagDisputeKeywords: boolean;
     flagVipCustomers: boolean;
   };
+  chaseDelayDays: number;
+  preDueDateDays: number;
+  preDueDateMinAmount: string;
 }
 
 interface CommModeSettings {
@@ -138,6 +141,9 @@ export default function SettingsAutonomyRules() {
   const [approvalMode, setApprovalMode] = useState<string | null>(null);
   const [timeoutHours, setTimeoutHours] = useState<number | null>(null);
   const [exceptionRules, setExceptionRules] = useState<TenantSettings["exceptionRules"] | null>(null);
+  const [chaseDelayDays, setChaseDelayDays] = useState<number | null>(null);
+  const [preDueDateDays, setPreDueDateDays] = useState<number | null>(null);
+  const [preDueDateMinAmount, setPreDueDateMinAmount] = useState<string | null>(null);
 
   // Communication testing state
   const [commMode, setCommMode] = useState<CommMode | null>(null);
@@ -185,8 +191,13 @@ export default function SettingsAutonomyRules() {
     flagVipCustomers: true,
   };
 
+  const currentChaseDelayDays = chaseDelayDays ?? settings?.chaseDelayDays ?? 5;
+  const currentPreDueDateDays = preDueDateDays ?? settings?.preDueDateDays ?? 7;
+  const currentPreDueDateMinAmount = preDueDateMinAmount ?? settings?.preDueDateMinAmount ?? "1000.00";
+
   const hasChanges =
-    approvalMode !== null || timeoutHours !== null || exceptionRules !== null;
+    approvalMode !== null || timeoutHours !== null || exceptionRules !== null ||
+    chaseDelayDays !== null || preDueDateDays !== null || preDueDateMinAmount !== null;
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -194,6 +205,9 @@ export default function SettingsAutonomyRules() {
       if (approvalMode !== null) body.approvalMode = approvalMode;
       if (timeoutHours !== null) body.approvalTimeoutHours = timeoutHours;
       if (exceptionRules !== null) body.exceptionRules = exceptionRules;
+      if (chaseDelayDays !== null) body.chaseDelayDays = chaseDelayDays;
+      if (preDueDateDays !== null) body.preDueDateDays = preDueDateDays;
+      if (preDueDateMinAmount !== null) body.preDueDateMinAmount = preDueDateMinAmount;
       const res = await apiRequest("PATCH", "/api/tenant/settings", body);
       return res.json();
     },
@@ -203,6 +217,9 @@ export default function SettingsAutonomyRules() {
       setApprovalMode(null);
       setTimeoutHours(null);
       setExceptionRules(null);
+      setChaseDelayDays(null);
+      setPreDueDateDays(null);
+      setPreDueDateMinAmount(null);
     },
     onError: (err: Error) => {
       toast({ title: "Failed to save", description: err.message, variant: "destructive" });
@@ -462,6 +479,90 @@ export default function SettingsAutonomyRules() {
                     setExceptionRules({ ...currentRules, flagVipCustomers: checked })
                   }
                 />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Collection Timing */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-primary" />
+                Collection Timing
+              </CardTitle>
+              <CardDescription>
+                Control when the agent transitions from a gentle informational nudge to actively chasing a payment date.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <Label className="text-sm font-medium">Chase delay (days after due date)</Label>
+                  <span className="text-sm font-medium tabular-nums">{currentChaseDelayDays} days</span>
+                </div>
+                <p className="text-xs text-muted-foreground mb-2">
+                  During this window the agent sends one polite nudge only. After this period, the agent actively seeks a payment date.
+                </p>
+                <Slider
+                  value={[currentChaseDelayDays]}
+                  onValueChange={(v) => setChaseDelayDays(v[0])}
+                  min={0}
+                  max={14}
+                  step={1}
+                  className="w-full"
+                />
+                <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                  <span>0 (chase immediately)</span>
+                  <span>7</span>
+                  <span>14 days</span>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <Label className="text-sm font-medium">Pre-due reminder (days before due date)</Label>
+                  <span className="text-sm font-medium tabular-nums">{currentPreDueDateDays} days</span>
+                </div>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Send a courtesy heads-up this many days before the invoice is due. Set to 0 to disable.
+                </p>
+                <Slider
+                  value={[currentPreDueDateDays]}
+                  onValueChange={(v) => setPreDueDateDays(v[0])}
+                  min={0}
+                  max={14}
+                  step={1}
+                  className="w-full"
+                />
+                <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                  <span>Off</span>
+                  <span>7</span>
+                  <span>14 days</span>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm font-medium">Pre-due minimum amount</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Only send pre-due reminders for invoices above this amount.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">£</span>
+                  <Input
+                    type="number"
+                    value={currentPreDueDateMinAmount}
+                    onChange={(e) => setPreDueDateMinAmount(e.target.value)}
+                    className="w-28"
+                    min={0}
+                    step={100}
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>
