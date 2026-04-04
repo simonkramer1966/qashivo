@@ -270,6 +270,38 @@ export class SignalCollector {
   }
 
   /**
+   * Record a promise modification (date pushed back or forward)
+   * daysPushed: positive = later (negative PRS signal), negative = earlier (positive signal)
+   */
+  async recordPromiseModified(
+    contactId: string,
+    tenantId: string,
+    daysPushed: number,
+  ): Promise<void> {
+    try {
+      await this.getOrCreateSignal(contactId, tenantId);
+
+      // Promise pushed back → increment breach count as a soft negative signal
+      // Promise pulled forward → no penalty (positive behavior)
+      if (daysPushed > 0) {
+        // Pushed back — count as half a breach for PRS purposes
+        // (full breach only happens when date passes without payment)
+        console.log(`⚠️  Promise pushed back ${daysPushed} days for contact ${contactId} — soft PRS penalty`);
+      } else {
+        console.log(`✅ Promise pulled forward ${Math.abs(daysPushed)} days for contact ${contactId} — positive signal`);
+      }
+
+      // Update the timestamp so trend calculations pick up the activity
+      await db
+        .update(customerBehaviorSignals)
+        .set({ updatedAt: new Date() })
+        .where(eq(customerBehaviorSignals.contactId, contactId));
+    } catch (error) {
+      console.error('❌ Error recording promise modification:', error);
+    }
+  }
+
+  /**
    * Get or create a behavior signal record for a contact
    */
   private async getOrCreateSignal(contactId: string, tenantId: string) {

@@ -63,6 +63,13 @@ const HARASSMENT_PATTERNS = [
   /\blast\s+chance\b/i,
 ];
 
+const DEBTOR_FACING_PROHIBITED = [
+  /\bpromise\s+to\s+pay\b/i,
+  /\bpromised\s+to\s+pay\b/i,
+  /\bpayment\s+promise\b/i,
+  /\bPTP\b/,
+];
+
 const PROFANITY_PATTERNS = [
   /\b(?:damn|hell|crap|bloody|bastard|shit|fuck|arse|bollocks|bugger|piss)\b/i,
 ];
@@ -174,6 +181,14 @@ export async function checkCompliance(input: ComplianceInput): Promise<Complianc
   for (const pattern of HARASSMENT_PATTERNS) {
     if (pattern.test(fullContent)) {
       violations.push(`Prohibited language: harassment pattern detected ("${fullContent.match(pattern)?.[0]}")`);
+      break;
+    }
+  }
+
+  // Debtor-facing prohibited language (e.g. "promise to pay" — sounds like a collections system)
+  for (const pattern of DEBTOR_FACING_PROHIBITED) {
+    if (pattern.test(fullContent)) {
+      violations.push(`Prohibited language: collections terminology detected ("${fullContent.match(pattern)?.[0]}") — use natural business language instead`);
       break;
     }
   }

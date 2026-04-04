@@ -1,10 +1,11 @@
 import { generateJSON } from "./llm/claude";
 import { db } from "../db";
-import { inboundMessages, actions, contacts, invoices, paymentPlans, paymentPlanInvoices, users, outcomes, emailClarifications, tenants, emailMessages, customerContactPersons, forecastUserAdjustments } from "@shared/schema";
-import { eq, and, desc, inArray, asc, sql } from "drizzle-orm";
+import { inboundMessages, actions, contacts, invoices, paymentPlans, paymentPlanInvoices, users, outcomes, emailClarifications, tenants, emailMessages, customerContactPersons, forecastUserAdjustments, paymentPromises, timelineEvents } from "@shared/schema";
+import { eq, and, desc, inArray, asc, sql, gte } from "drizzle-orm";
 import { getPromiseReliabilityService } from "./promiseReliabilityService.js";
 import { emailClarificationService } from "./emailClarificationService.js";
 import { processInboundReply } from "./inboundReplyPipeline";
+import { signalCollector } from "../lib/signal-collector";
 
 // Outcome types that map to CharlieIntentType
 type OutcomeType = 
@@ -436,17 +437,27 @@ CRITICAL EXCEPTIONS — do NOT flag ambiguity when:
         }
         
         // If high confidence PTP or payment_plan with no ambiguity, send confirmation
-        const shouldConfirm = 
+        const shouldConfirm =
           (analysis.intentType === 'promise_to_pay' || analysis.intentType === 'payment_plan') &&
           analysis.confidence >= this.CONFIDENCE_THRESHOLD &&
           !analysis.ambiguity?.hasAmbiguity &&
           message.contactId &&
           message.from;
-        
+
         let confirmationSent = false;
         if (shouldConfirm) {
-          console.log(`✅ Clear ${analysis.intentType} detected - sending confirmation email`);
-          await this.sendConfirmationEmail(message, analysis, context);
+          // Check for active promises to detect modification vs new promise
+          const activePromise = analysis.intentType === 'promise_to_pay' && message.contactId
+            ? await this.findActivePromise(message.tenantId, message.contactId)
+            : null;
+
+          if (activePromise) {
+            console.log(`🔄 Existing active promise detected — sending modified confirmation`);
+          } else {
+            console.log(`✅ Clear ${analysis.intentType} detected - sending confirmation email`);
+          }
+
+          await this.sendConfirmationEmail(message, analysis, context, activePromise);
           confirmationSent = true;
         }
 
@@ -475,13 +486,17 @@ CRITICAL EXCEPTIONS — do NOT flag ambiguity when:
         }
         
         // Create promise record if this is a promise_to_pay intent with high confidence
-        // (Legacy table - kept for backwards compatibility)
+        // Detects modifications to existing active promises vs genuinely new promises
         if (analysis.intentType === 'promise_to_pay' &&
             analysis.confidence >= this.CONFIDENCE_THRESHOLD &&
             message.contactId && message.invoiceId) {
-          await this.createPromiseFromIntent(message, analysis, context);
-          // Also create a forecastUserAdjustment so this promise feeds into cashflow forecasting
-          await this.createForecastAdjustmentFromPromise(message, analysis, context);
+          const modificationResult = await this.detectAndHandlePromiseModification(message, analysis, context);
+          if (!modificationResult.isModification) {
+            // Genuinely new promise — create fresh records
+            await this.createPromiseFromIntent(message, analysis, context);
+            await this.createForecastAdjustmentFromPromise(message, analysis, context);
+          }
+          // If modification, detectAndHandlePromiseModification already updated the records
         }
         
         // Handle payment plan requests - update invoice outcome and create notification
@@ -1049,6 +1064,251 @@ CRITICAL EXCEPTIONS — do NOT flag ambiguity when:
     content += `Original Message:\n"${message.content}"`;
     
     return content;
+  }
+
+  // ── Promise modification detection ──────────────────────────────────
+
+  /**
+   * Find the most recent active (open/rescheduled) promise for this contact.
+   * Returns null if no active promise exists.
+   */
+  private async findActivePromise(
+    tenantId: string,
+    contactId: string,
+  ): Promise<typeof paymentPromises.$inferSelect | null> {
+    const [active] = await db
+      .select()
+      .from(paymentPromises)
+      .where(
+        and(
+          eq(paymentPromises.tenantId, tenantId),
+          eq(paymentPromises.contactId, contactId),
+          inArray(paymentPromises.status, ['open', 'rescheduled']),
+          gte(paymentPromises.promisedDate, new Date()), // Not yet past due
+        )
+      )
+      .orderBy(desc(paymentPromises.createdAt))
+      .limit(1);
+
+    return active || null;
+  }
+
+  /**
+   * Detect if a new PTP modifies an existing active promise.
+   * If modification detected: updates existing promise, forecast, and logs signal.
+   * Returns { isModification: true } if handled, { isModification: false } if new promise.
+   */
+  private async detectAndHandlePromiseModification(
+    message: typeof inboundMessages.$inferSelect,
+    analysis: IntentAnalysisResult,
+    context: any,
+  ): Promise<{ isModification: boolean }> {
+    try {
+      if (!message.contactId) return { isModification: false };
+
+      const activePromise = await this.findActivePromise(message.tenantId, message.contactId);
+      if (!activePromise) return { isModification: false };
+
+      // Extract new promised date
+      let newDate: Date | null = null;
+      for (const dateStr of (analysis.extractedEntities.dates || [])) {
+        newDate = this.parsePromisedDate(dateStr);
+        if (newDate) break;
+      }
+      if (!newDate) {
+        // No concrete new date — might be a cancellation or vague update, not a modification
+        return { isModification: false };
+      }
+
+      // Extract new amount (if changed)
+      let newAmount: number | undefined;
+      for (const amountStr of (analysis.extractedEntities.amounts || [])) {
+        newAmount = this.parseAmount(amountStr);
+        if (newAmount !== undefined && newAmount > 0) break;
+      }
+
+      // Calculate days pushed
+      const oldDate = new Date(activePromise.promisedDate);
+      const daysPushed = Math.round((newDate.getTime() - oldDate.getTime()) / 86400000);
+
+      // If dates are the same (within 1 day), treat as reiteration, not modification
+      if (Math.abs(daysPushed) <= 1 && !newAmount) {
+        return { isModification: false };
+      }
+
+      console.log(`🔄 Promise modification detected: ${oldDate.toLocaleDateString()} → ${newDate.toLocaleDateString()} (${daysPushed > 0 ? '+' : ''}${daysPushed} days)`);
+
+      // Find the original promise date (first in the chain) for tracking total drift
+      let originalDate = oldDate;
+      if (activePromise.previousPromiseId) {
+        const chain = await db
+          .select({ promisedDate: paymentPromises.promisedDate })
+          .from(paymentPromises)
+          .where(
+            and(
+              eq(paymentPromises.contactId, message.contactId),
+              eq(paymentPromises.invoiceId, activePromise.invoiceId),
+            )
+          )
+          .orderBy(asc(paymentPromises.createdAt))
+          .limit(1);
+        if (chain[0]) originalDate = new Date(chain[0].promisedDate);
+      }
+
+      // 1. Mark old promise as rescheduled
+      await db
+        .update(paymentPromises)
+        .set({
+          status: 'rescheduled',
+          notes: `${activePromise.notes || ''}\nRescheduled on ${new Date().toLocaleDateString()} — moved ${daysPushed > 0 ? 'back' : 'forward'} ${Math.abs(daysPushed)} days`.trim(),
+          metadata: {
+            ...(activePromise.metadata as any || {}),
+            rescheduledAt: new Date().toISOString(),
+            rescheduledTo: newDate.toISOString(),
+            daysPushed,
+          },
+          updatedAt: new Date(),
+        })
+        .where(eq(paymentPromises.id, activePromise.id));
+
+      // 2. Create new promise with modification tracking
+      const promiseService = getPromiseReliabilityService();
+      await promiseService.createPromise({
+        tenantId: message.tenantId,
+        contactId: message.contactId,
+        invoiceId: activePromise.invoiceId,
+        promiseType: 'payment_date',
+        promisedDate: newDate,
+        promisedAmount: newAmount ?? (activePromise.promisedAmount ? Number(activePromise.promisedAmount) : undefined),
+        sourceType: 'inbound_message',
+        sourceId: message.id,
+        channel: message.channel,
+        createdByUserId: message.tenantId,
+        notes: `Modified promise — ${daysPushed > 0 ? 'pushed back' : 'pulled forward'} ${Math.abs(daysPushed)} days from ${oldDate.toLocaleDateString()}`,
+        metadata: {
+          originalMessage: message.content,
+          extractedEntities: analysis.extractedEntities,
+          confidence: analysis.confidence,
+          sentiment: analysis.sentiment,
+          isModification: true,
+          previousPromiseId: activePromise.id,
+          previousDate: oldDate.toISOString(),
+          originalDate: originalDate.toISOString(),
+          daysPushed,
+        },
+      });
+
+      // 3. Update existing forecastUserAdjustment instead of creating duplicate
+      await this.updateForecastAdjustmentForModification(
+        message.tenantId,
+        message.contactId,
+        newDate,
+        newAmount,
+        daysPushed,
+      );
+
+      // 4. Log behavioural signal
+      try {
+        await signalCollector.recordPromiseModified(message.contactId, message.tenantId, daysPushed);
+      } catch (err) {
+        console.warn('⚠️ Failed to record promise modification signal:', err);
+      }
+
+      // 5. Log timeline event for visibility
+      const [contact] = await db
+        .select({ name: contacts.name, companyName: contacts.companyName })
+        .from(contacts)
+        .where(eq(contacts.id, message.contactId))
+        .limit(1);
+      const debtorName = contact?.companyName || contact?.name || 'Unknown';
+
+      const signalType = daysPushed > 0 ? 'promise_delayed' : 'promise_accelerated';
+      await db.insert(timelineEvents).values({
+        tenantId: message.tenantId,
+        customerId: message.contactId,
+        invoiceId: activePromise.invoiceId,
+        occurredAt: new Date(),
+        direction: 'inbound',
+        channel: message.channel || 'email',
+        summary: `${debtorName} modified payment promise: ${oldDate.toLocaleDateString('en-GB')} → ${newDate.toLocaleDateString('en-GB')} (${daysPushed > 0 ? '+' : ''}${daysPushed} days)`,
+        preview: (message.content || '').substring(0, 240),
+        status: 'processed',
+        createdByType: 'system',
+        createdByName: 'Qashivo AI',
+        outcomeType: signalType,
+        outcomeExtracted: {
+          previousDate: oldDate.toISOString(),
+          newDate: newDate.toISOString(),
+          daysPushed,
+          previousAmount: activePromise.promisedAmount ? Number(activePromise.promisedAmount) : null,
+          newAmount: newAmount || null,
+          originalDate: originalDate.toISOString(),
+        },
+      });
+
+      console.log(`✅ Promise modification processed: ${signalType}, ${daysPushed} days`);
+      return { isModification: true };
+    } catch (error) {
+      console.error('❌ Error detecting promise modification:', error);
+      // Fall through to create as new promise
+      return { isModification: false };
+    }
+  }
+
+  /**
+   * Update an existing forecastUserAdjustment for a modified promise
+   * instead of creating a duplicate record.
+   */
+  private async updateForecastAdjustmentForModification(
+    tenantId: string,
+    contactId: string,
+    newDate: Date,
+    newAmount: number | undefined,
+    daysPushed: number,
+  ): Promise<void> {
+    try {
+      // Find the most recent PTP-related forecast adjustment for this contact
+      const [existing] = await db
+        .select()
+        .from(forecastUserAdjustments)
+        .where(
+          and(
+            eq(forecastUserAdjustments.tenantId, tenantId),
+            eq(forecastUserAdjustments.source, 'inbound_reply'),
+            eq(forecastUserAdjustments.category, 'revenue_change'),
+            eq(forecastUserAdjustments.affects, 'inflows'),
+            sql`${forecastUserAdjustments.description} LIKE '%Promise to pay%'`,
+            sql`COALESCE(${forecastUserAdjustments.expired}, false) = false`,
+          )
+        )
+        .orderBy(desc(forecastUserAdjustments.createdAt))
+        .limit(1);
+
+      if (existing) {
+        // Update existing record
+        const updates: any = {
+          startDate: newDate,
+          updatedAt: new Date(),
+          followUpStatus: 'pending', // Reset follow-up since the date changed
+          description: `${existing.description} [revised ${daysPushed > 0 ? '+' : ''}${daysPushed}d on ${new Date().toLocaleDateString('en-GB')}]`,
+        };
+        if (newAmount !== undefined && newAmount > 0) {
+          updates.amount = newAmount.toFixed(2);
+        }
+
+        await db
+          .update(forecastUserAdjustments)
+          .set(updates)
+          .where(eq(forecastUserAdjustments.id, existing.id));
+
+        console.log(`✅ Updated forecast adjustment ${existing.id} with new date ${newDate.toLocaleDateString()}`);
+      } else {
+        // No existing record found — create one (shouldn't normally happen)
+        console.log(`⚠️ No existing forecast adjustment found for modified promise — will be created via standard flow`);
+      }
+    } catch (error) {
+      console.error('❌ Error updating forecast adjustment for modification:', error);
+    }
   }
 
   /**
@@ -2121,7 +2381,8 @@ CRITICAL: Each payment tranche on a DIFFERENT date MUST be a SEPARATE entry in t
   private async sendConfirmationEmail(
     message: typeof inboundMessages.$inferSelect,
     analysis: IntentAnalysisResult,
-    context: any
+    context: any,
+    activePromise?: typeof paymentPromises.$inferSelect | null,
   ): Promise<void> {
     try {
       if (!message.contactId || !message.from) {
@@ -2200,7 +2461,53 @@ CRITICAL: Each payment tranche on a DIFFERENT date MUST be a SEPARATE entry in t
         }
       }
       
-      // Send confirmation email
+      // Build modification context if modifying an existing active promise
+      let modificationData: {
+        isModification: boolean;
+        previousPromise?: {
+          promisedDate: string;
+          promisedAmount?: number;
+          originalPromisedDate?: string;
+          daysPushed: number;
+        };
+      } | undefined;
+
+      if (activePromise && ptpDate) {
+        const oldDate = new Date(activePromise.promisedDate);
+        const newDate = new Date(ptpDate);
+        const daysPushed = Math.round((newDate.getTime() - oldDate.getTime()) / 86400000);
+
+        if (Math.abs(daysPushed) > 1 || (ptpAmount && activePromise.promisedAmount && Math.abs(ptpAmount - Number(activePromise.promisedAmount)) > 1)) {
+          // Find the original promise date (first in chain)
+          let originalDate = oldDate;
+          if (activePromise.previousPromiseId) {
+            const [first] = await db
+              .select({ promisedDate: paymentPromises.promisedDate })
+              .from(paymentPromises)
+              .where(
+                and(
+                  eq(paymentPromises.contactId, message.contactId!),
+                  eq(paymentPromises.invoiceId, activePromise.invoiceId),
+                )
+              )
+              .orderBy(asc(paymentPromises.createdAt))
+              .limit(1);
+            if (first) originalDate = new Date(first.promisedDate);
+          }
+
+          modificationData = {
+            isModification: true,
+            previousPromise: {
+              promisedDate: oldDate.toISOString(),
+              promisedAmount: activePromise.promisedAmount ? Number(activePromise.promisedAmount) : undefined,
+              originalPromisedDate: originalDate.toISOString(),
+              daysPushed,
+            },
+          };
+        }
+      }
+
+      // Send confirmation email (with modification context if applicable)
       const result = await emailClarificationService.sendConfirmationEmail({
         tenantId: message.tenantId,
         contactId: message.contactId,
@@ -2214,6 +2521,7 @@ CRITICAL: Each payment tranche on a DIFFERENT date MUST be a SEPARATE entry in t
         invoices: linkedInvoices.length > 0 ? linkedInvoices : undefined,
         paymentPlanDetails,
         sourceChannel: message.channel || 'email',
+        ...(modificationData || {}),
       });
       
       if (result.success) {

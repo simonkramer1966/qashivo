@@ -109,6 +109,7 @@ export function buildSystemPrompt(
   lines.push(`- Never threaten legal action unless the action context is "final_notice" and tone is "formal".`);
   lines.push(`- Never disclose other debtors' names, amounts, or any confidential information.`);
   lines.push(`- Never use aggressive, harassing, or profane language.`);
+  lines.push(`- LANGUAGE RULE: Never use the term "promise to pay" or "PTP" in any communication to the debtor. Use natural business language instead: "payment arrangement", "confirmed payment date", "agreed payment", "scheduled payment". The debtor should never feel they are being managed through a collections system.`);
   if (policyConstraints?.maxTouchesBeforeEscalation) {
     lines.push(`- Maximum ${policyConstraints.maxTouchesBeforeEscalation} contact attempts before escalation.`);
   }
@@ -143,8 +144,23 @@ export function buildUserPrompt(
   invoices: OutstandingInvoice[],
   history: ConversationEntry[],
   action: ActionContext,
+  conversationBrief?: string,
 ): string {
   const sections: string[] = [];
+
+  // Conversation brief — full debtor context (injected before all other sections)
+  if (conversationBrief) {
+    sections.push(conversationBrief);
+    sections.push('');
+    sections.push('You are continuing an ongoing conversation with this debtor. Your message must:');
+    sections.push('- Reference relevant previous interactions naturally');
+    sections.push('- Acknowledge any active commitments or arrangements');
+    sections.push('- Not contradict anything previously communicated');
+    sections.push('- Not repeat information already sent if the debtor acknowledged it');
+    sections.push('- Match the appropriate escalation level given the history');
+    sections.push('- Never write as if this is the first contact unless it genuinely is');
+    sections.push('');
+  }
 
   // Debtor profile
   sections.push(`DEBTOR PROFILE:`);
@@ -165,7 +181,7 @@ export function buildUserPrompt(
     if (b.trend !== undefined) {
       parts.push(b.trend > 0 ? "payment speed declining" : b.trend < 0 ? "payment speed improving" : "stable payment pattern");
     }
-    if (b.promiseBreachCount && b.promiseBreachCount > 0) parts.push(`${b.promiseBreachCount} broken promise(s)`);
+    if (b.promiseBreachCount && b.promiseBreachCount > 0) parts.push(`${b.promiseBreachCount} missed payment commitment(s)`);
     if (b.emailReplyRate !== undefined) parts.push(`${Math.round(b.emailReplyRate * 100)}% email reply rate`);
     if (parts.length > 0) {
       sections.push(`- Payment behaviour: ${parts.join(", ")}`);

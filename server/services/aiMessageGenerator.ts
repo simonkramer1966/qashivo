@@ -46,6 +46,8 @@ export interface MessageContext {
   tenantName: string;
   tenantPhone?: string;
   tenantEmail?: string;
+  /** Structured conversation brief — full debtor context for LLM */
+  conversationBrief?: string;
 }
 
 export interface ToneSettings {
@@ -332,7 +334,8 @@ Guidelines:
 - Maintain professionalism at all times
 - Reference invoice details naturally
 - If there's a payment link, include it
-- For Recovery stage, mention the seriousness but offer a path to resolution${invoiceTableInstruction}
+- For Recovery stage, mention the seriousness but offer a path to resolution
+- LANGUAGE RULE: Never use the term "promise to pay" or "PTP" in any communication. Use natural business language instead: "payment arrangement", "confirmed payment date", "agreed payment", "scheduled payment". The debtor should never feel they are being managed through a collections system.${invoiceTableInstruction}
 ${toneSettings.useLatePaymentLegislation ? "- You may reference the Late Payment of Commercial Debts (Interest) Act 1998 if appropriate" : ""}
 
 HTML FORMATTING REQUIREMENTS (CRITICAL):
@@ -356,13 +359,13 @@ Respond with valid JSON containing:
 
   private buildEmailUserPrompt(context: MessageContext, toneSettings: ToneSettings): string {
     const currency = context.currency || '£';
-    
+
     let situationContext = "";
-    
+
     if (context.promiseToPayMissed) {
-      situationContext = `IMPORTANT: The customer previously promised to pay by ${context.promiseToPayDate?.toLocaleDateString('en-GB')} but missed this commitment. Reference this broken promise professionally.`;
+      situationContext = `IMPORTANT: The customer previously confirmed they would pay by ${context.promiseToPayDate?.toLocaleDateString('en-GB')} but this commitment was not met. Reference this professionally.`;
     } else if (context.hasPromiseToPay) {
-      situationContext = `The customer has an active promise to pay by ${context.promiseToPayDate?.toLocaleDateString('en-GB')}. This is a follow-up reminder.`;
+      situationContext = `The customer has confirmed a payment date of ${context.promiseToPayDate?.toLocaleDateString('en-GB')}. This is a follow-up reminder.`;
     } else if (context.hasDispute) {
       situationContext = `There is an active dispute on this invoice. Acknowledge this and offer to discuss.`;
     } else if (context.previousContactCount && context.previousContactCount > 2) {
@@ -379,8 +382,13 @@ Respond with valid JSON containing:
       invoiceDetailsSection += `\nIMPORTANT: You MUST include an HTML table with the above invoices in the email body.`;
     }
 
-    return `Generate a collection email for the following situation:
+    // Conversation brief — full debtor context
+    const briefSection = context.conversationBrief
+      ? `\n${context.conversationBrief}\n\nYou are continuing an ongoing conversation with this debtor. Your message must:\n- Reference relevant previous interactions naturally\n- Acknowledge any active commitments or arrangements\n- Not contradict anything previously communicated\n- Not repeat information already sent if the debtor acknowledged it\n- Match the appropriate escalation level given the history\n- Never write as if this is the first contact unless it genuinely is\n`
+      : '';
 
+    return `Generate a collection email for the following situation:
+${briefSection}
 Customer: ${context.customerName}
 Company: ${context.companyName || context.customerName}
 Invoice: ${context.invoiceNumber}
@@ -430,6 +438,7 @@ CRITICAL RULES:
 - Every word must earn its place
 - Clear call to action (pay/call)
 - Never be threatening - professional UK tone
+- Never use "promise to pay" or "PTP" — use "payment arrangement" or "confirmed payment" instead
 - Include phone number if provided
 
 STRUCTURE (use \\n for line breaks):
@@ -445,10 +454,10 @@ Respond with valid JSON:
     const currency = context.currency || '£';
     const invoiceCount = context.invoiceCount || 1;
     const totalAmount = context.totalOutstanding || context.invoiceAmount;
-    
+
     let situationHint = "";
     if (context.promiseToPayMissed) {
-      situationHint = "CONTEXT: Customer missed a promised payment date - reference this.";
+      situationHint = "CONTEXT: Customer missed a confirmed payment date - reference this.";
     } else if (context.daysOverdue > 90) {
       situationHint = "CONTEXT: Severely overdue - emphasise urgency.";
     } else if (context.daysOverdue > 60) {
@@ -457,8 +466,28 @@ Respond with valid JSON:
       situationHint = "CONTEXT: Moderately overdue - firmer tone needed.";
     }
 
-    return `Generate SMS (MUST be under 160 characters):
+    // Condensed brief for SMS (constraints + commitments only, not full history)
+    let smsBrief = '';
+    if (context.conversationBrief) {
+      // Extract just the ACTIVE COMMITMENTS and WHAT NOT TO DO sections
+      const lines = context.conversationBrief.split('\n');
+      const relevantSections: string[] = [];
+      let inSection = false;
+      for (const line of lines) {
+        if (line.startsWith('ACTIVE COMMITMENTS:') || line.startsWith('WHAT NOT TO DO:')) {
+          inSection = true;
+        } else if (line.match(/^[A-Z ]+:/) && !line.startsWith('-')) {
+          inSection = false;
+        }
+        if (inSection) relevantSections.push(line);
+      }
+      if (relevantSections.length > 0) {
+        smsBrief = '\n' + relevantSections.join('\n') + '\n';
+      }
+    }
 
+    return `Generate SMS (MUST be under 160 characters):
+${smsBrief}
 Customer: ${context.customerName}
 Amount: ${currency}${totalAmount.toFixed(2)}
 Invoices: ${invoiceCount}
@@ -495,6 +524,7 @@ Script Guidelines:
 - Offer to help arrange payment or discuss options
 - Include closing with next steps
 - Keep it concise - aim for 30-60 seconds when spoken
+- Never use "promise to pay" or "PTP" — use "payment arrangement" or "confirmed payment" instead
 
 The script should work as an opening monologue that the AI will adapt based on customer responses.
 
@@ -506,15 +536,20 @@ Respond with valid JSON containing:
 
   private buildVoiceUserPrompt(context: MessageContext, toneSettings: ToneSettings): string {
     const currency = context.currency || '£';
-    
-    return `Generate a voice call script for:
 
+    // Voice gets full brief for pre-call briefing
+    const voiceBrief = context.conversationBrief
+      ? `\nPRE-CALL BRIEFING:\n${context.conversationBrief}\nUse this briefing to inform your conversation. Reference relevant history naturally.\n`
+      : '';
+
+    return `Generate a voice call script for:
+${voiceBrief}
 Customer: ${context.customerName}
 Company: ${context.companyName || context.customerName}
 Invoice: ${context.invoiceNumber}
 Amount: ${currency}${context.invoiceAmount.toFixed(2)}
 Days Overdue: ${context.daysOverdue}
-${context.promiseToPayMissed ? 'Note: Customer missed a promised payment date.' : ''}
+${context.promiseToPayMissed ? 'Note: Customer missed a confirmed payment date.' : ''}
 ${context.previousContactCount && context.previousContactCount > 0 ? `Previous contacts: ${context.previousContactCount}` : ''}
 
 Caller Company: ${context.tenantName}
@@ -606,8 +641,8 @@ ${invoiceTableHtml}
       // Recovery: formal, urgent, mention days overdue
       message = `Hi ${firstName},\n${formattedAmount} is ${context.daysOverdue} days overdue.\nPay today to avoid escalation. ${tenantName}`;
     } else if (context.promiseToPayMissed) {
-      // Promise missed: reference the broken commitment
-      message = `Hi ${firstName},\nYour promised payment of ${formattedAmount} wasn't received.\nPlease pay or call. ${tenantName}`;
+      // Missed payment commitment: reference naturally without collections jargon
+      message = `Hi ${firstName},\nYour expected payment of ${formattedAmount} wasn't received.\nPlease pay or call. ${tenantName}`;
     } else {
       // Credit Control: friendly reminder
       message = `Hi ${firstName},\n${formattedAmount} overdue (${invoiceCount} inv).\nPlease pay or call if any issues. ${tenantName}`;

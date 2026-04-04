@@ -66,6 +66,14 @@ interface ConfirmationContext {
     installments: Array<{ date: string; amount: number }>;
   };
   sourceChannel?: string;
+  // Promise modification context (when updating an existing active promise)
+  isModification?: boolean;
+  previousPromise?: {
+    promisedDate: string;  // ISO date of the original/previous promise
+    promisedAmount?: number;
+    originalPromisedDate?: string; // The very first promise date (for tracking total drift)
+    daysPushed: number;    // positive = later, negative = earlier
+  };
 }
 
 type VoiceCallDisposition = 'completed' | 'no_answer' | 'busy' | 'voicemail' | 'failed';
@@ -275,7 +283,12 @@ class EmailClarificationService {
       const formattedAmount = context.ptpAmount ? `£${context.ptpAmount.toFixed(2)}` : null;
       
       let timelineSummary: string;
-      if (context.intentType === 'promise_to_pay') {
+      if (context.intentType === 'promise_to_pay' && context.isModification) {
+        const parts = ['Revised payment promise confirmation sent'];
+        if (formattedAmount) parts.push(`for ${formattedAmount}`);
+        if (formattedDate) parts.push(`now due ${formattedDate}`);
+        timelineSummary = parts.join(' ');
+      } else if (context.intentType === 'promise_to_pay') {
         const parts = ['Payment promise confirmation sent'];
         if (formattedAmount) parts.push(`for ${formattedAmount}`);
         if (formattedDate) parts.push(`due ${formattedDate}`);
@@ -301,11 +314,17 @@ class EmailClarificationService {
         providerMessageId: emailId,
         createdByType: 'system',
         createdByName: 'Qashivo AI',
-        outcomeType: context.intentType === 'promise_to_pay' ? 'promise_to_pay' : 'payment_plan',
+        outcomeType: context.isModification ? 'promise_modified' : (context.intentType === 'promise_to_pay' ? 'promise_to_pay' : 'payment_plan'),
         outcomeExtracted: {
           ptpDate: context.ptpDate || null,
           ptpAmount: context.ptpAmount || null,
           sourceChannel: context.sourceChannel || 'email',
+          ...(context.isModification && context.previousPromise ? {
+            isModification: true,
+            previousDate: context.previousPromise.promisedDate,
+            previousAmount: context.previousPromise.promisedAmount,
+            daysPushed: context.previousPromise.daysPushed,
+          } : {}),
         },
       });
       
@@ -486,38 +505,104 @@ This email was sent on behalf of ${tenantName} via Qashivo credit control.`;
     let confirmationDetailsText: string;
     
     if (intentType === 'promise_to_pay') {
-      subject = `Payment Arrangement Confirmed - ${tenantName}`;
-      
-      const formattedDate = ptpDate ? new Date(ptpDate).toLocaleDateString('en-GB', { 
-        weekday: 'long', 
-        day: 'numeric', 
-        month: 'long', 
-        year: 'numeric' 
+      const formattedDate = ptpDate ? new Date(ptpDate).toLocaleDateString('en-GB', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
       }) : 'the agreed date';
-      
+
       const formattedAmount = ptpAmount ? `£${ptpAmount.toFixed(2)}` : 'the agreed amount';
-      
-      confirmationDetails = `
-        <div style="background-color: #e8f5e9; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="margin: 0 0 10px 0; color: #2e7d32;">✓ Payment Promise Confirmed</h3>
-          <p style="margin: 5px 0;"><strong>Amount:</strong> ${formattedAmount}</p>
-          <p style="margin: 5px 0;"><strong>Payment Date:</strong> ${formattedDate}</p>
-          ${invoices && invoices.length > 0 ? `
-            <p style="margin: 10px 0 5px 0;"><strong>Covering:</strong></p>
-            <ul style="margin: 5px 0; padding-left: 20px;">
-              ${invoices.map(inv => `<li>Invoice ${inv.invoiceNumber} - £${inv.amount.toFixed(2)}</li>`).join('')}
-            </ul>
-          ` : ''}
-        </div>
-      `;
-      
-      confirmationDetailsText = `
-PAYMENT PROMISE CONFIRMED
--------------------------
+
+      // Check if this is a modification of an existing promise
+      if (context.isModification && context.previousPromise) {
+        subject = `Payment Arrangement Updated - ${tenantName}`;
+
+        const prevDate = new Date(context.previousPromise.promisedDate).toLocaleDateString('en-GB', {
+          weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+        });
+        const prevAmount = context.previousPromise.promisedAmount
+          ? `£${context.previousPromise.promisedAmount.toFixed(2)}`
+          : null;
+        const daysPushed = context.previousPromise.daysPushed;
+        const directionNote = daysPushed < 0
+          ? 'We appreciate you bringing the payment date forward.'
+          : '';
+
+        const amountChanged = prevAmount && formattedAmount !== prevAmount;
+
+        confirmationDetails = `
+          <div style="background-color: #fff3e0; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin: 0 0 10px 0; color: #e65100;">✓ Revised Payment Arrangement</h3>
+            <table style="width: 100%; border-collapse: collapse; margin-top: 8px;">
+              <tr>
+                <td style="padding: 6px 0; color: #666; width: 120px;">Previous date:</td>
+                <td style="padding: 6px 0; text-decoration: line-through; color: #999;">${prevDate}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px 0; color: #666;">Revised date:</td>
+                <td style="padding: 6px 0; font-weight: bold; color: #1b5e20;">${formattedDate}</td>
+              </tr>
+              ${amountChanged ? `
+              <tr>
+                <td style="padding: 6px 0; color: #666;">Previous amount:</td>
+                <td style="padding: 6px 0; text-decoration: line-through; color: #999;">${prevAmount}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px 0; color: #666;">Revised amount:</td>
+                <td style="padding: 6px 0; font-weight: bold; color: #1b5e20;">${formattedAmount}</td>
+              </tr>
+              ` : `
+              <tr>
+                <td style="padding: 6px 0; color: #666;">Amount:</td>
+                <td style="padding: 6px 0; font-weight: bold;">${formattedAmount}</td>
+              </tr>
+              `}
+            </table>
+            ${invoices && invoices.length > 0 ? `
+              <p style="margin: 10px 0 5px 0;"><strong>Covering:</strong></p>
+              <ul style="margin: 5px 0; padding-left: 20px;">
+                ${invoices.map(inv => `<li>Invoice ${inv.invoiceNumber} - £${inv.amount.toFixed(2)}</li>`).join('')}
+              </ul>
+            ` : ''}
+          </div>
+        `;
+
+        confirmationDetailsText = `
+REVISED PAYMENT ARRANGEMENT
+----------------------------
+Previous date: ${prevDate}
+Revised date:  ${formattedDate}
+${amountChanged ? `Previous amount: ${prevAmount}\nRevised amount:  ${formattedAmount}` : `Amount: ${formattedAmount}`}
+${invoices && invoices.length > 0 ? `Covering:\n${invoices.map(inv => `  - Invoice ${inv.invoiceNumber}: £${inv.amount.toFixed(2)}`).join('\n')}` : ''}
+${directionNote}
+`;
+      } else {
+        // Standard new promise confirmation
+        subject = `Payment Arrangement Confirmed - ${tenantName}`;
+
+        confirmationDetails = `
+          <div style="background-color: #e8f5e9; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin: 0 0 10px 0; color: #2e7d32;">✓ Payment Arrangement Confirmed</h3>
+            <p style="margin: 5px 0;"><strong>Amount:</strong> ${formattedAmount}</p>
+            <p style="margin: 5px 0;"><strong>Payment Date:</strong> ${formattedDate}</p>
+            ${invoices && invoices.length > 0 ? `
+              <p style="margin: 10px 0 5px 0;"><strong>Covering:</strong></p>
+              <ul style="margin: 5px 0; padding-left: 20px;">
+                ${invoices.map(inv => `<li>Invoice ${inv.invoiceNumber} - £${inv.amount.toFixed(2)}</li>`).join('')}
+              </ul>
+            ` : ''}
+          </div>
+        `;
+
+        confirmationDetailsText = `
+PAYMENT ARRANGEMENT CONFIRMED
+------------------------------
 Amount: ${formattedAmount}
 Payment Date: ${formattedDate}
 ${invoices && invoices.length > 0 ? `Covering:\n${invoices.map(inv => `  - Invoice ${inv.invoiceNumber}: £${inv.amount.toFixed(2)}`).join('\n')}` : ''}
 `;
+      }
       
     } else {
       // Payment plan
@@ -570,11 +655,14 @@ ${installments.length > 0 ? `Payment Schedule:\n${installments.map(inst => `  - 
 <body>
   <div class="container">
     <p>Dear ${contactName},</p>
-    
-    <p>Thank you for confirming your payment arrangements. We have recorded the following:</p>
-    
+
+    ${context.isModification
+      ? `<p>Thank you for the update regarding your account. We have noted the revised payment arrangement:</p>`
+      : `<p>Thank you for confirming your payment arrangements. We have recorded the following:</p>`
+    }
+
     ${confirmationDetails}
-    
+
     <p>We appreciate you working with us to bring your account up to date. If you have any questions or need to make changes to this arrangement, please reply to this email.</p>
     
     <p>Kind regards,<br>
@@ -587,9 +675,13 @@ ${installments.length > 0 ? `Payment Schedule:\n${installments.map(inst => `  - 
 </body>
 </html>`;
 
+    const introParagraph = context.isModification
+      ? 'Thank you for the update regarding your account. We have noted the revised payment arrangement:'
+      : 'Thank you for confirming your payment arrangements. We have recorded the following:';
+
     const textContent = `Dear ${contactName},
 
-Thank you for confirming your payment arrangements. We have recorded the following:
+${introParagraph}
 ${confirmationDetailsText}
 
 We appreciate you working with us to bring your account up to date. If you have any questions or need to make changes to this arrangement, please reply to this email.

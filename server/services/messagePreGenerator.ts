@@ -4,6 +4,7 @@ import { actions, messageDrafts, contacts, invoices, tenants } from '@shared/sch
 import { aiMessageGenerator, MessageContext, ToneSettings, InvoiceDetail } from './aiMessageGenerator';
 import { CircuitOpenError } from './llmCircuitBreaker';
 import { ToneProfile, PlaybookStage } from './playbookEngine';
+import { buildConversationBrief } from './conversationBriefService';
 import crypto from 'crypto';
 
 export class MessagePreGenerationService {
@@ -83,7 +84,7 @@ export class MessagePreGenerationService {
         sql`${invoices.status} NOT IN ('paid', 'cancelled', 'void')`
       )) : [];
 
-    const messageContext = this.buildMessageContext(action, contact, invoice, tenant, contactOverdueInvoices);
+    const messageContext = await this.buildMessageContext(action, contact, invoice, tenant, contactOverdueInvoices);
     const toneSettings = this.buildToneSettings(action);
     const contextHash = this.computeContextHash(action, messageContext, toneSettings);
 
@@ -310,7 +311,7 @@ export class MessagePreGenerationService {
     }
   }
 
-  private buildMessageContext(action: any, contact: any, invoice: any, tenant: any, overdueInvoices: any[] = []): MessageContext {
+  private async buildMessageContext(action: any, contact: any, invoice: any, tenant: any, overdueInvoices: any[] = []): Promise<MessageContext> {
     const daysOverdue = invoice?.dueDate 
       ? Math.max(0, Math.floor((Date.now() - new Date(invoice.dueDate).getTime()) / (1000 * 60 * 60 * 24)))
       : action.metadata?.daysOverdue || 0;
@@ -331,6 +332,17 @@ export class MessagePreGenerationService {
 
     // Calculate total outstanding from all overdue invoices
     const totalFromInvoices = invoiceDetails.reduce((sum, inv) => sum + inv.amount, 0);
+
+    // Build conversation brief
+    let conversationBrief: string | undefined;
+    try {
+      if (contact.id && action.tenantId) {
+        const brief = await buildConversationBrief(action.tenantId, contact.id);
+        conversationBrief = brief.text;
+      }
+    } catch (err) {
+      // Non-fatal
+    }
 
     return {
       customerName: contact.name || 'Customer',
@@ -355,6 +367,7 @@ export class MessagePreGenerationService {
       tenantName: tenant.name || 'Accounts Team',
       tenantPhone: tenant.phone,
       tenantEmail: tenant.email,
+      conversationBrief,
     };
   }
 

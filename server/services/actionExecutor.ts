@@ -11,6 +11,7 @@ import { CircuitOpenError } from "./llmCircuitBreaker";
 import { ToneProfile, PlaybookStage } from "./playbookEngine";
 import { messagePreGenerator } from "./messagePreGenerator";
 import { resolvePrimaryEmail, resolvePrimarySmsNumber } from "./contactEmailResolver";
+import { buildConversationBrief } from "./conversationBriefService";
 
 /**
  * Action Executor Service
@@ -586,15 +587,27 @@ export class ActionExecutor {
   /**
    * Build message context from action data
    */
-  private buildMessageContext(
+  private async buildMessageContext(
     action: any,
     contact: any,
     invoice: any,
     tenant: any
-  ): MessageContext {
-    const daysOverdue = invoice?.dueDate 
+  ): Promise<MessageContext> {
+    const daysOverdue = invoice?.dueDate
       ? Math.max(0, Math.floor((Date.now() - new Date(invoice.dueDate).getTime()) / (1000 * 60 * 60 * 24)))
       : action.metadata?.daysOverdue || 0;
+
+    // Build conversation brief for full debtor context
+    let conversationBrief: string | undefined;
+    try {
+      if (contact.id && action.tenantId) {
+        const brief = await buildConversationBrief(action.tenantId, contact.id);
+        conversationBrief = brief.text;
+      }
+    } catch (err) {
+      console.warn(`⚠️ Failed to build conversation brief for ${contact.name}:`, err);
+      // Non-fatal — continue without brief
+    }
 
     return {
       customerName: contact.name || 'Customer',
@@ -618,6 +631,7 @@ export class ActionExecutor {
       tenantName: tenant.name || 'Accounts Team',
       tenantPhone: tenant.phone,
       tenantEmail: tenant.email,
+      conversationBrief,
     };
   }
 
@@ -650,7 +664,7 @@ export class ActionExecutor {
         return { success: false, error: 'Contact has no email address' };
       }
 
-      const messageContext = this.buildMessageContext(action, contact, invoice, tenant);
+      const messageContext = await this.buildMessageContext(action, contact, invoice, tenant);
       const toneSettings = this.buildToneSettings(action);
 
       let emailContent: { subject: string; body: string };
@@ -794,7 +808,7 @@ export class ActionExecutor {
 
       let message: string;
       let usedPreGenerated = false;
-      const messageContext = this.buildMessageContext(action, contact, invoice, tenant);
+      const messageContext = await this.buildMessageContext(action, contact, invoice, tenant);
       const toneSettings = this.buildToneSettings(action);
 
       if (action.content && action.content.trim() !== '') {
@@ -876,7 +890,7 @@ export class ActionExecutor {
         message = this.replaceTemplateVariables(action.content, contact, invoice);
       } else {
         console.log(`🤖 Generating AI WhatsApp message for ${contact.name}...`);
-        const messageContext = this.buildMessageContext(action, contact, invoice, tenant);
+        const messageContext = await this.buildMessageContext(action, contact, invoice, tenant);
         const toneSettings = this.buildToneSettings(action);
         const generated = await aiMessageGenerator.generateSMS(messageContext, toneSettings, {
           tenantId: action.tenantId,
@@ -927,7 +941,7 @@ export class ActionExecutor {
 
       let openingScript: string | undefined;
       let usedPreGenerated = false;
-      const messageContext = this.buildMessageContext(action, contact, invoice, tenant);
+      const messageContext = await this.buildMessageContext(action, contact, invoice, tenant);
       const toneSettings = this.buildToneSettings(action);
       
       if (!action.content || action.content.trim() === '') {

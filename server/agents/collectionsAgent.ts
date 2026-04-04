@@ -29,6 +29,7 @@ import {
   type ActionContext,
   type PolicyConstraints,
 } from "./prompts/collectionEmail";
+import { buildConversationBrief } from "../services/conversationBriefService";
 
 // ── Output type ──────────────────────────────────────────────
 
@@ -57,12 +58,13 @@ export async function generateCollectionEmail(
   // 1. Resolve persona
   const persona = personaOverride ?? await resolvePersona(tenantId);
 
-  // 2. Load debtor profile, invoices, history, and policy in parallel
-  const [debtor, outstandingInvoices, history, policy] = await Promise.all([
+  // 2. Load debtor profile, invoices, history, policy, and conversation brief in parallel
+  const [debtor, outstandingInvoices, history, policy, brief] = await Promise.all([
     loadDebtorProfile(tenantId, contactId),
     loadOutstandingInvoices(tenantId, contactId),
     loadConversationHistory(tenantId, contactId),
     loadPolicy(tenantId),
+    buildConversationBrief(tenantId, contactId),
   ]);
 
   // 3. Enforce vulnerable-customer tone ceiling
@@ -83,7 +85,7 @@ export async function generateCollectionEmail(
     cooldownDaysBetweenTouches: policy?.cooldownDaysBetweenTouches ?? undefined,
   };
   const systemPrompt = buildSystemPrompt(persona, policyConstraints, debtor.language, debtor.currency);
-  const userPrompt = buildUserPrompt(debtor, outstandingInvoices, history, effectiveAction);
+  const userPrompt = buildUserPrompt(debtor, outstandingInvoices, history, effectiveAction, brief.text);
 
   // 5. Call Claude (Sonnet — cost-effective, fast)
   const result = await generateJSON<CollectionEmailResult>({
