@@ -18,6 +18,24 @@ if (vonageClient) {
   console.log('  ✅ Vonage SMS client initialized');
 }
 
+/**
+ * Normalize a phone number to E.164 format without '+' prefix (Vonage requirement).
+ * UK mobiles: 07xxx → 447xxx, +447xxx → 447xxx, 00447xxx → 447xxx
+ */
+function normalizeToE164(phone: string): string {
+  let normalized = phone.replace(/[\s\-\(\)]/g, ''); // Strip whitespace, dashes, parens
+  if (normalized.startsWith('+')) {
+    normalized = normalized.slice(1);
+  }
+  if (normalized.startsWith('0044')) {
+    normalized = '44' + normalized.slice(4);
+  }
+  if (normalized.startsWith('0')) {
+    normalized = '44' + normalized.slice(1);
+  }
+  return normalized;
+}
+
 interface SMSParams {
   to: string;
   message: string;
@@ -63,7 +81,7 @@ export async function sendSMS(params: SMSParams & {
     }
 
     const from = params.from || fromNumber;
-    let to = params.to;
+    let to = normalizeToE164(params.to);
     let text = params.message;
 
     // SECURITY: Communication mode enforcement — MUST happen before any send
@@ -96,7 +114,7 @@ export async function sendSMS(params: SMSParams & {
           return { success: false, error: `No test phone numbers configured for ${mode} mode` };
         }
         const originalTo = to;
-        to = testPhones[0];
+        to = normalizeToE164(testPhones[0]);
         const modeLabel = mode === 'testing' ? 'TEST' : 'SOFT LIVE';
         text = `[${modeLabel}] Original recipient: ${originalTo}\n\n${text}`;
         console.log(`🧪 [SmsCommMode] ${modeLabel} redirect from ${originalTo} → ${to}`);
@@ -111,7 +129,7 @@ export async function sendSMS(params: SMSParams & {
       }
     }
 
-    console.log(`📤 Sending Vonage SMS from ${from} to ${to}`);
+    console.log(`📤 Sending Vonage SMS from=${from} to=${to} textLen=${text.length}`);
 
     const response = await vonageClient.sms.send({
       to,
@@ -126,10 +144,10 @@ export async function sendSMS(params: SMSParams & {
         console.log(`✅ Vonage SMS sent successfully! Message ID: ${message.messageId}`);
         return { success: true, messageId: message.messageId };
       } else {
-        console.error(`❌ Vonage SMS error: ${message.errorText}`);
+        console.error(`❌ Vonage SMS error: status=${message.status} error="${message.errorText}" to=${to} from=${from}`);
         return {
           success: false,
-          error: message.errorText || 'Failed to send SMS'
+          error: `Vonage status ${message.status}: ${message.errorText || 'Failed to send SMS'}`
         };
       }
     }
