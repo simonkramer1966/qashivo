@@ -171,14 +171,7 @@ export default function ActivityFeedTab() {
   if (channel !== "all") queryParams.set("channel", channel);
 
   const { data, isLoading } = useQuery<FeedResponse>({
-    queryKey: ["/api/action-centre/activity-feed", queryParams.toString()],
-    queryFn: async () => {
-      const res = await fetch(`/api/action-centre/activity-feed?${queryParams.toString()}`, {
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Failed to fetch activity feed");
-      return res.json();
-    },
+    queryKey: [`/api/action-centre/activity-feed?${queryParams.toString()}`],
     refetchInterval: 30_000,
   });
 

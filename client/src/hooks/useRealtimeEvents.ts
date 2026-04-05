@@ -71,6 +71,22 @@ const MAX_RETRIES = 3;
 const RETRY_DELAYS = [1000, 3000, 10000]; // Escalating retry delays
 
 /**
+ * Get Clerk session token for SSE connection.
+ * EventSource doesn't support custom headers, so we pass the token as a query param.
+ */
+async function getClerkToken(): Promise<string | undefined> {
+  try {
+    const clerk = (window as any).Clerk;
+    if (clerk?.session) {
+      return await clerk.session.getToken();
+    }
+  } catch {
+    // Clerk not initialised yet
+  }
+  return undefined;
+}
+
+/**
  * Hook that connects to the SSE endpoint and invalidates TanStack Query
  * caches when real-time events arrive from the server.
  *
@@ -86,10 +102,16 @@ export function useRealtimeEvents() {
     let cancelled = false;
     let retryTimeout: ReturnType<typeof setTimeout>;
 
-    function connect() {
+    async function connect() {
       if (cancelled) return;
 
-      const es = new EventSource("/api/events/stream", { withCredentials: true });
+      // EventSource doesn't support Authorization headers — pass token as query param
+      const token = await getClerkToken();
+      const url = token
+        ? `/api/events/stream?token=${encodeURIComponent(token)}`
+        : "/api/events/stream";
+
+      const es = new EventSource(url, { withCredentials: true });
       eventSourceRef.current = es;
 
       es.onopen = () => {

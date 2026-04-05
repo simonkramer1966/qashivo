@@ -90,12 +90,7 @@ export default function QollectionsAgentActivity() {
   });
 
   const { data: activityFeedData } = useQuery<{ inboundCount: number }>({
-    queryKey: ["/api/action-centre/activity-feed", "time=today"],
-    queryFn: async () => {
-      const res = await fetch("/api/action-centre/activity-feed?time=today", { credentials: "include" });
-      if (!res.ok) throw new Error("Failed");
-      return res.json();
-    },
+    queryKey: ["/api/action-centre/activity-feed?time=today"],
     refetchInterval: 30_000,
   });
 

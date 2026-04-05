@@ -659,7 +659,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerImpactRoutes(app);
 
   // ── SSE endpoint for real-time UI updates ──────────────────────
-  app.get('/api/events/stream', isAuthenticated, async (req, res) => {
+  // EventSource API doesn't support Authorization headers, so we also
+  // accept the Clerk token as a ?token= query parameter.
+  app.get('/api/events/stream', async (req, res, next) => {
+    // If token is in query param (SSE/EventSource), move it to the Authorization header
+    // so the standard isAuthenticated middleware can verify it.
+    const queryToken = req.query.token as string | undefined;
+    if (queryToken && !req.headers.authorization) {
+      req.headers.authorization = `Bearer ${queryToken}`;
+    }
+    return isAuthenticated(req, res, next);
+  }, async (req, res) => {
     const user = (req as any).user;
     const tenantId = user?.activeTenantId || user?.tenantId;
     if (!tenantId) {
