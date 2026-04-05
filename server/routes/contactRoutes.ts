@@ -3970,12 +3970,28 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
         .where(and(...tlConditions))
         .orderBy(desc(timelineEvents.occurredAt));
 
-      // Map channel to category for filtering
-      const channelToCategory = (channel: string): string => {
-        const ch = (channel || '').toLowerCase();
+      // Derive category from outcomeType > summary patterns > channel (most specific wins)
+      const deriveCategory = (tl: { channel: string; outcomeType: string | null; summary: string }): string => {
+        const ot = (tl.outcomeType || '').toLowerCase();
+        // 1. outcomeType (most specific)
+        if (ot === 'promise_to_pay' || ot === 'request_more_time' || ot === 'payment_plan'
+            || ot === 'promise_delayed' || ot === 'promise_accelerated') return 'Promises';
+        if (ot === 'dispute') return 'Disputes';
+        if (ot === 'paid_confirmed') return 'Payments';
+        if (ot === 'refused' || ot === 'wrong_contact') return 'Risk';
+
+        // 2. summary content patterns (when outcomeType is null)
+        if (!ot) {
+          const s = (tl.summary || '').toLowerCase();
+          if (s.includes('arrangement confirmed') || s.includes('payment confirmed')
+              || s.includes('promise') || s.includes('payment arrangement')) return 'Promises';
+          if (s.includes('dispute')) return 'Disputes';
+        }
+
+        // 3. channel fallback
+        const ch = (tl.channel || '').toLowerCase();
         if (ch === 'email' || ch === 'sms' || ch === 'voice') return 'Communications';
         if (ch === 'note' || ch === 'internal') return 'Notes';
-        if (ch === 'system') return 'System';
         if (ch === 'payment') return 'Payments';
         return 'System';
       }
@@ -3989,7 +4005,7 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
 
       // Map timeline_events to unified activity shape
       const tlMapped = tlRows
-        .filter(tl => !category || channelToCategory(tl.channel) === category)
+        .filter(tl => !category || deriveCategory(tl) === category)
         .map(tl => {
           // For agent-sent outbound emails, show persona name instead of user name
           let displayTriggeredBy = tl.createdByName || tl.createdByType || 'system';
@@ -3999,7 +4015,7 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
           return {
             id: tl.id,
             eventType: tl.channel,
-            category: channelToCategory(tl.channel),
+            category: deriveCategory(tl),
             title: tl.summary,
             description: tl.preview || tl.subject || null,
             triggeredBy: displayTriggeredBy,
@@ -5088,8 +5104,9 @@ ${type === 'email' ? 'Generate a JSON object with "subject" (string) and "body" 
           id: crypto.randomUUID(),
           tenantId: user.tenantId,
           customerId: contactId,
-          channel: "internal",
+          channel: "system",
           direction: "internal",
+          occurredAt: now,
           summary: `Promoted to VIP: ${reason}${note ? " — " + note : ""}`,
           createdByName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email,
           createdByType: "user",
@@ -5235,8 +5252,9 @@ ${type === 'email' ? 'Generate a JSON object with "subject" (string) and "body" 
           id: crypto.randomUUID(),
           tenantId: user.tenantId,
           customerId: contactId,
-          channel: "internal",
+          channel: "system",
           direction: "internal",
+          occurredAt: now,
           summary: `Returned from VIP to automated chasing: ${reason}${note ? " — " + note : ""}. Resume mode: ${resumeMode === "scratch" ? "from scratch" : "where left off"}.`,
           createdByName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email,
           createdByType: "user",
