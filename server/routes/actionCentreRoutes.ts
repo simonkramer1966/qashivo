@@ -414,6 +414,18 @@ export function registerActionCentreRoutes(app: Express): void {
         .orderBy(desc(timelineEvents.occurredAt))
         .limit(500);
 
+      // Fix up legacy SMS summaries that show raw "sms action" or phone numbers
+      for (const row of timelineRows) {
+        if (row.channel === "sms" && row.direction === "outbound") {
+          const s = (row.summary || "").toLowerCase();
+          if (s === "sms action" || s.startsWith("sms sent to 0") || s.startsWith("sms sent to +") || /sms sent to \d/.test(s)) {
+            row.summary = row.body
+              ? `SMS: ${row.body.substring(0, 100)}`
+              : `SMS sent to ${row.contactName || "contact"}`;
+          }
+        }
+      }
+
       // Collect action IDs already represented in timeline events to avoid duplicates
       const timelineActionIds = new Set(
         timelineRows.filter(e => e.actionId).map(e => e.actionId!)
@@ -460,7 +472,12 @@ export function registerActionCentreRoutes(app: Express): void {
             companyName: row.companyName || null,
             direction: "outbound",
             channel: ch,
-            summary: a.actionSummary || a.subject || `${a.type} action${statusLabel}`,
+            summary: a.actionSummary || a.subject
+              || (ch === "sms"
+                ? (a.content ? `SMS: ${a.content.substring(0, 100)}` : `SMS sent to ${row.contactName || "contact"}${statusLabel}`)
+                : ch === "voice"
+                  ? `Voice call to ${row.contactName || "contact"}${statusLabel}`
+                  : `Email to ${row.contactName || "contact"}${statusLabel}`),
             preview: a.content?.substring(0, 240) || null,
             subject: a.subject || null,
             body: a.content || null,
@@ -599,16 +616,13 @@ export function registerActionCentreRoutes(app: Express): void {
         }
       }
 
-      // Sort groups: inbound first, then by latest activity
+      // Sort groups: most recent activity first (morning scan order).
+      // Inbound groups get a small boost but don't override recency.
       const groups = Array.from(debtorMap.values())
-        .sort((a, b) => {
-          if (a.hasInbound && !b.hasInbound) return -1;
-          if (!a.hasInbound && b.hasInbound) return 1;
-          return b.latestAt.getTime() - a.latestAt.getTime();
-        })
+        .sort((a, b) => b.latestAt.getTime() - a.latestAt.getTime())
         .map(g => ({
           ...g,
-          events: g.events.reverse(), // chronological within group (oldest first)
+          events: g.events, // newest first within each group (descending)
         }));
 
       // Summary counts
