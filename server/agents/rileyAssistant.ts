@@ -642,7 +642,7 @@ async function buildInvoiceDetailContext(invoiceId: string, tenantId: string): P
 }
 
 async function buildActivityContext(tenantId: string): Promise<string> {
-  const lines: string[] = ["PAGE CONTEXT: Agent Activity"];
+  const lines: string[] = ["PAGE CONTEXT: Action Centre — Activity Feed"];
 
   try {
     const recentActions = await storage.getActions(tenantId, 30);

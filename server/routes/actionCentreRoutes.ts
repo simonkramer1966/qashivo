@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { isAuthenticated } from "../auth";
 import { storage } from "../storage";
 import { db } from "../db";
-import { actions, actionBatches, rejectionPatterns, tenants, messageDrafts, contacts, invoices, disputes, complianceChecks, emailMessages, promisesToPay, paymentPlans, customerLearningProfiles, inboundMessages, paymentPromises, aiFacts, customerPreferences } from "@shared/schema";
+import { actions, actionBatches, rejectionPatterns, tenants, messageDrafts, contacts, invoices, disputes, complianceChecks, emailMessages, promisesToPay, paymentPlans, customerLearningProfiles, inboundMessages, paymentPromises, aiFacts, customerPreferences, timelineEvents } from "@shared/schema";
 import { eq, and, inArray, desc, asc, sql, or, gte, lte, count, sum, not, isNull, isNotNull, between } from "drizzle-orm";
 import { batchProcessor } from "../services/batchProcessor";
 import { z } from "zod";
@@ -312,6 +312,183 @@ export function registerActionCentreRoutes(app: Express): void {
       res.json({ message: "Action moved to immediate send", actionId });
     } catch (error: any) {
       console.error("Error sending action now:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ── GET /api/action-centre/activity-feed ─────────────────────
+  // Unified, debtor-threaded activity feed for the Activity Feed tab
+  app.get("/api/action-centre/activity-feed", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const direction = req.query.direction as string | undefined; // inbound | outbound
+      const channel = req.query.channel as string | undefined; // email | sms | voice | system
+      const timeRange = (req.query.time as string) || "today"; // today | yesterday | week | month
+
+      // Build time filter
+      const now = new Date();
+      let timeStart: Date;
+      switch (timeRange) {
+        case "yesterday": {
+          const y = new Date(now);
+          y.setDate(y.getDate() - 1);
+          y.setHours(0, 0, 0, 0);
+          timeStart = y;
+          break;
+        }
+        case "week": {
+          const w = new Date(now);
+          w.setDate(w.getDate() - 7);
+          w.setHours(0, 0, 0, 0);
+          timeStart = w;
+          break;
+        }
+        case "month": {
+          const m = new Date(now);
+          m.setMonth(m.getMonth() - 1);
+          m.setHours(0, 0, 0, 0);
+          timeStart = m;
+          break;
+        }
+        default: { // today
+          const t = new Date(now);
+          t.setHours(0, 0, 0, 0);
+          timeStart = t;
+        }
+      }
+
+      // Build WHERE conditions for timelineEvents
+      const conditions: any[] = [
+        eq(timelineEvents.tenantId, user.tenantId),
+        gte(timelineEvents.occurredAt, timeStart),
+      ];
+      if (direction) {
+        conditions.push(eq(timelineEvents.direction, direction));
+      }
+      if (channel) {
+        if (channel === "system") {
+          conditions.push(inArray(timelineEvents.channel, ["system", "note"]));
+        } else {
+          conditions.push(eq(timelineEvents.channel, channel));
+        }
+      }
+
+      // Fetch events with contact info
+      const events = await db
+        .select({
+          id: timelineEvents.id,
+          customerId: timelineEvents.customerId,
+          contactName: contacts.name,
+          companyName: contacts.companyName,
+          direction: timelineEvents.direction,
+          channel: timelineEvents.channel,
+          summary: timelineEvents.summary,
+          preview: timelineEvents.preview,
+          subject: timelineEvents.subject,
+          body: timelineEvents.body,
+          status: timelineEvents.status,
+          occurredAt: timelineEvents.occurredAt,
+          outcomeType: timelineEvents.outcomeType,
+          createdByType: timelineEvents.createdByType,
+          createdByName: timelineEvents.createdByName,
+          actionId: timelineEvents.actionId,
+        })
+        .from(timelineEvents)
+        .leftJoin(contacts, eq(timelineEvents.customerId, contacts.id))
+        .where(and(...conditions))
+        .orderBy(desc(timelineEvents.occurredAt))
+        .limit(500);
+
+      // Group by debtor
+      const debtorMap = new Map<string, {
+        contactId: string;
+        contactName: string;
+        companyName: string | null;
+        events: typeof events;
+        hasInbound: boolean;
+        latestAt: Date;
+        statusColor: string;
+      }>();
+
+      for (const evt of events) {
+        const cid = evt.customerId || "unknown";
+        let group = debtorMap.get(cid);
+        if (!group) {
+          group = {
+            contactId: cid,
+            contactName: evt.contactName || "Unknown",
+            companyName: evt.companyName || null,
+            events: [],
+            hasInbound: false,
+            latestAt: evt.occurredAt!,
+            statusColor: "blue",
+          };
+          debtorMap.set(cid, group);
+        }
+        group.events.push(evt);
+        if (evt.direction === "inbound") group.hasInbound = true;
+        if (evt.occurredAt && evt.occurredAt > group.latestAt) {
+          group.latestAt = evt.occurredAt;
+        }
+
+        // Determine status color based on events
+        if (evt.outcomeType === "dispute" || evt.channel === "system" && evt.summary?.toLowerCase().includes("dispute")) {
+          group.statusColor = "red";
+        } else if (evt.outcomeType === "paid_confirmed" || evt.outcomeType === "promise_to_pay" || evt.outcomeType === "payment_plan") {
+          if (group.statusColor !== "red") group.statusColor = "green";
+        } else if (evt.direction === "inbound" && !evt.outcomeType) {
+          if (group.statusColor !== "red" && group.statusColor !== "green") group.statusColor = "amber";
+        }
+      }
+
+      // Sort groups: inbound first, then by latest activity
+      const groups = Array.from(debtorMap.values())
+        .sort((a, b) => {
+          if (a.hasInbound && !b.hasInbound) return -1;
+          if (!a.hasInbound && b.hasInbound) return 1;
+          return b.latestAt.getTime() - a.latestAt.getTime();
+        })
+        .map(g => ({
+          ...g,
+          events: g.events.reverse(), // chronological within group (oldest first)
+        }));
+
+      // Summary counts
+      const summary = {
+        emailsSent: 0,
+        repliesReceived: 0,
+        arrangementsConfirmed: 0,
+        disputesRaised: 0,
+      };
+      for (const evt of events) {
+        if (evt.direction === "outbound" && (evt.channel === "email" || evt.channel === "sms")) {
+          summary.emailsSent++;
+        }
+        if (evt.direction === "inbound") {
+          summary.repliesReceived++;
+        }
+        if (evt.outcomeType === "promise_to_pay" || evt.outcomeType === "payment_plan") {
+          summary.arrangementsConfirmed++;
+        }
+        if (evt.outcomeType === "dispute") {
+          summary.disputesRaised++;
+        }
+      }
+
+      // Inbound count for badge
+      const inboundCount = events.filter(e => e.direction === "inbound").length;
+
+      res.json({
+        groups,
+        summary,
+        inboundCount,
+        total: events.length,
+        timeRange,
+      });
+    } catch (error: any) {
+      console.error("Error fetching activity feed:", error);
       res.status(500).json({ message: error.message });
     }
   });

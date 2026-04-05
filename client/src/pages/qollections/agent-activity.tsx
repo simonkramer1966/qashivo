@@ -6,7 +6,7 @@ import CountdownBanner from "@/components/action-centre/CountdownBanner";
 import OverviewTab from "@/components/action-centre/OverviewTab";
 import ApprovalsTab from "@/components/action-centre/ApprovalsTab";
 import ScheduledTab from "@/components/action-centre/ScheduledTab";
-import ActionedTab from "@/components/action-centre/ActionedTab";
+import ActivityFeedTab from "@/components/action-centre/ActivityFeedTab";
 import ExceptionsTab from "@/components/action-centre/ExceptionsTab";
 import VipTab from "@/components/action-centre/VipTab";
 import { cn } from "@/lib/utils";
@@ -88,6 +88,16 @@ export default function QollectionsAgentActivity() {
     refetchInterval: 15_000,
   });
 
+  const { data: activityFeedData } = useQuery<{ inboundCount: number }>({
+    queryKey: ["/api/action-centre/activity-feed", "time=today"],
+    queryFn: async () => {
+      const res = await fetch("/api/action-centre/activity-feed?time=today", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    refetchInterval: 30_000,
+  });
+
   const { data: vipData } = useQuery<{ total: number }>({
     queryKey: ["/api/contacts/vip"],
     refetchInterval: 30_000,
@@ -96,6 +106,7 @@ export default function QollectionsAgentActivity() {
   const approvalMode = (context?.tenant as any)?.approvalMode ?? "manual";
   const approvalCount = approvalsData?.total ?? 0;
   const scheduledCount = scheduledData?.total ?? 0;
+  const activityInboundCount = activityFeedData?.inboundCount ?? 0;
   const exceptionCount = (exceptionsData?.totalExceptions ?? 0) + (exceptionsData?.totalPatterns ?? 0);
   const vipCount = vipData?.total ?? 0;
 
@@ -154,7 +165,7 @@ export default function QollectionsAgentActivity() {
               </TabButton>
 
               <TabButton active={activeTab === "activity"} onClick={() => setTab("activity")}>
-                Sent
+                {tabLabel("Activity Feed", activityInboundCount)}
               </TabButton>
 
               <TabButton active={activeTab === "vip"} onClick={() => setTab("vip")}>
@@ -191,7 +202,7 @@ export default function QollectionsAgentActivity() {
           {activeTab === "queue" && showApprovals && <ApprovalsTab />}
           {activeTab === "scheduled" && <ScheduledTab />}
           {activeTab === "vip" && <VipTab />}
-          {activeTab === "activity" && <ActionedTab />}
+          {activeTab === "activity" && <ActivityFeedTab />}
           {activeTab === "exceptions" && <ExceptionsTab subTab={exceptionSubTab ?? undefined} />}
         </div>
       </div>
