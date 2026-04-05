@@ -652,6 +652,24 @@ export function registerWebhookRoutes(app: Express) {
 
       console.log(`✅ Inbound SMS stored: ${message.id}`);
 
+      // Create timeline event so SMS appears in Activity Feed
+      await db.insert(timelineEvents).values({
+        tenantId: contact.tenantId,
+        customerId: contact.id,
+        channel: 'sms',
+        direction: 'inbound',
+        summary: `SMS from ${contact.name || fromPhone}: "${text.substring(0, 120)}"`,
+        preview: text.substring(0, 200),
+        body: text,
+        status: 'received',
+        occurredAt: new Date(),
+        createdByType: 'system',
+        createdByName: contact.name || fromPhone,
+        participantsFrom: fromPhone,
+        providerMessageId: messageId ?? null,
+        provider: 'vonage',
+      });
+
       // Notify connected UI clients
       const { emitTenantEvent } = await import("../services/realtimeEvents");
       emitTenantEvent(contact.tenantId, 'inbound_sms', {
@@ -739,6 +757,24 @@ export function registerWebhookRoutes(app: Express) {
         .returning();
 
       console.log(`✅ Inbound WhatsApp stored: ${msg.id}`);
+
+      // Create timeline event so WhatsApp appears in Activity Feed
+      await db.insert(timelineEvents).values({
+        tenantId: contact.tenantId,
+        customerId: contact.id,
+        channel: 'whatsapp',
+        direction: 'inbound',
+        summary: `WhatsApp from ${contact.name || fromPhone}: "${messageText.substring(0, 120)}"`,
+        preview: messageText.substring(0, 200),
+        body: messageText,
+        status: 'received',
+        occurredAt: new Date(),
+        createdByType: 'system',
+        createdByName: contact.name || fromPhone,
+        participantsFrom: fromPhone,
+        providerMessageId: message_uuid ?? null,
+        provider: 'vonage',
+      });
 
       // Record WhatsApp reply signal
       const { signalCollector } = await import("../lib/signal-collector");

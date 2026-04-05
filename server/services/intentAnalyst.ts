@@ -1,7 +1,7 @@
 import { generateJSON } from "./llm/claude";
 import { db } from "../db";
-import { inboundMessages, actions, contacts, invoices, paymentPlans, paymentPlanInvoices, users, outcomes, emailClarifications, tenants, emailMessages, customerContactPersons, forecastUserAdjustments, paymentPromises, timelineEvents } from "@shared/schema";
-import { eq, and, desc, inArray, asc, sql, gte } from "drizzle-orm";
+import { inboundMessages, actions, contacts, invoices, paymentPlans, paymentPlanInvoices, users, outcomes, emailClarifications, tenants, emailMessages, customerContactPersons, forecastUserAdjustments, paymentPromises, timelineEvents, aiFacts } from "@shared/schema";
+import { eq, and, desc, inArray, notInArray, asc, sql, gte, lt } from "drizzle-orm";
 import { getPromiseReliabilityService } from "./promiseReliabilityService.js";
 import { emailClarificationService } from "./emailClarificationService.js";
 import { processInboundReply } from "./inboundReplyPipeline";
@@ -394,7 +394,15 @@ CRITICAL EXCEPTIONS — do NOT flag ambiguity when:
         .where(eq(inboundMessages.id, messageId));
 
       console.log(`✅ Intent analyzed: ${analysis.intentType} (${(analysis.confidence * 100).toFixed(0)}% confidence)${analysis.requiresHumanReview ? ' [HUMAN REVIEW]' : ''}`);
-      
+
+      // Check if debtor has overdue invoices — used for PTP flow gating (all channels)
+      let debtorHasOverdue = false;
+      if (message.contactId &&
+          (analysis.intentType === 'promise_to_pay' || analysis.intentType === 'payment_plan') &&
+          analysis.confidence >= this.CONFIDENCE_THRESHOLD) {
+        debtorHasOverdue = await this.checkDebtorHasOverdueInvoices(message.tenantId, message.contactId);
+      }
+
       // Check if this is a response to a pending clarification (EMAIL only)
       if (message.channel === 'email' || message.channel === 'EMAIL') {
         const pendingResult = message.contactId 
@@ -445,8 +453,9 @@ CRITICAL EXCEPTIONS — do NOT flag ambiguity when:
           message.from;
 
         let confirmationSent = false;
-        if (shouldConfirm) {
-          // Check for active promises to detect modification vs new promise
+
+        if (shouldConfirm && debtorHasOverdue) {
+          // Standard PTP confirmation flow — debtor has overdue invoices
           const activePromise = analysis.intentType === 'promise_to_pay' && message.contactId
             ? await this.findActivePromise(message.tenantId, message.contactId)
             : null;
@@ -459,6 +468,11 @@ CRITICAL EXCEPTIONS — do NOT flag ambiguity when:
 
           await this.sendConfirmationEmail(message, analysis, context, activePromise);
           confirmationSent = true;
+        } else if (shouldConfirm && !debtorHasOverdue) {
+          // Early intelligence — debtor mentioned payment timing but nothing is overdue
+          console.log(`📋 Early intelligence: debtor mentioned payment date but has no overdue invoices — storing as aiFact, skipping confirmation`);
+          await this.storeEarlyPaymentIntelligence(message, analysis, context);
+          confirmationSent = true; // Prevent auto-reply since we've handled it
         }
 
         // Active conversation auto-reply: if the debtor is in an active conversation
@@ -471,8 +485,18 @@ CRITICAL EXCEPTIONS — do NOT flag ambiguity when:
         }
       }
 
+      // For non-email channels: store early intelligence if PTP detected with no overdue invoices
+      if (message.channel !== 'email' && message.channel !== 'EMAIL' &&
+          !debtorHasOverdue &&
+          (analysis.intentType === 'promise_to_pay' || analysis.intentType === 'payment_plan') &&
+          analysis.confidence >= this.CONFIDENCE_THRESHOLD &&
+          message.contactId) {
+        console.log(`📋 Early intelligence (${message.channel}): debtor mentioned payment date but has no overdue invoices`);
+        await this.storeEarlyPaymentIntelligence(message, analysis, context);
+      }
+
       // Determine if we should create an action
-      const shouldCreateAction = 
+      const shouldCreateAction =
         analysis.intentType === 'dispute' ||       // Always create for disputes
         (analysis.confidence >= this.CONFIDENCE_THRESHOLD && analysis.intentType !== 'unknown');
       
@@ -487,9 +511,11 @@ CRITICAL EXCEPTIONS — do NOT flag ambiguity when:
         
         // Create promise record if this is a promise_to_pay intent with high confidence
         // Detects modifications to existing active promises vs genuinely new promises
+        // Only create formal PTP records when the debtor actually has overdue invoices
         if (analysis.intentType === 'promise_to_pay' &&
             analysis.confidence >= this.CONFIDENCE_THRESHOLD &&
-            message.contactId && message.invoiceId) {
+            message.contactId && message.invoiceId &&
+            debtorHasOverdue) {
           const modificationResult = await this.detectAndHandlePromiseModification(message, analysis, context);
           if (!modificationResult.isModification) {
             // Genuinely new promise — create fresh records
@@ -1091,6 +1117,79 @@ CRITICAL EXCEPTIONS — do NOT flag ambiguity when:
       .limit(1);
 
     return active || null;
+  }
+
+  /**
+   * Check if a debtor has any overdue invoices (dueDate < now, status not paid/void/draft).
+   */
+  private async checkDebtorHasOverdueInvoices(tenantId: string, contactId: string): Promise<boolean> {
+    const [overdueInvoice] = await db
+      .select({ id: invoices.id })
+      .from(invoices)
+      .where(
+        and(
+          eq(invoices.tenantId, tenantId),
+          eq(invoices.contactId, contactId),
+          lt(invoices.dueDate, new Date()),
+          notInArray(invoices.invoiceStatus, ['PAID', 'VOIDED', 'DELETED', 'DRAFT']),
+        )
+      )
+      .limit(1);
+
+    return !!overdueInvoice;
+  }
+
+  /**
+   * Store early payment intelligence when a debtor mentions payment timing
+   * but has no overdue invoices. Stored as an aiFact for Riley and Charlie
+   * to reference when the invoice eventually becomes overdue.
+   */
+  private async storeEarlyPaymentIntelligence(
+    message: typeof inboundMessages.$inferSelect,
+    analysis: IntentAnalysisResult,
+    context: any,
+  ): Promise<void> {
+    try {
+      const extractedDates = analysis.extractedEntities.dates || [];
+      const dateStr = extractedDates[0] || 'unspecified date';
+
+      // Store as aiFact for future reference
+      await db.insert(aiFacts).values({
+        tenantId: message.tenantId,
+        category: 'payment_behaviour',
+        title: `Early payment signal — expects to pay ${dateStr}`,
+        content: `Debtor indicated payment timing before invoice is overdue. Original message (${message.channel}): "${message.content}". Extracted date: ${dateStr}. No invoices are currently overdue — this is advance notice of potential late payment. When invoices become overdue, Charlie can reference this: "I understand you mentioned ${dateStr} — just confirming that's still the plan?"`,
+        tags: ['early_intelligence', 'payment_timing', 'pre_overdue'],
+        priority: 7,
+        source: 'intent_extraction',
+        entityType: 'debtor',
+        entityId: message.contactId,
+        factKey: 'expected_payment_date',
+        factValue: dateStr,
+        confidence: String(analysis.confidence),
+        expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 90 days
+      });
+
+      // Create a note action (not a PTP) to appear in Activity Feed
+      if (message.contactId) {
+        await db.insert(actions).values({
+          tenantId: message.tenantId,
+          contactId: message.contactId,
+          invoiceId: message.invoiceId,
+          type: 'note',
+          status: 'completed',
+          subject: 'Early Payment Intelligence',
+          content: `Debtor mentioned payment timing ("${message.content?.substring(0, 150)}") but no invoices are currently overdue. Stored as advance notice — will be referenced when invoices become due.`,
+          source: 'charlie_inbound',
+          aiGenerated: true,
+          completedAt: new Date(),
+        });
+      }
+
+      console.log(`✅ Early payment intelligence stored as aiFact for contact ${message.contactId}`);
+    } catch (err) {
+      console.error('Failed to store early payment intelligence (non-fatal):', err);
+    }
   }
 
   /**
