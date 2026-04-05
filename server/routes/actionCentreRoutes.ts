@@ -3,7 +3,7 @@ import { isAuthenticated } from "../auth";
 import { storage } from "../storage";
 import { db } from "../db";
 import { actions, actionBatches, rejectionPatterns, tenants, messageDrafts, contacts, invoices, disputes, complianceChecks, emailMessages, promisesToPay, paymentPlans, customerLearningProfiles, inboundMessages, paymentPromises, aiFacts, customerPreferences, timelineEvents } from "@shared/schema";
-import { eq, and, inArray, desc, asc, sql, or, gte, lte, count, sum, not, isNull, isNotNull, between } from "drizzle-orm";
+import { eq, and, inArray, desc, asc, sql, or, gte, lte, lt, count, sum, not, isNull, isNotNull, between } from "drizzle-orm";
 import { batchProcessor } from "../services/batchProcessor";
 import { z } from "zod";
 
@@ -328,7 +328,7 @@ export function registerActionCentreRoutes(app: Express): void {
       const timeRange = (req.query.time as string) || "today"; // today | yesterday | week | month
 
       // Build time filter using tenant's timezone (default Europe/London)
-      // On Railway (UTC), "today" must mean midnight in the tenant's timezone
+      // On Railway (UTC), "today" must mean midnight-local to midnight-local+1day
       const tenantRow = await db
         .select({ tz: tenants.executionTimezone })
         .from(tenants)
@@ -336,40 +336,52 @@ export function registerActionCentreRoutes(app: Express): void {
         .limit(1);
       const tz = tenantRow[0]?.tz || "Europe/London";
 
-      // Compute midnight in the tenant's timezone as a UTC Date.
-      // Uses Intl to get the correct local date, then calculates the UTC offset.
-      const midnightInTz = (offsetDays: number): Date => {
+      // Get the UTC offset for the tenant's timezone right now (handles DST)
+      const getTzOffsetMs = (): number => {
         const now = new Date();
-        // Get today's date string in the tenant's timezone (YYYY-MM-DD)
-        const localDateStr = new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(now);
-        const [year, month, day] = localDateStr.split("-").map(Number);
-        // Target date (with offset) at midnight UTC
-        const target = new Date(Date.UTC(year, month - 1, day + offsetDays, 0, 0, 0));
-        // Calculate TZ offset: format the target UTC time in the tenant's TZ
-        // and see what hour it shows — the difference is the offset
-        const parts = new Intl.DateTimeFormat("en-GB", {
-          timeZone: tz, hour: "numeric", hour12: false,
-        }).formatToParts(target);
-        const localHour = parseInt(parts.find(p => p.type === "hour")?.value || "0");
-        // If midnight UTC shows as e.g. 01:00 local, then local is UTC+1,
-        // meaning midnight local = 23:00 UTC the day before
-        target.setUTCHours(target.getUTCHours() - localHour);
-        return target;
+        // Format current time in tenant TZ to extract components
+        const fmt = new Intl.DateTimeFormat("en-GB", {
+          timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit",
+          hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+        });
+        const parts = fmt.formatToParts(now);
+        const get = (t: string) => parseInt(parts.find(p => p.type === t)?.value || "0");
+        // Build a UTC date from what the local clock reads
+        const localAsUtc = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second"));
+        // Offset = localAsUtc - actualUtc
+        return localAsUtc - now.getTime();
       };
+      const tzOffsetMs = getTzOffsetMs();
 
+      // Midnight in tenant timezone = start of "today" local, expressed as UTC
+      const midnightLocalToday = ((): Date => {
+        const now = new Date();
+        // Current local time components
+        const localMs = now.getTime() + tzOffsetMs;
+        const localDate = new Date(localMs);
+        // Midnight local = start of that day
+        localDate.setUTCHours(0, 0, 0, 0);
+        // Convert back to UTC
+        return new Date(localDate.getTime() - tzOffsetMs);
+      })();
+
+      const oneDay = 24 * 60 * 60 * 1000;
       let timeStart: Date;
+      let timeEnd: Date | null = null; // null = no upper bound (through now)
+
       switch (timeRange) {
         case "yesterday":
-          timeStart = midnightInTz(-1);
+          timeStart = new Date(midnightLocalToday.getTime() - oneDay);
+          timeEnd = midnightLocalToday; // exclusive: up to but not including today
           break;
         case "week":
-          timeStart = midnightInTz(-7);
+          timeStart = new Date(midnightLocalToday.getTime() - 7 * oneDay);
           break;
         case "month":
-          timeStart = midnightInTz(-30);
+          timeStart = new Date(midnightLocalToday.getTime() - 30 * oneDay);
           break;
         default: // today
-          timeStart = midnightInTz(0);
+          timeStart = midnightLocalToday;
       }
 
       // Build WHERE conditions for timelineEvents
@@ -377,6 +389,9 @@ export function registerActionCentreRoutes(app: Express): void {
         eq(timelineEvents.tenantId, user.tenantId),
         gte(timelineEvents.occurredAt, timeStart),
       ];
+      if (timeEnd) {
+        conditions.push(lt(timelineEvents.occurredAt, timeEnd));
+      }
       if (direction) {
         conditions.push(eq(timelineEvents.direction, direction));
       }
@@ -442,6 +457,7 @@ export function registerActionCentreRoutes(app: Express): void {
           gte(actions.createdAt, timeStart),
           inArray(actions.status, ["completed", "sent", "failed"]),
         ];
+        if (timeEnd) actionConditions.push(lt(actions.createdAt, timeEnd));
         if (channel && channel !== "system") {
           actionConditions.push(eq(actions.type, channel === "voice" ? "voice" : channel));
         }
@@ -497,6 +513,7 @@ export function registerActionCentreRoutes(app: Express): void {
           eq(inboundMessages.tenantId, user.tenantId),
           gte(inboundMessages.createdAt, timeStart),
         ];
+        if (timeEnd) inboundConditions.push(lt(inboundMessages.createdAt, timeEnd));
         if (channel && channel !== "system") {
           inboundConditions.push(eq(inboundMessages.channel, channel));
         }
@@ -564,28 +581,41 @@ export function registerActionCentreRoutes(app: Express): void {
         }
       }
 
+      // Final dedup pass: if two events have the same contactId + channel + direction
+      // within a 2-minute window, keep the first (timeline event) and drop the second (backfill).
+      // This catches SMS/email duplicates where timeline_event exists but has no actionId link.
+      const truncTo2Min = (d: Date | null | undefined) => d ? Math.floor(d.getTime() / 120000) : 0;
+      const seenSigs = new Set<string>();
+      const deduped: FeedEvent[] = [];
+      for (const evt of events) {
+        const sig = `${evt.customerId}-${evt.channel}-${evt.direction}-${truncTo2Min(evt.occurredAt)}`;
+        if (seenSigs.has(sig)) continue;
+        seenSigs.add(sig);
+        deduped.push(evt);
+      }
+
       // Sort all events by occurredAt descending
-      events.sort((a, b) => {
+      deduped.sort((a, b) => {
         const aTime = a.occurredAt?.getTime() || 0;
         const bTime = b.occurredAt?.getTime() || 0;
         return bTime - aTime;
       });
 
       // Trim to 500
-      if (events.length > 500) events.length = 500;
+      if (deduped.length > 500) deduped.length = 500;
 
       // Group by debtor
       const debtorMap = new Map<string, {
         contactId: string;
         contactName: string;
         companyName: string | null;
-        events: typeof events;
+        events: typeof deduped;
         hasInbound: boolean;
         latestAt: Date;
         statusColor: string;
       }>();
 
-      for (const evt of events) {
+      for (const evt of deduped) {
         const cid = evt.customerId || "unknown";
         let group = debtorMap.get(cid);
         if (!group) {
@@ -632,7 +662,7 @@ export function registerActionCentreRoutes(app: Express): void {
         arrangementsConfirmed: 0,
         disputesRaised: 0,
       };
-      for (const evt of events) {
+      for (const evt of deduped) {
         if (evt.direction === "outbound" && (evt.channel === "email" || evt.channel === "sms")) {
           summary.emailsSent++;
         }
@@ -648,13 +678,13 @@ export function registerActionCentreRoutes(app: Express): void {
       }
 
       // Inbound count for badge
-      const inboundCount = events.filter(e => e.direction === "inbound").length;
+      const inboundCount = deduped.filter(e => e.direction === "inbound").length;
 
       res.json({
         groups,
         summary,
         inboundCount,
-        total: events.length,
+        total: deduped.length,
         timeRange,
       });
     } catch (error: any) {
