@@ -411,42 +411,41 @@ Generate a personalised, professional email.`;
   }
 
   private buildSMSSystemPrompt(toneSettings: ToneSettings): string {
-    const stageGuidance: Record<PlaybookStage, string> = {
-      CREDIT_CONTROL: `STAGE: CREDIT CONTROL (under 60 days overdue)
-- Tone: Friendly, helpful reminder
-- Assume it may be an oversight
-- Offer to help if there's an issue
-- Example: "Hi Sarah,\\n£1,250 on inv 2341 was due 5 Dec.\\nPlease pay or let us know if there's an issue. ABC Ltd"`,
-      RECOVERY: `STAGE: RECOVERY (60+ days overdue)
-- Tone: Formal, direct, urgent
-- Emphasise days overdue
-- Mention avoiding further action
-- Example: "Hi Sarah,\\n£1,250 is 45 days overdue.\\nPay today to avoid escalation. ABC Ltd 020 7123 4567"`,
-      LEGAL: `STAGE: PRE-LEGAL (escalation)
-- Tone: Formal, final warning
-- Clear consequence if not paid
-- Request immediate contact`
+    // SMS is a one-way nudge channel for MVP — points debtors to check their email.
+    // No amounts, no invoice numbers, no links, no phone numbers.
+    const toneGuidance: Record<string, string> = {
+      friendly: `TONE: Friendly
+- Example: "Hi Sarah, just a quick note — we sent you an email about your account. Could you take a look? Thanks, James"`,
+      professional: `TONE: Professional
+- Example: "Hi Sarah, we've sent an email regarding outstanding invoices on your account. We'd appreciate your response. Thanks, James"`,
+      firm: `TONE: Firm
+- Example: "Hi Sarah, we've been trying to reach you by email about overdue invoices. Please check your inbox at your earliest convenience. James"`,
     };
 
-    const guidance = stageGuidance[toneSettings.stage] || stageGuidance.CREDIT_CONTROL;
+    const stage = toneSettings.stage;
+    let tone = 'professional';
+    if (stage === 'CREDIT_CONTROL') tone = 'friendly';
+    else if (stage === 'RECOVERY') tone = 'firm';
 
-    return `You are a UK credit control specialist writing collection SMS messages.
+    const guidance = toneGuidance[tone] || toneGuidance.professional;
+
+    return `You are a UK credit control specialist writing a brief SMS nudge.
+
+SMS is a ONE-WAY nudge channel. The purpose is ONLY to direct the debtor to check their email.
 
 ${guidance}
 
-OBJECTIVE: Get a payment date. Make it easy for the debtor to reply with when they'll pay.
-
 CRITICAL RULES:
 - HARD LIMIT: 160 characters maximum - count carefully before responding
-- Use ONLY total amount and invoice count - NEVER list invoice numbers
-- Every word must earn its place
-- Clear call to action (pay/call)
+- ALWAYS reference that an email has been sent
+- NEVER include specific amounts or invoice numbers
+- NEVER include email addresses, phone numbers, or links
+- ALWAYS sign off with the agent persona name
 - Never be threatening - professional UK tone
-- Never use "promise to pay" or "PTP" — use "payment arrangement" or "confirmed payment" instead
-- Include phone number if provided
+- Never use "promise to pay" or "PTP"
+- Keep it brief and non-sensitive
 
-STRUCTURE (use \\n for line breaks):
-Greeting\\nAmount + context\\nAction + sender
+STRUCTURE: Greeting + email reference + brief ask + agent name
 
 Respond with valid JSON:
 {
@@ -455,54 +454,23 @@ Respond with valid JSON:
   }
 
   private buildSMSUserPrompt(context: MessageContext, toneSettings: ToneSettings): string {
-    const currency = context.currency || '£';
-    const invoiceCount = context.invoiceCount || 1;
-    const totalAmount = context.totalOutstanding || context.invoiceAmount;
+    const firstName = context.customerName.split(' ')[0];
+    // Use agent persona name if available, otherwise tenant name
+    const agentName = context.tenantName;
 
-    let situationHint = "";
-    if (context.promiseToPayMissed) {
-      situationHint = "CONTEXT: Customer missed a confirmed payment date - reference this.";
-    } else if (context.daysOverdue > 90) {
-      situationHint = "CONTEXT: Severely overdue - emphasise urgency.";
-    } else if (context.daysOverdue > 60) {
-      situationHint = "CONTEXT: Significantly overdue - be direct about escalation.";
-    } else if (context.daysOverdue > 30) {
-      situationHint = "CONTEXT: Moderately overdue - firmer tone needed.";
-    }
+    let toneHint = 'friendly';
+    if (toneSettings.stage === 'RECOVERY') toneHint = 'firm';
+    else if (context.daysOverdue > 30) toneHint = 'professional';
 
-    // Condensed brief for SMS (constraints + commitments only, not full history)
-    let smsBrief = '';
-    if (context.conversationBrief) {
-      // Extract just the ACTIVE COMMITMENTS and WHAT NOT TO DO sections
-      const lines = context.conversationBrief.split('\n');
-      const relevantSections: string[] = [];
-      let inSection = false;
-      for (const line of lines) {
-        if (line.startsWith('ACTIVE COMMITMENTS:') || line.startsWith('WHAT NOT TO DO:')) {
-          inSection = true;
-        } else if (line.match(/^[A-Z ]+:/) && !line.startsWith('-')) {
-          inSection = false;
-        }
-        if (inSection) relevantSections.push(line);
-      }
-      if (relevantSections.length > 0) {
-        smsBrief = '\n' + relevantSections.join('\n') + '\n';
-      }
-    }
+    return `Generate a brief SMS nudge (MUST be under 160 characters):
 
-    return `Generate SMS (MUST be under 160 characters):
-${smsBrief}
-Customer: ${context.customerName}
-Amount: ${currency}${totalAmount.toFixed(2)}
-Invoices: ${invoiceCount}
-Days Overdue: ${context.daysOverdue}
-Sender: ${context.tenantName}
-${context.tenantPhone ? `Phone: ${context.tenantPhone}` : ''}
-${situationHint}
+Customer first name: ${firstName}
+Agent name: ${agentName}
+Tone: ${toneHint}
 
-Stage: ${toneSettings.stage}
+The SMS should ONLY tell them to check their email. Do NOT include amounts, invoice numbers, links, or phone numbers.
 
-REMEMBER: Max 160 chars. No invoice numbers. Include phone if provided.`;
+REMEMBER: Max 160 chars. Sign off with "${agentName}".`;
   }
 
   private buildVoiceSystemPrompt(toneSettings: ToneSettings): string {
@@ -631,35 +599,21 @@ ${invoiceTableHtml}
   }
 
   private getDefaultSMSBody(context: MessageContext, toneSettings: ToneSettings): string {
-    const currency = context.currency || '£';
-    const invoiceCount = context.invoiceCount || 1;
-    const totalAmount = context.totalOutstanding || context.invoiceAmount;
-    const formattedAmount = `${currency}${totalAmount.toFixed(2)}`;
+    // SMS is a one-way nudge — points debtors to check their email.
+    // No amounts, no invoice numbers, no links, no phone numbers.
     const firstName = context.customerName.split(' ')[0];
-    
-    // Use abbreviated tenant name if needed for length
-    const tenantName = this.abbreviateTenantName(context.tenantName, 20);
-    const phone = context.tenantPhone ? ` ${context.tenantPhone}` : '';
-    
-    let message: string;
-    
+    const agentName = this.abbreviateTenantName(context.tenantName, 20);
+
     if (toneSettings.stage === 'RECOVERY') {
-      // Recovery: formal, urgent, mention days overdue
-      message = `Hi ${firstName},\n${formattedAmount} is ${context.daysOverdue} days overdue.\nPay today to avoid escalation. ${tenantName}`;
-    } else if (context.promiseToPayMissed) {
-      // Missed payment commitment: reference naturally without collections jargon
-      message = `Hi ${firstName},\nYour expected payment of ${formattedAmount} wasn't received.\nPlease pay or call. ${tenantName}`;
+      // Firm nudge
+      return `Hi ${firstName}, we've been trying to reach you by email about overdue invoices. Please check your inbox at your earliest convenience. ${agentName}`;
+    } else if (context.daysOverdue > 30) {
+      // Professional nudge
+      return `Hi ${firstName}, we've sent an email regarding outstanding invoices on your account. We'd appreciate your response. Thanks, ${agentName}`;
     } else {
-      // Credit Control: friendly reminder
-      message = `Hi ${firstName},\n${formattedAmount} overdue (${invoiceCount} inv).\nPlease pay or call if any issues. ${tenantName}`;
+      // Friendly nudge
+      return `Hi ${firstName}, just a quick note — we sent you an email about your account. Could you take a look? Thanks, ${agentName}`;
     }
-    
-    // Add phone if it fits within 160 chars
-    if (phone && (message.length + phone.length) <= 160) {
-      message += phone;
-    }
-    
-    return message;
   }
   
   private abbreviateTenantName(name: string, maxLength: number): string {

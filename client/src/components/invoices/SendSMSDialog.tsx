@@ -42,29 +42,31 @@ interface SendSMSDialogProps {
 
 type SMSTemplate = "friendly" | "professional" | "firm" | "urgent";
 
+// SMS is a one-way nudge channel — points debtors to check their email.
+// No amounts, no invoice numbers, no links, no phone numbers.
 const smsTemplates: Record<SMSTemplate, { label: string; description: string; content: string; color: string }> = {
   friendly: {
-    label: "Friendly Reminder",
-    description: "Gentle, polite tone for early reminders",
-    content: "Hi {firstName}, just a friendly reminder that invoice #{invoiceNumber} for {amount} was due on {dueDate}. Thanks!",
+    label: "Friendly Nudge",
+    description: "Gentle reminder to check their email",
+    content: "Hi {firstName}, just a quick note — we sent you an email about your account. Could you take a look? Thanks, {companyName}",
     color: "bg-blue-100 text-blue-800 border-blue-200",
   },
   professional: {
-    label: "Professional",
-    description: "Standard business tone",
-    content: "Payment reminder: Invoice #{invoiceNumber} ({amount}) due {dueDate}. Please process payment. Questions? Reply HELP",
+    label: "Professional Nudge",
+    description: "Standard business nudge to check email",
+    content: "Hi {firstName}, we've sent an email regarding outstanding invoices on your account. We'd appreciate your response. Thanks, {companyName}",
     color: "bg-slate-100 text-slate-800 border-slate-200",
   },
   firm: {
-    label: "Firm Notice",
-    description: "Assertive for overdue invoices",
-    content: "NOTICE: Invoice #{invoiceNumber} ({amount}) is past due. Payment required immediately. Contact us to avoid further action.",
+    label: "Firm Nudge",
+    description: "Direct reminder to check their inbox",
+    content: "Hi {firstName}, we've been trying to reach you by email about overdue invoices. Please check your inbox at your earliest convenience. {companyName}",
     color: "bg-amber-100 text-amber-800 border-amber-200",
   },
   urgent: {
-    label: "Urgent",
-    description: "Critical for seriously overdue",
-    content: "URGENT: Invoice #{invoiceNumber} overdue. {amount} payment required NOW to avoid collection action. Call immediately.",
+    label: "Urgent Nudge",
+    description: "Urgent prompt to check email",
+    content: "Hi {firstName}, it's important you check the email we've sent regarding your account. Please review at your earliest opportunity. {companyName}",
     color: "bg-red-100 text-red-800 border-red-200",
   },
 };
@@ -210,6 +212,9 @@ export function SendSMSDialog({ invoice, open, onOpenChange, daysOverdue }: Send
               <span>{characterCount} characters</span>
               <span>{messageSegments} SMS segment{messageSegments !== 1 ? "s" : ""}</span>
             </div>
+            <p className="mt-2 text-xs text-slate-500 italic">
+              SMS is used as a nudge to check email. Keep messages brief.
+            </p>
           </div>
 
           {/* Days Overdue Info */}

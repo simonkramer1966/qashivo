@@ -530,10 +530,19 @@ export function registerWebhookRoutes(app: Express) {
    * Vonage SMS Inbound Webhook
    * https://developer.vonage.com/en/messaging/sms/guides/inbound-sms
    */
+  // SMS is one-way for MVP. Inbound processing disabled.
+  // Re-enable when RCS or per-tenant numbers are available.
   app.post("/api/webhooks/vonage/sms", async (req: Request, res: Response) => {
     try {
-      console.log('📱 Received inbound SMS webhook from Vonage');
-      
+      console.log('📱 Received inbound SMS webhook from Vonage (inbound processing disabled)');
+
+      // Return 200 immediately — Vonage retries aggressively on non-200
+      res.status(200).json({ message: 'SMS inbound disabled' });
+
+      /* ── Inbound SMS processing disabled for MVP ──────────────────
+       * SMS is a one-way nudge channel. Inbound processing preserved
+       * below for re-enablement when RCS or per-tenant numbers are available.
+       *
       const {
         msisdn,      // Sender's phone number
         to,          // Recipient (your Vonage number)
@@ -690,14 +699,15 @@ export function registerWebhookRoutes(app: Express) {
       }).catch(err => console.error('Failed to record SMS signal:', err));
 
       // Trigger intent analysis
-      intentAnalyst.processInboundMessage(message.id).catch(err => 
+      intentAnalyst.processInboundMessage(message.id).catch(err =>
         console.error('❌ Intent analysis error:', err)
       );
 
-      res.status(200).json({ 
-        message: 'SMS received', 
-        messageId: message.id 
+      res.status(200).json({
+        message: 'SMS received',
+        messageId: message.id
       });
+      ── End of disabled inbound SMS processing ──────────────────── */
 
     } catch (error) {
       console.error('❌ Vonage SMS webhook error:', error);
@@ -709,10 +719,19 @@ export function registerWebhookRoutes(app: Express) {
    * Vonage WhatsApp Inbound Webhook
    * https://developer.vonage.com/en/messages/concepts/whatsapp
    */
+  // WhatsApp is one-way for MVP. Inbound processing disabled.
+  // Re-enable when RCS or per-tenant numbers are available.
   app.post("/api/webhooks/vonage/whatsapp", async (req: Request, res: Response) => {
     try {
-      console.log('💬 Received inbound WhatsApp webhook from Vonage');
-      
+      console.log('💬 Received inbound WhatsApp webhook from Vonage (inbound processing disabled)');
+
+      // Return 200 immediately — Vonage retries aggressively on non-200
+      res.status(200).json({ message: 'WhatsApp inbound disabled' });
+
+      /* ── Inbound WhatsApp processing disabled for MVP ─────────────
+       * WhatsApp is a one-way nudge channel. Inbound processing preserved
+       * below for re-enablement when RCS or per-tenant numbers are available.
+       *
       const {
         from,        // Sender's WhatsApp number
         to,          // Recipient
@@ -728,7 +747,7 @@ export function registerWebhookRoutes(app: Express) {
 
       // Normalize phone number
       const fromPhone = normalizePhone(from);
-      
+
       // Find contact by phone
       const [contact] = await db
         .select()
@@ -787,14 +806,15 @@ export function registerWebhookRoutes(app: Express) {
       }).catch(err => console.error('Failed to record WhatsApp signal:', err));
 
       // Trigger intent analysis
-      intentAnalyst.processInboundMessage(msg.id).catch(err => 
+      intentAnalyst.processInboundMessage(msg.id).catch(err =>
         console.error('❌ Intent analysis error:', err)
       );
 
-      res.status(200).json({ 
-        message: 'WhatsApp message received', 
-        messageId: msg.id 
+      res.status(200).json({
+        message: 'WhatsApp message received',
+        messageId: msg.id
       });
+      ── End of disabled inbound WhatsApp processing ─────────────── */
 
     } catch (error) {
       console.error('❌ Vonage WhatsApp webhook error:', error);

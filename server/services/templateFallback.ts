@@ -69,12 +69,16 @@ const EMAIL_TEMPLATES: Record<string, { subject: string; body: string }> = {
 
 // ── SMS Templates (5 tones) ────────────────────────────────────
 
+// SMS is a one-way nudge channel for MVP — points debtors to check their email.
+// No amounts, no invoice numbers, no links, no phone numbers.
+// Formal/legal tones should not use SMS (decision tree excludes them), but templates
+// fall back to professional tone if somehow reached.
 const SMS_TEMPLATES: Record<string, string> = {
-  friendly: `Hi {{contactName}}, {{totalOutstanding}} on your account is overdue. Please pay or call {{agentPhone}}. {{creditorName}}`,
-  professional: `{{contactName}}, {{totalOutstanding}} is overdue ({{invoiceCount}} inv). Please arrange payment. {{creditorName}} {{agentPhone}}`,
-  firm: `{{contactName}}, {{totalOutstanding}} is {{oldestInvoiceDays}} days overdue. Pay today to avoid escalation. {{creditorName}} {{agentPhone}}`,
-  formal: `{{contactName}}, formal notice: {{totalOutstanding}} overdue. Contact us within 7 days. {{creditorName}} {{agentPhone}}`,
-  legal: `{{contactName}}, pre-action notice: {{totalOutstanding}} overdue. Respond within 30 days. {{creditorName}} {{agentPhone}}`,
+  friendly: `Hi {{contactName}}, just a quick note — we sent you an email about your account. Could you take a look? Thanks, {{agentName}}`,
+  professional: `Hi {{contactName}}, we've sent an email regarding outstanding invoices on your account. We'd appreciate your response. Thanks, {{agentName}}`,
+  firm: `Hi {{contactName}}, we've been trying to reach you by email about overdue invoices. Please check your inbox at your earliest convenience. {{agentName}}`,
+  formal: `Hi {{contactName}}, we've sent an email regarding outstanding invoices on your account. We'd appreciate your response. Thanks, {{agentName}}`,
+  legal: `Hi {{contactName}}, we've sent an email regarding outstanding invoices on your account. We'd appreciate your response. Thanks, {{agentName}}`,
 };
 
 // ── Template Substitution ──────────────────────────────────────

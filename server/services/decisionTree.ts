@@ -589,16 +589,32 @@ function selectChannel(
   input: DebtorDecisionInput,
   category: BehaviouralCategory,
   tone: ToneLevel,
-): { channel: 'email' | 'sms' | 'voice'; reasoning: string } {
+): { channel: 'email' | 'sms' | 'voice'; reasoning: string; createException?: { type: string; explanation: string; priority: string } } {
   const { contact, channelPrefs, consecutiveNoResponseCount, learningProfile } = input;
 
   // Build available channels
   const available: Array<'email' | 'sms' | 'voice'> = [];
   if (channelPrefs.emailEnabled && contact.email) available.push('email');
-  if (channelPrefs.smsEnabled && contact.phone) available.push('sms');
+  // SMS excluded at formal/legal tone — formal and legal communications must be
+  // written, detailed, and auditable. SMS doesn't meet that standard.
+  if (channelPrefs.smsEnabled && contact.phone && tone !== 'formal' && tone !== 'legal') {
+    available.push('sms');
+  }
   if (channelPrefs.voiceEnabled && contact.phone) available.push('voice');
 
   if (available.length === 0) {
+    // If SMS was the only option but got excluded by formal/legal tone, create exception
+    if (channelPrefs.smsEnabled && contact.phone && !contact.email && (tone === 'formal' || tone === 'legal')) {
+      return {
+        channel: 'email', // fallback value (won't actually send — exception created)
+        reasoning: 'SMS excluded at formal/legal tone. No email available. Exception created for manual review.',
+        createException: {
+          type: 'no_channel_formal_tone',
+          explanation: `Formal/legal tone requires email but no email address on file. SMS excluded at this tone level. Manual intervention needed.`,
+          priority: 'high',
+        },
+      };
+    }
     // Fallback — shouldn't reach here due to gate 7, but defensive
     return { channel: 'email', reasoning: 'No available channels (fallback)' };
   }
@@ -808,7 +824,23 @@ export function evaluateDecisionTree(input: DebtorDecisionInput): DecisionOutput
   }
 
   // 6. Select channel
-  const { channel, reasoning: channelReasoning } = selectChannel(input, category, finalTone);
+  const channelResult = selectChannel(input, category, finalTone);
+
+  // If channel selection created an exception (e.g. SMS-only at formal/legal tone), HOLD
+  if (channelResult.createException) {
+    return {
+      action: 'HOLD',
+      holdReason: channelResult.createException.explanation,
+      gateNode: 'channel_selection',
+      gatesEvaluated: gateResult.gatesEvaluated,
+      behaviouralCategory: category,
+      createException: channelResult.createException,
+      reasoning: `HOLD at channel selection: ${channelResult.reasoning}`,
+      inputSnapshot: input,
+    };
+  }
+
+  const { channel, reasoning: channelReasoning } = channelResult;
 
   // 7. Select timing
   const scheduledFor = selectTiming(input);
