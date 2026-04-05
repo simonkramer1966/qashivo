@@ -11,18 +11,22 @@ import {
   customerPreferences,
   customerLearningProfiles,
   debtorGroups,
+  decisionAuditLog,
 } from "@shared/schema";
 import { CollectionLearningService } from "./collectionLearningService";
-import { 
-  scheduleNextTouch, 
-  type AdaptiveSettings, 
-  type CustomerContext, 
-  type InvoiceContext, 
+import {
+  scheduleNextTouch,
+  type AdaptiveSettings,
+  type CustomerContext,
+  type InvoiceContext,
   type SchedulerConstraints,
-  type Channel 
+  type Channel
 } from "../lib/adaptive-scheduler";
 import { differenceInDays } from "date-fns";
 import { getEffectiveSeasonalAdjustments, type SeasonalAdjustment } from "./paymentDistribution";
+import { evaluateDecisionTree, type DebtorDecisionInput } from "./decisionTree";
+import { getRolling30DayDSO, getARSummary } from "./arCalculations";
+import crypto from "crypto";
 
 // Utility: Format currency for display
 function formatCurrency(amount: number): string {
@@ -400,6 +404,228 @@ export class ActionPlanner {
         ? Number(debtorProfile.debtorUrgency)
         : Number(adaptiveSettings.urgencyFactor || 0.5);
 
+      // ── Decision Tree Feature Flag ──────────────────────────────
+      const [tenantRecordForTree] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+      if (tenantRecordForTree?.useDecisionTree) {
+        // Load full learning profile for decision tree
+        const fullProfile = await db.query.customerLearningProfiles.findFirst({
+          where: and(
+            eq(customerLearningProfiles.contactId, contact.id),
+            eq(customerLearningProfiles.tenantId, tenantId),
+          ),
+        });
+
+        // Load DSO context (one pair of queries per tenant — could be cached in caller)
+        const [rollingDSO, arSummary] = await Promise.all([
+          getRolling30DayDSO(tenantId),
+          getARSummary(tenantId),
+        ]);
+
+        // Consecutive no-response count
+        const noResponseResult = await db
+          .select({ count: sql<number>`COUNT(*)` })
+          .from(actions)
+          .where(and(
+            eq(actions.contactId, contact.id),
+            eq(actions.tenantId, tenantId),
+            sql`${actions.status} IN ('completed', 'sent')`,
+            sql`${actions.completedAt} > COALESCE(${sql.raw(`(SELECT MAX(last_inbound_at) FROM contacts WHERE id = '${contact.id}')`)}, '1970-01-01')`,
+          ));
+        const consecutiveNoResponseCount = Number(noResponseResult[0]?.count ?? 0);
+
+        // Total outstanding for this debtor across all invoices
+        const debtorTotalResult = await db
+          .select({ total: sql<number>`COALESCE(SUM(${invoices.amount} - COALESCE(${invoices.amountPaid}, 0)), 0)` })
+          .from(invoices)
+          .where(and(
+            eq(invoices.contactId, contact.id),
+            eq(invoices.tenantId, tenantId),
+            sql`${invoices.status} NOT IN ('paid', 'void', 'voided', 'deleted', 'draft')`,
+          ));
+        const totalOutstandingForDebtor = Number(debtorTotalResult[0]?.total ?? 0);
+
+        // Get last completed action for velocity cap
+        const lastActionRows = await db
+          .select({
+            completedAt: actions.completedAt,
+            type: actions.type,
+            agentToneLevel: actions.agentToneLevel,
+          })
+          .from(actions)
+          .where(and(
+            eq(actions.contactId, contact.id),
+            eq(actions.tenantId, tenantId),
+            sql`${actions.status} IN ('completed', 'sent')`,
+          ))
+          .orderBy(sql`${actions.completedAt} DESC NULLS LAST`)
+          .limit(1);
+
+        const lastActionData = lastActionRows[0] ?? null;
+        const cooldowns = (tenantRecordForTree.channelCooldowns as { email?: number; sms?: number; voice?: number } | null) ?? { email: 3, sms: 5, voice: 7 };
+
+        const decisionInput: DebtorDecisionInput = {
+          now: new Date(),
+          communicationModeOff: tenantRecordForTree.communicationMode === 'off',
+          recentInboundUnprocessed: false, // TODO: wire when inbound processing queue is built
+          consecutiveNoResponseCount,
+          paymentPlanFailureCount: Number(fullProfile?.promisesBroken ?? 0),
+          totalOutstandingForDebtor,
+          hasActiveDispute: invoice.status === 'disputed',
+          hasActivePaymentPlan: invoice.pauseState === 'payment_plan',
+
+          invoice: {
+            id: invoice.id,
+            amount: Number(invoice.amount || 0),
+            amountPaid: Number(invoice.amountPaid || 0),
+            dueDate: new Date(invoice.dueDate),
+            issueDate: new Date(invoice.issueDate || invoice.dueDate),
+            status: invoice.status || 'unknown',
+            pauseState: invoice.pauseState || null,
+            escalationFlag: !!invoice.escalationFlag,
+            legalFlag: !!invoice.legalFlag,
+            promiseToPayDate: invoice.promiseToPayDate ? new Date(invoice.promiseToPayDate) : null,
+            balance: Number(invoice.amount || 0) - Number(invoice.amountPaid || 0),
+            collectionStage: invoice.collectionStage || null,
+          },
+          contact: {
+            id: contact.id,
+            email: contact.email || contact.arContactEmail || null,
+            phone: contact.phone || contact.arContactPhone || null,
+            paymentTerms: contact.paymentTerms ?? 30,
+            riskScore: contact.riskScore ?? null,
+            manualBlocked: !!contact.manualBlocked,
+            probablePaymentDetected: !!contact.probablePaymentDetected,
+            probablePaymentConfidence: contact.probablePaymentConfidence || null,
+            legalResponseWindowEnd: contact.legalResponseWindowEnd ? new Date(contact.legalResponseWindowEnd) : null,
+            isVip: !!contact.isVip,
+            isException: !!contact.isException,
+            isPotentiallyVulnerable: !!contact.isPotentiallyVulnerable,
+            wrongPartyRisk: contact.wrongPartyRisk || 'NONE',
+            lastOutboundAt: contact.lastOutboundAt ? new Date(contact.lastOutboundAt) : null,
+            lastOutboundChannel: contact.lastOutboundChannel || null,
+            lastInboundAt: contact.lastInboundAt ? new Date(contact.lastInboundAt) : null,
+            contactCountLast30d: contact.contactCountLast30d ?? 0,
+            nextTouchNotBefore: contact.nextTouchNotBefore ? new Date(contact.nextTouchNotBefore) : null,
+            companiesHouseStatus: null, // TODO: wire from debtorIntelligence table
+          },
+          behavior: {
+            medianDaysToPay: behavior ? Number(behavior.medianDaysToPay ?? null) : null,
+            p75DaysToPay: behavior ? Number(behavior.p75DaysToPay ?? null) : null,
+            volatility: behavior ? Number(behavior.volatility ?? null) : null,
+            trend: behavior ? Number(behavior.trend ?? null) : null,
+            emailReplyRate: behavior ? Number(behavior.emailReplyRate ?? null) : null,
+            smsReplyRate: behavior ? Number(behavior.smsReplyRate ?? null) : null,
+            voiceReplyRate: null, // Not tracked in behavior signals schema yet
+            segment: behavior?.segment || null,
+            invoiceCount: behavior ? Number(behavior.invoiceCount ?? 0) : 0,
+            disputeCount: behavior ? Number(behavior.disputeCount ?? 0) : 0,
+            promiseBreachCount: Number(fullProfile?.promisesBroken ?? 0),
+          },
+          learningProfile: {
+            emailEffectiveness: parseFloat(fullProfile?.emailEffectiveness || '0.5'),
+            smsEffectiveness: parseFloat(fullProfile?.smsEffectiveness || '0.5'),
+            voiceEffectiveness: parseFloat(fullProfile?.voiceEffectiveness || '0.5'),
+            debtorUrgency: fullProfile?.debtorUrgency ? Number(fullProfile.debtorUrgency) : null,
+            prsRaw: fullProfile?.prsRaw ? Number(fullProfile.prsRaw) : null,
+            prsConfidence: fullProfile?.prsConfidence ? Number(fullProfile.prsConfidence) : null,
+            isSerialPromiser: !!(fullProfile as any)?.isSerialPromiser,
+            isReliableLatePayer: !!(fullProfile as any)?.isReliableLatePayer,
+            responsiveness: (fullProfile as any)?.responsiveness || null,
+            sentimentTrend: (fullProfile as any)?.sentimentTrend || null,
+            paymentReliability: (fullProfile as any)?.paymentReliability ? Number((fullProfile as any).paymentReliability) : null,
+            learningConfidence: fullProfile?.learningConfidence ? Number(fullProfile.learningConfidence) : null,
+          },
+          channelPrefs: {
+            emailEnabled: (debtorPrefs?.emailEnabled !== false) && !!contact.email,
+            smsEnabled: (debtorPrefs?.smsEnabled !== false) && !!contact.phone,
+            voiceEnabled: (debtorPrefs?.voiceEnabled !== false) && !!contact.phone,
+          },
+          tenantSettings: {
+            chaseDelayDays: tenantRecordForTree.chaseDelayDays ?? 5,
+            preDueDateDays: tenantRecordForTree.preDueDateDays ?? 7,
+            preDueDateMinAmount: parseFloat(tenantRecordForTree.preDueDateMinAmount || '1000'),
+            minimumChaseThreshold: parseFloat(tenantRecordForTree.minimumChaseThreshold || '50'),
+            noResponseEscalationThreshold: tenantRecordForTree.noResponseEscalationThreshold ?? 4,
+            significantPaymentThreshold: parseFloat(tenantRecordForTree.significantPaymentThreshold || '0.50'),
+            channelCooldowns: {
+              email: cooldowns.email ?? 3,
+              sms: cooldowns.sms ?? 5,
+              voice: cooldowns.voice ?? 7,
+            },
+            dsoImpactThreshold: parseFloat(tenantRecordForTree.dsoImpactThreshold || '1.00'),
+            tenantStyle: (tenantRecordForTree.tenantStyle as 'GENTLE' | 'STANDARD' | 'FIRM') || 'STANDARD',
+            businessHoursStart: tenantRecordForTree.businessHoursStart || '08:00',
+            businessHoursEnd: tenantRecordForTree.businessHoursEnd || '18:00',
+          },
+          lastAction: lastActionData?.completedAt ? {
+            completedAt: new Date(lastActionData.completedAt),
+            type: lastActionData.type || 'email',
+            agentToneLevel: (lastActionData.agentToneLevel as any) || null,
+          } : null,
+          dsoContext: {
+            currentDSO: rollingDSO,
+            totalOutstanding: arSummary.totalOutstanding,
+            debtorOutstanding: totalOutstandingForDebtor,
+            debtorPaymentTerms: contact.paymentTerms ?? 30,
+          },
+        };
+
+        const decision = evaluateDecisionTree(decisionInput);
+
+        // Generate audit ID for outcome linkage
+        const auditId = crypto.randomUUID();
+
+        // Audit log (async, non-blocking, non-fatal)
+        db.insert(decisionAuditLog).values({
+          id: auditId,
+          tenantId,
+          contactId: contact.id,
+          invoiceId: invoice.id,
+          gatesEvaluated: decision.gatesEvaluated,
+          stoppedAtGate: decision.gateNode || null,
+          holdReason: decision.holdReason || null,
+          behaviouralCategory: decision.behaviouralCategory || null,
+          decision: decision.action,
+          phaseSelected: decision.phase || null,
+          toneSelected: decision.tone || null,
+          channelSelected: decision.channel || null,
+          dsoAcceptance: decision.dsoAcceptance?.acceptance || null,
+          dsoImpact: decision.dsoAcceptance?.dsoImpact?.toString() || null,
+          partialPaymentTarget: decision.dsoAcceptance?.partialPaymentNeeded?.toString() || null,
+          inputSnapshot: decisionInput,
+          reasoning: decision.reasoning,
+        }).catch(err => console.error('[DecisionTree] Audit log write failed:', err));
+
+        if (decision.action === 'HOLD') {
+          console.log(`🌳 [DecisionTree] HOLD for ${contact.name} invoice ${invoice.invoiceNumber}: ${decision.holdReason}`);
+          return null;
+        }
+
+        // Map to PlannedAction
+        const actionType = decision.channel === 'voice' ? 'voice' : decision.channel!;
+        console.log(`🌳 [DecisionTree] CONTACT ${contact.name}: ${decision.channel} ${decision.tone} (${decision.behaviouralCategory})`);
+
+        return {
+          invoiceId: invoice.id,
+          contactId: contact.id,
+          tenantId,
+          actionType: actionType as 'email' | 'sms' | 'whatsapp' | 'voice' | 'manual_call',
+          scheduledFor: decision.scheduledFor!,
+          metadata: {
+            scheduleId: schedule.id,
+            schedulerType: 'decision_tree',
+            behaviouralCategory: decision.behaviouralCategory,
+            collectionPhase: decision.phase,
+            agentToneLevel: decision.tone,
+            dsoAcceptance: decision.dsoAcceptance,
+            reasoning: decision.reasoning,
+            decisionEvaluationId: auditId,
+          },
+          priority: 'normal',
+        };
+      }
+      // ── End Decision Tree Feature Flag ──────────────────────────
+
       // Build adaptive settings
       const settings: AdaptiveSettings = {
         targetDSO: adaptiveSettings.targetDSO || 45,
@@ -741,6 +967,17 @@ export async function planAdaptiveActions(
     const chaseDelayDays = tenantRecord?.chaseDelayDays ?? 5;
     const preDueDateDays = tenantRecord?.preDueDateDays ?? 7;
     const preDueDateMinAmount = parseFloat(tenantRecord?.preDueDateMinAmount || '1000');
+
+    // Decision tree: pre-load DSO context once per tenant (not per invoice)
+    let dsoContextForTree: { currentDSO: number; totalOutstanding: number } | null = null;
+    if (tenantRecord?.useDecisionTree) {
+      const [rollingDSO, arSummary] = await Promise.all([
+        getRolling30DayDSO(tenantId),
+        getARSummary(tenantId),
+      ]);
+      dsoContextForTree = { currentDSO: rollingDSO, totalOutstanding: arSummary.totalOutstanding };
+      console.log(`[PLAN] Decision tree enabled — DSO: ${rollingDSO}, outstanding: £${arSummary.totalOutstanding.toFixed(2)}`);
+    }
 
     // Get overdue + pre-due invoices with behavior signals
     // Include invoices due within preDueDateDays for Phase 1 pre-due nudges

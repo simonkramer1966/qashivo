@@ -12,13 +12,14 @@
  */
 
 import { db } from "../db";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, gte } from "drizzle-orm";
 import {
   invoices,
   contacts,
   cachedXeroOverpayments,
   cachedXeroPrepayments,
   cachedXeroCreditNotes,
+  dsoSnapshots,
 } from "@shared/schema";
 
 export interface ARSummary {
@@ -137,4 +138,35 @@ export async function getARSummary(tenantId: string): Promise<ARSummary> {
     debtorCount,
     currentDSO,
   };
+}
+
+/**
+ * Rolling 30-day DSO — average of daily snapshots over the last 30 days.
+ * Falls back to getARSummary().currentDSO if no snapshots exist.
+ */
+export async function getRolling30DayDSO(tenantId: string): Promise<number> {
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  const result = await db
+    .select({
+      avgDSO: sql<number>`COALESCE(AVG(${dsoSnapshots.dsoValue}::numeric), 0)`,
+      count: sql<number>`COUNT(*)`,
+    })
+    .from(dsoSnapshots)
+    .where(
+      and(
+        eq(dsoSnapshots.tenantId, tenantId),
+        gte(dsoSnapshots.snapshotDate, thirtyDaysAgo),
+      ),
+    );
+
+  const row = result[0];
+  if (row && Number(row.count) > 0) {
+    return Math.round(Number(row.avgDSO));
+  }
+
+  // Fallback to current DSO from AR summary
+  const summary = await getARSummary(tenantId);
+  return summary.currentDSO;
 }

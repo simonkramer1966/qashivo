@@ -683,6 +683,8 @@ export class XeroSyncService {
 
             // Gap 1: Trigger payment attribution when invoice transitions to paid
             if (isNewlyPaid) {
+              // TODO: When payment detected, find the action that triggered
+              // the chase and update its decisionAuditLog with outcome 'paid'
               try {
                 const { processPaymentAttribution } = await import('./channelEffectivenessService');
                 const paidDate = cachedInv.paidDate ? new Date(cachedInv.paidDate) : new Date();

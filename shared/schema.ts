@@ -134,6 +134,10 @@ export const tenants = pgTable("tenants", {
   preDueDateDays: integer("pre_due_date_days").default(7), // Days before due date for pre-due courtesy reminder
   preDueDateMinAmount: decimal("pre_due_date_min_amount", { precision: 10, scale: 2 }).default("1000.00"), // Minimum invoice amount for pre-due reminders (GBP)
 
+  // Decision tree feature flag + DSO acceptance threshold
+  useDecisionTree: boolean("use_decision_tree").default(false),
+  dsoImpactThreshold: decimal("dso_impact_threshold", { precision: 5, scale: 2 }).default('1.00'),
+
   // Gap 1: Payment attribution settings
   paymentAttributionFullCreditHours: integer("payment_attribution_full_credit_hours").default(48), // Hours after action for full credit (1.0)
   paymentAttributionPartialCreditDays: integer("payment_attribution_partial_credit_days").default(7), // Days after action for partial credit (0.5)
@@ -929,6 +933,9 @@ export const actions = pgTable("actions", {
   voiceContactRecord: jsonb("voice_contact_record"), // Retell AI call evidence
   generationMethod: varchar("generation_method").default('llm'), // llm | template_fallback
   cancellationReason: varchar("cancellation_reason"),
+
+  // Decision tree outcome linkage
+  decisionEvaluationId: varchar("decision_evaluation_id"), // Links to decisionAuditLog.id
 
   // Exception state tracking (new → in_progress → resolved)
   exceptionStatus: varchar("exception_status").default("new"), // new, in_progress, resolved
@@ -1894,6 +1901,7 @@ export const tenantsRelations = relations(tenants, ({ many, one }) => ({
   channelAnalytics: many(channelAnalytics),
   voiceCalls: many(voiceCalls),
   aiFacts: many(aiFacts),
+  decisionAuditLogs: many(decisionAuditLog),
 }));
 
 export const contactsRelations = relations(contacts, ({ one, many }) => ({
@@ -6237,3 +6245,53 @@ export const insertImpactSnapshotSchema = createInsertSchema(tenantImpactSnapsho
 
 export type TenantImpactSnapshot = typeof tenantImpactSnapshots.$inferSelect;
 export type InsertImpactSnapshot = z.infer<typeof insertImpactSnapshotSchema>;
+
+// ── Decision Tree Audit Log ──────────────────────────────
+export const decisionAuditLog = pgTable("decision_audit_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id),
+  invoiceId: varchar("invoice_id"),
+  gatesEvaluated: integer("gates_evaluated").notNull(),
+  stoppedAtGate: varchar("stopped_at_gate"),
+  holdReason: varchar("hold_reason"),
+  behaviouralCategory: varchar("behavioural_category"),
+  decision: varchar("decision").notNull(),           // HOLD | CONTACT
+  phaseSelected: varchar("phase_selected"),
+  toneSelected: varchar("tone_selected"),
+  channelSelected: varchar("channel_selected"),
+  dsoAcceptance: varchar("dso_acceptance"),           // ACCEPT | NEGOTIATE
+  dsoImpact: decimal("dso_impact", { precision: 8, scale: 4 }),
+  partialPaymentTarget: decimal("partial_payment_target", { precision: 10, scale: 2 }),
+  inputSnapshot: jsonb("input_snapshot").notNull(),
+  reasoning: text("reasoning").notNull(),
+  evaluatedAt: timestamp("evaluated_at").defaultNow(),
+
+  // Outcome fields — start null, updated when outcomes arrive (future wiring)
+  outcomeType: varchar("outcome_type"),    // responded | paid | partial_paid | promised | disputed | bounced | silence
+  outcomeAt: timestamp("outcome_at"),
+  daysToOutcome: integer("days_to_outcome"),
+  outcomeDetails: jsonb("outcome_details"),
+}, (table) => [
+  index("idx_decision_audit_tenant_contact").on(table.tenantId, table.contactId),
+  index("idx_decision_audit_evaluated_at").on(table.evaluatedAt),
+]);
+
+export const decisionAuditLogRelations = relations(decisionAuditLog, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [decisionAuditLog.tenantId],
+    references: [tenants.id],
+  }),
+  contact: one(contacts, {
+    fields: [decisionAuditLog.contactId],
+    references: [contacts.id],
+  }),
+}));
+
+export const insertDecisionAuditLogSchema = createInsertSchema(decisionAuditLog).omit({
+  id: true,
+  evaluatedAt: true,
+});
+
+export type DecisionAuditLog = typeof decisionAuditLog.$inferSelect;
+export type InsertDecisionAuditLog = z.infer<typeof insertDecisionAuditLogSchema>;

@@ -314,6 +314,9 @@ export async function getActionSignals(actionId: string): Promise<{
 /**
  * Full pipeline: calculate attribution for a payment, update effectiveness, handle multi-channel.
  * Called when Xero sync detects an invoice transition to 'paid'.
+ *
+ * TODO: Link effectiveness updates back to decisionAuditLog
+ * via action.decisionEvaluationId for decision-outcome pairing
  */
 export async function processPaymentAttribution(
   tenantId: string,

@@ -101,6 +101,17 @@ The wrappers enforce Off / Testing / Soft Live / Live modes and **fail closed on
 
 <!-- ADD NEW ENTRIES AT THE TOP — format: YYYY-MM-DD: What changed -->
 
+- 2026-04-05: FIX — Activity Feed shows "No activity yet" despite real activity. Three root causes: (1) `actionExecutor.ts` never created `timelineEvent` records for successful outbound sends — emails/SMS were delivered but invisible to the Activity Feed which only queries `timelineEvents`. Fix: new `createOutboundTimelineEvent()` method on ActionExecutor, called from both execution paths (`executeScheduledActions` and `executeActionsByIds`) after successful delivery. Creates timeline event with direction='outbound', correct channel, summary, preview, body, and actionId linkage. Non-fatal — delivery is never blocked by a failed timeline insert. (2) Historical actions and inbound messages had no timeline events — Activity Feed endpoint now also queries `actions` table (completed/sent/failed) and `inbound_messages` table as backfill, deduplicating against existing timeline events by actionId and channel+contact+timestamp signature. (3) Time filter used UTC midnight instead of tenant timezone — "today" at 11pm BST excluded the last hour of the business day. Fix: endpoint now reads `executionTimezone` from tenants table (default Europe/London) and computes midnight in the tenant's timezone using Intl.DateTimeFormat.
+- 2026-04-05: Charlie Deterministic Decision Tree Engine implemented. New pure-function module `server/services/decisionTree.ts` (~530 lines) — zero DB queries, zero side effects, zero LLM calls. 9 sequential gate checks, behavioural categorisation (RELIABLE/COMMUNICATIVE/SILENT/UNKNOWN), phase/tone/channel/timing selection, DSO acceptance engine with partial payment calculation. Feature-flagged via `tenants.useDecisionTree` (default false). New `decisionAuditLog` table for full audit trail with outcome columns for future ML training. Integrated into `actionPlanner.ts` with input mapping from existing data structures. Existing probabilistic path preserved as fallback when flag is off.
+- 2026-04-05: INVESTIGATION — Full Charlie decision engine architecture audit completed. Traced decision flow from "debtor has overdue invoice" to "email sent". Documented all decision functions (charlieDecisionEngine, actionPlanner, adaptive-scheduler, collectionsAgent, actionExecutor), 27+ gate checks across 4 layers (planning, execution, compliance, communications orchestrator), LLM boundary (content generation only — LLM never decides channel/tone/timing/whether to send), data dependencies (12+ tables), 3 independent DSO calculations (realised, snapshot, projected), and integration points for future deterministic decision tree. Key finding: LLM is cleanly isolated to content generation and intent classification — all strategic decisions are rule-based. Recommended insertion point for decisionTree.ts: replace `planAdaptiveAction()` in actionPlanner.ts, keep all downstream infrastructure (executor, compliance, delivery).
+- 2026-04-05: FIX — Activity Feed shows "No activity yet" for inbound SMS. Root cause: SMS webhook stored messages in `inboundMessages` table but never created a `timelineEvent`. Activity Feed only queries `timelineEvents`. Fix: Added `db.insert(timelineEvents)` to SMS and WhatsApp webhook handlers (matching email handler pattern — channel, direction, summary, preview, body, provider='vonage').
+- 2026-04-05: FIX — Payment promise (PTP) confirmation sent for non-overdue invoices. Debtor said "can't pay until June" on invoice not yet due — system sent "Payment Arrangement Confirmed" email. Root cause: intentAnalyst.ts had no overdue check before PTP confirmation flow. Fix: New `checkDebtorHasOverdueInvoices()` queries invoices where dueDate < now AND status NOT IN (PAID, VOIDED, DELETED, DRAFT). If not overdue: stores as early intelligence (`aiFact` with category='payment_behaviour', factKey='expected_payment_date', 90-day expiry) + note action; skips confirmation email and PTP record. If overdue: standard flow unchanged. Works across all channels (email, SMS, voice, WhatsApp). Charlie can reference early intelligence when invoice becomes overdue: "I understand you mentioned June — just confirming that's still the plan?"
+- 2026-04-05: SSE infrastructure for real-time UI updates. New `server/services/realtimeEvents.ts` — tenant-scoped SSE service (addClient, emitTenantEvent, 30s keep-alive, auto-cleanup on disconnect). New `GET /api/events/stream` endpoint (behind isAuthenticated). Wired into: Vonage SMS webhook, SendGrid inbound email, action executor (both execution paths), event-bus hard bounces, Xero payment detection. Client: new `client/src/hooks/useRealtimeEvents.ts` — EventSource connection with auto-reconnect (3 retries, escalating delays), per-event-type TanStack Query invalidation map (10 event types → query key prefixes), smart debtor detail invalidation by contactId, graceful fallback to polling. Connected via `RealtimeEventsProvider` component in App.tsx authenticated routes.
+- 2026-04-05: FIX — Vonage SMS webhook crash (TypeError in Drizzle insert). Root cause: `rawPayload: req.body` passed raw Express-parsed form-urlencoded body to Drizzle's jsonb serializer. Fix: Wrapped rawPayload in clean object with explicit fields (matching email handler pattern). Added `?? null` guards on nullable fields (to, providerMessageId). Same fix applied to WhatsApp webhook.
+- 2026-04-05: Shared invalidation hook `useInvalidateActionCentre.ts` — invalidates all action-centre queries + VIP + approval-queue with single function call. Uses prefix matching on ["/api/action-centre"].
+- 2026-04-05: Exception sub-tabs: state sections + filter pills. Exception items now have workflow states (new → in_progress → resolved) with filter pills (All | New | In Progress | Resolved), state indicators (CircleDot/Circle/Check), state transition buttons (Acknowledge, Mark resolved with notes, Dismiss, Reopen). Badge count only shows "new" items. Schema: 4 new columns on actions table (exceptionStatus, exceptionResolvedBy, exceptionResolvedAt, exceptionResolutionNotes). API: new endpoints POST /api/actions/:actionId/start-working, /reopen. Resolved items shown for 7 days.
+- 2026-04-05: Exceptions tab summary landing. Main tab shows summary dashboard with category cards (Collections, Debtor Situations, Other) showing counts and trend indicators. Clicking a card navigates to the relevant sub-tab. Sub-tabs show detailed exception items with expand/collapse per item.
+- 2026-04-05: SMS drawer fix — priority phone lookup + contact picker. Phone resolution now checks 6 sources in priority order: Primary AR SMS → Primary AR phone → AR overlay → main contact → escalation contact → other persons. Deduplication by number. Contact picker dropdown when multiple phones found, disabled Send when none.
 - 2026-04-05: Activity Feed tab replaces Sent tab. Debtor-threaded view of all communications grouped by contact with coloured left borders (amber=needs attention, green=positive outcome, blue=awaiting response, red=dispute). Smart summary strip at top ("Today: 12 sent · 3 replies · 2 arrangements"). Pill filters for direction/channel/time range. Events expand inline to show full body. Badge count shows inbound items only. New API: `GET /api/action-centre/activity-feed` queries timelineEvents grouped by debtor with filtering. Tab order: Summary | Approval (N) | Scheduled (N) | Activity Feed (N) | VIP | Exceptions.
 - 2026-04-04: Action Centre tab restructure + configurable send delay. Tabs renamed: Queue→Approval, Activity→Sent. New Scheduled tab shows approved-but-not-yet-sent actions (status=scheduled, sorted by scheduledFor ascending) with Cancel and Send Now buttons per row, plus preview sheet on row click. New API endpoints: `GET /api/action-centre/scheduled`, `POST /api/actions/:actionId/cancel`, `POST /api/actions/:actionId/send-now`. New `sendDelayMinutes` tenant setting (default 15, range 0-60) — after approval, actions wait N minutes in Scheduled before executor picks them up. When sendDelayMinutes=0, immediate delivery (no regression). `approveAndSend()` in collectionsPipeline.ts now sets status=scheduled + scheduledFor=NOW+delay instead of immediate delivery. Settings UI: "Send Delay After Approval" card with slider (0-60min, step 5). Tab order: Summary | Approval (N) | Scheduled (N) | Sent | VIP | Exceptions.
 - 2026-04-04: Two-phase collection model implemented. Phase 1 (Inform): invoice is new or recently overdue — one polite nudge only, do NOT ask for payment date, do NOT chase silence. Phase 2 (Elicit Date): invoice is significantly overdue — actively seek a specific payment date, end with clear question. Transition controlled by `chaseDelayDays` tenant setting (default 5). Three new tenant columns: `chaseDelayDays`, `preDueDateDays` (default 7, courtesy reminder before due), `preDueDateMinAmount` (default £1000). Phase flows through `ActionContext.phase` into all LLM prompts (collectionEmail.ts, aiMessageGenerator.ts for email/SMS/voice). Single-touch enforcement: Phase 1 contacts with any prior completed action are skipped. Pre-due invoices included in adaptive query when `preDueDateDays > 0` and amount exceeds minimum. Conversation brief service includes COLLECTION PHASE section. Settings UI added to Autonomy & Rules page (Collection Timing card with sliders + amount input). All debtor-facing prompts include LANGUAGE RULE prohibiting "promise to pay"/"PTP" — use "payment arrangement", "confirmed payment date" instead. Compliance engine enforces this via DEBTOR_FACING_PROHIBITED patterns.
@@ -146,6 +157,10 @@ The wrappers enforce Off / Testing / Soft Live / Live modes and **fail closed on
 - **Bank transactions now synced — FIXED (Gap 14)**: `syncBankTransactionsAndMatch()` in xeroSync.ts fetches unreconciled RECEIVE transactions from Xero (last 90 days), stores in bank_transactions table, runs probable payment matching. bankTransactionsCount now reflects actual synced count. Matching results stored in probablePayments table. Remaining: Phase 2 (Open Banking confirmation + learning layer) not yet built.
 - **Data Health doesn't detect hard bounces — FIXED**: GET /api/settings/data-health now batch-queries timelineEvents for `email_hard_bounce` events (Gap 8). Contacts with a hard bounce are downgraded to `needs_email`, a `bounced` flag is included per contact, and `summary.bounced` count is added. Single grouped query — no N+1.
 - **Circuit breaker admin SMS alerts — RESOLVED**: SMS path was already absent from `notifyAdmins()` — only a stale comment remained. Comment updated to clarify SMS is intentionally excluded until user phone numbers are collected. Email notifications work fine.
+- **Inbound SMS invisible in Activity Feed — FIXED**: SMS webhook never created a `timelineEvent`. Activity Feed only queries that table. Fixed 5 April 2026 — SMS and WhatsApp webhooks now create timeline events matching the email handler pattern.
+- **Activity Feed shows "No activity yet" — FIXED**: Three root causes: (1) actionExecutor never created timeline events for successful outbound sends, (2) historical actions/inbound messages had no timeline events (endpoint now backfills from actions + inboundMessages tables), (3) time filter used UTC instead of tenant timezone. All three fixed 5 April 2026.
+- **PTP confirmation sent for non-overdue invoices — FIXED**: `intentAnalyst.ts` had no overdue check before sending "Payment Arrangement Confirmed" emails. Fixed 5 April 2026 — new `checkDebtorHasOverdueInvoices()` gates the PTP flow. Non-overdue signals stored as early intelligence (`aiFact`) instead.
+- **Vonage SMS webhook crash — FIXED**: `rawPayload: req.body` passed raw form-urlencoded body to Drizzle jsonb serializer, causing `TypeError`. Fixed 5 April 2026 — wrapped in clean object with explicit fields.
 
 ---
 
@@ -172,6 +187,28 @@ The wrappers enforce Off / Testing / Soft Live / Live modes and **fail closed on
 - **Probable payment detection is per-sync**: `syncBankTransactionsAndMatch()` in xeroSync.ts runs after every invoice sync. It fetches unreconciled RECEIVE bank transactions, stores them, and runs matching. The execution-time gate in actionExecutor checks `probablePaymentDetected` flag + P(Pay) CDF > 0.60 defensive check. Resolution is via `POST /api/contacts/:id/probable-payment/resolve` (confirm/reject). Auto-cleared when all invoices become paid. Bank transaction data is Xero-API-compliant (inference only, no model training).
 
 - **Debtor group enforcement is post-planning**: `enforceDebtorGroupConsistency()` in `actionPlanner.ts` runs AFTER all actions for a tenant are created via `proposeAction()`. It queries the DB for same-day scheduled actions belonging to grouped contacts, aligns tones (highest wins), and cancels duplicates. This means actions are briefly in the DB before being cleaned — if the planner crashes mid-sweep, some duplicate actions may remain scheduled. The sweep is fail-safe (non-fatal errors are caught and logged). `detectPotentialGroups()` in `debtorGroupRoutes.ts` is also used by Riley's debtors list context.
+
+### SSE real-time events
+- **SSE service is tenant-scoped**: `server/services/realtimeEvents.ts` maintains a Map of SSE clients keyed by connection ID, each tagged with tenantId. Events only broadcast to clients matching the tenant. 30-second keep-alive prevents proxy timeouts.
+- **SSE endpoint**: `GET /api/events/stream` (behind `isAuthenticated` in `server/routes.ts`). Client connects via `EventSource` in `useRealtimeEvents()` hook.
+- **10 event types**: `inbound_sms`, `inbound_email`, `action_completed`, `payment_received`, `ptp_created`, `dispute_detected`, `exception_created`, `delivery_bounce`, `approval_needed`, `sync_complete`. Each maps to specific TanStack Query key prefixes for invalidation.
+- **WebSocket service exists but is DISABLED**: `server/services/websocketService.ts` has `WEBSOCKET_DISABLED = true`. SSE replaces it for push notifications. The broadcast methods in WebSocket service document the event types needed.
+- **Emission points**: Vonage SMS webhook, SendGrid inbound email, actionExecutor (both execution paths), event-bus (hard bounces), xeroSync (payment detection). New emission points should call `emitTenantEvent()` from `realtimeEvents.ts`.
+
+### Timeline events and Activity Feed
+- **actionExecutor was not creating timeline events**: The `sendEmailAction()`, `sendSMSAction()`, and `initiateVoiceCall()` methods in actionExecutor.ts wrote to `emailMessages` and updated action status, but never created a `timelineEvent`. The Activity Feed only queries `timelineEvents`. Fixed: new `createOutboundTimelineEvent()` method in both execution paths.
+- **Activity Feed now backfills from actions + inboundMessages**: The endpoint at `GET /api/action-centre/activity-feed` queries `timelineEvents` first, then fills gaps from `actions` (outbound) and `inbound_messages` (inbound), deduplicating by actionId and channel+contact+timestamp. This means historical data shows up immediately without a migration.
+- **Time filter must use tenant timezone**: The endpoint defaults to "today" which must mean midnight in the tenant's timezone (Europe/London), not UTC. A 1-hour offset during BST can exclude recent activity.
+
+### Inbound message pipeline gaps
+- **SMS/WhatsApp webhooks were missing timeline events**: The email inbound path creates a `timelineEvent` (webhooks.ts ~line 2233) but SMS and WhatsApp did not. Activity Feed only queries `timelineEvents` table, so inbound SMS was invisible. Fixed 5 April 2026 — both now create timeline events matching the email pattern.
+- **Vonage SMS sends form-urlencoded data**: `req.body` from Vonage is form-urlencoded, not JSON. Passing `req.body` directly to Drizzle's jsonb column can crash with `TypeError: Cannot read properties of null (reading 'constructor')`. Always wrap `rawPayload` in a clean plain object with explicit fields (matching the email handler pattern).
+- **Intent extraction runs on all channels**: `intentAnalyst.processInboundMessage()` is called from SMS, WhatsApp, email, and voice webhook handlers. But the confirmation email flow and clarification flow (lines 399-486 in intentAnalyst.ts) are gated to email channel only. SMS/voice PTP detections create actions and outcomes but don't send clarification emails.
+
+### PTP (Promise to Pay) pipeline
+- **No overdue check existed before 5 April 2026**: The PTP flow (confirmation email, promise record, forecast adjustment) fired regardless of whether the debtor had overdue invoices. A debtor saying "can't pay until June" on a not-yet-due invoice would get a "Payment Arrangement Confirmed" email.
+- **Early intelligence flow**: When a PTP is detected for a debtor with no overdue invoices, it's stored as an `aiFact` (category='payment_behaviour', factKey='expected_payment_date') with 90-day expiry. Charlie can reference this when the invoice becomes overdue. No confirmation email, no PTP record, no forecast adjustment.
+- **Overdue check is at method level, not query level**: `checkDebtorHasOverdueInvoices()` in intentAnalyst.ts queries ALL invoices for the contact (not just the linked invoice) to determine overdue status. This handles SMS messages that arrive without a specific invoiceId linkage.
 
 ### Charlie decision engine (from full audit)
 - **Consolidation is sound**: actionPlanner.ts (lines 618-898) correctly filters invoices individually before bundling. Only invoices that pass exclusion checks enter consolidated actions.
@@ -363,6 +400,62 @@ Phase 2 (Elicit Date) — daysOverdue > chaseDelayDays
 Phase flows via ActionContext.phase → LLM prompts (collectionEmail, aiMessageGenerator).
 Tenant settings: chaseDelayDays, preDueDateDays, preDueDateMinAmount.
 UI: Settings > Autonomy & Rules > Collection Timing card.
+```
+
+### Real-time events (SSE)
+```
+Server: realtimeEvents.ts
+  → addClient(tenantId, res) — registers SSE connection
+  → emitTenantEvent(tenantId, type, data) — broadcasts to tenant's clients
+  → 30s keep-alive, auto-cleanup on disconnect
+
+Emission points:
+  webhooks.ts (SMS/email inbound) → inbound_sms / inbound_email
+  actionExecutor.ts (delivery) → action_completed
+  event-bus.ts (bounces) → delivery_bounce
+  xeroSync.ts (PAID detection) → payment_received
+
+Client: useRealtimeEvents.ts hook
+  → EventSource to /api/events/stream
+  → Per-event-type TanStack Query invalidation
+  → 3 retries with escalating delays (1s, 3s, 10s)
+  → Falls back to polling (refetchInterval) after max retries
+```
+
+### Charlie decision architecture (from 5 April 2026 audit)
+```
+Two-phase pipeline orchestrated by collectionsScheduler.ts:
+
+PLANNING (hourly):
+  actionPlanner.planActionsForAllTenants()
+    → for each tenant with collectionsAutomationEnabled=true:
+      → planActionsForTenant(tenantId)
+        → Query overdue invoices (JOIN contacts, schedules, assignments)
+        → for each invoice:
+          → planAdaptiveAction() → adaptive-scheduler.scheduleNextTouch()
+            → Scores all (channel × time horizon) combos
+            → Composite: α·pPay − β·friction − γ·risk + δ·urgency
+        → Bundle multi-invoice actions by contact
+        → Create actions via batchProcessor.proposeAction()
+        → enforceDebtorGroupConsistency() (post-sweep)
+
+EXECUTION (every 10 minutes):
+  actionExecutor.executeScheduledActions()
+    → validateActionBeforeExecution() — 6 Gap 4 gates
+    → runComplianceGate() — content compliance
+    → executeAction() → sendEmail/SMS/Voice
+    → enforceCommunicationMode() — final safety gate
+
+LLM BOUNDARY (strict separation):
+  Rules decide: WHETHER, WHICH channel, WHAT tone, WHEN, WHO
+  LLM generates: email/SMS/voice CONTENT only
+  LLM classifies: inbound intent (12 types, confidence gated)
+  LLM never decides channel, tone, timing, or whether to send
+
+DECISION TREE INSERTION POINT (future):
+  Replace planAdaptiveAction() + scheduleNextTouch() with
+  decisionTree.evaluate(debtor, invoices, tenant, history)
+  Keep all downstream: executor, compliance, delivery, mode enforcement
 ```
 
 ### Agent architecture (current vs planned)

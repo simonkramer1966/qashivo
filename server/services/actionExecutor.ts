@@ -108,9 +108,12 @@ export class ActionExecutor {
           const result = await this.executeAction(action, contact, invoice, tenant);
 
           if (result.success) {
+            // TODO: When outcomes arrive (payment, response, bounce),
+            // update decisionAuditLog.outcomeType/outcomeAt/daysToOutcome
+            // via the action's decisionEvaluationId
             await db
               .update(actions)
-              .set({ 
+              .set({
                 status: 'completed',
                 completedAt: new Date(),
                 metadata: {
@@ -121,6 +124,9 @@ export class ActionExecutor {
               .where(eq(actions.id, action.id));
             successCount++;
             console.log(`✅ Executed ${action.type} action for ${contact.name}`);
+
+            // Create timeline event for Activity Feed
+            await this.createOutboundTimelineEvent(action, contact, invoice, result.data);
 
             // Gap 10: Set legal response window if this was a Legal tone action
             await setLegalResponseWindowIfNeeded(action.id, action.contactId, action.tenantId, action.agentToneLevel);
@@ -248,6 +254,9 @@ export class ActionExecutor {
               .where(eq(actions.id, action.id));
             successCount++;
             console.log(`✅ Immediately executed ${action.type} action for ${contact.name}`);
+
+            // Create timeline event for Activity Feed
+            await this.createOutboundTimelineEvent(action, contact, invoice, result.data);
 
             // Gap 10: Set legal response window if this was a Legal tone action
             await setLegalResponseWindowIfNeeded(action.id, action.contactId, action.tenantId, action.agentToneLevel);
@@ -1137,6 +1146,62 @@ export class ActionExecutor {
           console.error('[Retry] Failed to record hard bounce (non-fatal):', err);
         }
       }
+    }
+  }
+
+  /**
+   * Create a timeline event for a successfully executed outbound action.
+   * This populates the Activity Feed tab.
+   * Non-fatal — a failed timeline insert must never block delivery.
+   */
+  private async createOutboundTimelineEvent(
+    action: any,
+    contact: any,
+    invoice: any,
+    resultData: any,
+  ): Promise<void> {
+    try {
+      // Map action type to channel name used by timeline
+      const channelMap: Record<string, string> = {
+        email: 'email',
+        sms: 'sms',
+        whatsapp: 'sms',
+        voice: 'voice',
+        call: 'voice',
+      };
+      const channel = channelMap[action.type] || action.type;
+
+      const summary = action.type === 'email'
+        ? `Sent email: ${action.subject || 'Payment reminder'}`
+        : action.type === 'sms'
+          ? `Sent SMS to ${contact.name}`
+          : action.type === 'voice' || action.type === 'call'
+            ? `Voice call initiated to ${contact.name}`
+            : `${action.type} sent to ${contact.name}`;
+
+      const preview = action.content
+        ? action.content.substring(0, 240)
+        : resultData?.subject || summary;
+
+      await db.insert(timelineEvents).values({
+        tenantId: action.tenantId,
+        customerId: action.contactId,
+        invoiceId: action.invoiceId || invoice?.id || null,
+        occurredAt: new Date(),
+        direction: 'outbound',
+        channel,
+        summary,
+        preview,
+        subject: action.subject || null,
+        body: action.content || null,
+        status: 'sent',
+        createdByType: 'system',
+        createdByName: 'Charlie',
+        actionId: action.id,
+      });
+    } catch (err) {
+      console.warn(`[Executor] Failed to create outbound timeline event for action ${action.id}:`, err);
+      // Non-fatal — delivery already succeeded
     }
   }
 }

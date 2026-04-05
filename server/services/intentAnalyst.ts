@@ -328,6 +328,9 @@ CRITICAL EXCEPTIONS — do NOT flag ambiguity when:
 
   /**
    * Process an unanalyzed inbound message
+   *
+   * TODO: Link inbound response back to the decisionAuditLog
+   * that triggered the outbound action, update outcome 'responded'
    */
   async processInboundMessage(messageId: string): Promise<void> {
     try {

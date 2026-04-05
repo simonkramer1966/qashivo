@@ -327,36 +327,49 @@ export function registerActionCentreRoutes(app: Express): void {
       const channel = req.query.channel as string | undefined; // email | sms | voice | system
       const timeRange = (req.query.time as string) || "today"; // today | yesterday | week | month
 
-      // Build time filter
-      const now = new Date();
+      // Build time filter using tenant's timezone (default Europe/London)
+      // On Railway (UTC), "today" must mean midnight in the tenant's timezone
+      const tenantRow = await db
+        .select({ tz: tenants.executionTimezone })
+        .from(tenants)
+        .where(eq(tenants.id, user.tenantId))
+        .limit(1);
+      const tz = tenantRow[0]?.tz || "Europe/London";
+
+      // Compute midnight in the tenant's timezone as a UTC Date.
+      // Uses Intl to get the correct local date, then calculates the UTC offset.
+      const midnightInTz = (offsetDays: number): Date => {
+        const now = new Date();
+        // Get today's date string in the tenant's timezone (YYYY-MM-DD)
+        const localDateStr = new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(now);
+        const [year, month, day] = localDateStr.split("-").map(Number);
+        // Target date (with offset) at midnight UTC
+        const target = new Date(Date.UTC(year, month - 1, day + offsetDays, 0, 0, 0));
+        // Calculate TZ offset: format the target UTC time in the tenant's TZ
+        // and see what hour it shows — the difference is the offset
+        const parts = new Intl.DateTimeFormat("en-GB", {
+          timeZone: tz, hour: "numeric", hour12: false,
+        }).formatToParts(target);
+        const localHour = parseInt(parts.find(p => p.type === "hour")?.value || "0");
+        // If midnight UTC shows as e.g. 01:00 local, then local is UTC+1,
+        // meaning midnight local = 23:00 UTC the day before
+        target.setUTCHours(target.getUTCHours() - localHour);
+        return target;
+      };
+
       let timeStart: Date;
       switch (timeRange) {
-        case "yesterday": {
-          const y = new Date(now);
-          y.setDate(y.getDate() - 1);
-          y.setHours(0, 0, 0, 0);
-          timeStart = y;
+        case "yesterday":
+          timeStart = midnightInTz(-1);
           break;
-        }
-        case "week": {
-          const w = new Date(now);
-          w.setDate(w.getDate() - 7);
-          w.setHours(0, 0, 0, 0);
-          timeStart = w;
+        case "week":
+          timeStart = midnightInTz(-7);
           break;
-        }
-        case "month": {
-          const m = new Date(now);
-          m.setMonth(m.getMonth() - 1);
-          m.setHours(0, 0, 0, 0);
-          timeStart = m;
+        case "month":
+          timeStart = midnightInTz(-30);
           break;
-        }
-        default: { // today
-          const t = new Date(now);
-          t.setHours(0, 0, 0, 0);
-          timeStart = t;
-        }
+        default: // today
+          timeStart = midnightInTz(0);
       }
 
       // Build WHERE conditions for timelineEvents
@@ -375,8 +388,8 @@ export function registerActionCentreRoutes(app: Express): void {
         }
       }
 
-      // Fetch events with contact info
-      const events = await db
+      // Fetch events from timelineEvents
+      const timelineRows = await db
         .select({
           id: timelineEvents.id,
           customerId: timelineEvents.customerId,
@@ -400,6 +413,133 @@ export function registerActionCentreRoutes(app: Express): void {
         .where(and(...conditions))
         .orderBy(desc(timelineEvents.occurredAt))
         .limit(500);
+
+      // Collect action IDs already represented in timeline events to avoid duplicates
+      const timelineActionIds = new Set(
+        timelineRows.filter(e => e.actionId).map(e => e.actionId!)
+      );
+
+      // Backfill: also query actions table for outbound activity without timeline events.
+      // This covers historical actions executed before the timeline event fix.
+      type FeedEvent = typeof timelineRows[number];
+      const events: FeedEvent[] = [...timelineRows];
+
+      if (!direction || direction === "outbound") {
+        const actionConditions: any[] = [
+          eq(actions.tenantId, user.tenantId),
+          gte(actions.createdAt, timeStart),
+          inArray(actions.status, ["completed", "sent", "failed"]),
+        ];
+        if (channel && channel !== "system") {
+          actionConditions.push(eq(actions.type, channel === "voice" ? "voice" : channel));
+        }
+
+        const actionRows = await db
+          .select({
+            action: actions,
+            contactName: contacts.name,
+            companyName: contacts.companyName,
+          })
+          .from(actions)
+          .leftJoin(contacts, eq(actions.contactId, contacts.id))
+          .where(and(...actionConditions))
+          .orderBy(desc(actions.createdAt))
+          .limit(300);
+
+        for (const row of actionRows) {
+          // Skip if this action already has a timeline event
+          if (timelineActionIds.has(row.action.id)) continue;
+
+          const a = row.action;
+          const ch = a.type === "voice" || a.type === "call" ? "voice" : a.type;
+          const statusLabel = a.status === "failed" ? " (failed)" : "";
+          events.push({
+            id: `action-${a.id}`,
+            customerId: a.contactId || "unknown",
+            contactName: row.contactName || "Unknown",
+            companyName: row.companyName || null,
+            direction: "outbound",
+            channel: ch,
+            summary: a.actionSummary || a.subject || `${a.type} action${statusLabel}`,
+            preview: a.content?.substring(0, 240) || null,
+            subject: a.subject || null,
+            body: a.content || null,
+            status: a.status === "failed" ? "failed" : "sent",
+            occurredAt: a.completedAt || a.createdAt!,
+            outcomeType: null,
+            createdByType: "system",
+            createdByName: "Charlie",
+            actionId: a.id,
+          });
+        }
+      }
+
+      // Backfill: query inbound_messages for inbound activity without timeline events
+      if (!direction || direction === "inbound") {
+        const inboundConditions: any[] = [
+          eq(inboundMessages.tenantId, user.tenantId),
+          gte(inboundMessages.createdAt, timeStart),
+        ];
+        if (channel && channel !== "system") {
+          inboundConditions.push(eq(inboundMessages.channel, channel));
+        }
+
+        const inboundRows = await db
+          .select({
+            msg: inboundMessages,
+            contactName: contacts.name,
+            companyName: contacts.companyName,
+          })
+          .from(inboundMessages)
+          .leftJoin(contacts, eq(inboundMessages.contactId, contacts.id))
+          .where(and(...inboundConditions))
+          .orderBy(desc(inboundMessages.createdAt))
+          .limit(200);
+
+        // Collect existing inbound timeline event signatures to deduplicate
+        const inboundSignatures = new Set(
+          timelineRows
+            .filter(e => e.direction === "inbound")
+            .map(e => `${e.channel}-${e.customerId}-${e.occurredAt?.getTime()}`)
+        );
+
+        for (const row of inboundRows) {
+          const m = row.msg;
+          const sig = `${m.channel}-${m.contactId}-${m.createdAt?.getTime()}`;
+          if (inboundSignatures.has(sig)) continue;
+
+          events.push({
+            id: `inbound-${m.id}`,
+            customerId: m.contactId || "unknown",
+            contactName: row.contactName || m.from || "Unknown",
+            companyName: row.companyName || null,
+            direction: "inbound",
+            channel: m.channel || "email",
+            summary: m.channel === "sms"
+              ? `SMS from ${row.contactName || m.from || "Unknown"}`
+              : `Email from ${row.contactName || m.from || "Unknown"}: ${(m.subject || "").substring(0, 60)}`,
+            preview: m.content?.substring(0, 240) || m.subject || null,
+            subject: m.subject || null,
+            body: m.content || null,
+            status: "received",
+            occurredAt: m.createdAt!,
+            outcomeType: null,
+            createdByType: "system",
+            createdByName: null,
+            actionId: null,
+          });
+        }
+      }
+
+      // Sort all events by occurredAt descending
+      events.sort((a, b) => {
+        const aTime = a.occurredAt?.getTime() || 0;
+        const bTime = b.occurredAt?.getTime() || 0;
+        return bTime - aTime;
+      });
+
+      // Trim to 500
+      if (events.length > 500) events.length = 500;
 
       // Group by debtor
       const debtorMap = new Map<string, {
