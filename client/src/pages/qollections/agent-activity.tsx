@@ -203,7 +203,7 @@ export default function QollectionsAgentActivity() {
           {activeTab === "scheduled" && <ScheduledTab />}
           {activeTab === "vip" && <VipTab />}
           {activeTab === "activity" && <ActivityFeedTab />}
-          {activeTab === "exceptions" && <ExceptionsTab subTab={exceptionSubTab ?? undefined} />}
+          {activeTab === "exceptions" && <ExceptionsTab subTab={exceptionSubTab ?? undefined} onNavigateSubTab={setSubTab} />}
         </div>
       </div>
     </AppShell>

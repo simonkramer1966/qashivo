@@ -500,10 +500,25 @@ export function registerActionCentreRoutes(app: Express): void {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
 
-      const [exceptionActions, patterns] = await Promise.all([
+      const [exceptionRows, patterns] = await Promise.all([
         db
-          .select()
+          .select({
+            id: actions.id,
+            type: actions.type,
+            status: actions.status,
+            subject: actions.subject,
+            content: actions.content,
+            exceptionReason: actions.exceptionReason,
+            exceptionType: actions.exceptionType,
+            agentReasoning: actions.agentReasoning,
+            actionSummary: actions.actionSummary,
+            createdAt: actions.createdAt,
+            contactId: actions.contactId,
+            contactName: contacts.name,
+            companyName: contacts.companyName,
+          })
           .from(actions)
+          .leftJoin(contacts, eq(actions.contactId, contacts.id))
           .where(
             and(
               eq(actions.tenantId, user.tenantId),
@@ -525,13 +540,71 @@ export function registerActionCentreRoutes(app: Express): void {
       ]);
 
       res.json({
-        exceptionActions,
+        exceptionActions: exceptionRows,
         rejectionPatterns: patterns,
-        totalExceptions: exceptionActions.length,
+        totalExceptions: exceptionRows.length,
         totalPatterns: patterns.length,
       });
     } catch (error: any) {
       console.error("Error fetching exceptions:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ── POST /api/actions/:actionId/resolve ──────────────────────
+  // Resolve an exception — marks it as completed
+  app.post("/api/actions/:actionId/resolve", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const { actionId } = req.params;
+      const [action] = await db
+        .select()
+        .from(actions)
+        .where(and(eq(actions.id, actionId), eq(actions.tenantId, user.tenantId), eq(actions.status, "exception")))
+        .limit(1);
+
+      if (!action) return res.status(404).json({ message: "Exception not found" });
+
+      await db.update(actions).set({
+        status: "completed",
+        completedAt: new Date(),
+        updatedAt: new Date(),
+      }).where(eq(actions.id, actionId));
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error resolving exception:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ── POST /api/actions/:actionId/dismiss ─────────────────────
+  // Dismiss an exception — marks it as cancelled
+  app.post("/api/actions/:actionId/dismiss", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const { actionId } = req.params;
+      const [action] = await db
+        .select()
+        .from(actions)
+        .where(and(eq(actions.id, actionId), eq(actions.tenantId, user.tenantId), eq(actions.status, "exception")))
+        .limit(1);
+
+      if (!action) return res.status(404).json({ message: "Exception not found" });
+
+      await db.update(actions).set({
+        status: "cancelled",
+        cancellationReason: "dismissed_by_user",
+        updatedAt: new Date(),
+      }).where(eq(actions.id, actionId));
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error dismissing exception:", error);
       res.status(500).json({ message: error.message });
     }
   });
