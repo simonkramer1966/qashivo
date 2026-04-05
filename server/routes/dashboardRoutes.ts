@@ -1982,6 +1982,27 @@ export function registerDashboardRoutes(app: Express): void {
       // Get AR totals (per-contact credit netting, matching Debtors page exactly)
       const arSummary = await getARSummary(user.tenantId);
 
+      // DSO: use latest dsoSnapshot (standard formula: Outstanding/Revenue90d × 90)
+      // so the card matches the trend chart. Fall back to inline calc if no snapshot.
+      const latestSnapshots = await storage.getDsoSnapshots(user.tenantId, 7);
+      let standardDSO: number;
+      if (latestSnapshots.length > 0) {
+        standardDSO = Math.round(Number(latestSnapshots[latestSnapshots.length - 1].dsoValue));
+      } else {
+        // Inline fallback: (totalOutstanding / revenue90d) × 90
+        const rev90Result = await db.execute(sql`
+          SELECT COALESCE(SUM(amount::numeric), 0) as revenue_90d
+          FROM invoices
+          WHERE tenant_id = ${user.tenantId}
+            AND issue_date >= CURRENT_DATE - INTERVAL '90 days'
+        `);
+        const rev90Row = (rev90Result as any).rows?.[0] || (rev90Result as any)[0] || {};
+        const revenue90d = Number(rev90Row.revenue_90d || 0);
+        standardDSO = revenue90d > 0
+          ? Math.round((arSummary.totalOutstanding / revenue90d) * 90)
+          : 0;
+      }
+
       // Ageing buckets (Dashboard-specific, separate query)
       const ageingResult = await db.execute(sql`
         SELECT
@@ -2035,7 +2056,8 @@ export function registerDashboardRoutes(app: Express): void {
         totalOutstanding: arSummary.totalOutstanding,
         totalOverdue: arSummary.totalOverdue,
         overdueCount: Number(overdueRow.overdue_count || 0),
-        dso: arSummary.currentDSO,
+        dso: standardDSO,
+        avgDaysToPay: arSummary.currentDSO, // Realised DSO (avg paid invoice days) — useful for CFO review
         totalDebtors: arSummary.debtorCount,
         totalInvoices: Number(invoiceRow.total_invoices || 0),
         ageingBuckets,
