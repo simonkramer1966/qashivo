@@ -496,17 +496,33 @@ export function registerActionCentreRoutes(app: Express): void {
           .orderBy(desc(inboundMessages.createdAt))
           .limit(200);
 
-        // Collect existing inbound timeline event signatures to deduplicate
-        const inboundSignatures = new Set(
-          timelineRows
-            .filter(e => e.direction === "inbound")
-            .map(e => `${e.channel}-${e.customerId}-${e.occurredAt?.getTime()}`)
-        );
+        // Deduplicate inbound_messages against timelineEvents.
+        // Timestamps differ slightly between tables, so we match on:
+        // 1. contact+channel+minute (truncated to 60s window)
+        // 2. contact+channel with body content match (first 80 chars)
+        const truncateToMin = (d: Date | null | undefined) =>
+          d ? Math.floor(d.getTime() / 60000) : 0;
+
+        const inboundTimelineSigs = new Set<string>();
+        const inboundTimelineContent = new Set<string>();
+        for (const e of timelineRows) {
+          if (e.direction !== "inbound") continue;
+          inboundTimelineSigs.add(`${e.channel}-${e.customerId}-${truncateToMin(e.occurredAt)}`);
+          // Also fingerprint by content to catch cases where timestamps differ by >1 min
+          if (e.body || e.preview) {
+            const contentKey = `${e.channel}-${e.customerId}-${(e.body || e.preview || "").substring(0, 80).trim()}`;
+            inboundTimelineContent.add(contentKey);
+          }
+        }
 
         for (const row of inboundRows) {
           const m = row.msg;
-          const sig = `${m.channel}-${m.contactId}-${m.createdAt?.getTime()}`;
-          if (inboundSignatures.has(sig)) continue;
+          // Check minute-truncated signature
+          const sig = `${m.channel}-${m.contactId}-${truncateToMin(m.createdAt)}`;
+          if (inboundTimelineSigs.has(sig)) continue;
+          // Check content fingerprint
+          const contentKey = `${m.channel}-${m.contactId}-${(m.content || "").substring(0, 80).trim()}`;
+          if (inboundTimelineContent.has(contentKey)) continue;
 
           events.push({
             id: `inbound-${m.id}`,
