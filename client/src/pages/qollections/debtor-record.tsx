@@ -100,6 +100,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import SendEmailDrawer from "@/components/email/SendEmailDrawer";
+import { ActivityEventRow, getDateKey, type ActivityEventData } from "@/components/activity/ActivityEventRow";
 import { CURRENCIES, SUPPORTED_LANGUAGES, getLanguageName, getCurrencySymbol } from "@shared/currencies";
 
 // ---------------------------------------------------------------------------
@@ -525,8 +526,6 @@ export default function DebtorRecord() {
   const [activityRange, setActivityRange] = useState("90d");
   const [activityDirection, setActivityDirection] = useState("All");
   const [activityPage, setActivityPage] = useState(1);
-  const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set());
-
   // --- Sort state for outstanding / paid tables ---
   const [outstandingSortKey, setOutstandingSortKey] = useState<string>("dueDate");
   const [outstandingSortDir, setOutstandingSortDir] = useState<SortDir>("asc");
@@ -2285,11 +2284,7 @@ export default function DebtorRecord() {
               <div className="space-y-3">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <div key={i} className="flex gap-3">
-                    <Skeleton className="h-8 w-8 rounded-full shrink-0" />
-                    <div className="flex-1 space-y-2">
-                      <Skeleton className="h-4 w-2/3" />
-                      <Skeleton className="h-3 w-1/2" />
-                    </div>
+                    <Skeleton className="h-8 w-full" />
                   </div>
                 ))}
               </div>
@@ -2310,116 +2305,48 @@ export default function DebtorRecord() {
                 </p>
               </div>
             ) : (
-              <div className="space-y-1.5">
-                {(activityQuery.data?.events ?? []).map((evt) => {
-                  const config = getEventTypeConfig(evt.eventType, evt.direction);
-                  const significant = isSignificantEvent(evt.eventType);
-                  const isExpanded = expandedEvents.has(evt.id);
-                  const hasExpandableContent = evt.description && evt.description.length > 100;
-                  const toggleExpand = () => {
-                    setExpandedEvents(prev => {
-                      const next = new Set(prev);
-                      if (next.has(evt.id)) next.delete(evt.id); else next.add(evt.id);
-                      return next;
+              <Card className="overflow-hidden">
+                <div>
+                  {(() => {
+                    let lastDateKey = "";
+                    return (activityQuery.data?.events ?? []).map((evt, idx) => {
+                      // Map ActivityEvent to ActivityEventData for the shared row component
+                      const mapped: ActivityEventData = {
+                        id: evt.id,
+                        direction: evt.direction,
+                        channel: undefined,
+                        summary: evt.title,
+                        description: evt.description,
+                        subject: undefined,
+                        body: evt.description,
+                        status: evt.metadata?.outcomeType || null,
+                        occurredAt: evt.createdAt,
+                        outcomeType: evt.metadata?.outcomeType || null,
+                        createdByName: evt.triggeredBy || null,
+                        contactName: contact?.name || null,
+                        eventType: evt.eventType,
+                        triggeredBy: evt.triggeredBy,
+                        title: evt.title,
+                        metadata: evt.metadata,
+                      };
+                      const dateKey = getDateKey(evt.createdAt);
+                      const showDate = dateKey !== lastDateKey;
+                      if (showDate) lastDateKey = dateKey;
+
+                      return (
+                        <ActivityEventRow
+                          key={evt.id}
+                          evt={mapped}
+                          index={idx}
+                          showDate={showDate}
+                        />
+                      );
                     });
-                  };
-
-                  return (
-                    <div
-                      key={evt.id}
-                      className={cn(
-                        "relative flex items-center gap-3 rounded-lg border border-zinc-200 px-3 py-2.5 transition-colors",
-                        "border-l-[3px]",
-                        config.borderColor,
-                        significant && "bg-zinc-50/80",
-                      )}
-                    >
-                      {/* Icon circle */}
-                      <div className={cn(
-                        "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
-                        config.bgColor,
-                        config.iconColor,
-                      )}>
-                        {config.icon}
-                      </div>
-
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        {/* Header row */}
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className={cn("text-sm font-medium leading-tight", significant && "font-semibold")}>
-                            {evt.title}
-                          </span>
-                          {evt.metadata?.outcomeType && (
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                "text-[10px] px-1.5 py-0 h-4 font-normal",
-                                evt.metadata.outcomeType === "delivered" && "border-green-300 text-green-700",
-                                evt.metadata.outcomeType === "bounce" && "border-red-300 text-red-700",
-                                evt.metadata.outcomeType === "open" && "border-blue-300 text-blue-700",
-                              )}
-                            >
-                              {evt.metadata.outcomeType}
-                            </Badge>
-                          )}
-                        </div>
-
-                        {/* Preview / description */}
-                        {evt.description && (
-                          <div className="mt-1">
-                            <p
-                              className={cn(
-                                "text-xs text-muted-foreground leading-relaxed",
-                                !isExpanded && "line-clamp-2",
-                              )}
-                            >
-                              {evt.description}
-                            </p>
-                            {hasExpandableContent && (
-                              <button
-                                onClick={toggleExpand}
-                                className="text-[11px] text-blue-600 hover:text-blue-800 mt-0.5 font-medium"
-                              >
-                                {isExpanded ? "Show less" : "Show more"}
-                              </button>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Footer: time + agent */}
-                        <div className="flex items-center gap-2 mt-1.5 text-[11px] text-muted-foreground">
-                          <span title={formatDateFull(evt.createdAt)}>
-                            {relativeTime(evt.createdAt)}
-                          </span>
-                          {evt.triggeredBy && (
-                            <>
-                              <span className="text-zinc-300">·</span>
-                              <span>{evt.triggeredBy}</span>
-                            </>
-                          )}
-                          {evt.linkedInvoiceId && (
-                            <>
-                              <span className="text-zinc-300">·</span>
-                              <span className="text-blue-600">Invoice linked</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Directional arrow — right edge */}
-                      {evt.direction === "outbound" && (
-                        <ArrowRight className="h-6 w-6 shrink-0 text-blue-500" />
-                      )}
-                      {evt.direction === "inbound" && (
-                        <ArrowLeft className="h-6 w-6 shrink-0 text-emerald-500" />
-                      )}
-                    </div>
-                  );
-                })}
+                  })()}
+                </div>
 
                 {activityQuery.data?.hasMore && (
-                  <div className="text-center pt-2 pb-1">
+                  <div className="text-center py-3 border-t">
                     <Button
                       variant="outline"
                       size="sm"
@@ -2430,7 +2357,7 @@ export default function DebtorRecord() {
                     </Button>
                   </div>
                 )}
-              </div>
+              </Card>
             )}
 
             {/* ── Recent Actions table ── */}
