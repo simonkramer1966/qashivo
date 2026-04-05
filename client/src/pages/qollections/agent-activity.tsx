@@ -75,9 +75,10 @@ export default function QollectionsAgentActivity() {
   });
 
   const { data: exceptionsData } = useQuery<{
-    exceptionActions: Array<{ exceptionReason: string | null }>;
+    exceptionActions: Array<{ exceptionReason: string | null; exceptionStatus: string | null }>;
     totalExceptions: number;
     totalPatterns: number;
+    newCount: number;
   }>({
     queryKey: ["/api/action-centre/exceptions"],
     refetchInterval: 30_000,
@@ -107,16 +108,18 @@ export default function QollectionsAgentActivity() {
   const approvalCount = approvalsData?.total ?? 0;
   const scheduledCount = scheduledData?.total ?? 0;
   const activityInboundCount = activityFeedData?.inboundCount ?? 0;
-  const exceptionCount = (exceptionsData?.totalExceptions ?? 0) + (exceptionsData?.totalPatterns ?? 0);
+  const exceptionCount = (exceptionsData?.newCount ?? 0) + (exceptionsData?.totalPatterns ?? 0);
   const vipCount = vipData?.total ?? 0;
 
-  // Compute per-sub-tab exception counts
+  // Compute per-sub-tab exception counts (only "new" items for badge)
   const exceptionSubCounts = useMemo(() => {
     const counts: Record<ExceptionSubTab, number> = { collections: 0, debtor_situations: 0, other: 0 };
     const actions = exceptionsData?.exceptionActions ?? [];
     for (const a of actions) {
+      if (a.exceptionStatus && a.exceptionStatus !== "new") continue;
       const cat = classifyException(a.exceptionReason);
       if (cat) counts[cat]++;
+      else counts.other++;
     }
     return counts;
   }, [exceptionsData]);

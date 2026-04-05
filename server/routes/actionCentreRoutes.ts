@@ -500,6 +500,8 @@ export function registerActionCentreRoutes(app: Express): void {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
 
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
       const [exceptionRows, patterns] = await Promise.all([
         db
           .select({
@@ -512,6 +514,9 @@ export function registerActionCentreRoutes(app: Express): void {
             exceptionType: actions.exceptionType,
             agentReasoning: actions.agentReasoning,
             actionSummary: actions.actionSummary,
+            exceptionStatus: actions.exceptionStatus,
+            exceptionResolvedAt: actions.exceptionResolvedAt,
+            exceptionResolutionNotes: actions.exceptionResolutionNotes,
             createdAt: actions.createdAt,
             contactId: actions.contactId,
             contactName: contacts.name,
@@ -522,11 +527,26 @@ export function registerActionCentreRoutes(app: Express): void {
           .where(
             and(
               eq(actions.tenantId, user.tenantId),
-              eq(actions.status, "exception"),
+              or(
+                // Active exceptions (new + in_progress)
+                and(
+                  eq(actions.status, "exception"),
+                  or(
+                    isNull(actions.exceptionStatus),
+                    inArray(actions.exceptionStatus, ["new", "in_progress"]),
+                  ),
+                ),
+                // Resolved exceptions from last 7 days
+                and(
+                  eq(actions.status, "exception"),
+                  eq(actions.exceptionStatus, "resolved"),
+                  gte(actions.exceptionResolvedAt, sevenDaysAgo),
+                ),
+              ),
             )
           )
           .orderBy(desc(actions.createdAt))
-          .limit(100),
+          .limit(200),
         db
           .select()
           .from(rejectionPatterns)
@@ -539,11 +559,17 @@ export function registerActionCentreRoutes(app: Express): void {
           .orderBy(desc(rejectionPatterns.lastOccurredAt)),
       ]);
 
+      // Count only "new" exceptions for badge
+      const newCount = exceptionRows.filter(e =>
+        !e.exceptionStatus || e.exceptionStatus === "new"
+      ).length;
+
       res.json({
         exceptionActions: exceptionRows,
         rejectionPatterns: patterns,
         totalExceptions: exceptionRows.length,
         totalPatterns: patterns.length,
+        newCount,
       });
     } catch (error: any) {
       console.error("Error fetching exceptions:", error);
@@ -552,13 +578,14 @@ export function registerActionCentreRoutes(app: Express): void {
   });
 
   // ── POST /api/actions/:actionId/resolve ──────────────────────
-  // Resolve an exception — marks it as completed
+  // Resolve an exception — sets exceptionStatus to 'resolved' with notes
   app.post("/api/actions/:actionId/resolve", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
 
       const { actionId } = req.params;
+      const { notes } = req.body || {};
       const [action] = await db
         .select()
         .from(actions)
@@ -568,8 +595,10 @@ export function registerActionCentreRoutes(app: Express): void {
       if (!action) return res.status(404).json({ message: "Exception not found" });
 
       await db.update(actions).set({
-        status: "completed",
-        completedAt: new Date(),
+        exceptionStatus: "resolved",
+        exceptionResolvedBy: user.id,
+        exceptionResolvedAt: new Date(),
+        exceptionResolutionNotes: notes || null,
         updatedAt: new Date(),
       }).where(eq(actions.id, actionId));
 
@@ -581,7 +610,7 @@ export function registerActionCentreRoutes(app: Express): void {
   });
 
   // ── POST /api/actions/:actionId/dismiss ─────────────────────
-  // Dismiss an exception — marks it as cancelled
+  // Dismiss an exception — same as resolve but with 'dismissed' note
   app.post("/api/actions/:actionId/dismiss", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -597,14 +626,75 @@ export function registerActionCentreRoutes(app: Express): void {
       if (!action) return res.status(404).json({ message: "Exception not found" });
 
       await db.update(actions).set({
-        status: "cancelled",
-        cancellationReason: "dismissed_by_user",
+        exceptionStatus: "resolved",
+        exceptionResolvedBy: user.id,
+        exceptionResolvedAt: new Date(),
+        exceptionResolutionNotes: "Dismissed",
         updatedAt: new Date(),
       }).where(eq(actions.id, actionId));
 
       res.json({ success: true });
     } catch (error: any) {
       console.error("Error dismissing exception:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ── POST /api/actions/:actionId/start-working ─────────────────
+  // Move exception from 'new' to 'in_progress'
+  app.post("/api/actions/:actionId/start-working", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const { actionId } = req.params;
+      const [action] = await db
+        .select()
+        .from(actions)
+        .where(and(eq(actions.id, actionId), eq(actions.tenantId, user.tenantId), eq(actions.status, "exception")))
+        .limit(1);
+
+      if (!action) return res.status(404).json({ message: "Exception not found" });
+
+      await db.update(actions).set({
+        exceptionStatus: "in_progress",
+        updatedAt: new Date(),
+      }).where(eq(actions.id, actionId));
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error starting work on exception:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ── POST /api/actions/:actionId/reopen ────────────────────────
+  // Reopen a resolved exception — back to 'new'
+  app.post("/api/actions/:actionId/reopen", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const { actionId } = req.params;
+      const [action] = await db
+        .select()
+        .from(actions)
+        .where(and(eq(actions.id, actionId), eq(actions.tenantId, user.tenantId), eq(actions.status, "exception")))
+        .limit(1);
+
+      if (!action) return res.status(404).json({ message: "Exception not found" });
+
+      await db.update(actions).set({
+        exceptionStatus: "new",
+        exceptionResolvedBy: null,
+        exceptionResolvedAt: null,
+        exceptionResolutionNotes: null,
+        updatedAt: new Date(),
+      }).where(eq(actions.id, actionId));
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error reopening exception:", error);
       res.status(500).json({ message: error.message });
     }
   });

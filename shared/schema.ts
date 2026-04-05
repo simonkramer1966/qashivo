@@ -930,6 +930,12 @@ export const actions = pgTable("actions", {
   generationMethod: varchar("generation_method").default('llm'), // llm | template_fallback
   cancellationReason: varchar("cancellation_reason"),
 
+  // Exception state tracking (new → in_progress → resolved)
+  exceptionStatus: varchar("exception_status").default("new"), // new, in_progress, resolved
+  exceptionResolvedBy: varchar("exception_resolved_by").references(() => users.id),
+  exceptionResolvedAt: timestamp("exception_resolved_at"),
+  exceptionResolutionNotes: text("exception_resolution_notes"),
+
   // Action Centre: batch & rejection tracking
   batchId: varchar("batch_id"),
   agentType: varchar("agent_type"), // collections, risk, cashflow, dispute, working_capital
