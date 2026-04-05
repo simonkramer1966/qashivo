@@ -658,6 +658,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerDemoRoutes(app);
   registerImpactRoutes(app);
 
+  // ── SSE endpoint for real-time UI updates ──────────────────────
+  app.get('/api/events/stream', isAuthenticated, async (req, res) => {
+    const user = (req as any).user;
+    const tenantId = user?.activeTenantId || user?.tenantId;
+    if (!tenantId) {
+      return res.status(400).json({ error: 'No tenant context' });
+    }
+    const { addClient } = await import("./services/realtimeEvents");
+    addClient(tenantId, res);
+  });
+
   // Partner and Context Management Routes
   // Get current auth context (user info, role, active tenant)
   app.get('/api/auth/context', isAuthenticated, async (req, res) => {

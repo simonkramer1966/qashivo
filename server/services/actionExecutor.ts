@@ -127,10 +127,14 @@ export class ActionExecutor {
 
             // Broadcast real-time update to connected clients
             websocketService.broadcastActionCompleted(action.tenantId, action.id, action.type);
+            const { emitTenantEvent } = await import("./realtimeEvents");
+            emitTenantEvent(action.tenantId, 'action_completed', {
+              actionId: action.id, type: action.type, contactId: action.contactId,
+            });
           } else {
             await db
               .update(actions)
-              .set({ 
+              .set({
                 status: 'failed',
                 metadata: {
                   ...(action.metadata || {}),
@@ -249,6 +253,10 @@ export class ActionExecutor {
             await setLegalResponseWindowIfNeeded(action.id, action.contactId, action.tenantId, action.agentToneLevel);
 
             websocketService.broadcastActionCompleted(action.tenantId, action.id, action.type);
+            const { emitTenantEvent } = await import("./realtimeEvents");
+            emitTenantEvent(action.tenantId, 'action_completed', {
+              actionId: action.id, type: action.type, contactId: action.contactId,
+            });
           } else {
             await db.update(actions)
               .set({

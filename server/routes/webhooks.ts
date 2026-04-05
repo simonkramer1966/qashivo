@@ -636,14 +636,30 @@ export function registerWebhookRoutes(app: Express) {
           contactId: contact.id,
           channel: 'sms',
           from: fromPhone,
-          to: to,
+          to: to ?? null,
           content: text,
-          providerMessageId: messageId,
-          rawPayload: req.body,
+          providerMessageId: messageId ?? null,
+          rawPayload: {
+            msisdn,
+            to,
+            text,
+            messageId: messageId ?? null,
+            timestamp: timestamp ?? null,
+            matchSource,
+          },
         })
         .returning();
 
       console.log(`✅ Inbound SMS stored: ${message.id}`);
+
+      // Notify connected UI clients
+      const { emitTenantEvent } = await import("../services/realtimeEvents");
+      emitTenantEvent(contact.tenantId, 'inbound_sms', {
+        messageId: message.id,
+        contactId: contact.id,
+        contactName: contact.name,
+        preview: text.substring(0, 100),
+      });
 
       // Record SMS reply signal
       const { signalCollector } = await import("../lib/signal-collector");
@@ -715,10 +731,10 @@ export function registerWebhookRoutes(app: Express) {
           contactId: contact.id,
           channel: 'whatsapp',
           from: fromPhone,
-          to: to,
+          to: to ?? null,
           content: messageText,
-          providerMessageId: message_uuid,
-          rawPayload: req.body,
+          providerMessageId: message_uuid ?? null,
+          rawPayload: { from, to, messageText, message_uuid, timestamp: new Date().toISOString() },
         })
         .returning();
 
@@ -2266,7 +2282,17 @@ async function processNormalizedInboundEmail(
       linkedContact.id,
       linkedContact.name || linkedContact.companyName || 'Unknown Customer'
     );
-    
+
+    // SSE: notify connected UI clients
+    const { emitTenantEvent: emitEmailEvent } = await import("../services/realtimeEvents");
+    emitEmailEvent(linkedContact.tenantId, 'inbound_email', {
+      messageId: legacyMessage.id,
+      contactId: linkedContact.id,
+      contactName: linkedContact.name,
+      subject: subject || '(No Subject)',
+      preview: (text || '').substring(0, 100),
+    });
+
     // Record email reply signal
     const { signalCollector } = await import("../lib/signal-collector");
     signalCollector.recordChannelEvent({

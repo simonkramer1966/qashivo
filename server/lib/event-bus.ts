@@ -163,6 +163,11 @@ class EventBusService {
     // Hard bounce → record in timeline for Data Health visibility
     if (deliveryStatus === 'failed_permanent' && event.contactId) {
       await this.handleHardBounce(event.tenantId, event.contactId);
+      // SSE: notify UI of hard bounce
+      const { emitTenantEvent } = await import("../services/realtimeEvents");
+      emitTenantEvent(event.tenantId, 'delivery_bounce', {
+        actionId: event.actionId, contactId: event.contactId,
+      });
     }
   }
 

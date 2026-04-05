@@ -691,6 +691,12 @@ export class XeroSyncService {
                 console.warn(`[Attribution] Failed for invoice ${cachedInv.invoiceNumber}: ${(attrErr as Error).message}`);
                 // Non-fatal — sync continues
               }
+              // SSE: notify UI of payment received
+              const { emitTenantEvent } = await import("./realtimeEvents");
+              emitTenantEvent(tenantId, 'payment_received', {
+                contactId: contact.id, contactName: contact.name,
+                invoiceNumber: cachedInv.invoiceNumber, amount: cachedInv.amount,
+              });
             }
           } else {
             // Double-check no duplicate exists (guard against Map collision from prior duplicates)

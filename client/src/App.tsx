@@ -10,6 +10,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import PageLoader from "@/components/PageLoader";
 import AdminShell from "@/components/AdminShell";
 import FloatingRileyChat from "@/components/riley/FloatingRileyChat";
+import { useRealtimeEvents } from "@/hooks/useRealtimeEvents";
 import { DrawerProvider } from "@/contexts/DrawerContext";
 import type { OnboardingStatus } from "@/components/OnboardingWizard";
 
@@ -133,6 +134,12 @@ function ClerkSignUpPage() {
       <SignIn routing="path" path="/signup" forceRedirectUrl="/qollections" />
     </div>
   );
+}
+
+/** Activates SSE connection for authenticated users */
+function RealtimeEventsProvider() {
+  useRealtimeEvents();
+  return null;
 }
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
@@ -291,6 +298,7 @@ function Router() {
           <Route path="/:rest*" component={NotFound} />
         </Switch>
         <FloatingRileyChat />
+        <RealtimeEventsProvider />
         </OnboardingGuard>
       )}
     </>
