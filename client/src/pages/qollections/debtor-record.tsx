@@ -482,6 +482,7 @@ export default function DebtorRecord() {
 
   // --- SMS sheet state ---
   const [smsMessage, setSmsMessage] = useState("");
+  const [smsRecipientPhone, setSmsRecipientPhone] = useState("");
 
   // --- Call sheet state ---
   const [callOutcome, setCallOutcome] = useState("Answered");
@@ -878,6 +879,37 @@ export default function DebtorRecord() {
   const metrics = metricsQuery.data;
   const persons = personsQuery.data ?? [];
 
+  // Build prioritised list of SMS-eligible phone contacts
+  const smsPhoneContacts = useMemo(() => {
+    const list: { label: string; phone: string; priority: number }[] = [];
+    // 1. Primary AR contact person
+    const primary = persons.find((p) => p.isPrimaryCreditControl);
+    if (primary?.phone) list.push({ label: `${primary.name} (Primary AR)`, phone: primary.phone, priority: 1 });
+    if (primary?.smsNumber && primary.smsNumber !== primary?.phone) list.push({ label: `${primary.name} (Primary AR – SMS)`, phone: primary.smsNumber, priority: 0 });
+    // 2. AR overlay phone on contact record
+    if (contact?.arContactPhone) list.push({ label: `${contact.arContactName || contact.name || "AR Contact"} (AR Phone)`, phone: contact.arContactPhone, priority: 2 });
+    // 3. Main contact phone
+    if (contact?.phone) list.push({ label: `${contact.name || "Main Contact"} (Phone)`, phone: contact.phone, priority: 3 });
+    // 4. Escalation contact person
+    const escalation = persons.find((p) => p.isEscalation);
+    if (escalation?.phone && escalation.id !== primary?.id) list.push({ label: `${escalation.name} (Escalation)`, phone: escalation.phone, priority: 4 });
+    if (escalation?.smsNumber && escalation.smsNumber !== escalation?.phone && escalation.id !== primary?.id) list.push({ label: `${escalation.name} (Escalation – SMS)`, phone: escalation.smsNumber, priority: 3 });
+    // 5. Other contact persons with phone numbers
+    for (const p of persons) {
+      if (p.id === primary?.id || p.id === escalation?.id) continue;
+      if (p.phone) list.push({ label: `${p.name}`, phone: p.phone, priority: 5 });
+      if (p.smsNumber && p.smsNumber !== p.phone) list.push({ label: `${p.name} (SMS)`, phone: p.smsNumber, priority: 5 });
+    }
+    // Deduplicate by phone number (keep highest priority = lowest number)
+    const seen = new Map<string, (typeof list)[0]>();
+    for (const entry of list) {
+      const key = entry.phone.replace(/[\s\-\(\)]/g, '');
+      const existing = seen.get(key);
+      if (!existing || entry.priority < existing.priority) seen.set(key, entry);
+    }
+    return Array.from(seen.values()).sort((a, b) => a.priority - b.priority);
+  }, [contact, persons]);
+
   const outstandingInvoices = useMemo(
     () =>
       invoices.filter((inv) => {
@@ -1064,6 +1096,7 @@ export default function DebtorRecord() {
   const openSmsSheet = useCallback(() => {
     setSmsSheetOpen(true);
     setSmsMessage("");
+    setSmsRecipientPhone(smsPhoneContacts[0]?.phone ?? "");
     draftMutation.mutate(
       { type: "sms" },
       {
@@ -1074,7 +1107,7 @@ export default function DebtorRecord() {
         },
       }
     );
-  }, [contactId]);
+  }, [contactId, smsPhoneContacts]);
 
   const openCallSheet = useCallback(() => {
     setCallSheetOpen(true);
@@ -1111,16 +1144,14 @@ export default function DebtorRecord() {
   // (handleSendEmail moved to SendEmailDrawer component)
 
   const handleSendSms = useCallback(() => {
-    const recipientPhone =
-      contact?.arContactPhone ?? contact?.phone ?? "";
-    if (!recipientPhone) {
-      toast({ title: "No phone number found", variant: "destructive" });
+    if (!smsRecipientPhone) {
+      toast({ title: "No phone number selected", variant: "destructive" });
       return;
     }
     sendSmsMutation.mutate({
       body: smsMessage,
       templateType: "chase",
-      recipientPhone,
+      recipientPhone: smsRecipientPhone,
     });
     logActivityMutation.mutate({
       eventType: "sms_sent",
@@ -1129,7 +1160,7 @@ export default function DebtorRecord() {
       description: smsMessage,
       direction: "outbound",
     });
-  }, [smsMessage, contact]);
+  }, [smsMessage, smsRecipientPhone]);
 
   const handleLogCall = useCallback(() => {
     logActivityMutation.mutate(
@@ -3189,6 +3220,29 @@ export default function DebtorRecord() {
                 </div>
               ) : (
                 <>
+                  {/* Contact picker */}
+                  <div>
+                    <label className="text-xs text-muted-foreground">To</label>
+                    {smsPhoneContacts.length === 0 ? (
+                      <p className="text-sm text-destructive mt-1">No phone numbers found for this debtor</p>
+                    ) : smsPhoneContacts.length === 1 ? (
+                      <p className="text-sm mt-1">{smsPhoneContacts[0].label} — {smsPhoneContacts[0].phone}</p>
+                    ) : (
+                      <Select value={smsRecipientPhone} onValueChange={setSmsRecipientPhone}>
+                        <SelectTrigger className="mt-1">
+                          <SelectValue placeholder="Select recipient" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {smsPhoneContacts.map((c) => (
+                            <SelectItem key={c.phone} value={c.phone}>
+                              {c.label} — {c.phone}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+
                   <div>
                     <label className="text-xs text-muted-foreground">Message</label>
                     <Textarea
@@ -3241,7 +3295,7 @@ export default function DebtorRecord() {
                     <Button
                       size="sm"
                       onClick={handleSendSms}
-                      disabled={sendSmsMutation.isPending || !smsMessage.trim()}
+                      disabled={sendSmsMutation.isPending || !smsMessage.trim() || !smsRecipientPhone}
                     >
                       {sendSmsMutation.isPending ? (
                         <Loader2 className="h-3 w-3 animate-spin mr-1" />
