@@ -295,13 +295,12 @@ export class ActionPlanner {
 
       const behavior = behaviorSignals[0] || null;
 
-      // Gap 11: Fetch debtor channel preference overrides
+      // Gap 11: Fetch debtor channel preference overrides + contact timing + blackout
       const debtorPrefs = await db.query.customerPreferences.findFirst({
         where: and(
           eq(customerPreferences.contactId, contact.id),
           eq(customerPreferences.tenantId, tenantId),
         ),
-        columns: { emailEnabled: true, smsEnabled: true, voiceEnabled: true },
       });
       const emailAllowed = (debtorPrefs?.emailEnabled !== false) && !!contact.email;
       const smsAllowed = (debtorPrefs?.smsEnabled !== false) && !!contact.phone;
@@ -507,6 +506,15 @@ export class ActionPlanner {
             contactCountLast30d: contact.contactCountLast30d ?? 0,
             nextTouchNotBefore: contact.nextTouchNotBefore ? new Date(contact.nextTouchNotBefore) : null,
             companiesHouseStatus: null, // TODO: wire from debtorIntelligence table
+            // Per-debtor contact timing overrides
+            businessHoursStart: debtorPrefs?.bestContactWindowStart || null,
+            businessHoursEnd: debtorPrefs?.bestContactWindowEnd || null,
+            contactTimezone: debtorPrefs?.contactTimezone || null,
+            contactDays: (debtorPrefs?.bestContactDays as string[] | null) || null,
+            // Blackout
+            doNotContactFrom: debtorPrefs?.doNotContactFrom ? new Date(debtorPrefs.doNotContactFrom) : null,
+            doNotContactUntil: debtorPrefs?.doNotContactUntil ? new Date(debtorPrefs.doNotContactUntil) : null,
+            doNotContactReason: debtorPrefs?.doNotContactReason || null,
           },
           behavior: {
             medianDaysToPay: behavior ? Number(behavior.medianDaysToPay ?? null) : null,
@@ -539,6 +547,7 @@ export class ActionPlanner {
             emailEnabled: (debtorPrefs?.emailEnabled !== false) && !!contact.email,
             smsEnabled: (debtorPrefs?.smsEnabled !== false) && !!contact.phone,
             voiceEnabled: (debtorPrefs?.voiceEnabled !== false) && !!contact.phone,
+            preferredChannelOverride: debtorPrefs?.preferredChannelOverride || null,
           },
           tenantSettings: {
             chaseDelayDays: tenantRecordForTree.chaseDelayDays ?? 5,

@@ -1806,6 +1806,18 @@ export const customerPreferences = pgTable("customer_preferences", {
   channelPreferenceSource: varchar("channel_preference_source"), // 'user_manual' | 'riley_conversation' | 'call_transcript'
   channelPreferenceNotes: text("channel_preference_notes"), // e.g. "Debtor requested email only during call on 15 March"
 
+  // Blackout / do-not-contact
+  doNotContactFrom: date("do_not_contact_from"),
+  doNotContactUntil: date("do_not_contact_until"),
+  doNotContactReason: varchar("do_not_contact_reason"),
+
+  // Channel override (preference, not hard lock — falls back if unavailable)
+  preferredChannelOverride: varchar("preferred_channel_override"), // null | 'email' | 'sms' | 'voice'
+  preferredChannelOverrideSource: varchar("preferred_channel_override_source"), // 'user_manual' | 'riley_conversation'
+
+  // Per-debtor timezone for contact hours
+  contactTimezone: varchar("contact_timezone"), // e.g. "Europe/London", null = use tenant default
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [

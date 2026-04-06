@@ -15,6 +15,7 @@ import {
   invoices,
   actions,
   complianceChecks,
+  customerPreferences,
 } from "@shared/schema";
 import { storage } from "../../storage";
 
@@ -80,10 +81,23 @@ export async function checkCompliance(input: ComplianceInput): Promise<Complianc
   const violations: string[] = [];
   const rulesChecked: string[] = [];
 
-  // Load tenant settings and contact in parallel
-  const [tenant, contact] = await Promise.all([
+  // Load tenant settings, contact, and preferences in parallel
+  const [tenant, contact, debtorPrefs] = await Promise.all([
     loadTenant(input.tenantId),
     loadContact(input.tenantId, input.contactId),
+    db.query.customerPreferences.findFirst({
+      where: and(
+        eq(customerPreferences.contactId, input.contactId),
+        eq(customerPreferences.tenantId, input.tenantId),
+      ),
+      columns: {
+        bestContactWindowStart: true,
+        bestContactWindowEnd: true,
+        contactTimezone: true,
+        doNotContactFrom: true,
+        doNotContactUntil: true,
+      },
+    }),
   ]);
 
   if (!tenant) {
@@ -152,15 +166,31 @@ export async function checkCompliance(input: ComplianceInput): Promise<Complianc
     }
   }
 
-  // ── Rule 3: Time-of-day ─────────────────────────────────
+  // ── Rule 3: Time-of-day (per-debtor hours override tenant) ──
   rulesChecked.push("time_of_day");
-  const startHour = parseTime(tenant.businessHoursStart ?? "08:00");
-  const endHour = parseTime(tenant.businessHoursEnd ?? "18:00");
-  const tenantTz = tenant.executionTimezone || "Europe/London";
-  const currentHour = getCurrentHourInTimezone(tenantTz);
+  const debtorStartStr = debtorPrefs?.bestContactWindowStart ?? tenant.businessHoursStart ?? "08:00";
+  const debtorEndStr = debtorPrefs?.bestContactWindowEnd ?? tenant.businessHoursEnd ?? "18:00";
+  const debtorTz = debtorPrefs?.contactTimezone ?? tenant.executionTimezone ?? "Europe/London";
+  const startHour = parseTime(debtorStartStr);
+  const endHour = parseTime(debtorEndStr);
+  const currentHour = getCurrentHourInTimezone(debtorTz);
 
   if (currentHour < startHour || currentHour >= endHour) {
-    violations.push(`Time-of-day: current time outside business hours (${tenant.businessHoursStart ?? "08:00"}–${tenant.businessHoursEnd ?? "18:00"})`);
+    violations.push(`Time-of-day: current time outside business hours (${debtorStartStr}–${debtorEndStr}${debtorPrefs?.bestContactWindowStart ? ' [debtor override]' : ''})`);
+  }
+
+  // ── Rule 3b: Blackout / do-not-contact ────────────────
+  rulesChecked.push("blackout_period");
+  if (debtorPrefs?.doNotContactUntil) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const until = new Date(debtorPrefs.doNotContactUntil);
+    until.setHours(0, 0, 0, 0);
+    const from = debtorPrefs.doNotContactFrom ? new Date(debtorPrefs.doNotContactFrom) : until;
+    from.setHours(0, 0, 0, 0);
+    if (today >= from && today <= until) {
+      violations.push(`Blackout: debtor is in a do-not-contact period until ${until.toISOString().slice(0, 10)}`);
+    }
   }
 
   // ── Rule 4: Prohibited language ─────────────────────────

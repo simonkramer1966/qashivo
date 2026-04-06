@@ -675,6 +675,12 @@ export class CustomerTimelineService {
       workflowId: contact?.workflowId || null,
       channelPreferenceSource: prefs?.channelPreferenceSource || null,
       channelPreferenceNotes: prefs?.channelPreferenceNotes || null,
+      doNotContactFrom: prefs?.doNotContactFrom || null,
+      doNotContactUntil: prefs?.doNotContactUntil || null,
+      doNotContactReason: prefs?.doNotContactReason || null,
+      preferredChannelOverride: prefs?.preferredChannelOverride || null,
+      preferredChannelOverrideSource: prefs?.preferredChannelOverrideSource || null,
+      contactTimezone: prefs?.contactTimezone || null,
     };
   }
 
@@ -719,6 +725,24 @@ export class CustomerTimelineService {
     if (updates.channelPreferenceNotes !== undefined) {
       updateData.channelPreferenceNotes = updates.channelPreferenceNotes || null;
     }
+    if (updates.doNotContactFrom !== undefined) {
+      updateData.doNotContactFrom = updates.doNotContactFrom || null;
+    }
+    if (updates.doNotContactUntil !== undefined) {
+      updateData.doNotContactUntil = updates.doNotContactUntil || null;
+    }
+    if (updates.doNotContactReason !== undefined) {
+      updateData.doNotContactReason = updates.doNotContactReason || null;
+    }
+    if (updates.preferredChannelOverride !== undefined) {
+      updateData.preferredChannelOverride = updates.preferredChannelOverride || null;
+    }
+    if (updates.preferredChannelOverrideSource !== undefined) {
+      updateData.preferredChannelOverrideSource = updates.preferredChannelOverrideSource || null;
+    }
+    if (updates.contactTimezone !== undefined) {
+      updateData.contactTimezone = updates.contactTimezone || null;
+    }
 
     // Handle workflowId update on the contacts table (not customerPreferences)
     if (updates.workflowId !== undefined) {
@@ -749,6 +773,12 @@ export class CustomerTimelineService {
         bestContactDays: updates.bestContactDays || null,
         channelPreferenceSource: updates.channelPreferenceSource || null,
         channelPreferenceNotes: updates.channelPreferenceNotes || null,
+        doNotContactFrom: updates.doNotContactFrom || null,
+        doNotContactUntil: updates.doNotContactUntil || null,
+        doNotContactReason: updates.doNotContactReason || null,
+        preferredChannelOverride: updates.preferredChannelOverride || null,
+        preferredChannelOverrideSource: updates.preferredChannelOverrideSource || null,
+        contactTimezone: updates.contactTimezone || null,
         updatedAt: new Date()
       });
     }

@@ -46,6 +46,15 @@ export interface ContactInput {
   contactCountLast30d: number;
   nextTouchNotBefore: Date | null;
   companiesHouseStatus: string | null;
+  // Per-debtor contact timing overrides
+  businessHoursStart: string | null;
+  businessHoursEnd: string | null;
+  contactTimezone: string | null;
+  contactDays: string[] | null;  // ["monday", "tuesday", ...]
+  // Blackout / do-not-contact
+  doNotContactFrom: Date | null;
+  doNotContactUntil: Date | null;
+  doNotContactReason: string | null;
 }
 
 export interface BehaviorSignalsInput {
@@ -81,6 +90,7 @@ export interface ChannelPrefsInput {
   emailEnabled: boolean;
   smsEnabled: boolean;
   voiceEnabled: boolean;
+  preferredChannelOverride: string | null;
 }
 
 export interface TenantSettingsInput {
@@ -372,6 +382,26 @@ function isSilentDebtor(input: DebtorDecisionInput): boolean {
   );
 }
 
+function gateBlackout(input: DebtorDecisionInput): GateResult {
+  const { contact, now } = input;
+  if (contact.doNotContactUntil) {
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+    const until = new Date(contact.doNotContactUntil);
+    until.setHours(0, 0, 0, 0);
+    const from = contact.doNotContactFrom ? new Date(contact.doNotContactFrom) : until;
+    from.setHours(0, 0, 0, 0);
+    if (today >= from && today <= until) {
+      return {
+        pass: false,
+        holdReason: `Blackout: ${contact.doNotContactReason || 'Do not contact period'} (until ${until.toISOString().slice(0, 10)})`,
+        gateNode: 'BLACKOUT',
+      };
+    }
+  }
+  return { pass: true, gateNode: 'BLACKOUT' };
+}
+
 const GATES = [
   gateSystem,
   gateInvoice,
@@ -381,6 +411,7 @@ const GATES = [
   gateProbablePayment,
   gateContactValidation,
   gateCooldown,
+  gateBlackout,
   gateUnresolvedInbound,
 ];
 
@@ -622,6 +653,17 @@ function selectChannel(
   let channel: 'email' | 'sms' | 'voice' = available.includes('email') ? 'email' : available[0];
   const reasons: string[] = [`Default: ${channel}`];
 
+  // Preferred channel override (user/Riley set) — preference, not hard lock
+  if (channelPrefs.preferredChannelOverride) {
+    const override = channelPrefs.preferredChannelOverride as 'email' | 'sms' | 'voice';
+    if (available.includes(override)) {
+      channel = override;
+      reasons.push(`User override: prefer ${channel}`);
+    } else {
+      reasons.push(`User override ${override} unavailable, using ${channel}`);
+    }
+  }
+
   // Category overrides
   if (category === 'RELIABLE') {
     // RELIABLE always email
@@ -678,34 +720,52 @@ function selectChannel(
 // ─── Timing Selection ────────────────────────────────────────
 
 function selectTiming(input: DebtorDecisionInput): Date {
-  const { now, tenantSettings } = input;
-  const [startH, startM] = tenantSettings.businessHoursStart.split(':').map(Number);
-  const [endH, endM] = tenantSettings.businessHoursEnd.split(':').map(Number);
+  const { now, tenantSettings, contact } = input;
+  // Per-debtor hours override tenant defaults
+  const startStr = contact.businessHoursStart ?? tenantSettings.businessHoursStart;
+  const endStr = contact.businessHoursEnd ?? tenantSettings.businessHoursEnd;
+  const [startH, startM] = startStr.split(':').map(Number);
+  const [endH, endM] = endStr.split(':').map(Number);
+
+  // Per-debtor contact days override default weekdays
+  const contactDays = contact.contactDays;
 
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
   const startMinutes = startH * 60 + startM;
   const endMinutes = endH * 60 + endM;
 
-  if (currentMinutes >= startMinutes && currentMinutes < endMinutes) {
-    // Within business hours → schedule 1 hour from now
+  // Check if a given date is a valid contact day
+  const isContactDay = (d: Date): boolean => {
+    if (contactDays && contactDays.length > 0) {
+      const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][d.getDay()];
+      return contactDays.includes(dayName);
+    }
+    // Default: skip weekends
+    return d.getDay() !== 0 && d.getDay() !== 6;
+  };
+
+  if (isContactDay(now) && currentMinutes >= startMinutes && currentMinutes < endMinutes) {
+    // Within business hours on a contact day → schedule 1 hour from now
     const scheduled = new Date(now);
     scheduled.setTime(scheduled.getTime() + 60 * 60 * 1000);
     return scheduled;
   }
 
-  if (currentMinutes < startMinutes) {
-    // Before business hours today
+  if (isContactDay(now) && currentMinutes < startMinutes) {
+    // Before business hours today (and it's a contact day)
     const scheduled = new Date(now);
     scheduled.setHours(startH, startM, 0, 0);
     return scheduled;
   }
 
-  // After business hours → next business day start
+  // After business hours or non-contact day → next valid contact day start
   const scheduled = new Date(now);
   scheduled.setDate(scheduled.getDate() + 1);
-  // Skip weekends
-  while (scheduled.getDay() === 0 || scheduled.getDay() === 6) {
+  // Skip non-contact days (max 14 iterations to avoid infinite loop)
+  let iterations = 0;
+  while (!isContactDay(scheduled) && iterations < 14) {
     scheduled.setDate(scheduled.getDate() + 1);
+    iterations++;
   }
   scheduled.setHours(startH, startM, 0, 0);
   return scheduled;

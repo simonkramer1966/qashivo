@@ -150,6 +150,15 @@ export interface CustomerPreferences {
   // Gap 11: Channel preference provenance
   channelPreferenceSource?: string | null; // 'user_manual' | 'riley_conversation' | 'call_transcript'
   channelPreferenceNotes?: string | null;
+  // Blackout / do-not-contact
+  doNotContactFrom?: string | null;
+  doNotContactUntil?: string | null;
+  doNotContactReason?: string | null;
+  // Channel override
+  preferredChannelOverride?: string | null;
+  preferredChannelOverrideSource?: string | null;
+  // Per-debtor timezone
+  contactTimezone?: string | null;
 }
 
 export function getConfidenceLabel(confidence: number, requiresReview?: boolean): string {

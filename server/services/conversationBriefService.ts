@@ -145,7 +145,7 @@ export async function buildConversationBrief(
     contact, timeline, promises, outstandingInvs, signals,
     facts, prefs, intel, recentEmails, recentActions, forecasts, chaseDelayDays,
   );
-  const text = formatBriefText(data, contact);
+  const text = formatBriefText(data, contact, prefs);
 
   const brief: ConversationBrief = { text, data };
 
@@ -473,7 +473,7 @@ function assembleData(
 
 // ── Text formatter ───────────────────────────────────────────
 
-function formatBriefText(data: ConversationBriefData, contact: any): string {
+function formatBriefText(data: ConversationBriefData, contact: any, prefs?: any): string {
   const lines: string[] = [];
   const name = contact?.companyName || contact?.name || 'Unknown';
 
@@ -563,6 +563,57 @@ function formatBriefText(data: ConversationBriefData, contact: any): string {
       lines.push(`- ${d}`);
     }
     lines.push('');
+  }
+
+  // Contact preferences (only show debtor-level overrides)
+  if (prefs) {
+    const prefLines: string[] = [];
+    if (prefs.bestContactWindowStart || prefs.bestContactWindowEnd) {
+      prefLines.push(`- Hours: ${prefs.bestContactWindowStart || '?'}–${prefs.bestContactWindowEnd || '?'}${prefs.contactTimezone ? ` ${prefs.contactTimezone}` : ''} (debtor specific)`);
+    }
+    if (prefs.bestContactDays) {
+      const days = prefs.bestContactDays as string[];
+      if (days.length > 0 && days.length < 7) {
+        prefLines.push(`- Days: ${days.map((d: string) => d.charAt(0).toUpperCase() + d.slice(1, 3)).join(', ')} only`);
+      }
+    }
+    if (prefs.doNotContactUntil) {
+      const until = new Date(prefs.doNotContactUntil);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      until.setHours(0, 0, 0, 0);
+      if (today <= until) {
+        prefLines.push(`- BLACKOUT: Do not contact until ${until.toISOString().slice(0, 10)}${prefs.doNotContactReason ? ` (${prefs.doNotContactReason})` : ''}`);
+      } else {
+        // Post-blackout — check if within 14 days of expiry
+        const fourteenDaysAfter = new Date(until);
+        fourteenDaysAfter.setDate(fourteenDaysAfter.getDate() + 14);
+        if (today <= fourteenDaysAfter) {
+          prefLines.push(`- NOTE: Debtor was in a do-not-contact period until ${until.toISOString().slice(0, 10)}${prefs.doNotContactReason ? `. Reason: ${prefs.doNotContactReason}` : ''}. This is the first contact since the period ended.`);
+        }
+      }
+    }
+    const channelStatus = [
+      prefs.emailEnabled !== false ? 'Email' : null,
+      prefs.smsEnabled !== false ? 'SMS' : null,
+      prefs.voiceEnabled !== false ? 'Voice' : null,
+    ].filter(Boolean).join(', ');
+    const channelBlocked = [
+      prefs.emailEnabled === false ? 'Email' : null,
+      prefs.smsEnabled === false ? 'SMS' : null,
+      prefs.voiceEnabled === false ? 'Voice' : null,
+    ].filter(Boolean);
+    if (channelBlocked.length > 0) {
+      prefLines.push(`- Channels: ${channelStatus} (${channelBlocked.join(', ')} disabled)`);
+    }
+    if (prefs.preferredChannelOverride) {
+      prefLines.push(`- Override: Always ${prefs.preferredChannelOverride} (${prefs.preferredChannelOverrideSource || 'manual'})`);
+    }
+    if (prefLines.length > 0) {
+      lines.push('CONTACT PREFERENCES:');
+      lines.push(...prefLines);
+      lines.push('');
+    }
   }
 
   // Constraints
