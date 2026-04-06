@@ -467,7 +467,7 @@ export class SyncOrchestrator {
         dueDate: inv.dueDate,
         paidDate: inv.fullyPaidDate,
         currency: inv.currencyCode || 'GBP',
-        updatedDateUtc: raw.UpdatedDateUTC ? new Date(raw.UpdatedDateUTC) : null,
+        updatedDateUtc: raw.UpdatedDateUTC ? this.safeParseDate(raw.UpdatedDateUTC) : null,
       };
     });
 
@@ -974,6 +974,19 @@ export class SyncOrchestrator {
     setTimeout(() => {
       this.enqueueSync(tenantId, 'incremental', trigger);
     }, delay);
+  }
+
+  // ─── Helpers ──────────────────────────────────────────────────────────────
+
+  /** Parse Xero dates safely — handles /Date(ms)/ format, ISO, and epoch */
+  private safeParseDate(value: string | number | null | undefined): Date | null {
+    if (!value) return null;
+    if (typeof value === 'string') {
+      const dotNetMatch = value.match(/\/Date\((\d+)([+-]\d{4})?\)\//);
+      if (dotNetMatch) return new Date(parseInt(dotNetMatch[1], 10));
+    }
+    const parsed = new Date(value);
+    return isNaN(parsed.getTime()) ? null : parsed;
   }
 
   // ─── Audit Logging ───────────────────────────────────────────────────────
