@@ -11,7 +11,7 @@ const app = express();
 
 // Xero webhook needs raw body for HMAC-SHA256 signature verification
 // Must come BEFORE express.json() middleware
-app.post("/api/xero/webhooks", express.raw({ type: 'application/json' }), async (req, res) => {
+app.post("/api/xero/webhook", express.raw({ type: 'application/json' }), async (req, res) => {
   try {
     const crypto = await import("crypto");
     const signature = req.headers["x-xero-signature"] as string | undefined;

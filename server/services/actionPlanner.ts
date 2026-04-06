@@ -77,17 +77,28 @@ export class ActionPlanner {
    */
   async planActionsForAllTenants(): Promise<void> {
     const enabledTenants = await db
-      .select({ 
-        id: tenants.id, 
+      .select({
+        id: tenants.id,
         name: tenants.name,
+        xeroLastSyncAt: tenants.xeroLastSyncAt,
       })
       .from(tenants)
       .where(eq(tenants.collectionsAutomationEnabled, true));
 
     console.log(`📋 Action Planner: Found ${enabledTenants.length} tenants with automation enabled`);
 
+    const STALE_SYNC_THRESHOLD_HOURS = 6;
+
     for (const tenant of enabledTenants) {
       try {
+        // Sync freshness guard: skip planning if data is stale
+        if (tenant.xeroLastSyncAt) {
+          const hoursSinceSync = (Date.now() - tenant.xeroLastSyncAt.getTime()) / (1000 * 60 * 60);
+          if (hoursSinceSync > STALE_SYNC_THRESHOLD_HOURS) {
+            console.warn(`⚠️ Action Planner: Skipping tenant ${tenant.name} — sync data stale (last sync: ${tenant.xeroLastSyncAt.toISOString()}, ${Math.round(hoursSinceSync)}h ago)`);
+            continue;
+          }
+        }
         await this.planActionsForTenant(tenant.id);
       } catch (error: any) {
         console.error(`❌ Action Planner: Error planning actions for tenant ${tenant.name}:`, error.message);

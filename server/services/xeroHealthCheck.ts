@@ -123,8 +123,14 @@ export class XeroHealthCheckService {
       // Sanitize error message to avoid exposing sensitive OAuth details
       const rawError = error instanceof Error ? error.message : 'Unknown error';
       const sanitizedError = this.sanitizeErrorMessage(rawError);
-      await this.updateConnectionStatus(tenant.id, 'disconnected', sanitizedError);
-      console.log(`❌ Xero connection FAILED for tenant: ${tenant.name} - ${sanitizedError}`);
+
+      // Distinguish transient errors (network/API issues) from auth failures (needs re-auth).
+      // Auth failures mention reconnect, expired, or specific HTTP status codes.
+      const isAuthFailure = /reconnect|expired|authorization|authentication|401|403|invalid_grant/i.test(sanitizedError);
+      const status = isAuthFailure ? 'disconnected' : 'error';
+
+      await this.updateConnectionStatus(tenant.id, status, sanitizedError);
+      console.log(`❌ Xero connection ${status === 'error' ? 'ERROR (transient)' : 'FAILED'} for tenant: ${tenant.name} - ${sanitizedError}`);
     }
   }
 

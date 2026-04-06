@@ -228,44 +228,9 @@ export function registerSyncRoutes(app: Express): void {
     }
   });
 
-  /**
-   * Webhook receiver for Xero
-   * POST /api/sync/webhook/xero
-   */
-  app.post('/api/sync/webhook/xero', 
-    express.raw({ type: 'application/json', verify: rawBodyMiddleware }),
-    async (req, res) => {
-    try {
-      const signature = req.headers['x-xero-signature'] as string;
-      
-      if (!signature) {
-        return res.status(400).json({
-          success: false,
-          error: 'Missing webhook signature'
-        });
-      }
-
-      console.log('📥 Received Xero webhook');
-
-      const result = await webhookHandler.processWebhook('xero', req.body, signature, req);
-
-      if (result.success) {
-        res.json({ success: true, message: 'Webhook processed successfully' });
-      } else {
-        res.status(400).json({
-          success: false,
-          error: result.error
-        });
-      }
-
-    } catch (error) {
-      console.error('❌ Xero webhook error:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Webhook processing failed'
-      });
-    }
-  });
+  // Xero webhook handler removed — the working handler lives in server/index.ts
+  // at POST /api/xero/webhook (before express.json() middleware for raw body access).
+  // The handler here used the broken SyncService path and has been removed.
 
   /**
    * Webhook receiver for Sage

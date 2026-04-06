@@ -168,6 +168,10 @@ interface XeroExchangeRate {
 
 class XeroService {
   private config: XeroConfig;
+  // Mutex: prevents concurrent token refreshes for the same tenant.
+  // Xero uses rotating refresh tokens — a second concurrent refresh would use the
+  // now-revoked old token and fail, marking the connection as expired.
+  private refreshInProgress: Map<string, Promise<XeroTokens | null>> = new Map();
 
   constructor() {
     // Build base URL: APP_URL (full URL) > RAILWAY_PUBLIC_DOMAIN (hostname only) > localhost
@@ -395,6 +399,26 @@ class XeroService {
       return null;
     }
 
+    // Mutex: if a refresh is already in progress for this tenant, wait for it
+    // instead of sending a second refresh request (which would use the now-revoked token).
+    const mutexKey = currentTenantId || refreshToken;
+    const existing = this.refreshInProgress.get(mutexKey);
+    if (existing) {
+      console.log(`🔒 Token refresh already in progress for ${currentTenantId || 'unknown tenant'}, waiting...`);
+      return existing;
+    }
+
+    const refreshPromise = this.doRefreshAccessToken(refreshToken, currentTenantId);
+    this.refreshInProgress.set(mutexKey, refreshPromise);
+
+    try {
+      return await refreshPromise;
+    } finally {
+      this.refreshInProgress.delete(mutexKey);
+    }
+  }
+
+  private async doRefreshAccessToken(refreshToken: string, currentTenantId?: string): Promise<XeroTokens | null> {
     try {
       const response = await fetch('https://identity.xero.com/connect/token', {
         method: 'POST',
@@ -416,7 +440,7 @@ class XeroService {
       }
 
       const tokenData = await response.json();
-      
+
       // Get tenant ID from connections endpoint if not provided
       let tenantId = currentTenantId || '';
       if (!tenantId) {
@@ -426,7 +450,7 @@ class XeroService {
               'Authorization': `Bearer ${tokenData.access_token}`,
             },
           });
-          
+
           if (connectionsResponse.ok) {
             const connections = await connectionsResponse.json();
             tenantId = connections[0]?.tenantId || '';
@@ -435,7 +459,7 @@ class XeroService {
           console.warn('Failed to fetch connections during token refresh:', connectionsError);
         }
       }
-      
+
       return {
         accessToken: tokenData.access_token,
         refreshToken: tokenData.refresh_token,

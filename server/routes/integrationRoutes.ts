@@ -1373,7 +1373,9 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
             connectionStatus = 'active';
           } else if (status === 'expired') {
             connectionStatus = 'expired';
-          } else if (status === 'error' || status === 'disconnected') {
+          } else if (status === 'disconnected') {
+            connectionStatus = 'disconnected';
+          } else if (status === 'error') {
             connectionStatus = 'error';
           } else if (conn?.isConnected) {
             // Fallback: connected in providerConnections but no health check status yet

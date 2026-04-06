@@ -1,4 +1,3 @@
-import { syncService } from './syncService';
 import { XeroSyncService } from './xeroSync';
 import { db } from '../db';
 import { tenants } from '@shared/schema';
@@ -6,10 +5,14 @@ import { eq } from 'drizzle-orm';
 
 /**
  * Sync Scheduler for Automatic Background Sync Operations
- * Handles periodic sync scheduling and execution
+ *
+ * Primary sync path: Xero webhooks (near real-time, handled in server/index.ts)
+ * Safety net: XeroSyncService polling (every 15 min, catches anything webhooks miss)
+ *
+ * The old SyncService/apiMiddleware hourly loop was removed — it used a broken
+ * provider registration path that generated "Provider not found" errors silently.
  */
 class SyncScheduler {
-  private intervalId: NodeJS.Timeout | null = null;
   private xeroIntervalId: NodeJS.Timeout | null = null;
   private isRunning = false;
   private xeroSyncService: XeroSyncService;
@@ -28,16 +31,8 @@ class SyncScheduler {
     }
 
     console.log('📅 Starting sync scheduler...');
-    
-    // Run API middleware syncs immediately (catch to prevent unhandled rejection)
-    this.runScheduledSyncs().catch(err => console.error('[syncScheduler] initial scheduled sync error:', err));
 
-    // Schedule API middleware syncs to run every hour
-    this.intervalId = setInterval(() => {
-      this.runScheduledSyncs().catch(err => console.error('[syncScheduler] scheduled sync error:', err));
-    }, 60 * 60 * 1000); // 1 hour
-
-    // Start Xero background sync (every 4 hours)
+    // Start Xero background sync (every 15 minutes as safety net behind webhooks)
     console.log('Starting Xero background sync scheduler...');
     this.runXeroSyncs().catch(err => console.error('[syncScheduler] initial Xero sync error:', err));
 
@@ -46,38 +41,20 @@ class SyncScheduler {
     }, 15 * 60 * 1000); // 15 minutes
 
     this.isRunning = true;
-    console.log('✅ Sync scheduler started - API syncs every hour, Xero syncs every 15 minutes');
+    console.log('✅ Sync scheduler started - Xero syncs every 15 minutes (webhooks provide real-time updates)');
   }
 
   /**
    * Stop the sync scheduler
    */
   stop(): void {
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-      this.intervalId = null;
-    }
-    
     if (this.xeroIntervalId) {
       clearInterval(this.xeroIntervalId);
       this.xeroIntervalId = null;
     }
-    
+
     this.isRunning = false;
     console.log('⏹️ Sync scheduler stopped');
-  }
-
-  /**
-   * Execute scheduled syncs for all tenants
-   */
-  private async runScheduledSyncs(): Promise<void> {
-    try {
-      console.log('📅 Running scheduled syncs...');
-      await syncService.scheduleAutomaticSyncs();
-      console.log('✅ Scheduled syncs completed');
-    } catch (error) {
-      console.error('❌ Scheduled syncs failed:', error);
-    }
   }
 
   /**
