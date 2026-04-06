@@ -693,9 +693,10 @@ export class XeroAdapter implements AccountingAdapter {
     endpoint: string,
     tenantId: string,
     additionalHeaders?: Record<string, string>,
+    isRetry = false,
   ): Promise<any> {
     const url = `${XERO_API_BASE}/${endpoint}`;
-    console.log(`[XeroAdapter] GET ${url}`);
+    console.log(`[XeroAdapter] GET ${url}${isRetry ? ' (retry after refresh)' : ''}`);
 
     const response = await fetch(url, {
       method: 'GET',
@@ -715,6 +716,26 @@ export class XeroAdapter implements AccountingAdapter {
       if (status === 429) {
         throw new Error(`XERO_RATE_LIMIT: 429 rate limit hit for ${endpoint}`);
       }
+
+      // 401/403: token may have been revoked server-side. Refresh once and retry.
+      if ((status === 401 || status === 403) && !isRetry) {
+        console.warn(`[XeroAdapter] ${status} on ${endpoint} — refreshing token and retrying`);
+        try {
+          const refreshed = await this.refreshToken(tenantId);
+          const newTokens: TenantTokens = {
+            accessToken: refreshed.accessToken,
+            refreshToken: refreshed.refreshToken,
+            expiresAt: refreshed.expiresAt,
+            xeroTenantId: tokens.xeroTenantId,
+          };
+          return this.makeApiCall(newTokens, endpoint, tenantId, additionalHeaders, true);
+        } catch (refreshErr) {
+          // Refresh failed — throw the original auth error
+          console.error(`[XeroAdapter] Token refresh failed after ${status}: ${(refreshErr as Error).message}`);
+          throw new Error(`XERO_AUTH_ERROR: ${status} for ${endpoint} (refresh also failed) — ${errorText.substring(0, 500)}`);
+        }
+      }
+
       if (status === 401 || status === 403) {
         throw new Error(`XERO_AUTH_ERROR: ${status} for ${endpoint} — ${errorText.substring(0, 500)}`);
       }
