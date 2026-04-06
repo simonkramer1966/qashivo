@@ -2530,10 +2530,10 @@ export default function DebtorRecord() {
             {/* ── Filter bar ── */}
             <div className="flex flex-wrap gap-1.5 items-center">
               {["All", "Communications", "Payments", "Disputes", "Promises", "Notes", "System", "Risk"].map(v => (
-                <FilterPill key={v} label={v === "All" ? "All categories" : v} active={activityCategory === v} onClick={() => { setActivityCategory(v); setActivityPage(1); }} />
+                <FilterPill key={v} label={v === "All" ? "All" : v} active={activityCategory === v} onClick={() => { setActivityCategory(v); setActivityPage(1); }} />
               ))}
               <div className="mx-1.5 h-5 w-px bg-border self-center" />
-              {([["30d", "30 days"], ["90d", "90 days"], ["12m", "12 months"], ["All", "All time"]] as const).map(([v, label]) => (
+              {([["All", "All"], ["30d", "30 days"], ["90d", "90 days"], ["12m", "12 months"]] as const).map(([v, label]) => (
                 <FilterPill key={v} label={label} active={activityRange === v} onClick={() => { setActivityRange(v); setActivityPage(1); }} />
               ))}
               <div className="mx-1.5 h-5 w-px bg-border self-center" />
