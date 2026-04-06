@@ -31,7 +31,7 @@ import { calculateLatePaymentInterest } from "../utils/interestCalculator";
 import { calculateBatchLPI, formatLPIRate, type LPIConfig } from "../services/lpiService";
 import { resolvePrimaryEmail } from "../services/contactEmailResolver";
 import { getLanguageName, getCurrencySymbol, formatCurrencyForPrompt } from "@shared/currencies";
-import { eq, and, desc, asc, sql, count, avg, gte, lte, lt, inArray, or, isNull, isNotNull, gt, not } from 'drizzle-orm';
+import { eq, and, desc, asc, sql, count, avg, gte, lte, lt, inArray, notInArray, or, isNull, isNotNull, gt, not } from 'drizzle-orm';
 import { db } from '../db';
 import { z } from "zod";
 import { generateCollectionSuggestions, generateEmailDraft, generateAiCfoResponse } from "../services/openai";
@@ -5273,6 +5273,182 @@ ${type === 'email' ? 'Generate a JSON object with "subject" (string) and "body" 
         stack: error.stack?.split("\n").slice(0, 5).join("\n"),
       });
       res.status(500).json({ message: "Failed to return from VIP", detail: error.message });
+    }
+  });
+
+  // ── Charlie Status Banner ─────────────────────────────────
+  // Lightweight endpoint that returns Charlie's current posture toward a debtor.
+  app.get("/api/contacts/:contactId/charlie-status", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+      const { contactId } = req.params;
+      const tenantId = user.tenantId;
+
+      // Parallel fetch all data sources
+      const [contact, prefs, activeDisputes, activePromises, recentActions, overdueInvs, scheduledActions] = await Promise.all([
+        storage.getContact(contactId, tenantId),
+        db.query.customerPreferences.findFirst({
+          where: and(eq(customerPreferences.contactId, contactId), eq(customerPreferences.tenantId, tenantId)),
+        }),
+        db.select({ id: disputes.id }).from(disputes)
+          .where(and(
+            eq(disputes.contactId, contactId),
+            eq(disputes.tenantId, tenantId),
+            inArray(disputes.status, ['open', 'under_review', 'pending']),
+          ))
+          .limit(1),
+        db.select({ id: paymentPromises.id, promisedAmount: paymentPromises.promisedAmount, promisedDate: paymentPromises.promisedDate })
+          .from(paymentPromises)
+          .where(and(
+            eq(paymentPromises.contactId, contactId),
+            eq(paymentPromises.tenantId, tenantId),
+            eq(paymentPromises.status, 'open'),
+            gt(paymentPromises.promisedDate, new Date()),
+          ))
+          .orderBy(asc(paymentPromises.promisedDate))
+          .limit(1),
+        db.select({
+          id: actions.id,
+          status: actions.status,
+          type: actions.type,
+          agentToneLevel: actions.agentToneLevel,
+          completedAt: actions.completedAt,
+          scheduledFor: actions.scheduledFor,
+          direction: sql<string>`'outbound'`,
+        })
+          .from(actions)
+          .where(and(
+            eq(actions.contactId, contactId),
+            eq(actions.tenantId, tenantId),
+            inArray(actions.status, ['completed', 'sent']),
+          ))
+          .orderBy(desc(actions.completedAt))
+          .limit(10),
+        db.select({ dueDate: invoices.dueDate, amount: invoices.amount, amountPaid: invoices.amountPaid })
+          .from(invoices)
+          .where(and(
+            eq(invoices.contactId, contactId),
+            eq(invoices.tenantId, tenantId),
+            notInArray(invoices.status, ['paid', 'void', 'voided', 'deleted', 'draft']),
+            lt(invoices.dueDate, new Date()),
+          )),
+        db.select({ id: actions.id, scheduledFor: actions.scheduledFor })
+          .from(actions)
+          .where(and(
+            eq(actions.contactId, contactId),
+            eq(actions.tenantId, tenantId),
+            inArray(actions.status, ['scheduled', 'pending', 'pending_approval']),
+          ))
+          .orderBy(asc(actions.scheduledFor))
+          .limit(1),
+      ]);
+
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      // Count inbound messages
+      const [inboundCount] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(inboundMessages)
+        .where(and(
+          eq(inboundMessages.contactId, contactId),
+          eq(inboundMessages.tenantId, tenantId),
+        ));
+
+      const hasEmail = !!(contact.email || contact.arContactEmail);
+      const hasPhone = !!(contact.phone || contact.arContactPhone);
+      const outboundCount = recentActions.length;
+      const responsesReceived = (inboundCount as any)?.count || 0;
+      const lastAction = recentActions[0] || null;
+      const nextScheduled = scheduledActions[0]?.scheduledFor || null;
+      const hasOverdue = overdueInvs.length > 0;
+
+      // Priority-ordered status determination
+      let status: string | null = null;
+      let reason = '';
+      let variant = '';
+      const detail: Record<string, any> = {};
+
+      // 1. VIP
+      if (contact.isVip) {
+        status = 'paused'; variant = 'vip'; reason = 'VIP \u00b7 Exempt from automated contact';
+      }
+      // 2. On hold
+      if (!status && ((contact as any).isOnHold || (contact as any).manualBlocked)) {
+        status = 'paused'; variant = 'on_hold'; reason = 'On hold \u00b7 Manually paused';
+      }
+      // 3. Legal window
+      if (!status && contact.legalResponseWindowEnd && new Date(contact.legalResponseWindowEnd) > new Date()) {
+        const daysRemaining = Math.ceil((new Date(contact.legalResponseWindowEnd).getTime() - Date.now()) / 86400000);
+        status = 'paused'; variant = 'legal';
+        reason = `Legal window \u00b7 30-day response period \u00b7 ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} remaining`;
+        detail.legalWindowDaysRemaining = daysRemaining;
+      }
+      // 4. Blackout
+      if (!status && prefs?.doNotContactUntil) {
+        const until = new Date(prefs.doNotContactUntil);
+        const today = new Date(); today.setHours(0, 0, 0, 0); until.setHours(0, 0, 0, 0);
+        const from = prefs.doNotContactFrom ? new Date(prefs.doNotContactFrom) : until;
+        from.setHours(0, 0, 0, 0);
+        if (today >= from && today <= until) {
+          status = 'paused'; variant = 'blackout';
+          reason = `Paused \u00b7 Do not contact until ${until.toISOString().slice(0, 10)}${prefs.doNotContactReason ? ` \u00b7 Reason: ${prefs.doNotContactReason}` : ''}`;
+          detail.blackoutUntil = prefs.doNotContactUntil;
+          detail.blackoutReason = prefs.doNotContactReason || null;
+        }
+      }
+      // 5. Dispute active
+      if (!status && activeDisputes.length > 0) {
+        status = 'paused'; variant = 'dispute';
+        reason = 'Paused \u00b7 Active dispute \u00b7 Awaiting resolution before chasing';
+      }
+      // 6. Arrangement active
+      if (!status && activePromises.length > 0) {
+        const p = activePromises[0];
+        const promiseDate = p.promisedDate ? new Date(p.promisedDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '?';
+        const amount = p.promisedAmount ? `\u00a3${Number(p.promisedAmount).toLocaleString('en-GB', { minimumFractionDigits: 2 })}` : '';
+        status = 'holding'; variant = 'arrangement';
+        reason = `Holding \u00b7 Payment arrangement ${amount} due ${promiseDate}`;
+        detail.arrangementAmount = p.promisedAmount ? Number(p.promisedAmount) : null;
+        detail.arrangementDate = p.promisedDate;
+      }
+      // 7. Data issue
+      if (!status && !hasEmail && !hasPhone) {
+        status = 'holding'; variant = 'data_issue';
+        reason = 'Cannot contact \u00b7 No email or phone on file';
+      }
+      // 8/9. Chasing
+      if (!status && hasOverdue) {
+        const tone = lastAction?.agentToneLevel || 'Professional';
+        const toneCap = tone.charAt(0).toUpperCase() + tone.slice(1).toLowerCase();
+        const parts = [`Chasing \u00b7 ${toneCap} tone`];
+        if (nextScheduled) {
+          parts.push(`Next contact ${new Date(nextScheduled).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`);
+        }
+        if (outboundCount > 0 || responsesReceived > 0) {
+          parts.push(`${outboundCount} sent, ${responsesReceived} response${responsesReceived !== 1 ? 's' : ''}`);
+        }
+        status = 'chasing'; variant = 'chasing';
+        reason = parts.join(' \u00b7 ');
+        detail.tone = lastAction?.agentToneLevel || null;
+        detail.nextContact = nextScheduled;
+        detail.contactsSent = outboundCount;
+        detail.responsesReceived = responsesReceived;
+      }
+      // 10. No action needed
+      if (!status) {
+        status = 'no_action'; variant = 'no_action';
+        reason = 'Up to date \u00b7 No overdue invoices';
+      }
+
+      res.json({ status, variant, reason, detail });
+    } catch (error: any) {
+      console.error("Error fetching charlie status:", error);
+      res.status(500).json({ message: "Failed to fetch charlie status" });
     }
   });
 

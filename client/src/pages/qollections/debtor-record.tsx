@@ -105,6 +105,7 @@ import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { CURRENCIES, SUPPORTED_LANGUAGES, getLanguageName, getCurrencySymbol } from "@shared/currencies";
+import DebtorStatusBanner from "@/components/DebtorStatusBanner";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -471,7 +472,7 @@ export default function DebtorRecord() {
   const { toast } = useToast();
 
   // --- Tabs state ---
-  const [activeTab, setActiveTab] = useState("details");
+  const [activeTab, setActiveTab] = useState("activity");
 
   // --- Action bar state ---
   const [emailSheetOpen, setEmailSheetOpen] = useState(false);
@@ -607,7 +608,7 @@ export default function DebtorRecord() {
       const res = await apiRequest("GET", `/api/contacts/${contactId}/actions`);
       return res.json();
     },
-    enabled: !!contactId && activeTab === "workflows",
+    enabled: false, // Workflows tab removed
   });
 
   const outstandingQuery = useQuery<Invoice[]>({
@@ -1880,11 +1881,10 @@ export default function DebtorRecord() {
         {/* ----------------------------------------------------------------- */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="flex w-full h-auto gap-1">
-            <TabsTrigger value="details" className="flex-1">Details & Contacts</TabsTrigger>
             <TabsTrigger value="activity" className="flex-1">Activity</TabsTrigger>
             <TabsTrigger value="outstanding" className="flex-1">Outstanding</TabsTrigger>
             <TabsTrigger value="disputes" className="flex-1">Disputes</TabsTrigger>
-            <TabsTrigger value="workflows" className="flex-1">Workflows</TabsTrigger>
+            <TabsTrigger value="details" className="flex-1">Details & Contacts</TabsTrigger>
             <TabsTrigger value="risk" className="flex-1">Risk & Credit</TabsTrigger>
             <TabsTrigger value="paid" className="flex-1">Paid</TabsTrigger>
           </TabsList>
@@ -2523,6 +2523,9 @@ export default function DebtorRecord() {
           {/* TAB 2: Activity                                                 */}
           {/* ============================================================== */}
           <TabsContent value="activity" className="space-y-4 mt-4">
+            {/* ── Charlie status banner ── */}
+            <DebtorStatusBanner contactId={contactId} />
+
             {/* ── Filter bar ── */}
             <div className="flex flex-wrap gap-2 items-center">
               <Select value={activityCategory} onValueChange={(v) => { setActivityCategory(v); setActivityPage(1); }}>
@@ -3247,25 +3250,7 @@ export default function DebtorRecord() {
           {/* ============================================================== */}
           {/* TAB 6: Workflows                                                */}
           {/* ============================================================== */}
-          <TabsContent value="workflows" className="space-y-4 mt-4">
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Bot className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                <p className="text-lg font-medium">Workflow management coming soon</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Automated collection workflows will be configured here.
-                </p>
-                {contact.playbookRiskTag && (
-                  <div className="mt-4">
-                    <Badge variant="secondary" className="text-sm">
-                      Current strategy: {contact.playbookRiskTag}
-                    </Badge>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-          </TabsContent>
+          {/* Workflows tab removed — placeholder had no content */}
 
           {/* ============================================================== */}
           {/* TAB 7: Risk & Credit                                            */}
