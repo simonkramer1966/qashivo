@@ -10,7 +10,7 @@
  */
 
 import { db } from "../db";
-import { eq, and, desc, inArray } from "drizzle-orm";
+import { eq, and, desc, inArray, sql } from "drizzle-orm";
 import {
   contacts,
   timelineEvents,
@@ -24,6 +24,9 @@ import {
   emailMessages,
   actions,
   tenants,
+  cachedXeroCreditNotes,
+  cachedXeroOverpayments,
+  cachedXeroPrepayments,
 } from "@shared/schema";
 
 // ── Types ────────────────────────────────────────────────────
@@ -68,6 +71,11 @@ export interface ConversationBriefData {
     callsMade: number;
     lastCallDate: string | null;
     preferredChannel: string | null;
+  };
+  creditBalance: {
+    totalUnappliedCredits: number;
+    netOutstanding: number;
+    hasCredits: boolean;
   };
   debtorIntel: string[];
   constraints: string[];
@@ -141,9 +149,12 @@ export async function buildConversationBrief(
 
   const chaseDelayDays = tenantRecord?.chaseDelayDays ?? 5;
 
+  // Load credit balance (needs contact's xeroContactId — sequential after contact load)
+  const creditBalance = await loadCreditBalance(tenantId, contact?.xeroContactId ?? null);
+
   const data = assembleData(
     contact, timeline, promises, outstandingInvs, signals,
-    facts, prefs, intel, recentEmails, recentActions, forecasts, chaseDelayDays,
+    facts, prefs, intel, recentEmails, recentActions, forecasts, chaseDelayDays, creditBalance,
   );
   const text = formatBriefText(data, contact, prefs);
 
@@ -305,6 +316,40 @@ async function loadActiveForecasts(tenantId: string, contactId: string) {
     .limit(5);
 }
 
+async function loadCreditBalance(tenantId: string, xeroContactId: string | null): Promise<number> {
+  if (!xeroContactId) return 0;
+
+  // Sum remainingCredit from all three cached tables where status is AUTHORISED
+  const [cnResult] = await db
+    .select({ total: sql<string>`COALESCE(SUM(${cachedXeroCreditNotes.remainingCredit}), 0)` })
+    .from(cachedXeroCreditNotes)
+    .where(and(
+      eq(cachedXeroCreditNotes.tenantId, tenantId),
+      eq(cachedXeroCreditNotes.xeroContactId, xeroContactId),
+      eq(cachedXeroCreditNotes.status, 'AUTHORISED'),
+    ));
+
+  const [opResult] = await db
+    .select({ total: sql<string>`COALESCE(SUM(${cachedXeroOverpayments.remainingCredit}), 0)` })
+    .from(cachedXeroOverpayments)
+    .where(and(
+      eq(cachedXeroOverpayments.tenantId, tenantId),
+      eq(cachedXeroOverpayments.xeroContactId, xeroContactId),
+      eq(cachedXeroOverpayments.status, 'AUTHORISED'),
+    ));
+
+  const [ppResult] = await db
+    .select({ total: sql<string>`COALESCE(SUM(${cachedXeroPrepayments.remainingCredit}), 0)` })
+    .from(cachedXeroPrepayments)
+    .where(and(
+      eq(cachedXeroPrepayments.tenantId, tenantId),
+      eq(cachedXeroPrepayments.xeroContactId, xeroContactId),
+      eq(cachedXeroPrepayments.status, 'AUTHORISED'),
+    ));
+
+  return parseFloat(cnResult?.total || '0') + parseFloat(opResult?.total || '0') + parseFloat(ppResult?.total || '0');
+}
+
 // ── Data assembly ────────────────────────────────────────────
 
 function assembleData(
@@ -320,6 +365,7 @@ function assembleData(
   recentActions: any[],
   forecasts: any[],
   chaseDelayDays: number,
+  creditBalance: number = 0,
 ): ConversationBriefData {
   const now = new Date();
 
@@ -413,6 +459,10 @@ function assembleData(
   if (contact?.probablePaymentDetected) {
     constraints.push('Probable payment detected — do NOT chase aggressively, payment may have been made.');
   }
+  if (creditBalance > 0) {
+    const netAmount = Math.max(0, totalOutstanding - creditBalance);
+    constraints.push(`Debtor has £${creditBalance.toFixed(2)} in unapplied credits. Reference net outstanding (£${netAmount.toFixed(2)}), NOT gross invoice totals.`);
+  }
 
   return {
     relationshipSummary: {
@@ -460,6 +510,11 @@ function assembleData(
         : null,
       preferredChannel: prefs?.preferredChannel || null,
     },
+    creditBalance: {
+      totalUnappliedCredits: creditBalance,
+      netOutstanding: Math.max(0, totalOutstanding - creditBalance),
+      hasCredits: creditBalance > 0,
+    },
     debtorIntel,
     constraints,
     collectionPhase: {
@@ -493,6 +548,13 @@ function formatBriefText(data: ConversationBriefData, contact: any, prefs?: any)
     lines.push(`- Special instructions: ${data.relationshipSummary.specialInstructions}`);
   }
   lines.push('');
+
+  // Credit balance
+  if (data.creditBalance.hasCredits) {
+    lines.push('CREDIT BALANCE:');
+    lines.push(`This debtor has £${data.creditBalance.totalUnappliedCredits.toFixed(2)} in unapplied credits (credit notes/overpayments). Their net outstanding after credits is £${data.creditBalance.netOutstanding.toFixed(2)}. You MUST reference the net amount (£${data.creditBalance.netOutstanding.toFixed(2)}), NOT the gross invoice total. Do not chase for the credited portion.`);
+    lines.push('');
+  }
 
   // Collection phase
   lines.push('COLLECTION PHASE:');

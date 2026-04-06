@@ -20,6 +20,8 @@ import type {
   QashivoInvoiceStatus,
   QashivoContact,
   QashivoCreditNote,
+  QashivoOverpayment,
+  QashivoPrepayment,
   QashivoBankTransaction,
   ContactPerson,
   Address,
@@ -320,6 +322,74 @@ export class XeroAdapter implements AccountingAdapter {
     return { totalCount, pagesFetched: currentPage - 1, fetchedAt };
   }
 
+  async fetchOverpayments(
+    tenantId: string,
+    options: FetchOptions,
+    onPage: (page: any[], pageNumber: number) => Promise<void>,
+  ): Promise<FetchSummary> {
+    const fetchedAt = new Date();
+    const tokens = await this.getTokens(tenantId);
+
+    const whereClause = 'Type=="RECEIVE-OVERPAYMENT"';
+    let currentPage = 1;
+    let totalCount = 0;
+    let hasNextPage = true;
+
+    while (hasNextPage) {
+      const endpoint = `Overpayments?where=${encodeURIComponent(whereClause)}&page=${currentPage}`;
+      const response = await this.makeApiCall(tokens, endpoint, tenantId);
+      const pageItems: any[] = response.Overpayments || [];
+
+      if (pageItems.length > 0) {
+        await onPage(pageItems, currentPage);
+        totalCount += pageItems.length;
+      }
+
+      hasNextPage = pageItems.length === 100;
+      currentPage++;
+
+      if (hasNextPage) {
+        await this.rateDelay();
+      }
+    }
+
+    return { totalCount, pagesFetched: currentPage - 1, fetchedAt };
+  }
+
+  async fetchPrepayments(
+    tenantId: string,
+    options: FetchOptions,
+    onPage: (page: any[], pageNumber: number) => Promise<void>,
+  ): Promise<FetchSummary> {
+    const fetchedAt = new Date();
+    const tokens = await this.getTokens(tenantId);
+
+    const whereClause = 'Type=="RECEIVE-PREPAYMENT"';
+    let currentPage = 1;
+    let totalCount = 0;
+    let hasNextPage = true;
+
+    while (hasNextPage) {
+      const endpoint = `Prepayments?where=${encodeURIComponent(whereClause)}&page=${currentPage}`;
+      const response = await this.makeApiCall(tokens, endpoint, tenantId);
+      const pageItems: any[] = response.Prepayments || [];
+
+      if (pageItems.length > 0) {
+        await onPage(pageItems, currentPage);
+        totalCount += pageItems.length;
+      }
+
+      hasNextPage = pageItems.length === 100;
+      currentPage++;
+
+      if (hasNextPage) {
+        await this.rateDelay();
+      }
+    }
+
+    return { totalCount, pagesFetched: currentPage - 1, fetchedAt };
+  }
+
   // ── Single-Record Fetch (spec 13.12 — webhook efficiency) ────────────
 
   async fetchInvoiceById(tenantId: string, platformInvoiceId: string): Promise<any | null> {
@@ -454,6 +524,30 @@ export class XeroAdapter implements AccountingAdapter {
       contactName: raw.Contact?.Name || null,
       platformContactId: raw.Contact?.ContactID || null,
       isReconciled: raw.IsReconciled ?? false,
+      platformRaw: raw,
+    };
+  }
+
+  mapOverpayment(raw: any): QashivoOverpayment {
+    return {
+      platformOverpaymentId: raw.OverpaymentID,
+      platformContactId: raw.Contact?.ContactID || '',
+      amount: raw.Total ?? 0,
+      amountRemaining: raw.RemainingCredit ?? 0,
+      status: raw.Status || 'UNKNOWN',
+      date: this.parseXeroDate(raw.DateString || raw.Date),
+      platformRaw: raw,
+    };
+  }
+
+  mapPrepayment(raw: any): QashivoPrepayment {
+    return {
+      platformPrepaymentId: raw.PrepaymentID,
+      platformContactId: raw.Contact?.ContactID || '',
+      amount: raw.Total ?? 0,
+      amountRemaining: raw.RemainingCredit ?? 0,
+      status: raw.Status || 'UNKNOWN',
+      date: this.parseXeroDate(raw.DateString || raw.Date),
       platformRaw: raw,
     };
   }

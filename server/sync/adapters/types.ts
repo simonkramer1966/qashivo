@@ -136,6 +136,26 @@ export interface QashivoCreditNote {
   platformRaw: Record<string, any>;
 }
 
+export interface QashivoOverpayment {
+  platformOverpaymentId: string;
+  platformContactId: string;
+  amount: number;
+  amountRemaining: number;
+  status: string;
+  date: Date;
+  platformRaw: Record<string, any>;
+}
+
+export interface QashivoPrepayment {
+  platformPrepaymentId: string;
+  platformContactId: string;
+  amount: number;
+  amountRemaining: number;
+  status: string;
+  date: Date;
+  platformRaw: Record<string, any>;
+}
+
 export interface QashivoBankTransaction {
   platformTransactionId: string;
   date: Date;
@@ -198,6 +218,8 @@ export interface SyncResult {
     invoices: number;
     contacts: number;
     creditNotes: number;
+    overpayments: number;
+    prepayments: number;
     payments: number;
     bankTransactions: number;
     apiCallsMade: number;
@@ -308,6 +330,18 @@ export interface AccountingAdapter {
     onPage: (page: any[], pageNumber: number) => Promise<void>,
   ): Promise<FetchSummary>;
 
+  fetchOverpayments?(
+    tenantId: string,
+    options: FetchOptions,
+    onPage: (page: any[], pageNumber: number) => Promise<void>,
+  ): Promise<FetchSummary>;
+
+  fetchPrepayments?(
+    tenantId: string,
+    options: FetchOptions,
+    onPage: (page: any[], pageNumber: number) => Promise<void>,
+  ): Promise<FetchSummary>;
+
   // ── Single-Record Fetch (spec 13.12 — webhook efficiency) ─
   fetchInvoiceById?(tenantId: string, platformInvoiceId: string): Promise<any | null>;
   fetchContactById?(tenantId: string, platformContactId: string): Promise<any | null>;
@@ -318,6 +352,8 @@ export interface AccountingAdapter {
   mapCreditNote(raw: any): QashivoCreditNote;
   mapPayment?(raw: any): QashivoPayment;
   mapBankTransaction?(raw: any): QashivoBankTransaction;
+  mapOverpayment?(raw: any): QashivoOverpayment;
+  mapPrepayment?(raw: any): QashivoPrepayment;
 
   // Determine invoice status from platform-specific fields
   deriveInvoiceStatus(raw: any): QashivoInvoiceStatus;

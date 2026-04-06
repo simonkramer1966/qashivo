@@ -31,6 +31,7 @@ export interface DebtorProfile {
     rateDisplay: string;   // "12.50% (BoE 4.50% + 8.00% statutory)"
     annualRate: number;
   };
+  creditBalance?: number; // unapplied credits (credit notes/overpayments/prepayments)
 }
 
 export interface OutstandingInvoice {
@@ -221,6 +222,14 @@ export function buildUserPrompt(
       sections.push(`- ${inv.invoiceNumber}: ${formatCurrencyForPrompt(balance, debtor.currency)} — ${overdueLabel} — state: ${stateInfo}`);
     }
     sections.push(`- Total owed: ${formatCurrencyForPrompt(totalOwed, debtor.currency)}`);
+
+    // Credit balance netting
+    if (debtor.creditBalance && debtor.creditBalance > 0) {
+      const netAmount = Math.max(0, totalOwed - debtor.creditBalance);
+      sections.push(`- Unapplied credits: ${formatCurrencyForPrompt(debtor.creditBalance, debtor.currency)} (credit notes/overpayments)`);
+      sections.push(`- NET amount owed after credits: ${formatCurrencyForPrompt(netAmount, debtor.currency)}`);
+      sections.push(`- IMPORTANT: Reference the NET amount (${formatCurrencyForPrompt(netAmount, debtor.currency)}) in your email, NOT the gross total.`);
+    }
 
     // LPI section
     if (debtor.lpiContext?.enabled && debtor.lpiContext.totalLPI > 0) {

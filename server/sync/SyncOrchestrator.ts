@@ -15,6 +15,7 @@
 import { db } from '../db';
 import {
   tenants, contacts, invoices, cachedXeroInvoices, cachedXeroContacts,
+  cachedXeroCreditNotes, cachedXeroOverpayments, cachedXeroPrepayments,
   syncState, customerContactPersons, timelineEvents,
 } from '@shared/schema';
 import { eq, and, sql, inArray } from 'drizzle-orm';
@@ -220,7 +221,7 @@ export class SyncOrchestrator {
       syncMode: mode,
       platform: this.adapter.platformName,
       tenantId,
-      fetched: { invoices: 0, contacts: 0, creditNotes: 0, payments: 0, bankTransactions: 0, apiCallsMade: 0 },
+      fetched: { invoices: 0, contacts: 0, creditNotes: 0, overpayments: 0, prepayments: 0, payments: 0, bankTransactions: 0, apiCallsMade: 0 },
       processed: { invoicesCreated: 0, invoicesUpdated: 0, statusChanges: 0, paymentChangesDetected: 0, contactsCreated: 0, contactsUpdated: 0, creditNotesProcessed: 0 },
       startedAt,
       completedAt: startedAt,
@@ -285,6 +286,9 @@ export class SyncOrchestrator {
       if (effectiveMode === 'initial') {
         await db.delete(cachedXeroInvoices).where(eq(cachedXeroInvoices.tenantId, tenantId));
         await db.delete(cachedXeroContacts).where(eq(cachedXeroContacts.tenantId, tenantId));
+        await db.delete(cachedXeroCreditNotes).where(eq(cachedXeroCreditNotes.tenantId, tenantId));
+        await db.delete(cachedXeroOverpayments).where(eq(cachedXeroOverpayments.tenantId, tenantId));
+        await db.delete(cachedXeroPrepayments).where(eq(cachedXeroPrepayments.tenantId, tenantId));
       }
 
       const uniqueContactIds = new Map<string, string>(); // platformContactId → name
@@ -350,11 +354,55 @@ export class SyncOrchestrator {
           async (pageCreditNotes) => {
             result.fetched.apiCallsMade++;
             result.fetched.creditNotes += pageCreditNotes.length;
+            await this.cacheCreditNotePage(tenantId, pageCreditNotes, effectiveMode);
           },
         );
         result.processed.creditNotesProcessed = cnSummary.totalCount;
+        console.log(`[SyncOrchestrator] Cached ${cnSummary.totalCount} credit notes`);
       } catch (err) {
         result.warnings.push(`Credit notes fetch failed: ${(err as Error).message}`);
+      }
+
+      // ── Step 6b: Fetch overpayments (optional, non-fatal) ─────────
+      if (this.adapter.fetchOverpayments) {
+        try {
+          if (effectiveMode === 'initial') {
+            await db.delete(cachedXeroOverpayments).where(eq(cachedXeroOverpayments.tenantId, tenantId));
+          }
+          const opSummary = await this.adapter.fetchOverpayments(
+            tenantId,
+            {},
+            async (pageOverpayments) => {
+              result.fetched.apiCallsMade++;
+              result.fetched.overpayments += pageOverpayments.length;
+              await this.cacheOverpaymentPage(tenantId, pageOverpayments, effectiveMode);
+            },
+          );
+          console.log(`[SyncOrchestrator] Cached ${opSummary.totalCount} overpayments`);
+        } catch (err) {
+          result.warnings.push(`Overpayments fetch failed: ${(err as Error).message}`);
+        }
+      }
+
+      // ── Step 6c: Fetch prepayments (optional, non-fatal) ──────────
+      if (this.adapter.fetchPrepayments) {
+        try {
+          if (effectiveMode === 'initial') {
+            await db.delete(cachedXeroPrepayments).where(eq(cachedXeroPrepayments.tenantId, tenantId));
+          }
+          const ppSummary = await this.adapter.fetchPrepayments(
+            tenantId,
+            {},
+            async (pagePrepayments) => {
+              result.fetched.apiCallsMade++;
+              result.fetched.prepayments += pagePrepayments.length;
+              await this.cachePrepaymentPage(tenantId, pagePrepayments, effectiveMode);
+            },
+          );
+          console.log(`[SyncOrchestrator] Cached ${ppSummary.totalCount} prepayments`);
+        } catch (err) {
+          result.warnings.push(`Prepayments fetch failed: ${(err as Error).message}`);
+        }
       }
 
       // ── Step 7: Fetch bank transactions (optional, non-fatal) ────────
@@ -416,7 +464,7 @@ export class SyncOrchestrator {
         });
       } catch { /* non-fatal */ }
 
-      console.log(`[SyncOrchestrator] Sync complete for ${tenantId}: ${result.fetched.invoices} invoices, ${result.fetched.contacts} contacts in ${result.durationMs}ms`);
+      console.log(`[SyncOrchestrator] Sync complete for ${tenantId}: ${result.fetched.invoices} invoices, ${result.fetched.contacts} contacts, ${result.fetched.creditNotes} credit notes, ${result.fetched.overpayments} overpayments, ${result.fetched.prepayments} prepayments in ${result.durationMs}ms`);
 
       // Log to sync audit
       await this.logSyncAudit(tenantId, result, trigger);
@@ -506,6 +554,95 @@ export class SyncOrchestrator {
     }
 
     await db.insert(cachedXeroContacts).values(toCache);
+  }
+
+  private async cacheCreditNotePage(tenantId: string, rawCreditNotes: any[], mode: SyncMode) {
+    if (!this.adapter.mapCreditNote) return;
+
+    const mapped = rawCreditNotes.map(raw => {
+      const cn = this.adapter.mapCreditNote(raw);
+      return {
+        tenantId,
+        xeroCreditNoteId: cn.platformCreditNoteId,
+        xeroContactId: cn.platformContactId || null,
+        creditNoteNumber: raw.CreditNoteNumber || null,
+        type: raw.Type || 'ACCRECCREDIT',
+        status: cn.status,
+        total: cn.amount.toString(),
+        remainingCredit: cn.amountRemaining.toString(),
+        date: cn.issueDate,
+        updatedDateUtc: raw.UpdatedDateUTC ? this.safeParseDate(raw.UpdatedDateUTC) : null,
+      };
+    });
+
+    if (mapped.length === 0) return;
+
+    if (mode !== 'initial') {
+      const ids = mapped.map(m => m.xeroCreditNoteId);
+      await db.delete(cachedXeroCreditNotes).where(
+        and(eq(cachedXeroCreditNotes.tenantId, tenantId), inArray(cachedXeroCreditNotes.xeroCreditNoteId, ids)),
+      );
+    }
+
+    await db.insert(cachedXeroCreditNotes).values(mapped);
+  }
+
+  private async cacheOverpaymentPage(tenantId: string, rawOverpayments: any[], mode: SyncMode) {
+    if (!this.adapter.mapOverpayment) return;
+
+    const mapped = rawOverpayments.map(raw => {
+      const op = this.adapter.mapOverpayment!(raw);
+      return {
+        tenantId,
+        xeroOverpaymentId: op.platformOverpaymentId,
+        xeroContactId: op.platformContactId || null,
+        status: op.status,
+        total: op.amount.toString(),
+        remainingCredit: op.amountRemaining.toString(),
+        date: op.date,
+        updatedDateUtc: raw.UpdatedDateUTC ? this.safeParseDate(raw.UpdatedDateUTC) : null,
+      };
+    });
+
+    if (mapped.length === 0) return;
+
+    if (mode !== 'initial') {
+      const ids = mapped.map(m => m.xeroOverpaymentId);
+      await db.delete(cachedXeroOverpayments).where(
+        and(eq(cachedXeroOverpayments.tenantId, tenantId), inArray(cachedXeroOverpayments.xeroOverpaymentId, ids)),
+      );
+    }
+
+    await db.insert(cachedXeroOverpayments).values(mapped);
+  }
+
+  private async cachePrepaymentPage(tenantId: string, rawPrepayments: any[], mode: SyncMode) {
+    if (!this.adapter.mapPrepayment) return;
+
+    const mapped = rawPrepayments.map(raw => {
+      const pp = this.adapter.mapPrepayment!(raw);
+      return {
+        tenantId,
+        xeroPrepaymentId: pp.platformPrepaymentId,
+        xeroContactId: pp.platformContactId || null,
+        status: pp.status,
+        total: pp.amount.toString(),
+        remainingCredit: pp.amountRemaining.toString(),
+        date: pp.date,
+        updatedDateUtc: raw.UpdatedDateUTC ? this.safeParseDate(raw.UpdatedDateUTC) : null,
+      };
+    });
+
+    if (mapped.length === 0) return;
+
+    if (mode !== 'initial') {
+      const ids = mapped.map(m => m.xeroPrepaymentId);
+      await db.delete(cachedXeroPrepayments).where(
+        and(eq(cachedXeroPrepayments.tenantId, tenantId), inArray(cachedXeroPrepayments.xeroPrepaymentId, ids)),
+      );
+    }
+
+    await db.insert(cachedXeroPrepayments).values(mapped);
   }
 
   // ─── Main Table Processing ───────────────────────────────────────────────
