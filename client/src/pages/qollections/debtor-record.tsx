@@ -2027,8 +2027,7 @@ export default function DebtorRecord() {
                   <MessageSquare className="h-4 w-4" /> Communication Preferences
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Saved indicator helper */}
+              <CardContent>
                 {(() => {
                   const SavedTick = ({ field }: { field: string }) => (
                     prefSaveField === field ? (
@@ -2037,13 +2036,13 @@ export default function DebtorRecord() {
                   );
 
                   const ALL_DAYS = [
-                    { key: "monday", label: "Mon" },
-                    { key: "tuesday", label: "Tue" },
-                    { key: "wednesday", label: "Wed" },
-                    { key: "thursday", label: "Thu" },
-                    { key: "friday", label: "Fri" },
-                    { key: "saturday", label: "Sat" },
-                    { key: "sunday", label: "Sun" },
+                    { key: "monday", label: "M" },
+                    { key: "tuesday", label: "T" },
+                    { key: "wednesday", label: "W" },
+                    { key: "thursday", label: "T" },
+                    { key: "friday", label: "F" },
+                    { key: "saturday", label: "S" },
+                    { key: "sunday", label: "S" },
                   ];
 
                   const currentDays = commPrefs?.bestContactDays || ["monday", "tuesday", "wednesday", "thursday", "friday"];
@@ -2051,11 +2050,11 @@ export default function DebtorRecord() {
                   const channelOverride = commPrefs?.preferredChannelOverride || null;
 
                   return (
-                    <>
-                      {/* a) Channels */}
-                      <div className="space-y-3">
-                        <h4 className="text-sm font-medium">Channels</h4>
-                        <div className="flex flex-col gap-2.5">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-5">
+                      {/* ── ROW 1, COL 1: Channels ── */}
+                      <div className="space-y-2.5">
+                        <h4 className="text-[13px] font-medium text-muted-foreground">Channels</h4>
+                        <div className="flex flex-col gap-2">
                           {([
                             { key: "emailEnabled", label: "Email", icon: Mail },
                             { key: "smsEnabled", label: "SMS", icon: MessageSquare },
@@ -2086,48 +2085,9 @@ export default function DebtorRecord() {
                         )}
                       </div>
 
-                      <Separator />
-
-                      {/* b) Preferred channel override */}
-                      <div className="space-y-3">
-                        <h4 className="text-sm font-medium flex items-center gap-2">
-                          Preferred Channel
-                          <SavedTick field="preferredChannelOverride" />
-                        </h4>
-                        <RadioGroup
-                          value={channelOverride || "auto"}
-                          onValueChange={(val) =>
-                            updateCommPrefsMutation.mutate({
-                              preferredChannelOverride: val === "auto" ? null : val,
-                              preferredChannelOverrideSource: "user_manual",
-                            })
-                          }
-                          className="flex flex-col gap-1.5"
-                        >
-                          {[
-                            { value: "auto", label: "Let Charlie decide" },
-                            { value: "email", label: "Always email" },
-                            { value: "sms", label: "Always SMS" },
-                            { value: "voice", label: "Always voice" },
-                          ].map((opt) => (
-                            <div key={opt.value} className="flex items-center gap-2">
-                              <RadioGroupItem value={opt.value} id={`ch-override-${opt.value}`} />
-                              <Label htmlFor={`ch-override-${opt.value}`} className="text-sm font-normal cursor-pointer">
-                                {opt.label}
-                              </Label>
-                            </div>
-                          ))}
-                        </RadioGroup>
-                        <p className="text-xs text-muted-foreground">
-                          Override is a preference, not a hard lock. Charlie falls back if unavailable.
-                        </p>
-                      </div>
-
-                      <Separator />
-
-                      {/* c) Contact hours */}
-                      <div className="space-y-3">
-                        <h4 className="text-sm font-medium flex items-center gap-2">
+                      {/* ── ROW 1, COL 2: Contact Hours ── */}
+                      <div className="space-y-2.5">
+                        <h4 className="text-[13px] font-medium text-muted-foreground flex items-center gap-1.5">
                           Contact Hours
                           <SavedTick field="bestContactWindowStart" />
                         </h4>
@@ -2142,12 +2102,12 @@ export default function DebtorRecord() {
                               });
                             }
                           }}
-                          className="flex flex-col gap-1.5"
+                          className="flex flex-col gap-1"
                         >
                           <div className="flex items-center gap-2">
                             <RadioGroupItem value="default" id="hours-default" />
                             <Label htmlFor="hours-default" className="text-sm font-normal cursor-pointer">
-                              Use default (08:00–18:00)
+                              Default (08:00–18:00)
                             </Label>
                           </div>
                           <div className="flex items-center gap-2">
@@ -2158,31 +2118,33 @@ export default function DebtorRecord() {
                           </div>
                         </RadioGroup>
                         {hasCustomHours && (
-                          <div className="flex items-center gap-2 pl-6">
-                            <Input
-                              type="time"
-                              className="h-8 w-28"
-                              value={commPrefs?.bestContactWindowStart || "09:00"}
-                              onChange={(e) =>
-                                updateCommPrefsMutation.mutate({ bestContactWindowStart: e.target.value })
-                              }
-                            />
-                            <span className="text-sm text-muted-foreground">to</span>
-                            <Input
-                              type="time"
-                              className="h-8 w-28"
-                              value={commPrefs?.bestContactWindowEnd || "17:00"}
-                              onChange={(e) =>
-                                updateCommPrefsMutation.mutate({ bestContactWindowEnd: e.target.value })
-                              }
-                            />
+                          <div className="space-y-1.5 pl-6">
+                            <div className="flex items-center gap-1.5">
+                              <Input
+                                type="time"
+                                className="h-7 w-24 text-xs"
+                                value={commPrefs?.bestContactWindowStart || "09:00"}
+                                onChange={(e) =>
+                                  updateCommPrefsMutation.mutate({ bestContactWindowStart: e.target.value })
+                                }
+                              />
+                              <span className="text-xs text-muted-foreground">–</span>
+                              <Input
+                                type="time"
+                                className="h-7 w-24 text-xs"
+                                value={commPrefs?.bestContactWindowEnd || "17:00"}
+                                onChange={(e) =>
+                                  updateCommPrefsMutation.mutate({ bestContactWindowEnd: e.target.value })
+                                }
+                              />
+                            </div>
                             <Select
                               value={commPrefs?.contactTimezone || "Europe/London"}
                               onValueChange={(val) =>
                                 updateCommPrefsMutation.mutate({ contactTimezone: val })
                               }
                             >
-                              <SelectTrigger className="h-8 w-44">
+                              <SelectTrigger className="h-7 w-full text-xs">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -2195,13 +2157,92 @@ export default function DebtorRecord() {
                         )}
                       </div>
 
-                      {/* d) Contact days */}
-                      <div className="space-y-3">
-                        <h4 className="text-sm font-medium flex items-center gap-2">
+                      {/* ── ROW 1, COL 3: Do Not Contact ── */}
+                      <div className="space-y-2.5">
+                        <h4 className="text-[13px] font-medium text-muted-foreground flex items-center gap-1.5">
+                          Do Not Contact
+                          <SavedTick field="doNotContactUntil" />
+                        </h4>
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs text-muted-foreground w-10">From</span>
+                            <Input
+                              type="date"
+                              className="h-7 text-xs flex-1"
+                              value={commPrefs?.doNotContactFrom || ""}
+                              onChange={(e) =>
+                                updateCommPrefsMutation.mutate({ doNotContactFrom: e.target.value || null })
+                              }
+                            />
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs text-muted-foreground w-10">Until</span>
+                            <Input
+                              type="date"
+                              className="h-7 text-xs flex-1"
+                              value={commPrefs?.doNotContactUntil || ""}
+                              onChange={(e) =>
+                                updateCommPrefsMutation.mutate({ doNotContactUntil: e.target.value || null })
+                              }
+                            />
+                          </div>
+                          <Input
+                            placeholder="Reason (e.g. holiday, staff change)"
+                            className="h-7 text-xs"
+                            defaultValue={commPrefs?.doNotContactReason || ""}
+                            key={commPrefs?.doNotContactReason ?? "dnc-reason"}
+                            onBlur={(e) =>
+                              updateCommPrefsMutation.mutate({ doNotContactReason: e.target.value || null })
+                            }
+                          />
+                        </div>
+                      </div>
+
+                      {/* ── Row separator ── */}
+                      <div className="md:col-span-3 border-t border-border" />
+
+                      {/* ── ROW 2, COL 1: Preferred Channel ── */}
+                      <div className="space-y-2.5">
+                        <h4 className="text-[13px] font-medium text-muted-foreground flex items-center gap-1.5">
+                          Preferred Channel
+                          <SavedTick field="preferredChannelOverride" />
+                        </h4>
+                        <RadioGroup
+                          value={channelOverride || "auto"}
+                          onValueChange={(val) =>
+                            updateCommPrefsMutation.mutate({
+                              preferredChannelOverride: val === "auto" ? null : val,
+                              preferredChannelOverrideSource: "user_manual",
+                            })
+                          }
+                          className="flex flex-col gap-1"
+                        >
+                          {[
+                            { value: "auto", label: "Charlie decides" },
+                            { value: "email", label: "Always email" },
+                            { value: "sms", label: "Always SMS" },
+                            { value: "voice", label: "Always voice" },
+                          ].map((opt) => (
+                            <div key={opt.value} className="flex items-center gap-2">
+                              <RadioGroupItem value={opt.value} id={`ch-override-${opt.value}`} />
+                              <Label htmlFor={`ch-override-${opt.value}`} className="text-sm font-normal cursor-pointer">
+                                {opt.label}
+                              </Label>
+                            </div>
+                          ))}
+                        </RadioGroup>
+                        <p className="text-xs text-muted-foreground">
+                          Override is a preference, not a hard lock.
+                        </p>
+                      </div>
+
+                      {/* ── ROW 2, COL 2: Contact Days ── */}
+                      <div className="space-y-2.5">
+                        <h4 className="text-[13px] font-medium text-muted-foreground flex items-center gap-1.5">
                           Contact Days
                           <SavedTick field="bestContactDays" />
                         </h4>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex gap-1">
                           {ALL_DAYS.map(({ key, label }) => {
                             const active = currentDays.includes(key);
                             return (
@@ -2214,9 +2255,9 @@ export default function DebtorRecord() {
                                   updateCommPrefsMutation.mutate({ bestContactDays: newDays });
                                 }}
                                 className={cn(
-                                  "px-3 py-1 text-xs rounded-md border transition-colors",
+                                  "w-9 h-9 text-xs font-medium rounded-md border transition-colors",
                                   active
-                                    ? "bg-primary text-primary-foreground border-primary"
+                                    ? "bg-teal-600 text-white border-teal-600"
                                     : "bg-background text-muted-foreground border-border hover:bg-muted"
                                 )}
                               >
@@ -2227,106 +2268,62 @@ export default function DebtorRecord() {
                         </div>
                       </div>
 
-                      <Separator />
-
-                      {/* e) Do not contact */}
+                      {/* ── ROW 2, COL 3: Currency & Language ── */}
                       <div className="space-y-3">
-                        <h4 className="text-sm font-medium flex items-center gap-2">
-                          Do Not Contact
-                          <SavedTick field="doNotContactUntil" />
-                        </h4>
-                        <div className="flex items-center gap-2">
+                        <h4 className="text-[13px] font-medium text-muted-foreground">Currency & Language</h4>
+                        <div className="space-y-2">
                           <div className="space-y-1">
-                            <span className="text-xs text-muted-foreground">From</span>
-                            <Input
-                              type="date"
-                              className="h-8 w-40"
-                              value={commPrefs?.doNotContactFrom || ""}
-                              onChange={(e) =>
-                                updateCommPrefsMutation.mutate({ doNotContactFrom: e.target.value || null })
+                            <span className="text-xs text-muted-foreground">Currency</span>
+                            <Select
+                              value={contact?.preferredCurrency || "__default__"}
+                              onValueChange={(val) =>
+                                updateContactPrefMutation.mutate({
+                                  preferredCurrency: val === "__default__" ? "" : val,
+                                })
                               }
-                            />
+                            >
+                              <SelectTrigger className="h-8 rounded-lg bg-background border-border text-sm">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__default__">Use default</SelectItem>
+                                {CURRENCIES.map((c) => (
+                                  <SelectItem key={c.code} value={c.code}>
+                                    {c.symbol} {c.name} ({c.code})
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
                           <div className="space-y-1">
-                            <span className="text-xs text-muted-foreground">Until</span>
-                            <Input
-                              type="date"
-                              className="h-8 w-40"
-                              value={commPrefs?.doNotContactUntil || ""}
-                              onChange={(e) =>
-                                updateCommPrefsMutation.mutate({ doNotContactUntil: e.target.value || null })
+                            <span className="text-xs text-muted-foreground">Language</span>
+                            <Select
+                              value={contact?.preferredLanguage || "__default__"}
+                              onValueChange={(val) =>
+                                updateContactPrefMutation.mutate({
+                                  preferredLanguage: val === "__default__" ? "" : val,
+                                })
                               }
-                            />
+                            >
+                              <SelectTrigger className="h-8 rounded-lg bg-background border-border text-sm">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__default__">Use default</SelectItem>
+                                {SUPPORTED_LANGUAGES.map((l) => (
+                                  <SelectItem key={l.code} value={l.code}>
+                                    {l.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <p className="text-xs text-muted-foreground">
+                              Overrides tenant default for AI comms.
+                            </p>
                           </div>
                         </div>
-                        <Input
-                          placeholder="Reason (e.g. holiday, staff change)"
-                          className="h-8 max-w-sm"
-                          defaultValue={commPrefs?.doNotContactReason || ""}
-                          key={commPrefs?.doNotContactReason ?? "dnc-reason"}
-                          onBlur={(e) =>
-                            updateCommPrefsMutation.mutate({ doNotContactReason: e.target.value || null })
-                          }
-                        />
                       </div>
-
-                      <Separator />
-
-                      {/* f) Currency */}
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <span className="text-sm text-muted-foreground">Currency</span>
-                          <Select
-                            value={contact?.preferredCurrency || "__default__"}
-                            onValueChange={(val) =>
-                              updateContactPrefMutation.mutate({
-                                preferredCurrency: val === "__default__" ? "" : val,
-                              })
-                            }
-                          >
-                            <SelectTrigger className="h-9 rounded-lg bg-background border-border max-w-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="__default__">Use default</SelectItem>
-                              {CURRENCIES.map((c) => (
-                                <SelectItem key={c.code} value={c.code}>
-                                  {c.symbol} {c.name} ({c.code})
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        {/* g) Language */}
-                        <div className="space-y-1.5">
-                          <span className="text-sm text-muted-foreground">Language</span>
-                          <Select
-                            value={contact?.preferredLanguage || "__default__"}
-                            onValueChange={(val) =>
-                              updateContactPrefMutation.mutate({
-                                preferredLanguage: val === "__default__" ? "" : val,
-                              })
-                            }
-                          >
-                            <SelectTrigger className="h-9 rounded-lg bg-background border-border max-w-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="__default__">Use default</SelectItem>
-                              {SUPPORTED_LANGUAGES.map((l) => (
-                                <SelectItem key={l.code} value={l.code}>
-                                  {l.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <p className="text-xs text-muted-foreground">
-                            Overrides the tenant default for AI emails and voice calls.
-                          </p>
-                        </div>
-                      </div>
-                    </>
+                    </div>
                   );
                 })()}
               </CardContent>
