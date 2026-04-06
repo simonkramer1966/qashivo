@@ -305,30 +305,31 @@ export class SyncOrchestrator {
 
       let invoiceFetchedAt: Date;
 
-      if (effectiveMode === 'initial') {
-        // Two-pass initial sync:
+      if (effectiveMode === 'initial' || effectiveMode === 'force' || effectiveMode === 'reconciliation') {
+        // Two-pass bounded sync:
         // Pass 1: All open invoices (any age) — these are what we're chasing
-        console.log(`[SyncOrchestrator] Initial sync pass 1: open invoices (AUTHORISED, SUBMITTED)`);
+        console.log(`[SyncOrchestrator] ${effectiveMode} sync pass 1: open invoices (AUTHORISED, SUBMITTED)`);
         const openSummary = await this.adapter.fetchInvoices(
           tenantId,
           { statuses: ['AUTHORISED', 'SUBMITTED'] },
           onInvoicePage,
         );
 
-        // Pass 2: Paid history from last 24 months — for payment behaviour analysis
+        // Pass 2: Paid/voided history from last 24 months — for payment behaviour analysis
         const historyStart = new Date();
         historyStart.setMonth(historyStart.getMonth() - this.adapter.defaultHistoryMonths);
-        console.log(`[SyncOrchestrator] Initial sync pass 2: paid history since ${historyStart.toISOString().slice(0, 10)}`);
-        const paidSummary = await this.adapter.fetchInvoices(
+        console.log(`[SyncOrchestrator] ${effectiveMode} sync pass 2: closed invoices since ${historyStart.toISOString().slice(0, 10)}`);
+        const closedSummary = await this.adapter.fetchInvoices(
           tenantId,
-          { statuses: ['PAID'], dateFrom: historyStart },
+          { statuses: ['PAID', 'VOIDED'], dateFrom: historyStart },
           onInvoicePage,
         );
 
-        result.fetched.invoices = openSummary.totalCount + paidSummary.totalCount;
+        result.fetched.invoices = openSummary.totalCount + closedSummary.totalCount;
         // Use the earlier fetchedAt for cursor safety
-        invoiceFetchedAt = openSummary.fetchedAt < paidSummary.fetchedAt ? openSummary.fetchedAt : paidSummary.fetchedAt;
+        invoiceFetchedAt = openSummary.fetchedAt < closedSummary.fetchedAt ? openSummary.fetchedAt : closedSummary.fetchedAt;
       } else {
+        // Incremental: fetch all statuses modified since cursor
         const invoiceSummary = await this.adapter.fetchInvoices(
           tenantId,
           fetchOptions,
