@@ -19,37 +19,144 @@ MVP v1 delivered the core Collections Agent pipeline (LLM email generation, comp
 
 ---
 
-## SPRINT 5: XERO PRODUCTION + DATA HEALTH (Current)
+## SPRINT 5: XERO PRODUCTION + DATA HEALTH + COLLECTIONS HARDENING (Current)
+
+*Updated: 5 April 2026 — significant scope expansion beyond original Sprint 5 plan. Collections pipeline hardening, two-phase model, and Action Centre restructure pulled forward from backlog.*
 
 ### 5.1 Xero Foundations Fix
 
-| Task | Detail |
-|------|--------|
-| Fix redirect URI | Replace REPLIT_DOMAINS in xero.ts constructor with APP_URL env var. Add APP_URL to Railway. |
-| Remove old sync code | Delete syncContactsToDatabase if unused. Invoice-first sync in xeroSync.ts is the correct path. |
-| Fix invoice sync | syncInvoicesAndContacts must write to BOTH cached_xero_invoices AND main invoices table. Map all fields correctly. |
-| Token refresh | Verify offline_access in scopes, proactive refresh before API calls, 401 retry, mark expired on failure. |
-| Sync status API | GET /api/xero/sync-status returning { status, invoiceCount, contactCount } for onboarding polling. |
-| Sync banner | Show "Sync in progress" banner on Debtors/Data Health pages that auto-refreshes on completion. |
-| Background sync mode | Ensure scheduled 4-hour sync uses mode='ongoing' (upsert, never delete). AR overlay fields never overwritten. |
+| Task | Detail | Status |
+|------|--------|--------|
+| Fix redirect URI | Replace REPLIT_DOMAINS in xero.ts constructor with APP_URL env var. Add APP_URL to Railway. | ⬜ Pending |
+| Remove old sync code | Delete syncContactsToDatabase if unused. Invoice-first sync in xeroSync.ts is the correct path. | ⬜ Pending |
+| Fix invoice sync | syncInvoicesAndContacts must write to BOTH cached_xero_invoices AND main invoices table. Map all fields correctly. | ⬜ Pending |
+| Token refresh | Verify offline_access in scopes, proactive refresh before API calls, 401 retry, mark expired on failure. | ⬜ Pending |
+| Sync status API | GET /api/xero/sync-status returning { status, invoiceCount, contactCount } for onboarding polling. | ⬜ Pending |
+| Sync banner | Show "Sync in progress" banner on Debtors/Data Health pages that auto-refreshes on completion. | ⬜ Pending |
+| Background sync mode | Ensure scheduled 4-hour sync uses mode='ongoing' (upsert, never delete). AR overlay fields never overwritten. | ⬜ Pending |
 
 ### 5.2 Data Health Page
 
-| Task | Detail |
-|------|--------|
-| API endpoint | GET /api/settings/data-health — categorise contacts by readiness (ready, needs_email, generic_email, needs_phone, needs_attention, no_outstanding) |
-| Generic email detection | Flag 12 patterns: info@, accounts@, admin@, office@, finance@, hello@, enquiries@, contact@, billing@, sales@, support@, reception@ |
-| Page UI | Settings > Data Health. Summary cards (clickable filters) + search + sortable table + inline email/phone editing |
-| AR overlay saves | Inline edits save to arContactEmail/arContactPhone — Qashivo data, not synced back to Xero |
-| Onboarding integration | Step 6 (Review Debtors) uses same data-health API and readiness assessment |
+| Task | Detail | Status |
+|------|--------|--------|
+| API endpoint | GET /api/settings/data-health — categorise contacts by readiness (ready, needs_email, generic_email, needs_phone, needs_attention, no_outstanding) | ✅ Done |
+| Generic email detection | Flag 12 patterns: info@, accounts@, admin@, office@, finance@, hello@, enquiries@, contact@, billing@, sales@, support@, reception@ | ✅ Done |
+| Hard bounce detection | Queries timelineEvents for email_hard_bounce events, downgrades contacts to needs_email | ✅ Done (4 Apr) |
+| Page UI | Settings > Data Health. Summary cards (clickable filters) + search + sortable table + inline email/phone editing | ✅ Done |
+| AR overlay saves | Inline edits save to arContactEmail/arContactPhone — Qashivo data, not synced back to Xero | ✅ Done |
+| Onboarding integration | Step 6 (Review Debtors) uses same data-health API and readiness assessment | ⬜ Pending |
 
 ### 5.3 Communication Test Mode
 
-| Task | Detail |
-|------|--------|
-| Settings UI | Add to Autonomy & Rules: communicationMode radio (Off/Testing/Soft Live/Live), testContactName, testEmails, testPhones |
-| Pipeline integration | When mode=testing, ALL outbound emails redirect to test addresses. Subject prefixed with [TEST]. Body includes "Original recipient: {real_email}" |
-| Default | New tenants default to "testing" mode |
+| Task | Detail | Status |
+|------|--------|--------|
+| Settings UI | Add to Autonomy & Rules: communicationMode radio (Off/Testing/Soft Live/Live), testContactName, testEmails, testPhones | ✅ Done |
+| Pipeline integration | When mode=testing, ALL outbound emails redirect to test addresses. Subject prefixed with [TEST]. Body includes "Original recipient: {real_email}" | ✅ Done |
+| Default | New tenants default to "testing" mode | ✅ Done |
+| Voice mode enforcement | Two Retell voice paths now routed through sendVoiceCall() wrapper for mode checks | ✅ Done (4 Apr) |
+
+### 5.4 Collections Pipeline Hardening (added 4 Apr — pulled forward)
+
+| Task | Detail | Status |
+|------|--------|--------|
+| Compliance gate on ActionExecutor | runComplianceGate() runs compliance engine on all email/SMS before delivery. Fails closed. | ✅ Done (4 Apr) |
+| Approval pipeline fix | Deleted shadowed old approve endpoint. Bulk-approve and approve-all call approveAndSend(). | ✅ Done (4 Apr) |
+| Collections scheduler boot fix | orchestrator.ts now correctly calls collectionsScheduler.start() | ✅ Done (4 Apr) |
+| Compliance false positive fixes | Tenant timezone for time-of-day, digit-boundary invoice matching, cooldown pre-filter | ✅ Done (4 Apr) |
+| Email HTML formatting | New emailFormatter.ts converts LLM plain text to professional HTML. Applied to all 4 email paths. | ✅ Done (4 Apr) |
+| Conversation brief service | 11-source debtor history injected into all LLM generation paths | ✅ Done (4 Apr) |
+| Promise modification detection | intentAnalyst detects revised payment promises, updates existing PTP signals | ✅ Done (4 Apr) |
+| Prohibited PTP language | "promise to pay"/"PTP" prohibited in debtor-facing comms — replaced with "payment arrangement" | ✅ Done (4 Apr) |
+| SMS E.164 normalization | normalizeToE164() converts UK local → international for all sends | ✅ Done (4 Apr) |
+| Inbound SMS wider lookup | Three-source search × 4 format variants + unmatched SMS creates exception item | ✅ Done (4 Apr) |
+| Startup validation | Throws at startup for missing ANTHROPIC_API_KEY/DATABASE_URL | ✅ Done (4 Apr) |
+
+### 5.5 Two-Phase Collection Model (added 4 Apr)
+
+| Task | Detail | Status |
+|------|--------|--------|
+| Phase 1 (Inform) | Single polite nudge for new/recent overdue. No payment date ask. Single-touch enforcement. | ✅ Done (4 Apr) |
+| Phase 2 (Elicit Date) | After chaseDelayDays — actively seek payment date. Clear question. Normal escalation. | ✅ Done (4 Apr) |
+| Pre-due reminders | Courtesy reminder N days before due for invoices above minimum threshold | ✅ Done (4 Apr) |
+| Tenant settings | chaseDelayDays (default 5), preDueDateDays (default 7), preDueDateMinAmount (default £1000) | ✅ Done (4 Apr) |
+| Settings UI | Collection Timing card on Autonomy & Rules page with sliders + amount input | ✅ Done (4 Apr) |
+
+### 5.6 Action Centre Restructure (added 4 Apr)
+
+| Task | Detail | Status |
+|------|--------|--------|
+| Tab rename + restructure | Queue→Approval, Activity→Sent, new Scheduled tab. Order: Summary, Approval, Scheduled, Sent, VIP, Exceptions | ✅ Done (4 Apr) |
+| Configurable send delay | sendDelayMinutes tenant setting (0-60, default 15). After approval, actions wait in Scheduled. | ✅ Done (4 Apr) |
+| Scheduled tab | Shows approved-but-not-yet-sent actions with Cancel and Send Now buttons + preview sheet | ✅ Done (4 Apr) |
+| API endpoints | GET /api/action-centre/scheduled, POST /api/actions/:actionId/cancel, POST /api/actions/:actionId/send-now | ✅ Done (4 Apr) |
+| Query invalidation | Shared useInvalidateActionCentre hook for consistent cross-tab invalidation | ✅ Done (4 Apr) |
+
+### 5.7 UI/UX Improvements (added 4 Apr)
+
+| Task | Detail | Status |
+|------|--------|--------|
+| Activity timeline redesign | Event-type visual differentiation (colour-coded borders, icons, expand/collapse) | ✅ Done (4 Apr) |
+| Directional arrows on timeline | Blue outbound, emerald inbound arrows. Replaces text direction badges. | ✅ Done (4 Apr) |
+| Sidebar restructured | Dashboard → Action Centre → Debtors → Disputes → Impact → Reports | ✅ Done (4 Apr) |
+| Invoices page removed | Route redirects to /qollections/debtors. Invoices accessed via Debtor Detail. | ✅ Done (4 Apr) |
+| Payment link placeholders removed | {{paymentLink}}/{{PORTAL_LINK}} removed — debtor portal deferred to MVP v2 | ✅ Done (4 Apr) |
+| Riley drawer fix | modal={false} on Action Centre drawers so Riley z-[60] receives clicks | ✅ Done (4 Apr) |
+| VIP 0-rows guard | VIP promote returns 404 for non-existent/wrong-tenant contacts | ✅ Done (4 Apr) |
+| Dead code cleanup | Orphaned ageing analysis endpoint + component deleted | ✅ Done (4 Apr) |
+
+### 5.8 Activity Feed + Real-Time Events (added 5 Apr)
+
+| Task | Detail | Status |
+|------|--------|--------|
+| Activity Feed tab | Replaces Sent tab. Debtor-threaded view with coloured left borders, summary strip, pill filters, inline expand. Badge shows inbound count. | ✅ Done (5 Apr) |
+| Activity Feed API | GET /api/action-centre/activity-feed queries timelineEvents + backfills from actions + inboundMessages, deduplicates | ✅ Done (5 Apr) |
+| SSE real-time infrastructure | Tenant-scoped SSE service (realtimeEvents.ts) with 10 event types, 30s keep-alive, auto-cleanup | ✅ Done (5 Apr) |
+| SSE client hook | useRealtimeEvents.ts — EventSource with auto-reconnect, per-event TanStack Query invalidation | ✅ Done (5 Apr) |
+| Outbound timeline events | actionExecutor now creates timelineEvent for all successful sends (was missing) | ✅ Done (5 Apr) |
+| Timeline event backfill | Activity Feed endpoint backfills from actions + inboundMessages tables for historical data | ✅ Done (5 Apr) |
+| Tenant timezone fix | Time filter uses tenant timezone (Europe/London) instead of UTC midnight | ✅ Done (5 Apr) |
+| Debtor detail Activity tab | Aligned with Action Centre Activity Feed design (timestamp column, clean narratives) | ✅ Done (5 Apr) |
+| ActivityEventRow component | New shared component for consistent event rendering across feeds | ✅ Done (5 Apr) |
+
+### 5.9 Decision Tree Engine (added 5 Apr)
+
+| Task | Detail | Status |
+|------|--------|--------|
+| Deterministic decision tree | New decisionTree.ts (~530 lines). Pure function, zero DB queries, zero LLM calls. 9 gate checks, behavioural categorisation, DSO acceptance engine. | ✅ Done (5 Apr) |
+| decisionAuditLog table | Full audit trail with outcome columns for future ML training | ✅ Done (5 Apr) |
+| Feature flag | tenants.useDecisionTree (default false). Existing probabilistic path preserved as fallback. | ✅ Done (5 Apr) |
+| Integration | Wired into actionPlanner.ts with input mapping from existing data structures | ✅ Done (5 Apr) |
+
+### 5.10 SMS Nudge Model (added 5 Apr)
+
+| Task | Detail | Status |
+|------|--------|--------|
+| SMS simplified to nudge | Outbound SMS now points debtors to check email only. No amounts, invoice numbers, links, or phone numbers. | ✅ Done (5 Apr) |
+| Formal/legal exclusion | SMS excluded at formal/legal tone levels — those require written, detailed, auditable email | ✅ Done (5 Apr) |
+| Inbound SMS/WhatsApp disabled | Webhooks return 200 immediately. Processing code preserved in block comments for re-enablement. | ✅ Done (5 Apr) |
+| LLM prompt + templates updated | aiMessageGenerator system/user prompts + templateFallback SMS templates all generate nudge messages | ✅ Done (5 Apr) |
+| SendSMSDialog UI | Updated with nudge templates and helper note | ✅ Done (5 Apr) |
+
+### 5.11 Exceptions Enhancement (added 5 Apr)
+
+| Task | Detail | Status |
+|------|--------|--------|
+| Exception state management | Workflow states: new → in_progress → resolved. Filter pills, state indicators, transition buttons. | ✅ Done (5 Apr) |
+| Exception schema additions | 4 new columns: exceptionStatus, exceptionResolvedBy, exceptionResolvedAt, exceptionResolutionNotes | ✅ Done (5 Apr) |
+| Exception summary landing | Dashboard with category cards (Collections, Debtor Situations, Other) showing counts + trends | ✅ Done (5 Apr) |
+| Exception sub-tab APIs | POST /api/actions/:actionId/start-working, /reopen. Resolved items shown for 7 days. | ✅ Done (5 Apr) |
+
+### 5.12 Bug Fixes (5 Apr)
+
+| Task | Detail | Status |
+|------|--------|--------|
+| Inbound SMS timeline events | SMS/WhatsApp webhooks now create timeline events (was missing) | ✅ Done (5 Apr) |
+| PTP overdue gate | intentAnalyst checks overdue status before PTP confirmation flow | ✅ Done (5 Apr) |
+| Vonage webhook crash | rawPayload wrapped in clean object instead of raw req.body | ✅ Done (5 Apr) |
+| SSE 401 fix | Clerk auth token passed to EventSource connection | ✅ Done (5 Apr) |
+| DSO card formula | Aligned to standard formula matching trend chart | ✅ Done (5 Apr) |
+| Activity Feed deduplication | By actionId and channel+contact+timestamp signature | ✅ Done (5 Apr) |
+| SMS drawer contact picker | 6-source priority phone lookup + contact picker when multiple | ✅ Done (5 Apr) |
 
 ---
 
@@ -240,8 +347,13 @@ Without the full Bayesian engine, Riley's review uses:
 
 ## BUILD ORDER (v1.1)
 
+*Updated: 5 April 2026*
+
 ```
 SPRINT 5 (Current):  Xero production hardening + Data Health + communication test mode
+                     + collections pipeline hardening + two-phase model + Action Centre restructure
+                     REMAINING: Xero redirect URI fix, old sync code removal, invoice dual-write,
+                     token refresh, sync status API, sync banner, background sync mode, onboarding integration
 SPRINT 6:            Debtor Detail page + row navigation + three-dot menus
 SPRINT 7:            Riley core — chat widget, conversations, intelligence extraction, onboarding mode
 SPRINT 8:            Weekly CFO Review — Qashflow tab, review generation, proactive notifications

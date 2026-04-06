@@ -3963,6 +3963,10 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       const { approveAndSend } = await import("../services/collectionsPipeline");
       const result = await approveAndSend(actionId, user.id);
 
+      // Emit SSE so other browser tabs update immediately
+      const { emitTenantEvent } = await import("../services/realtimeEvents");
+      emitTenantEvent(user.tenantId, 'action_approved', { actionId });
+
       res.json({
         message: "Action approved and delivery initiated",
         result,

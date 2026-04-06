@@ -42,21 +42,25 @@ function ChannelIcon({ type }: { type: string }) {
   return <Mail className="h-4 w-4" />;
 }
 
-function formatCountdown(scheduledFor: string): string {
+function formatCountdown(scheduledFor: string): { text: string; variant: "sending" | "delayed" | "normal" } {
   const target = new Date(scheduledFor).getTime();
   const now = Date.now();
   const diffMs = target - now;
 
-  if (diffMs <= 0) return "Sending soon";
+  // Past due by more than 5 minutes — something may be wrong
+  if (diffMs < -5 * 60_000) return { text: "Delayed", variant: "delayed" };
+
+  // Past due — executor should pick it up any second
+  if (diffMs <= 0) return { text: "Sending\u2026", variant: "sending" };
 
   const mins = Math.floor(diffMs / 60_000);
-  if (mins < 1) return "< 1 min";
-  if (mins < 60) return `${mins} min`;
+  if (mins < 1) return { text: "< 1 min", variant: "normal" };
+  if (mins < 60) return { text: `${mins} min`, variant: "normal" };
   const hours = Math.floor(mins / 60);
   const remainMins = mins % 60;
-  if (hours < 24) return remainMins > 0 ? `${hours}h ${remainMins}m` : `${hours}h`;
+  if (hours < 24) return { text: remainMins > 0 ? `${hours}h ${remainMins}m` : `${hours}h`, variant: "normal" };
   const days = Math.floor(hours / 24);
-  return `${days}d ${hours % 24}h`;
+  return { text: `${days}d ${hours % 24}h`, variant: "normal" };
 }
 
 function formatScheduledTime(scheduledFor: string): string {
@@ -117,7 +121,7 @@ export default function ScheduledTab() {
     onSuccess: () => {
       invalidate();
       setPreviewAction(null);
-      toast({ title: "Action moved to immediate send" });
+      toast({ title: "Action sent" });
     },
     onError: () => {
       toast({ title: "Failed to send now", variant: "destructive" });
@@ -191,14 +195,25 @@ export default function ScheduledTab() {
               </TableCell>
               <TableCell>
                 {action.scheduledFor ? (
-                  <div>
-                    <div className="text-sm font-medium">
-                      {formatCountdown(action.scheduledFor)}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {formatScheduledTime(action.scheduledFor)}
-                    </div>
-                  </div>
+                  (() => {
+                    const countdown = formatCountdown(action.scheduledFor);
+                    return (
+                      <div>
+                        <div className={`text-sm font-medium flex items-center gap-1.5 ${
+                          countdown.variant === "delayed" ? "text-amber-600" :
+                          countdown.variant === "sending" ? "text-blue-600" : ""
+                        }`}>
+                          {countdown.variant === "sending" && (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          )}
+                          {countdown.text}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {formatScheduledTime(action.scheduledFor)}
+                        </div>
+                      </div>
+                    );
+                  })()
                 ) : (
                   <span className="text-xs text-muted-foreground">Pending</span>
                 )}
@@ -255,13 +270,23 @@ export default function ScheduledTab() {
               <div className="mt-4 space-y-4">
                 {/* Schedule info */}
                 {previewAction.scheduledFor && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span>
-                      Sending in <strong>{formatCountdown(previewAction.scheduledFor)}</strong>
-                      {" "}({formatScheduledTime(previewAction.scheduledFor)})
-                    </span>
-                  </div>
+                  (() => {
+                    const countdown = formatCountdown(previewAction.scheduledFor);
+                    return (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <span className={
+                          countdown.variant === "delayed" ? "text-amber-600" :
+                          countdown.variant === "sending" ? "text-blue-600" : ""
+                        }>
+                          {countdown.variant === "sending" ? "Sending now" :
+                           countdown.variant === "delayed" ? "Delayed" :
+                           <>Sending in <strong>{countdown.text}</strong></>}
+                          {" "}({formatScheduledTime(previewAction.scheduledFor)})
+                        </span>
+                      </div>
+                    );
+                  })()
                 )}
 
                 {/* Tone + channel */}

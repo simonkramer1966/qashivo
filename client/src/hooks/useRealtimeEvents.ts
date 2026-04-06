@@ -5,6 +5,7 @@ type RealtimeEventType =
   | "inbound_sms"
   | "inbound_email"
   | "action_completed"
+  | "action_approved"
   | "payment_received"
   | "ptp_created"
   | "dispute_detected"
@@ -33,6 +34,10 @@ const INVALIDATION_MAP: Record<RealtimeEventType, string[][]> = {
     ["/api/contacts"],
   ],
   action_completed: [
+    ["/api/action-centre"],
+    ["/api/approval-queue"],
+  ],
+  action_approved: [
     ["/api/action-centre"],
     ["/api/approval-queue"],
   ],

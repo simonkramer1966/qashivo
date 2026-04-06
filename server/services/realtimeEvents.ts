@@ -27,6 +27,7 @@ export type RealtimeEventType =
   | "inbound_sms"
   | "inbound_email"
   | "action_completed"
+  | "action_approved"
   | "payment_received"
   | "ptp_created"
   | "dispute_detected"

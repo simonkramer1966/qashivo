@@ -47,6 +47,13 @@ Read /docs/QASHIVO_CONTEXT.md completely. It is the canonical product specificat
 7. AR overlay fields (arContactEmail, arContactPhone, arContactName, arNotes) are SACRED — never overwrite during any sync operation. This is Qashivo-owned data, a core stickiness factor, and a data asset for the bank buyer.
 8. Make targeted edits, not full rebuilds, unless Simon explicitly asks for a rebuild.
 9. Ask before deleting — if you think code is dead/unused, flag it rather than removing silently.
+10. **Immediate UI Feedback** — Every user action must produce visible feedback within 200ms. No invisible states.
+    - **Optimistic UI**: After approve/cancel/send, update the local cache immediately via `queryClient.setQueryData()` or `invalidateQueries()`. Do not wait for the next polling cycle.
+    - **Button states**: Every mutation button must show a loading spinner (`isPending`) while the request is in flight and be disabled to prevent double-clicks.
+    - **Cache invalidation**: Use `useInvalidateActionCentre()` (prefix `["/api/action-centre"]`) after any action-centre mutation. For cross-tab updates, emit an SSE event via `emitTenantEvent()`.
+    - **Send Now means NOW**: When a user clicks "Send Now", execute the action immediately via `actionExecutor.executeActionsByIds()`. Never just update `scheduledFor` and wait for the executor polling cycle.
+    - **SSE for every state change**: Every server-side state transition that affects the UI must emit an SSE event (`emitTenantEvent()` in `realtimeEvents.ts`). This includes: approval, cancellation, execution completion, inbound messages, payment detection.
+    - **No invisible states**: If an item moves between tabs (e.g. Approval → Scheduled → Sent), both the source and destination tabs must update. The user must never wonder "where did that item go?"
 
 ## Outbound Communications Safety (CRITICAL)
 

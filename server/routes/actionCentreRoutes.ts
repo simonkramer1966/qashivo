@@ -280,7 +280,7 @@ export function registerActionCentreRoutes(app: Express): void {
   });
 
   // ── POST /api/actions/:actionId/send-now ────────────────────
-  // Move a scheduled action's send time to now
+  // Execute a scheduled action immediately (bypasses executor polling)
   app.post("/api/actions/:actionId/send-now", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -301,15 +301,13 @@ export function registerActionCentreRoutes(app: Express): void {
         return res.status(400).json({ message: `Cannot send-now action with status '${action.status}'` });
       }
 
-      await db
-        .update(actions)
-        .set({
-          scheduledFor: new Date(),
-          updatedAt: new Date(),
-        })
-        .where(eq(actions.id, actionId));
+      // Execute immediately via the action executor (same path as scheduled execution)
+      const { actionExecutor } = await import("../services/actionExecutor");
+      actionExecutor.executeActionsByIds([actionId] as any, user.id).catch(err => {
+        console.error(`[SendNow] Background execution failed for ${actionId}:`, err.message);
+      });
 
-      res.json({ message: "Action moved to immediate send", actionId });
+      res.json({ message: "Action sent", actionId });
     } catch (error: any) {
       console.error("Error sending action now:", error);
       res.status(500).json({ message: error.message });
