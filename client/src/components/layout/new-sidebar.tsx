@@ -9,6 +9,7 @@ import {
   User,
   ChevronDown,
   ChevronRight,
+  ChevronLeft,
   Gauge,
   Users,
   TrendingUp,
@@ -49,6 +50,7 @@ interface NavPillar {
   label: string;
   icon: any;
   href?: string;
+  defaultHref?: string; // for collapsed mode: click icon → navigate here
   children?: NavChild[];
 }
 
@@ -57,6 +59,7 @@ const navigationPillars: NavPillar[] = [
   {
     label: "Credit Control",
     icon: ClipboardList,
+    defaultHref: "/qollections",
     children: [
       { name: "Dashboard", href: "/qollections", icon: Gauge },
       { name: "Action Centre", href: "/qollections/agent-activity", icon: Activity },
@@ -72,6 +75,7 @@ const navigationPillars: NavPillar[] = [
   {
     label: "Settings",
     icon: Settings,
+    defaultHref: "/settings/agent-personas",
     children: [
       { name: "Agent Personas", href: "/settings/agent-personas", icon: UserCog },
       { name: "Autonomy & Rules", href: "/settings/autonomy-rules", icon: Sliders },
@@ -82,6 +86,8 @@ const navigationPillars: NavPillar[] = [
     ],
   },
 ];
+
+const STORAGE_KEY = "sidebar_collapsed";
 
 // ── Sidebar component ─────────────────────────────────────
 
@@ -126,6 +132,37 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
     return location === href || location.startsWith(href + "/");
   };
 
+  // Collapsed state — persisted in localStorage, mobile always expanded
+  const [collapsed, setCollapsed] = useState(() => {
+    if (mobile) return false;
+    try {
+      return localStorage.getItem(STORAGE_KEY) === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try { localStorage.setItem(STORAGE_KEY, String(next)); } catch {}
+      return next;
+    });
+  };
+
+  const isCollapsed = !mobile && collapsed;
+
+  // Flyout state for collapsed groups
+  const [flyout, setFlyout] = useState<string | null>(null);
+
+  // Close flyout on outside click
+  useEffect(() => {
+    if (!flyout) return;
+    const handler = () => setFlyout(null);
+    window.addEventListener("click", handler);
+    return () => window.removeEventListener("click", handler);
+  }, [flyout]);
+
   const [expandedPillars, setExpandedPillars] = useState<Set<string>>(() => {
     const initial = new Set<string>();
     for (const pillar of navigationPillars) {
@@ -148,6 +185,7 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
 
   const navigate = (href: string) => {
     setLocation(href);
+    setFlyout(null);
     onNavigate?.();
   };
 
@@ -167,25 +205,44 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
 
   const companyName = tenant?.xeroOrganisationName || tenant?.settings?.companyName || tenant?.name || "";
 
-  // When in mobile Sheet, always show expanded
-  const isCollapsed = false;
-
   return (
     <aside
       className={cn(
-        "flex flex-col h-full bg-[hsl(var(--sidebar-background))] text-[hsl(var(--sidebar-foreground))]",
-        mobile ? "w-full" : "hidden lg:flex w-[240px] shrink-0"
+        "flex flex-col h-full bg-[hsl(var(--sidebar-background))] text-[hsl(var(--sidebar-foreground))] transition-[width] duration-200 ease-in-out",
+        mobile ? "w-full" : isCollapsed ? "hidden lg:flex w-16 shrink-0" : "hidden lg:flex w-[240px] shrink-0"
       )}
     >
-      {/* Logo + Company */}
-      <div className="px-4 pt-5 pb-2">
-        <div className="flex items-center gap-2.5 mb-4">
+      {/* Logo + Company + Collapse toggle */}
+      <div className={cn("pt-5 pb-2", isCollapsed ? "px-2" : "px-4")}>
+        <div className={cn("flex items-center mb-4", isCollapsed ? "justify-center" : "gap-2.5")}>
           <div className="w-7 h-7 flex items-center justify-center shrink-0">
             <img src={nexusLogo} alt="Qashivo" className="w-full h-full object-contain" />
           </div>
-          <span className="text-lg font-bold tracking-tight text-white">Qashivo</span>
+          {!isCollapsed && (
+            <>
+              <span className="text-lg font-bold tracking-tight text-white flex-1">Qashivo</span>
+              <button
+                onClick={toggleCollapsed}
+                className="w-6 h-6 flex items-center justify-center rounded text-[hsl(var(--sidebar-foreground))]/50 hover:text-white transition-colors"
+                title="Collapse sidebar"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+            </>
+          )}
         </div>
-        {companyName && (
+        {isCollapsed && (
+          <div className="flex justify-center mb-2">
+            <button
+              onClick={toggleCollapsed}
+              className="w-6 h-6 flex items-center justify-center rounded text-[hsl(var(--sidebar-foreground))]/50 hover:text-white transition-colors"
+              title="Expand sidebar"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+        {!isCollapsed && companyName && (
           <p className="text-xs text-[hsl(var(--sidebar-foreground))]/60 truncate px-0.5">
             {companyName}
           </p>
@@ -193,7 +250,7 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-0.5">
+      <nav className={cn("flex-1 overflow-y-auto py-3 space-y-0.5", isCollapsed ? "px-2" : "px-3")}>
         <TooltipProvider delayDuration={0}>
           {navigationPillars.map((pillar) => {
             const PillarIcon = pillar.icon;
@@ -201,6 +258,98 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
               ? isActivePath(pillar.href)
               : pillar.children?.some((c) => isActivePath(c.href)) || false;
             const isExpanded = expandedPillars.has(pillar.label);
+
+            // ── Collapsed mode ──────────────────────────────
+            if (isCollapsed) {
+              // Simple top-level link
+              if (pillar.href) {
+                return (
+                  <Tooltip key={pillar.label}>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => navigate(pillar.href!)}
+                        className={cn(
+                          "w-full flex items-center justify-center py-2.5 rounded-md transition-colors",
+                          isPillarActive
+                            ? "bg-[hsl(var(--sidebar-accent))] text-white"
+                            : "text-[hsl(var(--sidebar-foreground))]/70 hover:bg-[hsl(var(--sidebar-accent))] hover:text-white"
+                        )}
+                      >
+                        <PillarIcon className={cn("w-4 h-4", isPillarActive ? "text-[hsl(var(--sidebar-primary))]" : "")} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" sideOffset={8}>
+                      {pillar.label}
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              }
+
+              // Collapsible group — show flyout on click
+              const filteredChildren = (pillar.children || []).filter(
+                (c) => !c.permission || hasPermission(c.permission)
+              );
+              if (filteredChildren.length === 0) return null;
+
+              return (
+                <div key={pillar.label} className="relative">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFlyout(flyout === pillar.label ? null : pillar.label);
+                        }}
+                        className={cn(
+                          "w-full flex items-center justify-center py-2.5 rounded-md transition-colors",
+                          isPillarActive
+                            ? "bg-[hsl(var(--sidebar-accent))] text-white"
+                            : "text-[hsl(var(--sidebar-foreground))]/70 hover:bg-[hsl(var(--sidebar-accent))] hover:text-white"
+                        )}
+                      >
+                        <PillarIcon className={cn("w-4 h-4", isPillarActive ? "text-[hsl(var(--sidebar-primary))]" : "")} />
+                      </button>
+                    </TooltipTrigger>
+                    {flyout !== pillar.label && (
+                      <TooltipContent side="right" sideOffset={8}>
+                        {pillar.label}
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+
+                  {/* Flyout menu */}
+                  {flyout === pillar.label && (
+                    <div
+                      className="absolute left-full top-0 ml-2 z-50 min-w-[180px] rounded-md border bg-popover p-1 shadow-md"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <p className="px-2 py-1.5 text-xs font-medium text-muted-foreground">{pillar.label}</p>
+                      {filteredChildren.map((child) => {
+                        const ChildIcon = child.icon;
+                        const isChildActive = isActivePath(child.href);
+                        return (
+                          <button
+                            key={child.name}
+                            onClick={() => navigate(child.href)}
+                            className={cn(
+                              "w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm transition-colors",
+                              isChildActive
+                                ? "bg-accent text-accent-foreground font-medium"
+                                : "text-popover-foreground hover:bg-accent hover:text-accent-foreground"
+                            )}
+                          >
+                            <ChildIcon className="w-3.5 h-3.5 shrink-0" />
+                            <span>{child.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            // ── Expanded mode ───────────────────────────────
 
             // Simple top-level link
             if (pillar.href) {
@@ -292,19 +441,37 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
       </nav>
 
       {/* Footer — user profile */}
-      <div className="px-3 pb-4 pt-2">
-        <button
-          onClick={() => logoutMutation.mutate()}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm text-[hsl(var(--sidebar-foreground))]/70 hover:bg-[hsl(var(--sidebar-accent))] hover:text-white transition-colors"
-        >
-          <div className="w-7 h-7 rounded-full bg-[hsl(var(--sidebar-accent))] flex items-center justify-center text-xs font-medium text-white shrink-0">
-            {initials}
-          </div>
-          <div className="flex-1 text-left min-w-0">
-            <p className="text-sm truncate">{displayName}</p>
-          </div>
-          <LogOut className="w-4 h-4 opacity-50 shrink-0" />
-        </button>
+      <div className={cn("pb-4 pt-2", isCollapsed ? "px-2" : "px-3")}>
+        {isCollapsed ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => logoutMutation.mutate()}
+                className="w-full flex items-center justify-center py-2 rounded-md text-[hsl(var(--sidebar-foreground))]/70 hover:bg-[hsl(var(--sidebar-accent))] hover:text-white transition-colors"
+              >
+                <div className="w-7 h-7 rounded-full bg-[hsl(var(--sidebar-accent))] flex items-center justify-center text-xs font-medium text-white shrink-0">
+                  {initials}
+                </div>
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={8}>
+              {displayName} — Log out
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <button
+            onClick={() => logoutMutation.mutate()}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm text-[hsl(var(--sidebar-foreground))]/70 hover:bg-[hsl(var(--sidebar-accent))] hover:text-white transition-colors"
+          >
+            <div className="w-7 h-7 rounded-full bg-[hsl(var(--sidebar-accent))] flex items-center justify-center text-xs font-medium text-white shrink-0">
+              {initials}
+            </div>
+            <div className="flex-1 text-left min-w-0">
+              <p className="text-sm truncate">{displayName}</p>
+            </div>
+            <LogOut className="w-4 h-4 opacity-50 shrink-0" />
+          </button>
+        )}
       </div>
     </aside>
   );
