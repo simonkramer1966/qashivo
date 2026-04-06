@@ -473,22 +473,20 @@ function TimelineItemRow({ item, compact, onClick, isLast }: TimelineItemRowProp
   const ChannelIcon = channelIcons[item.channel] || Mail;
   const channelColor = channelColors[item.channel] || "text-muted-foreground";
   
-  const formatTimeAgo = (dateStr: string) => {
+  const formatShortDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
     return date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
   };
 
+  const formatTime = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  };
+
+  const isCommChannel = item.channel === "email" || item.channel === "sms" || item.channel === "voice";
+
   return (
-    <div 
+    <div
       className={`py-3 cursor-pointer hover:bg-muted/50 transition-colors ${
         !isLast ? 'border-b border-border/50' : ''
       }`}
@@ -511,10 +509,10 @@ function TimelineItemRow({ item, compact, onClick, isLast }: TimelineItemRowProp
           <p className={`text-foreground ${compact ? 'line-clamp-1' : 'line-clamp-2'} text-sm`}>
             {item.summary}
           </p>
-          
+
           <div className="flex items-center gap-3 mt-1">
             <span className="text-xs text-muted-foreground">
-              {formatTimeAgo(item.occurredAt)}
+              {formatShortDate(item.occurredAt)}{isCommChannel ? ` · ${formatTime(item.occurredAt)}` : ""}
             </span>
             
             {item.outcome && (

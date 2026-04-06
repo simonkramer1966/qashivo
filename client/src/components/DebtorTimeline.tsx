@@ -47,24 +47,20 @@ interface DebtorTimelineProps {
   timeline?: TimelineEntry[];
 }
 
-const formatSmartTime = (dateStr: string) => {
-  const now = new Date();
+/** Format date as primary element, with optional time for communication events */
+const formatSmartDate = (dateStr: string) => {
   const date = new Date(dateStr);
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
+  return date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+};
 
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays === 1) return 'Yesterday';
-  if (diffDays < 7) return `${diffDays}d ago`;
-  
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const year = String(date.getFullYear()).slice(-2);
-  return `${day}/${month}/${year}`;
+const formatSmartTime = (dateStr: string) => {
+  const date = new Date(dateStr);
+  return date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+};
+
+/** Communication types where time is meaningful */
+const isCommunicationType = (type: string) => {
+  return type === 'email' || type === 'sms' || type === 'voice' || type === 'manual_call';
 };
 
 const formatCurrency = (amount: number) => {
@@ -342,7 +338,10 @@ export function DebtorTimeline({
                   </div>
                   
                   <div className="flex flex-col items-end gap-1">
-                    <span className="text-xs text-slate-400">{formatSmartTime(entry.createdAt)}</span>
+                    <span className="text-xs font-medium text-slate-500">{formatSmartDate(entry.createdAt)}</span>
+                    {isCommunicationType(entry.type) && (
+                      <span className="text-[11px] text-slate-400">{formatSmartTime(entry.createdAt)}</span>
+                    )}
                     {getOutcomeIndicator(entry.outcome, entry.metadata)}
                   </div>
                 </div>

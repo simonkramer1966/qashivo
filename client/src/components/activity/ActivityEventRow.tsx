@@ -62,6 +62,19 @@ export function getDateKey(dateStr: string): string {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 }
 
+/** Check if an event is a real communication where time is meaningful */
+function isCommunicationEvent(evt: ActivityEventData): boolean {
+  const ch = evt.channel?.toLowerCase();
+  if (ch === "email" || ch === "sms" || ch === "voice") return true;
+  const et = (evt.eventType || "").toLowerCase();
+  if (et === "email" || et === "sms" || et === "voice" || et === "call") return true;
+  // Inbound/outbound messages are always communications
+  if (evt.direction === "inbound" || evt.direction === "outbound") {
+    if (et !== "invoice_issued" && et !== "payment_received" && et !== "payment") return true;
+  }
+  return false;
+}
+
 // ── Narrative builder ─────────────────────────────────────────
 
 /** Infer tone descriptor from subject/summary text */
@@ -292,14 +305,14 @@ export function ActivityEventRow({
         isEven && "bg-muted/20",
       )}
     >
-      {/* Timestamp column — fixed width */}
+      {/* Timestamp column — date primary, time secondary for comms only */}
       <div className="w-[60px] md:w-[72px] shrink-0 py-2 pl-4 pr-2 whitespace-nowrap text-right">
         <div className="text-xs font-medium text-foreground leading-tight">
-          {formatTime(evt.occurredAt)}
+          {formatShortDate(evt.occurredAt)}
         </div>
-        {showDate && (
+        {isCommunicationEvent(evt) && (
           <div className="text-[11px] text-muted-foreground leading-tight">
-            {formatShortDate(evt.occurredAt)}
+            {formatTime(evt.occurredAt)}
           </div>
         )}
       </div>
