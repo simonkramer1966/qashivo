@@ -2,7 +2,7 @@ import cron from "node-cron";
 import { db } from "../db";
 import { tenants } from "../../shared/schema";
 import { and, isNotNull, eq } from "drizzle-orm";
-import { XeroSyncService } from "../services/xeroSync";
+import { syncOrchestrator } from "../sync";
 
 export function startXeroReconciliationJob(): void {
   // 02:00 UTC daily
@@ -39,7 +39,6 @@ export async function runNightlyReconciliation(): Promise<void> {
 
   console.log(`[XeroReconciliation] Found ${eligibleTenants.length} eligible tenant(s)`);
 
-  const xeroSyncService = new XeroSyncService();
   let succeeded = 0;
   let failed = 0;
   let totalInvoices = 0;
@@ -47,20 +46,15 @@ export async function runNightlyReconciliation(): Promise<void> {
   for (const tenant of eligibleTenants) {
     try {
       console.log(`[XeroReconciliation] Syncing tenant ${tenant.id} (${tenant.name})...`);
-      const result = await xeroSyncService.syncAllDataForTenant(
-        tenant.id,
-        "ongoing",
-        undefined,
-        { force: true },
-      );
+      const result = await syncOrchestrator.syncTenant(tenant.id, 'force', 'schedule');
 
-      if (result.success) {
+      if (result.status === 'success' || result.status === 'partial') {
         succeeded++;
-        totalInvoices += result.invoicesCount;
-        console.log(`[XeroReconciliation] Tenant ${tenant.id} OK — ${result.invoicesCount} invoices`);
+        totalInvoices += result.fetched.invoices;
+        console.log(`[XeroReconciliation] Tenant ${tenant.id} OK — ${result.fetched.invoices} invoices`);
       } else {
         failed++;
-        console.error(`[XeroReconciliation] Tenant ${tenant.id} failed: ${result.error}`);
+        console.error(`[XeroReconciliation] Tenant ${tenant.id} failed: ${result.errors[0]}`);
       }
     } catch (error) {
       failed++;

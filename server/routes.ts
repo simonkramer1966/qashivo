@@ -260,7 +260,7 @@ import { ActionPrioritizationService } from "./services/actionPrioritizationServ
 import { formatDate } from "../shared/utils/dateFormatter";
 import { xeroService } from "./services/xero";
 import { onboardingService } from "./services/onboardingService";
-import { XeroSyncService } from "./services/xeroSync";
+// XeroSyncService removed — sync now handled by server/sync/SyncOrchestrator
 import { generateMockData } from "./mock-data";
 import { retellService } from "./retell-service";
 import { createRetellClient } from "./mcp/client";
@@ -4461,8 +4461,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
   // Test endpoint to verify callback URL is reachable
   // Mock Xero auth endpoint for development
   // Xero raw invoice data endpoint with pagination
-  // Initialize sync service
-  const xeroSyncService = new XeroSyncService();
+  // Sync endpoints moved to integrationRoutes.ts, powered by server/sync/SyncOrchestrator
 
   // Xero sync endpoints
   // Separate endpoints for individual syncing (optional)

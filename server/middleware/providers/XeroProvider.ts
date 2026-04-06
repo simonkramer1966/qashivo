@@ -8,9 +8,7 @@ import {
   TokenAccessor
 } from '../types';
 import { xeroService } from '../../services/xero';
-import { XeroSyncService } from '../../services/xeroSync';
-
-const xeroSyncService = new XeroSyncService();
+import { syncOrchestrator } from '../../sync';
 
 /**
  * Xero Provider Implementation
@@ -245,12 +243,12 @@ export class XeroProvider implements UniversalProvider {
         tenantId: tokenData.tenantId || tenantId,
       };
 
-      // Use the optimised invoice-first sync (same as Sync Now button)
-      const result = await xeroSyncService.syncInvoicesAndContacts(tenantId, 'ongoing');
+      // Use the SyncOrchestrator for incremental sync
+      const result = await syncOrchestrator.syncTenant(tenantId, 'incremental', 'reconnect');
 
       return {
-        synced: result.invoicesCount + result.contactsCount,
-        errors: result.error ? [result.error] : [],
+        synced: result.fetched.invoices + result.fetched.contacts,
+        errors: result.errors,
       };
 
     } catch (error) {

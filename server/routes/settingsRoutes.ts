@@ -35,7 +35,6 @@ import { ActionPrioritizationService } from "../services/actionPrioritizationSer
 import { formatDate } from "@shared/utils/dateFormatter";
 import { xeroService } from "../services/xero";
 import { onboardingService } from "../services/onboardingService";
-import { XeroSyncService } from "../services/xeroSync";
 import { generateMockData } from "../mock-data";
 import { retellService } from "../retell-service";
 import { createRetellClient } from "../mcp/client";

@@ -35,8 +35,7 @@ import { ActionPrioritizationService } from "../services/actionPrioritizationSer
 import { formatDate } from "@shared/utils/dateFormatter";
 import { xeroService } from "../services/xero";
 import { onboardingService } from "../services/onboardingService";
-import { XeroSyncService } from "../services/xeroSync";
-const xeroSyncService = new XeroSyncService();
+import { syncOrchestrator } from "../sync";
 import { generateMockData } from "../mock-data";
 import { retellService } from "../retell-service";
 import { createRetellClient } from "../mcp/client";
@@ -715,19 +714,15 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
         console.error(`[Xero] Failed to check onboarding status:`, error);
       }
 
-      // Trigger automatic comprehensive sync after successful connection
-      console.log(`🚀 Triggering automatic initial Xero sync for tenant: ${appTenantId}`);
+      // Trigger automatic sync after successful connection via SyncOrchestrator.
+      // Uses 'incremental' — orchestrator auto-detects initial if no prior sync exists.
+      console.log(`🚀 Triggering automatic Xero sync for tenant: ${appTenantId}`);
       updateSyncStatus(appTenantId, { status: 'syncing', startedAt: new Date().toISOString(), invoiceCount: 0, contactCount: 0 });
-      const syncService = new XeroSyncService();
-      // Use 'ongoing' — syncAllDataForTenant auto-detects initial if no prior sync exists.
-      // Hardcoding 'initial' here would wipe enriched data on Xero reconnect.
-      syncService.syncAllDataForTenant(appTenantId, 'ongoing', (counts) => {
-        updateSyncStatus(appTenantId, { status: 'syncing', ...counts });
-      })
+      syncOrchestrator.syncTenant(appTenantId, 'incremental', 'reconnect')
         .then(async (result) => {
-          if (result.success) {
-            updateSyncStatus(appTenantId, { status: 'complete', invoiceCount: result.invoicesCount, contactCount: result.contactsCount, completedAt: new Date().toISOString() });
-            console.log(`✅ Initial Xero sync completed successfully:`, result);
+          if (result.status === 'success') {
+            updateSyncStatus(appTenantId, { status: 'complete', invoiceCount: result.fetched.invoices, contactCount: result.fetched.contacts, completedAt: new Date().toISOString() });
+            console.log(`✅ Initial Xero sync completed:`, { invoices: result.fetched.invoices, contacts: result.fetched.contacts });
             try {
               const { enqueueDebtorScoringAfterSync } = await import("../jobs/debtorScoringJob");
               await enqueueDebtorScoringAfterSync(appTenantId);
@@ -735,8 +730,8 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
               console.error("Failed to enqueue debtor scoring after sync:", err);
             }
           } else {
-            updateSyncStatus(appTenantId, { status: 'failed', error: result.error || 'Sync failed', completedAt: new Date().toISOString() });
-            console.error(`❌ Initial Xero sync failed:`, result.error);
+            updateSyncStatus(appTenantId, { status: 'failed', error: result.errors[0] || 'Sync failed', completedAt: new Date().toISOString() });
+            console.error(`❌ Initial Xero sync failed:`, result.errors);
           }
         })
         .catch(error => {
@@ -1031,33 +1026,26 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      // Default to "ongoing" — syncAllDataForTenant has a safety guard that
-      // prevents clearTenantDataForFreshSync if initialSyncComplete is already true.
-      const mode = req.body?.mode === 'initial' ? 'initial' : 'ongoing';
-      const force = req.body?.force === true;
+      const mode = req.body?.force ? 'force' : (req.body?.mode === 'initial' ? 'initial' : 'incremental');
 
-      console.log(`🚀 Starting ${mode.toUpperCase()}${force ? ' FORCE' : ''} Xero sync for tenant: ${user.tenantId}`);
+      console.log(`🚀 Starting ${mode.toUpperCase()} Xero sync for tenant: ${user.tenantId}`);
       updateSyncStatus(user.tenantId, { status: 'syncing', startedAt: new Date().toISOString(), invoiceCount: 0, contactCount: 0 });
-      const result = await xeroSyncService.syncAllDataForTenant(user.tenantId, mode as any, (counts) => {
-        updateSyncStatus(user.tenantId, { status: 'syncing', ...counts });
-      }, { force });
+      const result = await syncOrchestrator.syncTenant(user.tenantId, mode as any, 'user');
 
-      if (result.success) {
-        updateSyncStatus(user.tenantId, { status: 'complete', invoiceCount: result.invoicesCount, contactCount: result.contactsCount, completedAt: new Date().toISOString() });
+      if (result.status === 'success' || result.status === 'partial') {
+        updateSyncStatus(user.tenantId, { status: 'complete', invoiceCount: result.fetched.invoices, contactCount: result.fetched.contacts, completedAt: new Date().toISOString() });
         res.json({
           success: true,
           syncMode: result.syncMode,
-          message: `${mode === 'initial' ? 'Initial' : 'Ongoing'} sync complete: ${result.contactsCount} contacts, ${result.invoicesCount} invoices`,
-          contactsCount: result.contactsCount,
-          invoicesCount: result.invoicesCount,
-          billsCount: result.billsCount,
-          bankAccountsCount: result.bankAccountsCount,
-          bankTransactionsCount: result.bankTransactionsCount,
-          filteredCount: result.filteredCount,
-          syncedAt: new Date().toISOString(),
+          message: `Sync complete: ${result.fetched.contacts} contacts, ${result.fetched.invoices} invoices`,
+          contactsCount: result.fetched.contacts,
+          invoicesCount: result.fetched.invoices,
+          syncedAt: result.completedAt.toISOString(),
+          durationMs: result.durationMs,
+          warnings: result.warnings,
         });
       } else {
-        const errorMsg = result.error || "Sync failed";
+        const errorMsg = result.errors[0] || "Sync failed";
         const is403 = errorMsg.includes('403') || errorMsg.includes('Forbidden') || errorMsg.includes('expired') || errorMsg.includes('reconnect');
         const guidance = is403 ? ' Please disconnect and reconnect Xero in Settings > Integrations.' : '';
         updateSyncStatus(user.tenantId, { status: 'failed', error: errorMsg, completedAt: new Date().toISOString() });
@@ -1083,20 +1071,20 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
       }
 
       console.log(`🔍 Starting invoice-first sync (contacts + invoices) for tenant: ${user.tenantId}`);
-      const result = await xeroSyncService.syncInvoicesAndContacts(user.tenantId);
+      const result = await syncOrchestrator.syncTenant(user.tenantId, 'incremental', 'user');
 
-      if (result.success) {
+      if (result.status === 'success' || result.status === 'partial') {
         res.json({
           success: true,
-          message: `Successfully synced ${result.contactsCount} contacts and ${result.invoicesCount} invoices`,
-          contactsCount: result.contactsCount,
-          invoicesCount: result.invoicesCount,
-          syncedAt: new Date().toISOString(),
+          message: `Successfully synced ${result.fetched.contacts} contacts and ${result.fetched.invoices} invoices`,
+          contactsCount: result.fetched.contacts,
+          invoicesCount: result.fetched.invoices,
+          syncedAt: result.completedAt.toISOString(),
         });
       } else {
         res.status(500).json({
           success: false,
-          message: result.error || "Sync failed",
+          message: result.errors[0] || "Sync failed",
         });
       }
     } catch (error) {
@@ -1116,19 +1104,19 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
       }
 
       console.log(`📄 Starting invoice-first sync for tenant: ${user.tenantId}`);
-      const result = await xeroSyncService.syncInvoicesAndContacts(user.tenantId);
+      const result = await syncOrchestrator.syncTenant(user.tenantId, 'incremental', 'user');
 
-      if (result.success) {
+      if (result.status === 'success' || result.status === 'partial') {
         res.json({
           success: true,
-          message: `Successfully synced ${result.invoicesCount} collection-relevant invoices`,
-          invoicesCount: result.invoicesCount,
-          syncedAt: new Date().toISOString(),
+          message: `Successfully synced ${result.fetched.invoices} collection-relevant invoices`,
+          invoicesCount: result.fetched.invoices,
+          syncedAt: result.completedAt.toISOString(),
         });
       } else {
         res.status(500).json({
           success: false,
-          message: result.error || "Invoice sync failed",
+          message: result.errors[0] || "Invoice sync failed",
         });
       }
     } catch (error) {
@@ -1148,10 +1136,28 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
       }
 
       const status = req.query.status as string;
-      const invoices = await xeroSyncService.getCachedInvoices(user.tenantId, status);
+      // Direct DB query — simple read, no orchestrator needed
+      const { cachedXeroInvoices } = await import("@shared/schema");
+      const { and: andOp, eq: eqOp } = await import("drizzle-orm");
+      const whereConditions = [eqOp(cachedXeroInvoices.tenantId, user.tenantId)];
+      if (status) whereConditions.push(eqOp(cachedXeroInvoices.status, status));
+      const cachedRows = await db.select().from(cachedXeroInvoices).where(andOp(...whereConditions));
+      const invoices = cachedRows.map(inv => ({
+        id: inv.xeroInvoiceId,
+        invoiceNumber: inv.invoiceNumber,
+        amount: parseFloat(inv.amount),
+        amountDue: parseFloat(inv.amountDue || '0'),
+        issueDate: inv.issueDate.toISOString(),
+        dueDate: inv.dueDate.toISOString(),
+        status: inv.status,
+        xeroStatus: inv.xeroStatus,
+        currency: inv.currency,
+        syncedAt: inv.syncedAt?.toISOString(),
+      }));
 
       // Get sync info
-      const lastSyncTime = await xeroSyncService.getLastSyncTime(user.tenantId);
+      const [tenantRow] = await db.select({ xeroLastSyncAt: tenants.xeroLastSyncAt }).from(tenants).where(eq(tenants.id, user.tenantId));
+      const lastSyncTime = tenantRow?.xeroLastSyncAt || null;
       
       res.json({
         invoices,
@@ -1176,12 +1182,20 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      const settings = await xeroSyncService.getSyncSettings(user.tenantId);
-      if (!settings) {
+      const [tenantSettings] = await db.select({
+        xeroSyncInterval: tenants.xeroSyncInterval,
+        xeroAutoSync: tenants.xeroAutoSync,
+        xeroLastSyncAt: tenants.xeroLastSyncAt,
+      }).from(tenants).where(eq(tenants.id, user.tenantId));
+      if (!tenantSettings) {
         return res.status(404).json({ message: "Sync settings not found" });
       }
 
-      res.json(settings);
+      res.json({
+        syncInterval: tenantSettings.xeroSyncInterval || 240,
+        autoSync: tenantSettings.xeroAutoSync ?? true,
+        lastSyncAt: tenantSettings.xeroLastSyncAt,
+      });
     } catch (error) {
       console.error("Error fetching sync settings:", error);
       res.status(500).json({ message: "Failed to fetch sync settings" });
@@ -1204,16 +1218,12 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
         });
       }
 
-      const success = await xeroSyncService.updateSyncSettings(user.tenantId, {
-        syncInterval,
-        autoSync,
-      });
+      await db.update(tenants).set({
+        ...(syncInterval !== undefined && { xeroSyncInterval: syncInterval }),
+        ...(autoSync !== undefined && { xeroAutoSync: autoSync }),
+      }).where(eq(tenants.id, user.tenantId));
 
-      if (success) {
-        res.json({ success: true, message: "Sync settings updated" });
-      } else {
-        res.status(500).json({ message: "Failed to update sync settings" });
-      }
+      res.json({ success: true, message: "Sync settings updated" });
     } catch (error) {
       console.error("Error updating sync settings:", error);
       res.status(500).json({ message: "Failed to update sync settings" });

@@ -6,8 +6,7 @@ import { SageProvider } from "../middleware/providers/SageProvider";
 import { SendGridProvider } from "../middleware/providers/SendGridProvider";
 import { RetellProvider } from "../middleware/providers/RetellProvider";
 import { collectionsScheduler } from "../services/collectionsScheduler";
-import { syncScheduler } from "../services/syncScheduler";
-import { xeroHealthCheckService } from "../services/xeroHealthCheck";
+import { syncOrchestrator } from "../sync";
 import { ptpBreachDetector } from "../services/ptpBreachDetector";
 import { startReportScheduler } from "../services/reportScheduler";
 import { startDebtorScoringWorker } from "../jobs/debtorScoringJob";
@@ -139,17 +138,10 @@ export async function startAll(): Promise<void> {
   }
 
   try {
-    syncScheduler.start();
-    console.log("[startup] sync scheduler started");
+    syncOrchestrator.start();
+    console.log("[startup] sync orchestrator started (polling + health checks + webhook dispatch)");
   } catch (error) {
-    console.error("[startup] sync scheduler failed:", error);
-  }
-
-  try {
-    await xeroHealthCheckService.start();
-    console.log("[startup] xero health check started");
-  } catch (error) {
-    console.error("[startup] xero health check failed:", error);
+    console.error("[startup] sync orchestrator failed:", error);
   }
 
   try {

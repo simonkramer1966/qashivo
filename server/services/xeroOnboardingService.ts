@@ -89,13 +89,12 @@ export class XeroOnboardingService {
         await this.initializeServices();
       }
 
-      // Steps 1-2: Import contacts and invoices using optimised invoice-first sync
-      console.log('📋 Steps 1-2: Importing invoices and contacts (invoice-first sync)...');
-      const { XeroSyncService } = await import('./xeroSync');
-      const syncService = new XeroSyncService();
-      const syncResult = await syncService.syncInvoicesAndContacts(tenantId, 'initial');
-      console.log(`✅ Imported: ${syncResult.invoicesCount} invoices, ${syncResult.contactsCount} contacts`);
-      if (syncResult.error) errors.push(syncResult.error);
+      // Steps 1-2: Import contacts and invoices via SyncOrchestrator
+      console.log('📋 Steps 1-2: Importing invoices and contacts (sync orchestrator)...');
+      const { syncOrchestrator } = await import('../sync');
+      const syncResult = await syncOrchestrator.syncTenant(tenantId, 'initial', 'reconnect');
+      console.log(`✅ Imported: ${syncResult.fetched.invoices} invoices, ${syncResult.fetched.contacts} contacts`);
+      if (syncResult.errors.length > 0) errors.push(...syncResult.errors);
 
       // Step 3: Generate data summary and insights
       console.log('📊 Step 3: Analyzing imported data...');

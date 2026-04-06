@@ -51,40 +51,31 @@ app.post("/api/xero/webhook", express.raw({ type: 'application/json' }), async (
 
     console.log(`[Xero Webhook] Received ${events.length} event(s)`);
 
-    // Dynamic imports to avoid circular dependencies
-    const { db } = await import("./db");
-    const { tenants } = await import("@shared/schema");
-    const { eq } = await import("drizzle-orm");
-    const { XeroSyncService } = await import("./services/xeroSync");
+    // Route through new SyncOrchestrator
+    const { syncOrchestrator, xeroAdapter } = await import("./sync");
+    const parsedEvents = xeroAdapter.parseWebhookEvents(payload);
 
-    const xeroSyncService = new XeroSyncService();
+    // Group by platform tenant ID
+    const seenTenants = new Set<string>();
+    for (const evt of parsedEvents) {
+      if (seenTenants.has(evt.tenantPlatformId)) continue;
+      seenTenants.add(evt.tenantPlatformId);
 
-    // Group events by Xero tenant ID and trigger one sync per tenant
-    const xeroTenantIds = [...new Set(events.map((e: any) => e.tenantId).filter(Boolean))] as string[];
+      const { db: appDb } = await import("./db");
+      const { tenants } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
 
-    for (const xeroTenantId of xeroTenantIds) {
-      const tenantEvents = events.filter((e: any) => e.tenantId === xeroTenantId);
-      console.log(`[Xero Webhook] ${tenantEvents.length} event(s) for Xero org ${xeroTenantId}:`);
-      for (const evt of tenantEvents) {
-        console.log(`  - ${evt.eventCategory}/${evt.eventType}: ${evt.resourceId}`);
-      }
-
-      // Look up our app tenant by Xero tenant ID
-      const [tenant] = await db
-        .select()
+      const [tenant] = await appDb.select({ id: tenants.id, name: tenants.name })
         .from(tenants)
-        .where(eq(tenants.xeroTenantId, xeroTenantId));
+        .where(eq(tenants.xeroTenantId, evt.tenantPlatformId));
 
       if (!tenant) {
-        console.warn(`[Xero Webhook] No tenant found for Xero org ${xeroTenantId} — skipping`);
+        console.warn(`[Xero Webhook] No tenant found for Xero org ${evt.tenantPlatformId} — skipping`);
         continue;
       }
 
-      // Trigger incremental sync for this tenant
-      console.log(`[Xero Webhook] Triggering incremental sync for tenant ${tenant.id} (${tenant.name})`);
-      xeroSyncService.syncAllDataForTenant(tenant.id, 'ongoing').catch((err) => {
-        console.error(`[Xero Webhook] Sync failed for tenant ${tenant.id}:`, err);
-      });
+      console.log(`[Xero Webhook] Triggering sync for tenant ${tenant.id} (${tenant.name})`);
+      syncOrchestrator.enqueueSync(tenant.id, 'webhook', 'webhook');
     }
   } catch (error) {
     console.error("[Xero Webhook] Processing error:", error);
