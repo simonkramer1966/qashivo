@@ -1,9 +1,6 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import AppShell from "@/components/layout/app-shell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   DollarSign,
@@ -11,14 +8,7 @@ import {
   Users,
   TrendingUp,
   TrendingDown,
-  ArrowUpDown,
   BarChart3,
-  MoreVertical,
-  Eye,
-  UserPlus,
-  StickyNote,
-  PauseCircle,
-  Star as StarIcon,
   AlertTriangle,
 } from "lucide-react";
 import {
@@ -33,15 +23,6 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useLocation } from "wouter";
 import DebtorTreemap from "@/components/dashboard/DebtorTreemap";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 
@@ -86,9 +67,6 @@ const fmt = (amount: number | string | null, currency = "GBP") => {
   return new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(num);
 };
 
-type SortField = "name" | "totalOutstanding" | "oldestOverdueDays" | "lastContactDate";
-type SortDir = "asc" | "desc";
-
 const BUCKET_LABELS: Record<string, string> = {
   current: "Current", "1-30": "1–30d", "31-60": "31–60d", "61-90": "61–90d", "90+": "90+d",
 };
@@ -97,11 +75,6 @@ const BUCKET_COLORS = ["hsl(var(--chart-3))", "hsl(var(--chart-1))", "hsl(var(--
 // ── Main Dashboard ─────────────────────────────────────────
 
 export default function QollectionsDashboard() {
-  const [, navigate] = useLocation();
-
-  const [sortField, setSortField] = useState<SortField>("totalOutstanding");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
-
   // ── Queries ──
   const { data: summary, isLoading: summaryLoading } = useQuery<QollectionsSummary>({
     queryKey: ["/api/qollections/summary"],
@@ -126,23 +99,6 @@ export default function QollectionsDashboard() {
   }>({
     queryKey: ["/api/impact/summary"],
     refetchInterval: 300000,
-  });
-
-  // Sorting
-  const toggleSort = (field: SortField) => {
-    if (sortField === field) setSortDir(sortDir === "asc" ? "desc" : "asc");
-    else { setSortField(field); setSortDir("desc"); }
-  };
-
-  const sortedDebtors = [...debtors].sort((a, b) => {
-    let cmp = 0;
-    switch (sortField) {
-      case "name": cmp = a.name.localeCompare(b.name); break;
-      case "totalOutstanding": cmp = a.totalOutstanding - b.totalOutstanding; break;
-      case "oldestOverdueDays": cmp = a.oldestOverdueDays - b.oldestOverdueDays; break;
-      case "lastContactDate": cmp = new Date(a.lastContactDate || 0).getTime() - new Date(b.lastContactDate || 0).getTime(); break;
-    }
-    return sortDir === "asc" ? cmp : -cmp;
   });
 
   const chartData = (summary?.ageingBuckets || []).map((b, idx) => ({
@@ -306,112 +262,6 @@ export default function QollectionsDashboard() {
         <ErrorBoundary>
           <DebtorTreemap debtors={debtors} isLoading={debtorsLoading} />
         </ErrorBoundary>
-
-        {/* ── Debtor List ── */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <Users className="h-4 w-4 text-primary" />
-              Debtors
-            </CardTitle>
-            <CardDescription className="text-xs">
-              All contacts with outstanding balances ({debtors.length} total)
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {debtorsLoading ? (
-              <div className="space-y-3">
-                {[...Array(6)].map((_, i) => (
-                  <div key={i} className="flex items-center gap-4">
-                    <Skeleton className="h-4 w-32" />
-                    <Skeleton className="h-4 w-20 ml-auto" />
-                    <Skeleton className="h-4 w-12" />
-                    <Skeleton className="h-4 w-16" />
-                  </div>
-                ))}
-              </div>
-            ) : debtors.length === 0 ? (
-              <EmptyState icon={<Users className="h-8 w-8" />} message="No debtors with outstanding balances." />
-            ) : (
-              <div className="overflow-x-auto -mx-6 px-6">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b">
-                      <SortHeader label="Name" field="name" current={sortField} dir={sortDir} onClick={toggleSort} />
-                      <SortHeader label="Outstanding" field="totalOutstanding" current={sortField} dir={sortDir} onClick={toggleSort} className="text-right" />
-                      <SortHeader label="Oldest Overdue" field="oldestOverdueDays" current={sortField} dir={sortDir} onClick={toggleSort} className="text-right" />
-                      <SortHeader label="Last Contact" field="lastContactDate" current={sortField} dir={sortDir} onClick={toggleSort} />
-                      <th className="py-2 px-3 text-xs font-medium text-muted-foreground">Next Action</th>
-                      <th className="py-2 px-3 text-xs font-medium text-muted-foreground">Status</th>
-                      <th className="py-2 px-3 w-10" />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedDebtors.map((d) => (
-                      <tr key={d.id} className="border-b last:border-0 hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => navigate(`/qollections/debtors/${d.id}`)}>
-                        <td className="py-2.5 px-3">
-                          <div className="font-medium">{d.name}</div>
-                          <div className="text-xs text-muted-foreground">{d.invoiceCount} invoice{d.invoiceCount !== 1 ? "s" : ""}</div>
-                        </td>
-                        <td className="py-2.5 px-3 text-right font-medium">
-                          {fmt(d.totalOutstanding)}
-                          {d.overdueAmount > 0 && <div className="text-xs text-rose-600">{fmt(d.overdueAmount)} overdue</div>}
-                        </td>
-                        <td className="py-2.5 px-3 text-right">
-                          {d.oldestOverdueDays > 0 ? (
-                            <span className={d.oldestOverdueDays > 60 ? "text-rose-600 font-medium" : d.oldestOverdueDays > 30 ? "text-amber-600" : "text-muted-foreground"}>
-                              {d.oldestOverdueDays}d
-                            </span>
-                          ) : <span className="text-muted-foreground">—</span>}
-                        </td>
-                        <td className="py-2.5 px-3 text-xs text-muted-foreground">
-                          {d.lastContactDate ? new Date(d.lastContactDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "—"}
-                        </td>
-                        <td className="py-2.5 px-3 text-xs text-muted-foreground">
-                          {d.nextActionDate ? new Date(d.nextActionDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "—"}
-                        </td>
-                        <td className="py-2.5 px-3">
-                          <Badge variant="outline" className={`text-[10px] ${d.status === "active" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-muted text-muted-foreground"}`}>
-                            {d.status}
-                          </Badge>
-                        </td>
-                        <td className="py-2.5 px-3">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-                                <MoreVertical className="h-3.5 w-3.5" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={() => navigate(`/qollections/debtors/${d.id}`)}>
-                                <Eye className="h-4 w-4 mr-2" /> View Details
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => navigate(`/qollections/debtors/${d.id}`)}>
-                                <UserPlus className="h-4 w-4 mr-2" /> Add Contact
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => navigate(`/qollections/debtors/${d.id}`)}>
-                                <StickyNote className="h-4 w-4 mr-2" /> Add Note
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem>
-                                <PauseCircle className="h-4 w-4 mr-2" /> Put On Hold
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <StarIcon className="h-4 w-4 mr-2" /> Mark as VIP
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
       </div>
 
     </AppShell>
@@ -463,16 +313,4 @@ function KpiCard({ title, value, subtitle, icon, loading, accent }: {
   );
 }
 
-function SortHeader({ label, field, current, dir, onClick, className = "" }: {
-  label: string; field: SortField; current: SortField; dir: SortDir; onClick: (f: SortField) => void; className?: string;
-}) {
-  return (
-    <th className={`py-2 px-3 ${className}`}>
-      <button onClick={() => onClick(field)} className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
-        {label}
-        <ArrowUpDown className={`h-3 w-3 ${current === field ? "text-foreground" : "text-muted-foreground/40"}`} />
-      </button>
-    </th>
-  );
-}
 
