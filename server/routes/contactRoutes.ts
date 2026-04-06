@@ -4029,6 +4029,9 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
         });
 
       // 3. Synthesize events from invoices (created + paid)
+      const fmtGBP = (v: number) => new Intl.NumberFormat('en-GB', {
+        minimumFractionDigits: 2, maximumFractionDigits: 2,
+      }).format(v);
       const shouldIncludeInvoices = !category || category === 'Payments' || category === 'System';
       let invoiceEvents: typeof tlMapped = [];
       if (shouldIncludeInvoices) {
@@ -4048,7 +4051,7 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
                 eventType: 'invoice_issued',
                 category: 'System',
                 title: `Invoice ${inv.invoiceNumber} issued`,
-                description: `${inv.invoiceNumber} for £${Number(inv.amount || 0).toFixed(2)}`,
+                description: `${inv.invoiceNumber} for £${fmtGBP(Number(inv.amount || 0))}`,
                 triggeredBy: 'Xero',
                 direction: 'outbound',
                 linkedInvoiceId: inv.id,
@@ -4069,7 +4072,7 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
                 eventType: 'payment_received',
                 category: 'Payments',
                 title: `Payment received — ${inv.invoiceNumber}`,
-                description: `£${Number(inv.amountPaid || inv.amount || 0).toFixed(2)} paid`,
+                description: `£${fmtGBP(Number(inv.amountPaid || inv.amount || 0))} paid`,
                 triggeredBy: 'Xero',
                 direction: 'inbound',
                 linkedInvoiceId: inv.id,
@@ -4087,12 +4090,27 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
         }
       }
 
+      // Collect invoiceIds already represented by payment timeline events
+      const tlPaymentInvoiceIds = new Set(
+        tlMapped
+          .filter(tl => tl.linkedInvoiceId && (tl.category === 'Payments' || tl.eventType === 'payment_received'))
+          .map(tl => tl.linkedInvoiceId)
+      );
+
+      // Filter out synthesized payment events that duplicate a timeline event
+      const dedupedInvoiceEvents = invoiceEvents.filter(e => {
+        if (e.eventType === 'payment_received' && e.linkedInvoiceId && tlPaymentInvoiceIds.has(e.linkedInvoiceId)) {
+          return false;
+        }
+        return true;
+      });
+
       // Merge and deduplicate (activity_events take priority)
       const aeIds = new Set(aeRows.map(e => e.id));
       const merged = [
         ...aeRows.map(e => ({ ...e, _source: 'activity_events' as const })),
         ...tlMapped.filter(tl => !aeIds.has(tl.id)),
-        ...invoiceEvents,
+        ...dedupedInvoiceEvents,
       ];
 
       // Sort by date descending
