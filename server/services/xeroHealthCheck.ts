@@ -105,20 +105,12 @@ export class XeroHealthCheckService {
 
       if (apiOk) {
         console.log(`✅ Xero connection HEALTHY for tenant: ${tenant.name}`);
+        await this.updateConnectionStatus(tenant.id, 'connected');
       } else {
-        // API ping failed but token refresh succeeded — still connected
-        console.warn(`⚠️ Xero API ping failed for tenant: ${tenant.name} (token refresh OK — connection is fine)`);
+        // Token refreshed but API calls fail — likely needs re-authorization (403 scenario)
+        console.warn(`⚠️ Xero API access denied for tenant: ${tenant.name} — token refreshes but API returns 403. User may need to reconnect.`);
+        await this.updateConnectionStatus(tenant.id, 'error', 'API access denied — token refreshes but invoice access forbidden. Please reconnect Xero in Settings > Integrations.');
       }
-
-      await db
-        .update(tenants)
-        .set({
-          xeroConnectionStatus: 'connected',
-          xeroLastHealthCheck: new Date(),
-          xeroHealthCheckError: null,
-          updatedAt: new Date(),
-        })
-        .where(eq(tenants.id, tenant.id));
     } catch (error) {
       // Sanitize error message to avoid exposing sensitive OAuth details
       const rawError = error instanceof Error ? error.message : 'Unknown error';

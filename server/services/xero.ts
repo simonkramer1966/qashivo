@@ -272,8 +272,10 @@ class XeroService {
           throw new Error(`XERO_RATE_LIMIT:429:${errorText}`);
         }
 
-        // Handle 401 unauthorized errors specifically
-        if (response.status === 401) {
+        // Handle 401/403 — both indicate auth issues
+        // 401 = token expired, 403 = token valid but lacks tenant permissions (revoked authorization)
+        // In both cases, refresh the token and retry once
+        if (response.status === 401 || response.status === 403) {
           throw new Error(`XERO_AUTH_ERROR:${response.status}:${errorText}`);
         }
 
@@ -290,9 +292,10 @@ class XeroService {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       
-      // Check if this is a 401 authentication error
-      if (errorMessage.includes('XERO_AUTH_ERROR:401')) {
-        console.warn('🔄 Xero access token expired, attempting refresh...');
+      // Check if this is a 401/403 authentication error
+      if (errorMessage.includes('XERO_AUTH_ERROR:')) {
+        const statusCode = errorMessage.match(/XERO_AUTH_ERROR:(\d+)/)?.[1] || 'unknown';
+        console.warn(`🔄 Xero auth error (${statusCode}), attempting token refresh...`);
         
         try {
           // Attempt to refresh the token

@@ -1057,10 +1057,13 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
           syncedAt: new Date().toISOString(),
         });
       } else {
-        updateSyncStatus(user.tenantId, { status: 'failed', error: result.error || 'Sync failed', completedAt: new Date().toISOString() });
+        const errorMsg = result.error || "Sync failed";
+        const is403 = errorMsg.includes('403') || errorMsg.includes('Forbidden') || errorMsg.includes('expired') || errorMsg.includes('reconnect');
+        const guidance = is403 ? ' Please disconnect and reconnect Xero in Settings > Integrations.' : '';
+        updateSyncStatus(user.tenantId, { status: 'failed', error: errorMsg, completedAt: new Date().toISOString() });
         res.status(500).json({
           success: false,
-          message: result.error || "Sync failed",
+          message: errorMsg + guidance,
         });
       }
     } catch (error) {
