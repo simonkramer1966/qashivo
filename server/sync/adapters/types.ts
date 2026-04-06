@@ -40,6 +40,7 @@ export type SyncTrigger = 'webhook' | 'schedule' | 'user' | 'reconnect';
 export interface FetchOptions {
   modifiedSince?: Date;       // null = fetch all
   statuses?: string[];        // platform-specific status filters
+  dateFrom?: Date;            // only records with Date >= this value
   includeArchived?: boolean;  // default false
   pageSize?: number;          // override default page size
 }

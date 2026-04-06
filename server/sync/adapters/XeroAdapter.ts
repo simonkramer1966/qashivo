@@ -178,7 +178,14 @@ export class XeroAdapter implements AccountingAdapter {
     const fetchedAt = new Date(); // BEFORE first API call (spec 13.3)
     const tokens = await this.getTokens(tenantId);
 
-    const whereClause = 'Type=="ACCREC"';
+    // Build where clause: always ACCREC, optionally with date filter
+    let whereClause = 'Type=="ACCREC"';
+    if (options.dateFrom) {
+      // Xero date format: DateTime(year,month,day)
+      const d = options.dateFrom;
+      whereClause += `&&Date>=DateTime(${d.getFullYear()},${d.getMonth() + 1},${d.getDate()})`;
+    }
+
     let statusFilter = '';
     if (options.statuses?.length) {
       statusFilter = `&Statuses=${options.statuses.join(',')}`;

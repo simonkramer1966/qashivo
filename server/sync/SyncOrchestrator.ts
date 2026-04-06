@@ -272,9 +272,7 @@ export class SyncOrchestrator {
 
       // Build fetch options
       const fetchOptions: FetchOptions = {};
-      if (effectiveMode === 'initial') {
-        fetchOptions.statuses = ['AUTHORISED', 'SUBMITTED'];
-      } else if (effectiveMode === 'incremental' && state.invoicesCursor) {
+      if (effectiveMode === 'incremental' && state.invoicesCursor) {
         fetchOptions.modifiedSince = new Date(state.invoicesCursor);
       }
       // force + reconciliation: no filters — fetch everything
@@ -293,26 +291,52 @@ export class SyncOrchestrator {
 
       const uniqueContactIds = new Map<string, string>(); // platformContactId → name
 
-      const invoiceSummary = await this.adapter.fetchInvoices(
-        tenantId,
-        fetchOptions,
-        async (pageInvoices, pageNumber) => {
-          // Extract contact IDs from invoices
-          for (const inv of pageInvoices) {
-            const contactId = inv.Contact?.ContactID;
-            if (contactId) {
-              uniqueContactIds.set(contactId, inv.Contact?.Name || 'Unknown');
-            }
+      const onInvoicePage = async (pageInvoices: any[], pageNumber: number) => {
+        for (const inv of pageInvoices) {
+          const contactId = inv.Contact?.ContactID;
+          if (contactId) {
+            uniqueContactIds.set(contactId, inv.Contact?.Name || 'Unknown');
           }
+        }
+        await this.cacheInvoicePage(tenantId, pageInvoices, effectiveMode);
+        result.fetched.apiCallsMade++;
+        console.log(`[SyncOrchestrator] Page ${pageNumber}: ${pageInvoices.length} invoices cached`);
+      };
 
-          // Cache each page immediately
-          await this.cacheInvoicePage(tenantId, pageInvoices, effectiveMode);
-          result.fetched.apiCallsMade++;
-          console.log(`[SyncOrchestrator] Page ${pageNumber}: ${pageInvoices.length} invoices cached`);
-        },
-      );
+      let invoiceFetchedAt: Date;
 
-      result.fetched.invoices = invoiceSummary.totalCount;
+      if (effectiveMode === 'initial') {
+        // Two-pass initial sync:
+        // Pass 1: All open invoices (any age) — these are what we're chasing
+        console.log(`[SyncOrchestrator] Initial sync pass 1: open invoices (AUTHORISED, SUBMITTED)`);
+        const openSummary = await this.adapter.fetchInvoices(
+          tenantId,
+          { statuses: ['AUTHORISED', 'SUBMITTED'] },
+          onInvoicePage,
+        );
+
+        // Pass 2: Paid history from last 24 months — for payment behaviour analysis
+        const historyStart = new Date();
+        historyStart.setMonth(historyStart.getMonth() - this.adapter.defaultHistoryMonths);
+        console.log(`[SyncOrchestrator] Initial sync pass 2: paid history since ${historyStart.toISOString().slice(0, 10)}`);
+        const paidSummary = await this.adapter.fetchInvoices(
+          tenantId,
+          { statuses: ['PAID'], dateFrom: historyStart },
+          onInvoicePage,
+        );
+
+        result.fetched.invoices = openSummary.totalCount + paidSummary.totalCount;
+        // Use the earlier fetchedAt for cursor safety
+        invoiceFetchedAt = openSummary.fetchedAt < paidSummary.fetchedAt ? openSummary.fetchedAt : paidSummary.fetchedAt;
+      } else {
+        const invoiceSummary = await this.adapter.fetchInvoices(
+          tenantId,
+          fetchOptions,
+          onInvoicePage,
+        );
+        result.fetched.invoices = invoiceSummary.totalCount;
+        invoiceFetchedAt = invoiceSummary.fetchedAt;
+      }
 
       // ── Step 4: Fetch contacts ───────────────────────────────────────
       if (uniqueContactIds.size > 0) {
@@ -441,7 +465,7 @@ export class SyncOrchestrator {
         lastSuccessfulSyncAt: result.status === 'success' ? result.completedAt : undefined,
         lastSyncError: result.errors.length > 0 ? result.errors[0] : null,
         lastSyncResult: result,
-        invoicesCursor: result.status === 'success' ? invoiceSummary.fetchedAt.toISOString() : undefined,
+        invoicesCursor: result.status === 'success' ? invoiceFetchedAt.toISOString() : undefined,
         consecutiveFailures: 0,
         initialSyncComplete: effectiveMode === 'initial' && result.status === 'success' ? true : undefined,
         totalInvoicesSynced: result.fetched.invoices > 0 ? result.fetched.invoices : undefined,
