@@ -228,7 +228,7 @@ export function registerDashboardRoutes(app: Express): void {
             eq(invoices.tenantId, user.tenantId),
             sql`CAST(${invoices.amount} AS DECIMAL) > CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL)`
           ))
-          .where(eq(contacts.tenantId, user.tenantId))
+          .where(and(eq(contacts.tenantId, user.tenantId), isNotNull(contacts.xeroContactId)))
           .groupBy(contacts.id, contacts.name, contacts.xeroContactId, contacts.email, contacts.phone)
           .having(sql`SUM(CAST(${invoices.amount} AS DECIMAL) - CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL)) > 0`)
           .orderBy(sql`SUM(CAST(${invoices.amount} AS DECIMAL) - CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL)) DESC`)
@@ -2007,18 +2007,20 @@ export function registerDashboardRoutes(app: Express): void {
       const ageingResult = await db.execute(sql`
         SELECT
           CASE
-            WHEN (CURRENT_DATE - due_date::date) < 0 THEN 'current'
-            WHEN (CURRENT_DATE - due_date::date) <= 30 THEN '1-30'
-            WHEN (CURRENT_DATE - due_date::date) <= 60 THEN '31-60'
-            WHEN (CURRENT_DATE - due_date::date) <= 90 THEN '61-90'
+            WHEN (CURRENT_DATE - i.due_date::date) < 0 THEN 'current'
+            WHEN (CURRENT_DATE - i.due_date::date) <= 30 THEN '1-30'
+            WHEN (CURRENT_DATE - i.due_date::date) <= 60 THEN '31-60'
+            WHEN (CURRENT_DATE - i.due_date::date) <= 90 THEN '61-90'
             ELSE '90+'
           END as bucket,
-          COALESCE(SUM(amount - amount_paid), 0) as amount,
+          COALESCE(SUM(i.amount - i.amount_paid), 0) as amount,
           COUNT(*) as invoice_count
-        FROM invoices
-        WHERE tenant_id = ${user.tenantId}
-          AND LOWER(status) NOT IN ('paid', 'void', 'voided', 'deleted', 'draft')
-          AND (amount - amount_paid) > 0
+        FROM invoices i
+        JOIN contacts c ON c.id = i.contact_id
+        WHERE i.tenant_id = ${user.tenantId}
+          AND c.xero_contact_id IS NOT NULL
+          AND LOWER(i.status) NOT IN ('paid', 'void', 'voided', 'deleted', 'draft')
+          AND (i.amount - i.amount_paid) > 0
         GROUP BY bucket
       `);
 
@@ -2179,7 +2181,11 @@ export function registerDashboardRoutes(app: Express): void {
           invoices,
           and(eq(invoices.contactId, contacts.id), eq(invoices.tenantId, user.tenantId)),
         )
-        .where(and(eq(contacts.tenantId, user.tenantId), eq(contacts.isActive, true)))
+        .where(and(
+          eq(contacts.tenantId, user.tenantId),
+          eq(contacts.isActive, true),
+          isNotNull(contacts.xeroContactId),
+        ))
         .groupBy(contacts.id, contacts.name, contacts.companyName, contacts.email, contacts.isActive, contacts.isVip)
         .having(
           sql`SUM(CASE WHEN LOWER(${invoices.status}) NOT IN ('paid', 'void', 'voided', 'deleted', 'draft') THEN ${invoices.amount} - ${invoices.amountPaid} ELSE 0 END) > 0`,

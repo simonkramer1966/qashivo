@@ -12,7 +12,7 @@
  */
 
 import { db } from "../db";
-import { eq, and, sql, gte } from "drizzle-orm";
+import { eq, and, sql, gte, isNotNull } from "drizzle-orm";
 import {
   invoices,
   contacts,
@@ -44,7 +44,11 @@ export async function getARSummary(tenantId: string): Promise<ARSummary> {
       invoices,
       and(eq(invoices.contactId, contacts.id), eq(invoices.tenantId, tenantId)),
     )
-    .where(and(eq(contacts.tenantId, tenantId), eq(contacts.isActive, true)))
+    .where(and(
+      eq(contacts.tenantId, tenantId),
+      eq(contacts.isActive, true),
+      isNotNull(contacts.xeroContactId),
+    ))
     .groupBy(contacts.id)
     .having(
       sql`SUM(CASE WHEN LOWER(${invoices.status}) NOT IN ${sql.raw(EXCLUDED_STATUSES)} THEN ${invoices.amount} - ${invoices.amountPaid} ELSE 0 END) > 0`,
@@ -122,12 +126,15 @@ export async function getARSummary(tenantId: string): Promise<ARSummary> {
   totalOutstanding = Math.round((totalOutstanding - unmatchedCredits) * 100) / 100;
 
   // 6. DSO — average days to pay for invoices paid in last 90 days
+  // Exclude contacts without xero_contact_id (test/seed data)
   const dsoResult = await db.execute(sql`
-    SELECT COALESCE(AVG(EXTRACT(DAY FROM AGE(paid_date, issue_date))), 0) as dso
-    FROM invoices
-    WHERE tenant_id = ${tenantId}
-      AND status = 'paid'
-      AND paid_date >= NOW() - INTERVAL '90 days'
+    SELECT COALESCE(AVG(EXTRACT(DAY FROM AGE(i.paid_date, i.issue_date))), 0) as dso
+    FROM invoices i
+    JOIN contacts c ON c.id = i.contact_id
+    WHERE i.tenant_id = ${tenantId}
+      AND c.xero_contact_id IS NOT NULL
+      AND i.status = 'paid'
+      AND i.paid_date >= NOW() - INTERVAL '90 days'
   `);
   const dsoRow = (dsoResult as any).rows?.[0] || (dsoResult as any)[0] || {};
   const currentDSO = Math.round(Number(dsoRow.dso || 0));

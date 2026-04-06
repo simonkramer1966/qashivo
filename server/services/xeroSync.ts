@@ -151,6 +151,8 @@ export class XeroSyncService {
       let hasNextPage = true;
       const uniqueContactIds = new Map<string, { name: string }>();
 
+      let apiFetchFailed = false;
+
       while (hasNextPage) {
         try {
           const endpoint = `Invoices?where=${encodeURIComponent(whereClause)}${statusFilter}&page=${currentPage}`;
@@ -220,14 +222,32 @@ export class XeroSyncService {
           if (hasNextPage) {
             await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY_MS));
           }
-        } catch (pageError) {
-          console.error(`  Error fetching invoice page ${currentPage}:`, pageError);
+        } catch (pageError: any) {
+          const errMsg = pageError?.message || String(pageError);
+          console.error(`  ❌ Error fetching invoice page ${currentPage}:`, errMsg);
+
+          if (currentPage === 1) {
+            // CRITICAL: Page 1 failure means the Xero API is unreachable or rejecting us.
+            // Do NOT silently continue with stale cached data — fail the sync so the
+            // error is visible and lastSuccessfulSyncAt is NOT updated.
+            throw new Error(`Xero API fetch failed on page 1: ${errMsg}`);
+          }
+
+          // Later page failures: keep data from earlier pages but stop pagination
+          console.warn(`  ⚠️ Stopping pagination at page ${currentPage} — ${totalInvoicesCount} invoices from earlier pages preserved`);
+          apiFetchFailed = true;
           hasNextPage = false;
         }
       }
 
       console.log(`✅ Fetched ${totalInvoicesCount} invoices in ${currentPage - 1} API calls`);
       console.log(`📇 Found ${uniqueContactIds.size} unique contacts from invoices`);
+
+      // Warn if ongoing sync fetched 0 invoices — may indicate If-Modified-Since
+      // returning empty results despite real changes existing in Xero
+      if (effectiveMode === 'ongoing' && !force && totalInvoicesCount === 0 && !apiFetchFailed) {
+        console.warn(`⚠️ Ongoing sync fetched 0 modified invoices from Xero API. If data looks stale, try a Force Sync.`);
+      }
 
       // ── Step 2: Fetch contact details + cache in cached_xero_contacts ──
       if (effectiveMode === 'initial') {
