@@ -94,7 +94,12 @@ export default function RecipientChipInput({
                 <Plus className="h-3 w-3 mr-0.5" /> Add
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-80 p-0" align="start">
+            <PopoverContent
+              className="w-80 p-0"
+              align="start"
+              onInteractOutside={(e) => e.preventDefault()}
+              onOpenAutoFocus={(e) => e.preventDefault()}
+            >
               <ContactPickerPanel
                 suggestions={suggestions}
                 selectedEmails={value}

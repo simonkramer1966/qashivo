@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -490,6 +491,21 @@ export default function SendEmailDrawer({
                         </button>
                         <button
                           type="button"
+                          onClick={() =>
+                            setSelectedInvoiceIds(
+                              new Set(
+                                chaseableInvoices
+                                  .filter((inv) => (inv.daysOverdue ?? 0) > 0)
+                                  .map((inv) => inv.id)
+                              )
+                            )
+                          }
+                          className="text-xs text-primary hover:underline"
+                        >
+                          Select overdue
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => toggleAllInvoices(false)}
                           className="text-xs text-muted-foreground hover:underline"
                         >
@@ -502,16 +518,14 @@ export default function SendEmailDrawer({
                         key={inv.id}
                         className="flex items-center gap-2 text-sm py-1 px-2 rounded hover:bg-muted cursor-pointer"
                       >
-                        <input
-                          type="checkbox"
+                        <Checkbox
                           checked={selectedInvoiceIds.has(inv.id)}
-                          onChange={(e) => {
+                          onCheckedChange={(checked) => {
                             const next = new Set(selectedInvoiceIds);
-                            if (e.target.checked) next.add(inv.id);
+                            if (checked) next.add(inv.id);
                             else next.delete(inv.id);
                             setSelectedInvoiceIds(next);
                           }}
-                          className="rounded"
                           disabled={mode === "generated"}
                         />
                         <span className="font-medium">{inv.invoiceNumber}</span>
@@ -542,7 +556,7 @@ export default function SendEmailDrawer({
                         key={inv.id}
                         className="flex items-center gap-2 text-sm py-1 px-2 opacity-50"
                       >
-                        <input type="checkbox" disabled checked={false} className="rounded" />
+                        <Checkbox disabled checked={false} />
                         <span className="font-medium">{inv.invoiceNumber}</span>
                         <span className="tabular-nums">{gbp.format(inv.amount)}</span>
                         <Badge variant="outline" className="text-[10px]">
