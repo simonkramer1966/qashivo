@@ -8,7 +8,7 @@ import ApprovalsTab from "@/components/action-centre/ApprovalsTab";
 import ScheduledTab from "@/components/action-centre/ScheduledTab";
 import ActivityFeedTab from "@/components/action-centre/ActivityFeedTab";
 import ExceptionsTab from "@/components/action-centre/ExceptionsTab";
-import VipTab from "@/components/action-centre/VipTab";
+// VipTab removed — VIP is a debtor status, managed from Debtors list + debtor detail
 import { cn } from "@/lib/utils";
 import {
   type ExceptionSubTab,
@@ -29,9 +29,9 @@ interface TenantSettings {
   approvalTimeoutHours: number;
 }
 
-type MainTab = "summary" | "queue" | "scheduled" | "vip" | "activity" | "exceptions";
+type MainTab = "summary" | "queue" | "scheduled" | "activity" | "exceptions";
 
-const VALID_TABS = new Set<MainTab>(["summary", "queue", "scheduled", "vip", "activity", "exceptions"]);
+const VALID_TABS = new Set<MainTab>(["summary", "queue", "scheduled", "activity", "exceptions"]);
 
 // Parse search string into params
 function parseSearch(search: string): URLSearchParams {
@@ -94,18 +94,13 @@ export default function QollectionsAgentActivity() {
     refetchInterval: 30_000,
   });
 
-  const { data: vipData } = useQuery<{ total: number }>({
-    queryKey: ["/api/contacts/vip"],
-    refetchInterval: 30_000,
-  });
+  // VIP data query removed — VIP tab removed
 
   const approvalMode = (context?.tenant as any)?.approvalMode ?? "manual";
   const approvalCount = approvalsData?.total ?? 0;
   const scheduledCount = scheduledData?.total ?? 0;
   const activityInboundCount = activityFeedData?.inboundCount ?? 0;
   const exceptionCount = (exceptionsData?.newCount ?? 0) + (exceptionsData?.totalPatterns ?? 0);
-  const vipCount = vipData?.total ?? 0;
-
   // Compute per-sub-tab exception counts (only "new" items for badge)
   const exceptionSubCounts = useMemo(() => {
     const counts: Record<ExceptionSubTab, number> = { collections: 0, debtor_situations: 0, other: 0 };
@@ -146,7 +141,7 @@ export default function QollectionsAgentActivity() {
             {/* Main tabs — grid ensures all columns match the widest */}
             <div className={cn(
               "grid auto-cols-[1fr] grid-flow-col",
-              showApprovals ? "grid-cols-6" : "grid-cols-5",
+              showApprovals ? "grid-cols-5" : "grid-cols-4",
             )}>
               <TabButton active={activeTab === "summary"} onClick={() => setTab("summary")}>
                 Summary
@@ -164,10 +159,6 @@ export default function QollectionsAgentActivity() {
 
               <TabButton active={activeTab === "activity"} onClick={() => setTab("activity")}>
                 {tabLabel("Activity Feed", activityInboundCount)}
-              </TabButton>
-
-              <TabButton active={activeTab === "vip"} onClick={() => setTab("vip")}>
-                {tabLabel("VIP", vipCount)}
               </TabButton>
 
               <TabButton active={activeTab === "exceptions"} onClick={() => setTab("exceptions")}>
@@ -199,7 +190,6 @@ export default function QollectionsAgentActivity() {
           {activeTab === "summary" && <OverviewTab />}
           {activeTab === "queue" && showApprovals && <ApprovalsTab />}
           {activeTab === "scheduled" && <ScheduledTab />}
-          {activeTab === "vip" && <VipTab />}
           {activeTab === "activity" && <ActivityFeedTab />}
           {activeTab === "exceptions" && <ExceptionsTab subTab={exceptionSubTab ?? undefined} onNavigateSubTab={setSubTab} />}
         </div>

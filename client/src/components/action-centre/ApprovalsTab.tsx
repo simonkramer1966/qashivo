@@ -56,7 +56,7 @@ import {
   PauseCircle, Star,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { useDrawer } from "@/contexts/DrawerContext";
 import { formatRelativeTime, normalizeChannel, formatCurrencyCompact } from "./utils";
 import ApprovalDrawer from "./ApprovalDrawer";
@@ -852,9 +852,19 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
                     {/* Line 1 — Who */}
                     <div className="flex items-center gap-1.5">
                       <span className={cn("inline-block h-1.5 w-1.5 rounded-full flex-shrink-0", urgencyColor(action.priority, action.daysOverdue))} />
-                      <span className="text-[13px] font-medium truncate">
-                        {action.companyName || action.contactName || "Unknown debtor"}
-                      </span>
+                      {action.contactId ? (
+                        <Link
+                          href={`/qollections/debtors/${action.contactId}`}
+                          className="text-[13px] font-medium truncate hover:underline"
+                          onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                        >
+                          {action.companyName || action.contactName || "Unknown debtor"}
+                        </Link>
+                      ) : (
+                        <span className="text-[13px] font-medium truncate">
+                          {action.companyName || action.contactName || "Unknown debtor"}
+                        </span>
+                      )}
                     </div>
 
                     {/* Line 2 — Why */}
@@ -928,6 +938,15 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
                       onClick={() => setDrawerActionId(action.id)}
                     >
                       <X className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 w-7 p-0 text-muted-foreground hover:text-purple-600 hover:bg-purple-50"
+                      title="Mark as VIP"
+                      onClick={() => handleMenuAction(action, "vip")}
+                    >
+                      <Star className="h-3.5 w-3.5" />
                     </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>

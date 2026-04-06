@@ -66,6 +66,7 @@ interface Debtor {
   nextActionDate: string | null;
   status: "active" | "inactive";
   hasCredit?: boolean;
+  isVip?: boolean;
 }
 
 const PAGE_SIZE = 20;
@@ -110,7 +111,7 @@ function daysOverdueColor(days: number): string {
   return "text-red-600";
 }
 
-type StatusFilter = "all" | "active" | "overdue";
+type StatusFilter = "all" | "active" | "overdue" | "vip";
 
 const DEFAULT_SORT: SortState = { field: "totalOutstanding", dir: "desc" };
 
@@ -178,6 +179,8 @@ export default function QollectionsDebtors() {
       result = result.filter((d) => d.status === "active");
     } else if (statusFilter === "overdue") {
       result = result.filter((d) => d.overdueAmount > 0);
+    } else if (statusFilter === "vip") {
+      result = result.filter((d) => d.isVip);
     }
 
     // Sort
@@ -266,6 +269,7 @@ export default function QollectionsDebtors() {
                   <SelectItem value="all">All</SelectItem>
                   <SelectItem value="active">Active</SelectItem>
                   <SelectItem value="overdue">Overdue</SelectItem>
+                  <SelectItem value="vip">VIP</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -442,7 +446,10 @@ export default function QollectionsDebtors() {
                       >
                         <TableCell className="py-3 px-3">
                           <div className="min-w-0">
-                            <p className="text-sm font-medium leading-tight truncate">{debtor.name}</p>
+                            <p className="text-sm font-medium leading-tight truncate flex items-center gap-1">
+                              {debtor.isVip && <Star className="h-3.5 w-3.5 text-purple-500 fill-purple-500 flex-shrink-0" />}
+                              {debtor.name}
+                            </p>
                             <p className="text-xs text-muted-foreground truncate">
                               {debtor.email}
                             </p>

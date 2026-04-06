@@ -20,7 +20,7 @@ export function registerActionCentreRoutes(app: Express): void {
       const limit = parseInt(req.query.limit as string) || 50;
       const offset = (page - 1) * limit;
 
-      // Join contacts for company name; filter out aged debt (>365 days overdue)
+      // Join contacts for company name; filter out aged debt (>365 days overdue) and VIP contacts
       const rows = await db
         .select({
           action: actions,
@@ -39,6 +39,8 @@ export function registerActionCentreRoutes(app: Express): void {
               isNull(invoices.dueDate),
               sql`${invoices.dueDate} > now() - interval '365 days'`,
             ),
+            // Exclude VIP contacts — they are managed personally
+            or(isNull(contacts.isVip), eq(contacts.isVip, false)),
           )
         )
         .orderBy(desc(actions.priority), actions.createdAt)
@@ -121,6 +123,7 @@ export function registerActionCentreRoutes(app: Express): void {
       const [countResult] = await db
         .select({ count: sql<number>`count(*)::int` })
         .from(actions)
+        .leftJoin(contacts, eq(actions.contactId, contacts.id))
         .leftJoin(invoices, eq(actions.invoiceId, invoices.id))
         .where(
           and(
@@ -131,6 +134,7 @@ export function registerActionCentreRoutes(app: Express): void {
               isNull(invoices.dueDate),
               sql`${invoices.dueDate} > now() - interval '365 days'`,
             ),
+            or(isNull(contacts.isVip), eq(contacts.isVip, false)),
           )
         );
 
@@ -219,6 +223,8 @@ export function registerActionCentreRoutes(app: Express): void {
               isNull(actions.deliveryStatus),
               eq(actions.deliveryStatus, "pending"),
             ),
+            // Exclude VIP contacts — they are managed personally
+            or(isNull(contacts.isVip), eq(contacts.isVip, false)),
           )
         )
         .orderBy(asc(actions.scheduledFor))

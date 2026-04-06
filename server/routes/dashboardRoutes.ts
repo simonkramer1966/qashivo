@@ -2172,6 +2172,7 @@ export function registerDashboardRoutes(app: Express): void {
           lastContactDate: sql<Date>`(SELECT MAX(a.created_at) FROM actions a WHERE a.contact_id = ${contacts.id} AND a.tenant_id = ${user.tenantId})`,
           nextActionDate: sql<Date>`(SELECT MIN(a.scheduled_for) FROM actions a WHERE a.contact_id = ${contacts.id} AND a.tenant_id = ${user.tenantId} AND a.status IN ('pending', 'pending_approval', 'scheduled'))`,
           isActive: contacts.isActive,
+          isVip: contacts.isVip,
         })
         .from(contacts)
         .leftJoin(
@@ -2179,7 +2180,7 @@ export function registerDashboardRoutes(app: Express): void {
           and(eq(invoices.contactId, contacts.id), eq(invoices.tenantId, user.tenantId)),
         )
         .where(and(eq(contacts.tenantId, user.tenantId), eq(contacts.isActive, true)))
-        .groupBy(contacts.id, contacts.name, contacts.companyName, contacts.email, contacts.isActive)
+        .groupBy(contacts.id, contacts.name, contacts.companyName, contacts.email, contacts.isActive, contacts.isVip)
         .having(
           sql`SUM(CASE WHEN LOWER(${invoices.status}) NOT IN ('paid', 'void', 'voided', 'deleted', 'draft') THEN ${invoices.amount} - ${invoices.amountPaid} ELSE 0 END) > 0`,
         )
@@ -2243,6 +2244,7 @@ export function registerDashboardRoutes(app: Express): void {
           nextActionDate: d.nextActionDate,
           status: d.isActive ? "active" : "inactive",
           hasCredit: netOutstanding < 0,
+          isVip: d.isVip ?? false,
         };
       });
 
@@ -2267,6 +2269,7 @@ export function registerDashboardRoutes(app: Express): void {
           nextActionDate: null as any,
           status: "active",
           hasCredit: true,
+          isVip: false,
         });
       }
 

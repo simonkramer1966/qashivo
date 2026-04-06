@@ -14,6 +14,7 @@ import {
 import { Clock, Mail, MessageSquare, Phone, X, Send, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useInvalidateActionCentre } from "@/hooks/useInvalidateActionCentre";
+import { Link } from "wouter";
 import { normalizeChannel } from "./utils";
 
 interface ScheduledAction {
@@ -179,7 +180,17 @@ export default function ScheduledTab() {
               </TableCell>
               <TableCell>
                 <div className="font-medium text-sm">
-                  {action.companyName || action.contactName || "Unknown"}
+                  {action.contactId ? (
+                    <Link
+                      href={`/qollections/debtors/${action.contactId}`}
+                      className="hover:underline"
+                      onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                    >
+                      {action.companyName || action.contactName || "Unknown"}
+                    </Link>
+                  ) : (
+                    action.companyName || action.contactName || "Unknown"
+                  )}
                 </div>
                 {action.contactName && action.companyName && (
                   <div className="text-xs text-muted-foreground">{action.contactName}</div>
