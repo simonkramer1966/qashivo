@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { ExecutedAction } from '../types';
 import { formatCurrencyCompact, getChannelLabel, formatRelativeTime } from '../utils';
+import { FilterPill } from '@/components/ui/filter-pill';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface ExecutedTabProps {
@@ -113,35 +114,26 @@ export function ExecutedTab({ actions, onSelectDebtor, isLoading }: ExecutedTabP
   return (
     <div className="flex flex-col h-[calc(100vh-220px)]">
       <div className="flex items-center justify-between pb-2 flex-shrink-0">
-        <p className="text-[13px] text-slate-400 flex-1">
+        <span className="text-[13px] text-muted-foreground">
           {filteredActions.length} actions
+        </span>
+        <div className="flex items-center gap-1.5 ml-3">
           {DATE_OPTIONS.map(opt => (
-            <button
+            <FilterPill
               key={opt.value}
+              label={opt.label}
+              active={dateFilter === opt.value}
               onClick={() => setDateFilter(opt.value)}
-              className={`ml-3 text-[12px] transition-colors ${
-                dateFilter === opt.value 
-                  ? 'text-slate-900 font-medium' 
-                  : 'text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              {opt.label}
-            </button>
+            />
           ))}
-        </p>
-        <div className="flex items-center gap-1">
+          <div className="mx-1.5 h-5 w-px bg-border self-center" />
           {CHANNEL_OPTIONS.map(opt => (
-            <button
+            <FilterPill
               key={opt.value}
+              label={opt.label}
+              active={channelFilter === opt.value}
               onClick={() => setChannelFilter(opt.value)}
-              className={`px-2 py-1 text-[12px] rounded transition-colors ${
-                channelFilter === opt.value 
-                  ? 'bg-slate-100 text-slate-900 font-medium' 
-                  : 'text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              {opt.label}
-            </button>
+            />
           ))}
         </div>
       </div>

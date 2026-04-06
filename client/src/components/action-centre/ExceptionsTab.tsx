@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { FilterPill } from "@/components/ui/filter-pill";
 import { cn } from "@/lib/utils";
 import {
   AlertTriangle, TrendingDown, CheckCircle2, ChevronRight,
@@ -110,23 +111,7 @@ function StateIndicator({ state }: { state: ExceptionState }) {
   }
 }
 
-function FilterPill({ label, count, active, onClick }: {
-  label: string; count?: number; active: boolean; onClick: () => void;
-}) {
-  return (
-    <button
-      className={cn(
-        "px-3 py-1 rounded-full text-xs transition-colors",
-        active
-          ? "bg-secondary border border-border font-medium text-foreground"
-          : "text-muted-foreground hover:text-foreground hover:bg-muted",
-      )}
-      onClick={onClick}
-    >
-      {count !== undefined ? `${label} (${count})` : label}
-    </button>
-  );
-}
+// FilterPill imported from @/components/ui/filter-pill
 
 // ── Main component ────────────────────────────────────────────
 

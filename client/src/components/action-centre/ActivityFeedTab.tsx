@@ -4,6 +4,7 @@ import { Link } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { FilterPill } from "@/components/ui/filter-pill";
 import { cn } from "@/lib/utils";
 import { Inbox } from "lucide-react";
 import {
@@ -49,33 +50,7 @@ interface FeedResponse {
   timeRange: string;
 }
 
-// ── Pill button ───────────────────────────────────────────────
-
-function Pill<T extends string>({
-  value,
-  label,
-  active,
-  onClick,
-}: {
-  value: T;
-  label: string;
-  active: boolean;
-  onClick: (v: T) => void;
-}) {
-  return (
-    <button
-      className={cn(
-        "px-3 py-1 rounded-full text-xs transition-colors",
-        active
-          ? "bg-secondary border border-border font-medium text-foreground"
-          : "text-muted-foreground hover:text-foreground hover:bg-muted",
-      )}
-      onClick={() => onClick(value)}
-    >
-      {label}
-    </button>
-  );
-}
+// ── Pill button (uses shared FilterPill) ─────────────────────
 
 // ── Status border colour ──────────────────────────────────────
 
@@ -188,15 +163,15 @@ export default function ActivityFeedTab() {
       <div className="space-y-2">
         <div className="flex flex-wrap gap-1.5">
           {(["all", "inbound", "outbound"] as Direction[]).map(v => (
-            <Pill key={v} value={v} label={v === "all" ? "All" : v === "inbound" ? "Inbound" : "Outbound"} active={direction === v} onClick={setDirection} />
+            <FilterPill key={v} label={v === "all" ? "All" : v === "inbound" ? "Inbound" : "Outbound"} active={direction === v} onClick={() => setDirection(v)} />
           ))}
           <div className="mx-1.5 h-6 w-px bg-border self-center" />
           {(["all", "email", "sms", "voice", "system"] as Channel[]).map(v => (
-            <Pill key={v} value={v} label={v === "all" ? "All" : v === "sms" ? "SMS" : v.charAt(0).toUpperCase() + v.slice(1)} active={channel === v} onClick={setChannel} />
+            <FilterPill key={v} label={v === "all" ? "All" : v === "sms" ? "SMS" : v.charAt(0).toUpperCase() + v.slice(1)} active={channel === v} onClick={() => setChannel(v)} />
           ))}
           <div className="mx-1.5 h-6 w-px bg-border self-center" />
           {(["today", "yesterday", "week", "month"] as TimeRange[]).map(v => (
-            <Pill key={v} value={v} label={v === "today" ? "Today" : v === "yesterday" ? "Yesterday" : v === "week" ? "This week" : "This month"} active={timeRange === v} onClick={setTimeRange} />
+            <FilterPill key={v} label={v === "today" ? "Today" : v === "yesterday" ? "Yesterday" : v === "week" ? "This week" : "This month"} active={timeRange === v} onClick={() => setTimeRange(v)} />
           ))}
         </div>
       </div>
