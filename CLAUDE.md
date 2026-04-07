@@ -110,6 +110,14 @@ The wrappers enforce Off / Testing / Soft Live / Live modes and **fail closed on
 
 <!-- ADD NEW ENTRIES AT THE TOP — format: YYYY-MM-DD: What changed -->
 
+- 2026-04-07: BUG FIX — Action Centre showing total outstanding instead of overdue/bundled amount. Mentzendorff row showed £32,277 (all 17 unpaid invoices) when only £11,137.40 was actually overdue and the action bundled a single £10,203.92 invoice. Two root causes fixed: (1) `actionCentreRoutes.ts` approvals query summed all unpaid invoices per contact via `contactInvoiceStats`. Now computes per-row `totalAmount` from `action.invoiceIds[]` (the bundle Charlie chose to chase), net of `amountPaid`. Account-wide outstanding still computed and exposed as `accountBalance` for context only. (2) `collectionsAgent.generateCollectionEmail` loaded ALL unpaid invoices for the LLM prompt regardless of which the action was chasing. New `actionInvoiceIds` parameter threaded from `collectionsPipeline.processCollectionEmail` (and regenerate-tone path) — when present, loads exactly those invoices; when absent (e.g. inbound reply path), defaults to overdue-only (`dueDate < now`). Renamed `loadOutstandingInvoices` → `loadChaseInvoices`. Bundle is the source of truth — Charlie does not chase payment of invoices that aren't yet due, and the email/UI never reference invoices outside the action bundle. Files: `server/services/actionPlanner.ts` (totalAmount net of amountPaid), `server/agents/collectionsAgent.ts`, `server/services/collectionsPipeline.ts`, `server/routes/actionCentreRoutes.ts`.
+- 2026-04-07: Email drawer fixes — (1) Replaced native `<input type="checkbox">` with shadcn `Checkbox` component for visible/clickable invoice selection. (2) Added "Select overdue" button between "Select all" and "Deselect all", filters by `daysOverdue > 0`. (3) Fixed contact picker click bug — Popover-inside-Sheet pointer-event interception. Added `onInteractOutside={(e) => e.preventDefault()}` and `onOpenAutoFocus={(e) => e.preventDefault()}` to PopoverContent in `RecipientChipInput.tsx`. Files: `client/src/components/email/SendEmailDrawer.tsx`, `client/src/components/email/RecipientChipInput.tsx`.
+- 2026-04-06: Sync Abstraction Layer — replaced monolithic Xero sync with platform-agnostic SyncOrchestrator + XeroAdapter (~1,980 lines). Provider-independent types, webhook router, adapter interface for QuickBooks/Sage. Files: server/sync/SyncOrchestrator.ts, server/sync/adapters/XeroAdapter.ts, server/sync/adapters/types.ts, server/sync/index.ts, server/sync/webhookRouter.ts.
+- 2026-04-06: Xero sync hardening — (1) /Date()/ format crash fixed; (2) 401/403 retry with token refresh; (3) silent failure logging + test contact exclusion from AR; (4) dynamic webhook URL from APP_URL; (5) dead sync system removed + token mutex + stale data guard; (6) health check 403 treated as auth failure. Credit notes, overpayments, prepayments now populated. Initial sync date-filtered (open invoices any age + 24mo paid). Two-pass bounded fetch for force/reconciliation syncs. Database clearing script added (scripts/clear-sync-data.mjs).
+- 2026-04-06: Collapsible sidebar with icon-only mode, persisted preference. Standardised filter-pill.tsx component across Activity, Approvals, Scheduled, Exceptions tabs. VIP restructured with navigation links + safety filters.
+- 2026-04-06: Debtor detail enhancements — DebtorStatusBanner shows Charlie's phase/tone/next action/risk signals. Communication Preferences expanded to per-debtor channel controls (3×2 grid). Tab reorder. New customerTimelineService.ts for debtor-specific timeline queries. shared/types/timeline.ts for unified event types.
+- 2026-04-06: Activity view polish — date leads in all views (time only for communications). Debtor activity tab deduplication of payment events + amount formatting with commas. Dashboard debtor list table removed (debtors via dedicated page).
+- 2026-04-06: Immediate UI Feedback architecture rule added to CLAUDE.md (optimistic UI, button states, cache invalidation, SSE patterns).
 - 2026-04-05: SMS simplified to one-way nudge channel for MVP. Outbound SMS now points debtors to check their email — no amounts, no invoice numbers, no links, no phone numbers. Inbound SMS/WhatsApp processing disabled (webhooks return 200 immediately, processing code preserved in block comments for re-enablement). LLM prompt + fallback templates + circuit breaker template fallbacks all updated to generate nudge messages. Decision tree excludes SMS at formal/legal tone levels — formal/legal communications require written, detailed, auditable email. If SMS is the only channel at formal/legal tone, an exception is created for manual review. SendSMSDialog UI updated with nudge templates and helper note. Files: webhooks.ts (SMS + WhatsApp handlers), aiMessageGenerator.ts (system/user prompts + default body), templateFallback.ts (SMS templates), decisionTree.ts (channel selection), SendSMSDialog.tsx (UI templates + note).
 - 2026-04-05: FIX — Activity Feed shows "No activity yet" despite real activity. Three root causes: (1) `actionExecutor.ts` never created `timelineEvent` records for successful outbound sends — emails/SMS were delivered but invisible to the Activity Feed which only queries `timelineEvents`. Fix: new `createOutboundTimelineEvent()` method on ActionExecutor, called from both execution paths (`executeScheduledActions` and `executeActionsByIds`) after successful delivery. Creates timeline event with direction='outbound', correct channel, summary, preview, body, and actionId linkage. Non-fatal — delivery is never blocked by a failed timeline insert. (2) Historical actions and inbound messages had no timeline events — Activity Feed endpoint now also queries `actions` table (completed/sent/failed) and `inbound_messages` table as backfill, deduplicating against existing timeline events by actionId and channel+contact+timestamp signature. (3) Time filter used UTC midnight instead of tenant timezone — "today" at 11pm BST excluded the last hour of the business day. Fix: endpoint now reads `executionTimezone` from tenants table (default Europe/London) and computes midnight in the tenant's timezone using Intl.DateTimeFormat.
 - 2026-04-05: Charlie Deterministic Decision Tree Engine implemented. New pure-function module `server/services/decisionTree.ts` (~530 lines) — zero DB queries, zero side effects, zero LLM calls. 9 sequential gate checks, behavioural categorisation (RELIABLE/COMMUNICATIVE/SILENT/UNKNOWN), phase/tone/channel/timing selection, DSO acceptance engine with partial payment calculation. Feature-flagged via `tenants.useDecisionTree` (default false). New `decisionAuditLog` table for full audit trail with outcome columns for future ML training. Integrated into `actionPlanner.ts` with input mapping from existing data structures. Existing probabilistic path preserved as fallback when flag is off.
@@ -157,9 +165,9 @@ The wrappers enforce Off / Testing / Soft Live / Live modes and **fail closed on
 <!-- ADD bugs when discovered (with date), REMOVE when fixed -->
 
 - **Ageing analysis chart bug — RESOLVED**: Diagnosed as dead code. The buggy `/api/analytics/aging-analysis` endpoint and its `aging-analysis.tsx` component were orphaned (never imported/rendered). The live Dashboard uses `/api/qollections/summary` which has correct UK ageing buckets. Dead code deleted 4 April 2026.
-- **Xero redirect URI**: Still references REPLIT_DOMAINS in xero.ts constructor — needs APP_URL
-- **Old sync code**: syncContactsToDatabase may still exist — needs deletion if unused
-- **Invoice sync incomplete**: syncInvoicesAndContacts may not be writing to both cached_xero_invoices AND main invoices table
+- **Xero redirect URI**: Still references REPLIT_DOMAINS in xero.ts constructor — needs APP_URL. This is the last remaining Sprint 5.1 item.
+- **Old sync code — FIXED (6 Apr)**: Dead sync system removed. Sync Abstraction Layer (SyncOrchestrator + XeroAdapter) replaces monolithic xeroSync.ts as the primary sync path.
+- **Invoice sync — FIXED (6 Apr)**: SyncOrchestrator writes to both cached tables and main tables. Credit notes, overpayments, and prepayments now populated during sync.
 - **SendGrid delivery webhooks — FIXED (Gap 8)**: Custom args now attached, webhook events flow through event bus to update action delivery status. Remaining limitation: connected email (Gmail/Outlook OAuth) path has no delivery tracking — no equivalent to SendGrid custom_args or webhooks. Also: `processed`, `unsubscribe`, `spamreport`, `group_unsubscribe`, `group_resubscribe` events are not handled (recorded in contactOutcomes but not in DELIVERY_EVENT_TYPES). Data Health endpoint does not yet query timeline events for hard bounce signals — the auto-flip creates the event but Data Health only checks static contact fields.
 - **Tone escalation engine stateless — FIXED (Gap 5)**: Velocity cap (±1 step/cycle) reads agentToneLevel from last completed action. No-response escalation pressure after N consecutive unanswered contacts. Significant payment override resets baseline to Professional. Two new tenant settings: noResponseEscalationThreshold (default 4), significantPaymentThreshold (default 0.50).
 - **PRS no sample size guard — FIXED (Gap 2)**: Bayesian prior (k=3) regresses thin-data debtors toward population mean or system default 60. 1 kept promise now scores ~70 (not 100). Recency weighting (90-day half-life) ensures recent behavior dominates. prsRaw and prsConfidence columns added for transparency.
@@ -229,10 +237,14 @@ The wrappers enforce Off / Testing / Soft Live / Live modes and **fail closed on
 - **Xero API training prohibition**: March 2026 developer terms prohibit using Xero API data for AI/ML training. Architecture must position AI as inference on customer-owned data. Open Banking data (via TrueLayer/Yapily) has no such restriction — all model training should use Open Banking data.
 
 ### Sync conventions
-- **Invoice-first sync**: Fetch invoices from Xero → extract contacts from invoice data → batch-fetch contact details. This is the correct sync path (xeroSync.ts), NOT the old syncContactsToDatabase.
+- **Sync Abstraction Layer (6 Apr)**: New `server/sync/` directory contains the platform-agnostic sync system. `SyncOrchestrator` manages sync lifecycle, `XeroAdapter` implements the provider interface. Types in `server/sync/adapters/types.ts`. Webhook router in `server/sync/webhookRouter.ts`. The old monolithic `xeroSync.ts` is being phased out — new code should use the abstraction layer.
+- **Invoice-first sync**: Fetch invoices from Xero → extract contacts from invoice data → batch-fetch contact details. Both the old xeroSync.ts and new XeroAdapter follow this pattern.
 - **Two sync modes**: INITIAL (clean sweep + fresh insert) for first connection. ONGOING (upsert by xeroInvoiceId/xeroContactId, never delete) for scheduled background syncs.
+- **Initial sync date filter**: Open invoices (any age) + 24 months of paid history. Reduces volume on large books.
+- **Two-pass bounded fetch**: Force and reconciliation syncs use two passes — first open invoices, then recent paid — to prevent timeout.
 - **Rate limiting**: 1.5 second delay between paginated Xero API calls, 60 second wait on 429.
-- **Token refresh**: Proactive (check expiry with 2-min buffer before API calls) + reactive (401 retry once). Failed refresh → mark connection "expired", prompt user to reconnect.
+- **Token refresh**: Proactive (check expiry with 2-min buffer before API calls) + reactive (401/403 retry once). Failed refresh → mark connection "expired", prompt user to reconnect. 403 is now treated as auth failure (not just 401).
+- **Xero date format gotcha**: Xero returns dates in `/Date(timestamp+offset)/` format. Must parse before DB insert or Drizzle will crash.
 
 ### Design system
 - **shadcn/ui**: zinc neutral palette, semantic tokens, minimal borders, near-black primary actions.
@@ -283,9 +295,16 @@ npm run db:push    # Drizzle Kit: push schema changes to PostgreSQL
   - `agents/prompts/` — Prompt assembly functions per action type
   - `services/compliance/` — Compliance engine (rule-based v1)
   - `services/llm/claude.ts` — Claude API abstraction (generateText(), generateJSON())
+  - `sync/` — Sync Abstraction Layer (added 6 Apr). Platform-agnostic sync system.
+    - `SyncOrchestrator.ts` — sync lifecycle management
+    - `adapters/XeroAdapter.ts` — Xero-specific sync implementation
+    - `adapters/types.ts` — provider-independent types
+    - `webhookRouter.ts` — webhook routing by provider
+    - `index.ts` — public API
 - `shared/` — Code shared by client and server
   - `schema.ts` — Single source of truth: ~92 Drizzle tables, Zod validation schemas, TypeScript types
-  - `types/`, `utils/`, `forecast.ts`, `currencies.ts`
+  - `types/` — shared type definitions (includes `timeline.ts` for unified event types)
+  - `utils/`, `forecast.ts`, `currencies.ts`
 - `migrations/` — Drizzle-generated SQL migrations
 - `docs/` — Feature & architecture documentation + QASHIVO_CONTEXT.md
 
@@ -361,15 +380,24 @@ Started from `server/startup/orchestrator.ts`. All fire-and-forget async calls m
 
 ### Data flow (Xero sync)
 ```
-Xero API
-  ↓ (invoice-first sync, 1.5s rate limit between pages)
-cached_xero_invoices (raw cache) + invoices table + contacts table
-  ↓
-AR overlay fields preserved (NEVER overwritten)
-  ↓
-Data Health assessment recalculated
-  ↓
-Debtor scoring job queued
+Two paths exist (transitioning from old → new):
+
+OLD (xeroSync.ts — being phased out):
+  Xero API → cached tables + main tables → AR overlay preserved → scoring
+
+NEW (server/sync/ — Sync Abstraction Layer, 6 Apr):
+  SyncOrchestrator → XeroAdapter → Xero API
+    ↓ (invoice-first, date-filtered, two-pass bounded fetch)
+  cached_xero_invoices + cached_xero_credit_notes + cached_xero_overpayments
+    + invoices table + contacts table
+    ↓
+  AR overlay fields preserved (NEVER overwritten)
+    ↓
+  Credit notes, overpayments, prepayments populated
+    ↓
+  Data Health assessment recalculated
+    ↓
+  Debtor scoring / enrichment queued
 ```
 
 ### Core pipeline: LLM Email Generation → Delivery

@@ -1261,7 +1261,11 @@ export async function planAdaptiveActions(
 
           const invoiceIds = scoredInvoices.map(si => si.invoice.id);
           const invoiceNumbers = scoredInvoices.map(si => si.invoice.invoiceNumber).join(', ');
-          const totalAmount = scoredInvoices.reduce((sum, si) => sum + Number(si.invoice.amount || 0), 0);
+          // Net of any payments already received against these invoices
+          const totalAmount = scoredInvoices.reduce(
+            (sum, si) => sum + (Number(si.invoice.amount || 0) - Number(si.invoice.amountPaid || 0)),
+            0
+          );
 
           // Gap 4: Skip if consolidated total below minimum chase threshold
           if (totalAmount < minChaseThreshold) {

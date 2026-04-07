@@ -80,14 +80,38 @@ export function registerActionCentreRoutes(app: Express): void {
         : [];
       const priorCountMap = new Map(priorCounts.map(p => [p.contactId, p.count]));
 
-      // Batch-fetch overdue invoice totals per contact
+      // Compute per-action chase amount from the action's invoice bundle (action.invoiceIds[]).
+      // This is the source of truth — what Charlie chose to chase — not the contact's
+      // total outstanding. Falls back to action.invoiceId for legacy single-invoice actions.
       const now = new Date();
-      const contactInvoiceStats = contactIds.length > 0
+      const allBundleInvoiceIds = Array.from(
+        new Set(
+          rows.flatMap(r => {
+            const ids = r.action.invoiceIds?.length
+              ? r.action.invoiceIds
+              : (r.action.invoiceId ? [r.action.invoiceId] : []);
+            return ids;
+          })
+        )
+      );
+
+      const bundleInvoices = allBundleInvoiceIds.length > 0
+        ? await db.select({
+            id: invoices.id,
+            amount: invoices.amount,
+            amountPaid: invoices.amountPaid,
+            dueDate: invoices.dueDate,
+            status: invoices.status,
+          }).from(invoices).where(inArray(invoices.id, allBundleInvoiceIds))
+        : [];
+      const bundleInvoiceMap = new Map(bundleInvoices.map(inv => [inv.id, inv]));
+
+      // Total outstanding per contact (account balance) — context only, NOT the chase amount.
+      // Used for the optional "we also note your account balance stands at £X" line.
+      const contactOutstanding = contactIds.length > 0
         ? await db.select({
             contactId: invoices.contactId,
-            totalAmount: sql<string>`coalesce(sum(cast(${invoices.amount} as numeric) - cast(coalesce(${invoices.amountPaid}, '0') as numeric)), 0)::text`,
-            invoiceCount: sql<number>`count(*)::int`,
-            oldestDueDate: sql<string>`min(${invoices.dueDate})::text`,
+            totalOutstanding: sql<string>`coalesce(sum(cast(${invoices.amount} as numeric) - cast(coalesce(${invoices.amountPaid}, '0') as numeric)), 0)::text`,
           }).from(invoices).where(
             and(
               eq(invoices.tenantId, user.tenantId),
@@ -96,16 +120,36 @@ export function registerActionCentreRoutes(app: Express): void {
             )
           ).groupBy(invoices.contactId)
         : [];
-      const invoiceStatsMap = new Map(contactInvoiceStats.map(s => [s.contactId, s]));
+      const outstandingMap = new Map(contactOutstanding.map(s => [s.contactId, parseFloat(s.totalOutstanding)]));
 
       // Flatten: spread action fields + add enriched context
       const flatRows = rows.map(r => {
         const cid = r.action.contactId;
         const profile = cid ? profileMap.get(cid) : null;
         const priorCount = cid ? (priorCountMap.get(cid) ?? 0) : 0;
-        const invStats = cid ? invoiceStatsMap.get(cid) : null;
-        const oldestDue = invStats?.oldestDueDate ? new Date(invStats.oldestDueDate) : null;
-        const daysOverdue = oldestDue ? Math.max(0, Math.floor((now.getTime() - oldestDue.getTime()) / (1000 * 60 * 60 * 24))) : 0;
+
+        // Resolve this action's invoice bundle
+        const actionInvoiceIds = r.action.invoiceIds?.length
+          ? r.action.invoiceIds
+          : (r.action.invoiceId ? [r.action.invoiceId] : []);
+        const bundleRows = actionInvoiceIds
+          .map(id => bundleInvoiceMap.get(id))
+          .filter((inv): inv is NonNullable<typeof inv> => !!inv);
+
+        // Per-action chase amount = sum of (amount - amountPaid) for the bundled invoices
+        const chaseAmount = bundleRows.reduce(
+          (sum, inv) => sum + (Number(inv.amount || 0) - Number(inv.amountPaid || 0)),
+          0
+        );
+
+        // Days overdue = oldest invoice in the bundle
+        const oldestDue = bundleRows.reduce<Date | null>((oldest, inv) => {
+          if (!inv.dueDate) return oldest;
+          return !oldest || inv.dueDate < oldest ? inv.dueDate : oldest;
+        }, null);
+        const daysOverdue = oldestDue
+          ? Math.max(0, Math.floor((now.getTime() - oldestDue.getTime()) / (1000 * 60 * 60 * 24)))
+          : 0;
 
         return {
           ...r.action,
@@ -115,8 +159,9 @@ export function registerActionCentreRoutes(app: Express): void {
           daysOverdue,
           priorContactCount: priorCount,
           prsScore: profile?.prs ? Number(profile.prs) : null,
-          totalAmount: invStats ? parseFloat(invStats.totalAmount) : 0,
-          invoiceCount: invStats?.invoiceCount ?? 0,
+          totalAmount: chaseAmount, // What Charlie is chasing in THIS action
+          accountBalance: cid ? (outstandingMap.get(cid) ?? 0) : 0, // Total outstanding (context)
+          invoiceCount: bundleRows.length,
         };
       });
 

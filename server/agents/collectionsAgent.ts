@@ -14,7 +14,7 @@
  */
 
 import { db } from "../db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, inArray } from "drizzle-orm";
 import {
   agentPersonas,
   contacts,
@@ -60,14 +60,19 @@ export async function generateCollectionEmail(
   contactId: string,
   actionContext: ActionContext,
   personaOverride?: AgentPersona,
+  actionInvoiceIds?: string[],
 ): Promise<CollectionEmailResult> {
   // 1. Resolve persona
   const persona = personaOverride ?? await resolvePersona(tenantId);
 
   // 2. Load debtor profile, invoices, history, policy, and conversation brief in parallel
-  const [debtor, outstandingInvoices, history, policy, brief] = await Promise.all([
+  // When actionInvoiceIds is provided, the chase invoices are limited to that bundle.
+  // Otherwise, only invoices that are actually overdue (dueDate < now) are included —
+  // never not-yet-due invoices, so the email never demands payment of invoices that
+  // aren't yet due.
+  const [debtor, chaseInvoices, history, policy, brief] = await Promise.all([
     loadDebtorProfile(tenantId, contactId),
-    loadOutstandingInvoices(tenantId, contactId),
+    loadChaseInvoices(tenantId, contactId, actionInvoiceIds),
     loadConversationHistory(tenantId, contactId),
     loadPolicy(tenantId),
     buildConversationBrief(tenantId, contactId),
@@ -91,7 +96,7 @@ export async function generateCollectionEmail(
     cooldownDaysBetweenTouches: policy?.cooldownDaysBetweenTouches ?? undefined,
   };
   const systemPrompt = buildSystemPrompt(persona, policyConstraints, debtor.language, debtor.currency);
-  const userPrompt = buildUserPrompt(debtor, outstandingInvoices, history, effectiveAction, brief.text);
+  const userPrompt = buildUserPrompt(debtor, chaseInvoices, history, effectiveAction, brief.text);
 
   // 5. Call Claude (Sonnet — cost-effective, fast)
   const result = await generateJSON<CollectionEmailResult>({
@@ -177,23 +182,60 @@ async function loadDebtorProfile(tenantId: string, contactId: string): Promise<D
   };
 }
 
-async function loadOutstandingInvoices(tenantId: string, contactId: string): Promise<OutstandingInvoice[]> {
+/**
+ * Load the invoices Charlie is chasing for this email.
+ *
+ * - If `actionInvoiceIds` is provided, returns those exact invoices (the action's
+ *   bundle), filtered to those that are still chaseable (unpaid, not void/deleted,
+ *   not paused).
+ * - Otherwise, returns only invoices that are actually OVERDUE (dueDate < now) for
+ *   the contact. Never includes not-yet-due invoices — Charlie does not demand
+ *   payment of invoices that aren't yet due.
+ *
+ * Excluded statuses: paid, cancelled, voided, deleted, draft. Paused invoices
+ * (dispute, ptp, payment_plan) are also excluded.
+ */
+async function loadChaseInvoices(
+  tenantId: string,
+  contactId: string,
+  actionInvoiceIds?: string[],
+): Promise<OutstandingInvoice[]> {
+  const baseConditions = [
+    eq(invoices.tenantId, tenantId),
+    eq(invoices.contactId, contactId),
+  ];
+
+  if (actionInvoiceIds && actionInvoiceIds.length > 0) {
+    baseConditions.push(inArray(invoices.id, actionInvoiceIds));
+  }
+
   const rows = await db
     .select()
     .from(invoices)
-    .where(and(
-      eq(invoices.tenantId, tenantId),
-      eq(invoices.contactId, contactId),
-    ))
+    .where(and(...baseConditions))
     .orderBy(desc(invoices.dueDate));
 
   const now = new Date();
+  const EXCLUDED_STATUSES = new Set(["paid", "cancelled", "void", "voided", "deleted", "draft"]);
+  const EXCLUDED_INVOICE_STATUSES = new Set(["VOID", "PAID", "DELETED", "DRAFT"]);
+
   return rows
     .filter(inv => {
-      // Only include unpaid / partially paid invoices that aren't cancelled
-      const isPaid = inv.status === "paid" || inv.status === "cancelled";
-      const isVoided = inv.invoiceStatus === "VOID" || inv.invoiceStatus === "PAID";
-      return !isPaid && !isVoided;
+      // Status filters — only chaseable invoices
+      if (inv.status && EXCLUDED_STATUSES.has(inv.status.toLowerCase())) return false;
+      if (inv.invoiceStatus && EXCLUDED_INVOICE_STATUSES.has(inv.invoiceStatus)) return false;
+      // Skip paused invoices (dispute, ptp, payment_plan) — handled outside the chase flow
+      if (inv.pauseState) return false;
+      if (inv.isOnHold) return false;
+
+      // When loading by contactId without an explicit bundle, only return overdue invoices.
+      // When loading from a specific action bundle, trust the planner — the bundle is what
+      // Charlie chose to chase, and the loader should not second-guess it.
+      if (!actionInvoiceIds || actionInvoiceIds.length === 0) {
+        if (inv.dueDate.getTime() >= now.getTime()) return false;
+      }
+
+      return true;
     })
     .map(inv => {
       const daysOverdue = Math.floor((now.getTime() - inv.dueDate.getTime()) / (1000 * 60 * 60 * 24));

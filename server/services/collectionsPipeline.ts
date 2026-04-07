@@ -60,12 +60,25 @@ export async function processCollectionEmail(
     // 1. Map Charlie decision → agent action context
     let actionContext = await mapDecisionToActionContext(decision);
 
+    // Resolve the action's invoice bundle so the LLM only references the invoices
+    // Charlie chose to chase, not the contact's entire outstanding balance.
+    const [actionRecord] = await db
+      .select({ invoiceIds: actions.invoiceIds, invoiceId: actions.invoiceId })
+      .from(actions)
+      .where(eq(actions.id, actionId))
+      .limit(1);
+    const actionInvoiceIds: string[] = actionRecord?.invoiceIds?.length
+      ? actionRecord.invoiceIds
+      : (actionRecord?.invoiceId ? [actionRecord.invoiceId] : []);
+
     // 2. Generate email via Collections Agent (LLM)
-    console.log(`[Pipeline] Generating LLM email for contact ${contactId}`);
+    console.log(`[Pipeline] Generating LLM email for contact ${contactId} (${actionInvoiceIds.length} invoices in bundle)`);
     const emailResult = await generateCollectionEmail(
       tenantId,
       contactId,
       actionContext,
+      undefined,
+      actionInvoiceIds,
     );
 
     if (!emailResult.body) {
@@ -111,7 +124,7 @@ export async function processCollectionEmail(
       // Regenerate at lower tone — cap at "professional"
       console.log(`[Pipeline] Regenerating at lower tone`);
       const lowerContext: ActionContext = { ...actionContext, toneLevel: "professional" };
-      const regenerated = await generateCollectionEmail(tenantId, contactId, lowerContext);
+      const regenerated = await generateCollectionEmail(tenantId, contactId, lowerContext, undefined, actionInvoiceIds);
 
       // Re-run compliance on regenerated content
       const recheck = await checkCompliance({
@@ -408,11 +421,18 @@ export async function regenerateAtTone(
     touchCount: 0,
   };
 
+  // Resolve the action's invoice bundle so the LLM only references the chase invoices
+  const actionInvoiceIds: string[] = action.invoiceIds?.length
+    ? action.invoiceIds
+    : (action.invoiceId ? [action.invoiceId] : []);
+
   // Generate new email via the collections agent LLM
   const emailResult = await generateCollectionEmail(
     action.tenantId,
     action.contactId,
     actionContext,
+    undefined,
+    actionInvoiceIds,
   );
 
   if (!emailResult.body) {
