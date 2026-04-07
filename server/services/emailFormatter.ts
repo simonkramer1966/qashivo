@@ -18,13 +18,40 @@
  * (wrapped in the outer template only).
  */
 export function formatEmailHtml(body: string): string {
-  // If the body already has block-level HTML, skip conversion but still wrap
+  // If the body already has block-level HTML, skip conversion but still wrap.
+  // We must still inject margin styles into bare <p> tags — the LLM often
+  // forgets inline styles and email clients (Gmail, Outlook, Apple Mail) strip
+  // <style> blocks, leaving paragraphs flush against each other.
   if (/<(?:p|div|table|ul|ol|h[1-6])\b/i.test(body)) {
-    return wrapInTemplate(body);
+    return wrapInTemplate(injectParagraphSpacing(body));
   }
 
   const html = textToHtml(body);
   return wrapInTemplate(html);
+}
+
+/**
+ * Inject inline margin into bare <p> tags from LLM-generated HTML.
+ * Preserves any existing style attribute by appending margin only when absent.
+ * Email clients strip <style> blocks, so margins MUST be inline.
+ */
+function injectParagraphSpacing(html: string): string {
+  return html.replace(/<p(\s[^>]*)?>/gi, (match, attrs) => {
+    const attrString = attrs || '';
+    // If a style attribute already exists, only append margin if not set
+    const styleMatch = attrString.match(/style\s*=\s*"([^"]*)"/i);
+    if (styleMatch) {
+      const styleValue = styleMatch[1];
+      if (/margin\s*:/i.test(styleValue) || /margin-bottom\s*:/i.test(styleValue)) {
+        return match; // already has margin — leave alone
+      }
+      const newStyle = styleValue.trim().replace(/;?\s*$/, '') + ';margin:0 0 12px 0;';
+      const newAttrs = attrString.replace(/style\s*=\s*"[^"]*"/i, `style="${newStyle}"`);
+      return `<p${newAttrs}>`;
+    }
+    // No style attribute — add one
+    return `<p${attrString} style="margin:0 0 12px 0;">`;
+  });
 }
 
 /**
