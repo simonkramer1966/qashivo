@@ -319,8 +319,8 @@ class AIMessageGenerator {
 
     const tone = toneDescriptions[toneSettings.toneProfile] || toneDescriptions.CREDIT_CONTROL_FRIENDLY;
 
-    const invoiceTableInstruction = hasMultipleInvoices ? `
-- IMPORTANT: When there are multiple invoices, you MUST include an HTML table listing each invoice with columns: Invoice Number, Amount, Due Date, Days Overdue. Use clean styling with borders and proper formatting. Place the table after the opening context paragraph.` : '';
+    const invoiceTableInstruction = `
+- INVOICE FORMATTING (MANDATORY): When the email references one or more invoices, you MUST include an HTML table with these exact columns in this order: Invoice #, Amount, Due Date, Days Overdue. One row per invoice. Never list invoices as inline text, bullet points, or comma-separated lists. Use minimal inline styles: <table style="border-collapse:collapse;width:100%;margin:16px 0;">, <th style="border:1px solid #ddd;padding:8px;text-align:left;background:#f5f5f5;">, <td style="border:1px solid #ddd;padding:8px;">. The rule applies even when there is only a single invoice.`;
 
     return `You are a professional credit control specialist writing collection emails for UK businesses.
 
@@ -341,15 +341,19 @@ Guidelines:
 ${toneSettings.useLatePaymentLegislation ? "- You may reference the Late Payment of Commercial Debts (Interest) Act 1998 if appropriate" : ""}
 
 HTML FORMATTING REQUIREMENTS (CRITICAL):
-- Wrap EVERY paragraph in <p></p> tags - this is essential for proper email rendering
-- Structure your email with separate paragraphs for: greeting, context, main message, call to action, sign-off
+- Emit the ENTIRE email body as well-formed HTML. Wrap EVERY paragraph in <p></p> tags. Use <br> for soft line breaks.
+- Place the mandatory invoice table between the relevant paragraphs. Do not mix plain text with HTML.
+- Sign-off must contain THREE labelled lines, in this order, never substituted or duplicated:
+  Line 1 — Sender Name
+  Line 2 — Sender Title
+  Line 3 — Company Name
+  Render inside a single <p> with <br> between lines. Never repeat the company name on multiple lines. Never replace the name line with the company name.
 - Example structure:
   <p>Dear [Name],</p>
   <p>[Opening context about invoice(s)]</p>
-  [Invoice table if multiple invoices]
-  <p>[Main message with details]</p>
-  <p>[Call to action]</p>
-  <p>Kind regards,<br>[Sender]</p>
+  [Invoice table — mandatory for any invoice reference]
+  <p>[Main message and call to action]</p>
+  <p>Kind regards,<br>[Sender Name]<br>[Title]<br>[Company]</p>
 
 Respond with valid JSON containing:
 {
@@ -374,14 +378,14 @@ Respond with valid JSON containing:
       situationContext = `We have contacted this customer ${context.previousContactCount} times already. This requires a more direct approach.`;
     }
 
-    // Build invoice details section if multiple invoices
+    // Build invoice details section — render as mandatory HTML table for any invoice count
     let invoiceDetailsSection = '';
-    if (context.invoiceDetails && context.invoiceDetails.length > 1) {
-      invoiceDetailsSection = `\nInvoice Breakdown (INCLUDE AS HTML TABLE IN EMAIL):\n`;
+    if (context.invoiceDetails && context.invoiceDetails.length >= 1) {
+      invoiceDetailsSection = `\nInvoice Breakdown (RENDER AS THE MANDATORY HTML TABLE — columns: Invoice #, Amount, Due Date, Days Overdue):\n`;
       context.invoiceDetails.forEach(inv => {
-        invoiceDetailsSection += `- ${inv.invoiceNumber}: ${currency}${inv.amount.toFixed(2)}, Due: ${inv.dueDate.toLocaleDateString('en-GB')}, ${inv.daysOverdue} days overdue\n`;
+        invoiceDetailsSection += `  | ${inv.invoiceNumber} | ${currency}${inv.amount.toFixed(2)} | ${inv.dueDate.toLocaleDateString('en-GB')} | ${inv.daysOverdue} days overdue |\n`;
       });
-      invoiceDetailsSection += `\nIMPORTANT: You MUST include an HTML table with the above invoices in the email body.`;
+      invoiceDetailsSection += `\nIMPORTANT: You MUST include an HTML table with the above invoices in the email body, even if there is only one row.`;
     }
 
     // Conversation brief — full debtor context

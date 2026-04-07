@@ -126,14 +126,30 @@ export function buildSystemPrompt(
   }
   lines.push("");
 
+  // Invoice formatting (mandatory HTML table)
+  lines.push(`INVOICE FORMATTING (MANDATORY):`);
+  lines.push(`- When the email references one or more invoices, present them in an HTML table with these exact columns: Invoice #, Amount, Due Date, Days Overdue.`);
+  lines.push(`- Never list invoices as inline text, bullet points, or comma-separated lists. Always use the HTML table.`);
+  lines.push(`- Because the body must contain an HTML table, emit the ENTIRE email body as well-formed HTML: wrap each paragraph in <p>, use <br> for soft line breaks, and place the <table> between the relevant paragraphs. Do not mix plain text with HTML.`);
+  lines.push(`- Use minimal inline styles for table compatibility: <table style="border-collapse:collapse;width:100%;margin:16px 0;">, <th style="border:1px solid #ddd;padding:8px;text-align:left;background:#f5f5f5;">, <td style="border:1px solid #ddd;padding:8px;">.`);
+  lines.push(`- Everything else — greeting, paragraph count, tone, structure, call to action — adapts to tone level and debtor context. Do not follow a rigid template.`);
+  lines.push("");
+
   // Email signature
-  lines.push(`EMAIL SIGNATURE (always end emails with this):`);
-  lines.push(`${persona.emailSignatureName}`);
-  lines.push(`${persona.emailSignatureTitle}`);
-  lines.push(`${persona.emailSignatureCompany}`);
-  if (persona.emailSignaturePhone) {
-    lines.push(`Tel: ${persona.emailSignaturePhone}`);
+  const signatureLines: string[] = [persona.emailSignatureName, persona.emailSignatureTitle];
+  if (persona.emailSignatureCompany && persona.emailSignatureCompany !== persona.emailSignatureName) {
+    signatureLines.push(persona.emailSignatureCompany);
   }
+  lines.push(`EMAIL SIGNATURE (sign off with EXACTLY these lines, in this order, never substituting or duplicating):`);
+  lines.push(`Line 1 — Name: ${signatureLines[0]}`);
+  lines.push(`Line 2 — Title: ${signatureLines[1]}`);
+  if (signatureLines[2]) {
+    lines.push(`Line 3 — Company: ${signatureLines[2]}`);
+  }
+  if (persona.emailSignaturePhone) {
+    lines.push(`Line 4 — Phone (optional): Tel: ${persona.emailSignaturePhone}`);
+  }
+  lines.push(`Never repeat the company name on multiple lines. Never replace the name line with the company name. Render the signature inside <p> tags with <br> between lines.`);
   lines.push("");
 
   // Output format
@@ -214,21 +230,17 @@ export function buildUserPrompt(
     const chaseAmount = invoices.reduce((sum, inv) => sum + (inv.amount - inv.amountPaid), 0);
     sections.push(`- AMOUNT TO DEMAND: ${formatCurrencyForPrompt(chaseAmount, debtor.currency)} (sum of the invoices below)`);
     sections.push(`- This is the ONLY amount you should ask the debtor to pay. Do NOT cite any larger or different total. The subject line must reference ${formatCurrencyForPrompt(chaseAmount, debtor.currency)}, not any other figure.`);
-    sections.push(`- List each invoice individually in the email body so the debtor knows exactly what is being chased.`);
     sections.push('');
-    sections.push(`Invoices in this chase (${invoices.length} invoice${invoices.length === 1 ? '' : 's'}):`);
+    sections.push(`Render the following invoices as the mandatory HTML table (columns: Invoice #, Amount, Due Date, Days Overdue):`);
     for (const inv of invoices) {
       const balance = inv.amount - inv.amountPaid;
-      const stateInfo = inv.pauseState
-        ? `${inv.workflowState} (paused: ${inv.pauseState})`
-        : inv.workflowState;
       const overdueLabel = inv.daysOverdue > 0
         ? `${inv.daysOverdue} days overdue`
         : inv.daysOverdue === 0
           ? "due today"
           : `due in ${Math.abs(inv.daysOverdue)} days`;
       const dueStr = inv.dueDate.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-      sections.push(`- ${inv.invoiceNumber}: ${formatCurrencyForPrompt(balance, debtor.currency)} — due ${dueStr} (${overdueLabel}) — state: ${stateInfo}`);
+      sections.push(`  | ${inv.invoiceNumber} | ${formatCurrencyForPrompt(balance, debtor.currency)} | ${dueStr} | ${overdueLabel} |`);
     }
 
     // LPI section
