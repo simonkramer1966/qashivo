@@ -614,11 +614,28 @@ export class ActionExecutor {
       ? Math.max(0, Math.floor((Date.now() - new Date(invoice.dueDate).getTime()) / (1000 * 60 * 60 * 24)))
       : action.metadata?.daysOverdue || 0;
 
-    // Build conversation brief for full debtor context
+    // Build conversation brief for full debtor context. Pass chase context
+    // (the bundled invoices) so the brief tells the LLM to demand the
+    // bundled total, not the relationship-wide total.
     let conversationBrief: string | undefined;
     try {
       if (contact.id && action.tenantId) {
-        const brief = await buildConversationBrief(action.tenantId, contact.id);
+        const actionInvoiceIds: string[] = Array.isArray(action.invoiceIds) && action.invoiceIds.length > 0
+          ? action.invoiceIds
+          : (action.invoiceId ? [action.invoiceId] : []);
+        let chaseContext: { chaseAmount: number; chaseInvoiceCount: number } | undefined;
+        if (actionInvoiceIds.length > 0) {
+          const bundleRows = await db
+            .select({ amount: invoices.amount, amountPaid: invoices.amountPaid })
+            .from(invoices)
+            .where(inArray(invoices.id, actionInvoiceIds));
+          const chaseAmount = bundleRows.reduce(
+            (sum, inv) => sum + (Number(inv.amount || 0) - Number(inv.amountPaid || 0)),
+            0,
+          );
+          chaseContext = { chaseAmount, chaseInvoiceCount: bundleRows.length };
+        }
+        const brief = await buildConversationBrief(action.tenantId, contact.id, chaseContext);
         conversationBrief = brief.text;
       }
     } catch (err) {

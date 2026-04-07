@@ -203,12 +203,20 @@ export function buildUserPrompt(
   }
   sections.push("");
 
-  // Outstanding invoices
-  sections.push(`OUTSTANDING INVOICES:`);
+  // Outstanding invoices — these are the SPECIFIC invoices Charlie chose
+  // to chase in this email (the action's bundle). The LLM must demand
+  // payment of THIS amount only, not any relationship-wide total mentioned
+  // in the conversation brief.
+  sections.push(`INVOICES TO CHASE IN THIS EMAIL:`);
   if (invoices.length === 0) {
-    sections.push("- No outstanding invoices on record.");
+    sections.push("- No invoices to chase. Do not generate a payment demand.");
   } else {
-    const totalOwed = invoices.reduce((sum, inv) => sum + (inv.amount - inv.amountPaid), 0);
+    const chaseAmount = invoices.reduce((sum, inv) => sum + (inv.amount - inv.amountPaid), 0);
+    sections.push(`- AMOUNT TO DEMAND: ${formatCurrencyForPrompt(chaseAmount, debtor.currency)} (sum of the invoices below)`);
+    sections.push(`- This is the ONLY amount you should ask the debtor to pay. Do NOT cite any larger or different total. The subject line must reference ${formatCurrencyForPrompt(chaseAmount, debtor.currency)}, not any other figure.`);
+    sections.push(`- List each invoice individually in the email body so the debtor knows exactly what is being chased.`);
+    sections.push('');
+    sections.push(`Invoices in this chase (${invoices.length} invoice${invoices.length === 1 ? '' : 's'}):`);
     for (const inv of invoices) {
       const balance = inv.amount - inv.amountPaid;
       const stateInfo = inv.pauseState
@@ -219,16 +227,8 @@ export function buildUserPrompt(
         : inv.daysOverdue === 0
           ? "due today"
           : `due in ${Math.abs(inv.daysOverdue)} days`;
-      sections.push(`- ${inv.invoiceNumber}: ${formatCurrencyForPrompt(balance, debtor.currency)} — ${overdueLabel} — state: ${stateInfo}`);
-    }
-    sections.push(`- Total owed: ${formatCurrencyForPrompt(totalOwed, debtor.currency)}`);
-
-    // Credit balance netting
-    if (debtor.creditBalance && debtor.creditBalance > 0) {
-      const netAmount = Math.max(0, totalOwed - debtor.creditBalance);
-      sections.push(`- Unapplied credits: ${formatCurrencyForPrompt(debtor.creditBalance, debtor.currency)} (credit notes/overpayments)`);
-      sections.push(`- NET amount owed after credits: ${formatCurrencyForPrompt(netAmount, debtor.currency)}`);
-      sections.push(`- IMPORTANT: Reference the NET amount (${formatCurrencyForPrompt(netAmount, debtor.currency)}) in your email, NOT the gross total.`);
+      const dueStr = inv.dueDate.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+      sections.push(`- ${inv.invoiceNumber}: ${formatCurrencyForPrompt(balance, debtor.currency)} — due ${dueStr} (${overdueLabel}) — state: ${stateInfo}`);
     }
 
     // LPI section

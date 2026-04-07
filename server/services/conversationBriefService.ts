@@ -87,6 +87,22 @@ export interface ConversationBriefData {
   };
 }
 
+/**
+ * Chase context: which invoices the current action is actually chasing.
+ * When provided, the brief will tell the LLM to demand payment of THIS amount
+ * (the bundle), not the relationship-wide total. The relationship total is
+ * still shown for context but explicitly demoted to "context only — do not
+ * cite in the email".
+ */
+export interface ChaseContext {
+  /** Sum of (amount - amountPaid) for the invoices being chased */
+  chaseAmount: number;
+  /** Number of invoices in the chase bundle */
+  chaseInvoiceCount: number;
+  /** Currency symbol/code (defaults to GBP) */
+  currency?: string;
+}
+
 // ── Per-run cache ────────────────────────────────────────────
 
 const briefCache = new Map<string, { brief: ConversationBrief; cachedAt: number }>();
@@ -94,7 +110,11 @@ const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes — covers a full planning run
 
 /** Clear cache for a contact (call on new inbound events) */
 export function invalidateBriefCache(contactId: string): void {
-  briefCache.delete(contactId);
+  // Clear all cache entries for this contact (any chase context variant)
+  const keys = Array.from(briefCache.keys());
+  for (const key of keys) {
+    if (key.startsWith(`${contactId}:`)) briefCache.delete(key);
+  }
 }
 
 /** Clear entire cache (call at start of planning run) */
@@ -107,13 +127,22 @@ export function clearBriefCache(): void {
 /**
  * Build a conversation brief for a debtor.
  * Cached per contact for the duration of a planning run.
+ *
+ * @param chaseContext - Optional. When provided, the brief frames the email
+ *   around chasing the bundled amount, not the relationship-wide total. Pass
+ *   this from any caller that has already determined which invoices the
+ *   current action will chase (e.g. collectionsAgent with action.invoiceIds).
  */
 export async function buildConversationBrief(
   tenantId: string,
   contactId: string,
+  chaseContext?: ChaseContext,
 ): Promise<ConversationBrief> {
-  // Check cache
-  const cached = briefCache.get(contactId);
+  // Cache key includes chase context so different bundles don't collide
+  const cacheKey = chaseContext
+    ? `${contactId}:${chaseContext.chaseAmount.toFixed(2)}:${chaseContext.chaseInvoiceCount}`
+    : `${contactId}:none`;
+  const cached = briefCache.get(cacheKey);
   if (cached && Date.now() - cached.cachedAt < CACHE_TTL_MS) {
     return cached.brief;
   }
@@ -155,13 +184,14 @@ export async function buildConversationBrief(
   const data = assembleData(
     contact, timeline, promises, outstandingInvs, signals,
     facts, prefs, intel, recentEmails, recentActions, forecasts, chaseDelayDays, creditBalance,
+    chaseContext,
   );
-  const text = formatBriefText(data, contact, prefs);
+  const text = formatBriefText(data, contact, prefs, chaseContext);
 
   const brief: ConversationBrief = { text, data };
 
   // Cache
-  briefCache.set(contactId, { brief, cachedAt: Date.now() });
+  briefCache.set(cacheKey, { brief, cachedAt: Date.now() });
 
   return brief;
 }
@@ -366,6 +396,7 @@ function assembleData(
   forecasts: any[],
   chaseDelayDays: number,
   creditBalance: number = 0,
+  chaseContext?: ChaseContext,
 ): ConversationBriefData {
   const now = new Date();
 
@@ -459,9 +490,19 @@ function assembleData(
   if (contact?.probablePaymentDetected) {
     constraints.push('Probable payment detected — do NOT chase aggressively, payment may have been made.');
   }
-  if (creditBalance > 0) {
+  if (creditBalance > 0 && !chaseContext) {
+    // Only relevant when there's no specific chase bundle — when chasing a
+    // specific bundle, the chase amount (sum of bundle invoices) is what
+    // matters, not the relationship-wide net.
     const netAmount = Math.max(0, totalOutstanding - creditBalance);
     constraints.push(`Debtor has £${creditBalance.toFixed(2)} in unapplied credits. Reference net outstanding (£${netAmount.toFixed(2)}), NOT gross invoice totals.`);
+  }
+  if (chaseContext) {
+    // When a specific bundle is being chased, the chase amount overrides
+    // every other amount in the brief. The LLM must demand THIS amount.
+    constraints.push(
+      `THIS EMAIL CHASES £${chaseContext.chaseAmount.toFixed(2)} across ${chaseContext.chaseInvoiceCount} invoice(s) — NOT the relationship total. Demand payment of £${chaseContext.chaseAmount.toFixed(2)} only. Do NOT cite the relationship total of £${totalOutstanding.toFixed(2)} as the amount owed. The relationship total may be mentioned briefly as context ("we also note your overall account balance stands at £${totalOutstanding.toFixed(2)}") but the payment demand and subject line must be for the chase amount only.`
+    );
   }
 
   return {
@@ -528,16 +569,29 @@ function assembleData(
 
 // ── Text formatter ───────────────────────────────────────────
 
-function formatBriefText(data: ConversationBriefData, contact: any, prefs?: any): string {
+function formatBriefText(data: ConversationBriefData, contact: any, prefs?: any, chaseContext?: ChaseContext): string {
   const lines: string[] = [];
   const name = contact?.companyName || contact?.name || 'Unknown';
 
   lines.push(`CONVERSATION BRIEF FOR ${name.toUpperCase()}`);
   lines.push('');
 
-  // Relationship summary
-  lines.push('RELATIONSHIP SUMMARY:');
-  lines.push(`- Total outstanding: £${data.relationshipSummary.totalOutstanding.toFixed(2)} across ${data.relationshipSummary.invoiceCount} invoice(s)`);
+  // Chase target — when a specific bundle is being chased, this is the most
+  // important section in the brief. It must come first and be unambiguous.
+  if (chaseContext) {
+    lines.push('CHASE TARGET FOR THIS EMAIL:');
+    lines.push(`- Amount to demand: £${chaseContext.chaseAmount.toFixed(2)}`);
+    lines.push(`- Invoices in this chase: ${chaseContext.chaseInvoiceCount}`);
+    lines.push(`- This is the ONLY amount you should ask the debtor to pay. The OUTSTANDING INVOICES section of the user prompt lists the specific invoices — reference them individually by invoice number, amount, and days overdue.`);
+    lines.push(`- The subject line must reflect the chase amount (£${chaseContext.chaseAmount.toFixed(2)}), not the relationship total.`);
+    lines.push('');
+  }
+
+  // Relationship summary — when a chase context is present this becomes
+  // context only. When no chase context (e.g. inbound reply), it's the
+  // primary amount.
+  lines.push(chaseContext ? 'ACCOUNT-WIDE CONTEXT (for awareness only — do not cite as the amount owed):' : 'RELATIONSHIP SUMMARY:');
+  lines.push(`- Total relationship balance: £${data.relationshipSummary.totalOutstanding.toFixed(2)} across ${data.relationshipSummary.invoiceCount} invoice(s)`);
   if (data.relationshipSummary.oldestOverdueDays != null) {
     lines.push(`- Oldest overdue: ${data.relationshipSummary.oldestOverdueDays} days`);
   }
@@ -549,10 +603,16 @@ function formatBriefText(data: ConversationBriefData, contact: any, prefs?: any)
   }
   lines.push('');
 
-  // Credit balance
+  // Credit balance — the "MUST reference net" instruction only applies when
+  // chasing the full relationship. When chasing a specific bundle, the
+  // chase amount overrides this.
   if (data.creditBalance.hasCredits) {
     lines.push('CREDIT BALANCE:');
-    lines.push(`This debtor has £${data.creditBalance.totalUnappliedCredits.toFixed(2)} in unapplied credits (credit notes/overpayments). Their net outstanding after credits is £${data.creditBalance.netOutstanding.toFixed(2)}. You MUST reference the net amount (£${data.creditBalance.netOutstanding.toFixed(2)}), NOT the gross invoice total. Do not chase for the credited portion.`);
+    if (chaseContext) {
+      lines.push(`This debtor has £${data.creditBalance.totalUnappliedCredits.toFixed(2)} in unapplied credits on their account. These are NOT applied to the chase amount — they sit against the relationship balance. Demand payment of the chase amount above; do not deduct credits from it.`);
+    } else {
+      lines.push(`This debtor has £${data.creditBalance.totalUnappliedCredits.toFixed(2)} in unapplied credits (credit notes/overpayments). Their net outstanding after credits is £${data.creditBalance.netOutstanding.toFixed(2)}. You MUST reference the net amount (£${data.creditBalance.netOutstanding.toFixed(2)}), NOT the gross invoice total. Do not chase for the credited portion.`);
+    }
     lines.push('');
   }
 

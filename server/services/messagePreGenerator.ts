@@ -333,11 +333,15 @@ export class MessagePreGenerationService {
     // Calculate total outstanding from all overdue invoices
     const totalFromInvoices = invoiceDetails.reduce((sum, inv) => sum + inv.amount, 0);
 
-    // Build conversation brief
+    // Build conversation brief with chase context — `invoiceDetails` already
+    // contains the bundled invoices, so the chase amount is the sum of those.
     let conversationBrief: string | undefined;
     try {
       if (contact.id && action.tenantId) {
-        const brief = await buildConversationBrief(action.tenantId, contact.id);
+        const chaseContext = invoiceDetails.length > 0
+          ? { chaseAmount: totalFromInvoices, chaseInvoiceCount: invoiceDetails.length }
+          : undefined;
+        const brief = await buildConversationBrief(action.tenantId, contact.id, chaseContext);
         conversationBrief = brief.text;
       }
     } catch (err) {

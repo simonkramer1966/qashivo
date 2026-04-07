@@ -65,18 +65,27 @@ export async function generateCollectionEmail(
   // 1. Resolve persona
   const persona = personaOverride ?? await resolvePersona(tenantId);
 
-  // 2. Load debtor profile, invoices, history, policy, and conversation brief in parallel
-  // When actionInvoiceIds is provided, the chase invoices are limited to that bundle.
-  // Otherwise, only invoices that are actually overdue (dueDate < now) are included —
-  // never not-yet-due invoices, so the email never demands payment of invoices that
-  // aren't yet due.
-  const [debtor, chaseInvoices, history, policy, brief] = await Promise.all([
+  // 2. Load debtor profile, invoices, history, policy in parallel.
+  // Brief is loaded sequentially after — it needs the chase amount so it can
+  // tell the LLM to demand the bundled total, not the relationship-wide total.
+  const [debtor, chaseInvoices, history, policy] = await Promise.all([
     loadDebtorProfile(tenantId, contactId),
     loadChaseInvoices(tenantId, contactId, actionInvoiceIds),
     loadConversationHistory(tenantId, contactId),
     loadPolicy(tenantId),
-    buildConversationBrief(tenantId, contactId),
   ]);
+
+  // Compute chase context from the loaded bundle so the brief can frame the
+  // email around the bundled amount, not the full relationship balance.
+  const chaseAmount = chaseInvoices.reduce(
+    (sum, inv) => sum + (Number(inv.amount || 0) - Number(inv.amountPaid || 0)),
+    0,
+  );
+  const brief = await buildConversationBrief(tenantId, contactId, {
+    chaseAmount,
+    chaseInvoiceCount: chaseInvoices.length,
+    currency: debtor.currency,
+  });
 
   // 3. Enforce vulnerable-customer tone ceiling
   let effectiveAction = actionContext;
