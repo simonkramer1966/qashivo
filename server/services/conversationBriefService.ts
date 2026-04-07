@@ -74,7 +74,6 @@ export interface ConversationBriefData {
   };
   creditBalance: {
     totalUnappliedCredits: number;
-    netOutstanding: number;
     hasCredits: boolean;
   };
   debtorIntel: string[];
@@ -490,13 +489,12 @@ function assembleData(
   if (contact?.probablePaymentDetected) {
     constraints.push('Probable payment detected — do NOT chase aggressively, payment may have been made.');
   }
-  if (creditBalance > 0 && !chaseContext) {
-    // Only relevant when there's no specific chase bundle — when chasing a
-    // specific bundle, the chase amount (sum of bundle invoices) is what
-    // matters, not the relationship-wide net.
-    const netAmount = Math.max(0, totalOutstanding - creditBalance);
-    constraints.push(`Debtor has £${creditBalance.toFixed(2)} in unapplied credits. Reference net outstanding (£${netAmount.toFixed(2)}), NOT gross invoice totals.`);
-  }
+  // Note: We deliberately do NOT compute or reference a "net outstanding"
+  // figure that subtracts unallocated credits from the relationship total.
+  // That number is misleading: each invoice's amount already reflects any
+  // credits that have been allocated to it, and unallocated credits are just
+  // sitting on the account until the debtor (or we) decide what to do with
+  // them. The chase amount comes from the bundle, full stop.
   if (chaseContext) {
     // When a specific bundle is being chased, the chase amount overrides
     // every other amount in the brief. The LLM must demand THIS amount.
@@ -553,7 +551,6 @@ function assembleData(
     },
     creditBalance: {
       totalUnappliedCredits: creditBalance,
-      netOutstanding: Math.max(0, totalOutstanding - creditBalance),
       hasCredits: creditBalance > 0,
     },
     debtorIntel,
@@ -603,16 +600,14 @@ function formatBriefText(data: ConversationBriefData, contact: any, prefs?: any,
   }
   lines.push('');
 
-  // Credit balance — the "MUST reference net" instruction only applies when
-  // chasing the full relationship. When chasing a specific bundle, the
-  // chase amount overrides this.
+  // Credit balance — informational only. We do NOT compute or quote a "net
+  // outstanding" figure: each invoice's amount already reflects any credits
+  // allocated to it, and unallocated credits sit on the account until the
+  // debtor decides what to do with them. Mention them as context so the LLM
+  // knows they exist (the debtor may bring them up), but never as a deduction.
   if (data.creditBalance.hasCredits) {
-    lines.push('CREDIT BALANCE:');
-    if (chaseContext) {
-      lines.push(`This debtor has £${data.creditBalance.totalUnappliedCredits.toFixed(2)} in unapplied credits on their account. These are NOT applied to the chase amount — they sit against the relationship balance. Demand payment of the chase amount above; do not deduct credits from it.`);
-    } else {
-      lines.push(`This debtor has £${data.creditBalance.totalUnappliedCredits.toFixed(2)} in unapplied credits (credit notes/overpayments). Their net outstanding after credits is £${data.creditBalance.netOutstanding.toFixed(2)}. You MUST reference the net amount (£${data.creditBalance.netOutstanding.toFixed(2)}), NOT the gross invoice total. Do not chase for the credited portion.`);
-    }
+    lines.push('CREDIT NOTES:');
+    lines.push(`Unallocated credits of £${data.creditBalance.totalUnappliedCredits.toFixed(2)} exist on this account. Do NOT subtract them from the chase amount or any invoice total — each invoice already reflects any credits allocated to it. Mention these only if the debtor raises them.`);
     lines.push('');
   }
 
