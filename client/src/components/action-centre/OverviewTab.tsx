@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useInvalidateActionCentre } from "@/hooks/useInvalidateActionCentre";
@@ -245,6 +245,7 @@ function badgeType(value: number): "up" | "down" | "neutral" {
 export default function OverviewTab() {
   const { toast } = useToast();
   const invalidateActionCentre = useInvalidateActionCentre();
+  const queryClient = useQueryClient();
 
   // Period state
   const [period, setPeriod] = useState<Period>("week");
@@ -313,11 +314,35 @@ export default function OverviewTab() {
     mutationFn: async () => {
       await apiRequest("POST", "/api/approval-queue/clear");
     },
+    // Optimistic UI: zero out the queued summary numbers immediately so the
+    // overview cards reflect the cleared state without waiting for refetch.
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ["/api/action-centre/summary"] });
+      const snapshots: Array<[unknown, unknown]> = [];
+      // Match all summary queries regardless of queryParams variant
+      const matches = queryClient.getQueriesData<SummaryData>({ queryKey: ["/api/action-centre/summary"] });
+      for (const [key, data] of matches) {
+        snapshots.push([key, data]);
+        if (data && (data as any).queued) {
+          queryClient.setQueryData(key, {
+            ...(data as any),
+            queued: { ...(data as any).queued, total: 0, emails: 0, sms: 0, calls: 0 },
+          });
+        }
+      }
+      return { snapshots };
+    },
     onSuccess: () => {
       toast({ title: "Queue cleared", description: "All pending items have been cancelled." });
       invalidateActionCentre();
     },
-    onError: (err: Error) => {
+    onError: (err: Error, _vars, context) => {
+      // Roll back optimistic update on failure
+      if (context?.snapshots) {
+        for (const [key, data] of context.snapshots) {
+          queryClient.setQueryData(key as any, data);
+        }
+      }
       toast({ title: "Clear failed", description: err.message, variant: "destructive" });
     },
   });

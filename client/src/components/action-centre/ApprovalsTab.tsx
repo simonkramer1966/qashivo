@@ -341,12 +341,32 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
       const res = await apiRequest("POST", "/api/approval-queue/clear");
       return res.json();
     },
+    // Optimistic UI: empty the approvals list synchronously so the queue
+    // appears cleared the instant the user confirms. The server-side UPDATE
+    // is a single batch query, so the only thing the user was waiting for
+    // was the post-mutation refetch cycle.
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ["/api/action-centre/approvals"] });
+      const previous = queryClient.getQueryData(["/api/action-centre/approvals"]);
+      queryClient.setQueryData(["/api/action-centre/approvals"], []);
+      setJustCleared(true);
+      return { previous };
+    },
     onSuccess: (data: { cancelled: number }) => {
       toast({ title: `Queue cleared — ${data.cancelled} items cancelled` });
-      setJustCleared(true);
+      // Background reconciliation — the cache is already empty, but other
+      // tabs (Scheduled, Activity Feed, Summary) need to refetch to reflect
+      // the cancelled state.
       invalidateActionCentre();
     },
-    onError: () => toast({ title: "Failed to clear queue", variant: "destructive" }),
+    onError: (_err, _vars, context) => {
+      // Roll back optimistic update on failure
+      if (context?.previous !== undefined) {
+        queryClient.setQueryData(["/api/action-centre/approvals"], context.previous);
+      }
+      setJustCleared(false);
+      toast({ title: "Failed to clear queue", variant: "destructive" });
+    },
   });
 
   const runAgentMutation = useMutation({
@@ -354,13 +374,25 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
       const res = await apiRequest("POST", "/api/agent/run-now");
       return res.json();
     },
-    onSuccess: (data: { generated: number; communicationMode: string }) => {
+    onMutate: () => {
+      // Tell the user up-front this isn't instant — generating LLM emails
+      // for every eligible debtor takes real time. The button spinner alone
+      // doesn't convey "this is doing meaningful work in the background".
+      toast({
+        title: "Charlie is generating emails",
+        description: "This may take a minute or two. You can keep working — we'll let you know when it's done.",
+      });
+      return { startedAt: Date.now() };
+    },
+    onSuccess: (data: { generated: number; communicationMode: string }, _vars, context) => {
+      const elapsedSec = context ? Math.round((Date.now() - context.startedAt) / 1000) : 0;
+      const elapsedLabel = elapsedSec >= 60 ? `${Math.floor(elapsedSec / 60)}m ${elapsedSec % 60}s` : `${elapsedSec}s`;
       if (data.generated === 0) {
-        toast({ title: "No new emails generated", description: "All eligible debtors were recently contacted or are within cooldown." });
+        toast({ title: "No new emails generated", description: `Charlie checked every debtor (${elapsedLabel}). All were recently contacted or within cooldown.` });
       } else if (data.communicationMode === "testing") {
-        toast({ title: `${data.generated} new emails generated`, description: "Test mode — emails sent to test addresses." });
+        toast({ title: `${data.generated} new emails generated in ${elapsedLabel}`, description: "Test mode — emails will be sent to test addresses." });
       } else {
-        toast({ title: `${data.generated} new emails queued for approval` });
+        toast({ title: `${data.generated} new emails queued for approval`, description: `Generated in ${elapsedLabel}.` });
       }
       invalidateActionCentre();
     },
