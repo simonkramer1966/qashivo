@@ -273,6 +273,116 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
 
   // ── Mutations ──────────────────────────────────────────────
 
+  // Optimistic cache helpers — move items out of the Approval queue instantly
+  // so the UI reflects the action before the server responds. All mutations
+  // that remove items from the approval list go through these helpers so the
+  // keyboard shortcut, row tick, drawer button, and bulk action all behave
+  // identically.
+  type ApprovalsCache = { actions: EnrichedAction[]; total: number; batch: any } | undefined;
+  type ScheduledCache = { actions: any[]; total: number } | undefined;
+
+  const buildScheduledRow = (a: EnrichedAction, scheduledFor: Date) => ({
+    id: a.id,
+    type: a.type,
+    status: "scheduled",
+    subject: a.subject,
+    content: a.content,
+    contactId: a.contactId,
+    contactName: a.contactName,
+    companyName: a.companyName,
+    agentToneLevel: a.agentToneLevel,
+    agentChannel: normalizeChannel(a.type),
+    agentReasoning: a.agentReasoning,
+    scheduledFor: scheduledFor.toISOString(),
+    approvedBy: "you",
+    approvedAt: new Date().toISOString(),
+    createdAt: a.createdAt,
+    metadata: a.metadata,
+  });
+
+  const optimisticMoveOutOfApprovals = async (opts: {
+    ids: string[];
+    addToScheduled: boolean;
+    scheduledFor?: Date;
+  }) => {
+    const { ids, addToScheduled, scheduledFor } = opts;
+    await Promise.all([
+      queryClient.cancelQueries({ queryKey: ["/api/action-centre/approvals"] }),
+      queryClient.cancelQueries({ queryKey: ["/api/action-centre/scheduled"] }),
+      queryClient.cancelQueries({ queryKey: ["/api/action-centre/summary"] }),
+    ]);
+
+    const prevApprovals = queryClient.getQueryData<ApprovalsCache>(["/api/action-centre/approvals"]);
+    const prevScheduled = queryClient.getQueryData<ScheduledCache>(["/api/action-centre/scheduled"]);
+    const prevSummaries = queryClient.getQueriesData<any>({ queryKey: ["/api/action-centre/summary"] });
+
+    const idSet = new Set(ids);
+    const removed = (prevApprovals?.actions ?? []).filter(a => idSet.has(a.id));
+
+    // 1. Remove from approvals
+    if (prevApprovals) {
+      queryClient.setQueryData(["/api/action-centre/approvals"], {
+        ...prevApprovals,
+        actions: prevApprovals.actions.filter(a => !idSet.has(a.id)),
+        total: Math.max(0, (prevApprovals.total ?? 0) - removed.length),
+      });
+    }
+
+    // 2. Optionally add to scheduled
+    if (addToScheduled && removed.length > 0) {
+      const when = scheduledFor ?? new Date(Date.now() + 15 * 60_000);
+      const newRows = removed.map(a => buildScheduledRow(a, when));
+      const base = prevScheduled ?? { actions: [], total: 0 };
+      queryClient.setQueryData(["/api/action-centre/scheduled"], {
+        ...base,
+        actions: [...newRows, ...base.actions],
+        total: (base.total ?? 0) + newRows.length,
+      });
+    }
+
+    // 3. Decrement summary queued counts by channel
+    let emailsRemoved = 0, smsRemoved = 0, callsRemoved = 0, valueRemoved = 0;
+    for (const a of removed) {
+      const ch = normalizeChannel(a.type);
+      if (ch === "email") emailsRemoved++;
+      else if (ch === "sms") smsRemoved++;
+      else if (ch === "voice") callsRemoved++;
+      valueRemoved += a.totalAmount || 0;
+    }
+    for (const [key, data] of prevSummaries) {
+      if (data?.queued) {
+        queryClient.setQueryData(key, {
+          ...data,
+          queued: {
+            ...data.queued,
+            total: Math.max(0, (data.queued.total ?? 0) - removed.length),
+            emails: Math.max(0, (data.queued.emails ?? 0) - emailsRemoved),
+            sms: Math.max(0, (data.queued.sms ?? 0) - smsRemoved),
+            calls: Math.max(0, (data.queued.calls ?? 0) - callsRemoved),
+            totalValueQueued: Math.max(0, (data.queued.totalValueQueued ?? 0) - valueRemoved),
+          },
+        });
+      }
+    }
+
+    return { prevApprovals, prevScheduled, prevSummaries };
+  };
+
+  const rollbackOptimistic = (context: any) => {
+    if (!context) return;
+    if (context.prevApprovals !== undefined) {
+      queryClient.setQueryData(["/api/action-centre/approvals"], context.prevApprovals);
+    }
+    if (context.prevScheduled !== undefined) {
+      queryClient.setQueryData(["/api/action-centre/scheduled"], context.prevScheduled);
+    }
+    if (context.prevSummaries) {
+      for (const [key, data] of context.prevSummaries) {
+        queryClient.setQueryData(key, data);
+      }
+    }
+  };
+
   const approveMutation = useMutation({
     mutationFn: async ({ actionId, editedSubject, editedBody }: {
       actionId: string;
@@ -284,14 +394,22 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
         editedBody,
       });
     },
+    onMutate: async ({ actionId }) => {
+      // Close the drawer synchronously with the optimistic removal so the
+      // user never sees a drawer still pointing at an item that's gone.
+      setDrawerActionId(null);
+      return await optimisticMoveOutOfApprovals({ ids: [actionId], addToScheduled: true });
+    },
     onSuccess: (_, { actionId }) => {
+      // Silent reconciliation — cache is already correct, just refetch to
+      // pick up the real server-assigned scheduledFor/approvedBy fields.
       invalidateActionCentre();
-      // Clean up regeneration state
       setRegeneratedIds(prev => { const next = new Set(prev); next.delete(actionId); return next; });
       setToneOverrides(prev => { const next = new Map(prev); next.delete(actionId); return next; });
       toast({ title: "Action approved and sent" });
     },
-    onError: () => {
+    onError: (_err, _vars, context) => {
+      rollbackOptimistic(context);
       toast({ title: "Approval failed", variant: "destructive" });
     },
   });
@@ -315,11 +433,16 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
   const rejectMutation = useMutation({
     mutationFn: ({ actionId, reason, category, note }: { actionId: string; reason: string; category: string; note: string }) =>
       apiRequest("POST", `/api/actions/${actionId}/reject`, { reason, category, note }),
+    onMutate: async ({ actionId }) => {
+      setDrawerActionId(null);
+      return await optimisticMoveOutOfApprovals({ ids: [actionId], addToScheduled: false });
+    },
     onSuccess: () => {
       invalidateActionCentre();
       toast({ title: "Action rejected" });
     },
-    onError: () => {
+    onError: (_err, _vars, context) => {
+      rollbackOptimistic(context);
       toast({ title: "Rejection failed", variant: "destructive" });
     },
   });
@@ -327,11 +450,20 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
   const deferMutation = useMutation({
     mutationFn: ({ actionId, reason, deferredUntil, note }: { actionId: string; reason: string; deferredUntil: string; note: string }) =>
       apiRequest("POST", `/api/actions/${actionId}/defer`, { reason, deferredUntil, note }),
+    onMutate: async ({ actionId, deferredUntil }) => {
+      setDrawerActionId(null);
+      return await optimisticMoveOutOfApprovals({
+        ids: [actionId],
+        addToScheduled: true,
+        scheduledFor: new Date(deferredUntil),
+      });
+    },
     onSuccess: () => {
       invalidateActionCentre();
       toast({ title: "Action deferred" });
     },
-    onError: () => {
+    onError: (_err, _vars, context) => {
+      rollbackOptimistic(context);
       toast({ title: "Deferral failed", variant: "destructive" });
     },
   });
@@ -434,12 +566,19 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
         await apiRequest("POST", `/api/actions/${id}/approve`);
       }
     },
+    onMutate: async (ids) => {
+      setDrawerActionId(null);
+      setSelectedIds(new Set());
+      return await optimisticMoveOutOfApprovals({ ids, addToScheduled: true });
+    },
     onSuccess: () => {
       invalidateActionCentre();
-      setSelectedIds(new Set());
       toast({ title: "Selected actions approved" });
     },
-    onError: () => toast({ title: "Bulk approval failed", variant: "destructive" }),
+    onError: (_err, _vars, context) => {
+      rollbackOptimistic(context);
+      toast({ title: "Bulk approval failed", variant: "destructive" });
+    },
   });
 
   // ── Sort + derived data ────────────────────────────────────
@@ -515,7 +654,6 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
 
   const handleApprove = (id: string) => {
     approveMutation.mutate({ actionId: id });
-    setDrawerActionId(null);
   };
 
   const handleRegenerate = (id: string) => {
@@ -540,17 +678,14 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
 
   const handleDefer = (id: string, reason: string, until: Date, note: string) => {
     deferMutation.mutate({ actionId: id, reason, deferredUntil: until.toISOString(), note });
-    setDrawerActionId(null);
   };
 
   const handleReject = (id: string, reason: string, category: string, note: string) => {
     rejectMutation.mutate({ actionId: id, reason, category, note });
-    setDrawerActionId(null);
   };
 
   const handleApproveWithEdits = (id: string, subject: string, body: string) => {
     approveMutation.mutate({ actionId: id, editedSubject: subject, editedBody: body });
-    setDrawerActionId(null);
   };
 
   const handleToneChange = (id: string, tone: ToneLevel) => {
