@@ -128,7 +128,7 @@ export function buildSystemPrompt(
 
   // Invoice formatting (mandatory HTML table)
   lines.push(`INVOICE FORMATTING (MANDATORY):`);
-  lines.push(`- When the email references one or more invoices, present them in an HTML table with these exact columns: Invoice #, Amount, Due Date, Days Overdue.`);
+  lines.push(`- When invoice data is provided in the user prompt below, present it in an HTML table with these exact columns: Invoice #, Amount, Due Date, Days Overdue. When no invoice data is provided, omit the table entirely.`);
   lines.push(`- Never list invoices as inline text, bullet points, or comma-separated lists. Always use the HTML table.`);
   lines.push(`- Because the body must contain an HTML table, emit the ENTIRE email body as well-formed HTML: wrap each paragraph in <p>, use <br> for soft line breaks, and place the <table> between the relevant paragraphs. Do not mix plain text with HTML.`);
   lines.push(`- Use minimal inline styles for table compatibility: <table style="border-collapse:collapse;width:100%;margin:16px 0;">, <th style="border:1px solid #ddd;padding:8px;text-align:left;background:#f5f5f5;">, <td style="border:1px solid #ddd;padding:8px;">.`);

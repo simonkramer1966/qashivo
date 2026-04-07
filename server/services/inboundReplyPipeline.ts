@@ -87,12 +87,27 @@ export async function processInboundReply(
     // 3. Determine action context based on intent
     const actionContext = mapIntentToActionContext(ctx.intentType);
 
+    // 3b. Look up the originating outbound action this reply belongs to, so
+    //     the LLM chases the original bundle — not the relationship-wide
+    //     overdue set.
+    const originating = await findOriginatingAction(
+      ctx.tenantId,
+      ctx.contactId,
+      inboundEmail,
+    );
+    const originatingInvoiceIds: string[] | undefined =
+      originating?.invoiceIds && originating.invoiceIds.length > 0
+        ? originating.invoiceIds
+        : undefined;
+
     // 4. Generate reply via Collections Agent
     console.log(`[InboundReply] Generating reply for contact ${ctx.contactId}, intent: ${ctx.intentType}`);
     const emailResult = await generateCollectionEmail(
       ctx.tenantId,
       ctx.contactId,
       actionContext,
+      undefined,
+      originatingInvoiceIds,
     );
 
     if (!emailResult.body) {
@@ -117,7 +132,13 @@ export async function processInboundReply(
     // If compliance says regenerate, try at lower tone
     if (compliance.action === "regenerate") {
       const lowerContext: ActionContext = { ...actionContext, toneLevel: "professional" };
-      const regenerated = await generateCollectionEmail(ctx.tenantId, ctx.contactId, lowerContext);
+      const regenerated = await generateCollectionEmail(
+        ctx.tenantId,
+        ctx.contactId,
+        lowerContext,
+        undefined,
+        originatingInvoiceIds,
+      );
       const recheck = await checkCompliance({
         tenantId: ctx.tenantId,
         contactId: ctx.contactId,
@@ -429,6 +450,41 @@ async function deliverThreadedReply(
 }
 
 // ── Helpers ─────────────────────────────────────────────────
+
+/**
+ * Look up the outbound chase action this inbound email is a reply to. Prefer
+ * threadKey matching; fall back to conversationId if threadKey is missing.
+ * Returns the action's invoiceIds bundle (if any), so the reply chases the
+ * same invoices the debtor was replying about rather than the relationship-
+ * wide overdue set.
+ */
+async function findOriginatingAction(
+  tenantId: string,
+  contactId: string,
+  inboundEmail: typeof emailMessages.$inferSelect,
+): Promise<{ invoiceIds: string[] | null } | null> {
+  const threadCondition = inboundEmail.threadKey
+    ? eq(emailMessages.threadKey, inboundEmail.threadKey)
+    : eq(emailMessages.conversationId, inboundEmail.conversationId ?? "__none__");
+
+  const candidates = await db
+    .select({ id: actions.id, invoiceIds: actions.invoiceIds })
+    .from(actions)
+    .innerJoin(emailMessages, eq(emailMessages.actionId, actions.id))
+    .where(
+      and(
+        eq(actions.tenantId, tenantId),
+        eq(actions.contactId, contactId),
+        eq(emailMessages.direction, "OUTBOUND"),
+        threadCondition,
+      ),
+    )
+    .orderBy(desc(emailMessages.sentAt))
+    .limit(1);
+
+  if (!candidates.length) return null;
+  return { invoiceIds: candidates[0].invoiceIds as string[] | null };
+}
 
 function mapIntentToActionContext(intentType: string): ActionContext {
   // Map debtor intent → appropriate reply tone and action type

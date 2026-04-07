@@ -116,9 +116,32 @@ export class MessagePreGenerationService {
       let generatedContent: { subject?: string; body?: string; voiceScript?: string; callToAction?: string };
 
       switch (channel) {
-        case 'email':
-          generatedContent = await aiMessageGenerator.generateEmail(messageContext, toneSettings, genOptions);
+        case 'email': {
+          const { generateDebtorEmail } = await import('./debtorEmailService');
+
+          const invoiceIds: string[] | undefined =
+            Array.isArray(action.invoiceIds) && action.invoiceIds.length > 0
+              ? action.invoiceIds
+              : (action.invoiceId ? [action.invoiceId] : undefined);
+
+          const generated = await generateDebtorEmail({
+            tenantId: action.tenantId,
+            contactId: action.contactId,
+            emailType: (action.touchCount ?? 0) > 1 ? 'follow_up' : 'first_chase',
+            invoiceIds,
+            toneLevel: (action.agentToneLevel as
+              | 'friendly' | 'professional' | 'firm' | 'formal' | 'legal'
+            ) || 'professional',
+            sequencePosition: action.touchCount ?? undefined,
+            currency: contact.preferredCurrency || undefined,
+          });
+
+          generatedContent = {
+            subject: generated.subject,
+            body: generated.body,
+          };
           break;
+        }
         case 'sms':
           generatedContent = await aiMessageGenerator.generateSMS(messageContext, toneSettings, genOptions);
           break;
