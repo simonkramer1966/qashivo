@@ -414,12 +414,8 @@ export class ActionExecutor {
       return { valid: false, reason: 'bundle_modified_requires_replan' };
     }
 
-    // 7. Remaining total below minimum chase threshold
-    const totalAmount = validInvoices.reduce((sum, inv) => sum + Number(inv.amount || 0), 0);
-    const minThreshold = parseFloat(tenant?.minimumChaseThreshold || '50');
-    if (totalAmount < minThreshold) {
-      return { valid: false, reason: 'below_minimum_chase_threshold' };
-    }
+    // Note: small-balance threshold is enforced at planning time only.
+    // User-approved actions always send, regardless of the current total.
 
     return { valid: true };
   }

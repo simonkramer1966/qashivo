@@ -42,6 +42,8 @@ interface TenantSettings {
   chaseDelayDays: number;
   preDueDateDays: number;
   preDueDateMinAmount: string;
+  smallAmountThreshold: string;
+  smallAmountChaseEnabled: boolean;
 }
 
 interface CommModeSettings {
@@ -146,6 +148,8 @@ export default function SettingsAutonomyRules() {
   const [chaseDelayDays, setChaseDelayDays] = useState<number | null>(null);
   const [preDueDateDays, setPreDueDateDays] = useState<number | null>(null);
   const [preDueDateMinAmount, setPreDueDateMinAmount] = useState<string | null>(null);
+  const [smallAmountThreshold, setSmallAmountThreshold] = useState<string | null>(null);
+  const [smallAmountChaseEnabled, setSmallAmountChaseEnabled] = useState<boolean | null>(null);
 
   // Communication testing state
   const [commMode, setCommMode] = useState<CommMode | null>(null);
@@ -197,10 +201,14 @@ export default function SettingsAutonomyRules() {
   const currentChaseDelayDays = chaseDelayDays ?? settings?.chaseDelayDays ?? 5;
   const currentPreDueDateDays = preDueDateDays ?? settings?.preDueDateDays ?? 7;
   const currentPreDueDateMinAmount = preDueDateMinAmount ?? settings?.preDueDateMinAmount ?? "1000.00";
+  const currentSmallAmountThreshold = smallAmountThreshold ?? settings?.smallAmountThreshold ?? "50.00";
+  const currentSmallAmountChaseEnabled =
+    smallAmountChaseEnabled ?? settings?.smallAmountChaseEnabled ?? true;
 
   const hasChanges =
     approvalMode !== null || timeoutHours !== null || exceptionRules !== null ||
-    sendDelayMinutes !== null || chaseDelayDays !== null || preDueDateDays !== null || preDueDateMinAmount !== null;
+    sendDelayMinutes !== null || chaseDelayDays !== null || preDueDateDays !== null || preDueDateMinAmount !== null ||
+    smallAmountThreshold !== null || smallAmountChaseEnabled !== null;
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -212,6 +220,8 @@ export default function SettingsAutonomyRules() {
       if (chaseDelayDays !== null) body.chaseDelayDays = chaseDelayDays;
       if (preDueDateDays !== null) body.preDueDateDays = preDueDateDays;
       if (preDueDateMinAmount !== null) body.preDueDateMinAmount = preDueDateMinAmount;
+      if (smallAmountThreshold !== null) body.smallAmountThreshold = smallAmountThreshold;
+      if (smallAmountChaseEnabled !== null) body.smallAmountChaseEnabled = smallAmountChaseEnabled;
       const res = await apiRequest("PATCH", "/api/tenant/settings", body);
       return res.json();
     },
@@ -225,6 +235,8 @@ export default function SettingsAutonomyRules() {
       setChaseDelayDays(null);
       setPreDueDateDays(null);
       setPreDueDateMinAmount(null);
+      setSmallAmountThreshold(null);
+      setSmallAmountChaseEnabled(null);
     },
     onError: (err: Error) => {
       toast({ title: "Failed to save", description: err.message, variant: "destructive" });
@@ -603,6 +615,45 @@ export default function SettingsAutonomyRules() {
                     step={100}
                   />
                 </div>
+              </div>
+
+              <Separator />
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm font-medium">Small balance threshold</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Invoices below this amount are treated as small balances.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">£</span>
+                  <Input
+                    type="number"
+                    value={currentSmallAmountThreshold}
+                    onChange={(e) => setSmallAmountThreshold(e.target.value)}
+                    className="w-28"
+                    min={0}
+                    step={10}
+                    data-testid="input-small-amount-threshold"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <Label className="text-sm font-medium">Chase small balances</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {currentSmallAmountChaseEnabled
+                      ? "Invoices below this amount are chased with a softer, shorter email."
+                      : "Invoices below this amount are not chased."}
+                  </p>
+                </div>
+                <Switch
+                  checked={currentSmallAmountChaseEnabled}
+                  onCheckedChange={(checked) => setSmallAmountChaseEnabled(checked)}
+                  data-testid="switch-small-amount-chase-enabled"
+                />
               </div>
             </CardContent>
           </Card>

@@ -385,6 +385,12 @@ export async function registerSettingsRoutes(app: Express): Promise<void> {
         contactWindowDays: tenant.contactWindowDays || 14,
         tenantStyle: tenant.tenantStyle || 'STANDARD',
         collectionsAutomationEnabled: tenant.collectionsAutomationEnabled ?? true,
+        smallAmountThreshold: tenant.smallAmountThreshold || '50.00',
+        smallAmountChaseEnabled: tenant.smallAmountChaseEnabled ?? true,
+        chaseDelayDays: tenant.chaseDelayDays ?? 5,
+        preDueDateDays: tenant.preDueDateDays ?? 7,
+        preDueDateMinAmount: tenant.preDueDateMinAmount || '1000.00',
+        sendDelayMinutes: tenant.sendDelayMinutes ?? 15,
       });
     } catch (error) {
       console.error("Error fetching tenant settings:", error);
@@ -409,7 +415,7 @@ export async function registerSettingsRoutes(app: Express): Promise<void> {
         'dailyLimits', 'minConfidence', 'exceptionRules', 'channelCooldowns',
         'businessHoursStart', 'businessHoursEnd', 'maxTouchesPerWindow',
         'contactWindowDays', 'tenantStyle', 'collectionsAutomationEnabled',
-        'minimumChaseThreshold',
+        'smallAmountThreshold', 'smallAmountChaseEnabled',
         'noResponseEscalationThreshold', 'significantPaymentThreshold',
         'paymentAttributionFullCreditHours', 'paymentAttributionPartialCreditDays', 'paymentAttributionSameDayExcluded',
         'sendDelayMinutes',

@@ -172,8 +172,24 @@ export function buildUserPrompt(
   history: ConversationEntry[],
   action: ActionContext,
   conversationBrief?: string,
+  isSmallBalance: boolean = false,
 ): string {
   const sections: string[] = [];
+
+  // Small-balance framing — overrides tone guidance and keeps the email short.
+  // Set by the caller when the chase bundle is below the tenant's
+  // smallAmountThreshold. The LLM must acknowledge the amount is minor and
+  // stay warm regardless of the nominal tone parameter.
+  if (isSmallBalance) {
+    sections.push('SMALL BALANCE NOTE:');
+    sections.push(
+      'The chase amount is below the small-balance threshold. Frame the request warmly — ' +
+      'acknowledge the amount is minor but explain it helps to keep the ledger clear. ' +
+      'Keep the email short (3-4 sentences max). Use a friendly tone regardless of what the tone ' +
+      'parameter says below.'
+    );
+    sections.push('');
+  }
 
   // Conversation brief — full debtor context (injected before all other sections)
   if (conversationBrief) {

@@ -25,6 +25,7 @@ import {
 import { differenceInDays } from "date-fns";
 import { getEffectiveSeasonalAdjustments, type SeasonalAdjustment } from "./paymentDistribution";
 import { evaluateDecisionTree, type DebtorDecisionInput } from "./decisionTree";
+import { getSmallBalancePolicy, isSmallBalance, applySmallBalancePriority } from "./smallBalancePolicy";
 import { getRolling30DayDSO, getARSummary } from "./arCalculations";
 import crypto from "crypto";
 
@@ -472,6 +473,7 @@ export class ActionPlanner {
 
         const lastActionData = lastActionRows[0] ?? null;
         const cooldowns = (tenantRecordForTree.channelCooldowns as { email?: number; sms?: number; voice?: number } | null) ?? { email: 3, sms: 5, voice: 7 };
+      const treeSmallBalancePolicy = getSmallBalancePolicy(tenantRecordForTree);
 
         const decisionInput: DebtorDecisionInput = {
           now: new Date(),
@@ -564,7 +566,8 @@ export class ActionPlanner {
             chaseDelayDays: tenantRecordForTree.chaseDelayDays ?? 5,
             preDueDateDays: tenantRecordForTree.preDueDateDays ?? 7,
             preDueDateMinAmount: parseFloat(tenantRecordForTree.preDueDateMinAmount || '1000'),
-            minimumChaseThreshold: parseFloat(tenantRecordForTree.minimumChaseThreshold || '50'),
+            smallAmountThreshold: treeSmallBalancePolicy.threshold,
+            smallAmountChaseEnabled: treeSmallBalancePolicy.chaseEnabled,
             noResponseEscalationThreshold: tenantRecordForTree.noResponseEscalationThreshold ?? 4,
             significantPaymentThreshold: parseFloat(tenantRecordForTree.significantPaymentThreshold || '0.50'),
             channelCooldowns: {
@@ -981,9 +984,9 @@ export async function planAdaptiveActions(
 
     const minScoreThreshold = Number(settings.minScoreThreshold || 40);
 
-    // Gap 4: Fetch tenant for minimum chase threshold + collection timing settings
+    // Gap 4: Fetch tenant for small-balance policy + collection timing settings
     const [tenantRecord] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
-    const minChaseThreshold = parseFloat(tenantRecord?.minimumChaseThreshold || '50');
+    const smallBalancePolicy = getSmallBalancePolicy(tenantRecord);
     const chaseDelayDays = tenantRecord?.chaseDelayDays ?? 5;
     const preDueDateDays = tenantRecord?.preDueDateDays ?? 7;
     const preDueDateMinAmount = parseFloat(tenantRecord?.preDueDateMinAmount || '1000');
@@ -1267,9 +1270,13 @@ export async function planAdaptiveActions(
             0
           );
 
-          // Gap 4: Skip if consolidated total below minimum chase threshold
-          if (totalAmount < minChaseThreshold) {
-            console.log(`[PLAN] Skipping ${scoredInvoices[0]?.invoice?.contactId}: £${totalAmount.toFixed(2)} below £${minChaseThreshold} threshold`);
+          // Small-balance policy: below threshold either skip entirely (toggle
+          // off) or tag the action as smallBalance for softer chasing.
+          const smallBalance = isSmallBalance(totalAmount, smallBalancePolicy);
+          if (smallBalance && !smallBalancePolicy.chaseEnabled) {
+            console.log(
+              `[PLAN] Skipped ${contact?.name || scoredInvoices[0]?.invoice?.contactId} — £${totalAmount.toFixed(2)} below small balance threshold (chasing disabled)`
+            );
             continue;
           }
 
@@ -1295,7 +1302,10 @@ export async function planAdaptiveActions(
               : `Your invoice ${highestPriority.invoice.invoiceNumber} is overdue.`,
             agentType: 'collections',
             actionSummary: actionSubject,
-            priority: Math.min(Math.round(highestPriority.recommendation.priority), 100),
+            priority: applySmallBalancePriority(
+              Math.min(Math.round(highestPriority.recommendation.priority), 100),
+              smallBalance
+            ),
             metadata: {
               adaptiveScheduler: true,
               priority: highestPriority.recommendation.priority,
@@ -1304,6 +1314,8 @@ export async function planAdaptiveActions(
               bundled: invoiceIds.length > 1,
               invoiceCount: invoiceIds.length,
               collectionPhase: bundlePhase,
+              smallBalance,
+              totalAmount,
             },
             recommendedAt: today,
             recommendedBy: "adaptive",

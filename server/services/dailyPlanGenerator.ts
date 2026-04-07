@@ -8,6 +8,7 @@ import type { CharlieDecision, DailyPlan } from "./playbookEngine";
 import { charliePlaybook, prepareMessageFromDecision } from "./charliePlaybook";
 import { prepareMessageFromWorkflowProfile } from "./workflowProfileMessageService";
 import { processCollectionEmail } from "./collectionsPipeline";
+import { getSmallBalancePolicy, isSmallBalance, applySmallBalancePriority } from "./smallBalancePolicy";
 
 export interface InvoiceSummary {
   id: string;
@@ -297,6 +298,9 @@ async function generateDailyPlanWithCharlie(
   console.log(`   Critical: ${charliePlan.summary.byCriticalPriority}, High: ${charliePlan.summary.byHighPriority}`);
   console.log(`   Human review needed: ${charliePlan.summary.humanReviewRequired}`);
   
+  // Small-balance policy — tenant-scoped, hoisted out of the contact loop.
+  const smallBalancePolicy = getSmallBalancePolicy(tenant);
+
   // Parse policy settings
   const dailyLimits = (tenant.dailyLimits as any) || { email: 100, sms: 50, voice: 20 };
   const minConfidence = (tenant.minConfidence as any) || { email: 0.8, sms: 0.85, voice: 0.9 };
@@ -382,6 +386,16 @@ async function generateDailyPlanWithCharlie(
     // Calculate consolidated amounts from all OVERDUE invoices for this contact (amount being chased)
     const totalAmount = contactDecisions.reduce((sum, d) => sum + d.invoice.amount, 0);
     const invoiceCount = contactDecisions.length;
+
+    // Small-balance policy: below threshold either skip entirely (toggle off)
+    // or tag the action as smallBalance for softer chasing.
+    const smallBalance = isSmallBalance(totalAmount, smallBalancePolicy);
+    if (smallBalance && !smallBalancePolicy.chaseEnabled) {
+      console.log(
+        `⏭️  Skipped ${primaryDecision.contact.name} — £${totalAmount.toFixed(2)} below small balance threshold (chasing disabled)`
+      );
+      continue;
+    }
     
     // Query total outstanding for ALL unpaid invoices for this contact (not just overdue)
     const allUnpaidInvoices = await db.query.invoices.findMany({
@@ -485,13 +499,17 @@ async function generateDailyPlanWithCharlie(
       confidenceScore: primaryDecision.confidence.toString(),
       agentType: 'collections',
       actionSummary: subject,
-      priority: primaryDecision.priorityScore ? Math.min(Math.round(primaryDecision.priorityScore), 100) : 50,
+      priority: applySmallBalancePriority(
+        primaryDecision.priorityScore ? Math.min(Math.round(primaryDecision.priorityScore), 100) : 50,
+        smallBalance
+      ),
       metadata: {
         daysOverdue: maxDaysOverdue,
         amount: totalAmount.toString(),
         totalOutstanding: contactTotalOutstanding.toString(),
         priority,
         generatedBy: 'charlie_decision_engine',
+        smallBalance,
         messageSource: preparedMessage?.fromWorkflowProfile ? 'workflow_profile' : 'charlie_playbook',
         templateKey: preparedMessage?.templateKey,
         charlieState: primaryDecision.charlieState,

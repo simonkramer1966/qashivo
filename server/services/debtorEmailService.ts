@@ -35,6 +35,12 @@ import {
   type PolicyConstraints,
 } from "../agents/prompts/collectionEmail";
 import { buildConversationBrief } from "./conversationBriefService";
+import {
+  getSmallBalancePolicy,
+  isSmallBalance,
+  applySmallBalancePriority,
+  type SmallBalancePolicy,
+} from "./smallBalancePolicy";
 
 // ── Public types ─────────────────────────────────────────────
 
@@ -158,12 +164,14 @@ export async function generateDebtorEmail(
       ? []
       : request.invoiceIds;
 
-  const [debtor, chaseInvoices, history, policy] = await Promise.all([
+  const [debtorResult, chaseInvoices, history, policy] = await Promise.all([
     loadDebtorProfile(tenantId, contactId),
     loadChaseInvoices(tenantId, contactId, invoiceIdsForLoad),
     loadConversationHistory(tenantId, contactId),
     loadPolicy(tenantId),
   ]);
+  const debtor = debtorResult.profile;
+  const smallBalancePolicy = debtorResult.smallBalancePolicy;
 
   // 3. Compute chase context from the loaded bundle.
   const chaseAmount = chaseInvoices.reduce(
@@ -172,6 +180,11 @@ export async function generateDebtorEmail(
     0,
   );
   const currency = request.currency ?? debtor.currency;
+
+  // Small-balance detection — drives the SMALL BALANCE NOTE in the user
+  // prompt and forces tone back to 'friendly' regardless of what the caller
+  // asked for.
+  const isSmallBalanceChase = isSmallBalance(chaseAmount, smallBalancePolicy);
 
   // 4. Build the conversation brief with chase context so the LLM frames the
   //    email around the bundle, not the relationship-wide total.
@@ -199,6 +212,14 @@ export async function generateDebtorEmail(
     }
   }
 
+  // Small-balance: force friendly tone, overriding any escalation.
+  if (isSmallBalanceChase) {
+    effectiveAction = {
+      ...effectiveAction,
+      toneLevel: "friendly",
+    };
+  }
+
   // 6. Assemble prompts.
   const policyConstraints: PolicyConstraints = {
     maxTouchesBeforeEscalation:
@@ -218,6 +239,7 @@ export async function generateDebtorEmail(
     history,
     effectiveAction,
     brief.text,
+    isSmallBalanceChase,
   );
 
   // Append email-type-specific addenda the base prompt doesn't natively carry.
@@ -421,7 +443,7 @@ async function resolvePersona(tenantId: string): Promise<AgentPersona> {
 async function loadDebtorProfile(
   tenantId: string,
   contactId: string,
-): Promise<DebtorProfile> {
+): Promise<{ profile: DebtorProfile; smallBalancePolicy: SmallBalancePolicy }> {
   const [contact] = await db
     .select()
     .from(contacts)
@@ -436,6 +458,9 @@ async function loadDebtorProfile(
     .select({
       currency: tenants.currency,
       defaultLanguage: tenants.defaultLanguage,
+      smallAmountThreshold: tenants.smallAmountThreshold,
+      smallAmountChaseEnabled: tenants.smallAmountChaseEnabled,
+      minimumChaseThreshold: tenants.minimumChaseThreshold,
     })
     .from(tenants)
     .where(eq(tenants.id, tenantId))
@@ -467,19 +492,22 @@ async function loadDebtorProfile(
   }
 
   return {
-    companyName: contact.companyName || contact.name,
-    contactName: contact.arContactName || contact.name,
-    contactEmail: contact.arContactEmail || contact.email || "",
-    paymentTerms: contact.paymentTerms ?? 30,
-    creditLimit: contact.creditLimit ? Number(contact.creditLimit) : undefined,
-    riskTag:
-      (contact.playbookRiskTag as "NORMAL" | "HIGH_VALUE") || "NORMAL",
-    currency: contact.preferredCurrency || tenant?.currency || "GBP",
-    language:
-      contact.preferredLanguage || tenant?.defaultLanguage || "en-GB",
-    isPotentiallyVulnerable: contact.isPotentiallyVulnerable ?? false,
-    arNotes: contact.arNotes ?? undefined,
-    behaviour,
+    profile: {
+      companyName: contact.companyName || contact.name,
+      contactName: contact.arContactName || contact.name,
+      contactEmail: contact.arContactEmail || contact.email || "",
+      paymentTerms: contact.paymentTerms ?? 30,
+      creditLimit: contact.creditLimit ? Number(contact.creditLimit) : undefined,
+      riskTag:
+        (contact.playbookRiskTag as "NORMAL" | "HIGH_VALUE") || "NORMAL",
+      currency: contact.preferredCurrency || tenant?.currency || "GBP",
+      language:
+        contact.preferredLanguage || tenant?.defaultLanguage || "en-GB",
+      isPotentiallyVulnerable: contact.isPotentiallyVulnerable ?? false,
+      arNotes: contact.arNotes ?? undefined,
+      behaviour,
+    },
+    smallBalancePolicy: getSmallBalancePolicy(tenant),
   };
 }
 

@@ -97,7 +97,8 @@ export interface TenantSettingsInput {
   chaseDelayDays: number;
   preDueDateDays: number;
   preDueDateMinAmount: number;
-  minimumChaseThreshold: number;
+  smallAmountThreshold: number;
+  smallAmountChaseEnabled: boolean;
   noResponseEscalationThreshold: number;
   significantPaymentThreshold: number;
   channelCooldowns: { email: number; sms: number; voice: number };
@@ -232,8 +233,14 @@ function gateInvoice(input: DebtorDecisionInput): GateResult {
   if (invoice.pauseState) {
     return { pass: false, holdReason: 'invoice_paused', gateNode: 'INVOICE' };
   }
-  if (totalOutstandingForDebtor < tenantSettings.minimumChaseThreshold) {
-    return { pass: false, holdReason: 'below_minimum_chase_threshold', gateNode: 'INVOICE' };
+  // Small-balance policy: only hold if chasing is disabled for small balances.
+  // When chasing is enabled, let the action through — the planner will tag it
+  // smallBalance and the LLM will frame it warmly.
+  if (
+    !tenantSettings.smallAmountChaseEnabled &&
+    totalOutstandingForDebtor < tenantSettings.smallAmountThreshold
+  ) {
+    return { pass: false, holdReason: 'small_balance_chasing_disabled', gateNode: 'INVOICE' };
   }
   return { pass: true, gateNode: 'INVOICE' };
 }
