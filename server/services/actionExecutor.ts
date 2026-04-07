@@ -761,7 +761,7 @@ export class ActionExecutor {
         }
       }
 
-      const fromEmail = process.env.SENDGRID_FROM_EMAIL || 'noreply@qashivo.com';
+      const fromEmail = process.env.SENDGRID_FROM_EMAIL || 'cc@qashivo.com';
       const fromName = tenant.name ? `${tenant.name} via Qashivo` : 'Qashivo Credit Control';
 
       // Convert LLM plain text to proper HTML email
