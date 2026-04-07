@@ -1059,18 +1059,23 @@ export function registerActionCentreRoutes(app: Express): void {
         );
 
       // Invoices paid yesterday (amount sum)
+      // Use paidDate (date Xero marks the invoice fully paid), NOT updatedAt —
+      // updatedAt is bumped on every sync, so filtering by updatedAt would
+      // count all-time paid invoices as "paid yesterday" after any sync run.
+      // Sum amountPaid (what was actually received), not amount (gross invoice
+      // total which may include credit notes).
       const [paidResult] = await db
         .select({
           count: count(),
-          total: sum(invoices.amount),
+          total: sum(invoices.amountPaid),
         })
         .from(invoices)
         .where(
           and(
             eq(invoices.tenantId, user.tenantId),
             eq(invoices.status, "paid"),
-            gte(invoices.updatedAt, yesterday),
-            lte(invoices.updatedAt, today),
+            gte(invoices.paidDate, yesterday),
+            lte(invoices.paidDate, today),
           )
         );
 
