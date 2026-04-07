@@ -255,6 +255,29 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
     return () => window.removeEventListener("approval:edit", handler);
   }, []);
 
+  // Listen for background-delivery outcomes dispatched by useRealtimeEvents.
+  // The approve endpoint returns before SendGrid, so the "sent" confirmation
+  // comes in as an SSE event a few seconds later.
+  useEffect(() => {
+    const onSent = () => {
+      toast({ title: "Sent ✓", description: "The email has been delivered." });
+    };
+    const onFailed = (e: Event) => {
+      const err = (e as CustomEvent).detail?.error;
+      toast({
+        title: "Send failed",
+        description: err || "The email could not be delivered. Check the Exceptions tab.",
+        variant: "destructive",
+      });
+    };
+    window.addEventListener("realtime:action_sent", onSent);
+    window.addEventListener("realtime:send_failed", onFailed);
+    return () => {
+      window.removeEventListener("realtime:action_sent", onSent);
+      window.removeEventListener("realtime:send_failed", onFailed);
+    };
+  }, [toast]);
+
   // ── Data fetching ──────────────────────────────────────────
 
   const { data, isLoading } = useQuery<{
@@ -281,10 +304,10 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
   type ApprovalsCache = { actions: EnrichedAction[]; total: number; batch: any } | undefined;
   type ScheduledCache = { actions: any[]; total: number } | undefined;
 
-  const buildScheduledRow = (a: EnrichedAction, scheduledFor: Date) => ({
+  const buildScheduledRow = (a: EnrichedAction, scheduledFor: Date, status: "approved" | "scheduled" = "approved") => ({
     id: a.id,
     type: a.type,
-    status: "scheduled",
+    status,
     subject: a.subject,
     content: a.content,
     contactId: a.contactId,
@@ -304,8 +327,9 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
     ids: string[];
     addToScheduled: boolean;
     scheduledFor?: Date;
+    optimisticStatus?: "approved" | "scheduled";
   }) => {
-    const { ids, addToScheduled, scheduledFor } = opts;
+    const { ids, addToScheduled, scheduledFor, optimisticStatus = "approved" } = opts;
     await Promise.all([
       queryClient.cancelQueries({ queryKey: ["/api/action-centre/approvals"] }),
       queryClient.cancelQueries({ queryKey: ["/api/action-centre/scheduled"] }),
@@ -330,8 +354,8 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
 
     // 2. Optionally add to scheduled
     if (addToScheduled && removed.length > 0) {
-      const when = scheduledFor ?? new Date(Date.now() + 15 * 60_000);
-      const newRows = removed.map(a => buildScheduledRow(a, when));
+      const when = scheduledFor ?? new Date();
+      const newRows = removed.map(a => buildScheduledRow(a, when, optimisticStatus));
       const base = prevScheduled ?? { actions: [], total: 0 };
       queryClient.setQueryData(["/api/action-centre/scheduled"], {
         ...base,
@@ -403,10 +427,11 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
     onSuccess: (_, { actionId }) => {
       // Silent reconciliation — cache is already correct, just refetch to
       // pick up the real server-assigned scheduledFor/approvedBy fields.
+      // Actual "sent" confirmation arrives later via the action_sent SSE event.
       invalidateActionCentre();
       setRegeneratedIds(prev => { const next = new Set(prev); next.delete(actionId); return next; });
       setToneOverrides(prev => { const next = new Map(prev); next.delete(actionId); return next; });
-      toast({ title: "Action approved and sent" });
+      toast({ title: "Approved — sending…", description: "The email will be delivered in a few seconds." });
     },
     onError: (_err, _vars, context) => {
       rollbackOptimistic(context);

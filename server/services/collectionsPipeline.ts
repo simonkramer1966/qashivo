@@ -258,8 +258,102 @@ export async function processCollectionEmail(
 // ── Approve & send ──────────────────────────────────────────
 
 /**
- * Approve a pending action and deliver via SendGrid.
- * Called when a user approves from the dashboard, or by the auto-approval job.
+ * Mark a pending action as approved WITHOUT delivering. Used by the UI
+ * approve endpoint so the HTTP response can return immediately — delivery
+ * happens in a background `setImmediate(() => deliverApprovedAction(...))`
+ * so the SendGrid round-trip never blocks the user's click.
+ *
+ * Status transitions:
+ *   - sendDelayMinutes > 0 → status = 'scheduled' (executor handles later)
+ *   - sendDelayMinutes == 0 → status = 'approved' (caller fires background send)
+ */
+export async function markActionApproved(
+  actionId: string,
+  approvedBy: string | null,
+  editedSubject?: string,
+  editedBody?: string,
+): Promise<{ status: 'approved' | 'scheduled'; scheduledFor?: Date; willSendImmediately: boolean }> {
+  const [row] = await db
+    .select({ action: actions, tenant: tenants })
+    .from(actions)
+    .innerJoin(tenants, eq(actions.tenantId, tenants.id))
+    .where(eq(actions.id, actionId))
+    .limit(1);
+
+  if (!row) throw new Error("Action not found");
+  if (row.action.status !== "pending_approval") {
+    throw new Error(`Action is ${row.action.status}, not pending_approval`);
+  }
+
+  const sendDelayMinutes = row.tenant.sendDelayMinutes ?? 0;
+  const now = new Date();
+
+  // Apply edits + approval metadata atomically.
+  const updatePatch: Record<string, any> = {
+    approvedBy,
+    approvedAt: now,
+    updatedAt: now,
+  };
+  if (editedSubject) updatePatch.subject = editedSubject;
+  if (editedBody) {
+    updatePatch.content = editedBody;
+    updatePatch.editedByUser = true;
+    updatePatch.editedAt = now;
+  }
+
+  if (sendDelayMinutes > 0) {
+    const scheduledFor = new Date(Date.now() + sendDelayMinutes * 60_000);
+    updatePatch.status = "scheduled";
+    updatePatch.scheduledFor = scheduledFor;
+    await db.update(actions).set(updatePatch).where(eq(actions.id, actionId));
+    console.log(`[Pipeline] Approved with ${sendDelayMinutes}min delay — scheduled for ${scheduledFor.toISOString()}`);
+    return { status: "scheduled", scheduledFor, willSendImmediately: false };
+  }
+
+  updatePatch.status = "approved";
+  await db.update(actions).set(updatePatch).where(eq(actions.id, actionId));
+  console.log(`[Pipeline] Marked action ${actionId} as approved — background delivery pending`);
+  return { status: "approved", willSendImmediately: true };
+}
+
+/**
+ * Deliver an already-approved action. Called from `setImmediate` in the
+ * approve route so SendGrid's round-trip happens after the HTTP response
+ * has been flushed. Accepts actions in either 'approved' status (new fast
+ * path) or 'pending_approval' (legacy callers that haven't migrated).
+ */
+export async function deliverApprovedAction(actionId: string): Promise<PipelineResult> {
+  const [row] = await db
+    .select({ action: actions, contact: contacts, tenant: tenants })
+    .from(actions)
+    .innerJoin(contacts, eq(actions.contactId, contacts.id))
+    .innerJoin(tenants, eq(actions.tenantId, tenants.id))
+    .where(eq(actions.id, actionId))
+    .limit(1);
+
+  if (!row) return { actionId, status: "failed", error: "Action not found" };
+  if (row.action.status !== "approved" && row.action.status !== "pending_approval") {
+    return { actionId, status: "failed", error: `Action is ${row.action.status}, cannot deliver` };
+  }
+
+  return deliverEmail(
+    actionId,
+    row.action.tenantId,
+    row.action.contactId!,
+    {
+      subject: row.action.subject || "Payment Reminder",
+      body: row.action.content || "",
+      agentReasoning: (row.action.metadata as any)?.agentReasoning || "",
+    },
+    row.tenant,
+  );
+}
+
+/**
+ * Approve a pending action and deliver via SendGrid in one synchronous call.
+ * Used by the batch processor and auto-approval job, where background delivery
+ * isn't useful (the caller is already an async worker). UI paths should call
+ * `markActionApproved()` + background `deliverApprovedAction()` instead.
  */
 export async function approveAndSend(
   actionId: string,

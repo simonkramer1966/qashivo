@@ -6,6 +6,8 @@ type RealtimeEventType =
   | "inbound_email"
   | "action_completed"
   | "action_approved"
+  | "action_sent"
+  | "send_failed"
   | "payment_received"
   | "ptp_created"
   | "dispute_detected"
@@ -40,6 +42,12 @@ const INVALIDATION_MAP: Record<RealtimeEventType, string[][]> = {
   action_approved: [
     ["/api/action-centre"],
     ["/api/approval-queue"],
+  ],
+  action_sent: [
+    ["/api/action-centre"],
+  ],
+  send_failed: [
+    ["/api/action-centre"],
   ],
   payment_received: [
     ["/api/action-centre"],
@@ -133,6 +141,13 @@ export function useRealtimeEvents() {
 
           for (const queryKey of keys) {
             queryClient.invalidateQueries({ queryKey });
+          }
+
+          // Re-dispatch as a window event so individual components
+          // (e.g. ApprovalsTab toasts) can react to specific event types
+          // without coupling the hook to a toast system.
+          if ("data" in event) {
+            window.dispatchEvent(new CustomEvent(`realtime:${event.type}`, { detail: event.data }));
           }
 
           // Smart debtor detail invalidation — if event has a contactId,

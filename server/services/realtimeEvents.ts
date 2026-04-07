@@ -28,6 +28,8 @@ export type RealtimeEventType =
   | "inbound_email"
   | "action_completed"
   | "action_approved"
+  | "action_sent"
+  | "send_failed"
   | "payment_received"
   | "ptp_created"
   | "dispute_detected"

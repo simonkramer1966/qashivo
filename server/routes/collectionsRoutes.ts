@@ -3928,12 +3928,13 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
       const { actionId } = req.params;
       const { editedSubject, editedBody } = req.body;
+      const tenantId = user.tenantId;
 
-      // Verify action belongs to tenant and is pending_approval
+      // Verify action belongs to tenant
       const [action] = await db
         .select()
         .from(actions)
-        .where(and(eq(actions.id, actionId), eq(actions.tenantId, user.tenantId)))
+        .where(and(eq(actions.id, actionId), eq(actions.tenantId, tenantId)))
         .limit(1);
 
       if (!action) {
@@ -3943,35 +3944,74 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         return res.status(400).json({ message: `Action is ${action.status}, not pending_approval` });
       }
 
-      // If edited content provided, update the action first
-      if (editedSubject || editedBody) {
-        await db
-          .update(actions)
-          .set({
-            subject: editedSubject || action.subject,
-            content: editedBody || action.content,
-            editedByUser: true,
-            editedAt: new Date(),
-            updatedAt: new Date(),
-          })
-          .where(eq(actions.id, actionId));
-      }
+      // STEP 1 — Mark the action approved. This is a single fast DB write.
+      // The SendGrid round-trip happens in a background setImmediate() below
+      // so the HTTP response returns in <100ms.
+      const { markActionApproved, deliverApprovedAction } = await import("../services/collectionsPipeline");
+      const approvalResult = await markActionApproved(actionId, user.id, editedSubject, editedBody);
 
-      // Trigger delivery via collections pipeline
-      const { approveAndSend } = await import("../services/collectionsPipeline");
-      const result = await approveAndSend(actionId, user.id);
-
-      // Emit SSE so other browser tabs update immediately
+      // STEP 2 — Notify other browser tabs immediately.
       const { emitTenantEvent } = await import("../services/realtimeEvents");
-      emitTenantEvent(user.tenantId, 'action_approved', { actionId });
-
-      res.json({
-        message: "Action approved and delivery initiated",
-        result,
+      emitTenantEvent(tenantId, 'action_approved', {
+        actionId,
+        status: approvalResult.status,
+        scheduledFor: approvalResult.scheduledFor?.toISOString(),
       });
+
+      // STEP 3 — Respond to the client BEFORE touching SendGrid.
+      res.json({
+        success: true,
+        status: approvalResult.status,
+        willSendImmediately: approvalResult.willSendImmediately,
+        scheduledFor: approvalResult.scheduledFor?.toISOString(),
+      });
+
+      // STEP 4 — Kick off delivery in the background (only for the
+      // no-delay case — delayed actions are picked up by the scheduler
+      // at their scheduledFor time).
+      if (approvalResult.willSendImmediately) {
+        setImmediate(() => {
+          deliverApprovedAction(actionId)
+            .then(async (result) => {
+              if (result.status === "sent") {
+                emitTenantEvent(tenantId, 'action_sent', { actionId });
+              } else {
+                console.error(`[Approve] Background send failed for ${actionId}:`, result.error);
+                // Mark the action so the UI can show a failure state on next refresh.
+                await db
+                  .update(actions)
+                  .set({
+                    status: "send_failed",
+                    deliveryStatus: "failed",
+                    updatedAt: new Date(),
+                    metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({ sendError: result.error })}::jsonb`,
+                  })
+                  .where(eq(actions.id, actionId));
+                emitTenantEvent(tenantId, 'send_failed', { actionId, error: result.error });
+              }
+            })
+            .catch(async (err) => {
+              console.error(`[Approve] Background send threw for ${actionId}:`, err);
+              await db
+                .update(actions)
+                .set({
+                  status: "send_failed",
+                  deliveryStatus: "failed",
+                  updatedAt: new Date(),
+                  metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({ sendError: err?.message || String(err) })}::jsonb`,
+                })
+                .where(eq(actions.id, actionId));
+              emitTenantEvent(tenantId, 'send_failed', { actionId, error: err?.message });
+            });
+        });
+      }
     } catch (error: any) {
       console.error("Error approving action:", error);
-      res.status(500).json({ message: `Failed to approve action: ${error.message}` });
+      // If we've already sent a response, `res.json` above will have thrown
+      // before this catch, so it's safe to respond here.
+      if (!res.headersSent) {
+        res.status(500).json({ message: `Failed to approve action: ${error.message}` });
+      }
     }
   });
 

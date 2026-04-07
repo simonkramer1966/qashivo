@@ -263,7 +263,9 @@ export function registerActionCentreRoutes(app: Express): void {
         .where(
           and(
             eq(actions.tenantId, user.tenantId),
-            eq(actions.status, "scheduled"),
+            // 'approved' = clicked approve, background delivery in-flight
+            // 'scheduled' = delayed send, executor will pick up later
+            inArray(actions.status, ["approved", "scheduled"]),
             or(
               isNull(actions.deliveryStatus),
               eq(actions.deliveryStatus, "pending"),
