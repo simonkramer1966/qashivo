@@ -466,6 +466,7 @@ async function generateDailyPlanWithCharlie(
       tenantId,
       contactId: primaryDecision.contactId,
       invoiceId: primaryDecision.invoiceId,
+      invoiceIds: contactDecisions.map(d => d.invoiceId),
       userId,
       type: channel,
       subject,
