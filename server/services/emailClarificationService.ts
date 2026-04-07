@@ -135,9 +135,78 @@ class EmailClarificationService {
       // Generate email ID and reply-to address
       const emailId = uuidv4();
       const replyTo = generateReplyToEmail(context.tenantId, conversationId, emailId);
-      
-      // Build the clarification email content
-      const { subject, htmlContent, textContent } = this.buildClarificationEmail(context);
+
+      // Phase 4: generate the clarification email via the persona-backed
+      // debtor email service instead of the static template builder.
+      const { generateDebtorEmail } = await import('./debtorEmailService');
+
+      // Load the debtor's original ambiguous message so we can thread it
+      // into the LLM prompt as the inbound message being replied to.
+      const [inboundRow] = await db
+        .select({
+          content: inboundMessages.content,
+          createdAt: inboundMessages.createdAt,
+          channel: inboundMessages.channel,
+        })
+        .from(inboundMessages)
+        .where(eq(inboundMessages.id, context.messageId))
+        .limit(1);
+
+      const originalPromiseText = inboundRow?.content || '';
+
+      // Map ambiguityType → DebtorEmailRequest.clarificationContext.ambiguousField.
+      // The DebtorEmailRequest interface uses 'date' | 'amount' | 'both'; our
+      // internal ambiguityType vocabulary is wider, so collapse sensibly.
+      const ambiguousField: 'date' | 'amount' | 'both' =
+        context.ambiguityDetails.unclearDate && context.ambiguityDetails.unclearAmount
+          ? 'both'
+          : context.ambiguityDetails.unclearDate
+            ? 'date'
+            : context.ambiguityDetails.unclearAmount
+              ? 'amount'
+              : context.ambiguityType === 'payment_amount'
+                ? 'amount'
+                : 'date';
+
+      const generated = await generateDebtorEmail({
+        tenantId: context.tenantId,
+        contactId: context.contactId,
+        emailType: 'clarification',
+        toneLevel: 'friendly',
+        invoiceIds: [], // explicit empty — clarification emails don't render the invoice table
+        clarificationContext: {
+          ambiguousField,
+          originalPromise: originalPromiseText,
+        },
+        inboundMessage: {
+          body: originalPromiseText,
+          senderName: context.contactName,
+          senderEmail: context.contactEmail,
+          receivedAt: inboundRow?.createdAt ?? new Date(),
+        },
+      });
+
+      const subject = generated.subject?.startsWith('Re:')
+        ? generated.subject
+        : (generated.subject || 'RE: Payment Arrangement - Quick Clarification Needed');
+
+      // Preserve the outer scaffold the debtor used to see (DOCTYPE + body
+      // font stack + Qashivo footer); the persona-signed LLM body owns
+      // everything between.
+      const htmlContent = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+${generated.body}
+<div style="margin-top: 30px; font-size: 12px; color: #666; border-top: 1px solid #eee; padding-top: 10px;">
+  <p>This email was sent on behalf of ${context.tenantName} via Qashivo credit control.</p>
+</div>
+</body>
+</html>`;
+
+      const textContent =
+        generated.body.replace(/<[^>]+>/g, '').replace(/\n{3,}/g, '\n\n').trim() +
+        `\n\n---\nThis email was sent on behalf of ${context.tenantName} via Qashivo credit control.`;
       
       // Send the email
       const result = await sendEmail({
@@ -388,106 +457,6 @@ class EmailClarificationService {
       .where(eq(emailClarifications.id, clarificationId));
     
     console.log(`✅ Clarification ${clarificationId} marked as resolved`);
-  }
-  
-  /**
-   * Build clarification email content based on ambiguity type
-   */
-  private buildClarificationEmail(context: ClarificationContext): {
-    subject: string;
-    htmlContent: string;
-    textContent: string;
-  } {
-    const { ambiguityDetails, contactName, tenantName, outstandingInvoices } = context;
-    
-    // Use AI-generated questions if available, otherwise generate based on ambiguity type
-    const questions = ambiguityDetails.clarificationQuestions?.length 
-      ? ambiguityDetails.clarificationQuestions 
-      : this.generateDefaultQuestions(ambiguityDetails, outstandingInvoices);
-    
-    const subject = `RE: Payment Arrangement - Quick Clarification Needed`;
-    
-    // Build invoice list if there are multiple outstanding invoices
-    let invoiceListHtml = '';
-    let invoiceListText = '';
-    if (outstandingInvoices && outstandingInvoices.length > 1 && ambiguityDetails.multipleInvoices) {
-      invoiceListHtml = `
-        <p style="margin-top: 15px;">For reference, here are your current outstanding invoices:</p>
-        <table style="border-collapse: collapse; width: 100%; margin-top: 10px;">
-          <tr style="background-color: #f8f9fa;">
-            <th style="padding: 8px; text-align: left; border-bottom: 1px solid #dee2e6;">Invoice #</th>
-            <th style="padding: 8px; text-align: right; border-bottom: 1px solid #dee2e6;">Amount</th>
-            <th style="padding: 8px; text-align: left; border-bottom: 1px solid #dee2e6;">Due Date</th>
-          </tr>
-          ${outstandingInvoices.map(inv => `
-            <tr>
-              <td style="padding: 8px; border-bottom: 1px solid #dee2e6;">${inv.invoiceNumber}</td>
-              <td style="padding: 8px; text-align: right; border-bottom: 1px solid #dee2e6;">£${inv.amount.toFixed(2)}</td>
-              <td style="padding: 8px; border-bottom: 1px solid #dee2e6;">${new Date(inv.dueDate).toLocaleDateString('en-GB')}</td>
-            </tr>
-          `).join('')}
-        </table>
-      `;
-      invoiceListText = '\n\nFor reference, here are your current outstanding invoices:\n' +
-        outstandingInvoices.map(inv => 
-          `  - ${inv.invoiceNumber}: £${inv.amount.toFixed(2)} (Due: ${new Date(inv.dueDate).toLocaleDateString('en-GB')})`
-        ).join('\n');
-    }
-    
-    const htmlContent = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
-    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .question { margin: 10px 0; padding: 10px 15px; background-color: #f8f9fa; border-left: 3px solid #0070f3; }
-    .footer { margin-top: 30px; font-size: 12px; color: #666; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <p>Dear ${contactName},</p>
-    
-    <p>Thank you for getting in touch about your account with ${tenantName}.</p>
-    
-    <p>To ensure we record your payment arrangement accurately, could you please help us clarify a few details:</p>
-    
-    ${questions.map(q => `<div class="question">${q}</div>`).join('')}
-    
-    ${invoiceListHtml}
-    
-    <p style="margin-top: 20px;">Simply reply to this email with your answers, and we'll confirm the arrangement straight back to you.</p>
-    
-    <p>Kind regards,<br>
-    ${tenantName} Accounts Team</p>
-    
-    <div class="footer">
-      <p>This email was sent on behalf of ${tenantName} via Qashivo credit control.</p>
-    </div>
-  </div>
-</body>
-</html>`;
-
-    const textContent = `Dear ${contactName},
-
-Thank you for getting in touch about your account with ${tenantName}.
-
-To ensure we record your payment arrangement accurately, could you please help us clarify a few details:
-
-${questions.map((q, i) => `${i + 1}. ${q}`).join('\n')}
-${invoiceListText}
-
-Simply reply to this email with your answers, and we'll confirm the arrangement straight back to you.
-
-Kind regards,
-${tenantName} Accounts Team
-
----
-This email was sent on behalf of ${tenantName} via Qashivo credit control.`;
-
-    return { subject, htmlContent, textContent };
   }
   
   /**
@@ -980,82 +949,63 @@ ${escalation.suggestedHandoff ? `SUGGESTED FOCUS:\n${escalation.suggestedHandoff
     conversationHistory: string,
     partialEscalation?: { debtorQuestion?: string; suggestedHandoff?: string },
   ): Promise<{ subject: string; htmlContent: string; textContent: string; timelineSummary: string }> {
-    const currentDate = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const { generateDebtorEmail } = await import('./debtorEmailService');
 
-    const partialEscalationInstructions = partialEscalation ? `
-IMPORTANT — PARTIAL HANDOFF REQUIRED:
-The debtor's message contains a question that needs to be answered by a human colleague. You MUST:
-- Handle the parts you can (e.g. confirming a payment arrangement, acknowledging information)
-- For the question that needs human follow-up${partialEscalation.debtorQuestion ? ` ("${partialEscalation.debtorQuestion}")` : ''}, DO NOT attempt to answer it yourself
-- Instead, acknowledge the question naturally and tell them a colleague will come back to them personally on that matter
-- Use warm, natural phrasing like: "Regarding [their question], I'll pass that across to my colleague who will come back to you personally on that."
-- Do NOT say "I'm an AI" or "I can't answer that" — just naturally hand it off as a team member would
-- The handoff should feel seamless and reassuring, not like you're dodging the question
-` : '';
+    // Compose the partial-escalation hint as a user brief — it carries the
+    // debtor question + suggested handoff to the LLM without the inline
+    // boilerplate this method used to assemble.
+    const brief = partialEscalation
+      ? [
+          "PARTIAL HANDOFF REQUIRED.",
+          "Handle what you can naturally (confirmations, acknowledgements).",
+          partialEscalation.debtorQuestion
+            ? `Do NOT attempt to answer this question: "${partialEscalation.debtorQuestion}". Acknowledge it naturally and say a colleague will come back to them personally.`
+            : "Acknowledge any open question and tell them a colleague will come back to them personally.",
+          "Never say you are an AI. Hand off seamlessly, as a team member would.",
+        ].join(" ")
+      : undefined;
 
-    const systemPrompt = `You are a professional credit control assistant replying to a debtor's email. You are continuing an active conversation — respond naturally as if you are a human accounts team member.
-
-TODAY'S DATE: ${currentDate}
-TENANT (creditor) NAME: ${context.tenantName}
-DEBTOR NAME: ${context.contactName}
-
-CONVERSATION HISTORY (most recent first):
-${conversationHistory}
-
-LATEST DEBTOR MESSAGE:
-"${context.inboundMessageText}"
-
-${debtorContext}
-${partialEscalationInstructions}
-RULES — YOU MUST FOLLOW THESE:
-1. NEVER use placeholder text like "the agreed date", "the agreed amount", "your outstanding balance", or "[amount]". Use concrete figures from the debtor context or conversation history. If you don't have a specific figure, don't reference it.
-2. Respond directly to what the debtor said. This is a conversation — don't repeat introductions or context they already know.
-3. Keep responses concise — no more than 120 words in the body.
-4. If the debtor is asking a question you CAN answer, answer it clearly using the invoice/account data available.
-5. If the debtor is negotiating payment terms, engage constructively. You can accept reasonable payment dates and amounts. Suggest payment plans if the total is large and the debtor seems willing.
-6. If the debtor is providing information (e.g. remittance details, PO numbers), acknowledge receipt and confirm next steps.
-7. If the debtor confirms a payment promise, confirm the exact date and amount back to them.
-8. Be warm but professional. No overly formal language. No grovelling. Treat them as a business partner.
-9. Reference specific invoice numbers and amounts when relevant.
-10. Sign off as "${context.tenantName} Accounts Team".
-11. Do NOT include any Qashivo branding in the body — only in the footer.
-12. The subject line should be a reply (Re: ...) to maintain the thread.
-
-Return a JSON object with exactly these fields:
-- "subject": Email subject line (typically "Re: [original subject]")
-- "body_text": The plain text email body (include greeting and sign-off)
-- "body_html": The same email wrapped in clean, minimal HTML (use inline styles, no external CSS)
-- "timeline_summary": A one-line summary for the activity timeline (e.g. "AI replied to debtor query about INV-1234")`;
-
-    const result = await generateJSON<any>({
-      system: systemPrompt,
-      prompt: "Generate the reply email.",
-      model: "fast",
-      temperature: 0.4,
+    const generated = await generateDebtorEmail({
+      tenantId: context.tenantId,
+      contactId: context.contactId,
+      emailType: 'conversation',
+      toneLevel: 'friendly',
+      inboundMessage: {
+        body: context.inboundMessageText,
+        senderName: context.contactName,
+        senderEmail: context.contactEmail,
+        receivedAt: new Date(),
+      },
+      invoiceIds: context.linkedInvoiceIds,
+      userBrief: brief,
     });
 
-    const subject = result.subject || `Re: ${context.inboundSubject || 'Your account'}`;
-    const textContent = result.body_text || '';
-    const htmlBody = result.body_html || `<p>${textContent.replace(/\n/g, '<br>')}</p>`;
-    const timelineSummary = result.timeline_summary || 'AI replied to debtor email';
+    const subject = generated.subject.startsWith('Re:')
+      ? generated.subject
+      : `Re: ${context.inboundSubject || 'Your account'}`;
 
+    // Wrap the persona-signed HTML body in the existing outer HTML scaffold +
+    // Qashivo footer so nothing visible to the debtor regresses.
     const htmlContent = `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-${htmlBody}
+${generated.body}
 <div style="margin-top: 30px; font-size: 12px; color: #666; border-top: 1px solid #eee; padding-top: 10px;">
   <p>This email was sent on behalf of ${context.tenantName} via Qashivo credit control.</p>
 </div>
 </body>
 </html>`;
 
-    return {
-      subject,
-      htmlContent,
-      textContent: textContent + `\n\n---\nThis email was sent on behalf of ${context.tenantName} via Qashivo credit control.`,
-      timelineSummary,
-    };
+    // Plain-text fallback: strip tags from the generated body (it is well-formed
+    // HTML per debtorEmailService's output contract).
+    const textContent =
+      generated.body.replace(/<[^>]+>/g, '').replace(/\n{3,}/g, '\n\n').trim() +
+      `\n\n---\nThis email was sent on behalf of ${context.tenantName} via Qashivo credit control.`;
+
+    const timelineSummary = `AI replied to debtor email: "${subject}"`;
+
+    return { subject, htmlContent, textContent, timelineSummary };
   }
 
   /**
@@ -1653,38 +1603,6 @@ ${htmlBody}
     }
   }
 
-  /**
-   * Generate default clarification questions based on ambiguity type
-   */
-  private generateDefaultQuestions(
-    ambiguityDetails: AmbiguityDetails, 
-    outstandingInvoices?: Array<{ invoiceNumber: string; amount: number }>
-  ): string[] {
-    const questions: string[] = [];
-    
-    if (ambiguityDetails.unclearInvoices || ambiguityDetails.multipleInvoices) {
-      if (outstandingInvoices && outstandingInvoices.length > 1) {
-        questions.push(`Which invoice(s) does your payment relate to? (You have ${outstandingInvoices.length} outstanding invoices - see the list below)`);
-      } else {
-        questions.push(`Could you please confirm the invoice number(s) your payment relates to?`);
-      }
-    }
-    
-    if (ambiguityDetails.unclearAmount) {
-      questions.push(`What is the exact amount you intend to pay?`);
-    }
-    
-    if (ambiguityDetails.unclearDate) {
-      questions.push(`On what date do you expect to make the payment?`);
-    }
-    
-    // Ensure at least one question
-    if (questions.length === 0) {
-      questions.push(`Could you please confirm the details of your intended payment (invoice number, amount, and date)?`);
-    }
-    
-    return questions;
-  }
 }
 
 export const emailClarificationService = new EmailClarificationService();

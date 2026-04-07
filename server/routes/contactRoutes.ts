@@ -34,7 +34,6 @@ import { getLanguageName, getCurrencySymbol, formatCurrencyForPrompt } from "@sh
 import { eq, and, desc, asc, sql, count, avg, gte, lte, lt, inArray, notInArray, or, isNull, isNotNull, gt, not } from 'drizzle-orm';
 import { db } from '../db';
 import { z } from "zod";
-import { generateCollectionSuggestions, generateEmailDraft, generateAiCfoResponse } from "../services/openai";
 import { sendReminderEmail, DEFAULT_FROM, DEFAULT_FROM_EMAIL } from "../services/sendgrid";
 import { sendPaymentReminderSMS } from "../services/vonage";
 import { ActionPrioritizationService } from "../services/actionPrioritizationService";
