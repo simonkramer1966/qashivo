@@ -60,6 +60,7 @@ export interface ConversationBriefData {
     direction: string;
     channel: string;
     summary: string;
+    preview: string | null;
     outcomeType: string | null;
   }>;
   openDisputes: string[];
@@ -105,7 +106,7 @@ export interface ChaseContext {
 // ── Per-run cache ────────────────────────────────────────────
 
 const briefCache = new Map<string, { brief: ConversationBrief; cachedAt: number }>();
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes — covers a full planning run
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes — covers a full planning run + retries
 
 /** Clear cache for a contact (call on new inbound events) */
 export function invalidateBriefCache(contactId: string): void {
@@ -185,7 +186,19 @@ export async function buildConversationBrief(
     facts, prefs, intel, recentEmails, recentActions, forecasts, chaseDelayDays, creditBalance,
     chaseContext,
   );
-  const text = formatBriefText(data, contact, prefs, chaseContext);
+  let text = formatBriefText(data, contact, prefs, intel, chaseContext);
+
+  // Token guard rail — collapse history to 8 entries if over budget.
+  // Rough char/token ratio (~4 chars/token) is good enough for a guard;
+  // a single rebuild is sufficient — no iterative shrinking needed.
+  const estTokens = Math.ceil(text.length / 4);
+  if (estTokens > 900) {
+    const truncatedData: ConversationBriefData = {
+      ...data,
+      recentHistory: data.recentHistory.slice(0, 8),
+    };
+    text = formatBriefText(truncatedData, contact, prefs, intel, chaseContext);
+  }
 
   const brief: ConversationBrief = { text, data };
 
@@ -526,13 +539,21 @@ function assembleData(
         : null,
       hasPaymentPlan: unpaid.some((inv: any) => inv.pauseState === 'payment_plan'),
     },
-    recentHistory: timeline.slice(0, 10).map((t: any) => ({
-      date: new Date(t.occurredAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
-      direction: t.direction || 'system',
-      channel: t.channel || 'system',
-      summary: t.summary || '',
-      outcomeType: t.outcomeType || null,
-    })),
+    recentHistory: timeline.slice(0, 15).map((t: any) => {
+      const rawPreview: string | null = t.preview || (t.body ? String(t.body).split('\n').find((l: string) => l.trim()) : null) || null;
+      const trimmed = rawPreview ? rawPreview.trim().replace(/\s+/g, ' ') : null;
+      const preview = trimmed && trimmed.length > 0
+        ? (trimmed.length > 80 ? trimmed.slice(0, 80) + '…' : trimmed)
+        : null;
+      return {
+        date: new Date(t.occurredAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+        direction: t.direction || 'system',
+        channel: t.channel || 'system',
+        summary: t.summary || '',
+        preview,
+        outcomeType: t.outcomeType || null,
+      };
+    }),
     openDisputes,
     channelHistory: {
       emailsSent: emailEvents.length,
@@ -566,132 +587,123 @@ function assembleData(
 
 // ── Text formatter ───────────────────────────────────────────
 
-function formatBriefText(data: ConversationBriefData, contact: any, prefs?: any, chaseContext?: ChaseContext): string {
+function formatBriefText(
+  data: ConversationBriefData,
+  contact: any,
+  prefs?: any,
+  intel?: any,
+  chaseContext?: ChaseContext,
+): string {
   const lines: string[] = [];
   const name = contact?.companyName || contact?.name || 'Unknown';
 
   lines.push(`CONVERSATION BRIEF FOR ${name.toUpperCase()}`);
   lines.push('');
 
-  // Chase target — when a specific bundle is being chased, this is the most
-  // important section in the brief. It must come first and be unambiguous.
+  // Helper — every section always renders, falling back to "None recorded".
+  const section = (heading: string, body: string[]) => {
+    lines.push(`=== ${heading} ===`);
+    if (body.length === 0) {
+      lines.push('None recorded.');
+    } else {
+      lines.push(...body);
+    }
+    lines.push('');
+  };
+
+  // 1. CHASE CONTEXT — always rendered
+  const chaseLines: string[] = [];
   if (chaseContext) {
-    lines.push('CHASE TARGET FOR THIS EMAIL:');
-    lines.push(`- Amount to demand: £${chaseContext.chaseAmount.toFixed(2)}`);
-    lines.push(`- Invoices in this chase: ${chaseContext.chaseInvoiceCount}`);
-    lines.push(`- This is the ONLY amount you should ask the debtor to pay. The OUTSTANDING INVOICES section of the user prompt lists the specific invoices — reference them individually by invoice number, amount, and days overdue.`);
-    lines.push(`- The subject line must reflect the chase amount (£${chaseContext.chaseAmount.toFixed(2)}), not the relationship total.`);
-    lines.push('');
-  }
-
-  // Relationship summary — when a chase context is present this becomes
-  // context only. When no chase context (e.g. inbound reply), it's the
-  // primary amount.
-  lines.push(chaseContext ? 'ACCOUNT-WIDE CONTEXT (for awareness only — do not cite as the amount owed):' : 'RELATIONSHIP SUMMARY:');
-  lines.push(`- Total relationship balance: £${data.relationshipSummary.totalOutstanding.toFixed(2)} across ${data.relationshipSummary.invoiceCount} invoice(s)`);
-  if (data.relationshipSummary.oldestOverdueDays != null) {
-    lines.push(`- Oldest overdue: ${data.relationshipSummary.oldestOverdueDays} days`);
-  }
-  if (data.relationshipSummary.relationshipTier) {
-    lines.push(`- Relationship tier: ${data.relationshipSummary.relationshipTier}`);
-  }
-  if (data.relationshipSummary.specialInstructions) {
-    lines.push(`- Special instructions: ${data.relationshipSummary.specialInstructions}`);
-  }
-  lines.push('');
-
-  // Credit balance — informational only. We do NOT compute or quote a "net
-  // outstanding" figure: each invoice's amount already reflects any credits
-  // allocated to it, and unallocated credits sit on the account until the
-  // debtor decides what to do with them. Mention them as context so the LLM
-  // knows they exist (the debtor may bring them up), but never as a deduction.
-  if (data.creditBalance.hasCredits) {
-    lines.push('CREDIT NOTES:');
-    lines.push(`Unallocated credits of £${data.creditBalance.totalUnappliedCredits.toFixed(2)} exist on this account. Do NOT subtract them from the chase amount or any invoice total — each invoice already reflects any credits allocated to it. Mention these only if the debtor raises them.`);
-    lines.push('');
-  }
-
-  // Collection phase
-  lines.push('COLLECTION PHASE:');
-  if (data.collectionPhase.hasActiveArrangement) {
-    lines.push('- Phase: ARRANGEMENT IN PLACE — debtor has committed to a payment date or plan. Monitor, do not chase.');
-  } else if (data.collectionPhase.phase === 'inform') {
-    lines.push(`- Phase: 1 (Inform) — invoice is new or within ${data.collectionPhase.chaseDelayDays}-day grace period. One polite nudge only. Do NOT chase silence.`);
+    chaseLines.push(`Amount to demand: £${chaseContext.chaseAmount.toFixed(2)}`);
+    chaseLines.push(`Invoices in this chase: ${chaseContext.chaseInvoiceCount}`);
+    chaseLines.push('This is the ONLY amount you should ask the debtor to pay. The OUTSTANDING INVOICES section of the user prompt lists the specific invoices — reference them individually by invoice number, amount, and days overdue.');
+    chaseLines.push(`The subject line must reflect the chase amount (£${chaseContext.chaseAmount.toFixed(2)}), not the relationship total.`);
   } else {
-    lines.push(`- Phase: 2 (Elicit Date) — invoice is ${data.collectionPhase.oldestOverdueDays} days overdue (past ${data.collectionPhase.chaseDelayDays}-day grace period). Actively seek a specific payment date.`);
+    chaseLines.push('No specific chase bundle for this message — treat the relationship balance as context only and respond to the debtor based on the conversation history below.');
   }
-  lines.push('');
+  section('CHASE CONTEXT', chaseLines);
 
-  // Active commitments
-  lines.push('ACTIVE COMMITMENTS:');
+  // 2. RELATIONSHIP SUMMARY — always rendered, includes collection phase
+  const relLines: string[] = [];
+  relLines.push(`Total relationship balance: £${data.relationshipSummary.totalOutstanding.toFixed(2)} across ${data.relationshipSummary.invoiceCount} invoice(s)${chaseContext ? ' (account-wide context — do NOT cite as the amount owed)' : ''}`);
+  relLines.push(`Oldest overdue: ${data.relationshipSummary.oldestOverdueDays != null ? `${data.relationshipSummary.oldestOverdueDays} days` : 'no overdue invoices'}`);
+  relLines.push(`Relationship tier: ${data.relationshipSummary.relationshipTier || 'None recorded'}`);
+  relLines.push(`Special instructions: ${data.relationshipSummary.specialInstructions || 'None recorded'}`);
+  if (data.collectionPhase.hasActiveArrangement) {
+    relLines.push('Collection phase: ARRANGEMENT IN PLACE — debtor has committed to a payment date or plan. Monitor, do not chase.');
+  } else if (data.collectionPhase.phase === 'inform') {
+    relLines.push(`Collection phase: 1 (Inform) — invoice is new or within ${data.collectionPhase.chaseDelayDays}-day grace period. One polite nudge only. Do NOT chase silence.`);
+  } else {
+    relLines.push(`Collection phase: 2 (Elicit Date) — invoice is ${data.collectionPhase.oldestOverdueDays} days overdue (past ${data.collectionPhase.chaseDelayDays}-day grace period). Actively seek a specific payment date.`);
+  }
+  section('RELATIONSHIP SUMMARY', relLines);
+
+  // 3. ACTIVE COMMITMENTS — always rendered
+  const commitLines: string[] = [];
   if (data.activeCommitments.hasActivePromise) {
-    let promiseLine = `- Payment promise: £${data.activeCommitments.promiseAmount?.toFixed(2) || '?'} by ${data.activeCommitments.promiseDate || 'unknown date'}`;
+    let promiseLine = `Payment promise: £${data.activeCommitments.promiseAmount?.toFixed(2) || '?'} by ${data.activeCommitments.promiseDate || 'unknown date'}`;
     if (data.activeCommitments.promiseModified && data.activeCommitments.previousPromiseDate) {
       promiseLine += ` (modified from ${data.activeCommitments.previousPromiseDate})`;
     }
-    lines.push(promiseLine);
+    commitLines.push(promiseLine);
     if (data.activeCommitments.promiseReliabilityScore != null) {
-      lines.push(`- Promise reliability: PRS ${data.activeCommitments.promiseReliabilityScore}`);
+      commitLines.push(`Promise reliability: PRS ${data.activeCommitments.promiseReliabilityScore}`);
     }
-  } else {
-    lines.push('- No active payment promises');
   }
   if (data.activeCommitments.hasPaymentPlan) {
-    lines.push('- Payment plan in place — some invoices paused');
+    commitLines.push('Payment plan in place — some invoices paused');
   }
-  lines.push('');
+  section('ACTIVE COMMITMENTS', commitLines);
 
-  // Recent communication history
-  lines.push('RECENT COMMUNICATION HISTORY (most recent first):');
-  if (data.recentHistory.length > 0) {
-    for (const entry of data.recentHistory) {
-      let line = `- [${entry.date}] ${entry.direction.toUpperCase()} via ${entry.channel}: ${entry.summary}`;
-      if (entry.outcomeType) line += ` (${entry.outcomeType})`;
-      lines.push(line);
+  // 4. RECENT COMMUNICATION HISTORY — always rendered (richer per-entry)
+  const histLines: string[] = [];
+  for (const entry of data.recentHistory) {
+    let head = `[${entry.date}] ${entry.direction.toUpperCase()} ${entry.channel}: ${entry.summary || '(no summary)'}`;
+    if (entry.outcomeType) head += ` (${entry.outcomeType})`;
+    histLines.push(head);
+    if (entry.preview) {
+      histLines.push(`    "${entry.preview}"`);
     }
-  } else {
-    lines.push('- No prior communication on record. This is the first contact.');
   }
-  lines.push('');
+  section('RECENT COMMUNICATION HISTORY (most recent first)', histLines);
 
-  // Open disputes
-  if (data.openDisputes.length > 0) {
-    lines.push('OPEN DISPUTES:');
-    for (const d of data.openDisputes) {
-      lines.push(`- ${d}`);
-    }
-    lines.push('');
+  // 5. OPEN DISPUTES — always rendered
+  section('OPEN DISPUTES', data.openDisputes);
+
+  // 6. CHANNEL HISTORY — always rendered
+  const chanLines: string[] = [];
+  chanLines.push(`Emails sent: ${data.channelHistory.emailsSent}${data.channelHistory.lastEmailDate ? ` (last: ${data.channelHistory.lastEmailDate})` : ''}`);
+  chanLines.push(`SMS sent: ${data.channelHistory.smsSent}${data.channelHistory.lastSmsDate ? ` (last: ${data.channelHistory.lastSmsDate})` : ''}`);
+  chanLines.push(`Calls made: ${data.channelHistory.callsMade}${data.channelHistory.lastCallDate ? ` (last: ${data.channelHistory.lastCallDate})` : ''}`);
+  chanLines.push(`Preferred channel: ${data.channelHistory.preferredChannel || 'None recorded'}`);
+  section('CHANNEL HISTORY', chanLines);
+
+  // 7. DEBTOR INTELLIGENCE — always rendered
+  const intelLines: string[] = [...data.debtorIntel];
+  if (intel?.industrySector && !intelLines.some(l => l.includes('Industry'))) {
+    intelLines.push(`Industry: ${intel.industrySector}`);
   }
-
-  // Channel history
-  lines.push('CHANNEL HISTORY:');
-  lines.push(`- Emails sent: ${data.channelHistory.emailsSent}${data.channelHistory.lastEmailDate ? ` (last: ${data.channelHistory.lastEmailDate})` : ''}`);
-  lines.push(`- SMS sent: ${data.channelHistory.smsSent}${data.channelHistory.lastSmsDate ? ` (last: ${data.channelHistory.lastSmsDate})` : ''}`);
-  lines.push(`- Calls made: ${data.channelHistory.callsMade}${data.channelHistory.lastCallDate ? ` (last: ${data.channelHistory.lastCallDate})` : ''}`);
-  if (data.channelHistory.preferredChannel) {
-    lines.push(`- Preferred channel: ${data.channelHistory.preferredChannel}`);
+  if (intel?.sizeClassification && !intelLines.some(l => l.includes('Size'))) {
+    intelLines.push(`Size: ${intel.sizeClassification}`);
   }
-  lines.push('');
-
-  // Debtor intelligence
-  if (data.debtorIntel.length > 0) {
-    lines.push('DEBTOR INTELLIGENCE:');
-    for (const d of data.debtorIntel) {
-      lines.push(`- ${d}`);
-    }
-    lines.push('');
+  if (intel?.companyAge != null && !intelLines.some(l => l.includes('Company age'))) {
+    intelLines.push(`Company age: ${intel.companyAge} years`);
   }
+  if (intel?.insolvencyRisk) {
+    intelLines.push('INSOLVENCY RISK FLAG — proceed with caution.');
+  }
+  section('DEBTOR INTELLIGENCE', intelLines);
 
-  // Contact preferences (only show debtor-level overrides)
+  // 8. CONTACT PREFERENCES — always rendered
+  const prefLines: string[] = [];
   if (prefs) {
-    const prefLines: string[] = [];
     if (prefs.bestContactWindowStart || prefs.bestContactWindowEnd) {
-      prefLines.push(`- Hours: ${prefs.bestContactWindowStart || '?'}–${prefs.bestContactWindowEnd || '?'}${prefs.contactTimezone ? ` ${prefs.contactTimezone}` : ''} (debtor specific)`);
+      prefLines.push(`Hours: ${prefs.bestContactWindowStart || '?'}–${prefs.bestContactWindowEnd || '?'}${prefs.contactTimezone ? ` ${prefs.contactTimezone}` : ''} (debtor specific)`);
     }
     if (prefs.bestContactDays) {
       const days = prefs.bestContactDays as string[];
-      if (days.length > 0 && days.length < 7) {
-        prefLines.push(`- Days: ${days.map((d: string) => d.charAt(0).toUpperCase() + d.slice(1, 3)).join(', ')} only`);
+      if (days && days.length > 0 && days.length < 7) {
+        prefLines.push(`Days: ${days.map((d: string) => d.charAt(0).toUpperCase() + d.slice(1, 3)).join(', ')} only`);
       }
     }
     if (prefs.doNotContactUntil) {
@@ -700,46 +712,47 @@ function formatBriefText(data: ConversationBriefData, contact: any, prefs?: any,
       today.setHours(0, 0, 0, 0);
       until.setHours(0, 0, 0, 0);
       if (today <= until) {
-        prefLines.push(`- BLACKOUT: Do not contact until ${until.toISOString().slice(0, 10)}${prefs.doNotContactReason ? ` (${prefs.doNotContactReason})` : ''}`);
+        prefLines.push(`BLACKOUT: Do not contact until ${until.toISOString().slice(0, 10)}${prefs.doNotContactReason ? ` (${prefs.doNotContactReason})` : ''}`);
       } else {
-        // Post-blackout — check if within 14 days of expiry
         const fourteenDaysAfter = new Date(until);
         fourteenDaysAfter.setDate(fourteenDaysAfter.getDate() + 14);
         if (today <= fourteenDaysAfter) {
-          prefLines.push(`- NOTE: Debtor was in a do-not-contact period until ${until.toISOString().slice(0, 10)}${prefs.doNotContactReason ? `. Reason: ${prefs.doNotContactReason}` : ''}. This is the first contact since the period ended.`);
+          prefLines.push(`NOTE: Debtor was in a do-not-contact period until ${until.toISOString().slice(0, 10)}${prefs.doNotContactReason ? `. Reason: ${prefs.doNotContactReason}` : ''}. This is the first contact since the period ended.`);
         }
       }
     }
-    const channelStatus = [
-      prefs.emailEnabled !== false ? 'Email' : null,
-      prefs.smsEnabled !== false ? 'SMS' : null,
-      prefs.voiceEnabled !== false ? 'Voice' : null,
-    ].filter(Boolean).join(', ');
     const channelBlocked = [
       prefs.emailEnabled === false ? 'Email' : null,
       prefs.smsEnabled === false ? 'SMS' : null,
       prefs.voiceEnabled === false ? 'Voice' : null,
-    ].filter(Boolean);
+    ].filter(Boolean) as string[];
     if (channelBlocked.length > 0) {
-      prefLines.push(`- Channels: ${channelStatus} (${channelBlocked.join(', ')} disabled)`);
+      prefLines.push(`Disabled channels: ${channelBlocked.join(', ')}`);
     }
     if (prefs.preferredChannelOverride) {
-      prefLines.push(`- Override: Always ${prefs.preferredChannelOverride} (${prefs.preferredChannelOverrideSource || 'manual'})`);
-    }
-    if (prefLines.length > 0) {
-      lines.push('CONTACT PREFERENCES:');
-      lines.push(...prefLines);
-      lines.push('');
+      prefLines.push(`Override: Always ${prefs.preferredChannelOverride} (${prefs.preferredChannelOverrideSource || 'manual'})`);
     }
   }
+  if (prefLines.length === 0) {
+    section('CONTACT PREFERENCES', ['No overrides — use tenant defaults.']);
+  } else {
+    section('CONTACT PREFERENCES', prefLines);
+  }
 
-  // Constraints
-  if (data.constraints.length > 0) {
-    lines.push('WHAT NOT TO DO:');
-    for (const c of data.constraints) {
-      lines.push(`- ${c}`);
-    }
-    lines.push('');
+  // 9. CREDIT NOTES — always rendered
+  if (data.creditBalance.hasCredits) {
+    section('CREDIT NOTES', [
+      `Unallocated credits of £${data.creditBalance.totalUnappliedCredits.toFixed(2)} exist on this account. Do NOT subtract them from the chase amount or any invoice total — each invoice already reflects any credits allocated to it. Mention these only if the debtor raises them.`,
+    ]);
+  } else {
+    section('CREDIT NOTES', []);
+  }
+
+  // 10. WHAT NOT TO DO — always rendered
+  if (data.constraints.length === 0) {
+    section('WHAT NOT TO DO', ['No hard blocks — proceed with the standard playbook.']);
+  } else {
+    section('WHAT NOT TO DO', data.constraints);
   }
 
   return lines.join('\n');
