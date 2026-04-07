@@ -12,6 +12,8 @@ import { ToneProfile, PlaybookStage } from "./playbookEngine";
 import { messagePreGenerator } from "./messagePreGenerator";
 import { resolvePrimaryEmail, resolvePrimarySmsNumber } from "./contactEmailResolver";
 import { buildConversationBrief } from "./conversationBriefService";
+import { generateReplyToEmail, findOrCreateConversation, updateConversationStats } from "./emailCommunications";
+import { v4 as uuidv4 } from "uuid";
 
 /**
  * Action Executor Service
@@ -777,12 +779,23 @@ export class ActionExecutor {
         finalHtml = testBanner + finalHtml;
       }
 
+      // Reply-To wiring — pre-generate the emailMessages id and a signed
+      // reply token so debtor replies route into the inbound parse webhook
+      // (reply+TOKEN@in.qashivo.com → /api/webhooks/sendgrid/inbound).
+      // Without this, replies bounce back to the from address and never
+      // reach Qashivo's inbound pipeline. Same pattern as collectionsPipeline.
+      const conversationId = await findOrCreateConversation(action.tenantId, contact.id, emailContent.subject);
+      const emailMessageId = uuidv4();
+      const replyToEmail = generateReplyToEmail(action.tenantId, conversationId, emailMessageId);
+
+      console.log(`[Executor] Sending email to ${recipientEmail} (replyTo: ${replyToEmail})`);
       const result = await sendEmail({
         to: recipientEmail,
         from: `${fromName} <${fromEmail}>`,
         subject: emailContent.subject,
         html: finalHtml,
         text: textBody,
+        replyTo: replyToEmail,
         tenantId: action.tenantId,
         actionId: action.id,
         contactId: contact.id,
@@ -806,7 +819,9 @@ export class ActionExecutor {
 
       try {
         await db.insert(emailMessages).values({
+          id: emailMessageId,
           tenantId: action.tenantId,
+          conversationId,
           direction: 'OUTBOUND',
           channel: 'EMAIL',
           actionId: action.id,
@@ -819,10 +834,12 @@ export class ActionExecutor {
           subject: emailContent.subject,
           textBody,
           htmlBody: emailContent.body,
+          replyToken: `${action.tenantId}.${conversationId}.${emailMessageId}`,
           status: result?.success ? 'SENT' : 'FAILED',
           sendgridMessageId: result?.messageId || null,
           sentAt: result?.success ? new Date() : null,
         });
+        await updateConversationStats(conversationId, 'outbound');
       } catch (recordErr) {
         console.warn(`⚠️ Email sent but failed to record in email_messages:`, recordErr);
       }
