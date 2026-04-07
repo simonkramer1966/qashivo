@@ -1,6 +1,6 @@
 import { eq, and, sql } from "drizzle-orm";
 import { db } from "../db";
-import { actions, tenants, invoices } from "@shared/schema";
+import { actions, tenants, invoices, agentPersonas } from "@shared/schema";
 import { generateInvoiceTableHtml } from "./collectionsAutomation";
 import { setupDefaultWorkflow } from "./defaultWorkflowSetup";
 import { charlieDecisionEngine } from "./charlieDecisionEngine";
@@ -307,10 +307,20 @@ async function generateDailyPlanWithCharlie(
     flagVipCustomers: true,
   };
   
+  // Load active persona — template fallback path must use the same persona
+  // signature fields as the LLM path so the sign-off reads Name / Title / Company
+  // rather than the tenant company name twice.
+  const [activePersona] = await db
+    .select()
+    .from(agentPersonas)
+    .where(and(eq(agentPersonas.tenantId, tenantId), eq(agentPersonas.isActive, true)))
+    .limit(1);
+
   // Get tenant config for message preparation
   const tenantConfig = {
-    companyName: tenant.name,
-    senderName: tenant.name,
+    companyName: activePersona?.emailSignatureCompany || tenant.name,
+    senderName: activePersona?.emailSignatureName || tenant.name,
+    senderTitle: activePersona?.emailSignatureTitle || '',
     contactNumber: tenant.phone || '',
     paymentDetails: tenant.paymentDetails || 'Please contact us for payment details.',
   };
@@ -532,8 +542,24 @@ async function generateDailyPlanWithCharlie(
           }
         }
       } catch (pipelineErr: any) {
-        console.warn(`[Pipeline] LLM pipeline failed for action ${newAction.id}, keeping template content: ${pipelineErr.message}`);
-        // Falls back to template content already set on the action
+        console.warn(`[Pipeline] LLM pipeline failed for action ${newAction.id}: ${pipelineErr.message}. Marking as generation_failed.`);
+        // Clear template content and mark as generation_failed so the action
+        // is not visible in the approval queue. Failed generations must not
+        // be approvable — the template body would otherwise leak with the
+        // wrong (non-persona) signature.
+        await db
+          .update(actions)
+          .set({
+            status: 'generation_failed',
+            content: null,
+            subject: null,
+            metadata: sql`jsonb_set(COALESCE(${actions.metadata}, '{}'), '{generationError}', ${JSON.stringify(pipelineErr.message || 'unknown')}::jsonb)`,
+            updatedAt: new Date(),
+          })
+          .where(eq(actions.id, newAction.id));
+        newAction.status = 'generation_failed';
+        newAction.subject = null;
+        newAction.content = null;
       }
     }
 

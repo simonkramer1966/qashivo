@@ -113,7 +113,7 @@ export async function generateCollectionEmail(
     prompt: userPrompt,
     model: "standard", // claude-sonnet
     temperature: 0.4,
-    maxTokens: 1024,
+    maxTokens: 2048,
   });
 
   return {

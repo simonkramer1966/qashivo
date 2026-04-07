@@ -168,8 +168,9 @@ Thank you for your continued business.
 
 Best regards,
 {{senderName}}
+{{senderTitle}}
 {{senderCompany}}`,
-    variables: ['contactName', 'invoiceNumber', 'invoiceTotal', 'dueDateContext', 'invoiceSummary', 'paymentDetails', 'senderName', 'senderCompany'],
+    variables: ['contactName', 'invoiceNumber', 'invoiceTotal', 'dueDateContext', 'invoiceSummary', 'paymentDetails', 'senderName', 'senderTitle', 'senderCompany'],
   },
 
   // FIRM REMINDER (14-30 days)
@@ -195,8 +196,9 @@ Payment details:
 
 Regards,
 {{senderName}}
+{{senderTitle}}
 {{senderCompany}}`,
-    variables: ['contactName', 'invoiceNumber', 'invoiceTotal', 'daysOverdue', 'invoiceSummary', 'paymentDetails', 'senderName', 'senderCompany'],
+    variables: ['contactName', 'invoiceNumber', 'invoiceTotal', 'daysOverdue', 'invoiceSummary', 'paymentDetails', 'senderName', 'senderTitle', 'senderCompany'],
   },
 
   // RECOVERY FORMAL REMINDER (90+ days)
@@ -222,8 +224,9 @@ Please contact us immediately to discuss this matter.
 
 Regards,
 {{senderName}}
+{{senderTitle}}
 {{senderCompany}}`,
-    variables: ['contactName', 'senderCompany', 'invoiceNumber', 'invoiceTotal', 'daysOverdue', 'deadlineDate', 'dueDate', 'senderName'],
+    variables: ['contactName', 'senderCompany', 'invoiceNumber', 'invoiceTotal', 'daysOverdue', 'deadlineDate', 'dueDate', 'senderName', 'senderTitle'],
   },
 
   // STATUTORY INTEREST INFO (Late payment legislation)
@@ -249,8 +252,9 @@ To stop further interest accumulating and avoid additional recovery costs, pleas
 
 Regards,
 {{senderName}}
+{{senderTitle}}
 {{senderCompany}}`,
-    variables: ['contactName', 'invoiceNumber', 'originalAmount', 'daysOverdue', 'interestAmount', 'compensationAmount', 'totalDue', 'senderName', 'senderCompany'],
+    variables: ['contactName', 'invoiceNumber', 'originalAmount', 'daysOverdue', 'interestAmount', 'compensationAmount', 'totalDue', 'senderName', 'senderTitle', 'senderCompany'],
   },
 ];
 
@@ -412,6 +416,7 @@ export interface TemplateContext {
   invoiceSummary: string;
   paymentDetails: string;
   senderName: string;
+  senderTitle: string;
   senderCompany: string;
   contactNumber: string;
   promisedDate?: string;
@@ -502,6 +507,7 @@ export function prepareMessageFromDecision(
   tenantConfig: {
     companyName: string;
     senderName: string;
+    senderTitle?: string;
     contactNumber: string;
     paymentDetails: string;
   }
@@ -541,6 +547,7 @@ export function prepareMessageFromDecision(
         ? `was due on ${formatDate(decision.invoice.dueDate)}` 
         : `is due on ${formatDate(decision.invoice.dueDate)}`),
     senderName: tenantConfig.senderName,
+    senderTitle: tenantConfig.senderTitle || '',
     senderCompany: tenantConfig.companyName,
     contactNumber: tenantConfig.contactNumber,
     paymentDetails: tenantConfig.paymentDetails,
