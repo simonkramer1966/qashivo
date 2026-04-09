@@ -1882,21 +1882,21 @@ export default function DebtorRecord() {
         {/* ----------------------------------------------------------------- */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="flex w-full h-auto gap-1">
-            <TabsTrigger value="activity" className="flex-1">Activity</TabsTrigger>
-            <TabsTrigger value="outstanding" className="flex-1">Outstanding</TabsTrigger>
-            <TabsTrigger value="disputes" className="flex-1">Disputes</TabsTrigger>
-            <TabsTrigger value="details" className="flex-1">Details & Contacts</TabsTrigger>
-            <TabsTrigger value="risk" className="flex-1">Risk & Credit</TabsTrigger>
-            <TabsTrigger value="paid" className="flex-1">Paid</TabsTrigger>
+            <TabsTrigger value="activity" className="flex-1 whitespace-nowrap text-[13px] font-medium px-3 py-2">Activity</TabsTrigger>
+            <TabsTrigger value="outstanding" className="flex-1 whitespace-nowrap text-[13px] font-medium px-3 py-2">Outstanding</TabsTrigger>
+            <TabsTrigger value="disputes" className="flex-1 whitespace-nowrap text-[13px] font-medium px-3 py-2">Disputes</TabsTrigger>
+            <TabsTrigger value="details" className="flex-1 whitespace-nowrap text-[13px] font-medium px-3 py-2">Details &amp; Contacts</TabsTrigger>
+            <TabsTrigger value="risk" className="flex-1 whitespace-nowrap text-[13px] font-medium px-3 py-2">Risk &amp; Credit</TabsTrigger>
+            <TabsTrigger value="paid" className="flex-1 whitespace-nowrap text-[13px] font-medium px-3 py-2">Paid</TabsTrigger>
           </TabsList>
 
           {/* ============================================================== */}
           {/* TAB 1: Details & Contacts                                       */}
           {/* ============================================================== */}
           <TabsContent value="details" className="space-y-4 mt-4">
-            <div className="grid md:grid-cols-3 gap-4">
+            <div className="grid md:grid-cols-3 gap-4 items-stretch">
               {/* Company info */}
-              <Card>
+              <Card className="h-full">
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
                     <Building className="h-4 w-4" /> Company Information
@@ -1958,7 +1958,7 @@ export default function DebtorRecord() {
               {(() => {
                 const primary = persons.find((p) => p.isPrimaryCreditControl);
                 return (
-                  <Card>
+                  <Card className="h-full">
                     <CardHeader>
                       <CardTitle className="text-base flex items-center justify-between">
                         <span className="flex items-center gap-2">
@@ -1972,15 +1972,27 @@ export default function DebtorRecord() {
                     <CardContent className="space-y-2 text-sm">
                       <div>
                         <span className="text-muted-foreground">Name:</span>{" "}
-                        <span className="font-medium">{primary?.name || "Not set"}</span>
+                        {primary?.name ? (
+                          <span className="font-medium">{primary.name}</span>
+                        ) : (
+                          <span className="italic text-muted-foreground/70">Not set</span>
+                        )}
                       </div>
                       <div>
                         <span className="text-muted-foreground">Email:</span>{" "}
-                        <span className="font-medium">{primary?.email || "Not set"}</span>
+                        {primary?.email ? (
+                          <span className="font-medium">{primary.email}</span>
+                        ) : (
+                          <span className="italic text-muted-foreground/70">Not set</span>
+                        )}
                       </div>
                       <div>
                         <span className="text-muted-foreground">Phone:</span>{" "}
-                        <span className="font-medium">{primary?.phone || "Not set"}</span>
+                        {primary?.phone ? (
+                          <span className="font-medium">{primary.phone}</span>
+                        ) : (
+                          <span className="italic text-muted-foreground/70">Not set</span>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -1991,7 +2003,7 @@ export default function DebtorRecord() {
               {(() => {
                 const escalation = persons.find((p) => p.isEscalation);
                 return (
-                  <Card>
+                  <Card className="h-full">
                     <CardHeader>
                       <CardTitle className="text-base flex items-center justify-between">
                         <span className="flex items-center gap-2">
@@ -2005,15 +2017,27 @@ export default function DebtorRecord() {
                     <CardContent className="space-y-2 text-sm">
                       <div>
                         <span className="text-muted-foreground">Name:</span>{" "}
-                        <span className="font-medium">{escalation?.name || "Not set"}</span>
+                        {escalation?.name ? (
+                          <span className="font-medium">{escalation.name}</span>
+                        ) : (
+                          <span className="italic text-muted-foreground/70">Not set</span>
+                        )}
                       </div>
                       <div>
                         <span className="text-muted-foreground">Email:</span>{" "}
-                        <span className="font-medium">{escalation?.email || "Not set"}</span>
+                        {escalation?.email ? (
+                          <span className="font-medium">{escalation.email}</span>
+                        ) : (
+                          <span className="italic text-muted-foreground/70">Not set</span>
+                        )}
                       </div>
                       <div>
                         <span className="text-muted-foreground">Phone:</span>{" "}
-                        <span className="font-medium">{escalation?.phone || "Not set"}</span>
+                        {escalation?.phone ? (
+                          <span className="font-medium">{escalation.phone}</span>
+                        ) : (
+                          <span className="italic text-muted-foreground/70">Not set</span>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -2850,7 +2874,7 @@ export default function DebtorRecord() {
                                   <div className="flex items-center gap-2">
                                     <span className={cn(
                                       "tabular-nums",
-                                      days > 30 ? "text-red-600 font-bold" : ""
+                                      days > 30 ? "text-destructive font-bold" : ""
                                     )}>
                                       {days}d
                                     </span>
@@ -2882,12 +2906,12 @@ export default function DebtorRecord() {
                                   );
                                 })()}
                               </TableCell>
-                              <TableCell className="text-sm">
+                              <TableCell className="text-sm pr-4">
                                 {inv.lastChasedAt ? (
                                   <span className="text-muted-foreground">{formatDate(inv.lastChasedAt)}</span>
                                 ) : (
                                   <button
-                                    className="text-amber-600 hover:text-amber-700 hover:underline font-medium"
+                                    className="text-amber-600 hover:text-amber-700 hover:underline font-medium whitespace-nowrap"
                                     onClick={() => {
                                       setSelectedInvoiceIds(new Set([inv.id]));
                                       openEmailSheet();
@@ -3070,10 +3094,10 @@ export default function DebtorRecord() {
                                   daysToPay == null
                                     ? "text-muted-foreground"
                                     : daysToPay <= 0
-                                    ? "text-green-600"
+                                    ? "text-[hsl(var(--success))]"
                                     : daysToPay <= 30
-                                    ? "text-amber-600"
-                                    : "text-red-600"
+                                    ? "text-[hsl(var(--warning))]"
+                                    : "text-destructive"
                                 )}
                               >
                                 {daysToPay != null ? `${daysToPay}d` : "—"}
@@ -3230,9 +3254,9 @@ export default function DebtorRecord() {
           {/* TAB 7: Risk & Credit                                            */}
           {/* ============================================================== */}
           <TabsContent value="risk" className="space-y-4 mt-4">
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid md:grid-cols-2 gap-4 items-stretch">
               {/* Risk Score */}
-              <Card>
+              <Card className="h-full">
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
                     <ShieldAlert className="h-4 w-4" /> Risk Score
@@ -3297,7 +3321,7 @@ export default function DebtorRecord() {
               </Card>
 
               {/* Credit Details */}
-              <Card>
+              <Card className="h-full">
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
                     <CreditCard className="h-4 w-4" /> Credit Details
