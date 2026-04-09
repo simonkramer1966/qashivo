@@ -14,11 +14,16 @@ import {
 import { cn } from "@/lib/utils";
 
 interface ProviderStatus {
-  name: string;
+  provider: string;
   label: string;
   type: string;
   connectionStatus: string;
   orgName?: string | null;
+}
+
+interface ProviderStatusResponse {
+  success: boolean;
+  providers: ProviderStatus[];
 }
 
 /**
@@ -39,18 +44,23 @@ export default function HeaderSyncIndicator() {
   const canSync = hasMinimumRole("manager");
   const sync = useManualSync();
 
-  const { data: providers } = useQuery<ProviderStatus[]>({
+  const { data: providerResponse } = useQuery<ProviderStatusResponse>({
     queryKey: ["/api/providers/status"],
     staleTime: 60_000,
   });
 
   const platformLabel = useMemo(() => {
-    if (!providers) return "accounting platform";
+    // Defensive: the endpoint returns { success, providers: [...] } but
+    // older payloads or error responses may return something else. Treat
+    // anything that isn't an array as empty so the header never crashes.
+    const providers = Array.isArray(providerResponse?.providers)
+      ? providerResponse.providers
+      : [];
     const active = providers.find(
       (p) => p.type === "accounting" && p.connectionStatus === "active",
     );
     return active?.label ?? "accounting platform";
-  }, [providers]);
+  }, [providerResponse]);
 
   const relative = useMemo(() => {
     if (!lastSync) return null;
