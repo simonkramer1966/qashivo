@@ -1,7 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useXeroSyncStatus } from "@/hooks/useXeroSyncStatus";
-import { XeroSyncBanner } from "@/components/XeroSyncBanner";
+import SyncStatusBanner from "@/components/sync/SyncStatusBanner";
 import AppShell from "@/components/layout/app-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -157,8 +156,6 @@ export default function QollectionsDebtors() {
   });
   const debtors = debtorsResponse?.debtors;
 
-  const { syncStatus, isSyncing } = useXeroSyncStatus([["/api/qollections/debtors"]]);
-
   const filtered = useMemo(() => {
     if (!debtors) return [];
 
@@ -240,11 +237,7 @@ export default function QollectionsDebtors() {
       subtitle="Manage customer accounts and outstanding balances"
     >
       <div className="space-y-6">
-        <XeroSyncBanner
-          isSyncing={isSyncing}
-          contactCount={syncStatus?.contactCount ?? 0}
-          invoiceCount={syncStatus?.invoiceCount ?? 0}
-        />
+        <SyncStatusBanner />
         {/* Search and Filters */}
         <Card>
           <CardContent className="pt-6">

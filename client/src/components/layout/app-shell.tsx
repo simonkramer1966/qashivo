@@ -4,6 +4,7 @@ import Header from "./header";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
+import SyncProgressBar from "@/components/sync/SyncProgressBar";
 
 interface AppShellProps {
   title: string;
@@ -17,6 +18,7 @@ export default function AppShell({ title, subtitle = "", action, children }: App
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
+      <SyncProgressBar />
       {/* Desktop sidebar */}
       <NewSidebar />
 

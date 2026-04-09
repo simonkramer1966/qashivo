@@ -14,7 +14,10 @@ type RealtimeEventType =
   | "exception_created"
   | "delivery_bounce"
   | "approval_needed"
-  | "sync_complete";
+  | "sync_started"
+  | "sync_progress"
+  | "sync_complete"
+  | "sync_failed";
 
 interface RealtimeEvent {
   type: RealtimeEventType;
@@ -72,11 +75,20 @@ const INVALIDATION_MAP: Record<RealtimeEventType, string[][]> = {
     ["/api/action-centre"],
     ["/api/approval-queue"],
   ],
+  sync_started: [],
+  sync_progress: [],
   sync_complete: [
-    ["/api/action-centre"],
+    // Narrow set of endpoints whose numerical surfaces depend on sync output.
+    // Avoid invalidating ["/api"] (thundering herd of every cached query).
+    ["/api/sync/current"],
     ["/api/qollections"],
     ["/api/contacts"],
+    ["/api/action-centre"],
     ["/api/settings/data-health"],
+    ["/api/tenant"],
+  ],
+  sync_failed: [
+    ["/api/sync/current"],
   ],
 };
 

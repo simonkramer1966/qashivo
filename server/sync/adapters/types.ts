@@ -210,7 +210,7 @@ export interface WebhookEvent {
 // ─── Sync Result Types ─────────────────────────────────────────────────────
 
 export interface SyncResult {
-  status: 'success' | 'partial' | 'failed';
+  status: 'success' | 'partial' | 'failed' | 'skipped';
   syncMode: SyncMode;
   platform: string;
   tenantId: string;

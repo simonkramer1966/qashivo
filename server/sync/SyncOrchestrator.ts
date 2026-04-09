@@ -24,6 +24,7 @@ import type {
   SyncHealthStatus, SyncTrigger, QashivoInvoice, QashivoContact,
   FetchOptions, ChangeSet,
 } from './adapters/types';
+import { emitTenantEvent } from '../services/realtimeEvents';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
@@ -66,6 +67,31 @@ export class SyncOrchestrator {
   private healthTimer: ReturnType<typeof setInterval> | null = null;
   private queueTimer: ReturnType<typeof setInterval> | null = null;
   private isProcessingQueue = false;
+  // Per-(tenant, entity) leading-edge throttle for sync_progress events
+  private progressEmitLastAt = new Map<string, number>();
+  private static readonly PROGRESS_THROTTLE_MS = 500;
+
+  private safeEmit(tenantId: string, type: Parameters<typeof emitTenantEvent>[1], payload: Record<string, unknown>) {
+    try {
+      emitTenantEvent(tenantId, type, payload);
+    } catch { /* non-fatal — never let SSE errors break sync */ }
+  }
+
+  private resetProgressThrottle(tenantId: string) {
+    const prefix = `${tenantId}:`;
+    for (const key of Array.from(this.progressEmitLastAt.keys())) {
+      if (key.startsWith(prefix)) this.progressEmitLastAt.delete(key);
+    }
+  }
+
+  private emitProgress(tenantId: string, entity: string, payload: Record<string, unknown>) {
+    const key = `${tenantId}:${entity}`;
+    const now = Date.now();
+    const last = this.progressEmitLastAt.get(key) ?? 0;
+    if (now - last < SyncOrchestrator.PROGRESS_THROTTLE_MS) return;
+    this.progressEmitLastAt.set(key, now);
+    this.safeEmit(tenantId, 'sync_progress', { entity, ...payload });
+  }
 
   constructor(adapter: AccountingAdapter) {
     this.adapter = adapter;
@@ -232,6 +258,7 @@ export class SyncOrchestrator {
 
     // ── Step 1: Pre-sync checks ──────────────────────────────────────────
     if (this.activeSyncs.has(tenantId)) {
+      result.status = 'skipped';
       result.warnings.push('Sync already in progress for this tenant');
       return result;
     }
@@ -270,6 +297,15 @@ export class SyncOrchestrator {
         console.log(`[SyncOrchestrator] First sync for ${tenantId}, switching to initial mode`);
       }
 
+      // Reset throttle keys for this run, then emit sync_started
+      this.resetProgressThrottle(tenantId);
+      this.safeEmit(tenantId, 'sync_started', {
+        tenantId,
+        mode: effectiveMode,
+        trigger,
+        startedAt: startedAt.toISOString(),
+      });
+
       // Build fetch options
       const fetchOptions: FetchOptions = {};
       if (effectiveMode === 'incremental' && state.invoicesCursor) {
@@ -291,6 +327,7 @@ export class SyncOrchestrator {
 
       const uniqueContactIds = new Map<string, string>(); // platformContactId → name
 
+      let invoicesCumulative = 0;
       const onInvoicePage = async (pageInvoices: any[], pageNumber: number) => {
         for (const inv of pageInvoices) {
           const contactId = inv.Contact?.ContactID;
@@ -300,7 +337,14 @@ export class SyncOrchestrator {
         }
         await this.cacheInvoicePage(tenantId, pageInvoices, effectiveMode);
         result.fetched.apiCallsMade++;
+        invoicesCumulative += pageInvoices.length;
         console.log(`[SyncOrchestrator] Page ${pageNumber}: ${pageInvoices.length} invoices cached`);
+        this.emitProgress(tenantId, 'invoices', {
+          phase: 'fetching',
+          page: pageNumber,
+          pageSize: pageInvoices.length,
+          cumulative: invoicesCumulative,
+        });
       };
 
       let invoiceFetchedAt: Date;
@@ -357,6 +401,12 @@ export class SyncOrchestrator {
         }
         result.fetched.contacts = rawContacts.length;
         console.log(`[SyncOrchestrator] Fetched ${rawContacts.length} contacts`);
+        this.emitProgress(tenantId, 'contacts', {
+          phase: 'processing',
+          page: 1,
+          pageSize: rawContacts.length,
+          cumulative: rawContacts.length,
+        });
 
         // Upsert contacts into main table
         const contactResult = await this.processContacts(tenantId, rawContacts);
@@ -373,13 +423,21 @@ export class SyncOrchestrator {
 
       // ── Step 6: Fetch credit notes (non-fatal) ──────────────────────
       try {
+        let creditNotesCumulative = 0;
         const cnSummary = await this.adapter.fetchCreditNotes(
           tenantId,
           {},
-          async (pageCreditNotes) => {
+          async (pageCreditNotes, pageNumber) => {
             result.fetched.apiCallsMade++;
             result.fetched.creditNotes += pageCreditNotes.length;
+            creditNotesCumulative += pageCreditNotes.length;
             await this.cacheCreditNotePage(tenantId, pageCreditNotes, effectiveMode);
+            this.emitProgress(tenantId, 'credit_notes', {
+              phase: 'fetching',
+              page: pageNumber,
+              pageSize: pageCreditNotes.length,
+              cumulative: creditNotesCumulative,
+            });
           },
         );
         result.processed.creditNotesProcessed = cnSummary.totalCount;
@@ -480,14 +538,17 @@ export class SyncOrchestrator {
       }).where(eq(tenants.id, tenantId));
 
       // Emit SSE event
-      try {
-        const { emitTenantEvent } = await import('../services/realtimeEvents');
-        emitTenantEvent(tenantId, 'sync_complete', {
-          invoices: result.fetched.invoices,
-          contacts: result.fetched.contacts,
-          mode: effectiveMode,
-        });
-      } catch { /* non-fatal */ }
+      this.safeEmit(tenantId, 'sync_complete', {
+        invoicesProcessed: result.fetched.invoices,
+        contactsProcessed: result.fetched.contacts,
+        creditNotesProcessed: result.fetched.creditNotes,
+        overpaymentsProcessed: result.fetched.overpayments,
+        invoicesCreated: result.processed.invoicesCreated,
+        invoicesUpdated: result.processed.invoicesUpdated,
+        durationMs: result.durationMs,
+        mode: effectiveMode,
+        completedAt: result.completedAt?.toISOString(),
+      });
 
       console.log(`[SyncOrchestrator] Sync complete for ${tenantId}: ${result.fetched.invoices} invoices, ${result.fetched.contacts} contacts, ${result.fetched.creditNotes} credit notes, ${result.fetched.overpayments} overpayments, ${result.fetched.prepayments} prepayments in ${result.durationMs}ms`);
 
@@ -1116,6 +1177,13 @@ export class SyncOrchestrator {
       lastSyncCompletedAt: result.completedAt,
       lastSyncResult: result,
       consecutiveFailures: failures,
+    });
+
+    this.safeEmit(tenantId, 'sync_failed', {
+      error: result.errors[0] || 'Unknown error',
+      consecutiveFailures: failures,
+      mode: result.syncMode,
+      failedAt: (result.completedAt ?? new Date()).toISOString(),
     });
 
     if (failures >= CONSECUTIVE_FAILURES_PAUSE_CHARLIE) {

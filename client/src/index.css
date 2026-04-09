@@ -408,3 +408,28 @@
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(23, 182, 195, 0.5);
 }
+
+/* Sync progress bar — indeterminate sliding gradient */
+@keyframes sync-bar-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
+}
+
+.sync-bar-indeterminate {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 25%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    hsl(184, 76%, 43%) 50%,
+    transparent 100%
+  );
+  animation: sync-bar-indeterminate 1.4s ease-in-out infinite;
+}

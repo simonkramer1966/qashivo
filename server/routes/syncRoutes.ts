@@ -4,6 +4,9 @@ import { syncService } from "../services/syncService";
 import { webhookHandler } from "../services/webhookHandler";
 import { isAuthenticated } from "../auth";
 import { storage } from "../storage";
+import { db } from "../db";
+import { syncState, tenants } from "@shared/schema";
+import { and, eq } from "drizzle-orm";
 
 /**
  * Raw body middleware for webhook signature verification
@@ -385,6 +388,50 @@ export function registerSyncRoutes(app: Express): void {
         success: false,
         error: error instanceof Error ? error.message : 'Internal server error'
       });
+    }
+  });
+
+  /**
+   * Lightweight current sync state — used by client useSyncStatus hook for
+   * hydration on page load. Returns the orchestrator's sync_state row plus
+   * tenants.xeroLastSyncAt.
+   * GET /api/sync/current
+   */
+  app.get('/api/sync/current', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ error: 'no_tenant' });
+      }
+
+      const [stateRows, tenantRows] = await Promise.all([
+        db.select().from(syncState).where(and(
+          eq(syncState.tenantId, user.tenantId),
+          eq(syncState.provider, 'xero'),
+          eq(syncState.resource, 'all'),
+        )),
+        db.select({
+          xeroLastSyncAt: tenants.xeroLastSyncAt,
+          xeroConnectionStatus: tenants.xeroConnectionStatus,
+        }).from(tenants).where(eq(tenants.id, user.tenantId)),
+      ]);
+      const state = stateRows[0];
+      const tenant = tenantRows[0];
+
+      const metadata = (state?.metadata as any) || {};
+
+      res.json({
+        status: state?.syncStatus ?? 'idle',
+        startedAt: state?.lastSyncAt?.toISOString() ?? null,
+        lastSyncAt: tenant?.xeroLastSyncAt?.toISOString() ?? null,
+        lastSuccessfulSyncAt: state?.lastSuccessfulSyncAt?.toISOString() ?? null,
+        lastError: state?.errorMessage ?? null,
+        consecutiveFailures: metadata.consecutiveFailures ?? 0,
+        connectionStatus: tenant?.xeroConnectionStatus ?? null,
+      });
+    } catch (error) {
+      console.error('❌ /api/sync/current error:', error);
+      res.status(500).json({ error: 'internal_error' });
     }
   });
 

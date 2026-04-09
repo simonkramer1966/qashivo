@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import nexusLogo from "@/assets/qashivo-logo.png";
+import SidebarSyncIndicator from "@/components/sync/SidebarSyncIndicator";
 
 // ── Navigation structure ──────────────────────────────────
 
@@ -439,6 +440,11 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
           })}
         </TooltipProvider>
       </nav>
+
+      {/* Sync indicator */}
+      <div className={cn("border-t border-[hsl(var(--sidebar-border))] py-2", isCollapsed ? "px-2" : "px-3")}>
+        <SidebarSyncIndicator collapsed={isCollapsed} />
+      </div>
 
       {/* Footer — user profile */}
       <div className={cn("pb-4 pt-2", isCollapsed ? "px-2" : "px-3")}>

@@ -1031,6 +1031,17 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
       updateSyncStatus(user.tenantId, { status: 'syncing', startedAt: new Date().toISOString(), invoiceCount: 0, contactCount: 0 });
       const result = await syncOrchestrator.syncTenant(user.tenantId, mode as any, 'user');
 
+      // Already-in-progress guard: orchestrator returns status='skipped'
+      // when activeSyncs.has(tenantId). Surface as 409 so the client can show
+      // "Sync already in progress" without starting a duplicate.
+      if (result.status === 'skipped') {
+        return res.status(409).json({
+          success: false,
+          error: 'sync_in_progress',
+          message: 'A sync is already running for this tenant.',
+        });
+      }
+
       if (result.status === 'success' || result.status === 'partial') {
         updateSyncStatus(user.tenantId, { status: 'complete', invoiceCount: result.fetched.invoices, contactCount: result.fetched.contacts, completedAt: new Date().toISOString() });
         res.json({

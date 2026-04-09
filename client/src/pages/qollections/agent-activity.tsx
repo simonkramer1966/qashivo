@@ -8,6 +8,7 @@ import ApprovalsTab from "@/components/action-centre/ApprovalsTab";
 import ScheduledTab from "@/components/action-centre/ScheduledTab";
 import ActivityFeedTab from "@/components/action-centre/ActivityFeedTab";
 import ExceptionsTab from "@/components/action-centre/ExceptionsTab";
+import SyncStatusBanner from "@/components/sync/SyncStatusBanner";
 // VipTab removed — VIP is a debtor status, managed from Debtors list + debtor detail
 import { cn } from "@/lib/utils";
 import {
@@ -123,6 +124,7 @@ export default function QollectionsAgentActivity() {
   return (
     <AppShell title="Action Centre" subtitle="Review, approve and track agent actions">
       <div className="space-y-4">
+        <SyncStatusBanner />
         {/* Read-only mode indicator + countdown banner */}
         <div className="flex items-center justify-between">
           <div />

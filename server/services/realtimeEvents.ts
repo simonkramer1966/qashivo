@@ -36,7 +36,10 @@ export type RealtimeEventType =
   | "exception_created"
   | "delivery_bounce"
   | "approval_needed"
-  | "sync_complete";
+  | "sync_started"
+  | "sync_progress"
+  | "sync_complete"
+  | "sync_failed";
 
 export interface RealtimeEvent {
   type: RealtimeEventType;

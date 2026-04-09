@@ -25,6 +25,7 @@ import {
 } from "recharts";
 import DebtorTreemap from "@/components/dashboard/DebtorTreemap";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
+import SyncStatusBanner from "@/components/sync/SyncStatusBanner";
 
 // ── Types ──────────────────────────────────────────────────
 
@@ -111,6 +112,7 @@ export default function QollectionsDashboard() {
   return (
     <AppShell title="Dashboard" subtitle="Qollections overview">
       <div className="space-y-6">
+        <SyncStatusBanner />
         {/* ── KPI Summary Cards ── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <KpiCard
