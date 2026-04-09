@@ -8,6 +8,16 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import {
@@ -159,6 +169,9 @@ function AccountingTab() {
   const [scheduleEditing, setScheduleEditing] = useState(false);
   const [scheduleDraft, setScheduleDraft] = useState("");
   const [scheduleError, setScheduleError] = useState<string | null>(null);
+  const [disconnectTarget, setDisconnectTarget] = useState<
+    { id: string; name: string; orgName: string | null } | null
+  >(null);
 
   const { data, isLoading } = useQuery<{ success: boolean; providers: ProviderStatus[] }>({
     queryKey: ["/api/providers/status"],
@@ -431,9 +444,11 @@ function AccountingTab() {
                 className="text-red-600 hover:text-red-700 hover:bg-red-50"
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (confirm(`Disconnect ${def.name}? You can reconnect later.`)) {
-                    disconnectMutation.mutate(def.id);
-                  }
+                  setDisconnectTarget({
+                    id: def.id,
+                    name: def.name,
+                    orgName: status?.orgName ?? null,
+                  });
                 }}
               >
                 <Link2Off className="h-4 w-4 mr-1" /> Disconnect
@@ -499,6 +514,42 @@ function AccountingTab() {
           {ACCOUNTING_PROVIDERS.enterprise.map(renderProviderTile)}
         </div>
       </div>
+
+      <AlertDialog
+        open={disconnectTarget !== null}
+        onOpenChange={(open) => { if (!open) setDisconnectTarget(null); }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Disconnect {disconnectTarget?.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will stop syncing invoices and contacts
+              {disconnectTarget?.orgName ? ` from ${disconnectTarget.orgName}` : ""}.
+              Charlie will pause chasing until you reconnect.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={disconnectMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={disconnectMutation.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                if (!disconnectTarget) return;
+                disconnectMutation.mutate(disconnectTarget.id, {
+                  onSettled: () => setDisconnectTarget(null),
+                });
+              }}
+            >
+              {disconnectMutation.isPending ? (
+                <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Disconnecting…</>
+              ) : (
+                "Disconnect"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

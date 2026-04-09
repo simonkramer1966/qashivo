@@ -738,180 +738,133 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
           console.error(`❌ Initial Xero sync error:`, error);
         });
 
-      // Success page with auto-redirect to onboarding
+      // Success page with auto-redirect. Standalone HTML (served outside
+      // the React shell) so all styling is inline, but mirrors the app's
+      // Shadcn/zinc design tokens: white background, --foreground text,
+      // 1px border, 12px radius, no gradients / shadows / emoji.
+      const escapeHtml = (s: string) =>
+        s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+      const orgNameHtml = xeroOrgName ? escapeHtml(xeroOrgName) : null;
+      const headingText = isOnboardingComplete ? "Xero reconnected" : "Xero connected";
+      const buttonText = isOnboardingComplete ? "Return to app" : "Continue to AI analysis";
+      const subtitleHtml = orgNameHtml
+        ? `Connected to ${orgNameHtml}.<br>Syncing invoices and contacts…`
+        : `Syncing invoices and contacts…`;
+      const checkSvg =
+        `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+      const titleCheckSvg =
+        `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
       res.send(`
         <!DOCTYPE html>
-        <html>
+        <html lang="en">
         <head>
-          <title>Xero Connected Successfully</title>
+          <title>${headingText}</title>
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <style>
-            * {
-              margin: 0;
-              padding: 0;
-              box-sizing: border-box;
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            html, body {
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+              color: hsl(234 30% 14%);
+              background: hsl(0 0% 100%);
+              -webkit-font-smoothing: antialiased;
             }
-            body { 
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-              display: flex; 
-              justify-content: center; 
-              align-items: center; 
-              min-height: 100vh; 
-              background: linear-gradient(to bottom right, rgb(248 250 252) 0%, rgb(219 234 254) 50%, rgb(204 251 241) 100%);
-              padding: 1rem;
-            }
-            .container { 
-              background: rgba(255, 255, 255, 0.8);
-              backdrop-filter: blur(12px);
-              -webkit-backdrop-filter: blur(12px);
-              padding: 3rem 2.5rem; 
-              border-radius: 24px; 
-              border: 1px solid rgba(255, 255, 255, 0.5);
-              box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-              text-align: center; 
-              max-width: 500px;
-              width: 100%;
-            }
-            .success-icon { 
-              font-size: 5rem; 
-              margin-bottom: 1.5rem;
-              animation: bounce 1s ease-in-out;
-            }
-            @keyframes bounce {
-              0%, 100% { transform: translateY(0); }
-              50% { transform: translateY(-20px); }
-            }
-            @keyframes pulse {
-              0%, 100% { opacity: 1; }
-              50% { opacity: 0.5; }
-            }
-            h1 { 
-              color: #111827; 
-              margin-bottom: 1rem;
-              font-size: 2rem;
-              font-weight: 700;
-            }
-            .subtitle {
-              color: #6B7280;
-              font-size: 1.1rem;
-              margin-bottom: 1rem;
-              line-height: 1.6;
-            }
-            .ai-badge {
-              display: inline-block;
-              background: rgba(23, 182, 195, 0.1);
-              color: #17B6C3;
-              padding: 0.5rem 1rem;
-              border-radius: 12px;
-              font-size: 0.9rem;
-              font-weight: 600;
-              margin-bottom: 2rem;
-              border: 1px solid rgba(23, 182, 195, 0.2);
-            }
-            .loader {
-              display: inline-block;
-              width: 20px;
-              height: 20px;
-              border: 3px solid rgba(23, 182, 195, 0.2);
-              border-top-color: #17B6C3;
-              border-radius: 50%;
-              animation: spin 0.8s linear infinite;
-              margin-right: 0.5rem;
-              vertical-align: middle;
-            }
-            @keyframes spin {
-              to { transform: rotate(360deg); }
-            }
-            .btn { 
-              background: #17B6C3;
-              color: white; 
-              padding: 16px 32px; 
-              border: none; 
-              border-radius: 12px; 
-              text-decoration: none; 
-              display: inline-block; 
-              font-weight: 600;
-              transition: all 0.2s;
-              font-size: 1.05rem;
-              cursor: pointer;
-              box-shadow: 0 4px 6px rgba(23, 182, 195, 0.2);
-            }
-            .btn:hover { 
-              background: #1396A1; 
-              transform: translateY(-2px);
-              box-shadow: 0 6px 12px rgba(23, 182, 195, 0.3);
-            }
-            .countdown {
-              color: #9CA3AF;
-              font-size: 0.95rem;
-              margin-top: 1.5rem;
-              animation: pulse 1.5s ease-in-out infinite;
-            }
-            .steps {
-              text-align: left;
-              margin: 1.5rem 0;
-              padding: 1.25rem;
-              background: rgba(23, 182, 195, 0.05);
-              border-radius: 12px;
-              border: 1px solid rgba(23, 182, 195, 0.1);
-            }
-            .step-item {
+            body {
+              min-height: 100vh;
               display: flex;
               align-items: center;
-              color: #4B5563;
-              font-size: 0.95rem;
-              margin-bottom: 0.75rem;
+              justify-content: center;
+              padding: 1.5rem;
             }
-            .step-item:last-child {
-              margin-bottom: 0;
+            .card {
+              width: 100%;
+              max-width: 480px;
+              background: hsl(0 0% 100%);
+              border: 1px solid hsl(220 13% 91%);
+              border-radius: 12px;
+              padding: 2rem;
             }
-            .step-check {
-              color: #10B981;
-              margin-right: 0.75rem;
-              font-size: 1.2rem;
+            .title {
+              display: flex;
+              align-items: center;
+              gap: 0.5rem;
+              font-size: 1.25rem;
+              font-weight: 600;
+              color: hsl(234 30% 14%);
+              margin-bottom: 0.5rem;
+            }
+            .subtitle {
+              font-size: 0.875rem;
+              color: hsl(220 9% 46%);
+              line-height: 1.5;
+              margin-bottom: 1.5rem;
+            }
+            .steps {
+              display: flex;
+              flex-direction: column;
+              gap: 0.625rem;
+              margin-bottom: 1.5rem;
+            }
+            .step {
+              display: flex;
+              align-items: center;
+              gap: 0.625rem;
+              font-size: 0.875rem;
+              color: hsl(234 30% 14%);
+            }
+            .btn {
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              height: 2.5rem;
+              padding: 0 1rem;
+              background: hsl(234 30% 14%);
+              color: hsl(0 0% 100%);
+              border: none;
+              border-radius: 8px;
+              font-family: inherit;
+              font-size: 0.875rem;
+              font-weight: 500;
+              text-decoration: none;
+              cursor: pointer;
+              transition: background-color 0.15s;
+            }
+            .btn:hover { background: hsl(234 30% 22%); }
+            .countdown {
+              margin-top: 0.875rem;
+              font-size: 0.8125rem;
+              color: hsl(220 9% 46%);
             }
           </style>
         </head>
         <body>
-          <div class="container">
-            <div class="success-icon">🎉</div>
-            <h1>Xero ${isOnboardingComplete ? 'Reconnected' : 'Connected'}!</h1>
-            <p class="subtitle">${isOnboardingComplete ? 'Your Xero connection has been restored' : 'Your Qashivo account is now connected to Xero'}</p>
-            
-            <div class="ai-badge">
-              <span class="loader"></span>
-              ${isOnboardingComplete ? 'Syncing Data...' : 'AI Analysis Starting...'}
+          <div class="card">
+            <div class="title">
+              <span>${headingText}</span>
+              ${titleCheckSvg}
             </div>
-            
+            <p class="subtitle">${subtitleHtml}</p>
+
             <div class="steps">
-              <div class="step-item">
-                <span class="step-check">✓</span>
-                <span>Xero connection established</span>
-              </div>
-              <div class="step-item">
-                <span class="step-check">✓</span>
-                <span>Syncing invoices and contacts</span>
-              </div>
-              ${isOnboardingComplete ? '' : `<div class="step-item">
-                <span class="step-check">⏳</span>
-                <span>Launching AI cashflow analysis</span>
-              </div>`}
+              <div class="step">${checkSvg}<span>Xero connection established</span></div>
+              <div class="step">${checkSvg}<span>Syncing invoices and contacts</span></div>
             </div>
-            
-            <a href="${redirectUrl}" class="btn" onclick="clearInterval(window.redirectInterval)">${isOnboardingComplete ? 'Return to App' : 'Continue to AI Analysis'}</a>
-            <div class="countdown">Redirecting in <span id="countdown">2</span> seconds...</div>
+
+            <a href="${redirectUrl}" class="btn" onclick="clearInterval(window.redirectInterval)">${buttonText}</a>
+            <div class="countdown">Redirecting in <span id="countdown">3</span> seconds…</div>
           </div>
           <script>
-            let seconds = 2;
-            const countdownEl = document.getElementById('countdown');
-            window.redirectInterval = setInterval(() => {
-              seconds--;
-              if (countdownEl) countdownEl.textContent = seconds;
-              if (seconds <= 0) {
-                clearInterval(window.redirectInterval);
-                window.location.replace("${redirectUrl}");
-              }
-            }, 1000);
+            (function () {
+              var seconds = 3;
+              var el = document.getElementById('countdown');
+              window.redirectInterval = setInterval(function () {
+                seconds--;
+                if (el) el.textContent = seconds;
+                if (seconds <= 0) {
+                  clearInterval(window.redirectInterval);
+                  window.location.replace(${JSON.stringify(redirectUrl)});
+                }
+              }, 1000);
+            })();
           </script>
         </body>
         </html>
@@ -919,12 +872,48 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
     } catch (error) {
       console.error("Error handling Xero callback:", error);
       res.status(500).send(`
-        <html>
-          <body style="font-family: system-ui; text-align: center; padding: 2rem;">
-            <h1>❌ Connection Error</h1>
-            <p>An error occurred while connecting to Xero</p>
-            <a href="/" style="background: #17B6C3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Return to Dashboard</a>
-          </body>
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <title>Xero connection failed</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            html, body {
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+              color: hsl(234 30% 14%);
+              background: hsl(0 0% 100%);
+              -webkit-font-smoothing: antialiased;
+            }
+            body { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
+            .card {
+              width: 100%;
+              max-width: 480px;
+              background: hsl(0 0% 100%);
+              border: 1px solid hsl(220 13% 91%);
+              border-radius: 12px;
+              padding: 2rem;
+            }
+            .title { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; }
+            .subtitle { font-size: 0.875rem; color: hsl(220 9% 46%); line-height: 1.5; margin-bottom: 1.5rem; }
+            .btn {
+              display: inline-flex; align-items: center; justify-content: center;
+              height: 2.5rem; padding: 0 1rem;
+              background: hsl(234 30% 14%); color: hsl(0 0% 100%);
+              border: none; border-radius: 8px;
+              font-family: inherit; font-size: 0.875rem; font-weight: 500;
+              text-decoration: none; cursor: pointer;
+            }
+            .btn:hover { background: hsl(234 30% 22%); }
+          </style>
+        </head>
+        <body>
+          <div class="card">
+            <div class="title">Xero connection failed</div>
+            <p class="subtitle">Something went wrong while connecting to Xero. Please try again from Settings &rarr; Integrations.</p>
+            <a href="/settings/integrations" class="btn">Return to integrations</a>
+          </div>
+        </body>
         </html>
       `);
     }
