@@ -1,6 +1,8 @@
 // Note: This is a simplified Xero integration structure
 // In production, you would use the official Xero API SDK
 
+import { withXeroRefreshLock } from './xeroTokenLock';
+
 interface XeroConfig {
   clientId: string;
   clientSecret: string;
@@ -168,10 +170,7 @@ interface XeroExchangeRate {
 
 class XeroService {
   private config: XeroConfig;
-  // Mutex: prevents concurrent token refreshes for the same tenant.
-  // Xero uses rotating refresh tokens — a second concurrent refresh would use the
-  // now-revoked old token and fail, marking the connection as expired.
-  private refreshInProgress: Map<string, Promise<XeroTokens | null>> = new Map();
+  // Refresh mutex is now process-wide via xeroTokenLock (shared with XeroAdapter).
 
   constructor() {
     // Build base URL: APP_URL (full URL) > RAILWAY_PUBLIC_DOMAIN (hostname only) > localhost
@@ -402,23 +401,47 @@ class XeroService {
       return null;
     }
 
-    // Mutex: if a refresh is already in progress for this tenant, wait for it
-    // instead of sending a second refresh request (which would use the now-revoked token).
+    // Serialize via the process-wide lock shared with XeroAdapter so the
+    // health check and the sync orchestrator can't race each other.
     const mutexKey = currentTenantId || refreshToken;
-    const existing = this.refreshInProgress.get(mutexKey);
-    if (existing) {
-      console.log(`🔒 Token refresh already in progress for ${currentTenantId || 'unknown tenant'}, waiting...`);
-      return existing;
-    }
-
-    const refreshPromise = this.doRefreshAccessToken(refreshToken, currentTenantId);
-    this.refreshInProgress.set(mutexKey, refreshPromise);
-
-    try {
-      return await refreshPromise;
-    } finally {
-      this.refreshInProgress.delete(mutexKey);
-    }
+    return withXeroRefreshLock(mutexKey, async () => {
+      // If another caller refreshed while we were waiting, reuse the fresh
+      // tokens from the DB instead of sending a second refresh (which would
+      // use a now-revoked refresh token and fail with invalid_grant).
+      if (currentTenantId) {
+        try {
+          const { db } = await import('../db');
+          const { tenants } = await import('@shared/schema');
+          const { eq } = await import('drizzle-orm');
+          const [row] = await db
+            .select({
+              xeroAccessToken: tenants.xeroAccessToken,
+              xeroRefreshToken: tenants.xeroRefreshToken,
+              xeroExpiresAt: tenants.xeroExpiresAt,
+              xeroTenantId: tenants.xeroTenantId,
+            })
+            .from(tenants)
+            .where(eq(tenants.id, currentTenantId));
+          if (row?.xeroAccessToken && row.xeroExpiresAt && !this.isTokenExpired(row.xeroExpiresAt)) {
+            console.log(`🔒 Token already fresh for ${currentTenantId} after waiting on lock`);
+            return {
+              accessToken: row.xeroAccessToken,
+              refreshToken: row.xeroRefreshToken ?? refreshToken,
+              expiresAt: row.xeroExpiresAt,
+              tenantId: row.xeroTenantId ?? '',
+            };
+          }
+          // Use the freshest refresh_token from the DB — the one passed in
+          // might be stale if we blocked for a while.
+          if (row?.xeroRefreshToken) {
+            refreshToken = row.xeroRefreshToken;
+          }
+        } catch (err) {
+          console.warn(`⚠️ Could not re-read tenant row before refresh: ${(err as Error).message}`);
+        }
+      }
+      return this.doRefreshAccessToken(refreshToken, currentTenantId);
+    });
   }
 
   private async doRefreshAccessToken(refreshToken: string, currentTenantId?: string): Promise<XeroTokens | null> {

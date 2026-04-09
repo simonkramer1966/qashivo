@@ -10,6 +10,7 @@ import { db } from '../../db';
 import { tenants } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import * as crypto from 'crypto';
+import { withXeroRefreshLock } from '../../services/xeroTokenLock';
 import type {
   AccountingAdapter,
   AuthStatus,
@@ -33,10 +34,10 @@ import type {
 const XERO_API_BASE = 'https://api.xero.com/api.xro/2.0';
 const XERO_IDENTITY_BASE = 'https://identity.xero.com';
 
-// Per-tenant mutex prevents concurrent token refresh races.
-// Xero uses rotating refresh tokens — a second concurrent refresh
-// would use the now-revoked old token and fail.
-const refreshLocks = new Map<string, Promise<TokenResult>>();
+// Per-tenant refresh mutex is now shared process-wide via xeroTokenLock so
+// that XeroAdapter and legacy xeroService cannot race each other. Xero uses
+// rotating refresh tokens — a second concurrent refresh would use the
+// now-revoked old token and fail.
 
 interface TenantTokens {
   accessToken: string;
@@ -100,19 +101,27 @@ export class XeroAdapter implements AccountingAdapter {
   }
 
   async refreshToken(tenantId: string): Promise<TokenResult> {
-    // Mutex: if a refresh is already in progress, wait for it
-    const lockKey = `xero:${tenantId}`;
-    const existing = refreshLocks.get(lockKey);
-    if (existing) {
-      console.log(`[XeroAdapter] Token refresh already in progress for ${tenantId}, waiting...`);
-      return existing;
-    }
-
-    const promise = this.doRefreshToken(tenantId).finally(() => {
-      refreshLocks.delete(lockKey);
+    // Process-wide mutex shared with legacy xeroService.refreshAccessToken.
+    // After waiting for any in-flight refresh, re-read the tenant row — if the
+    // other caller already refreshed, our refresh_token would be stale.
+    return withXeroRefreshLock(tenantId, async () => {
+      const tenant = await this.getTenant(tenantId);
+      if (
+        tenant.xeroAccessToken &&
+        tenant.xeroExpiresAt &&
+        !this.isExpired(tenant.xeroExpiresAt)
+      ) {
+        // Another caller refreshed while we were waiting — return the fresh tokens.
+        console.log(`[XeroAdapter] Token already fresh for ${tenantId} after waiting on lock`);
+        return {
+          accessToken: tenant.xeroAccessToken,
+          refreshToken: tenant.xeroRefreshToken ?? '',
+          expiresAt: tenant.xeroExpiresAt,
+          scopes: this.requiredScopes,
+        };
+      }
+      return this.doRefreshToken(tenantId);
     });
-    refreshLocks.set(lockKey, promise);
-    return promise;
   }
 
   private async doRefreshToken(tenantId: string): Promise<TokenResult> {

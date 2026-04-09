@@ -77,31 +77,55 @@ export class XeroHealthCheckService {
         return;
       }
 
-      // Try to refresh the token (this will validate the connection)
-      const refreshedTokens = await xeroService.refreshAccessToken(
-        tenant.xeroRefreshToken,
-        tenant.xeroTenantId
-      );
+      // CRITICAL: Do NOT rotate the refresh token unconditionally on every
+      // health check. Xero uses rotating refresh tokens, and every rotation
+      // creates an opportunity to race with a concurrent sync and mark the
+      // connection expired. Instead:
+      //   1. If the current access token is still valid, verify API access
+      //      with it directly. A successful ping proves the connection works
+      //      without touching the refresh token.
+      //   2. Only refresh if the token is actually expired (or about to be).
+      //   3. Refresh is serialized via the process-wide xeroTokenLock.
+      const bufferMs = 2 * 60 * 1000;
+      const tokenStillValid =
+        !!tenant.xeroAccessToken &&
+        !!tenant.xeroExpiresAt &&
+        new Date(tenant.xeroExpiresAt).getTime() - bufferMs > Date.now();
 
-      if (!refreshedTokens) {
-        await this.updateConnectionStatus(tenant.id, 'disconnected', 'Token refresh failed - please reconnect');
-        console.log(`❌ Xero connection FAILED for tenant: ${tenant.name}`);
-        return;
+      let accessToken: string;
+      let effectiveTenantId: string;
+
+      if (tokenStillValid) {
+        accessToken = tenant.xeroAccessToken!;
+        effectiveTenantId = tenant.xeroTenantId;
+      } else {
+        const refreshedTokens = await xeroService.refreshAccessToken(
+          tenant.xeroRefreshToken,
+          tenant.xeroTenantId
+        );
+
+        if (!refreshedTokens) {
+          await this.updateConnectionStatus(tenant.id, 'disconnected', 'Token refresh failed - please reconnect');
+          console.log(`❌ Xero connection FAILED for tenant: ${tenant.name}`);
+          return;
+        }
+
+        // Persist new tokens — refreshAccessToken does NOT write them back itself.
+        await db
+          .update(tenants)
+          .set({
+            xeroAccessToken: refreshedTokens.accessToken,
+            xeroRefreshToken: refreshedTokens.refreshToken,
+            xeroExpiresAt: refreshedTokens.expiresAt,
+          })
+          .where(eq(tenants.id, tenant.id));
+
+        accessToken = refreshedTokens.accessToken;
+        effectiveTenantId = refreshedTokens.tenantId;
       }
 
-      // CRITICAL: Save new tokens immediately — Xero uses rotating refresh tokens,
-      // so the old refresh token is now invalidated. Must persist before anything else.
-      await db
-        .update(tenants)
-        .set({
-          xeroAccessToken: refreshedTokens.accessToken,
-          xeroRefreshToken: refreshedTokens.refreshToken,
-          xeroExpiresAt: refreshedTokens.expiresAt,
-        })
-        .where(eq(tenants.id, tenant.id));
-
-      // Token refresh succeeded — verify API access with a lightweight invoice ping
-      const apiOk = await this.verifyApiAccess(refreshedTokens.accessToken, refreshedTokens.tenantId);
+      // Verify API access with a lightweight invoice ping
+      const apiOk = await this.verifyApiAccess(accessToken, effectiveTenantId);
 
       if (apiOk) {
         console.log(`✅ Xero connection HEALTHY for tenant: ${tenant.name}`);
