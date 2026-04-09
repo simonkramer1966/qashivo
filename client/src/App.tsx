@@ -12,6 +12,8 @@ import AdminShell from "@/components/AdminShell";
 import FloatingRileyChat from "@/components/riley/FloatingRileyChat";
 import { useRealtimeEvents } from "@/hooks/useRealtimeEvents";
 import { SyncStatusProvider } from "@/hooks/useSyncStatus";
+import { AgentNotificationProvider } from "@/hooks/useAgentNotifications";
+import { GlobalAgentNotificationListener } from "@/components/notifications/GlobalAgentNotificationListener";
 import { DrawerProvider } from "@/contexts/DrawerContext";
 import type { OnboardingStatus } from "@/components/OnboardingWizard";
 
@@ -216,6 +218,7 @@ function Router() {
         // Authenticated routes — Sprint pillar pages + essential legacy
         <OnboardingGuard>
         <SyncStatusProvider>
+        <AgentNotificationProvider>
         <Switch>
           {/* Auth redirects — already signed in, go to dashboard */}
           <Route path="/login">{() => <Redirect to="/qollections" />}</Route>
@@ -301,6 +304,8 @@ function Router() {
         </Switch>
         <FloatingRileyChat />
         <RealtimeEventsProvider />
+        <GlobalAgentNotificationListener />
+        </AgentNotificationProvider>
         </SyncStatusProvider>
         </OnboardingGuard>
       )}

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAgentNotifications } from "@/hooks/useAgentNotifications";
 import { useInvalidateActionCentre } from "@/hooks/useInvalidateActionCentre";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -61,6 +62,8 @@ import { useDrawer } from "@/contexts/DrawerContext";
 import { formatRelativeTime, normalizeChannel, formatCurrencyCompact } from "./utils";
 import ApprovalDrawer from "./ApprovalDrawer";
 import { VipPromotionDialog } from "./VipPromotionDialog";
+import { ReplyBadge } from "./ReplyBadge";
+import { CONVERSATION_TYPE } from "@shared/types/actionMetadata";
 
 // ── Types ───────────────────────────────────────────────────
 
@@ -225,6 +228,7 @@ interface ApprovalsTabProps {
 
 export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
   const { toast } = useToast();
+  const { notify, update: updateNotification, dismiss: dismissNotification } = useAgentNotifications();
   const queryClient = useQueryClient();
   const invalidateActionCentre = useInvalidateActionCentre();
   const [, navigate] = useLocation();
@@ -257,26 +261,23 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
 
   // Listen for background-delivery outcomes dispatched by useRealtimeEvents.
   // The approve endpoint returns before SendGrid, so the "sent" confirmation
-  // comes in as an SSE event a few seconds later.
+  // comes in as an SSE event a few seconds later. Failure events are handled
+  // globally by GlobalAgentNotificationListener.
   useEffect(() => {
-    const onSent = () => {
-      toast({ title: "Sent ✓", description: "The email has been delivered." });
-    };
-    const onFailed = (e: Event) => {
-      const err = (e as CustomEvent).detail?.error;
-      toast({
-        title: "Send failed",
-        description: err || "The email could not be delivered. Check the Exceptions tab.",
-        variant: "destructive",
+    const onSent = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { contactName?: string } | undefined;
+      notify({
+        agent: "charlie",
+        severity: "success",
+        title: "Email delivered",
+        message: detail?.contactName
+          ? `I've sent the email to ${detail.contactName}.`
+          : "The email has been delivered.",
       });
     };
     window.addEventListener("realtime:action_sent", onSent);
-    window.addEventListener("realtime:send_failed", onFailed);
-    return () => {
-      window.removeEventListener("realtime:action_sent", onSent);
-      window.removeEventListener("realtime:send_failed", onFailed);
-    };
-  }, [toast]);
+    return () => window.removeEventListener("realtime:action_sent", onSent);
+  }, [notify]);
 
   // ── Data fetching ──────────────────────────────────────────
 
@@ -413,10 +414,15 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
       editedSubject?: string;
       editedBody?: string;
     }) => {
-      return apiRequest("POST", `/api/actions/${actionId}/approve`, {
+      const res = await apiRequest("POST", `/api/actions/${actionId}/approve`, {
         editedSubject,
         editedBody,
       });
+      return (await res.json()) as {
+        success: boolean;
+        willSendImmediately?: boolean;
+        scheduledFor?: string;
+      };
     },
     onMutate: async ({ actionId }) => {
       // Close the drawer synchronously with the optimistic removal so the
@@ -424,18 +430,57 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
       setDrawerActionId(null);
       return await optimisticMoveOutOfApprovals({ ids: [actionId], addToScheduled: true });
     },
-    onSuccess: (_, { actionId }) => {
+    onSuccess: (data, { actionId }) => {
       // Silent reconciliation — cache is already correct, just refetch to
       // pick up the real server-assigned scheduledFor/approvedBy fields.
       // Actual "sent" confirmation arrives later via the action_sent SSE event.
       invalidateActionCentre();
       setRegeneratedIds(prev => { const next = new Set(prev); next.delete(actionId); return next; });
       setToneOverrides(prev => { const next = new Map(prev); next.delete(actionId); return next; });
-      toast({ title: "Approved — sending…", description: "The email will be delivered in a few seconds." });
+
+      if (data.willSendImmediately) {
+        notify({
+          agent: "charlie",
+          severity: "info",
+          title: "Approved — sending",
+          message: "I'll deliver the email in a few seconds.",
+        });
+      } else if (data.scheduledFor) {
+        const when = new Date(data.scheduledFor);
+        const whenLabel = when.toLocaleString(undefined, {
+          weekday: "short",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+        notify({
+          agent: "charlie",
+          severity: "info",
+          title: "Approved — scheduled",
+          message: `It's outside business hours, so I'll send this at ${whenLabel}.`,
+          actions: [
+            {
+              label: "View in Scheduled",
+              onClick: () => navigate("/qollections/agent-activity?tab=scheduled"),
+            },
+          ],
+        });
+      } else {
+        notify({
+          agent: "charlie",
+          severity: "success",
+          title: "Approved",
+          message: "The email is on its way.",
+        });
+      }
     },
     onError: (_err, _vars, context) => {
       rollbackOptimistic(context);
-      toast({ title: "Approval failed", variant: "destructive" });
+      notify({
+        agent: "charlie",
+        severity: "error",
+        title: "Approval failed",
+        message: "I couldn't approve that one. Please try again.",
+      });
     },
   });
 
@@ -464,11 +509,21 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
     },
     onSuccess: () => {
       invalidateActionCentre();
-      toast({ title: "Action rejected" });
+      notify({
+        agent: "charlie",
+        severity: "info",
+        title: "Rejected",
+        message: "I've removed that email from the queue.",
+      });
     },
     onError: (_err, _vars, context) => {
       rollbackOptimistic(context);
-      toast({ title: "Rejection failed", variant: "destructive" });
+      notify({
+        agent: "charlie",
+        severity: "error",
+        title: "Rejection failed",
+        message: "I couldn't reject that one. Please try again.",
+      });
     },
   });
 
@@ -485,11 +540,27 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
     },
     onSuccess: () => {
       invalidateActionCentre();
-      toast({ title: "Action deferred" });
+      notify({
+        agent: "charlie",
+        severity: "info",
+        title: "Deferred",
+        message: "I'll come back to this one later.",
+        actions: [
+          {
+            label: "View in Scheduled",
+            onClick: () => navigate("/qollections/agent-activity?tab=scheduled"),
+          },
+        ],
+      });
     },
     onError: (_err, _vars, context) => {
       rollbackOptimistic(context);
-      toast({ title: "Deferral failed", variant: "destructive" });
+      notify({
+        agent: "charlie",
+        severity: "error",
+        title: "Deferral failed",
+        message: "I couldn't defer that one. Please try again.",
+      });
     },
   });
 
@@ -581,28 +652,65 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
   });
 
   // Bulk approve
+  const bulkApproveNotifId = useRef<string | null>(null);
   const bulkApproveMutation = useMutation({
     mutationFn: async (ids: string[]) => {
+      const total = ids.length;
+      let done = 0;
       for (const id of ids) {
         const override = toneOverrides.get(id);
         if (override) {
           await apiRequest("POST", `/api/actions/${id}/tone-override`, { tone: override });
         }
         await apiRequest("POST", `/api/actions/${id}/approve`);
+        done++;
+        if (bulkApproveNotifId.current) {
+          updateNotification(bulkApproveNotifId.current, {
+            message: `Approved ${done} of ${total}…`,
+            progress: Math.round((done / total) * 100),
+          });
+        }
       }
+      return { total };
     },
     onMutate: async (ids) => {
       setDrawerActionId(null);
       setSelectedIds(new Set());
+      bulkApproveNotifId.current = notify({
+        agent: "charlie",
+        severity: "info",
+        title: `Approving ${ids.length}`,
+        message: `Approved 0 of ${ids.length}…`,
+        progress: 0,
+        autoDismissMs: null,
+      });
       return await optimisticMoveOutOfApprovals({ ids, addToScheduled: true });
     },
-    onSuccess: () => {
+    onSuccess: ({ total }) => {
       invalidateActionCentre();
-      toast({ title: "Selected actions approved" });
+      if (bulkApproveNotifId.current) {
+        dismissNotification(bulkApproveNotifId.current);
+        bulkApproveNotifId.current = null;
+      }
+      notify({
+        agent: "charlie",
+        severity: "success",
+        title: "Bulk approved",
+        message: `${total} ${total === 1 ? "email is" : "emails are"} on the way.`,
+      });
     },
     onError: (_err, _vars, context) => {
       rollbackOptimistic(context);
-      toast({ title: "Bulk approval failed", variant: "destructive" });
+      if (bulkApproveNotifId.current) {
+        dismissNotification(bulkApproveNotifId.current);
+        bulkApproveNotifId.current = null;
+      }
+      notify({
+        agent: "charlie",
+        severity: "error",
+        title: "Bulk approval failed",
+        message: "Something went wrong approving those emails. Please try again.",
+      });
     },
   });
 
@@ -1012,6 +1120,10 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
             const isSelected = selectedIds.has(action.id);
             const isFocused = focusedIndex === idx;
             const currentTone = toneOverrides.get(action.id) || action.agentToneLevel || "professional";
+            const isConversationReply = action.metadata?.conversationType === CONVERSATION_TYPE.REPLY;
+            const replyDescription = isConversationReply
+              ? `Responding to debtor message ${formatRelativeTime(action.metadata?.originalMessageReceivedAt ?? action.createdAt)}`
+              : null;
 
             return (
               <div
@@ -1057,6 +1169,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
                           {action.companyName || action.contactName || "Unknown debtor"}
                         </span>
                       )}
+                      {isConversationReply && <ReplyBadge />}
                     </div>
 
                     {/* Line 2 — Why */}
@@ -1071,7 +1184,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
 
                     {/* Line 3 — What */}
                     <div className="text-xs text-muted-foreground/80 mt-0.5 truncate">
-                      {action.actionSummary || action.subject || `${action.type} action`}
+                      {replyDescription || action.actionSummary || action.subject || `${action.type} action`}
                     </div>
                   </div>
 
