@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
@@ -248,18 +248,20 @@ export default function ExceptionsTab({ subTab, onNavigateSubTab }: ExceptionsTa
   const normaliseState = (e: ExceptionAction): ExceptionState =>
     (e.exceptionStatus as ExceptionState) || "new";
 
-  // Compute per-category counts (all states, for summary landing)
-  const categoryCounts = useMemo(() => {
+  // Compute per-category counts (all states, for summary landing).
+  // Plain computation (not useMemo) so it doesn't sit after an early return
+  // and create a conditional hook-count change.
+  const categoryCounts: Record<ExceptionSubTab, number> = (() => {
     const counts: Record<ExceptionSubTab, number> = { collections: 0, debtor_situations: 0, promises: 0, other: 0 };
     for (const e of allExceptions) {
-      if (normaliseState(e) !== "new") continue; // summary cards show new only
+      if (normaliseState(e) !== "new") continue;
       const cat = classifyException(e.exceptionReason, e.status);
       if (cat && cat !== "promises") counts[cat]++;
       else if (!cat) counts.other++;
     }
     counts.promises = promisesCount;
     return counts;
-  }, [allExceptions, promisesCount]);
+  })();
 
   // ── Summary landing (no sub-tab selected) ───────────────────
   if (!subTab) {
@@ -394,22 +396,17 @@ export default function ExceptionsTab({ subTab, onNavigateSubTab }: ExceptionsTa
 
   // ── Sub-tab view ────────────────────────────────────────────
 
-  // Promises sub-tab has its own endpoint + row layout
-  if (subTab === "promises") {
-    return <PromisesSubTab />;
-  }
-
   const exceptions = allExceptions.filter(e => {
     const cat = classifyException(e.exceptionReason, e.status);
     return cat === subTab || (cat === null && subTab === "other");
   });
 
-  // State counts for filter pills
-  const stateCounts = useMemo(() => {
+  // State counts for filter pills (plain computation — no hooks after early returns)
+  const stateCounts: Record<ExceptionState, number> = (() => {
     const counts: Record<ExceptionState, number> = { new: 0, in_progress: 0, resolved: 0 };
     for (const e of exceptions) counts[normaliseState(e)]++;
     return counts;
-  }, [exceptions]);
+  })();
 
   // Apply filter
   const filtered = filter === "all"
@@ -417,14 +414,20 @@ export default function ExceptionsTab({ subTab, onNavigateSubTab }: ExceptionsTa
     : exceptions.filter(e => normaliseState(e) === filter);
 
   // Group by state for "all" view
-  const grouped = useMemo(() => {
+  const grouped: Record<ExceptionState, ExceptionAction[]> | null = (() => {
     if (filter !== "all") return null;
     const groups: Record<ExceptionState, ExceptionAction[]> = { new: [], in_progress: [], resolved: [] };
     for (const e of exceptions) groups[normaliseState(e)].push(e);
     return groups;
-  }, [exceptions, filter]);
+  })();
 
   const subLabel = EXCEPTION_SUB_TABS.find(t => t.value === subTab)?.label?.toLowerCase() ?? subTab;
+
+  // Promises sub-tab has its own endpoint + row layout.
+  // Rendered after all hooks above to keep hook order stable.
+  if (subTab === "promises") {
+    return <PromisesSubTab />;
+  }
 
   return (
     <div className="space-y-3">
