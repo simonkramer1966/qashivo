@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 import {
   AlertTriangle, TrendingDown, CheckCircle2, ChevronRight,
   ShieldAlert, Users, HelpCircle, Clock, ExternalLink, ChevronDown,
-  Mail, MessageSquare, Phone, Circle, CircleDot, Check,
+  Mail, MessageSquare, Phone, Circle, CircleDot, Check, RefreshCw,
 } from "lucide-react";
 import { formatRelativeTime } from "./utils";
 import { type ExceptionSubTab, classifyException, EXCEPTION_SUB_TABS } from "@/lib/exceptionConfig";
@@ -44,6 +44,7 @@ interface ExceptionAction {
   contactId: string | null;
   contactName: string | null;
   companyName: string | null;
+  metadata: Record<string, unknown> | null;
 }
 
 interface RejectionPattern {
@@ -178,6 +179,20 @@ export default function ExceptionsTab({ subTab, onNavigateSubTab }: ExceptionsTa
     },
   });
 
+  const retrySendMutation = useMutation({
+    mutationFn: async (actionId: string) => {
+      const res = await apiRequest("POST", `/api/actions/${actionId}/retry-send`);
+      return res.json();
+    },
+    onSuccess: () => {
+      invalidateActionCentre();
+      toast({ title: "Retry started" });
+    },
+    onError: (err: any) => {
+      toast({ title: "Retry failed", description: err?.message, variant: "destructive" });
+    },
+  });
+
   const reopenMutation = useMutation({
     mutationFn: async (actionId: string) => {
       const res = await apiRequest("POST", `/api/actions/${actionId}/reopen`);
@@ -219,7 +234,7 @@ export default function ExceptionsTab({ subTab, onNavigateSubTab }: ExceptionsTa
     const counts: Record<ExceptionSubTab, number> = { collections: 0, debtor_situations: 0, other: 0 };
     for (const e of allExceptions) {
       if (normaliseState(e) !== "new") continue; // summary cards show new only
-      const cat = classifyException(e.exceptionReason);
+      const cat = classifyException(e.exceptionReason, e.status);
       if (cat) counts[cat]++;
       else counts.other++;
     }
@@ -360,7 +375,7 @@ export default function ExceptionsTab({ subTab, onNavigateSubTab }: ExceptionsTa
   // ── Sub-tab view ────────────────────────────────────────────
 
   const exceptions = allExceptions.filter(e => {
-    const cat = classifyException(e.exceptionReason);
+    const cat = classifyException(e.exceptionReason, e.status);
     return cat === subTab || (cat === null && subTab === "other");
   });
 
@@ -471,7 +486,8 @@ export default function ExceptionsTab({ subTab, onNavigateSubTab }: ExceptionsTa
               onResolve={(notes) => resolveMutation.mutate({ actionId: action.id, notes })}
               onDismiss={() => dismissMutation.mutate(action.id)}
               onReopen={() => reopenMutation.mutate(action.id)}
-              isPending={startWorkingMutation.isPending || resolveMutation.isPending || dismissMutation.isPending || reopenMutation.isPending}
+              onRetrySend={() => retrySendMutation.mutate(action.id)}
+              isPending={startWorkingMutation.isPending || resolveMutation.isPending || dismissMutation.isPending || reopenMutation.isPending || retrySendMutation.isPending}
             />
           ))}
         </div>
@@ -487,6 +503,7 @@ function ExceptionRow({
   isResolving, resolveNotes, onResolveNotesChange,
   onStartResolving, onCancelResolving,
   onStartWorking, onResolve, onDismiss, onReopen,
+  onRetrySend,
   isPending,
 }: {
   action: ExceptionAction;
@@ -502,8 +519,11 @@ function ExceptionRow({
   onResolve: (notes?: string) => void;
   onDismiss: () => void;
   onReopen: () => void;
+  onRetrySend: () => void;
   isPending: boolean;
 }) {
+  const executionError = getExecutionError(action);
+  const isFailedSend = action.status === "failed";
   const debtorName = action.companyName || action.contactName;
   const title = formatExceptionTitle(action);
   const preview = action.content
@@ -543,7 +563,9 @@ function ExceptionRow({
               {title}
             </span>
             <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
-              {action.exceptionReason?.replace(/_/g, " ") || "flagged"}
+              {action.status === "failed"
+                ? "send failed"
+                : action.exceptionReason?.replace(/_/g, " ") || "flagged"}
             </Badge>
           </div>
 
@@ -584,6 +606,13 @@ function ExceptionRow({
               <div className="rounded border bg-background p-3 text-xs whitespace-pre-wrap max-h-48 overflow-y-auto">
                 {action.content}
               </div>
+            </div>
+          )}
+
+          {executionError && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-1">Error</p>
+              <p className="text-xs text-destructive">{executionError}</p>
             </div>
           )}
 
@@ -636,6 +665,12 @@ function ExceptionRow({
           {/* Action buttons based on state */}
           {!isResolving && (
             <div className="flex items-center gap-2 pt-1">
+              {isFailedSend && (
+                <Button size="sm" variant="outline" onClick={onRetrySend} disabled={isPending}>
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  Retry send
+                </Button>
+              )}
               {state === "new" && (
                 <>
                   <Button size="sm" variant="outline" onClick={onStartWorking} disabled={isPending}>
@@ -689,9 +724,19 @@ function ExceptionRow({
 // ── Helpers ───────────────────────────────────────────────────
 
 function formatExceptionTitle(action: ExceptionAction): string {
+  if (action.status === "failed") {
+    return action.subject || action.actionSummary || "Send failed";
+  }
   if (action.actionSummary) return action.actionSummary;
   if (action.subject) return action.subject;
   const reason = action.exceptionReason?.replace(/_/g, " ");
   if (reason) return reason.charAt(0).toUpperCase() + reason.slice(1);
   return `${action.type} exception`;
+}
+
+function getExecutionError(action: ExceptionAction): string | null {
+  const meta = action.metadata;
+  if (!meta || typeof meta !== "object") return null;
+  const err = (meta as any).executionError;
+  return typeof err === "string" && err.length > 0 ? err : null;
 }

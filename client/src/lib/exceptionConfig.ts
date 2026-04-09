@@ -35,8 +35,16 @@ export const VALID_EXCEPTION_SUBS = new Set<ExceptionSubTab>([
   "other",
 ]);
 
-/** Classify an exception reason string into a group. */
-export function classifyException(reason: string | null): ExceptionSubTab | null {
+/**
+ * Classify an exception into a group. Accepts a reason string (for
+ * status='exception' rows) plus the action status — failed sends are
+ * always routed to Collections regardless of reason.
+ */
+export function classifyException(
+  reason: string | null,
+  status?: string | null,
+): ExceptionSubTab | null {
+  if (status === "failed") return "collections";
   if (!reason) return null;
   const r = reason.toLowerCase();
   for (const [group, types] of Object.entries(EXCEPTION_GROUPS)) {

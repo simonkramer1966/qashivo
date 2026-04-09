@@ -374,6 +374,53 @@ export function registerActionCentreRoutes(app: Express): void {
     }
   });
 
+  // ── POST /api/actions/:actionId/retry-send ──────────────────
+  // Retry a failed send — resets status to scheduled and re-executes.
+  // Used by the Exceptions tab for delivery failures.
+  app.post("/api/actions/:actionId/retry-send", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const { actionId } = req.params;
+
+      const [action] = await db
+        .select()
+        .from(actions)
+        .where(and(eq(actions.id, actionId), eq(actions.tenantId, user.tenantId)))
+        .limit(1);
+
+      if (!action) return res.status(404).json({ message: "Action not found" });
+      if (action.status !== "failed") {
+        return res.status(400).json({ message: `Cannot retry action with status '${action.status}'` });
+      }
+
+      // Reset status and clear the previous error so the executor treats it
+      // as a fresh send. The new attempt will overwrite executionError on
+      // failure or mark it completed on success.
+      const existingMeta = (action.metadata as Record<string, unknown> | null) ?? {};
+      const { executionError: _prev, ...restMeta } = existingMeta as any;
+      await db
+        .update(actions)
+        .set({
+          status: "scheduled",
+          scheduledFor: new Date(),
+          metadata: restMeta,
+        })
+        .where(eq(actions.id, actionId));
+
+      const { actionExecutor } = await import("../services/actionExecutor");
+      actionExecutor.executeActionsByIds([actionId] as any, user.id).catch((err: any) => {
+        console.error(`[RetrySend] Background execution failed for ${actionId}:`, err.message);
+      });
+
+      res.json({ message: "Retry started", actionId });
+    } catch (error: any) {
+      console.error("Error retrying failed send:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // ── GET /api/action-centre/activity-feed ─────────────────────
   // Unified, debtor-threaded activity feed for the Activity Feed tab
   app.get("/api/action-centre/activity-feed", isAuthenticated, async (req: any, res) => {
@@ -513,7 +560,9 @@ export function registerActionCentreRoutes(app: Express): void {
         const actionConditions: any[] = [
           eq(actions.tenantId, user.tenantId),
           gte(actions.createdAt, timeStart),
-          inArray(actions.status, ["completed", "sent", "failed"]),
+          // Failed sends are intentionally excluded — they belong in the
+          // Exceptions tab, not the Activity Feed.
+          inArray(actions.status, ["completed", "sent"]),
         ];
         if (timeEnd) actionConditions.push(lt(actions.createdAt, timeEnd));
         if (channel && channel !== "system") {
@@ -775,6 +824,7 @@ export function registerActionCentreRoutes(app: Express): void {
             exceptionStatus: actions.exceptionStatus,
             exceptionResolvedAt: actions.exceptionResolvedAt,
             exceptionResolutionNotes: actions.exceptionResolutionNotes,
+            metadata: actions.metadata,
             createdAt: actions.createdAt,
             contactId: actions.contactId,
             contactName: contacts.name,
@@ -799,6 +849,12 @@ export function registerActionCentreRoutes(app: Express): void {
                   eq(actions.status, "exception"),
                   eq(actions.exceptionStatus, "resolved"),
                   gte(actions.exceptionResolvedAt, sevenDaysAgo),
+                ),
+                // Failed sends from last 7 days (bounces, SendGrid errors,
+                // compliance blocks) — surfaced here instead of Activity Feed
+                and(
+                  eq(actions.status, "failed"),
+                  gte(actions.createdAt, sevenDaysAgo),
                 ),
               ),
             )
