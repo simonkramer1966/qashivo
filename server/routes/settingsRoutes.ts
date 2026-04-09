@@ -391,6 +391,8 @@ export async function registerSettingsRoutes(app: Express): Promise<void> {
         preDueDateDays: tenant.preDueDateDays ?? 7,
         preDueDateMinAmount: tenant.preDueDateMinAmount || '1000.00',
         sendDelayMinutes: tenant.sendDelayMinutes ?? 15,
+        conversationReplyDelayMin: tenant.conversationReplyDelayMin ?? 2,
+        conversationReplyDelayMax: tenant.conversationReplyDelayMax ?? 5,
       });
     } catch (error) {
       console.error("Error fetching tenant settings:", error);
@@ -419,7 +421,8 @@ export async function registerSettingsRoutes(app: Express): Promise<void> {
         'noResponseEscalationThreshold', 'significantPaymentThreshold',
         'paymentAttributionFullCreditHours', 'paymentAttributionPartialCreditDays', 'paymentAttributionSameDayExcluded',
         'sendDelayMinutes',
-        'chaseDelayDays', 'preDueDateDays', 'preDueDateMinAmount'
+        'chaseDelayDays', 'preDueDateDays', 'preDueDateMinAmount',
+        'conversationReplyDelayMin', 'conversationReplyDelayMax',
       ];
 
       const nestedFields = ['dailyLimits', 'minConfidence', 'exceptionRules', 'channelCooldowns'];

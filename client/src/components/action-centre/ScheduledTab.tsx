@@ -16,6 +16,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useInvalidateActionCentre } from "@/hooks/useInvalidateActionCentre";
 import { Link } from "wouter";
 import { normalizeChannel } from "./utils";
+import { ReplyBadge } from "./ReplyBadge";
+import { CONVERSATION_TYPE } from "@shared/types/actionMetadata";
 
 interface ScheduledAction {
   id: string;
@@ -202,7 +204,10 @@ export default function ScheduledTab() {
                 </span>
               </TableCell>
               <TableCell>
-                <ToneBadge tone={action.agentToneLevel} />
+                <div className="flex items-center gap-1.5">
+                  <ToneBadge tone={action.agentToneLevel} />
+                  {action.metadata?.conversationType === CONVERSATION_TYPE.REPLY && <ReplyBadge />}
+                </div>
               </TableCell>
               <TableCell>
                 {action.scheduledFor ? (

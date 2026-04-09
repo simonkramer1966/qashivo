@@ -1,5 +1,5 @@
 import { db } from "../db";
-import { eq, and, desc, gte, sql } from "drizzle-orm";
+import { eq, and, desc, gte, sql, inArray } from "drizzle-orm";
 import { 
   emailClarifications, 
   emailMessages,
@@ -16,6 +16,7 @@ import { sendEmail } from "./sendgrid";
 import { generateReplyToEmail, findOrCreateConversation, updateConversationStats } from "./emailCommunications";
 import { v4 as uuidv4 } from "uuid";
 import { generateJSON } from "./llm/claude";
+import { CONVERSATION_TYPE } from "@shared/types/actionMetadata";
 
 const EMAIL_REPLY_DOMAIN = process.env.EMAIL_REPLY_DOMAIN || "in.qashivo.com";
 const SENDGRID_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || "cc@qashivo.com";
@@ -1606,3 +1607,68 @@ ${htmlBody}
 }
 
 export const emailClarificationService = new EmailClarificationService();
+
+/**
+ * Batch version of `isActiveConversation` for the planner. A debtor counts as
+ * being in an active conversation if either:
+ *   (a) we have an INBOUND email from them within the last 48 hours, or
+ *   (b) there is already a `conversation_reply` action sitting in
+ *       `pending_approval` or `scheduled` status (i.e. a reply we are about
+ *       to send).
+ *
+ * Returns the de-duplicated set of contactIds that match. Empty input → empty
+ * set, no DB round trip.
+ */
+export async function getActiveConversationContactIds(
+  tenantId: string,
+  contactIds: string[],
+): Promise<Set<string>> {
+  const result = new Set<string>();
+  if (!contactIds.length) return result;
+
+  const activeWindow = new Date();
+  activeWindow.setHours(activeWindow.getHours() - 48);
+
+  try {
+    // Run both lookups in parallel — they hit different tables and have no
+    // shared state, so awaiting them sequentially is wasted latency.
+    const [recentInbound, pendingReplies] = await Promise.all([
+      db
+        .select({ contactId: emailMessages.contactId })
+        .from(emailMessages)
+        .where(
+          and(
+            eq(emailMessages.tenantId, tenantId),
+            inArray(emailMessages.contactId, contactIds),
+            eq(emailMessages.direction, "INBOUND"),
+            sql`COALESCE(${emailMessages.receivedAt}, ${emailMessages.createdAt}) >= ${activeWindow}`,
+          ),
+        ),
+      db
+        .select({ contactId: actions.contactId })
+        .from(actions)
+        .where(
+          and(
+            eq(actions.tenantId, tenantId),
+            inArray(actions.contactId, contactIds),
+            inArray(actions.status, ["pending_approval", "scheduled"]),
+            sql`${actions.metadata}->>'conversationType' = ${CONVERSATION_TYPE.REPLY}`,
+          ),
+        ),
+    ]);
+
+    for (const row of recentInbound) {
+      if (row.contactId) result.add(row.contactId);
+    }
+    for (const row of pendingReplies) {
+      if (row.contactId) result.add(row.contactId);
+    }
+  } catch (error: any) {
+    // Fail closed: if we can't determine active conversations, skip every
+    // candidate rather than risk queueing chase emails on top of live threads.
+    console.error("[ActiveConversation] Batch lookup failed — failing closed:", error?.message);
+    for (const id of contactIds) result.add(id);
+  }
+
+  return result;
+}

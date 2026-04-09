@@ -5,6 +5,7 @@ import { db } from "../db";
 import { actions, actionBatches, rejectionPatterns, tenants, messageDrafts, contacts, invoices, disputes, complianceChecks, emailMessages, promisesToPay, paymentPlans, customerLearningProfiles, inboundMessages, paymentPromises, aiFacts, customerPreferences, timelineEvents } from "@shared/schema";
 import { eq, and, inArray, desc, asc, sql, or, gte, lte, lt, count, sum, not, isNull, isNotNull, between } from "drizzle-orm";
 import { batchProcessor } from "../services/batchProcessor";
+import { CONVERSATION_TYPE } from "@shared/types/actionMetadata";
 import { z } from "zod";
 
 export function registerActionCentreRoutes(app: Express): void {
@@ -43,7 +44,13 @@ export function registerActionCentreRoutes(app: Express): void {
             or(isNull(contacts.isVip), eq(contacts.isVip, false)),
           )
         )
-        .orderBy(desc(actions.priority), actions.createdAt)
+        // Conversation replies first (the debtor is waiting on us), then by
+        // priority and createdAt as before.
+        .orderBy(
+          sql`CASE WHEN ${actions.metadata}->>'conversationType' = ${CONVERSATION_TYPE.REPLY} THEN 0 ELSE 1 END`,
+          desc(actions.priority),
+          actions.createdAt,
+        )
         .limit(limit)
         .offset(offset);
 

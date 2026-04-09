@@ -27,6 +27,7 @@ import {
   Power,
   Rocket,
   Send,
+  MessageSquare,
 } from "lucide-react";
 
 interface TenantSettings {
@@ -44,6 +45,8 @@ interface TenantSettings {
   preDueDateMinAmount: string;
   smallAmountThreshold: string;
   smallAmountChaseEnabled: boolean;
+  conversationReplyDelayMin: number;
+  conversationReplyDelayMax: number;
 }
 
 interface CommModeSettings {
@@ -150,6 +153,8 @@ export default function SettingsAutonomyRules() {
   const [preDueDateMinAmount, setPreDueDateMinAmount] = useState<string | null>(null);
   const [smallAmountThreshold, setSmallAmountThreshold] = useState<string | null>(null);
   const [smallAmountChaseEnabled, setSmallAmountChaseEnabled] = useState<boolean | null>(null);
+  const [conversationReplyDelayMin, setConversationReplyDelayMin] = useState<number | null>(null);
+  const [conversationReplyDelayMax, setConversationReplyDelayMax] = useState<number | null>(null);
 
   // Communication testing state
   const [commMode, setCommMode] = useState<CommMode | null>(null);
@@ -204,11 +209,18 @@ export default function SettingsAutonomyRules() {
   const currentSmallAmountThreshold = smallAmountThreshold ?? settings?.smallAmountThreshold ?? "50.00";
   const currentSmallAmountChaseEnabled =
     smallAmountChaseEnabled ?? settings?.smallAmountChaseEnabled ?? true;
+  const currentConversationReplyDelayMin =
+    conversationReplyDelayMin ?? settings?.conversationReplyDelayMin ?? 2;
+  const currentConversationReplyDelayMax =
+    conversationReplyDelayMax ?? settings?.conversationReplyDelayMax ?? 5;
+  const conversationDelayInvalid =
+    currentConversationReplyDelayMax < currentConversationReplyDelayMin;
 
   const hasChanges =
     approvalMode !== null || timeoutHours !== null || exceptionRules !== null ||
     sendDelayMinutes !== null || chaseDelayDays !== null || preDueDateDays !== null || preDueDateMinAmount !== null ||
-    smallAmountThreshold !== null || smallAmountChaseEnabled !== null;
+    smallAmountThreshold !== null || smallAmountChaseEnabled !== null ||
+    conversationReplyDelayMin !== null || conversationReplyDelayMax !== null;
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -222,6 +234,8 @@ export default function SettingsAutonomyRules() {
       if (preDueDateMinAmount !== null) body.preDueDateMinAmount = preDueDateMinAmount;
       if (smallAmountThreshold !== null) body.smallAmountThreshold = smallAmountThreshold;
       if (smallAmountChaseEnabled !== null) body.smallAmountChaseEnabled = smallAmountChaseEnabled;
+      if (conversationReplyDelayMin !== null) body.conversationReplyDelayMin = conversationReplyDelayMin;
+      if (conversationReplyDelayMax !== null) body.conversationReplyDelayMax = conversationReplyDelayMax;
       const res = await apiRequest("PATCH", "/api/tenant/settings", body);
       return res.json();
     },
@@ -237,6 +251,8 @@ export default function SettingsAutonomyRules() {
       setPreDueDateMinAmount(null);
       setSmallAmountThreshold(null);
       setSmallAmountChaseEnabled(null);
+      setConversationReplyDelayMin(null);
+      setConversationReplyDelayMax(null);
     },
     onError: (err: Error) => {
       toast({ title: "Failed to save", description: err.message, variant: "destructive" });
@@ -307,7 +323,7 @@ export default function SettingsAutonomyRules() {
         hasChanges ? (
           <Button
             onClick={() => saveMutation.mutate()}
-            disabled={saveMutation.isPending}
+            disabled={saveMutation.isPending || conversationDelayInvalid}
             className="bg-primary hover:bg-primary/90 text-white"
           >
             {saveMutation.isPending ? (
@@ -655,6 +671,71 @@ export default function SettingsAutonomyRules() {
                   data-testid="switch-small-amount-chase-enabled"
                 />
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Conversation Behaviour */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5 text-primary" />
+                Conversation Behaviour
+              </CardTitle>
+              <CardDescription>
+                When a debtor replies, Charlie waits a randomised delay before sending the response so it
+                feels human-paced. Manual mode is unaffected — replies wait for your approval.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1">
+                  <Label className="text-sm font-medium">Minimum reply delay</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Shortest pause Charlie will take before sending a reply.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    value={currentConversationReplyDelayMin}
+                    onChange={(e) => setConversationReplyDelayMin(parseInt(e.target.value || "0", 10))}
+                    className="w-24"
+                    min={0}
+                    max={60}
+                    step={1}
+                    data-testid="input-conversation-reply-delay-min"
+                  />
+                  <span className="text-sm text-muted-foreground">min</span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1">
+                  <Label className="text-sm font-medium">Maximum reply delay</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Upper bound for the random delay window.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    value={currentConversationReplyDelayMax}
+                    onChange={(e) => setConversationReplyDelayMax(parseInt(e.target.value || "0", 10))}
+                    className="w-24"
+                    min={0}
+                    max={60}
+                    step={1}
+                    data-testid="input-conversation-reply-delay-max"
+                  />
+                  <span className="text-sm text-muted-foreground">min</span>
+                </div>
+              </div>
+
+              {conversationDelayInvalid && (
+                <p className="text-xs text-red-600">
+                  Maximum delay must be greater than or equal to the minimum.
+                </p>
+              )}
             </CardContent>
           </Card>
 

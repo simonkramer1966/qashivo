@@ -21,16 +21,21 @@ MVP v1 delivered the core Collections Agent pipeline (LLM email generation, comp
 
 ## SPRINT 5: XERO PRODUCTION + DATA HEALTH + COLLECTIONS HARDENING (Current)
 
-*Updated: 5 April 2026 — significant scope expansion beyond original Sprint 5 plan. Collections pipeline hardening, two-phase model, and Action Centre restructure pulled forward from backlog.*
+*Updated: 6 April 2026 — Xero sync rewritten with Sync Abstraction Layer. Multiple sync bugs fixed. UI polish across sidebar, filters, debtor detail.*
 
 ### 5.1 Xero Foundations Fix
 
 | Task | Detail | Status |
 |------|--------|--------|
+| ⚠️ Sync Abstraction Layer | Replaced monolithic Xero sync with platform-agnostic SyncOrchestrator + XeroAdapter. Provider-independent types, webhook router, adapter interface for future QuickBooks/Sage. | ✅ Done (6 Apr) |
 | Fix redirect URI | Replace REPLIT_DOMAINS in xero.ts constructor with APP_URL env var. Add APP_URL to Railway. | ⬜ Pending |
-| Remove old sync code | Delete syncContactsToDatabase if unused. Invoice-first sync in xeroSync.ts is the correct path. | ⬜ Pending |
-| Fix invoice sync | syncInvoicesAndContacts must write to BOTH cached_xero_invoices AND main invoices table. Map all fields correctly. | ⬜ Pending |
-| Token refresh | Verify offline_access in scopes, proactive refresh before API calls, 401 retry, mark expired on failure. | ⬜ Pending |
+| Remove old sync code | Dead sync system removed (webhook URL, token mutex, stale data guard fixes). Invoice-first sync via SyncOrchestrator. | ✅ Done (6 Apr) |
+| Fix invoice sync | SyncOrchestrator writes to both cached tables and main tables. Credit notes, overpayments, prepayments now populated. | ✅ Done (6 Apr) |
+| Token refresh | 401/403 retry with automatic token refresh. 403 treated as auth failure (was only checking 401). | ✅ Done (6 Apr) |
+| Initial sync date filter | Open invoices (any age) + 24 months paid history — reduces initial sync volume | ✅ Done (6 Apr) |
+| Two-pass bounded fetch | Force and reconciliation syncs use two passes (open invoices, then recent paid) to prevent timeout | ✅ Done (6 Apr) |
+| Xero /Date()/ format parsing | Parse Xero's /Date(timestamp+offset)/ format for UpdatedDateUTC before DB insert | ✅ Done (6 Apr) |
+| Database clearing script | scripts/clear-sync-data.mjs — clears sync tables while preserving tenant/user config for fresh start | ✅ Done (6 Apr) |
 | Sync status API | GET /api/xero/sync-status returning { status, invoiceCount, contactCount } for onboarding polling. | ⬜ Pending |
 | Sync banner | Show "Sync in progress" banner on Debtors/Data Health pages that auto-refreshes on completion. | ⬜ Pending |
 | Background sync mode | Ensure scheduled 4-hour sync uses mode='ongoing' (upsert, never delete). AR overlay fields never overwritten. | ⬜ Pending |
@@ -157,6 +162,26 @@ MVP v1 delivered the core Collections Agent pipeline (LLM email generation, comp
 | DSO card formula | Aligned to standard formula matching trend chart | ✅ Done (5 Apr) |
 | Activity Feed deduplication | By actionId and channel+contact+timestamp signature | ✅ Done (5 Apr) |
 | SMS drawer contact picker | 6-source priority phone lookup + contact picker when multiple | ✅ Done (5 Apr) |
+
+### 5.13 UI Polish + Xero Sync Hardening (added 6 Apr)
+
+| Task | Detail | Status |
+|------|--------|--------|
+| Collapsible sidebar | Icon-only collapsed mode with smooth transition, persisted preference | ✅ Done (6 Apr) |
+| Standardised filter pills | Shared filter-pill.tsx component used across Activity, Approvals, Scheduled, Exceptions tabs | ✅ Done (6 Apr) |
+| VIP restructure | Action Centre navigation links + safety filters on VIP view | ✅ Done (6 Apr) |
+| Charlie status banner | DebtorStatusBanner component on debtor detail showing phase, tone, next action, risk signals | ✅ Done (6 Apr) |
+| Communication Preferences expanded | Per-debtor channel controls (email/SMS/voice toggles) in 3×2 grid layout | ✅ Done (6 Apr) |
+| Immediate UI Feedback rule | Architecture rule added to CLAUDE.md: 200ms feedback, optimistic UI, button states, cache invalidation | ✅ Done (6 Apr) |
+| Debtor detail tab reorder | Reordered for workflow priority | ✅ Done (6 Apr) |
+| Customer timeline service | New server/services/customerTimelineService.ts for debtor-specific timeline queries | ✅ Done (6 Apr) |
+| Shared timeline types | shared/types/timeline.ts with unified event types | ✅ Done (6 Apr) |
+| Dashboard debtor list removed | Redundant debtor list table removed from dashboard — debtors via dedicated page | ✅ Done (6 Apr) |
+| Activity view date display | Date leads in all activity views, time shown only for communications | ✅ Done (6 Apr) |
+| Debtor activity tab deduplication | Payment events deduplicated + amounts formatted with commas | ✅ Done (6 Apr) |
+| Xero sync silent failure fix | Error logging + test contacts excluded from AR figures | ✅ Done (6 Apr) |
+| Xero health check false positive | 403 now treated as auth failure, not just 401 | ✅ Done (6 Apr) |
+| Xero webhook URL | Dynamic URL from APP_URL env var instead of stale hardcoded | ✅ Done (6 Apr) |
 
 ---
 
@@ -347,13 +372,13 @@ Without the full Bayesian engine, Riley's review uses:
 
 ## BUILD ORDER (v1.1)
 
-*Updated: 5 April 2026*
+*Updated: 6 April 2026*
 
 ```
 SPRINT 5 (Current):  Xero production hardening + Data Health + communication test mode
                      + collections pipeline hardening + two-phase model + Action Centre restructure
-                     REMAINING: Xero redirect URI fix, old sync code removal, invoice dual-write,
-                     token refresh, sync status API, sync banner, background sync mode, onboarding integration
+                     + Sync Abstraction Layer + UI polish
+                     REMAINING: Xero redirect URI fix, sync status API, sync banner, background sync mode, onboarding integration
 SPRINT 6:            Debtor Detail page + row navigation + three-dot menus
 SPRINT 7:            Riley core — chat widget, conversations, intelligence extraction, onboarding mode
 SPRINT 8:            Weekly CFO Review — Qashflow tab, review generation, proactive notifications

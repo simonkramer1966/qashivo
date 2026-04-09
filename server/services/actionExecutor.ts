@@ -13,6 +13,8 @@ import { messagePreGenerator } from "./messagePreGenerator";
 import { resolvePrimaryEmail, resolvePrimarySmsNumber } from "./contactEmailResolver";
 import { buildConversationBrief } from "./conversationBriefService";
 import { generateReplyToEmail, findOrCreateConversation, updateConversationStats } from "./emailCommunications";
+import { approveAndSendReply } from "./inboundReplyPipeline";
+import { CONVERSATION_TYPE } from "@shared/types/actionMetadata";
 import { v4 as uuidv4 } from "uuid";
 
 /**
@@ -691,6 +693,18 @@ export class ActionExecutor {
     tenant: any
   ): Promise<{ success: boolean; data?: any; error?: string }> {
     try {
+      // Conversation replies must go through the threaded delivery path so
+      // In-Reply-To/References headers are attached and the debtor sees a
+      // proper thread, not a fresh email.
+      const meta = (action.metadata ?? {}) as { conversationType?: string };
+      if (meta.conversationType === CONVERSATION_TYPE.REPLY) {
+        const replyResult = await approveAndSendReply(action.id, null);
+        if (replyResult.status === "sent") {
+          return { success: true, data: { mode: "conversation_reply" } };
+        }
+        return { success: false, error: replyResult.error || `reply status: ${replyResult.status}` };
+      }
+
       const recipientEmail = await resolvePrimaryEmail(contact.id, action.tenantId, contact.email, contact.arContactEmail);
       if (!recipientEmail) {
         return { success: false, error: 'Contact has no email address' };

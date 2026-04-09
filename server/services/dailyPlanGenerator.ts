@@ -9,6 +9,7 @@ import { charliePlaybook, prepareMessageFromDecision } from "./charliePlaybook";
 import { prepareMessageFromWorkflowProfile } from "./workflowProfileMessageService";
 import { processCollectionEmail } from "./collectionsPipeline";
 import { getSmallBalancePolicy, isSmallBalance, applySmallBalancePriority } from "./smallBalancePolicy";
+import { getActiveConversationContactIds } from "./emailClarificationService";
 
 export interface InvoiceSummary {
   id: string;
@@ -366,9 +367,23 @@ async function generateDailyPlanWithCharlie(
   }
   
   console.log(`📊 Grouped ${actionableDecisions.length} decisions into ${decisionsByContact.size} contacts`);
-  
+
+  // Skip debtors with an active conversation (recent inbound or pending reply).
+  // Avoids stacking a chase email on top of a live thread.
+  const activeConvSet = await getActiveConversationContactIds(
+    tenantId,
+    Array.from(decisionsByContact.keys()),
+  );
+  let activeConversationSkips = 0;
+
   // Process each contact ONCE (with all their invoices consolidated)
   for (const [contactId, contactDecisions] of decisionsByContact) {
+    if (activeConvSet.has(contactId)) {
+      const name = contactDecisions[0]?.contact?.name ?? contactId;
+      console.log(`⏭️  Skipped ${name} — active conversation`);
+      activeConversationSkips++;
+      continue;
+    }
     // Use first decision (highest priority due to earlier sort) for channel/priority
     const primaryDecision = contactDecisions[0];
     const channel = primaryDecision.recommendedChannel;
@@ -623,6 +638,9 @@ async function generateDailyPlanWithCharlie(
     ? planActions.reduce((sum, a) => sum + a.daysOverdue, 0) / planActions.length 
     : 0;
   
+  if (activeConversationSkips > 0) {
+    console.log(`💬 Charlie skipped ${activeConversationSkips} debtor(s) with active conversations`);
+  }
   console.log(`✅ Charlie plan: ${planActions.length} actions (${exceptionsCount} exceptions)`);
   console.log(`📧 Email: ${channelCounts.email}, 📱 SMS: ${channelCounts.sms}, 📞 Voice: ${channelCounts.voice}`);
   

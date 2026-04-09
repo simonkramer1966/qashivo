@@ -24,6 +24,7 @@ import {
 } from "../lib/adaptive-scheduler";
 import { differenceInDays } from "date-fns";
 import { getEffectiveSeasonalAdjustments, type SeasonalAdjustment } from "./paymentDistribution";
+import { getActiveConversationContactIds } from "./emailClarificationService";
 import { evaluateDecisionTree, type DebtorDecisionInput } from "./decisionTree";
 import { getSmallBalancePolicy, isSmallBalance, applySmallBalancePriority } from "./smallBalancePolicy";
 import { getRolling30DayDSO, getARSummary } from "./arCalculations";
@@ -1049,7 +1050,19 @@ export async function planAdaptiveActions(
       lowPriority: 0,
       recentAction: 0,
       cooldown: 0,
+      activeConversation: 0,
     };
+
+    // Batch-load debtors currently in an active conversation. They are skipped
+    // entirely so the planner doesn't queue chase emails on top of an
+    // unanswered inbound or a pending reply.
+    const activeConvSet = await getActiveConversationContactIds(
+      tenantId,
+      Array.from(invoicesByContact.keys()),
+    );
+    if (activeConvSet.size > 0) {
+      console.log(`[PLAN] ${activeConvSet.size} contact(s) in active conversation — will be skipped`);
+    }
 
     // Pre-compute channel cooldown from tenant settings (same source as compliance engine)
     const cooldowns = (tenantRecord?.channelCooldowns as { email?: number; sms?: number; voice?: number } | null) ?? { email: 3 };
@@ -1058,6 +1071,16 @@ export async function planAdaptiveActions(
     // Process each contact (may have multiple invoices)
     for (const [contactId, contactInvoices] of Array.from(invoicesByContact.entries())) {
       const { contact, behavior } = contactInvoices[0]; // Same contact for all
+
+      // Skip debtors with an active conversation (recent inbound or pending reply).
+      // Charlie should never queue a chase on top of a live thread. Cheap O(1)
+      // Set lookup — runs before the cooldown DB query so we short-circuit
+      // before any per-contact work.
+      if (activeConvSet.has(contactId)) {
+        console.log(`[PLAN] Skipped ${contact.name} — active conversation`);
+        skipped.activeConversation++;
+        continue;
+      }
 
       // Pre-filter: skip contact if within channel cooldown window
       const cooldownStart = new Date();

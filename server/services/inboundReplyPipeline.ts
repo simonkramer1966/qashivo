@@ -24,6 +24,7 @@ import { checkCompliance } from "./compliance/complianceEngine";
 import { sendEmail } from "./sendgrid";
 import { resolvePrimaryEmail } from "./contactEmailResolver";
 import type { ActionContext } from "../agents/prompts/collectionEmail";
+import { CONVERSATION_TYPE } from "@shared/types/actionMetadata";
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -39,7 +40,7 @@ interface InboundReplyContext {
 
 export interface InboundReplyResult {
   actionId: string | null;
-  status: "pending_approval" | "sent" | "blocked" | "skipped" | "failed";
+  status: "pending_approval" | "scheduled" | "sent" | "blocked" | "skipped" | "failed";
   error?: string;
 }
 
@@ -155,7 +156,35 @@ export async function processInboundReply(
       emailResult.agentReasoning = regenerated.agentReasoning;
     }
 
-    // 6. Create action record for the reply
+    // 6. Decide routing based on approval mode + compliance.
+    //    - manual           → pending_approval (user reviews in Approval tab)
+    //    - auto_after_timeout / full_auto + compliance.approved
+    //                       → scheduled with a randomised human-pacing delay
+    //                         (executor picks up at scheduledFor)
+    //    - any compliance non-approval → fall back to pending_approval
+    const approvalMode = tenant.approvalMode ?? "manual";
+    const inboundReceivedAt =
+      inboundEmail.receivedAt ?? inboundEmail.createdAt ?? new Date();
+
+    let initialStatus: "pending_approval" | "scheduled" = "pending_approval";
+    let scheduledFor: Date | null = null;
+    if (
+      compliance.approved &&
+      (approvalMode === "full_auto" || approvalMode === "auto_after_timeout")
+    ) {
+      const minRaw = tenant.conversationReplyDelayMin ?? 2;
+      const maxRaw = tenant.conversationReplyDelayMax ?? 5;
+      const min = Math.max(0, minRaw);
+      const max = Math.max(min, maxRaw);
+      const delayMins = min + Math.floor(Math.random() * (max - min + 1));
+      initialStatus = "scheduled";
+      scheduledFor = new Date(Date.now() + delayMins * 60_000);
+      console.log(
+        `[InboundReply] Reply scheduled for ${scheduledFor.toISOString()} (+${delayMins}min human-pacing, mode=${approvalMode})`,
+      );
+    }
+
+    // 7. Create action record for the reply
     const [action] = await db
       .insert(actions)
       .values({
@@ -163,65 +192,31 @@ export async function processInboundReply(
         contactId: ctx.contactId,
         invoiceId: ctx.invoiceId || null,
         type: "email",
-        status: "pending_approval",
+        status: initialStatus,
+        scheduledFor,
         subject: emailResult.subject,
         content: emailResult.body,
         aiGenerated: true,
         source: "charlie_inbound",
         metadata: {
           direction: "outbound_reply",
+          conversationType: CONVERSATION_TYPE.REPLY,
+          originalMessageReceivedAt:
+            inboundReceivedAt instanceof Date
+              ? inboundReceivedAt.toISOString()
+              : new Date(inboundReceivedAt).toISOString(),
           inboundEmailMessageId: ctx.inboundEmailMessageId,
           intentType: ctx.intentType,
           agentReasoning: emailResult.agentReasoning,
           generatedBy: "collections_agent_llm",
+          threadingData: extractThreadingData(inboundEmail),
         },
       })
       .returning();
 
-    // 7. Route based on approval mode
-    const approvalMode = tenant.approvalMode ?? "manual";
-
-    if (approvalMode === "full_auto" && compliance.approved) {
-      // Send immediately with threading
-      const sendResult = await deliverThreadedReply(
-        action.id,
-        ctx.tenantId,
-        ctx.contactId,
-        emailResult,
-        inboundEmail,
-        tenant,
-      );
-      return sendResult;
-    }
-
-    if (approvalMode === "auto_after_timeout") {
-      const timeoutHours = tenant.approvalTimeoutHours ?? 12;
-      const autoApproveAt = new Date();
-      autoApproveAt.setHours(autoApproveAt.getHours() + timeoutHours);
-
-      await db
-        .update(actions)
-        .set({
-          metadata: {
-            ...(action.metadata as any),
-            autoApproveAt: autoApproveAt.toISOString(),
-            threadingData: extractThreadingData(inboundEmail),
-          },
-          updatedAt: new Date(),
-        })
-        .where(eq(actions.id, action.id));
-    } else {
-      // Manual — store threading data for when it's approved
-      await db
-        .update(actions)
-        .set({
-          metadata: {
-            ...(action.metadata as any),
-            threadingData: extractThreadingData(inboundEmail),
-          },
-          updatedAt: new Date(),
-        })
-        .where(eq(actions.id, action.id));
+    if (initialStatus === "scheduled") {
+      console.log(`[InboundReply] Reply ${action.id} queued in Scheduled tab`);
+      return { actionId: action.id, status: "scheduled" };
     }
 
     console.log(`[InboundReply] Queued for approval (mode: ${approvalMode})`);
@@ -258,14 +253,24 @@ export async function approveAndSendReply(
     return { actionId, status: "failed", error: "Action not found" };
   }
 
-  if (record.action.status !== "pending_approval") {
+  // Allow both manual approval (pending_approval) and the executor's
+  // scheduled-with-delay path (scheduled).
+  if (
+    record.action.status !== "pending_approval" &&
+    record.action.status !== "scheduled"
+  ) {
     return { actionId, status: "failed", error: `Action is ${record.action.status}` };
   }
 
-  // Mark approved
+  // Mark approved. Preserve any pre-existing approvedBy/approvedAt so a
+  // human approver is never overwritten by the executor's null caller.
   await db
     .update(actions)
-    .set({ approvedBy, approvedAt: new Date(), updatedAt: new Date() })
+    .set({
+      approvedBy: record.action.approvedBy ?? approvedBy,
+      approvedAt: record.action.approvedAt ?? new Date(),
+      updatedAt: new Date(),
+    })
     .where(eq(actions.id, actionId));
 
   const meta = record.action.metadata as any;
