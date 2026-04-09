@@ -76,7 +76,11 @@ export default function QollectionsAgentActivity() {
   });
 
   const { data: exceptionsData } = useQuery<{
-    exceptionActions: Array<{ exceptionReason: string | null; exceptionStatus: string | null }>;
+    exceptionActions: Array<{
+      exceptionReason: string | null;
+      exceptionStatus: string | null;
+      status: string | null;
+    }>;
     totalExceptions: number;
     totalPatterns: number;
     newCount: number;
@@ -116,7 +120,8 @@ export default function QollectionsAgentActivity() {
     const actions = exceptionsData?.exceptionActions ?? [];
     for (const a of actions) {
       if (a.exceptionStatus && a.exceptionStatus !== "new") continue;
-      const cat = classifyException(a.exceptionReason);
+      // Pass status so failed sends route to Collections (matches the list query).
+      const cat = classifyException(a.exceptionReason, a.status);
       if (cat && cat !== "promises") counts[cat]++;
       else if (!cat) counts.other++;
     }
@@ -249,12 +254,12 @@ function SubTabButton({
   return (
     <button
       className={cn(
-        "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-[13px] font-medium transition-all",
+        "inline-flex items-center justify-center whitespace-nowrap rounded-full px-3 py-1 text-xs transition-all duration-150 ease-in-out",
         active
-          ? "text-muted-foreground"
-          : "text-muted-foreground/50 hover:text-muted-foreground/70",
+          ? "bg-teal-600 border border-teal-600 text-white font-medium cursor-default"
+          : "bg-transparent border border-transparent text-muted-foreground hover:bg-secondary hover:text-foreground font-normal cursor-pointer",
       )}
-      onClick={onClick}
+      onClick={active ? undefined : onClick}
     >
       {children}
     </button>
