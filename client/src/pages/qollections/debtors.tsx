@@ -66,6 +66,11 @@ interface Debtor {
   status: "active" | "inactive";
   hasCredit?: boolean;
   isVip?: boolean;
+  latestPromise?: {
+    amount: number;
+    date: string;
+    status: "open" | "broken";
+  } | null;
 }
 
 const PAGE_SIZE = 20;
@@ -366,8 +371,9 @@ export default function QollectionsDebtors() {
                   <TableRow>
                     <TableHead>Customer</TableHead>
                     <TableHead>Outstanding</TableHead>
-                    <TableHead>Invoices</TableHead>
-                    <TableHead>Days Overdue</TableHead>
+                    <TableHead className="text-center">Invoices</TableHead>
+                    <TableHead className="text-center">Days Overdue</TableHead>
+                    <TableHead className="text-center">Promise</TableHead>
                     <TableHead>Last Contact</TableHead>
                     <TableHead>Next Action</TableHead>
                   </TableRow>
@@ -382,11 +388,14 @@ export default function QollectionsDebtors() {
                       <TableCell className="py-3 px-3">
                         <Skeleton className="h-3.5 w-20" />
                       </TableCell>
-                      <TableCell className="py-3 px-3">
-                        <Skeleton className="h-5 w-8" />
+                      <TableCell className="py-3 px-3 text-center">
+                        <Skeleton className="h-5 w-8 mx-auto" />
                       </TableCell>
-                      <TableCell className="py-3 px-3">
-                        <Skeleton className="h-3.5 w-10" />
+                      <TableCell className="py-3 px-3 text-center">
+                        <Skeleton className="h-3.5 w-10 mx-auto" />
+                      </TableCell>
+                      <TableCell className="py-3 px-3 text-center">
+                        <Skeleton className="h-3.5 w-20 mx-auto" />
                       </TableCell>
                       <TableCell className="py-3 px-3">
                         <Skeleton className="h-3.5 w-16" />
@@ -423,8 +432,9 @@ export default function QollectionsDebtors() {
                         onSort={setSort}
                         className="w-[180px]"
                       />
-                      <SortableHeader column="invoiceCount" label="Invoices" currentSort={sort} onSort={setSort} className="w-[72px]" />
-                      <SortableHeader column="oldestOverdueDays" label="Days Overdue" currentSort={sort} onSort={setSort} className="w-[110px]" />
+                      <SortableHeader column="invoiceCount" label="Invoices" currentSort={sort} onSort={setSort} className="w-[72px] text-center" />
+                      <SortableHeader column="oldestOverdueDays" label="Days Overdue" currentSort={sort} onSort={setSort} className="w-[110px] text-center" />
+                      <TableHead className="w-[120px] text-center">Promise</TableHead>
                       <SortableHeader column="lastContactDate" label="Last Contact" currentSort={sort} onSort={setSort} className="w-[110px]" />
                       <SortableHeader column="nextActionDate" label="Next Action" currentSort={sort} onSort={setSort} className="w-[110px]" />
                       <TableHead className="w-[48px]" />
@@ -461,12 +471,12 @@ export default function QollectionsDebtors() {
                             </div>
                           )}
                         </TableCell>
-                        <TableCell className="py-3 px-3">
+                        <TableCell className="py-3 px-3 text-center">
                           <Badge variant="secondary">
                             {debtor.invoiceCount}
                           </Badge>
                         </TableCell>
-                        <TableCell className="py-3 px-3">
+                        <TableCell className="py-3 px-3 text-center">
                           <span
                             className={cn(
                               "text-sm font-medium",
@@ -475,6 +485,23 @@ export default function QollectionsDebtors() {
                           >
                             {debtor.oldestOverdueDays}
                           </span>
+                        </TableCell>
+                        <TableCell className="py-3 px-3 text-center text-sm">
+                          {debtor.latestPromise ? (
+                            <span
+                              className={cn(
+                                "font-medium",
+                                debtor.latestPromise.status === "broken"
+                                  ? "text-red-600"
+                                  : "text-blue-600",
+                              )}
+                            >
+                              {formatGBP(debtor.latestPromise.amount)} ·{" "}
+                              {formatDate(debtor.latestPromise.date)}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
                         </TableCell>
                         <TableCell className="py-3 px-3 text-sm text-muted-foreground">
                           {relativeDate(debtor.lastContactDate)}

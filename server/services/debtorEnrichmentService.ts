@@ -308,22 +308,76 @@ export async function enrichDebtor(
   );
 }
 
+// ── Batched Processing ──────────────────────────────────────────
+//
+// Enrichment fires Claude + Companies House API calls per contact.
+// Large books (78+ contacts) previously hammered the APIs in a tight
+// 1.5s-spaced loop with no cool-down. We now process in batches of
+// ENRICHMENT_BATCH_SIZE with an ENRICHMENT_PAUSE_MS gap between
+// batches. Individual failures are logged and the run continues.
+
+const ENRICHMENT_BATCH_SIZE = 10;
+const ENRICHMENT_PAUSE_MS = 15_000;
+
+async function enrichInBatches(
+  items: Array<{ tenantId: string; contactId: string; contactName: string }>,
+  label: string,
+): Promise<void> {
+  if (items.length === 0) {
+    console.log(`[Enrichment] ${label}: nothing to enrich`);
+    return;
+  }
+
+  const totalBatches = Math.ceil(items.length / ENRICHMENT_BATCH_SIZE);
+  let enrichedCount = 0;
+
+  console.log(
+    `[Enrichment] ${label}: ${items.length} contacts in ${totalBatches} batch(es) of ${ENRICHMENT_BATCH_SIZE}`,
+  );
+
+  for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+    const start = batchIndex * ENRICHMENT_BATCH_SIZE;
+    const batch = items.slice(start, start + ENRICHMENT_BATCH_SIZE);
+
+    for (const item of batch) {
+      try {
+        await enrichDebtor(item.tenantId, item.contactId, item.contactName);
+      } catch (err) {
+        console.warn(
+          `[Enrichment] Failed for ${item.contactName} (${item.contactId}):`,
+          err,
+        );
+        // Continue — one bad contact must not abort the batch.
+      }
+      enrichedCount++;
+      // Light per-contact spacing for Companies House (2/sec limit).
+      await new Promise((resolve) => setTimeout(resolve, RATE_LIMIT_DELAY_MS));
+    }
+
+    console.log(
+      `[Enrichment] Batch ${batchIndex + 1}/${totalBatches} complete (${enrichedCount} of ${items.length} contacts enriched)`,
+    );
+
+    // Pause between batches (skip after the final batch).
+    if (batchIndex < totalBatches - 1) {
+      console.log(`[Enrichment] Pausing ${ENRICHMENT_PAUSE_MS / 1000}s before next batch...`);
+      await new Promise((resolve) => setTimeout(resolve, ENRICHMENT_PAUSE_MS));
+    }
+  }
+
+  console.log(`[Enrichment] ${label}: complete`);
+}
+
 // ── Batch Enrichment for New Contacts ───────────────────────────
 
 export async function enrichNewContacts(
   tenantId: string,
   newContacts: Array<{ id: string; name: string }>,
 ): Promise<void> {
-  console.log(`[Enrichment] Queuing enrichment for ${newContacts.length} new contacts`);
-
-  for (const contact of newContacts) {
-    try {
-      await enrichDebtor(tenantId, contact.id, contact.name);
-      await new Promise((resolve) => setTimeout(resolve, RATE_LIMIT_DELAY_MS));
-    } catch (err) {
-      console.warn(`[Enrichment] Failed for ${contact.name}:`, err);
-    }
-  }
+  await enrichInBatches(
+    newContacts.map((c) => ({ tenantId, contactId: c.id, contactName: c.name })),
+    `New contacts (tenant ${tenantId})`,
+  );
 }
 
 // ── Quarterly Re-enrichment ─────────────────────────────────────
@@ -362,14 +416,12 @@ export async function runQuarterlyEnrichment(): Promise<void> {
     )
     .limit(50); // Batch limit to respect rate limits
 
-  console.log(`[Enrichment] Found ${debtorsToEnrich.length} debtors to re-enrich`);
-
-  for (const debtor of debtorsToEnrich) {
-    try {
-      await enrichDebtor(debtor.tenantId, debtor.contactId, debtor.contactName);
-      await new Promise((resolve) => setTimeout(resolve, RATE_LIMIT_DELAY_MS));
-    } catch (err) {
-      console.warn(`[Enrichment] Re-enrichment failed for ${debtor.contactName}:`, err);
-    }
-  }
+  await enrichInBatches(
+    debtorsToEnrich.map((d) => ({
+      tenantId: d.tenantId,
+      contactId: d.contactId,
+      contactName: d.contactName,
+    })),
+    "Quarterly re-enrichment",
+  );
 }

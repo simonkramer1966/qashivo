@@ -36,8 +36,6 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import nexusLogo from "@/assets/qashivo-logo.png";
-import SidebarSyncIndicator from "@/components/sync/SidebarSyncIndicator";
-
 // ── Navigation structure ──────────────────────────────────
 
 interface NavChild {
@@ -45,6 +43,12 @@ interface NavChild {
   href: string;
   icon: any;
   permission?: string;
+  /**
+   * When true, the child only highlights on an exact path match.
+   * Prevents the Dashboard link (/qollections) from highlighting when
+   * a sibling route like /qollections/debtors is active.
+   */
+  exact?: boolean;
 }
 
 interface NavPillar {
@@ -62,7 +66,7 @@ const navigationPillars: NavPillar[] = [
     icon: ClipboardList,
     defaultHref: "/qollections",
     children: [
-      { name: "Dashboard", href: "/qollections", icon: Gauge },
+      { name: "Dashboard", href: "/qollections", icon: Gauge, exact: true },
       { name: "Action Centre", href: "/qollections/agent-activity", icon: Activity },
       { name: "Debtors", href: "/qollections/debtors", icon: Users },
       { name: "Disputes", href: "/qollections/disputes", icon: AlertTriangle },
@@ -131,16 +135,25 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
   // Active-path resolution: pick the single longest href that matches the
   // current location. Prevents parent paths (e.g. /qollections) from lighting
   // up when a more specific child (/qollections/debtors) is also a nav item.
+  // Children marked `exact` only match on exact location equality — used for
+  // Dashboard (/qollections) so it doesn't highlight on /qollections/*.
   const activeHref = useMemo(() => {
-    const candidates: string[] = [];
+    const candidates: Array<{ href: string; exact: boolean }> = [];
     for (const pillar of navigationPillars) {
-      if (pillar.href) candidates.push(pillar.href);
-      if (pillar.children) for (const c of pillar.children) candidates.push(c.href);
+      if (pillar.href) candidates.push({ href: pillar.href, exact: false });
+      if (pillar.children) {
+        for (const c of pillar.children) {
+          candidates.push({ href: c.href, exact: c.exact ?? false });
+        }
+      }
     }
     let best: string | null = null;
-    for (const href of candidates) {
-      const matches =
-        href === "/" ? location === "/" : location === href || location.startsWith(href + "/");
+    for (const { href, exact } of candidates) {
+      const matches = exact
+        ? location === href
+        : href === "/"
+          ? location === "/"
+          : location === href || location.startsWith(href + "/");
       if (matches && (best === null || href.length > best.length)) {
         best = href;
       }
@@ -458,13 +471,8 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
         </TooltipProvider>
       </nav>
 
-      {/* Sync indicator */}
-      <div className={cn("border-t border-[hsl(var(--sidebar-border))] py-2", isCollapsed ? "px-2" : "px-3")}>
-        <SidebarSyncIndicator collapsed={isCollapsed} />
-      </div>
-
-      {/* Footer — user profile */}
-      <div className={cn("pb-4 pt-2", isCollapsed ? "px-2" : "px-3")}>
+      {/* Footer — user profile (sync indicator moved to header) */}
+      <div className={cn("border-t border-[hsl(var(--sidebar-border))] pb-4 pt-3", isCollapsed ? "px-2" : "px-3")}>
         {isCollapsed ? (
           <Tooltip>
             <TooltipTrigger asChild>

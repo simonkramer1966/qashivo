@@ -1,4 +1,5 @@
 import { UserButton } from "@clerk/clerk-react";
+import HeaderSyncIndicator from "@/components/sync/HeaderSyncIndicator";
 
 interface HeaderProps {
   title: string;
@@ -26,6 +27,7 @@ export default function Header({ title, subtitle, action, mobileMenuButton }: He
         </div>
         <div className="flex items-center gap-3 shrink-0">
           {action}
+          <HeaderSyncIndicator />
           <UserButton afterSignOutUrl="/login" />
         </div>
       </div>

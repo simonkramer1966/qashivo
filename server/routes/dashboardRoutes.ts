@@ -2205,6 +2205,38 @@ export function registerDashboardRoutes(app: Express): void {
           .where(and(eq(cachedXeroCreditNotes.tenantId, user.tenantId), eq(cachedXeroCreditNotes.status, "AUTHORISED"))),
       ]);
 
+      // Fetch latest payment promise per contact (open or broken within the
+      // last 30 days). Used to render the Promise column on the debtors list.
+      // One row per contact via DISTINCT ON, ordered by created_at DESC so
+      // the most recent promise wins.
+      const promiseRows = await db.execute(sql`
+        SELECT DISTINCT ON (contact_id)
+          contact_id, promised_amount, promised_date, status, grace_period_days
+        FROM payment_promises
+        WHERE tenant_id = ${user.tenantId}
+          AND (
+            status = 'open'
+            OR (status = 'broken' AND updated_at >= now() - interval '30 days')
+          )
+        ORDER BY contact_id, created_at DESC
+      `);
+      const promiseRowsArr = ((promiseRows as any).rows ?? promiseRows) as Array<{
+        contact_id: string;
+        promised_amount: string | null;
+        promised_date: string | null;
+        status: string | null;
+        grace_period_days: number | null;
+      }>;
+      const promiseByContactId = new Map<string, { amount: number; date: string; status: "open" | "broken" }>();
+      for (const r of promiseRowsArr) {
+        if (!r.contact_id || !r.promised_date || !r.status) continue;
+        promiseByContactId.set(r.contact_id, {
+          amount: parseFloat(r.promised_amount || "0"),
+          date: r.promised_date,
+          status: r.status as "open" | "broken",
+        });
+      }
+
       // Map xeroContactId → internal contactId
       const contactXeroIds = await db.select({ id: contacts.id, xeroContactId: contacts.xeroContactId })
         .from(contacts).where(eq(contacts.tenantId, user.tenantId));
@@ -2249,6 +2281,7 @@ export function registerDashboardRoutes(app: Express): void {
           status: d.isActive ? "active" : "inactive",
           hasCredit: netOutstanding < 0,
           isVip: d.isVip ?? false,
+          latestPromise: promiseByContactId.get(d.id) ?? null,
         };
       });
 
@@ -2274,6 +2307,7 @@ export function registerDashboardRoutes(app: Express): void {
           status: "active",
           hasCredit: true,
           isVip: false,
+          latestPromise: promiseByContactId.get(contactId) ?? null,
         });
       }
 
