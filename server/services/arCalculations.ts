@@ -30,7 +30,7 @@ export interface ARSummary {
   currentDSO: number;
 }
 
-const EXCLUDED_STATUSES = "('paid', 'void', 'voided', 'deleted', 'draft')";
+export const EXCLUDED_STATUSES = "('paid', 'void', 'voided', 'deleted', 'draft')";
 
 export async function getARSummary(tenantId: string): Promise<ARSummary> {
   // 1. Query invoices grouped by contact
@@ -146,6 +146,70 @@ export async function getARSummary(tenantId: string): Promise<ARSummary> {
     debtorCount,
     currentDSO,
   };
+}
+
+/**
+ * Per-contact AR summary — mirrors getARSummary() logic for a single contact.
+ *
+ * Uses the same EXCLUDED_STATUSES filter and per-contact credit netting
+ * (overpayments + prepayments + credit notes) as the aggregate summary, so
+ * debtor detail totals match the debtors list and Xero AR exactly.
+ */
+export async function getContactARSummary(
+  tenantId: string,
+  contactId: string,
+): Promise<{ totalOutstanding: number; totalOverdue: number }> {
+  // 1. Sum invoices for this contact using the canonical status filter.
+  const [invRow] = await db
+    .select({
+      outstanding: sql<number>`COALESCE(SUM(CASE WHEN LOWER(${invoices.status}) NOT IN ${sql.raw(EXCLUDED_STATUSES)} THEN ${invoices.amount} - ${invoices.amountPaid} ELSE 0 END), 0)`,
+      overdue: sql<number>`COALESCE(SUM(CASE WHEN LOWER(${invoices.status}) NOT IN ${sql.raw(EXCLUDED_STATUSES)} AND ${invoices.dueDate} < CURRENT_DATE THEN ${invoices.amount} - ${invoices.amountPaid} ELSE 0 END), 0)`,
+    })
+    .from(invoices)
+    .where(and(eq(invoices.tenantId, tenantId), eq(invoices.contactId, contactId)));
+
+  const grossOutstanding = Number(invRow?.outstanding || 0);
+  const grossOverdue = Number(invRow?.overdue || 0);
+
+  // 2. Look up the contact's xeroContactId to fetch matching credits.
+  const [contactRow] = await db
+    .select({ xeroContactId: contacts.xeroContactId })
+    .from(contacts)
+    .where(and(eq(contacts.id, contactId), eq(contacts.tenantId, tenantId)))
+    .limit(1);
+
+  let credit = 0;
+  if (contactRow?.xeroContactId) {
+    const [opRow, ppRow, cnRow] = await Promise.all([
+      db.select({ total: sql<number>`COALESCE(SUM(${cachedXeroOverpayments.remainingCredit}::numeric), 0)` })
+        .from(cachedXeroOverpayments)
+        .where(and(
+          eq(cachedXeroOverpayments.tenantId, tenantId),
+          eq(cachedXeroOverpayments.xeroContactId, contactRow.xeroContactId),
+          eq(cachedXeroOverpayments.status, "AUTHORISED"),
+        )),
+      db.select({ total: sql<number>`COALESCE(SUM(${cachedXeroPrepayments.remainingCredit}::numeric), 0)` })
+        .from(cachedXeroPrepayments)
+        .where(and(
+          eq(cachedXeroPrepayments.tenantId, tenantId),
+          eq(cachedXeroPrepayments.xeroContactId, contactRow.xeroContactId),
+          eq(cachedXeroPrepayments.status, "AUTHORISED"),
+        )),
+      db.select({ total: sql<number>`COALESCE(SUM(${cachedXeroCreditNotes.remainingCredit}::numeric), 0)` })
+        .from(cachedXeroCreditNotes)
+        .where(and(
+          eq(cachedXeroCreditNotes.tenantId, tenantId),
+          eq(cachedXeroCreditNotes.xeroContactId, contactRow.xeroContactId),
+          eq(cachedXeroCreditNotes.status, "AUTHORISED"),
+        )),
+    ]);
+    credit = Number(opRow[0]?.total || 0) + Number(ppRow[0]?.total || 0) + Number(cnRow[0]?.total || 0);
+  }
+
+  const totalOutstanding = Math.max(0, Math.round((grossOutstanding - credit) * 100) / 100);
+  const totalOverdue = Math.max(0, Math.round((grossOverdue - credit) * 100) / 100);
+
+  return { totalOutstanding, totalOverdue };
 }
 
 /**

@@ -29,6 +29,7 @@ import { REPORT_TYPE_LABELS, type ReportType } from "../services/reportGenerator
 import { getOverdueCategoryFromDueDate } from "@shared/utils/overdueUtils";
 import { calculateLatePaymentInterest } from "../utils/interestCalculator";
 import { calculateBatchLPI, formatLPIRate, type LPIConfig } from "../services/lpiService";
+import { getContactARSummary, EXCLUDED_STATUSES as AR_EXCLUDED_STATUSES } from "../services/arCalculations";
 import { resolvePrimaryEmail } from "../services/contactEmailResolver";
 import { getLanguageName, getCurrencySymbol, formatCurrencyForPrompt } from "@shared/currencies";
 import { eq, and, desc, asc, sql, count, avg, gte, lte, lt, inArray, notInArray, or, isNull, isNotNull, gt, not } from 'drizzle-orm';
@@ -4207,8 +4208,9 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
           .where(and(
             eq(invoices.tenantId, tenantId),
             eq(invoices.contactId, id),
-            not(eq(invoices.status, 'paid')),
-            not(eq(invoices.status, 'cancelled')),
+            // Canonical AR status filter — matches getARSummary() / Xero AR report.
+            // Excludes paid, void, voided, deleted, draft.
+            sql`LOWER(${invoices.status}) NOT IN ${sql.raw(AR_EXCLUDED_STATUSES)}`,
           )),
         db.select()
           .from(invoices)
@@ -4241,23 +4243,11 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
         return res.status(404).json({ message: "Contact not found" });
       }
 
-      // Total outstanding (net of credits via amountPaid)
-      const totalOutstanding = openInvoicesResult.reduce((sum, inv) => {
-        const amt = parseFloat(inv.amount || '0');
-        const paid = parseFloat(inv.amountPaid || '0');
-        return sum + (amt - paid);
-      }, 0);
-
-      // Total overdue
+      // Header totals use the canonical AR helper — same logic (status filter
+      // + per-contact credit netting) as the debtors list and Xero AR report.
+      // Never inline SUM queries for these figures; see arCalculations.ts.
+      const { totalOutstanding, totalOverdue } = await getContactARSummary(tenantId, id);
       const now = new Date();
-      const totalOverdue = openInvoicesResult.reduce((sum, inv) => {
-        if (inv.dueDate && new Date(inv.dueDate) < now) {
-          const amt = parseFloat(inv.amount || '0');
-          const paid = parseFloat(inv.amountPaid || '0');
-          return sum + (amt - paid);
-        }
-        return sum;
-      }, 0);
 
       // Oldest overdue invoice (due date passed AND balance > 0)
       const overdueInvoices = openInvoicesResult
