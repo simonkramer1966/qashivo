@@ -128,10 +128,27 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
     },
   });
 
-  const isActivePath = (href: string) => {
-    if (href === "/") return location === "/";
-    return location === href || location.startsWith(href + "/");
-  };
+  // Active-path resolution: pick the single longest href that matches the
+  // current location. Prevents parent paths (e.g. /qollections) from lighting
+  // up when a more specific child (/qollections/debtors) is also a nav item.
+  const activeHref = useMemo(() => {
+    const candidates: string[] = [];
+    for (const pillar of navigationPillars) {
+      if (pillar.href) candidates.push(pillar.href);
+      if (pillar.children) for (const c of pillar.children) candidates.push(c.href);
+    }
+    let best: string | null = null;
+    for (const href of candidates) {
+      const matches =
+        href === "/" ? location === "/" : location === href || location.startsWith(href + "/");
+      if (matches && (best === null || href.length > best.length)) {
+        best = href;
+      }
+    }
+    return best;
+  }, [location]);
+
+  const isActivePath = (href: string) => href === activeHref;
 
   // Collapsed state — persisted in localStorage, mobile always expanded
   const [collapsed, setCollapsed] = useState(() => {
