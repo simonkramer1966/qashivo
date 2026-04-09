@@ -286,6 +286,7 @@ import { registerActionCentreRoutes } from "./routes/actionCentreRoutes";
 import { registerRileyRoutes } from "./routes/rileyRoutes";
 import { registerWeeklyReviewRoutes } from "./routes/weeklyReviewRoutes";
 import { registerDebtorGroupRoutes } from "./routes/debtorGroupRoutes";
+import { registerPromiseRoutes } from "./routes/promiseRoutes";
 import { registerQuizRoutes } from "./routes/quizRoutes";
 import { registerDemoRoutes } from "./routes/demoRoutes";
 import { registerImpactRoutes } from "./routes/impactRoutes";
@@ -654,6 +655,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerRileyRoutes(app);
   registerWeeklyReviewRoutes(app);
   registerDebtorGroupRoutes(app);
+  registerPromiseRoutes(app);
   registerQuizRoutes(app);
   registerDemoRoutes(app);
   registerImpactRoutes(app);

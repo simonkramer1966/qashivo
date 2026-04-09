@@ -76,6 +76,7 @@ export function buildSystemPrompt(
   policyConstraints?: PolicyConstraints,
   language: string = 'en-GB',
   currency: string = 'GBP',
+  hasUnallocatedPayments: boolean = false,
 ): string {
   const lines: string[] = [];
 
@@ -128,7 +129,11 @@ export function buildSystemPrompt(
 
   // Invoice formatting (mandatory HTML table)
   lines.push(`INVOICE FORMATTING (MANDATORY):`);
-  lines.push(`- When invoice data is provided in the user prompt below, present it in an HTML table with these exact columns: Invoice #, Amount, Due Date, Days Overdue. When no invoice data is provided, omit the table entirely.`);
+  if (hasUnallocatedPayments) {
+    lines.push(`- UNALLOCATED PAYMENT MODE: This debtor has confirmed payments that are not yet reconciled in Xero. DO NOT render an HTML invoice table. DO NOT reference specific invoice numbers or amounts. Chase only the net remaining balance provided in the user prompt.`);
+  } else {
+    lines.push(`- When invoice data is provided in the user prompt below AND there are no unallocated payments, present it in an HTML table with these exact columns: Invoice #, Amount, Due Date, Days Overdue. When no invoice data is provided, omit the table entirely.`);
+  }
   lines.push(`- Never list invoices as inline text, bullet points, or comma-separated lists. Always use the HTML table.`);
   lines.push(`- Because the body must contain an HTML table, emit the ENTIRE email body as well-formed HTML: wrap each paragraph in <p>, use <br> for soft line breaks, and place the <table> between the relevant paragraphs. Do not mix plain text with HTML.`);
   lines.push(`- Use minimal inline styles for table compatibility: <table style="border-collapse:collapse;width:100%;margin:16px 0;">, <th style="border:1px solid #ddd;padding:8px;text-align:left;background:#f5f5f5;">, <td style="border:1px solid #ddd;padding:8px;">.`);
@@ -173,6 +178,7 @@ export function buildUserPrompt(
   action: ActionContext,
   conversationBrief?: string,
   isSmallBalance: boolean = false,
+  unallocatedContext?: { hasUnallocatedPayments: boolean; netRemaining: number; unallocatedTotal: number },
 ): string {
   const sections: string[] = [];
 
@@ -239,6 +245,17 @@ export function buildUserPrompt(
   // to chase in this email (the action's bundle). The LLM must demand
   // payment of THIS amount only, not any relationship-wide total mentioned
   // in the conversation brief.
+  if (unallocatedContext?.hasUnallocatedPayments) {
+    sections.push(`NET AMOUNT TO CHASE (UNALLOCATED PAYMENT MODE):`);
+    sections.push(`- The debtor has confirmed payments totalling ${formatCurrencyForPrompt(unallocatedContext.unallocatedTotal, debtor.currency)} that Xero has not yet reconciled.`);
+    sections.push(`- Net remaining balance to chase: ${formatCurrencyForPrompt(unallocatedContext.netRemaining, debtor.currency)}`);
+    sections.push(`- DO NOT reference any specific invoice number or amount in this email.`);
+    sections.push(`- DO NOT render an HTML invoice table.`);
+    sections.push(`- Acknowledge the payment with genuine thanks.`);
+    sections.push(`- Ask only about the net remaining balance (${formatCurrencyForPrompt(unallocatedContext.netRemaining, debtor.currency)}). Use a warm, appreciative, relationship-first tone.`);
+    sections.push(`- Keep the email short — this is a thank-you and a gentle chase, not a dunning letter.`);
+    sections.push("");
+  } else {
   sections.push(`INVOICES TO CHASE IN THIS EMAIL:`);
   if (invoices.length === 0) {
     sections.push("- No invoices to chase. Do not generate a payment demand.");
@@ -272,6 +289,7 @@ export function buildUserPrompt(
       }
     }
   }
+  } // end unallocated/normal invoice branch
   sections.push("");
 
   // Conversation history (last 10)

@@ -3790,10 +3790,31 @@ export const paymentPromises = pgTable("payment_promises", {
   previousPromiseId: varchar("previous_promise_id"), // Link to previous broken promise if rescheduled
   promiseSequence: integer("promise_sequence").default(1), // 1st, 2nd, 3rd promise for this invoice
   
+  // Bundle support — when a promise covers multiple invoices
+  promisedInvoiceIds: text("promised_invoice_ids").array(),
+
+  // Grace + reminder lifecycle
+  gracePeriodDays: integer("grace_period_days").default(3),
+  reminderSent: boolean("reminder_sent").default(false),
+  reminderSentAt: timestamp("reminder_sent_at"),
+  reminderActionId: varchar("reminder_action_id"),
+
+  // Modification tracking
+  originalPromisedDate: timestamp("original_promised_date"),
+  modificationCount: integer("modification_count").default(0),
+  lastModifiedAt: timestamp("last_modified_at"),
+  lastModifiedReason: text("last_modified_reason"),
+
+  // Outcome attribution
+  outcomeDetectedAt: timestamp("outcome_detected_at"),
+  outcomeDetectionMethod: varchar("outcome_detection_method"), // xero_sync | manual_confirmation | timeout
+  brokenPromiseCount: integer("broken_promise_count").default(0),
+  followUpActionId: varchar("follow_up_action_id"),
+
   // Additional context
   notes: text("notes"),
   metadata: jsonb("metadata"), // Additional structured data (call transcript excerpts, email snippets, etc.)
-  
+
   createdByUserId: varchar("created_by_user_id").notNull().references(() => users.id),
   evaluatedAt: timestamp("evaluated_at"), // When the promise outcome was determined
   evaluatedByUserId: varchar("evaluated_by_user_id").references(() => users.id),
@@ -3903,6 +3924,50 @@ export type InsertActionLog = z.infer<typeof insertActionLogSchema>;
 
 export type PaymentPromise = typeof paymentPromises.$inferSelect;
 export type InsertPaymentPromise = z.infer<typeof insertPaymentPromiseSchema>;
+
+// === UNALLOCATED PAYMENTS ===
+// Tracks payments a user has logged (e.g. via "Payment received" on a broken
+// promise) that Xero has not yet reconciled against specific invoices.
+// Charlie uses these to chase the NET effective overdue, not the gross.
+export const unallocatedPayments = pgTable("unallocated_payments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id),
+
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  remainingAmount: decimal("remaining_amount", { precision: 12, scale: 2 }).notNull(),
+  dateReceived: timestamp("date_received").notNull(),
+
+  sourcePromiseId: varchar("source_promise_id"),
+  confirmedBy: varchar("confirmed_by"),
+
+  // unallocated | partially_allocated | reconciled | expired | disputed
+  status: varchar("status").notNull().default("unallocated"),
+
+  // chase | wait | manual
+  remainingBalanceAction: varchar("remaining_balance_action"),
+  remainingBalancePromiseDate: timestamp("remaining_balance_promise_date"),
+
+  xeroAllocatedAmount: decimal("xero_allocated_amount", { precision: 12, scale: 2 }).default("0"),
+  lastReconcileCheckAt: timestamp("last_reconcile_check_at"),
+  expiresAt: timestamp("expires_at"),
+
+  note: text("note"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_unallocated_payments_tenant_status").on(table.tenantId, table.status),
+  index("idx_unallocated_payments_contact_status").on(table.contactId, table.status),
+]);
+
+export const insertUnallocatedPaymentSchema = createInsertSchema(unallocatedPayments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type UnallocatedPayment = typeof unallocatedPayments.$inferSelect;
+export type InsertUnallocatedPayment = z.infer<typeof insertUnallocatedPaymentSchema>;
 
 // === PARTNER-CLIENT SUBSCRIPTION SYSTEM ===
 

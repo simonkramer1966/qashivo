@@ -615,6 +615,11 @@ export class SyncOrchestrator {
       // Log to sync audit
       await this.logSyncAudit(tenantId, result, trigger);
 
+      // Non-blocking: auto-reconcile unallocated payments against newly-synced paid invoices
+      import('../services/promiseTrackingService')
+        .then(m => m.reconcileUnallocatedPayments(tenantId))
+        .catch(err => console.warn(`[SyncOrchestrator] Reconcile unallocated payments failed for ${tenantId}:`, err));
+
       return result;
 
     } catch (err) {

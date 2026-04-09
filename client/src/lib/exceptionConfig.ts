@@ -9,7 +9,6 @@ export const EXCEPTION_GROUPS = {
     "unresponsive",
     "wants_human",
     "compliance_failure",
-    "broken_promise",
   ],
   debtor_situations: [
     "distress",
@@ -18,20 +17,27 @@ export const EXCEPTION_GROUPS = {
     "insolvency_risk",
     "complaint",
   ],
+  promises: ["broken_promise", "unallocated_timeout"],
   other: ["other"],
 } as const;
 
-export type ExceptionSubTab = "collections" | "debtor_situations" | "other";
+export type ExceptionSubTab =
+  | "collections"
+  | "debtor_situations"
+  | "promises"
+  | "other";
 
 export const EXCEPTION_SUB_TABS: { value: ExceptionSubTab; label: string }[] = [
   { value: "collections", label: "Collections" },
   { value: "debtor_situations", label: "Debtor Situations" },
+  { value: "promises", label: "Promises" },
   { value: "other", label: "Other" },
 ];
 
 export const VALID_EXCEPTION_SUBS = new Set<ExceptionSubTab>([
   "collections",
   "debtor_situations",
+  "promises",
   "other",
 ]);
 

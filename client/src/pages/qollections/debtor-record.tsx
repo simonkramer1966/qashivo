@@ -1759,15 +1759,26 @@ export default function DebtorRecord() {
             {metricsQuery.isLoading ? (
               <Skeleton className="h-6 w-20 mt-1" />
             ) : metrics?.promiseToPay ? (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <p className="text-lg tabular-nums">
                   {metrics.promiseToPay.amount != null
                     ? <><span className="font-bold">{gbp.format(metrics.promiseToPay.amount)}</span> ({formatDate(metrics.promiseToPay.date)})</>
                     : formatDate(metrics.promiseToPay.date)}
                 </p>
-                {metrics.promiseToPay.overdue && (
+                {(metrics.promiseToPay as any).broken ? (
+                  <Badge variant="destructive" className="text-xs">
+                    BROKEN{(metrics.promiseToPay as any).brokenDaysAgo != null
+                      ? ` (${(metrics.promiseToPay as any).brokenDaysAgo} days ago)`
+                      : ""}
+                  </Badge>
+                ) : metrics.promiseToPay.overdue ? (
                   <Badge variant="destructive" className="text-xs">
                     Overdue
+                  </Badge>
+                ) : null}
+                {(metrics.promiseToPay as any).modified && (
+                  <Badge variant="outline" className="text-xs">
+                    Modified
                   </Badge>
                 )}
               </div>

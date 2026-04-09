@@ -102,18 +102,29 @@ export default function QollectionsAgentActivity() {
   const scheduledCount = scheduledData?.total ?? 0;
   const activityInboundCount = activityFeedData?.inboundCount ?? 0;
   const exceptionCount = (exceptionsData?.newCount ?? 0) + (exceptionsData?.totalPatterns ?? 0);
+  const { data: promisesData } = useQuery<{
+    brokenPromises: unknown[];
+    unallocatedTimeouts: unknown[];
+  }>({
+    queryKey: ["/api/action-centre/broken-promises"],
+    refetchInterval: 30_000,
+  });
+
   // Compute per-sub-tab exception counts (only "new" items for badge)
   const exceptionSubCounts = useMemo(() => {
-    const counts: Record<ExceptionSubTab, number> = { collections: 0, debtor_situations: 0, other: 0 };
+    const counts: Record<ExceptionSubTab, number> = { collections: 0, debtor_situations: 0, promises: 0, other: 0 };
     const actions = exceptionsData?.exceptionActions ?? [];
     for (const a of actions) {
       if (a.exceptionStatus && a.exceptionStatus !== "new") continue;
       const cat = classifyException(a.exceptionReason);
-      if (cat) counts[cat]++;
-      else counts.other++;
+      if (cat && cat !== "promises") counts[cat]++;
+      else if (!cat) counts.other++;
     }
+    counts.promises =
+      (promisesData?.brokenPromises?.length ?? 0) +
+      (promisesData?.unallocatedTimeouts?.length ?? 0);
     return counts;
-  }, [exceptionsData]);
+  }, [exceptionsData, promisesData]);
 
   const tabLabel = (label: string, count: number) =>
     count > 0 ? `${label} (${count})` : label;

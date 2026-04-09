@@ -1258,11 +1258,16 @@ CRITICAL EXCEPTIONS — do NOT flag ambiguity when:
       }
 
       // 1. Mark old promise as rescheduled
+      const prevModCount = Number((activePromise as any).modificationCount || 0);
       await db
         .update(paymentPromises)
         .set({
           status: 'rescheduled',
           notes: `${activePromise.notes || ''}\nRescheduled on ${new Date().toLocaleDateString()} — moved ${daysPushed > 0 ? 'back' : 'forward'} ${Math.abs(daysPushed)} days`.trim(),
+          modificationCount: prevModCount + 1,
+          originalPromisedDate: (activePromise as any).originalPromisedDate ?? originalDate,
+          lastModifiedAt: new Date(),
+          lastModifiedReason: `Rescheduled ${daysPushed > 0 ? '+' : ''}${daysPushed} days via ${message.channel}`,
           metadata: {
             ...(activePromise.metadata as any || {}),
             rescheduledAt: new Date().toISOString(),
@@ -1501,7 +1506,37 @@ CRITICAL EXCEPTIONS — do NOT flag ambiguity when:
           dateWasExtracted,
         },
       });
-      
+
+      // Backfill bundle fields — if the triggering action chased multiple
+      // invoices, populate promisedInvoiceIds from action.invoiceIds (or
+      // metadata.allInvoiceIds) so downstream gates know the full bundle.
+      try {
+        let bundleIds: string[] | null = null;
+        if (context?.actionId) {
+          const [sourceAction] = await db
+            .select({ invoiceIds: actions.invoiceIds, metadata: actions.metadata })
+            .from(actions)
+            .where(eq(actions.id, context.actionId))
+            .limit(1);
+          if (sourceAction) {
+            const metaIds = (sourceAction.metadata as any)?.allInvoiceIds as string[] | undefined;
+            bundleIds = (sourceAction.invoiceIds as string[] | null) || metaIds || null;
+          }
+        }
+        if (!bundleIds || bundleIds.length === 0) {
+          bundleIds = [message.invoiceId];
+        }
+        await db
+          .update(paymentPromises)
+          .set({
+            promisedInvoiceIds: bundleIds,
+            originalPromisedDate: promisedDate,
+          })
+          .where(eq(paymentPromises.id, promise.id));
+      } catch (err) {
+        console.warn('[intentAnalyst] promisedInvoiceIds backfill failed (non-fatal):', err);
+      }
+
       console.log(`✅ Promise created: ${promise.id} - Payment by ${promisedDate.toLocaleDateString()}${!dateWasExtracted ? ' (default)' : ''}`);
     } catch (error) {
       console.error('❌ Error creating promise from intent:', error);

@@ -12,6 +12,7 @@ import {
   customerLearningProfiles,
   debtorGroups,
   decisionAuditLog,
+  paymentPromises,
 } from "@shared/schema";
 import { CollectionLearningService } from "./collectionLearningService";
 import {
@@ -27,7 +28,7 @@ import { getEffectiveSeasonalAdjustments, type SeasonalAdjustment } from "./paym
 import { getActiveConversationContactIds } from "./emailClarificationService";
 import { evaluateDecisionTree, type DebtorDecisionInput } from "./decisionTree";
 import { getSmallBalancePolicy, isSmallBalance, applySmallBalancePriority } from "./smallBalancePolicy";
-import { getRolling30DayDSO, getARSummary } from "./arCalculations";
+import { getRolling30DayDSO, getARSummary, getEffectiveOverdue } from "./arCalculations";
 import crypto from "crypto";
 
 // Utility: Format currency for display
@@ -152,11 +153,50 @@ export class ActionPlanner {
 
       console.log(`📊 Action Planner: Found ${overdueInvoices.length} overdue invoices for tenant ${tenantId}`);
 
+      // Batch-fetch active promises + effective overdue per contact (avoids N+1 in the loop).
+      const uniqueContactIds = Array.from(new Set(overdueInvoices.map(r => r.contact.id)));
+      const activePromiseSet = new Set<string>();
+      if (uniqueContactIds.length > 0) {
+        const rows = await db
+          .select({ contactId: paymentPromises.contactId })
+          .from(paymentPromises)
+          .where(
+            and(
+              eq(paymentPromises.tenantId, tenantId),
+              inArray(paymentPromises.contactId, uniqueContactIds),
+              eq(paymentPromises.status, 'open'),
+              sql`(${paymentPromises.promisedDate} + (COALESCE(${paymentPromises.gracePeriodDays}, 3) || ' days')::interval) > now()`,
+            ),
+          );
+        for (const r of rows) activePromiseSet.add(r.contactId);
+      }
+      const effectiveOverdueMap = new Map<string, { xeroOverdue: number; unallocatedTotal: number; effectiveOverdue: number; hasUnallocatedPayments: boolean }>();
+      for (const cid of uniqueContactIds) {
+        try {
+          effectiveOverdueMap.set(cid, await getEffectiveOverdue(tenantId, cid));
+        } catch (err) {
+          console.warn(`[actionPlanner] getEffectiveOverdue failed for ${cid}:`, err);
+        }
+      }
+
       for (const record of overdueInvoices) {
         const { invoice, contact, assignment, schedule } = record;
 
         // Skip if no schedule assigned
         if (!assignment || !schedule) {
+          continue;
+        }
+
+        // Gate 1: Active promise → skip entirely
+        if (activePromiseSet.has(contact.id)) {
+          console.log(`⏭️  Skipped ${contact.name || contact.id} — active promise (within grace period)`);
+          continue;
+        }
+
+        // Gate 2: Effective overdue (net of unallocated payments) is zero → skip
+        const eff = effectiveOverdueMap.get(contact.id);
+        if (eff && eff.effectiveOverdue <= 0) {
+          console.log(`⏭️  Skipped ${contact.name || contact.id} — effective overdue £${eff.effectiveOverdue.toFixed(2)} (xero £${eff.xeroOverdue.toFixed(2)} − unallocated £${eff.unallocatedTotal.toFixed(2)})`);
           continue;
         }
 
@@ -1064,6 +1104,32 @@ export async function planAdaptiveActions(
       console.log(`[PLAN] ${activeConvSet.size} contact(s) in active conversation — will be skipped`);
     }
 
+    // Batch-fetch active promises + effective overdue per contact (avoids N+1).
+    const _planContactIds = Array.from(invoicesByContact.keys());
+    const activePromiseSet = new Set<string>();
+    if (_planContactIds.length > 0) {
+      const rows = await db
+        .select({ contactId: paymentPromises.contactId })
+        .from(paymentPromises)
+        .where(
+          and(
+            eq(paymentPromises.tenantId, tenantId),
+            inArray(paymentPromises.contactId, _planContactIds),
+            eq(paymentPromises.status, 'open'),
+            sql`(${paymentPromises.promisedDate} + (COALESCE(${paymentPromises.gracePeriodDays}, 3) || ' days')::interval) > now()`,
+          ),
+        );
+      for (const r of rows) activePromiseSet.add(r.contactId);
+    }
+    const effectiveOverdueMap = new Map<string, { xeroOverdue: number; unallocatedTotal: number; effectiveOverdue: number; hasUnallocatedPayments: boolean }>();
+    for (const cid of _planContactIds) {
+      try {
+        effectiveOverdueMap.set(cid, await getEffectiveOverdue(tenantId, cid));
+      } catch (err) {
+        console.warn(`[PLAN] getEffectiveOverdue failed for ${cid}:`, err);
+      }
+    }
+
     // Pre-compute channel cooldown from tenant settings (same source as compliance engine)
     const cooldowns = (tenantRecord?.channelCooldowns as { email?: number; sms?: number; voice?: number } | null) ?? { email: 3 };
     const emailCooldownDays = cooldowns.email ?? 3;
@@ -1079,6 +1145,19 @@ export async function planAdaptiveActions(
       if (activeConvSet.has(contactId)) {
         console.log(`[PLAN] Skipped ${contact.name} — active conversation`);
         skipped.activeConversation++;
+        continue;
+      }
+
+      // Gate 1: Active promise → skip entirely
+      if (activePromiseSet.has(contactId)) {
+        console.log(`[PLAN] Skipped ${contact.name} — active promise (within grace period)`);
+        continue;
+      }
+
+      // Gate 2: Effective overdue (net of unallocated payments) is zero → skip
+      const eff = effectiveOverdueMap.get(contactId);
+      if (eff && eff.effectiveOverdue <= 0) {
+        console.log(`[PLAN] Skipped ${contact.name} — effective overdue £${eff.effectiveOverdue.toFixed(2)} (xero £${eff.xeroOverdue.toFixed(2)} − unallocated £${eff.unallocatedTotal.toFixed(2)})`);
         continue;
       }
 
@@ -1339,6 +1418,10 @@ export async function planAdaptiveActions(
               collectionPhase: bundlePhase,
               smallBalance,
               totalAmount,
+              amount: (effectiveOverdueMap.get(contactId)?.effectiveOverdue ?? totalAmount).toString(),
+              grossAmount: totalAmount.toString(),
+              hasUnallocatedPayments: effectiveOverdueMap.get(contactId)?.hasUnallocatedPayments ?? false,
+              unallocatedTotal: (effectiveOverdueMap.get(contactId)?.unallocatedTotal ?? 0).toString(),
             },
             recommendedAt: today,
             recommendedBy: "adaptive",

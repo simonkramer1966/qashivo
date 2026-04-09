@@ -16,6 +16,7 @@ import { startDsoSnapshotJob } from "../jobs/dsoSnapshotJob";
 import { startXeroReconciliationJob } from "../jobs/xeroReconciliationJob";
 import { startWeeklyReviewJob } from "../jobs/weeklyReviewJob";
 import { startLegalWindowJob } from "../jobs/legalWindowJob";
+import { startPromiseChecker } from "../jobs/promiseChecker";
 import { startEnrichmentJob } from "../jobs/enrichmentJob";
 import { startImpactScheduler } from "../jobs/impactScheduler";
 import { batchProcessor } from "../services/batchProcessor";
@@ -212,6 +213,13 @@ export async function startAll(): Promise<void> {
     console.log("[startup] legal window job scheduled");
   } catch (error) {
     console.error("[startup] legal window job failed:", error);
+  }
+
+  try {
+    startPromiseChecker();
+    console.log("[startup] promise checker job scheduled");
+  } catch (error) {
+    console.error("[startup] promise checker job failed:", error);
   }
 
   try {

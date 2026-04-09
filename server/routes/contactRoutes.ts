@@ -2814,42 +2814,41 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
         return res.status(400).json({ message: "Invalid payment date format" });
       }
 
-      // Get the promise reliability service
-      const { getPromiseReliabilityService } = await import('../services/promiseReliabilityService.js');
-      const promiseService = getPromiseReliabilityService();
+      // Create a single bundled promise via promiseTrackingService so that
+      // promisedInvoiceIds is populated and sourceType='manual' is consistent.
+      const { createManualPromise } = await import('../services/promiseTrackingService');
 
-      // Create promises for each invoice or a single promise for full payment
-      const createdPromises = [];
-      
-      if (invoiceIds && invoiceIds.length > 0) {
-        // Get invoices to calculate amounts - fetch each individually
+      // Compute promised amount: user-confirmed amount OR sum of selected invoice balances
+      let promisedAmount: number | undefined = amount;
+      if ((!promisedAmount || promisedAmount <= 0) && paymentType === 'full') {
+        let sum = 0;
         for (const invoiceId of invoiceIds) {
           const invoice = await storage.getInvoice(invoiceId, user.tenantId);
           if (!invoice) continue;
-          const invoiceBalance = parseFloat(invoice.amountDue?.toString() || invoice.total?.toString() || '0') - parseFloat(invoice.amountPaid?.toString() || '0');
-          const promiseAmount = paymentType === 'full' ? invoiceBalance : (amount || 0);
-          
-          const promise = await promiseService.createPromise({
-            tenantId: user.tenantId,
-            contactId,
-            invoiceId: invoice.id,
-            promisedAmount: promiseAmount,
-            promisedDate: parsedDate,
-            promiseType: paymentType === 'full' ? 'payment_date' : 'partial_payment',
-            sourceType: 'manual',
-            notes: notes || `Confirmed by: ${confirmedBy || 'Unknown'}`,
-            createdByUserId: user.id,
-          });
-          
-          createdPromises.push(promise);
+          const balance = parseFloat(invoice.amountDue?.toString() || invoice.total?.toString() || '0')
+            - parseFloat(invoice.amountPaid?.toString() || '0');
+          sum += balance;
         }
-        
-        // Update invoice outcome override to 'Plan' for PTP
-        for (const invoiceId of invoiceIds) {
-          await storage.updateInvoice(invoiceId, user.tenantId, {
-            outcomeOverride: 'Plan',
-          });
-        }
+        promisedAmount = sum;
+      }
+
+      const created = await createManualPromise({
+        tenantId: user.tenantId,
+        contactId,
+        invoiceIds,
+        promisedDate: parsedDate,
+        promisedAmount,
+        userId: user.id,
+        notes: notes || `Confirmed by: ${confirmedBy || 'Unknown'}`,
+      });
+
+      const createdPromises = [created];
+
+      // Update invoice outcome override to 'Plan' for PTP
+      for (const invoiceId of invoiceIds) {
+        await storage.updateInvoice(invoiceId, user.tenantId, {
+          outcomeOverride: 'Plan',
+        });
       }
 
       // Create a timeline note for the PTP
@@ -4230,7 +4229,7 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
           .where(and(
             eq(paymentPromises.tenantId, tenantId),
             eq(paymentPromises.contactId, id),
-            eq(paymentPromises.status, 'open'),
+            inArray(paymentPromises.status, ['open', 'broken']),
           ))
           .orderBy(desc(paymentPromises.createdAt))
           .limit(1),
@@ -4368,14 +4367,26 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
       const disputedInvoiceIds = new Set(activeDisputes.map(d => d.invoiceId));
       const disputedCount = openInvoicesResult.filter(inv => disputedInvoiceIds.has(inv.id)).length;
 
-      // Promise to pay
+      // Promise to pay (extended shape: daysRemaining, modified, broken)
       const latestPromise = openPromises[0] || null;
       const promiseToPay = latestPromise
-        ? {
-            date: latestPromise.promisedDate.toISOString(),
-            amount: latestPromise.promisedAmount ? parseFloat(latestPromise.promisedAmount) : null,
-            overdue: new Date(latestPromise.promisedDate) < now,
-          }
+        ? (() => {
+            const promisedDate = new Date(latestPromise.promisedDate);
+            const daysRemaining = Math.floor((promisedDate.getTime() - now.getTime()) / 86400000);
+            const isBroken = latestPromise.status === 'broken';
+            const brokenDaysAgo = isBroken && latestPromise.outcomeDetectedAt
+              ? Math.floor((now.getTime() - new Date(latestPromise.outcomeDetectedAt).getTime()) / 86400000)
+              : null;
+            return {
+              date: promisedDate.toISOString(),
+              amount: latestPromise.promisedAmount ? parseFloat(latestPromise.promisedAmount) : null,
+              overdue: promisedDate < now,
+              daysRemaining,
+              modified: (latestPromise.modificationCount ?? 0) > 0,
+              broken: isBroken,
+              brokenDaysAgo,
+            };
+          })()
         : null;
 
       res.json({

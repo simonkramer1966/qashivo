@@ -1,6 +1,6 @@
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, inArray } from "drizzle-orm";
 import { db } from "../db";
-import { actions, tenants, invoices, agentPersonas } from "@shared/schema";
+import { actions, tenants, invoices, agentPersonas, paymentPromises } from "@shared/schema";
 import { generateInvoiceTableHtml } from "./collectionsAutomation";
 import { setupDefaultWorkflow } from "./defaultWorkflowSetup";
 import { charlieDecisionEngine } from "./charlieDecisionEngine";
@@ -10,6 +10,7 @@ import { prepareMessageFromWorkflowProfile } from "./workflowProfileMessageServi
 import { processCollectionEmail } from "./collectionsPipeline";
 import { getSmallBalancePolicy, isSmallBalance, applySmallBalancePriority } from "./smallBalancePolicy";
 import { getActiveConversationContactIds } from "./emailClarificationService";
+import { getEffectiveOverdue } from "./arCalculations";
 
 export interface InvoiceSummary {
   id: string;
@@ -376,12 +377,56 @@ async function generateDailyPlanWithCharlie(
   );
   let activeConversationSkips = 0;
 
+  // Batch-fetch active promises for all target contacts (avoids N+1 in the loop).
+  // An active promise is: status='open' AND promisedDate + gracePeriodDays > now.
+  const candidateContactIds = Array.from(decisionsByContact.keys());
+  const activePromiseSet = new Set<string>();
+  if (candidateContactIds.length > 0) {
+    const rows = await db
+      .select({ contactId: paymentPromises.contactId })
+      .from(paymentPromises)
+      .where(
+        and(
+          eq(paymentPromises.tenantId, tenantId),
+          inArray(paymentPromises.contactId, candidateContactIds),
+          eq(paymentPromises.status, 'open'),
+          sql`(${paymentPromises.promisedDate} + (COALESCE(${paymentPromises.gracePeriodDays}, 3) || ' days')::interval) > now()`,
+        ),
+      );
+    for (const r of rows) activePromiseSet.add(r.contactId);
+  }
+
+  // Batch-compute effective overdue (xero overdue − unallocated) per contact.
+  const effectiveOverdueMap = new Map<string, { xeroOverdue: number; unallocatedTotal: number; effectiveOverdue: number; hasUnallocatedPayments: boolean }>();
+  for (const cid of candidateContactIds) {
+    try {
+      effectiveOverdueMap.set(cid, await getEffectiveOverdue(tenantId, cid));
+    } catch (err) {
+      console.warn(`[dailyPlan] getEffectiveOverdue failed for ${cid}:`, err);
+    }
+  }
+
   // Process each contact ONCE (with all their invoices consolidated)
   for (const [contactId, contactDecisions] of decisionsByContact) {
     if (activeConvSet.has(contactId)) {
       const name = contactDecisions[0]?.contact?.name ?? contactId;
       console.log(`⏭️  Skipped ${name} — active conversation`);
       activeConversationSkips++;
+      continue;
+    }
+
+    // Gate 1: Active promise → skip entirely
+    if (activePromiseSet.has(contactId)) {
+      const name = contactDecisions[0]?.contact?.name ?? contactId;
+      console.log(`⏭️  Skipped ${name} — active promise (within grace period)`);
+      continue;
+    }
+
+    // Gate 2: Effective overdue (net of unallocated payments) is zero → skip
+    const eff = effectiveOverdueMap.get(contactId);
+    if (eff && eff.effectiveOverdue <= 0) {
+      const name = contactDecisions[0]?.contact?.name ?? contactId;
+      console.log(`⏭️  Skipped ${name} — effective overdue £${eff.effectiveOverdue.toFixed(2)} (xero £${eff.xeroOverdue.toFixed(2)} − unallocated £${eff.unallocatedTotal.toFixed(2)})`);
       continue;
     }
     // Use first decision (highest priority due to earlier sort) for channel/priority
@@ -520,8 +565,11 @@ async function generateDailyPlanWithCharlie(
       ),
       metadata: {
         daysOverdue: maxDaysOverdue,
-        amount: totalAmount.toString(),
+        amount: (eff?.effectiveOverdue ?? totalAmount).toString(),
+        grossAmount: totalAmount.toString(),
         totalOutstanding: contactTotalOutstanding.toString(),
+        hasUnallocatedPayments: eff?.hasUnallocatedPayments ?? false,
+        unallocatedTotal: (eff?.unallocatedTotal ?? 0).toString(),
         priority,
         generatedBy: 'charlie_decision_engine',
         smallBalance,

@@ -34,6 +34,7 @@ export type RealtimeEventType =
   | "ptp_created"
   | "dispute_detected"
   | "exception_created"
+  | "promise_broken"
   | "delivery_bounce"
   | "approval_needed"
   | "sync_started"

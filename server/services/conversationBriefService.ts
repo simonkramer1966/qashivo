@@ -27,6 +27,7 @@ import {
   cachedXeroCreditNotes,
   cachedXeroOverpayments,
   cachedXeroPrepayments,
+  unallocatedPayments,
 } from "@shared/schema";
 
 // ── Types ────────────────────────────────────────────────────
@@ -77,6 +78,12 @@ export interface ConversationBriefData {
     totalUnappliedCredits: number;
     hasCredits: boolean;
   };
+  unallocatedPayments: Array<{
+    amount: number;
+    dateReceived: string;
+    remainingAmount: number;
+    status: string;
+  }>;
   debtorIntel: string[];
   constraints: string[];
   collectionPhase: {
@@ -176,6 +183,17 @@ export async function buildConversationBrief(
     db.select({ chaseDelayDays: tenants.chaseDelayDays }).from(tenants).where(eq(tenants.id, tenantId)).limit(1).then(r => r[0]),
   ]);
 
+  // Load live unallocated payments (manual confirmations not yet reconciled in Xero)
+  const unallocatedRows = await db
+    .select()
+    .from(unallocatedPayments)
+    .where(and(
+      eq(unallocatedPayments.tenantId, tenantId),
+      eq(unallocatedPayments.contactId, contactId),
+      inArray(unallocatedPayments.status, ['unallocated', 'partially_allocated']),
+    ))
+    .orderBy(desc(unallocatedPayments.dateReceived));
+
   const chaseDelayDays = tenantRecord?.chaseDelayDays ?? 5;
 
   // Load credit balance (needs contact's xeroContactId — sequential after contact load)
@@ -184,7 +202,7 @@ export async function buildConversationBrief(
   const data = assembleData(
     contact, timeline, promises, outstandingInvs, signals,
     facts, prefs, intel, recentEmails, recentActions, forecasts, chaseDelayDays, creditBalance,
-    chaseContext,
+    chaseContext, unallocatedRows,
   );
   let text = formatBriefText(data, contact, prefs, intel, chaseContext);
 
@@ -409,6 +427,7 @@ function assembleData(
   chaseDelayDays: number,
   creditBalance: number = 0,
   chaseContext?: ChaseContext,
+  unallocatedRows: any[] = [],
 ): ConversationBriefData {
   const now = new Date();
 
@@ -502,6 +521,22 @@ function assembleData(
   if (contact?.probablePaymentDetected) {
     constraints.push('Probable payment detected — do NOT chase aggressively, payment may have been made.');
   }
+
+  // Unallocated payments — strict language rules when present.
+  const unallocatedSummary = unallocatedRows
+    .filter((r: any) => r.status === 'unallocated' || r.status === 'partially_allocated')
+    .map((r: any) => ({
+      amount: Number(r.amount || 0),
+      dateReceived: new Date(r.dateReceived).toLocaleDateString('en-GB'),
+      remainingAmount: Number(r.remainingAmount || 0),
+      status: r.status,
+    }));
+  const totalUnallocated = unallocatedSummary.reduce((sum, r) => sum + r.remainingAmount, 0);
+  if (unallocatedSummary.length > 0) {
+    constraints.push(
+      `UNALLOCATED PAYMENTS — £${totalUnallocated.toFixed(2)} has been confirmed received from this debtor but is not yet reconciled in Xero. Do NOT reference specific invoice numbers or amounts in this email. Acknowledge the payment(s) with thanks and chase only the NET remaining balance. Do NOT send an invoice table. Use an appreciative, relationship-first tone.`
+    );
+  }
   // Note: We deliberately do NOT compute or reference a "net outstanding"
   // figure that subtracts unallocated credits from the relationship total.
   // That number is misleading: each invoice's amount already reflects any
@@ -574,6 +609,7 @@ function assembleData(
       totalUnappliedCredits: creditBalance,
       hasCredits: creditBalance > 0,
     },
+    unallocatedPayments: unallocatedSummary,
     debtorIntel,
     constraints,
     collectionPhase: {
@@ -654,6 +690,23 @@ function formatBriefText(
     commitLines.push('Payment plan in place — some invoices paused');
   }
   section('ACTIVE COMMITMENTS', commitLines);
+
+  // 3b. UNALLOCATED PAYMENTS — only rendered when present
+  if (data.unallocatedPayments.length > 0) {
+    const upLines: string[] = [];
+    const total = data.unallocatedPayments.reduce((sum, r) => sum + r.remainingAmount, 0);
+    upLines.push(`Unallocated payments total: £${total.toFixed(2)} (confirmed received, not yet reconciled in Xero)`);
+    for (const r of data.unallocatedPayments) {
+      upLines.push(`  • £${r.amount.toFixed(2)} received ${r.dateReceived} — £${r.remainingAmount.toFixed(2)} remaining (${r.status})`);
+    }
+    upLines.push('STRICT RULES when drafting this email:');
+    upLines.push('  - Do NOT reference specific invoice numbers or invoice amounts.');
+    upLines.push('  - Do NOT send an HTML invoice table.');
+    upLines.push('  - Acknowledge the payment(s) with thanks.');
+    upLines.push('  - Chase ONLY the net remaining balance (gross overdue minus unallocated).');
+    upLines.push('  - Use an appreciative, relationship-first tone — the debtor has paid.');
+    section('UNALLOCATED PAYMENTS', upLines);
+  }
 
   // 4. RECENT COMMUNICATION HISTORY — always rendered (richer per-entry)
   const histLines: string[] = [];

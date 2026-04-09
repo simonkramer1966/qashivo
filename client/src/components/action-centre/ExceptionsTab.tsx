@@ -18,9 +18,11 @@ import {
   AlertTriangle, TrendingDown, CheckCircle2, ChevronRight,
   ShieldAlert, Users, HelpCircle, Clock, ExternalLink, ChevronDown,
   Mail, MessageSquare, Phone, Circle, CircleDot, Check, RefreshCw,
+  Handshake,
 } from "lucide-react";
 import { formatRelativeTime } from "./utils";
 import { type ExceptionSubTab, classifyException, EXCEPTION_SUB_TABS } from "@/lib/exceptionConfig";
+import PromisesSubTab from "./PromisesSubTab";
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -82,6 +84,12 @@ const CATEGORY_META: Record<ExceptionSubTab, {
     colour: "text-amber-600",
     bgColour: "bg-amber-50 border-amber-100 hover:bg-amber-100/60",
   },
+  promises: {
+    icon: Handshake,
+    description: "Broken promises and unallocated payment timeouts",
+    colour: "text-purple-600",
+    bgColour: "bg-purple-50 border-purple-100 hover:bg-purple-100/60",
+  },
   other: {
     icon: HelpCircle,
     description: "Unclear intents, unmatched inbound, system errors",
@@ -134,6 +142,17 @@ export default function ExceptionsTab({ subTab, onNavigateSubTab }: ExceptionsTa
     queryKey: ["/api/action-centre/exceptions"],
     refetchInterval: 30_000,
   });
+
+  const { data: promisesData } = useQuery<{
+    brokenPromises: any[];
+    unallocatedTimeouts: any[];
+  }>({
+    queryKey: ["/api/action-centre/broken-promises"],
+    refetchInterval: 30_000,
+  });
+  const promisesCount =
+    (promisesData?.brokenPromises?.length ?? 0) +
+    (promisesData?.unallocatedTimeouts?.length ?? 0);
 
   const acknowledgeMutation = useMutation({
     mutationFn: (patternId: string) =>
@@ -231,15 +250,16 @@ export default function ExceptionsTab({ subTab, onNavigateSubTab }: ExceptionsTa
 
   // Compute per-category counts (all states, for summary landing)
   const categoryCounts = useMemo(() => {
-    const counts: Record<ExceptionSubTab, number> = { collections: 0, debtor_situations: 0, other: 0 };
+    const counts: Record<ExceptionSubTab, number> = { collections: 0, debtor_situations: 0, promises: 0, other: 0 };
     for (const e of allExceptions) {
       if (normaliseState(e) !== "new") continue; // summary cards show new only
       const cat = classifyException(e.exceptionReason, e.status);
-      if (cat) counts[cat]++;
-      else counts.other++;
+      if (cat && cat !== "promises") counts[cat]++;
+      else if (!cat) counts.other++;
     }
+    counts.promises = promisesCount;
     return counts;
-  }, [allExceptions]);
+  }, [allExceptions, promisesCount]);
 
   // ── Summary landing (no sub-tab selected) ───────────────────
   if (!subTab) {
@@ -279,7 +299,7 @@ export default function ExceptionsTab({ subTab, onNavigateSubTab }: ExceptionsTa
           </div>
         )}
 
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {EXCEPTION_SUB_TABS.map(({ value, label }) => {
             const meta = CATEGORY_META[value];
             const Icon = meta.icon;
@@ -373,6 +393,11 @@ export default function ExceptionsTab({ subTab, onNavigateSubTab }: ExceptionsTa
   }
 
   // ── Sub-tab view ────────────────────────────────────────────
+
+  // Promises sub-tab has its own endpoint + row layout
+  if (subTab === "promises") {
+    return <PromisesSubTab />;
+  }
 
   const exceptions = allExceptions.filter(e => {
     const cat = classifyException(e.exceptionReason, e.status);

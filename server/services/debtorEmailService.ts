@@ -194,6 +194,18 @@ export async function generateDebtorEmail(
     currency,
   });
 
+  // Detect unallocated payments from the brief. When present, the email
+  // must chase only the net remaining balance and suppress the invoice
+  // table. The brief has already been rendered with UNALLOCATED PAYMENTS
+  // section and strict instructions — we still pass a dedicated context
+  // object to the user prompt so the rules are enforced there too.
+  const unallocatedTotal = brief.data.unallocatedPayments.reduce(
+    (sum, r) => sum + r.remainingAmount,
+    0,
+  );
+  const hasUnallocatedPayments = unallocatedTotal > 0;
+  const netRemaining = Math.max(0, chaseAmount - unallocatedTotal);
+
   // 5. Build the prompt's ActionContext (legacy escape hatch wins if present).
   const actionContext = buildActionContext(request);
 
@@ -232,14 +244,18 @@ export async function generateDebtorEmail(
     policyConstraints,
     debtor.language,
     currency,
+    hasUnallocatedPayments,
   );
   let userPrompt = buildUserPrompt(
     debtor,
-    chaseInvoices,
+    hasUnallocatedPayments ? [] : chaseInvoices,
     history,
     effectiveAction,
     brief.text,
     isSmallBalanceChase,
+    hasUnallocatedPayments
+      ? { hasUnallocatedPayments: true, netRemaining, unallocatedTotal }
+      : undefined,
   );
 
   // Append email-type-specific addenda the base prompt doesn't natively carry.

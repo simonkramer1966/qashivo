@@ -12,7 +12,7 @@
  */
 
 import { db } from "../db";
-import { eq, and, sql, gte, isNotNull } from "drizzle-orm";
+import { eq, and, sql, gte, isNotNull, inArray, lt } from "drizzle-orm";
 import {
   invoices,
   contacts,
@@ -20,6 +20,7 @@ import {
   cachedXeroPrepayments,
   cachedXeroCreditNotes,
   dsoSnapshots,
+  unallocatedPayments,
 } from "@shared/schema";
 
 export interface ARSummary {
@@ -176,4 +177,57 @@ export async function getRolling30DayDSO(tenantId: string): Promise<number> {
   // Fallback to current DSO from AR summary
   const summary = await getARSummary(tenantId);
   return summary.currentDSO;
+}
+
+/**
+ * Per-contact effective overdue: gross overdue from invoices minus any
+ * unallocated payments that haven't been reconciled by Xero yet.
+ *
+ * Used by the planner (Gate 2 — "zero or negative net = full stop") and
+ * by the email pipeline (R1 — chase the NET amount, not the gross).
+ */
+export async function getEffectiveOverdue(
+  tenantId: string,
+  contactId: string,
+): Promise<{
+  xeroOverdue: number;
+  unallocatedTotal: number;
+  effectiveOverdue: number;
+  hasUnallocatedPayments: boolean;
+}> {
+  // 1. Sum of (amount - amountPaid) across overdue invoices for this contact.
+  //    Mirrors the excluded-status set from getARSummary.
+  const [invRow] = await db
+    .select({
+      overdue: sql<number>`COALESCE(SUM(CASE WHEN LOWER(${invoices.status}) NOT IN ${sql.raw(EXCLUDED_STATUSES)} AND ${invoices.dueDate} < CURRENT_DATE THEN ${invoices.amount} - ${invoices.amountPaid} ELSE 0 END), 0)`,
+    })
+    .from(invoices)
+    .where(and(eq(invoices.tenantId, tenantId), eq(invoices.contactId, contactId)));
+
+  const xeroOverdue = Math.round(Number(invRow?.overdue || 0) * 100) / 100;
+
+  // 2. Sum remainingAmount across live unallocated rows.
+  const [unRow] = await db
+    .select({
+      total: sql<number>`COALESCE(SUM(${unallocatedPayments.remainingAmount}::numeric), 0)`,
+    })
+    .from(unallocatedPayments)
+    .where(
+      and(
+        eq(unallocatedPayments.tenantId, tenantId),
+        eq(unallocatedPayments.contactId, contactId),
+        inArray(unallocatedPayments.status, ["unallocated", "partially_allocated"]),
+      ),
+    );
+
+  const unallocatedTotal = Math.round(Number(unRow?.total || 0) * 100) / 100;
+
+  const effectiveOverdue = Math.max(0, Math.round((xeroOverdue - unallocatedTotal) * 100) / 100);
+
+  return {
+    xeroOverdue,
+    unallocatedTotal,
+    effectiveOverdue,
+    hasUnallocatedPayments: unallocatedTotal > 0,
+  };
 }
