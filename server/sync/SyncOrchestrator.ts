@@ -34,7 +34,7 @@ const RETRY_SCHEDULE = [
   { delay: 15 * 60 * 1000, label: '15 minutes' },
 ];
 
-const POLL_INTERVAL_MS = 4 * 60 * 60 * 1000;     // 4 hours
+const SCHEDULE_TICK_MS = 60 * 1000;               // tick once per minute
 const HEALTH_CHECK_INTERVAL_MS = 20 * 60 * 1000;  // 20 minutes
 const TENANT_COOLDOWN_MS = 60 * 1000;              // 1 min between syncs per tenant
 const CONSECUTIVE_FAILURES_DEGRADED = 3;
@@ -67,6 +67,7 @@ export class SyncOrchestrator {
   private healthTimer: ReturnType<typeof setInterval> | null = null;
   private queueTimer: ReturnType<typeof setInterval> | null = null;
   private isProcessingQueue = false;
+  private lastScheduleCheckAt = new Date();
   // Per-(tenant, entity) leading-edge throttle for sync_progress events
   private progressEmitLastAt = new Map<string, number>();
   private static readonly PROGRESS_THROTTLE_MS = 500;
@@ -105,8 +106,13 @@ export class SyncOrchestrator {
     // Process sync queue every 5 seconds
     this.queueTimer = setInterval(() => this.processQueue(), 5000);
 
-    // Schedule 4-hour incremental polls for all connected tenants
-    this.pollTimer = setInterval(() => this.scheduleAllTenants('incremental', 'schedule'), POLL_INTERVAL_MS);
+    // Initialise schedule-tick watermark to "now" so the boot kick (below)
+    // handles the first sync rather than the tick firing on boot.
+    this.lastScheduleCheckAt = new Date();
+
+    // Tick once per minute to check whether any tenant just crossed a
+    // scheduled sync slot (07:00 / 13:00 by default, in tenant local time).
+    this.pollTimer = setInterval(() => { void this.checkSchedule(); }, SCHEDULE_TICK_MS);
 
     // Schedule health checks every 20 minutes
     this.healthTimer = setInterval(() => this.runHealthChecks(), HEALTH_CHECK_INTERVAL_MS);
@@ -117,7 +123,7 @@ export class SyncOrchestrator {
     // Run initial poll on startup (after 10 seconds to let the server boot)
     setTimeout(() => this.scheduleAllTenants('incremental', 'schedule'), 10_000);
 
-    console.log('[SyncOrchestrator] Started — polling every 4 hours, health checks every 20 min');
+    console.log('[SyncOrchestrator] Started — polling schedule every 60s, health checks every 20 min');
   }
 
   stop() {
@@ -232,6 +238,60 @@ export class SyncOrchestrator {
     };
     // Check every 5 minutes
     setInterval(checkReconciliation, 5 * 60 * 1000);
+  }
+
+  // ─── Fixed-slot scheduling ───────────────────────────────────────────────
+
+  /**
+   * Runs once per minute. For each connected tenant, checks whether any of
+   * its scheduled slots (HH:MM in tenant local time) was crossed since the
+   * previous tick, and enqueues an incremental sync if so. Handles DST,
+   * server clock jumps, and missed slots uniformly.
+   */
+  private async checkSchedule() {
+    const now = new Date();
+    const lastCheck = this.lastScheduleCheckAt;
+    this.lastScheduleCheckAt = now;
+
+    try {
+      const rows = await db.select({
+        id: tenants.id,
+        syncScheduleTimes: tenants.syncScheduleTimes,
+        executionTimezone: tenants.executionTimezone,
+        xeroAutoSync: tenants.xeroAutoSync,
+      }).from(tenants).where(sql`${tenants.xeroAccessToken} IS NOT NULL AND ${tenants.xeroTenantId} IS NOT NULL`);
+
+      let scheduled = 0;
+      for (const t of rows) {
+        if (t.xeroAutoSync === false) continue;
+        const slots = t.syncScheduleTimes ?? ['07:00', '13:00'];
+        const tz = t.executionTimezone ?? 'Europe/London';
+        if (crossedScheduledSlot(lastCheck, now, slots, tz)) {
+          this.enqueueSync(t.id, 'incremental', 'schedule');
+          scheduled++;
+        }
+      }
+      if (scheduled > 0) {
+        console.log(`[SyncOrchestrator] Scheduled incremental sync for ${scheduled} tenants`);
+      }
+    } catch (err) {
+      console.error('[SyncOrchestrator] checkSchedule failed:', err);
+    }
+  }
+
+  /**
+   * Returns the soonest upcoming absolute Date from any slot in `slots`,
+   * evaluated in `tz`. Returns null if `slots` is empty.
+   */
+  getNextScheduledSyncAt(slots: string[], tz: string, now: Date = new Date()): Date | null {
+    if (!slots || slots.length === 0) return null;
+    let soonest: Date | null = null;
+    for (const slot of slots) {
+      const next = nextOccurrenceOfSlot(slot, tz, now);
+      if (!next) continue;
+      if (!soonest || next.getTime() < soonest.getTime()) soonest = next;
+    }
+    return soonest;
   }
 
   // ─── Core Sync Execution ─────────────────────────────────────────────────
@@ -1246,4 +1306,143 @@ export class SyncOrchestrator {
       }).where(eq(syncState.id, state.id));
     } catch { /* non-fatal */ }
   }
+}
+
+// ─── Schedule helpers (pure, unit-testable) ──────────────────────────────
+
+/**
+ * Parse an HH:MM slot. Returns null if malformed.
+ */
+function parseSlot(slot: string): { h: number; m: number } | null {
+  const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(slot.trim());
+  if (!match) return null;
+  return { h: parseInt(match[1], 10), m: parseInt(match[2], 10) };
+}
+
+/**
+ * Format a UTC Date into parts of a given IANA timezone.
+ */
+function getTzParts(date: Date, tz: string): {
+  year: number; month: number; day: number; hour: number; minute: number;
+} {
+  const fmt = new Intl.DateTimeFormat('en-GB', {
+    timeZone: tz,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+  const parts: Record<string, string> = {};
+  for (const p of fmt.formatToParts(date)) {
+    if (p.type !== 'literal') parts[p.type] = p.value;
+  }
+  return {
+    year: parseInt(parts.year, 10),
+    month: parseInt(parts.month, 10),
+    day: parseInt(parts.day, 10),
+    hour: parseInt(parts.hour === '24' ? '00' : parts.hour, 10),
+    minute: parseInt(parts.minute, 10),
+  };
+}
+
+/**
+ * Given a target local (y,m,d,h,min) in `tz`, return the UTC Date that
+ * represents that wall-clock moment. Uses iterative refinement to handle
+ * DST. Returns null if the target time doesn't exist (spring-forward gap).
+ */
+function localToUtc(
+  y: number, mo: number, d: number, h: number, min: number, tz: string,
+): Date | null {
+  // First guess: interpret the local components as if they were UTC.
+  let guess = Date.UTC(y, mo - 1, d, h, min, 0, 0);
+  // Refine twice — enough for any IANA offset.
+  for (let i = 0; i < 3; i++) {
+    const parts = getTzParts(new Date(guess), tz);
+    const drift =
+      (parts.year - y) * 365 * 24 * 60 +
+      (parts.month - mo) * 31 * 24 * 60 +
+      (parts.day - d) * 24 * 60 +
+      (parts.hour - h) * 60 +
+      (parts.minute - min);
+    if (drift === 0) return new Date(guess);
+    guess -= drift * 60 * 1000;
+  }
+  // Final check — if still drifting the target time doesn't exist (DST gap).
+  const finalParts = getTzParts(new Date(guess), tz);
+  if (finalParts.year !== y || finalParts.month !== mo || finalParts.day !== d ||
+      finalParts.hour !== h || finalParts.minute !== min) {
+    return null;
+  }
+  return new Date(guess);
+}
+
+/**
+ * Returns the most recent absolute Date at which `slot` (HH:MM in `tz`)
+ * occurred at-or-before `reference`. Handles DST gaps by walking back a day.
+ */
+function mostRecentSlotAtOrBefore(slot: string, tz: string, reference: Date): Date | null {
+  const parsed = parseSlot(slot);
+  if (!parsed) return null;
+  const refParts = getTzParts(reference, tz);
+
+  // Try today's slot first.
+  let candidate = localToUtc(refParts.year, refParts.month, refParts.day, parsed.h, parsed.m, tz);
+  if (candidate && candidate.getTime() <= reference.getTime()) {
+    return candidate;
+  }
+
+  // Walk back up to 3 days to find the most recent valid slot.
+  for (let back = 1; back <= 3; back++) {
+    const d = new Date(Date.UTC(refParts.year, refParts.month - 1, refParts.day) - back * 24 * 60 * 60 * 1000);
+    const parts = getTzParts(d, tz);
+    const attempt = localToUtc(parts.year, parts.month, parts.day, parsed.h, parsed.m, tz);
+    if (attempt && attempt.getTime() <= reference.getTime()) return attempt;
+  }
+  return null;
+}
+
+/**
+ * Returns true if any slot in `slots` (HH:MM in `tz`) falls in the
+ * half-open interval (lastCheck, now]. Handles DST and day rollover.
+ */
+export function crossedScheduledSlot(
+  lastCheck: Date,
+  now: Date,
+  slots: string[],
+  tz: string,
+): boolean {
+  if (now.getTime() <= lastCheck.getTime()) return false;
+  for (const slot of slots) {
+    const recent = mostRecentSlotAtOrBefore(slot, tz, now);
+    if (!recent) continue;
+    if (recent.getTime() > lastCheck.getTime() && recent.getTime() <= now.getTime()) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Returns the soonest absolute Date strictly after `now` at which `slot`
+ * occurs in `tz`. Skips DST-gap days. Returns null if slot is malformed.
+ */
+function nextOccurrenceOfSlot(slot: string, tz: string, now: Date): Date | null {
+  const parsed = parseSlot(slot);
+  if (!parsed) return null;
+  const refParts = getTzParts(now, tz);
+
+  // Try today.
+  let candidate = localToUtc(refParts.year, refParts.month, refParts.day, parsed.h, parsed.m, tz);
+  if (candidate && candidate.getTime() > now.getTime()) return candidate;
+
+  // Walk forward up to 3 days.
+  for (let fwd = 1; fwd <= 3; fwd++) {
+    const d = new Date(Date.UTC(refParts.year, refParts.month - 1, refParts.day) + fwd * 24 * 60 * 60 * 1000);
+    const parts = getTzParts(d, tz);
+    const attempt = localToUtc(parts.year, parts.month, parts.day, parsed.h, parsed.m, tz);
+    if (attempt && attempt.getTime() > now.getTime()) return attempt;
+  }
+  return null;
 }

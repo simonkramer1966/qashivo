@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { useMutation } from "@tanstack/react-query";
 import { CheckCircle2, AlertCircle, Loader2, X } from "lucide-react";
 import { useSyncStatus } from "@/hooks/useSyncStatus";
 import { humanizeSyncError } from "@/lib/syncErrorMessages";
-import { apiRequest } from "@/lib/queryClient";
+import { useManualSync } from "@/hooks/useManualSync";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -23,9 +22,7 @@ export default function SyncStatusBanner() {
     setDismissed(false);
   }, [phase]);
 
-  const retryMutation = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/xero/sync", {}),
-  });
+  const retryMutation = useManualSync();
 
   if (dismissed) return null;
   if (phase === "idle") return null;

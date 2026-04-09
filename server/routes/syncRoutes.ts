@@ -7,6 +7,7 @@ import { storage } from "../storage";
 import { db } from "../db";
 import { syncState, tenants } from "@shared/schema";
 import { and, eq } from "drizzle-orm";
+import { syncOrchestrator } from "../sync";
 
 /**
  * Raw body middleware for webhook signature verification
@@ -413,12 +414,17 @@ export function registerSyncRoutes(app: Express): void {
         db.select({
           xeroLastSyncAt: tenants.xeroLastSyncAt,
           xeroConnectionStatus: tenants.xeroConnectionStatus,
+          syncScheduleTimes: tenants.syncScheduleTimes,
+          executionTimezone: tenants.executionTimezone,
         }).from(tenants).where(eq(tenants.id, user.tenantId)),
       ]);
       const state = stateRows[0];
       const tenant = tenantRows[0];
 
       const metadata = (state?.metadata as any) || {};
+      const scheduleTimes = tenant?.syncScheduleTimes ?? ['07:00', '13:00'];
+      const timezone = tenant?.executionTimezone ?? 'Europe/London';
+      const nextScheduledSyncAt = syncOrchestrator.getNextScheduledSyncAt(scheduleTimes, timezone);
 
       res.json({
         status: state?.syncStatus ?? 'idle',
@@ -428,6 +434,9 @@ export function registerSyncRoutes(app: Express): void {
         lastError: state?.errorMessage ?? null,
         consecutiveFailures: metadata.consecutiveFailures ?? 0,
         connectionStatus: tenant?.xeroConnectionStatus ?? null,
+        syncScheduleTimes: scheduleTimes,
+        executionTimezone: timezone,
+        nextScheduledSyncAt: nextScheduledSyncAt?.toISOString() ?? null,
       });
     } catch (error) {
       console.error('❌ /api/sync/current error:', error);

@@ -1018,7 +1018,7 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
     }
   });
 
-  app.post("/api/xero/sync", isAuthenticated, async (req: any, res) => {
+  app.post("/api/xero/sync", ...withMinimumRole('manager'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
@@ -1185,6 +1185,64 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
     }
   });
 
+  // ─── Sync schedule (fixed daily slots, tenant-local) ───────────────────
+  app.get("/api/xero/sync/schedule", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+      const [row] = await db.select({
+        times: tenants.syncScheduleTimes,
+        timezone: tenants.executionTimezone,
+      }).from(tenants).where(eq(tenants.id, user.tenantId));
+      res.json({
+        times: row?.times ?? ['07:00', '13:00'],
+        timezone: row?.timezone ?? 'Europe/London',
+      });
+    } catch (error) {
+      console.error("Error fetching sync schedule:", error);
+      res.status(500).json({ message: "Failed to fetch sync schedule" });
+    }
+  });
+
+  app.put("/api/xero/sync/schedule", ...withMinimumRole('manager'), async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const raw = req.body?.times;
+      if (!Array.isArray(raw) || raw.length < 1 || raw.length > 12) {
+        return res.status(400).json({ message: "times must be an array of 1–12 HH:MM strings" });
+      }
+      const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
+      const cleaned: string[] = [];
+      for (const entry of raw) {
+        if (typeof entry !== 'string') {
+          return res.status(400).json({ message: `Invalid time: ${JSON.stringify(entry)}` });
+        }
+        const trimmed = entry.trim();
+        if (!HHMM.test(trimmed)) {
+          return res.status(400).json({ message: `Invalid time "${entry}" — use HH:MM (24h)` });
+        }
+        if (!cleaned.includes(trimmed)) cleaned.push(trimmed);
+      }
+      cleaned.sort();
+
+      await db.update(tenants)
+        .set({ syncScheduleTimes: cleaned })
+        .where(eq(tenants.id, user.tenantId));
+
+      res.json({ success: true, times: cleaned });
+    } catch (error) {
+      console.error("Error updating sync schedule:", error);
+      res.status(500).json({ message: "Failed to update sync schedule" });
+    }
+  });
+
+  // TODO: remove once syncScheduleTimes is the only sync-cadence surface
   app.get("/api/xero/sync/settings", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);

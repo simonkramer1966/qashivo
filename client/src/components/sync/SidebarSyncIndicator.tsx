@@ -1,10 +1,10 @@
-import { useMemo } from "react";
+import { useMemo, MouseEvent } from "react";
 import { useLocation } from "wouter";
-import { useMutation } from "@tanstack/react-query";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import { Clock, AlertCircle, RefreshCw } from "lucide-react";
 import { useSyncStatus } from "@/hooks/useSyncStatus";
-import { apiRequest } from "@/lib/queryClient";
+import { useManualSync } from "@/hooks/useManualSync";
+import { usePermissions } from "@/hooks/usePermissions";
 import {
   Tooltip,
   TooltipContent,
@@ -19,17 +19,17 @@ interface Props {
 /**
  * Subtle sync state indicator pinned above the user/logout block in the sidebar.
  * - Syncing: pulsing cyan dot + "Syncing…"
- * - Idle with last sync: clock icon + "Last sync N ago"
+ * - Idle with last sync: clock icon + "Last sync N ago" + "Next sync HH:MM" + optional manual sync button
  * - Failed: red dot + "Sync failed" + retry
  * - Never synced: hidden
  */
 export default function SidebarSyncIndicator({ collapsed }: Props) {
-  const { phase, lastSync, error, isInProgress } = useSyncStatus();
+  const { phase, lastSync, error, isInProgress, nextScheduledSyncAt } = useSyncStatus();
   const [, setLocation] = useLocation();
+  const { hasMinimumRole } = usePermissions();
+  const canSync = hasMinimumRole("manager");
 
-  const retryMutation = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/xero/sync", {}),
-  });
+  const sync = useManualSync();
 
   const relative = useMemo(() => {
     if (!lastSync) return null;
@@ -40,15 +40,34 @@ export default function SidebarSyncIndicator({ collapsed }: Props) {
     }
   }, [lastSync]);
 
+  const nextLabel = useMemo(() => {
+    if (!nextScheduledSyncAt) return null;
+    try {
+      const diffMs = nextScheduledSyncAt.getTime() - Date.now();
+      if (diffMs > 0 && diffMs <= 30 * 60 * 1000) {
+        return formatDistanceToNow(nextScheduledSyncAt, { addSuffix: true });
+      }
+      return format(nextScheduledSyncAt, "HH:mm");
+    } catch {
+      return null;
+    }
+  }, [nextScheduledSyncAt]);
+
   const isSyncing = isInProgress || phase === "starting" || phase === "fetching" || phase === "processing";
   const isFailed = phase === "failed";
 
   // Hidden when never synced and not in progress / not failed.
   if (!isSyncing && !isFailed && !lastSync) return null;
 
-  const handleClick = () => {
+  const handleSyncClick = (e: MouseEvent) => {
+    e.stopPropagation();
+    if (!canSync || isSyncing || sync.isPending) return;
+    sync.mutate();
+  };
+
+  const handleRowClick = () => {
     if (isFailed) {
-      retryMutation.mutate();
+      if (canSync) sync.mutate();
       return;
     }
     setLocation("/settings/integrations");
@@ -70,11 +89,20 @@ export default function SidebarSyncIndicator({ collapsed }: Props) {
       ? `Last sync ${relative}`
       : "Sync";
 
+    const handleCollapsedClick = () => {
+      if (isSyncing) return;
+      if (canSync) {
+        sync.mutate();
+        return;
+      }
+      setLocation("/settings/integrations");
+    };
+
     return (
       <Tooltip>
         <TooltipTrigger asChild>
           <button
-            onClick={handleClick}
+            onClick={handleCollapsedClick}
             className="w-full flex items-center justify-center py-2 rounded-md text-[hsl(var(--sidebar-foreground))]/70 hover:bg-[hsl(var(--sidebar-accent))] transition-colors"
             aria-label={tooltipText}
           >
@@ -82,7 +110,10 @@ export default function SidebarSyncIndicator({ collapsed }: Props) {
           </button>
         </TooltipTrigger>
         <TooltipContent side="right" sideOffset={8}>
-          {tooltipText}
+          <div>{tooltipText}</div>
+          {!isSyncing && !isFailed && nextLabel && (
+            <div className="opacity-70">Next sync {nextLabel}</div>
+          )}
         </TooltipContent>
       </Tooltip>
     );
@@ -92,7 +123,7 @@ export default function SidebarSyncIndicator({ collapsed }: Props) {
   if (isSyncing) {
     return (
       <button
-        onClick={handleClick}
+        onClick={handleRowClick}
         className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-[hsl(var(--sidebar-foreground))]/70 hover:bg-[hsl(var(--sidebar-accent))] hover:text-white transition-colors"
       >
         <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
@@ -106,14 +137,16 @@ export default function SidebarSyncIndicator({ collapsed }: Props) {
       <div className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-destructive">
         <AlertCircle className="w-3 h-3 shrink-0" />
         <span className="flex-1 truncate">Sync failed</span>
-        <button
-          onClick={() => retryMutation.mutate()}
-          disabled={retryMutation.isPending}
-          className="text-[hsl(var(--sidebar-foreground))]/70 hover:text-white"
-          title="Retry sync"
-        >
-          <RefreshCw className={cn("w-3 h-3", retryMutation.isPending && "animate-spin")} />
-        </button>
+        {canSync && (
+          <button
+            onClick={() => sync.mutate()}
+            disabled={sync.isPending}
+            className="text-[hsl(var(--sidebar-foreground))]/70 hover:text-white"
+            title="Retry sync"
+          >
+            <RefreshCw className={cn("w-3 h-3", sync.isPending && "animate-spin")} />
+          </button>
+        )}
       </div>
     );
   }
@@ -121,13 +154,31 @@ export default function SidebarSyncIndicator({ collapsed }: Props) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <button
-          onClick={handleClick}
-          className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-[hsl(var(--sidebar-foreground))]/60 hover:bg-[hsl(var(--sidebar-accent))] hover:text-white transition-colors"
+        <div
+          onClick={handleRowClick}
+          role="button"
+          tabIndex={0}
+          className="w-full flex items-start gap-2 px-3 py-1.5 rounded-md text-xs text-[hsl(var(--sidebar-foreground))]/60 hover:bg-[hsl(var(--sidebar-accent))] hover:text-white transition-colors cursor-pointer"
         >
-          <Clock className="w-3 h-3 shrink-0" />
-          <span className="truncate">Last sync {relative}</span>
-        </button>
+          <Clock className="w-3 h-3 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0 leading-tight">
+            <div className="truncate">Last sync {relative}</div>
+            {nextLabel && (
+              <div className="truncate opacity-70">Next sync {nextLabel}</div>
+            )}
+          </div>
+          {canSync && (
+            <button
+              onClick={handleSyncClick}
+              disabled={sync.isPending}
+              aria-label="Sync now"
+              title="Sync now"
+              className="shrink-0 text-[hsl(var(--sidebar-foreground))]/60 hover:text-white"
+            >
+              <RefreshCw className={cn("w-3 h-3", sync.isPending && "animate-spin")} />
+            </button>
+          )}
+        </div>
       </TooltipTrigger>
       <TooltipContent side="right" sideOffset={8}>
         {lastSync?.toLocaleString() ?? ""}

@@ -32,6 +32,9 @@ export interface SyncStatusValue {
   summary: SyncSummary | null;
   isInProgress: boolean;
   consecutiveFailures: number;
+  nextScheduledSyncAt: Date | null;
+  scheduleTimes: string[];
+  timezone: string;
 }
 
 interface CurrentResponse {
@@ -42,6 +45,9 @@ interface CurrentResponse {
   lastError: string | null;
   consecutiveFailures: number;
   connectionStatus: string | null;
+  syncScheduleTimes?: string[];
+  executionTimezone?: string;
+  nextScheduledSyncAt?: string | null;
 }
 
 const DEFAULT_VALUE: SyncStatusValue = {
@@ -53,6 +59,9 @@ const DEFAULT_VALUE: SyncStatusValue = {
   summary: null,
   isInProgress: false,
   consecutiveFailures: 0,
+  nextScheduledSyncAt: null,
+  scheduleTimes: ["07:00", "13:00"],
+  timezone: "Europe/London",
 };
 
 const SyncStatusContext = createContext<SyncStatusValue>(DEFAULT_VALUE);
@@ -95,6 +104,9 @@ export function SyncStatusProvider({ children }: { children: ReactNode }) {
         lastSync,
         error: current.lastError,
         consecutiveFailures: current.consecutiveFailures ?? 0,
+        nextScheduledSyncAt: current.nextScheduledSyncAt ? new Date(current.nextScheduledSyncAt) : null,
+        scheduleTimes: current.syncScheduleTimes ?? prev.scheduleTimes,
+        timezone: current.executionTimezone ?? prev.timezone,
       };
     });
   }, [current]);

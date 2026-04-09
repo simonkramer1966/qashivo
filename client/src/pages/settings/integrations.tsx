@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/hooks/usePermissions";
 import {
   Loader2,
   CheckCircle2,
@@ -153,6 +154,11 @@ const ACCOUNTING_PROVIDERS = {
 function AccountingTab() {
   const { toast } = useToast();
   const [expandedProvider, setExpandedProvider] = useState<string | null>(null);
+  const { hasMinimumRole } = usePermissions();
+  const canManageSchedule = hasMinimumRole("manager");
+  const [scheduleEditing, setScheduleEditing] = useState(false);
+  const [scheduleDraft, setScheduleDraft] = useState("");
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery<{ success: boolean; providers: ProviderStatus[] }>({
     queryKey: ["/api/providers/status"],
@@ -213,6 +219,53 @@ function AccountingTab() {
     },
   });
 
+  // Sync schedule — read from /api/sync/current (also used by sidebar hydration)
+  const { data: syncCurrent } = useQuery<{
+    syncScheduleTimes?: string[];
+    executionTimezone?: string;
+    nextScheduledSyncAt?: string | null;
+  }>({
+    queryKey: ["/api/sync/current"],
+    staleTime: 60_000,
+  });
+
+  const scheduleTimes = syncCurrent?.syncScheduleTimes ?? ["07:00", "13:00"];
+
+  const scheduleMutation = useMutation({
+    mutationFn: async (times: string[]) => {
+      const res = await apiRequest("PUT", "/api/xero/sync/schedule", { times });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/sync/current"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/providers/status"] });
+      toast({ title: "Schedule updated" });
+      setScheduleEditing(false);
+      setScheduleError(null);
+    },
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : "Failed to update schedule";
+      // apiRequest throws "400: <server message>" — strip prefix
+      const clean = msg.replace(/^\d+:\s*/, "");
+      setScheduleError(clean || "Invalid schedule");
+    },
+  });
+
+  const openScheduleEditor = () => {
+    setScheduleDraft(scheduleTimes.join(", "));
+    setScheduleError(null);
+    setScheduleEditing(true);
+  };
+
+  const saveSchedule = () => {
+    const parts = scheduleDraft
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    setScheduleError(null);
+    scheduleMutation.mutate(parts);
+  };
+
   function renderProviderTile(def: { id: string; name: string; description: string; color: string }) {
     const status = providerMap.get(def.id);
     const isConnected = status?.connected && status?.connectionStatus !== "disconnected";
@@ -271,6 +324,62 @@ function AccountingTab() {
                 </p>
               </div>
             </div>
+
+            {def.id === "xero" && (
+              <div className="text-sm">
+                <span className="text-muted-foreground">Sync schedule</span>
+                {!scheduleEditing ? (
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <p className="font-medium">{scheduleTimes.join(", ")}</p>
+                    {canManageSchedule && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-xs"
+                        onClick={(e) => { e.stopPropagation(); openScheduleEditor(); }}
+                      >
+                        Edit
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="mt-1 space-y-2" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="text"
+                      value={scheduleDraft}
+                      onChange={(e) => setScheduleDraft(e.target.value)}
+                      placeholder="07:00, 13:00"
+                      className="w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
+                    />
+                    {scheduleError && (
+                      <p className="text-xs text-red-600">{scheduleError}</p>
+                    )}
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={saveSchedule}
+                        disabled={scheduleMutation.isPending}
+                      >
+                        {scheduleMutation.isPending ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
+                        Save
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => { setScheduleEditing(false); setScheduleError(null); }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Comma-separated HH:MM (24h). Times are in {syncCurrent?.executionTimezone ?? "Europe/London"}.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
 
             {status.connectionStatus === "error" && status.lastError && !status.lastSyncAt && (
               <p className="text-sm text-red-600">{status.lastError}</p>

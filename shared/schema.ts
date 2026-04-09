@@ -62,7 +62,8 @@ export const tenants = pgTable("tenants", {
   xeroTenantId: varchar("xero_tenant_id"),
   xeroOrganisationName: varchar("xero_organisation_name"),
   xeroExpiresAt: timestamp("xero_expires_at"),
-  xeroSyncInterval: integer("xero_sync_interval").default(240), // minutes (4 hours)
+  xeroSyncInterval: integer("xero_sync_interval").default(240), // minutes (4 hours) — deprecated, kept for legacy sync settings endpoint
+  syncScheduleTimes: text("sync_schedule_times").array().default(sql`ARRAY['07:00','13:00']`),
   xeroLastSyncAt: timestamp("xero_last_sync_at"),
   xeroAutoSync: boolean("xero_auto_sync").default(true),
   collectionsAutomationEnabled: boolean("collections_automation_enabled").default(true),
@@ -132,6 +133,8 @@ export const tenants = pgTable("tenants", {
   noResponseEscalationThreshold: integer("no_response_escalation_threshold").default(4), // Gap 5: Consecutive unanswered contacts before escalation pressure
   significantPaymentThreshold: decimal("significant_payment_threshold", { precision: 3, scale: 2 }).default("0.50"), // Gap 5: Payment fraction that triggers tone reset (0.50 = 50%)
   sendDelayMinutes: integer("send_delay_minutes").default(15), // Minutes to wait after approval before sending (0 = immediate)
+  conversationReplyDelayMin: integer("conversation_reply_delay_min").default(2), // Minimum minutes a non-manual conversation reply waits before sending (human-pacing)
+  conversationReplyDelayMax: integer("conversation_reply_delay_max").default(5), // Maximum minutes for the random reply delay
   chaseDelayDays: integer("chase_delay_days").default(5), // Days past due before Charlie actively seeks a payment date (Phase 1 → Phase 2 transition)
   preDueDateDays: integer("pre_due_date_days").default(7), // Days before due date for pre-due courtesy reminder
   preDueDateMinAmount: decimal("pre_due_date_min_amount", { precision: 10, scale: 2 }).default("1000.00"), // Minimum invoice amount for pre-due reminders (GBP)
