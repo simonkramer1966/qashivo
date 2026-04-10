@@ -2001,7 +2001,7 @@ export default function ForecastPage() {
             </CardHeader>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <CardContent className="text-xs text-muted-foreground space-y-2">
+            <CardContent className="text-sm text-muted-foreground space-y-2">
               <p>
                 <strong>Data source:</strong> Every forecast number traces back to
                 a specific outstanding invoice and your debtor's historical payment
