@@ -1020,41 +1020,41 @@ export default function ForecastPage() {
                 fill="rgba(59,130,246,0.12)"
                 connectNulls
               />
-              {/* Safety threshold */}
+              {/* Safety threshold — muted red dashed */}
               <ReferenceLine
                 y={safetyThreshold}
-                stroke="#ef4444"
+                stroke="#f87171"
                 strokeDasharray="6 3"
                 strokeWidth={1}
                 label={{
                   value: `Safety: ${fmt(safetyThreshold)}`,
                   position: "right",
                   fontSize: 10,
-                  fill: "#ef4444",
+                  fill: "#f87171",
                 }}
               />
-              {/* Opening balance reference */}
-              <ReferenceLine
-                y={openingBal}
-                stroke="#94a3b8"
-                strokeDasharray="4 4"
-                strokeWidth={0.5}
+              {/* Optimistic balance line — solid green */}
+              <Line
+                dataKey="optimisticBalance"
+                stroke="#22c55e"
+                strokeWidth={1.5}
+                dot={false}
+                connectNulls
               />
-              {/* Expected balance line */}
+              {/* Pessimistic balance line — solid deep red */}
+              <Line
+                dataKey="pessimisticBalance"
+                stroke="#dc2626"
+                strokeWidth={1.5}
+                dot={false}
+                connectNulls
+              />
+              {/* Expected balance line — solid blue */}
               <Line
                 dataKey="expectedBalance"
                 stroke="#3b82f6"
                 strokeWidth={2}
                 dot={{ r: 3, fill: "#3b82f6" }}
-                connectNulls
-              />
-              {/* Pessimistic line (faint) */}
-              <Line
-                dataKey="pessimisticBalance"
-                stroke="#93c5fd"
-                strokeWidth={1}
-                dot={false}
-                strokeDasharray="4 2"
                 connectNulls
               />
             </ComposedChart>
