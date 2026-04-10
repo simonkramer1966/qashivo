@@ -1028,20 +1028,22 @@ export default function ForecastPage() {
                   fill: "#f87171",
                 }}
               />
-              {/* Optimistic balance line — solid green */}
+              {/* Optimistic balance line — dotted green */}
               <Line
                 dataKey="optimisticBalance"
                 stroke="#22c55e"
-                strokeWidth={1.5}
-                dot={false}
+                strokeWidth={1}
+                dot={{ r: 2, fill: "#22c55e" }}
+                strokeDasharray="2 3"
                 connectNulls
               />
-              {/* Pessimistic balance line — solid deep red */}
+              {/* Pessimistic balance line — dotted deep red */}
               <Line
                 dataKey="pessimisticBalance"
                 stroke="#dc2626"
-                strokeWidth={1.5}
-                dot={false}
+                strokeWidth={1}
+                dot={{ r: 2, fill: "#dc2626" }}
+                strokeDasharray="2 3"
                 connectNulls
               />
               {/* Expected balance line — solid blue */}
