@@ -24,7 +24,6 @@ import {
   TrendingUp,
   TrendingDown,
   AlertTriangle,
-  Info,
   ArrowUpRight,
   ArrowDownRight,
   Minus,
@@ -359,8 +358,9 @@ export default function ForecastPage() {
 
   const [editingBalance, setEditingBalance] = useState(false);
   const [balanceInput, setBalanceInput] = useState("");
+  const [editingSafety, setEditingSafety] = useState(false);
+  const [safetyInput, setSafetyInput] = useState("");
   const [changesDismissed, setChangesDismissed] = useState(false);
-  const [expandedWeek, setExpandedWeek] = useState<number | null>(null);
   const [expandedGap, setExpandedGap] = useState<number | null>(null);
   const [showMethodology, setShowMethodology] = useState(false);
 
@@ -576,6 +576,16 @@ export default function ForecastPage() {
     },
   });
 
+  const safetyMutation = useMutation({
+    mutationFn: async (amount: number) => {
+      await apiRequest("PATCH", "/api/cashflow/safety-threshold", { amount });
+    },
+    onSuccess: () => {
+      setEditingSafety(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/cashflow/inflow-forecast"] });
+    },
+  });
+
   const validatePatternMutation = useMutation({
     mutationFn: async ({
       id,
@@ -674,79 +684,148 @@ export default function ForecastPage() {
 
   return (
     <div className="space-y-6">
-      {/* A. Opening Balance */}
+      {/* A. Opening Balance + Safety Threshold */}
       <div className="flex items-center justify-between py-2">
-        <div>
-          <p className="text-sm text-muted-foreground">Opening cash balance</p>
-          <div className="flex items-center gap-2">
-            {editingBalance ? (
-              <div className="flex items-center gap-1">
-                <Input
-                  type="number"
-                  value={balanceInput}
-                  onChange={(e) => setBalanceInput(e.target.value)}
-                  className="h-8 w-40 text-lg font-semibold"
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
+        <div className="flex items-start gap-10">
+          {/* Opening cash balance */}
+          <div>
+            <p className="text-sm text-muted-foreground">Opening cash balance</p>
+            <div className="flex items-center gap-2">
+              {editingBalance ? (
+                <div className="flex items-center gap-1">
+                  <Input
+                    type="number"
+                    value={balanceInput}
+                    onChange={(e) => setBalanceInput(e.target.value)}
+                    className="h-8 w-40 text-lg font-semibold"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        const val = parseFloat(balanceInput);
+                        if (!isNaN(val)) balanceMutation.mutate(val);
+                      }
+                      if (e.key === "Escape") setEditingBalance(false);
+                    }}
+                  />
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 w-8 p-0"
+                    onClick={() => {
                       const val = parseFloat(balanceInput);
                       if (!isNaN(val)) balanceMutation.mutate(val);
-                    }
-                    if (e.key === "Escape") setEditingBalance(false);
-                  }}
-                />
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-8 w-8 p-0"
-                  onClick={() => {
-                    const val = parseFloat(balanceInput);
-                    if (!isNaN(val)) balanceMutation.mutate(val);
-                  }}
-                  disabled={balanceMutation.isPending}
-                >
-                  {balanceMutation.isPending ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Check className="h-3.5 w-3.5" />
-                  )}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-8 w-8 p-0"
-                  onClick={() => setEditingBalance(false)}
-                >
-                  <X className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            ) : (
-              <>
-                <span className="text-2xl font-semibold">{fmt(openingBal)}</span>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 w-7 p-0"
-                  onClick={() => {
-                    setBalanceInput(String(openingBal));
-                    setEditingBalance(true);
-                  }}
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                </Button>
-              </>
+                    }}
+                    disabled={balanceMutation.isPending}
+                  >
+                    {balanceMutation.isPending ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Check className="h-3.5 w-3.5" />
+                    )}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 w-8 p-0"
+                    onClick={() => setEditingBalance(false)}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <span className="text-2xl font-semibold">{fmt(openingBal)}</span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 w-7 p-0"
+                    onClick={() => {
+                      setBalanceInput(String(openingBal));
+                      setEditingBalance(true);
+                    }}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                </>
+              )}
+            </div>
+            {balance?.date && (
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {balance.source === "manual" ? "Manual entry" : balance.source} as of{" "}
+                {new Date(balance.date).toLocaleDateString("en-GB", {
+                  day: "numeric",
+                  month: "short",
+                })}
+              </p>
             )}
           </div>
-          {balance?.date && (
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {balance.source === "manual" ? "Manual entry" : balance.source} as of{" "}
-              {new Date(balance.date).toLocaleDateString("en-GB", {
-                day: "numeric",
-                month: "short",
-              })}
-            </p>
-          )}
+
+          {/* Safety threshold */}
+          <div>
+            <p className="text-sm text-muted-foreground">Safety threshold</p>
+            <div className="flex items-center gap-2">
+              {editingSafety ? (
+                <div className="flex items-center gap-1">
+                  <Input
+                    type="number"
+                    value={safetyInput}
+                    onChange={(e) => setSafetyInput(e.target.value)}
+                    className="h-8 w-40 text-lg font-semibold"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        const val = parseFloat(safetyInput);
+                        if (!isNaN(val) && val >= 0) safetyMutation.mutate(val);
+                      }
+                      if (e.key === "Escape") setEditingSafety(false);
+                    }}
+                  />
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 w-8 p-0"
+                    onClick={() => {
+                      const val = parseFloat(safetyInput);
+                      if (!isNaN(val) && val >= 0) safetyMutation.mutate(val);
+                    }}
+                    disabled={safetyMutation.isPending}
+                  >
+                    {safetyMutation.isPending ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Check className="h-3.5 w-3.5" />
+                    )}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 w-8 p-0"
+                    onClick={() => setEditingSafety(false)}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <span className="text-2xl font-semibold">{fmt(safetyThreshold)}</span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 w-7 p-0"
+                    onClick={() => {
+                      setSafetyInput(String(safetyThreshold));
+                      setEditingSafety(true);
+                    }}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                </>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">Balance alert level</p>
+          </div>
         </div>
+
         {balance?.source === "manual" && (
           <p className="text-xs text-muted-foreground">
             Connect Open Banking for real-time balance
@@ -1076,25 +1155,6 @@ export default function ForecastPage() {
           </Card>
         )}
 
-        {/* Unforecast remainder */}
-        <Card className="border-zinc-200">
-          <CardContent className="py-3 px-4">
-            <div className="flex items-center gap-2 mb-1">
-              <Info className="h-4 w-4 text-zinc-500" />
-              <span className="text-sm font-medium">Unforecast</span>
-            </div>
-            <p className="text-sm">
-              {fmt(forecast.unforecast.total)} (
-              {fmtPct(forecast.unforecast.percentOfOutstanding)}) outside 13-week
-              window
-            </p>
-            {forecast.unforecast.atRisk > 0 && (
-              <p className="text-xs text-red-500">
-                {fmt(forecast.unforecast.atRisk)} at risk (&gt;90 days overdue)
-              </p>
-            )}
-          </CardContent>
-        </Card>
       </div>
 
       {/* E2. Recurring Revenue Patterns — DISABLED (Layer 2 hidden for now) */}
@@ -1828,89 +1888,7 @@ export default function ForecastPage() {
         </Card>
       </div>
 
-      {/* H. Weekly Breakdown Table */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium">Weekly Breakdown</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-0.5">
-            {/* Header */}
-            <div className="grid grid-cols-[2fr_1fr_1fr_1fr_80px] gap-2 text-xs text-muted-foreground font-medium px-3 py-2">
-              <span>Week</span>
-              <span className="text-right">Optimistic</span>
-              <span className="text-right">Expected</span>
-              <span className="text-right">Pessimistic</span>
-              <span className="text-center">Confidence</span>
-            </div>
-            {forecast.weeklyForecasts.map((wf) => (
-              <Collapsible
-                key={wf.weekNumber}
-                open={expandedWeek === wf.weekNumber}
-                onOpenChange={(open) =>
-                  setExpandedWeek(open ? wf.weekNumber : null)
-                }
-              >
-                <CollapsibleTrigger asChild>
-                  <button className="w-full grid grid-cols-[2fr_1fr_1fr_1fr_80px] gap-2 text-sm px-3 py-2 rounded hover:bg-muted/50 items-center">
-                    <span className="flex items-center gap-1.5 text-left">
-                      {expandedWeek === wf.weekNumber ? (
-                        <ChevronDown className="h-3.5 w-3.5" />
-                      ) : (
-                        <ChevronRight className="h-3.5 w-3.5" />
-                      )}
-                      Wk {wf.weekNumber} — {weekLabel(wf.weekStarting)}
-                      {forecast.concentrationRisk.weeklyConcentration[
-                        wf.weekNumber - 1
-                      ]?.isFragile && (
-                        <AlertTriangle className="h-3 w-3 text-amber-500" />
-                      )}
-                    </span>
-                    <span className="text-right text-emerald-600">{fmt(wf.optimistic)}</span>
-                    <span className="text-right font-medium">{fmt(wf.expected)}</span>
-                    <span className="text-right text-muted-foreground">{fmt(wf.pessimistic)}</span>
-                    <span className="text-center">{confidenceBadge(wf.confidence)}</span>
-                  </button>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <div className="ml-8 mb-3 space-y-1">
-                    {wf.invoiceBreakdown.slice(0, 10).map((inv, i) => (
-                      <div
-                        key={i}
-                        className="grid grid-cols-[2fr_1fr_1fr_1fr_80px] gap-2 text-xs text-muted-foreground px-3 py-1"
-                      >
-                        <span className="flex items-center gap-1">
-                          {inv.contactName}
-                          <span className="text-zinc-400">{inv.invoiceNumber}</span>
-                          {inv.promiseOverride && (
-                            <Badge variant="outline" className="text-[10px] h-4 bg-blue-50 text-blue-600">
-                              promise
-                            </Badge>
-                          )}
-                        </span>
-                        <span className="text-right">{fmt(inv.amountDue)}</span>
-                        <span className="text-right">
-                          {Math.round(inv.probability * 100)}%
-                        </span>
-                        <span className="text-right">{inv.basedOn}</span>
-                        <span className="text-center">
-                          {confidenceBadge(inv.confidence)}
-                        </span>
-                      </div>
-                    ))}
-                    {wf.invoiceBreakdown.length > 10 && (
-                      <p className="text-xs text-muted-foreground px-3">
-                        + {wf.invoiceBreakdown.length - 10} more invoices
-                      </p>
-                    )}
-                    {/* Recurring revenue breakdown — hidden while Layer 2 is disabled */}
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      {/* Weekly Breakdown Table — removed from UI, data available via API for Riley */}
 
       {/* Pipeline Summary */}
       {forecast.pipeline && (forecast.pipeline.committed + forecast.pipeline.uncommitted + forecast.pipeline.stretch) > 0 && (
@@ -2144,12 +2122,6 @@ export default function ForecastPage() {
                 <strong>Promise overrides:</strong> When a debtor has an active
                 payment promise, their forecast shifts toward the promised date,
                 weighted by their historical reliability score.
-              </p>
-              <p>
-                <strong>Unforecast remainder:</strong> The portion of outstanding
-                invoices that falls outside the 13-week window. This includes new
-                debtors (no history), at-risk invoices (90+ days overdue), and
-                long-tail payments (will arrive, just after 13 weeks).
               </p>
               <p>
                 <strong>Improvement:</strong> The model improves automatically
