@@ -22,10 +22,9 @@ import {
   paymentPromises,
   tenants,
   forecastOutflows,
-  pipelineItems,
   forecastSnapshots,
 } from "@shared/schema";
-import { eq, and, sql, isNotNull, inArray } from "drizzle-orm";
+import { eq, and, sql, isNotNull } from "drizzle-orm";
 import {
   fitDistribution,
   weeklyProbabilitiesThreeScenarios,
@@ -185,23 +184,17 @@ export interface InflowForecast {
     }[];
   };
 
-  // Layer 3: User pipeline
+  // Layer 3: User pipeline (stored as forecast_outflows with pipeline_ categories)
   pipeline?: {
-    totalActive: number;
     committed: number;
     uncommitted: number;
     stretch: number;
-    items: {
-      id: string;
-      description: string;
-      contactName: string | null;
-      amount: number;
-      confidence: string;
-      timingType: string;
-      startWeek: string;
-      status: string;
-      weeklyContributions: number[];
-    }[];
+    weeklyByTier: {
+      committed: number[];
+      uncommitted: number[];
+      stretch: number[];
+    };
+    portfolioAvgDays: number;
   };
 
   // Phase 3: Outflows + net cashflow
@@ -384,7 +377,7 @@ export async function generateInflowForecast(
 
   // ── a. Fetch all data in parallel ──
 
-  const [invoiceRows, signalsRows, promisesRows, profilesRows, tenantRow, outflowRows, pipelineRows, completedSnapshots] =
+  const [invoiceRows, signalsRows, promisesRows, profilesRows, tenantRow, outflowRows, completedSnapshots] =
     await Promise.all([
       // All outstanding invoices (OPEN, not excluded statuses) with contact names
       db
@@ -457,22 +450,11 @@ export async function generateInflowForecast(
         .where(eq(tenants.id, tenantId))
         .then((rows) => rows[0]),
 
-      // All outflow entries for tenant
+      // All outflow entries for tenant (includes pipeline_committed/uncommitted/stretch)
       db
         .select()
         .from(forecastOutflows)
         .where(eq(forecastOutflows.tenantId, tenantId)),
-
-      // Active pipeline items for Layer 3
-      db
-        .select()
-        .from(pipelineItems)
-        .where(
-          and(
-            eq(pipelineItems.tenantId, tenantId),
-            inArray(pipelineItems.status, ["active"]),
-          ),
-        ),
 
       // Completed forecast snapshots for Phase 5 overlay
       db
@@ -923,145 +905,104 @@ export async function generateInflowForecast(
     console.warn("[CashflowForecast] Layer 2 recurring revenue failed:", err);
   }
 
-  // ── Layer 3: User Pipeline ──
+  // ── Layer 3: User Pipeline (stored as forecast_outflows with pipeline_ categories) ──
 
   const weeklyPipelineOptimistic = new Array(WEEKS).fill(0);
   const weeklyPipelineExpected = new Array(WEEKS).fill(0);
   const weeklyPipelinePessimistic = new Array(WEEKS).fill(0);
-  const pipelineItemProjections: {
-    id: string;
-    description: string;
-    contactName: string | null;
-    amount: number;
-    confidence: string;
-    timingType: string;
-    startWeek: string;
-    status: string;
-    weeklyContributions: number[];
-  }[] = [];
+
+  // Per-tier raw input amounts (before timing shift) for the response
+  const pipelineInputByTier: Record<string, number[]> = {
+    committed: new Array(WEEKS).fill(0),
+    uncommitted: new Array(WEEKS).fill(0),
+    stretch: new Array(WEEKS).fill(0),
+  };
+
+  // Portfolio average days-to-pay: weighted mean of per-debtor median days
+  let portfolioAvgDays = 40; // fallback
+  try {
+    let totalWeight = 0;
+    let weightedSum = 0;
+    for (const [contactId, signals] of signalsMap) {
+      if (signals.medianDaysToPay && signals.medianDaysToPay > 0) {
+        const debtorAmt = debtorExpected.get(contactId)?.total ?? 1;
+        weightedSum += signals.medianDaysToPay * debtorAmt;
+        totalWeight += debtorAmt;
+      }
+    }
+    if (totalWeight > 0) {
+      portfolioAvgDays = Math.round(weightedSum / totalWeight);
+    }
+  } catch (err) {
+    console.warn("[CashflowForecast] Portfolio avg calculation failed:", err);
+  }
+
+  // Confidence tier → days-to-pay multiplier
+  const TIER_MULTIPLIERS: Record<string, number> = {
+    pipeline_committed: 1.0,
+    pipeline_uncommitted: 1.25,
+    pipeline_stretch: 1.5,
+  };
+  const TIER_CONFIDENCE: Record<string, string> = {
+    pipeline_committed: "committed",
+    pipeline_uncommitted: "uncommitted",
+    pipeline_stretch: "stretch",
+  };
 
   try {
-    for (const item of pipelineRows) {
-      const itemAmount = Number(item.amount);
-      if (!itemAmount || itemAmount <= 0) continue;
+    const pipelineCategories = ["pipeline_committed", "pipeline_uncommitted", "pipeline_stretch"];
+    const pipelineEntries = outflowRows.filter((r) =>
+      pipelineCategories.includes(r.category),
+    );
 
-      const itemStart = new Date(item.startWeek);
-      const itemEnd = item.endWeek ? new Date(item.endWeek) : null;
-      const perWeekContributions = new Array(WEEKS).fill(0);
+    for (const row of pipelineEntries) {
+      const amt = Number(row.amount);
+      if (!amt || amt <= 0) continue;
+      const rowDate = new Date(row.weekStarting);
 
-      // Step 1: Distribute amount across weeks based on timingType
-      const weeklyRawAmounts = new Array(WEEKS).fill(0);
-
-      if (item.timingType === "one_off") {
-        // Full amount in the week containing startWeek
-        for (let w = 0; w < WEEKS; w++) {
-          if (itemStart >= weekBounds[w].start && itemStart <= weekBounds[w].end) {
-            weeklyRawAmounts[w] = itemAmount;
-            break;
-          }
-        }
-      } else if (item.timingType === "spread" && itemEnd) {
-        // Distribute evenly from startWeek to endWeek
-        const startMs = itemStart.getTime();
-        const endMs = itemEnd.getTime();
-        const spreadWeeks = Math.max(1, Math.round((endMs - startMs) / (7 * 24 * 60 * 60 * 1000)));
-        const perWeek = itemAmount / spreadWeeks;
-        for (let w = 0; w < WEEKS; w++) {
-          const wStart = weekBounds[w].start;
-          const wEnd = weekBounds[w].end;
-          if (wEnd >= itemStart && wStart <= itemEnd) {
-            weeklyRawAmounts[w] = perWeek;
-          }
-        }
-      } else if (item.timingType === "recurring_monthly") {
-        // Amount every ~4 weeks from startWeek
-        let d = new Date(itemStart);
-        while (d <= weekBounds[WEEKS - 1].end) {
-          for (let w = 0; w < WEEKS; w++) {
-            if (d >= weekBounds[w].start && d <= weekBounds[w].end) {
-              weeklyRawAmounts[w] += itemAmount;
-              break;
-            }
-          }
-          d = new Date(d);
-          d.setDate(d.getDate() + 28);
-        }
-      } else if (item.timingType === "recurring_weekly") {
-        // Amount in every week from startWeek
-        for (let w = 0; w < WEEKS; w++) {
-          if (weekBounds[w].start >= itemStart || (itemStart >= weekBounds[w].start && itemStart <= weekBounds[w].end)) {
-            weeklyRawAmounts[w] = itemAmount;
-          }
+      // Find which issue week this entry belongs to
+      let issueWeek = -1;
+      for (let w = 0; w < WEEKS; w++) {
+        if (rowDate >= weekBounds[w].start && rowDate <= weekBounds[w].end) {
+          issueWeek = w;
+          break;
         }
       }
+      if (issueWeek < 0) continue;
 
-      // Step 2: Apply payment timing distribution to each distributed amount
-      const signals = item.contactId ? signalsMap.get(item.contactId) : null;
-      let dist: DistributionParams;
-      if (item.contactId && item.useDebtorHistory && signals?.medianDaysToPay) {
-        dist = fitDistribution(
-          signals.medianDaysToPay,
-          signals.p75DaysToPay ?? null,
-          signals.volatility ?? null,
-          signals.trend ?? null,
-          signals.segment ?? undefined,
-        );
-      } else if (item.customPaymentDays) {
-        dist = fitDistribution(item.customPaymentDays, null, null, null);
-      } else {
-        dist = fitDistribution(40, null, null, null);
-      }
+      const tier = TIER_CONFIDENCE[row.category] ?? "uncommitted";
+      pipelineInputByTier[tier][issueWeek] += amt;
 
+      // Payment timing: portfolio avg × tier multiplier
+      const adjustedDays = portfolioAvgDays * (TIER_MULTIPLIERS[row.category] ?? 1.0);
+      const dist = fitDistribution(adjustedDays, null, null, null);
       const scenarios = weeklyProbabilitiesThreeScenarios(dist.mu, dist.sigma, 0);
 
-      for (let issueWeek = 0; issueWeek < WEEKS; issueWeek++) {
-        const rawAmt = weeklyRawAmounts[issueWeek];
-        if (rawAmt <= 0) continue;
+      for (let pw = 0; pw < WEEKS; pw++) {
+        const payWeek = issueWeek + pw;
+        if (payWeek >= WEEKS) break;
 
-        for (let pw = 0; pw < WEEKS; pw++) {
-          const payWeek = issueWeek + pw;
-          if (payWeek >= WEEKS) break;
+        const optProb = pw < scenarios.optimistic.length ? scenarios.optimistic[pw].probability : 0;
+        const expProb = pw < scenarios.expected.length ? scenarios.expected[pw].probability : 0;
+        const pesProb = pw < scenarios.pessimistic.length ? scenarios.pessimistic[pw].probability : 0;
 
-          const optProb = pw < scenarios.optimistic.length ? scenarios.optimistic[pw].probability : 0;
-          const expProb = pw < scenarios.expected.length ? scenarios.expected[pw].probability : 0;
-          const pesProb = pw < scenarios.pessimistic.length ? scenarios.pessimistic[pw].probability : 0;
-
-          // Step 3: Confidence-based scenario treatment
-          const optAmount = rawAmt * optProb;
-          const expAmount = rawAmt * expProb;
-          const pesAmount = rawAmt * pesProb;
-
-          if (item.confidence === "committed") {
-            weeklyPipelineOptimistic[payWeek] += optAmount;
-            weeklyPipelineExpected[payWeek] += expAmount;
-            weeklyPipelinePessimistic[payWeek] += pesAmount;
-          } else if (item.confidence === "uncommitted") {
-            weeklyPipelineOptimistic[payWeek] += optAmount;
-            weeklyPipelineExpected[payWeek] += expAmount;
-            // NOT pessimistic
-          } else {
-            // stretch — optimistic only
-            weeklyPipelineOptimistic[payWeek] += optAmount;
-          }
-
-          perWeekContributions[payWeek] += Math.round(expAmount * 100) / 100;
+        // Scenario treatment by confidence tier
+        if (row.category === "pipeline_committed") {
+          weeklyPipelineOptimistic[payWeek] += amt * optProb;
+          weeklyPipelineExpected[payWeek] += amt * expProb;
+          weeklyPipelinePessimistic[payWeek] += amt * pesProb;
+        } else if (row.category === "pipeline_uncommitted") {
+          weeklyPipelineOptimistic[payWeek] += amt * optProb;
+          weeklyPipelineExpected[payWeek] += amt * expProb;
+          // NOT pessimistic
+        } else {
+          // stretch — optimistic only
+          weeklyPipelineOptimistic[payWeek] += amt * optProb;
         }
       }
-
-      pipelineItemProjections.push({
-        id: item.id,
-        description: item.description,
-        contactName: item.contactName,
-        amount: itemAmount,
-        confidence: item.confidence || "uncommitted",
-        timingType: item.timingType,
-        startWeek: formatWeekDate(itemStart),
-        status: item.status || "active",
-        weeklyContributions: perWeekContributions,
-      });
     }
 
-    // Step 4: Add pipeline to weekly totals
+    // Add pipeline to weekly totals
     for (let w = 0; w < WEEKS; w++) {
       weeklyOptimistic[w] += weeklyPipelineOptimistic[w];
       weeklyExpected[w] += weeklyPipelineExpected[w];
@@ -1099,6 +1040,9 @@ export async function generateInflowForecast(
   };
 
   for (const row of outflowRows) {
+    // Skip pipeline entries — they're handled in Layer 3 above
+    if (row.category.startsWith("pipeline_")) continue;
+
     const rowDate = new Date(row.weekStarting);
     const amt = Number(row.amount);
     if (!amt || amt === 0) continue;
@@ -1523,28 +1467,23 @@ export async function generateInflowForecast(
         : undefined,
 
     // Layer 3: User pipeline
-    pipeline:
-      pipelineItemProjections.length > 0
-        ? {
-            totalActive: pipelineItemProjections.length,
-            committed: Math.round(
-              pipelineItemProjections
-                .filter((p) => p.confidence === "committed")
-                .reduce((s, p) => s + p.amount, 0) * 100,
-            ) / 100,
-            uncommitted: Math.round(
-              pipelineItemProjections
-                .filter((p) => p.confidence === "uncommitted")
-                .reduce((s, p) => s + p.amount, 0) * 100,
-            ) / 100,
-            stretch: Math.round(
-              pipelineItemProjections
-                .filter((p) => p.confidence === "stretch")
-                .reduce((s, p) => s + p.amount, 0) * 100,
-            ) / 100,
-            items: pipelineItemProjections,
-          }
-        : undefined,
+    pipeline: (() => {
+      const cTotal = pipelineInputByTier.committed.reduce((a, b) => a + b, 0);
+      const uTotal = pipelineInputByTier.uncommitted.reduce((a, b) => a + b, 0);
+      const sTotal = pipelineInputByTier.stretch.reduce((a, b) => a + b, 0);
+      if (cTotal + uTotal + sTotal === 0) return undefined;
+      return {
+        committed: Math.round(cTotal * 100) / 100,
+        uncommitted: Math.round(uTotal * 100) / 100,
+        stretch: Math.round(sTotal * 100) / 100,
+        weeklyByTier: {
+          committed: pipelineInputByTier.committed.map((v) => Math.round(v * 100) / 100),
+          uncommitted: pipelineInputByTier.uncommitted.map((v) => Math.round(v * 100) / 100),
+          stretch: pipelineInputByTier.stretch.map((v) => Math.round(v * 100) / 100),
+        },
+        portfolioAvgDays,
+      };
+    })(),
   };
 
   // Cache the result

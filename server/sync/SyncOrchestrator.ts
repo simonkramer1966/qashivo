@@ -625,11 +625,6 @@ export class SyncOrchestrator {
         .then(m => m.detectRecurringPatterns(tenantId))
         .catch(err => console.warn(`[SyncOrchestrator] Recurring pattern detection failed for ${tenantId}:`, err));
 
-      // Non-blocking: check pipeline item conversions for cashflow forecast Layer 3
-      import('../services/pipelineConversionService')
-        .then(m => m.checkPipelineConversions(tenantId))
-        .catch(err => console.warn(`[SyncOrchestrator] Pipeline conversion check failed for ${tenantId}:`, err));
-
       // Non-blocking: capture actuals for current week (forecast accuracy Phase 5)
       import('../services/forecastActualsService')
         .then(m => {

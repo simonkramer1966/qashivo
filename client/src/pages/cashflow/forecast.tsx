@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -13,13 +12,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Collapsible,
   CollapsibleContent,
@@ -40,8 +32,6 @@ import {
   Check,
   X,
   Loader2,
-  Plus,
-  Trash2,
   Lock,
   Target,
 } from "lucide-react";
@@ -439,132 +429,43 @@ export default function ForecastPage() {
     { category: "other", label: "Other / exceptional" },
   ] as const;
 
-  // ── Pipeline state ──
-  interface PipelineItem {
-    id: string;
-    description: string;
-    contactId: string | null;
-    contactName: string | null;
-    amount: string;
-    timingType: string;
-    startWeek: string;
-    endWeek: string | null;
-    confidence: string;
-    useDebtorHistory: boolean;
-    customPaymentDays: number | null;
-    status: string;
-    convertedInvoiceId: string | null;
-    convertedAt: string | null;
+  // ── Pipeline state (inline editing, same pattern as outflows) ──
+  const PIPELINE_TIERS = [
+    { category: "pipeline_committed", label: "Pipeline: Committed", color: "text-emerald-600" },
+    { category: "pipeline_uncommitted", label: "Pipeline: Uncommitted", color: "text-blue-600" },
+    { category: "pipeline_stretch", label: "Pipeline: Stretch", color: "text-amber-600" },
+  ] as const;
+
+  const [editingPipelineCell, setEditingPipelineCell] = useState<{ category: string; week: number } | null>(null);
+  const [pipelineCellValue, setPipelineCellValue] = useState("");
+
+  const pipelineMutation = useMutation({
+    mutationFn: async (data: {
+      category: string;
+      weekStarting: string;
+      amount: number;
+    }) => {
+      await apiRequest("PUT", "/api/cashflow/outflows", data);
+    },
+    onSuccess: () => {
+      refetchOutflows();
+      queryClient.invalidateQueries({ queryKey: ["/api/cashflow/inflow-forecast"] });
+    },
+  });
+
+  function getPipelineAmount(category: string, weekStarting: string): number {
+    if (!outflowRows) return 0;
+    const row = outflowRows.find(
+      (r) => r.category === category && r.weekStarting.slice(0, 10) === weekStarting.slice(0, 10),
+    );
+    return row ? Number(row.amount) : 0;
   }
 
-  const { data: pipelineItemsData, refetch: refetchPipeline } = useQuery<PipelineItem[]>({
-    queryKey: ["/api/cashflow/pipeline"],
-    staleTime: 60 * 60 * 1000,
-    enabled: !!forecast,
-  });
-
-  const [pipelineExpanded, setPipelineExpanded] = useState(false);
-  const [pipelineModalOpen, setPipelineModalOpen] = useState(false);
-  const [editingPipelineItem, setEditingPipelineItem] = useState<PipelineItem | null>(null);
-  const [pipelineForm, setPipelineForm] = useState({
-    description: "",
-    contactName: "",
-    amount: "",
-    timingType: "one_off",
-    startWeek: "",
-    endWeek: "",
-    confidence: "uncommitted",
-    useDebtorHistory: true,
-    customPaymentDays: "",
-    paymentTiming: "system", // system | custom
-  });
-
-  function openPipelineModal(item?: PipelineItem) {
-    if (item) {
-      setEditingPipelineItem(item);
-      setPipelineForm({
-        description: item.description,
-        contactName: item.contactName || "",
-        amount: String(Number(item.amount)),
-        timingType: item.timingType,
-        startWeek: item.startWeek ? new Date(item.startWeek).toISOString().slice(0, 10) : "",
-        endWeek: item.endWeek ? new Date(item.endWeek).toISOString().slice(0, 10) : "",
-        confidence: item.confidence,
-        useDebtorHistory: item.useDebtorHistory,
-        customPaymentDays: item.customPaymentDays ? String(item.customPaymentDays) : "",
-        paymentTiming: item.customPaymentDays ? "custom" : "system",
-      });
-    } else {
-      setEditingPipelineItem(null);
-      const firstWeek = forecast?.weeklyForecasts?.[0]?.weekStarting || "";
-      setPipelineForm({
-        description: "",
-        contactName: "",
-        amount: "",
-        timingType: "one_off",
-        startWeek: firstWeek,
-        endWeek: "",
-        confidence: "uncommitted",
-        useDebtorHistory: true,
-        customPaymentDays: "",
-        paymentTiming: "system",
-      });
-    }
-    setPipelineModalOpen(true);
-  }
-
-  const addPipelineMutation = useMutation({
-    mutationFn: async (data: Record<string, unknown>) => {
-      await apiRequest("POST", "/api/cashflow/pipeline", data);
-    },
-    onSuccess: () => {
-      refetchPipeline();
-      queryClient.invalidateQueries({ queryKey: ["/api/cashflow/inflow-forecast"] });
-      setPipelineModalOpen(false);
-    },
-  });
-
-  const editPipelineMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Record<string, unknown> }) => {
-      await apiRequest("PATCH", `/api/cashflow/pipeline/${id}`, data);
-    },
-    onSuccess: () => {
-      refetchPipeline();
-      queryClient.invalidateQueries({ queryKey: ["/api/cashflow/inflow-forecast"] });
-      setPipelineModalOpen(false);
-    },
-  });
-
-  const deletePipelineMutation = useMutation({
-    mutationFn: async (id: string) => {
-      await apiRequest("DELETE", `/api/cashflow/pipeline/${id}`);
-    },
-    onSuccess: () => {
-      refetchPipeline();
-      queryClient.invalidateQueries({ queryKey: ["/api/cashflow/inflow-forecast"] });
-    },
-  });
-
-  function handlePipelineSave() {
-    const payload: Record<string, unknown> = {
-      description: pipelineForm.description,
-      contactName: pipelineForm.contactName || null,
-      amount: Number(pipelineForm.amount),
-      timingType: pipelineForm.timingType,
-      startWeek: pipelineForm.startWeek,
-      endWeek: pipelineForm.timingType === "spread" ? pipelineForm.endWeek : null,
-      confidence: pipelineForm.confidence,
-      useDebtorHistory: pipelineForm.paymentTiming === "system",
-      customPaymentDays: pipelineForm.paymentTiming === "custom" && pipelineForm.customPaymentDays
-        ? Number(pipelineForm.customPaymentDays)
-        : null,
-    };
-
-    if (editingPipelineItem) {
-      editPipelineMutation.mutate({ id: editingPipelineItem.id, data: payload });
-    } else {
-      addPipelineMutation.mutate(payload);
-    }
+  function getPipelineTierTotal(category: string): number {
+    if (!outflowRows) return 0;
+    return outflowRows
+      .filter((r) => r.category === category)
+      .reduce((sum, r) => sum + Number(r.amount), 0);
   }
 
   // ── Phase 5: Close Week + Accuracy ──
@@ -1421,82 +1322,88 @@ export default function ForecastPage() {
                       {fmt(forecast.weeklyForecasts.reduce((s, wf) => s + wf.sourceBreakdown.recurringRevenue, 0))}
                     </td>
                   </tr>
-                  {/* Pipeline row (Layer 3) */}
-                  <tr className="border-b cursor-pointer hover:bg-muted/20" onClick={() => setPipelineExpanded(!pipelineExpanded)}>
-                    <td className="py-1.5 px-3 pl-6 text-purple-600 sticky left-0 bg-background z-10">
-                      <span className="flex items-center gap-1">
-                        {pipelineExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                        Pipeline
-                        <button
-                          className="ml-1 p-0.5 hover:bg-purple-100 rounded"
-                          onClick={(e) => { e.stopPropagation(); openPipelineModal(); }}
-                          title="Add pipeline item"
-                        >
-                          <Plus className="h-3 w-3" />
-                        </button>
-                      </span>
-                    </td>
-                    {forecast.weeklyForecasts.map((wf) => (
-                      <td key={wf.weekNumber} className="text-right py-1.5 px-2 text-purple-600">
-                        {wf.sourceBreakdown.pipeline > 0
-                          ? fmt(wf.sourceBreakdown.pipeline)
-                          : <span className="text-muted-foreground">—</span>}
+                  {/* Pipeline rows (Layer 3) — inline editable like outflows */}
+                  {PIPELINE_TIERS.map((tier) => (
+                    <tr key={tier.category} className="border-b hover:bg-muted/20">
+                      <td className={`py-1.5 px-3 pl-6 ${tier.color} sticky left-0 bg-background z-10`}>
+                        {tier.label}
                       </td>
-                    ))}
-                    <td className="text-right py-1.5 px-3 text-purple-600">
-                      {forecast.weeklyForecasts.reduce((s, wf) => s + wf.sourceBreakdown.pipeline, 0) > 0
-                        ? fmt(forecast.weeklyForecasts.reduce((s, wf) => s + wf.sourceBreakdown.pipeline, 0))
-                        : <span className="text-muted-foreground">—</span>}
-                    </td>
-                  </tr>
-                  {/* Pipeline item sub-rows */}
-                  {pipelineExpanded && forecast.pipeline?.items?.map((item) => (
-                    <tr key={item.id} className={`border-b ${item.status === "converted" ? "opacity-50" : ""}`}>
-                      <td className="py-1 px-3 pl-10 text-xs sticky left-0 bg-background z-10">
-                        <span className="flex items-center gap-1.5">
-                          <span className="truncate max-w-[140px]" title={item.description}>
-                            {item.description}
-                          </span>
-                          <Badge variant="outline" className={`text-[10px] px-1 py-0 ${
-                            item.confidence === "committed" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
-                            item.confidence === "stretch" ? "bg-amber-50 text-amber-700 border-amber-200" :
-                            "bg-blue-50 text-blue-700 border-blue-200"
-                          }`}>
-                            {item.confidence}
-                          </Badge>
-                          {item.status === "converted" && (
-                            <Badge variant="outline" className="text-[10px] px-1 py-0 bg-zinc-50">Converted</Badge>
-                          )}
-                          {item.status !== "converted" && (
-                            <>
-                              <button
-                                className="p-0.5 hover:bg-muted rounded"
-                                onClick={() => {
-                                  const pi = pipelineItemsData?.find(p => p.id === item.id);
-                                  if (pi) openPipelineModal(pi);
+                      {forecast.weeklyForecasts.map((wf, wi) => {
+                        const amount = getPipelineAmount(tier.category, wf.weekStarting);
+                        const isEditingThis =
+                          editingPipelineCell?.category === tier.category &&
+                          editingPipelineCell?.week === wi;
+
+                        return (
+                          <td key={wf.weekNumber} className="text-right py-0.5 px-1">
+                            {isEditingThis ? (
+                              <input
+                                type="number"
+                                className="w-full text-right text-xs border rounded px-1 py-0.5 h-6"
+                                autoFocus
+                                value={pipelineCellValue}
+                                onChange={(e) => setPipelineCellValue(e.target.value)}
+                                onBlur={() => {
+                                  const val = Number(pipelineCellValue) || 0;
+                                  pipelineMutation.mutate({
+                                    category: tier.category,
+                                    weekStarting: wf.weekStarting,
+                                    amount: val,
+                                  });
+                                  setEditingPipelineCell(null);
                                 }}
-                                title="Edit"
-                              >
-                                <Pencil className="h-3 w-3 text-muted-foreground" />
-                              </button>
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    (e.target as HTMLInputElement).blur();
+                                  }
+                                  if (e.key === "Escape") {
+                                    setEditingPipelineCell(null);
+                                  }
+                                  if (e.key === "Tab") {
+                                    e.preventDefault();
+                                    const val = Number(pipelineCellValue) || 0;
+                                    pipelineMutation.mutate({
+                                      category: tier.category,
+                                      weekStarting: wf.weekStarting,
+                                      amount: val,
+                                    });
+                                    const nextWeek = wi + 1;
+                                    if (nextWeek < forecast.weeklyForecasts.length) {
+                                      setPipelineCellValue(
+                                        String(
+                                          getPipelineAmount(
+                                            tier.category,
+                                            forecast.weeklyForecasts[nextWeek].weekStarting,
+                                          ) || "",
+                                        ),
+                                      );
+                                      setEditingPipelineCell({ category: tier.category, week: nextWeek });
+                                    } else {
+                                      setEditingPipelineCell(null);
+                                    }
+                                  }
+                                }}
+                              />
+                            ) : (
                               <button
-                                className="p-0.5 hover:bg-red-50 rounded"
-                                onClick={() => deletePipelineMutation.mutate(item.id)}
-                                title="Remove"
+                                className={`w-full text-right text-xs py-0.5 px-1 rounded hover:bg-muted/50 ${
+                                  amount > 0 ? tier.color : "text-muted-foreground"
+                                }`}
+                                onClick={() => {
+                                  setPipelineCellValue(amount > 0 ? String(amount) : "");
+                                  setEditingPipelineCell({ category: tier.category, week: wi });
+                                }}
                               >
-                                <Trash2 className="h-3 w-3 text-muted-foreground" />
+                                {amount > 0 ? fmt(amount) : "—"}
                               </button>
-                            </>
-                          )}
-                        </span>
-                      </td>
-                      {item.weeklyContributions.map((c, w) => (
-                        <td key={w} className="text-right py-1 px-2 text-xs text-muted-foreground">
-                          {c > 0 ? fmt(c) : "—"}
-                        </td>
-                      ))}
-                      <td className="text-right py-1 px-3 text-xs">
-                        {fmt(item.amount)}
+                            )}
+                          </td>
+                        );
+                      })}
+                      <td className={`text-right py-1.5 px-3 font-medium ${tier.color}`}>
+                        {getPipelineTierTotal(tier.category) > 0
+                          ? fmt(getPipelineTierTotal(tier.category))
+                          : <span className="text-muted-foreground">—</span>}
                       </td>
                     </tr>
                   ))}
@@ -2062,15 +1969,14 @@ export default function ForecastPage() {
       </Card>
 
       {/* Pipeline Summary */}
-      {forecast.pipeline && forecast.pipeline.totalActive > 0 && (
+      {forecast.pipeline && (forecast.pipeline.committed + forecast.pipeline.uncommitted + forecast.pipeline.stretch) > 0 && (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center justify-between">
-              <span>Pipeline Summary</span>
-              <Button size="sm" variant="outline" onClick={() => openPipelineModal()}>
-                <Plus className="h-3.5 w-3.5 mr-1" />
-                Add item
-              </Button>
+            <CardTitle className="text-sm font-medium">
+              Pipeline Summary
+              <span className="text-xs font-normal text-muted-foreground ml-2">
+                Portfolio avg: {forecast.pipeline.portfolioAvgDays} days to pay
+              </span>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -2078,148 +1984,22 @@ export default function ForecastPage() {
               <div>
                 <p className="text-muted-foreground">Committed</p>
                 <p className="text-lg font-semibold text-emerald-700">{fmt(forecast.pipeline.committed)}</p>
-                <p className="text-xs text-muted-foreground">In all scenarios</p>
+                <p className="text-xs text-muted-foreground">All scenarios, ×1.0 timing</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Uncommitted</p>
                 <p className="text-lg font-semibold text-blue-700">{fmt(forecast.pipeline.uncommitted)}</p>
-                <p className="text-xs text-muted-foreground">Optimistic + expected</p>
+                <p className="text-xs text-muted-foreground">Opt + expected, ×1.25 timing</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Stretch</p>
                 <p className="text-lg font-semibold text-amber-700">{fmt(forecast.pipeline.stretch)}</p>
-                <p className="text-xs text-muted-foreground">Optimistic only</p>
+                <p className="text-xs text-muted-foreground">Optimistic only, ×1.5 timing</p>
               </div>
             </div>
           </CardContent>
         </Card>
       )}
-
-      {/* Pipeline Add/Edit Modal */}
-      <Dialog open={pipelineModalOpen} onOpenChange={setPipelineModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{editingPipelineItem ? "Edit Pipeline Item" : "Add Pipeline Item"}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Description *</Label>
-              <Input
-                value={pipelineForm.description}
-                onChange={(e) => setPipelineForm({ ...pipelineForm, description: e.target.value })}
-                placeholder="e.g. New client onboarding — Acme Corp"
-              />
-            </div>
-            <div>
-              <Label>Client name</Label>
-              <Input
-                value={pipelineForm.contactName}
-                onChange={(e) => setPipelineForm({ ...pipelineForm, contactName: e.target.value })}
-                placeholder="Optional — link to existing debtor"
-              />
-            </div>
-            <div>
-              <Label>Amount (£) *</Label>
-              <Input
-                type="number"
-                value={pipelineForm.amount}
-                onChange={(e) => setPipelineForm({ ...pipelineForm, amount: e.target.value })}
-                placeholder="15000"
-                min={0}
-                step={100}
-              />
-            </div>
-            <div>
-              <Label>Timing</Label>
-              <Select value={pipelineForm.timingType} onValueChange={(v) => setPipelineForm({ ...pipelineForm, timingType: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="one_off">One-off in a specific week</SelectItem>
-                  <SelectItem value="spread">Spread across weeks</SelectItem>
-                  <SelectItem value="recurring_monthly">Recurring monthly</SelectItem>
-                  <SelectItem value="recurring_weekly">Recurring weekly</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>{pipelineForm.timingType === "spread" ? "Start week" : "Week"}</Label>
-                {forecast && (
-                  <Select value={pipelineForm.startWeek} onValueChange={(v) => setPipelineForm({ ...pipelineForm, startWeek: v })}>
-                    <SelectTrigger><SelectValue placeholder="Select week" /></SelectTrigger>
-                    <SelectContent>
-                      {forecast.weeklyForecasts.map((wf) => (
-                        <SelectItem key={wf.weekStarting} value={wf.weekStarting}>
-                          {weekLabel(wf.weekStarting)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-              {pipelineForm.timingType === "spread" && (
-                <div>
-                  <Label>End week</Label>
-                  {forecast && (
-                    <Select value={pipelineForm.endWeek} onValueChange={(v) => setPipelineForm({ ...pipelineForm, endWeek: v })}>
-                      <SelectTrigger><SelectValue placeholder="Select week" /></SelectTrigger>
-                      <SelectContent>
-                        {forecast.weeklyForecasts.map((wf) => (
-                          <SelectItem key={wf.weekStarting} value={wf.weekStarting}>
-                            {weekLabel(wf.weekStarting)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
-              )}
-            </div>
-            <div>
-              <Label>Confidence</Label>
-              <Select value={pipelineForm.confidence} onValueChange={(v) => setPipelineForm({ ...pipelineForm, confidence: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="committed">Committed — all scenarios</SelectItem>
-                  <SelectItem value="uncommitted">Uncommitted — optimistic + expected</SelectItem>
-                  <SelectItem value="stretch">Stretch — optimistic only</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Payment timing</Label>
-              <Select value={pipelineForm.paymentTiming} onValueChange={(v) => setPipelineForm({ ...pipelineForm, paymentTiming: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="system">System average (40 days)</SelectItem>
-                  <SelectItem value="custom">Custom days</SelectItem>
-                </SelectContent>
-              </Select>
-              {pipelineForm.paymentTiming === "custom" && (
-                <Input
-                  type="number"
-                  className="mt-2"
-                  value={pipelineForm.customPaymentDays}
-                  onChange={(e) => setPipelineForm({ ...pipelineForm, customPaymentDays: e.target.value })}
-                  placeholder="Days to payment"
-                  min={1}
-                  max={180}
-                />
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPipelineModalOpen(false)}>Cancel</Button>
-            <Button
-              onClick={handlePipelineSave}
-              disabled={!pipelineForm.description || !pipelineForm.amount || !pipelineForm.startWeek || addPipelineMutation.isPending || editPipelineMutation.isPending}
-            >
-              {(addPipelineMutation.isPending || editPipelineMutation.isPending) && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
-              {editingPipelineItem ? "Save" : "Add"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Close Week Modal */}
       <Dialog open={closeWeekModalOpen} onOpenChange={setCloseWeekModalOpen}>
