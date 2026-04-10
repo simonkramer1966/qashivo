@@ -19,8 +19,8 @@ import {
   validatePattern,
 } from "../services/recurringRevenueService";
 import { db } from "../db";
-import { tenants, forecastOutflows } from "@shared/schema";
-import { eq, and } from "drizzle-orm";
+import { tenants, forecastOutflows, pipelineItems, contacts } from "@shared/schema";
+import { eq, and, inArray } from "drizzle-orm";
 
 export function registerCashflowRoutes(app: Express): void {
   // ── GET /api/cashflow/inflow-forecast ──
@@ -429,6 +429,251 @@ export function registerCashflowRoutes(app: Express): void {
       } catch (error) {
         console.error("[CashflowRoutes] outflows DELETE error:", error);
         res.status(500).json({ error: "Failed to delete outflow" });
+      }
+    },
+  );
+
+  // ── Pipeline Items (Cashflow Layer 3) ──
+
+  const VALID_CONFIDENCE = ["committed", "uncommitted", "stretch"];
+  const VALID_TIMING_TYPE = ["one_off", "spread", "recurring_monthly", "recurring_weekly"];
+
+  // GET /api/cashflow/pipeline — all active + converted items for tenant
+  app.get(
+    "/api/cashflow/pipeline",
+    isAuthenticated,
+    async (req: any, res) => {
+      try {
+        const tenantId = req.user?.tenantId || req.rbac?.tenantId;
+        if (!tenantId) {
+          return res.status(401).json({ error: "No tenant context" });
+        }
+
+        const rows = await db
+          .select({
+            id: pipelineItems.id,
+            tenantId: pipelineItems.tenantId,
+            description: pipelineItems.description,
+            contactId: pipelineItems.contactId,
+            contactName: pipelineItems.contactName,
+            amount: pipelineItems.amount,
+            timingType: pipelineItems.timingType,
+            startWeek: pipelineItems.startWeek,
+            endWeek: pipelineItems.endWeek,
+            confidence: pipelineItems.confidence,
+            useDebtorHistory: pipelineItems.useDebtorHistory,
+            customPaymentDays: pipelineItems.customPaymentDays,
+            status: pipelineItems.status,
+            convertedInvoiceId: pipelineItems.convertedInvoiceId,
+            convertedAt: pipelineItems.convertedAt,
+            expiresAt: pipelineItems.expiresAt,
+            createdAt: pipelineItems.createdAt,
+            updatedAt: pipelineItems.updatedAt,
+            resolvedContactName: contacts.name,
+          })
+          .from(pipelineItems)
+          .leftJoin(contacts, eq(contacts.id, pipelineItems.contactId))
+          .where(
+            and(
+              eq(pipelineItems.tenantId, tenantId),
+              inArray(pipelineItems.status, ["active", "converted"]),
+            ),
+          );
+
+        // Use resolved contact name if available
+        const items = rows.map((r) => ({
+          ...r,
+          contactName: r.resolvedContactName || r.contactName,
+          resolvedContactName: undefined,
+        }));
+
+        res.json(items);
+      } catch (error) {
+        console.error("[CashflowRoutes] pipeline GET error:", error);
+        res.status(500).json({ error: "Failed to get pipeline items" });
+      }
+    },
+  );
+
+  // POST /api/cashflow/pipeline — create new pipeline item
+  app.post(
+    "/api/cashflow/pipeline",
+    isAuthenticated,
+    async (req: any, res) => {
+      try {
+        const tenantId = req.user?.tenantId || req.rbac?.tenantId;
+        if (!tenantId) {
+          return res.status(401).json({ error: "No tenant context" });
+        }
+
+        const { description, contactId, contactName, amount, timingType, startWeek, endWeek, confidence, useDebtorHistory, customPaymentDays } = req.body;
+
+        if (!description || !description.trim()) {
+          return res.status(400).json({ error: "description is required" });
+        }
+        const numAmount = Number(amount);
+        if (!numAmount || numAmount <= 0) {
+          return res.status(400).json({ error: "amount must be > 0" });
+        }
+        if (!VALID_TIMING_TYPE.includes(timingType)) {
+          return res.status(400).json({ error: `timingType must be one of: ${VALID_TIMING_TYPE.join(", ")}` });
+        }
+        if (!startWeek) {
+          return res.status(400).json({ error: "startWeek is required" });
+        }
+        const conf = confidence || "uncommitted";
+        if (!VALID_CONFIDENCE.includes(conf)) {
+          return res.status(400).json({ error: `confidence must be one of: ${VALID_CONFIDENCE.join(", ")}` });
+        }
+        if (timingType === "spread" && !endWeek) {
+          return res.status(400).json({ error: "endWeek is required for spread items" });
+        }
+
+        const startDate = new Date(startWeek);
+        const endDate = endWeek ? new Date(endWeek) : null;
+
+        // Set expiry: spread = endWeek + 4 weeks, others = startWeek + 17 weeks
+        let expiresAt: Date;
+        if (timingType === "spread" && endDate) {
+          expiresAt = new Date(endDate);
+          expiresAt.setDate(expiresAt.getDate() + 28);
+        } else {
+          expiresAt = new Date(startDate);
+          expiresAt.setDate(expiresAt.getDate() + 119); // 17 weeks
+        }
+
+        const [inserted] = await db.insert(pipelineItems).values({
+          tenantId,
+          description: description.trim(),
+          contactId: contactId || null,
+          contactName: contactName || null,
+          amount: String(numAmount),
+          timingType,
+          startWeek: startDate,
+          endWeek: endDate,
+          confidence: conf,
+          useDebtorHistory: useDebtorHistory !== false,
+          customPaymentDays: customPaymentDays ? Number(customPaymentDays) : null,
+          status: "active",
+          expiresAt,
+        }).returning();
+
+        invalidateForecastCache(tenantId);
+        res.json(inserted);
+      } catch (error) {
+        console.error("[CashflowRoutes] pipeline POST error:", error);
+        res.status(500).json({ error: "Failed to create pipeline item" });
+      }
+    },
+  );
+
+  // PATCH /api/cashflow/pipeline/:id — partial update
+  app.patch(
+    "/api/cashflow/pipeline/:id",
+    isAuthenticated,
+    async (req: any, res) => {
+      try {
+        const tenantId = req.user?.tenantId || req.rbac?.tenantId;
+        if (!tenantId) {
+          return res.status(401).json({ error: "No tenant context" });
+        }
+
+        const { id } = req.params;
+
+        // Verify ownership and not converted
+        const [existing] = await db
+          .select()
+          .from(pipelineItems)
+          .where(
+            and(
+              eq(pipelineItems.id, id),
+              eq(pipelineItems.tenantId, tenantId),
+            ),
+          );
+
+        if (!existing) {
+          return res.status(404).json({ error: "Pipeline item not found" });
+        }
+        if (existing.status === "converted") {
+          return res.status(400).json({ error: "Cannot edit a converted pipeline item" });
+        }
+
+        const updates: Record<string, unknown> = { updatedAt: new Date() };
+        const { description, contactId, contactName, amount, timingType, startWeek, endWeek, confidence, useDebtorHistory, customPaymentDays } = req.body;
+
+        if (description !== undefined) updates.description = description.trim();
+        if (contactId !== undefined) updates.contactId = contactId || null;
+        if (contactName !== undefined) updates.contactName = contactName || null;
+        if (amount !== undefined) {
+          const n = Number(amount);
+          if (!n || n <= 0) return res.status(400).json({ error: "amount must be > 0" });
+          updates.amount = String(n);
+        }
+        if (timingType !== undefined) {
+          if (!VALID_TIMING_TYPE.includes(timingType)) return res.status(400).json({ error: "Invalid timingType" });
+          updates.timingType = timingType;
+        }
+        if (startWeek !== undefined) updates.startWeek = new Date(startWeek);
+        if (endWeek !== undefined) updates.endWeek = endWeek ? new Date(endWeek) : null;
+        if (confidence !== undefined) {
+          if (!VALID_CONFIDENCE.includes(confidence)) return res.status(400).json({ error: "Invalid confidence" });
+          updates.confidence = confidence;
+        }
+        if (useDebtorHistory !== undefined) updates.useDebtorHistory = useDebtorHistory;
+        if (customPaymentDays !== undefined) updates.customPaymentDays = customPaymentDays ? Number(customPaymentDays) : null;
+
+        const [updated] = await db
+          .update(pipelineItems)
+          .set(updates)
+          .where(eq(pipelineItems.id, id))
+          .returning();
+
+        invalidateForecastCache(tenantId);
+        res.json(updated);
+      } catch (error) {
+        console.error("[CashflowRoutes] pipeline PATCH error:", error);
+        res.status(500).json({ error: "Failed to update pipeline item" });
+      }
+    },
+  );
+
+  // DELETE /api/cashflow/pipeline/:id — soft delete (cancel)
+  app.delete(
+    "/api/cashflow/pipeline/:id",
+    isAuthenticated,
+    async (req: any, res) => {
+      try {
+        const tenantId = req.user?.tenantId || req.rbac?.tenantId;
+        if (!tenantId) {
+          return res.status(401).json({ error: "No tenant context" });
+        }
+
+        const { id } = req.params;
+
+        const [existing] = await db
+          .select()
+          .from(pipelineItems)
+          .where(
+            and(
+              eq(pipelineItems.id, id),
+              eq(pipelineItems.tenantId, tenantId),
+            ),
+          );
+
+        if (!existing) {
+          return res.status(404).json({ error: "Pipeline item not found" });
+        }
+
+        await db
+          .update(pipelineItems)
+          .set({ status: "cancelled", updatedAt: new Date() })
+          .where(eq(pipelineItems.id, id));
+
+        invalidateForecastCache(tenantId);
+        res.json({ deleted: true });
+      } catch (error) {
+        console.error("[CashflowRoutes] pipeline DELETE error:", error);
+        res.status(500).json({ error: "Failed to delete pipeline item" });
       }
     },
   );

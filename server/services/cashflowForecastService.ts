@@ -22,6 +22,7 @@ import {
   paymentPromises,
   tenants,
   forecastOutflows,
+  pipelineItems,
 } from "@shared/schema";
 import { eq, and, sql, isNotNull, inArray } from "drizzle-orm";
 import {
@@ -178,6 +179,25 @@ export interface InflowForecast {
       averageAmount: number;
       status: string;
       weeklyProjections: number[];
+    }[];
+  };
+
+  // Layer 3: User pipeline
+  pipeline?: {
+    totalActive: number;
+    committed: number;
+    uncommitted: number;
+    stretch: number;
+    items: {
+      id: string;
+      description: string;
+      contactName: string | null;
+      amount: number;
+      confidence: string;
+      timingType: string;
+      startWeek: string;
+      status: string;
+      weeklyContributions: number[];
     }[];
   };
 
@@ -361,7 +381,7 @@ export async function generateInflowForecast(
 
   // ── a. Fetch all data in parallel ──
 
-  const [invoiceRows, signalsRows, promisesRows, profilesRows, tenantRow, outflowRows] =
+  const [invoiceRows, signalsRows, promisesRows, profilesRows, tenantRow, outflowRows, pipelineRows] =
     await Promise.all([
       // All outstanding invoices (OPEN, not excluded statuses) with contact names
       db
@@ -439,6 +459,17 @@ export async function generateInflowForecast(
         .select()
         .from(forecastOutflows)
         .where(eq(forecastOutflows.tenantId, tenantId)),
+
+      // Active pipeline items for Layer 3
+      db
+        .select()
+        .from(pipelineItems)
+        .where(
+          and(
+            eq(pipelineItems.tenantId, tenantId),
+            inArray(pipelineItems.status, ["active"]),
+          ),
+        ),
     ]);
 
   // Build lookup maps
@@ -875,6 +906,155 @@ export async function generateInflowForecast(
     console.warn("[CashflowForecast] Layer 2 recurring revenue failed:", err);
   }
 
+  // ── Layer 3: User Pipeline ──
+
+  const weeklyPipelineOptimistic = new Array(WEEKS).fill(0);
+  const weeklyPipelineExpected = new Array(WEEKS).fill(0);
+  const weeklyPipelinePessimistic = new Array(WEEKS).fill(0);
+  const pipelineItemProjections: {
+    id: string;
+    description: string;
+    contactName: string | null;
+    amount: number;
+    confidence: string;
+    timingType: string;
+    startWeek: string;
+    status: string;
+    weeklyContributions: number[];
+  }[] = [];
+
+  try {
+    for (const item of pipelineRows) {
+      const itemAmount = Number(item.amount);
+      if (!itemAmount || itemAmount <= 0) continue;
+
+      const itemStart = new Date(item.startWeek);
+      const itemEnd = item.endWeek ? new Date(item.endWeek) : null;
+      const perWeekContributions = new Array(WEEKS).fill(0);
+
+      // Step 1: Distribute amount across weeks based on timingType
+      const weeklyRawAmounts = new Array(WEEKS).fill(0);
+
+      if (item.timingType === "one_off") {
+        // Full amount in the week containing startWeek
+        for (let w = 0; w < WEEKS; w++) {
+          if (itemStart >= weekBounds[w].start && itemStart <= weekBounds[w].end) {
+            weeklyRawAmounts[w] = itemAmount;
+            break;
+          }
+        }
+      } else if (item.timingType === "spread" && itemEnd) {
+        // Distribute evenly from startWeek to endWeek
+        const startMs = itemStart.getTime();
+        const endMs = itemEnd.getTime();
+        const spreadWeeks = Math.max(1, Math.round((endMs - startMs) / (7 * 24 * 60 * 60 * 1000)));
+        const perWeek = itemAmount / spreadWeeks;
+        for (let w = 0; w < WEEKS; w++) {
+          const wStart = weekBounds[w].start;
+          const wEnd = weekBounds[w].end;
+          if (wEnd >= itemStart && wStart <= itemEnd) {
+            weeklyRawAmounts[w] = perWeek;
+          }
+        }
+      } else if (item.timingType === "recurring_monthly") {
+        // Amount every ~4 weeks from startWeek
+        let d = new Date(itemStart);
+        while (d <= weekBounds[WEEKS - 1].end) {
+          for (let w = 0; w < WEEKS; w++) {
+            if (d >= weekBounds[w].start && d <= weekBounds[w].end) {
+              weeklyRawAmounts[w] += itemAmount;
+              break;
+            }
+          }
+          d = new Date(d);
+          d.setDate(d.getDate() + 28);
+        }
+      } else if (item.timingType === "recurring_weekly") {
+        // Amount in every week from startWeek
+        for (let w = 0; w < WEEKS; w++) {
+          if (weekBounds[w].start >= itemStart || (itemStart >= weekBounds[w].start && itemStart <= weekBounds[w].end)) {
+            weeklyRawAmounts[w] = itemAmount;
+          }
+        }
+      }
+
+      // Step 2: Apply payment timing distribution to each distributed amount
+      const signals = item.contactId ? signalsMap.get(item.contactId) : null;
+      let dist: DistributionParams;
+      if (item.contactId && item.useDebtorHistory && signals?.medianDaysToPay) {
+        dist = fitDistribution(
+          signals.medianDaysToPay,
+          signals.p75DaysToPay ?? null,
+          signals.volatility ?? null,
+          signals.trend ?? null,
+          signals.segment ?? undefined,
+        );
+      } else if (item.customPaymentDays) {
+        dist = fitDistribution(item.customPaymentDays, null, null, null);
+      } else {
+        dist = fitDistribution(40, null, null, null);
+      }
+
+      const scenarios = weeklyProbabilitiesThreeScenarios(dist.mu, dist.sigma, 0);
+
+      for (let issueWeek = 0; issueWeek < WEEKS; issueWeek++) {
+        const rawAmt = weeklyRawAmounts[issueWeek];
+        if (rawAmt <= 0) continue;
+
+        for (let pw = 0; pw < WEEKS; pw++) {
+          const payWeek = issueWeek + pw;
+          if (payWeek >= WEEKS) break;
+
+          const optProb = pw < scenarios.optimistic.length ? scenarios.optimistic[pw].probability : 0;
+          const expProb = pw < scenarios.expected.length ? scenarios.expected[pw].probability : 0;
+          const pesProb = pw < scenarios.pessimistic.length ? scenarios.pessimistic[pw].probability : 0;
+
+          // Step 3: Confidence-based scenario treatment
+          const optAmount = rawAmt * optProb;
+          const expAmount = rawAmt * expProb;
+          const pesAmount = rawAmt * pesProb;
+
+          if (item.confidence === "committed") {
+            weeklyPipelineOptimistic[payWeek] += optAmount;
+            weeklyPipelineExpected[payWeek] += expAmount;
+            weeklyPipelinePessimistic[payWeek] += pesAmount;
+          } else if (item.confidence === "uncommitted") {
+            weeklyPipelineOptimistic[payWeek] += optAmount;
+            weeklyPipelineExpected[payWeek] += expAmount;
+            // NOT pessimistic
+          } else {
+            // stretch — optimistic only
+            weeklyPipelineOptimistic[payWeek] += optAmount;
+          }
+
+          perWeekContributions[payWeek] += Math.round(expAmount * 100) / 100;
+        }
+      }
+
+      pipelineItemProjections.push({
+        id: item.id,
+        description: item.description,
+        contactName: item.contactName,
+        amount: itemAmount,
+        confidence: item.confidence || "uncommitted",
+        timingType: item.timingType,
+        startWeek: formatWeekDate(itemStart),
+        status: item.status || "active",
+        weeklyContributions: perWeekContributions,
+      });
+    }
+
+    // Step 4: Add pipeline to weekly totals
+    for (let w = 0; w < WEEKS; w++) {
+      weeklyOptimistic[w] += weeklyPipelineOptimistic[w];
+      weeklyExpected[w] += weeklyPipelineExpected[w];
+      weeklyPessimistic[w] += weeklyPipelinePessimistic[w];
+    }
+  } catch (err) {
+    // Layer 3 is non-fatal
+    console.warn("[CashflowForecast] Layer 3 pipeline failed:", err);
+  }
+
   // ── Phase 3: Aggregate outflows by week ──
 
   const weeklyOutflowTotals = new Array(WEEKS).fill(0);
@@ -1035,7 +1215,7 @@ export async function generateInflowForecast(
             : "low";
 
     const arAmount = Math.round(
-      (weeklyExpected[w] - weeklyRecurringExpected[w]) * 100,
+      (weeklyExpected[w] - weeklyRecurringExpected[w] - weeklyPipelineExpected[w]) * 100,
     ) / 100;
 
     weeklyForecasts.push({
@@ -1053,7 +1233,7 @@ export async function generateInflowForecast(
         arCollections: arAmount,
         recurringRevenue:
           Math.round(weeklyRecurringExpected[w] * 100) / 100,
-        pipeline: 0, // Phase 4
+        pipeline: Math.round(weeklyPipelineExpected[w] * 100) / 100,
       },
     });
   }
@@ -1312,6 +1492,30 @@ export async function generateInflowForecast(
                 ) * 100,
               ) / 100,
             patterns: recurringPatternProjections,
+          }
+        : undefined,
+
+    // Layer 3: User pipeline
+    pipeline:
+      pipelineItemProjections.length > 0
+        ? {
+            totalActive: pipelineItemProjections.length,
+            committed: Math.round(
+              pipelineItemProjections
+                .filter((p) => p.confidence === "committed")
+                .reduce((s, p) => s + p.amount, 0) * 100,
+            ) / 100,
+            uncommitted: Math.round(
+              pipelineItemProjections
+                .filter((p) => p.confidence === "uncommitted")
+                .reduce((s, p) => s + p.amount, 0) * 100,
+            ) / 100,
+            stretch: Math.round(
+              pipelineItemProjections
+                .filter((p) => p.confidence === "stretch")
+                .reduce((s, p) => s + p.amount, 0) * 100,
+            ) / 100,
+            items: pipelineItemProjections,
           }
         : undefined,
   };

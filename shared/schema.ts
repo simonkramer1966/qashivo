@@ -6228,6 +6228,53 @@ export const insertForecastOutflowSchema = createInsertSchema(forecastOutflows).
 export type ForecastOutflow = typeof forecastOutflows.$inferSelect;
 export type InsertForecastOutflow = z.infer<typeof insertForecastOutflowSchema>;
 
+// ── Phase 4: User Pipeline (Cashflow Layer 3) ─────────────────
+
+export const pipelineItems = pgTable("pipeline_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  description: text("description").notNull(),
+  contactId: varchar("contact_id").references(() => contacts.id),
+  contactName: text("contact_name"),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  timingType: varchar("timing_type").notNull(), // one_off | spread | recurring_monthly | recurring_weekly
+  startWeek: timestamp("start_week").notNull(),
+  endWeek: timestamp("end_week"), // for spread items
+  confidence: varchar("confidence").notNull().default("uncommitted"), // committed | uncommitted | stretch
+  useDebtorHistory: boolean("use_debtor_history").default(true),
+  customPaymentDays: integer("custom_payment_days"),
+  status: varchar("status").default("active"), // active | converted | cancelled | expired
+  convertedInvoiceId: varchar("converted_invoice_id").references(() => invoices.id),
+  convertedAt: timestamp("converted_at"),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const pipelineItemsRelations = relations(pipelineItems, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [pipelineItems.tenantId],
+    references: [tenants.id],
+  }),
+  contact: one(contacts, {
+    fields: [pipelineItems.contactId],
+    references: [contacts.id],
+  }),
+  convertedInvoice: one(invoices, {
+    fields: [pipelineItems.convertedInvoiceId],
+    references: [invoices.id],
+  }),
+}));
+
+export const insertPipelineItemSchema = createInsertSchema(pipelineItems).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type PipelineItem = typeof pipelineItems.$inferSelect;
+export type InsertPipelineItem = z.infer<typeof insertPipelineItemSchema>;
+
 // ── Sprint 8: Weekly CFO Reviews ──────────────────────────
 
 export const weeklyReviews = pgTable("weekly_reviews", {
