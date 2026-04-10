@@ -168,6 +168,13 @@ export const tenants = pgTable("tenants", {
   rileyReviewTime: text("riley_review_time"), // e.g. "09:00"
   rileyReviewTimezone: text("riley_review_timezone").default("Europe/London"),
 
+  // Cashflow forecast settings
+  forecastOpeningBalance: decimal("forecast_opening_balance", { precision: 12, scale: 2 }),
+  forecastOpeningBalanceDate: timestamp("forecast_opening_balance_date"),
+  forecastOpeningBalanceSource: varchar("forecast_opening_balance_source", { length: 20 }).default("manual"),
+  forecastSafetyThreshold: decimal("forecast_safety_threshold", { precision: 12, scale: 2 }).default("20000"),
+  lastForecastSnapshot: jsonb("last_forecast_snapshot"),
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

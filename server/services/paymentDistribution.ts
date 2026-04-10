@@ -269,6 +269,75 @@ export function forecastInvoicePayment(
   };
 }
 
+// ── Weekly Payment Probabilities (Cashflow Forecast) ──────────
+
+/**
+ * Calculate the probability of payment landing in each of the next N weeks.
+ *
+ * Uses conditional probability: given the debtor hasn't paid yet
+ * (they're currentDaysOverdue days past due), what's the probability
+ * they pay in each future week?
+ */
+export function weeklyPaymentProbabilities(
+  mu: number,
+  sigma: number,
+  currentDaysOverdue: number,
+  weeksAhead: number = 13,
+): { week: number; probability: number }[] {
+  // Survival function at current point — P(not yet paid)
+  const survivalNow = 1 - logNormalCDF(currentDaysOverdue, mu, sigma);
+  if (survivalNow <= 0.001) {
+    // Already far past expected payment — spread tiny probability evenly
+    return Array.from({ length: weeksAhead }, (_, i) => ({
+      week: i + 1,
+      probability: 1 / weeksAhead * 0.01,
+    }));
+  }
+
+  const results: { week: number; probability: number }[] = [];
+  for (let w = 1; w <= weeksAhead; w++) {
+    const startDays = currentDaysOverdue + (w - 1) * 7;
+    const endDays = currentDaysOverdue + w * 7;
+    const pStart = logNormalCDF(startDays, mu, sigma);
+    const pEnd = logNormalCDF(endDays, mu, sigma);
+    // Conditional probability: P(pay in week W | haven't paid yet)
+    const probability = Math.max(0, (pEnd - pStart) / survivalNow);
+    results.push({ week: w, probability });
+  }
+
+  return results;
+}
+
+/**
+ * Three-scenario weekly probabilities for the cashflow forecast.
+ *
+ * Optimistic: debtor pays at the fast end of their distribution (25th percentile)
+ * Expected: debtor pays at their median speed
+ * Pessimistic: debtor pays at the slow end (75th percentile)
+ *
+ * All three are mathematically derived from the same distribution,
+ * not three separate guesses.
+ */
+export function weeklyProbabilitiesThreeScenarios(
+  mu: number,
+  sigma: number,
+  currentDaysOverdue: number,
+): {
+  optimistic: { week: number; probability: number }[];
+  expected: { week: number; probability: number }[];
+  pessimistic: { week: number; probability: number }[];
+} {
+  // 0.675 * sigma corresponds to the 25th/75th percentile of the log-normal
+  const muOptimistic = mu - 0.675 * sigma;
+  const muPessimistic = mu + 0.675 * sigma;
+
+  return {
+    optimistic: weeklyPaymentProbabilities(muOptimistic, sigma, currentDaysOverdue),
+    expected: weeklyPaymentProbabilities(mu, sigma, currentDaysOverdue),
+    pessimistic: weeklyPaymentProbabilities(muPessimistic, sigma, currentDaysOverdue),
+  };
+}
+
 // ── Gap 13: Seasonal Adjustment Lookup ─────────────────────────
 
 /**

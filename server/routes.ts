@@ -290,6 +290,7 @@ import { registerPromiseRoutes } from "./routes/promiseRoutes";
 import { registerQuizRoutes } from "./routes/quizRoutes";
 import { registerDemoRoutes } from "./routes/demoRoutes";
 import { registerImpactRoutes } from "./routes/impactRoutes";
+import { registerCashflowRoutes } from "./routes/cashflowRoutes";
 import { ForecastEngine, type ForecastConfig, type ForecastScenario } from "../shared/forecast";
 import { subscriptionService } from "./services/subscriptionService";
 import { cleanEmailContent } from "./services/messagePostProcessor";
@@ -659,6 +660,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerQuizRoutes(app);
   registerDemoRoutes(app);
   registerImpactRoutes(app);
+  registerCashflowRoutes(app);
 
   // ── SSE endpoint for real-time UI updates ──────────────────────
   // EventSource API doesn't support Authorization headers, so we also

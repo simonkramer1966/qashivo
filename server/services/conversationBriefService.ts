@@ -102,6 +102,16 @@ export interface ConversationBriefData {
     silenceTimeoutHours: number;
     enteredAt: string;
   };
+  paymentForecast?: {
+    peakWeek: number;
+    pPayWithin2Weeks: number;
+    pPayWithin4Weeks: number;
+    pPayWithin8Weeks: number;
+    basedOnCount: number;
+    avgDaysToPay: number;
+    trend: 'improving' | 'stable' | 'deteriorating';
+    trendDelta: number;
+  };
 }
 
 /**
@@ -234,6 +244,25 @@ export async function buildConversationBrief(
     chaseContext, unallocatedRows,
   );
   data.conversationState = convStateData;
+
+  // Load payment forecast profile (non-fatal)
+  try {
+    const { getDebtorPaymentProfile } = await import("./cashflowForecastService");
+    const profile = await getDebtorPaymentProfile(tenantId, contactId);
+    if (profile && profile.paymentCount > 0) {
+      data.paymentForecast = {
+        peakWeek: profile.weeklyCurve.reduce((best, w) => w.probability > (profile.weeklyCurve[best - 1]?.probability ?? 0) ? w.week : best, 1),
+        pPayWithin2Weeks: profile.weeklyCurve.slice(0, 2).reduce((sum, w) => sum + w.probability, 0),
+        pPayWithin4Weeks: profile.weeklyCurve.slice(0, 4).reduce((sum, w) => sum + w.probability, 0),
+        pPayWithin8Weeks: profile.weeklyCurve.slice(0, 8).reduce((sum, w) => sum + w.probability, 0),
+        basedOnCount: profile.paymentCount,
+        avgDaysToPay: profile.averageDaysToPay,
+        trend: profile.trend,
+        trendDelta: profile.trendDelta,
+      };
+    }
+  } catch { /* non-fatal — forecast section omitted if service fails */ }
+
   let text = formatBriefText(data, contact, prefs, intel, chaseContext);
 
   // Token guard rail — collapse history to 8 entries if over budget.
@@ -743,6 +772,28 @@ function formatBriefText(
     commitLines.push('Payment plan in place — some invoices paused');
   }
   section('ACTIVE COMMITMENTS', commitLines);
+
+  // 3a. PAYMENT FORECAST — only rendered when data exists
+  if (data.paymentForecast) {
+    const pf = data.paymentForecast;
+    const weekStart = new Date();
+    weekStart.setDate(weekStart.getDate() + (pf.peakWeek - 1) * 7);
+    const weekLabel = `Week ${pf.peakWeek} (w/c ${weekStart.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })})`;
+    const trendNote = pf.trend === 'improving'
+      ? `Improving (was ${pf.avgDaysToPay + Math.abs(pf.trendDelta)} days, now ${pf.avgDaysToPay} days)`
+      : pf.trend === 'deteriorating'
+        ? `Deteriorating (was ${pf.avgDaysToPay - Math.abs(pf.trendDelta)} days, now ${pf.avgDaysToPay} days)`
+        : `Stable at ${pf.avgDaysToPay} days`;
+
+    section('PAYMENT FORECAST', [
+      `Most likely payment window: ${weekLabel}`,
+      `P(pay within 2 weeks): ${Math.round(pf.pPayWithin2Weeks * 100)}%`,
+      `P(pay within 4 weeks): ${Math.round(pf.pPayWithin4Weeks * 100)}%`,
+      `P(pay within 8 weeks): ${Math.round(pf.pPayWithin8Weeks * 100)}%`,
+      `Based on: ${pf.basedOnCount} historical payments, avg ${pf.avgDaysToPay} days`,
+      `Trend: ${trendNote}`,
+    ]);
+  }
 
   // 3b. UNALLOCATED PAYMENTS — only rendered when present
   if (data.unallocatedPayments.length > 0) {
