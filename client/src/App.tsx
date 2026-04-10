@@ -93,6 +93,11 @@ function PermissionGuard({ permission, children }: { permission: string; childre
 
 function isOnboardingComplete(status: OnboardingStatus | undefined): boolean {
   if (!status) return false;
+  // Primary: data presence — immune to flag resets from schema migrations
+  if (status.hasDebtors || status.hasInvoices) return true;
+  // Secondary: Xero connected — they've been through OAuth
+  if (status.xeroConnected) return true;
+  // Tertiary: explicit flag
   return status.onboardingCompleted === true;
 }
 

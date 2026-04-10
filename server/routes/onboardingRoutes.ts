@@ -693,6 +693,103 @@ export function registerOnboardingRoutes(app: Express): void {
     }
   });
 
+  // ── Streamlined onboarding: complete setup in one step ──
+  app.post('/api/onboarding/complete-setup', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      const tenantId = user?.tenantId || req.session?.activeTenantId;
+      if (!tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const { testContactName, testContactEmail, testContactPhone } = req.body;
+      if (!testContactName || !testContactEmail || !testContactPhone) {
+        return res.status(400).json({ message: "Name, email, and mobile are all required" });
+      }
+      if (!testContactPhone.startsWith('+') || testContactPhone.length < 10) {
+        return res.status(400).json({ message: "Mobile must start with + and be at least 10 characters" });
+      }
+
+      // 1. Save test contact + safe defaults
+      await storage.updateTenant(tenantId, {
+        testContactName,
+        testEmails: [testContactEmail],
+        testPhones: [testContactPhone],
+        communicationMode: 'testing',
+        approvalMode: 'manual',
+      });
+
+      // 2. Create default agent persona if none exists
+      try {
+        const { agentPersonas } = await import("@shared/schema");
+        const [existingPersona] = await db
+          .select()
+          .from(agentPersonas)
+          .where(eq(agentPersonas.tenantId, tenantId))
+          .limit(1);
+
+        if (!existingPersona) {
+          const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
+          const companyName = tenant?.name || (tenant as any)?.companyName || 'Company';
+          const [persona] = await db
+            .insert(agentPersonas)
+            .values({
+              tenantId,
+              personaName: 'Sarah Mitchell',
+              jobTitle: 'Credit Controller',
+              emailSignatureName: 'Sarah Mitchell',
+              emailSignatureTitle: 'Credit Controller',
+              emailSignatureCompany: companyName,
+              toneDefault: 'professional',
+              isActive: true,
+            } as any)
+            .returning();
+
+          await storage.updateTenant(tenantId, { defaultPersonaId: persona.id });
+        }
+      } catch (personaErr) {
+        console.error("[onboarding] Failed to create default persona (non-fatal):", personaErr);
+      }
+
+      // 3. Mark onboarding complete
+      await storage.updateTenant(tenantId, {
+        onboardingCompleted: true,
+        onboardingCompletedAt: new Date(),
+      });
+
+      // 4. Update onboarding_progress (best-effort backward compat)
+      try {
+        await onboardingService.ensureProgress(tenantId);
+        await onboardingService.updateStepStatus(tenantId, 1, "COMPLETED");
+        await onboardingService.updateStepStatus(tenantId, 2, "COMPLETED");
+        await db.update(onboardingProgress)
+          .set({ completedAt: new Date(), updatedAt: new Date() })
+          .where(eq(onboardingProgress.tenantId, tenantId));
+      } catch (progressErr) {
+        console.error("[onboarding] Failed to update progress (non-fatal):", progressErr);
+      }
+
+      // 5. Activity log (best-effort)
+      try {
+        await storage.createActivityLog({
+          tenantId,
+          userId: user?.id,
+          activityType: "onboarding_completed",
+          category: "audit",
+          action: "completed",
+          result: "success",
+          description: "Onboarding completed (streamlined 3-step flow)",
+          metadata: { testContactName, testContactEmail },
+        });
+      } catch (logErr) {
+        console.error("[onboarding] Activity log failed (non-fatal):", logErr);
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error completing onboarding setup:", error);
+      res.status(500).json({ message: "Failed to complete setup" });
+    }
+  });
+
   app.post('/api/onboarding/complete-all', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);

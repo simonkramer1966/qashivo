@@ -1,30 +1,23 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import { Check, Loader2 } from "lucide-react";
-import Step1CompanyDetails from "./onboarding/Step1CompanyDetails";
-import Step2ConnectXero from "./onboarding/Step2ConnectXero";
-import Step3OpenBanking from "./onboarding/Step3OpenBanking";
-import Step4AgentPersona from "./onboarding/Step4AgentPersona";
-import Step5CommPrefs from "./onboarding/Step5CommPrefs";
-import Step6ContactAnalysis from "./onboarding/Step6ContactAnalysis";
-import Step7BusinessIntel from "./onboarding/Step7BusinessIntel";
-import Step8WeeklyReview from "./onboarding/Step8WeeklyReview";
-import Step9GoLive from "./onboarding/Step9GoLive";
-
-type StepStatus = "NOT_STARTED" | "COMPLETED" | "SKIPPED" | "RUNNING";
+import { useAuth } from "@/hooks/useAuth";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
+import SyncProgressBar from "@/components/sync/SyncProgressBar";
 
 export interface OnboardingStatus {
-  step1Status: StepStatus;
-  step2Status: StepStatus;
-  step3Status: StepStatus;
-  step4Status: StepStatus;
-  step5Status: StepStatus;
-  step6Status: StepStatus;
-  step7Status: StepStatus;
-  step8Status: StepStatus;
+  step1Status: string;
+  step2Status: string;
+  step3Status: string;
+  step4Status: string;
+  step5Status: string;
+  step6Status: string;
+  step7Status: string;
+  step8Status: string;
   companyDetails: {
     subscriberFirstName: string;
     subscriberLastName: string;
@@ -39,267 +32,204 @@ export interface OnboardingStatus {
     };
   } | null;
   smsMobileOptIn: boolean;
-  agedDebtorsSummary: any;
-  contactDataSummary: any;
+  agedDebtorsSummary: unknown;
+  contactDataSummary: unknown;
   lastAnalysisAt: string | null;
   onboardingCompleted: boolean;
   xeroConnected: boolean;
   emailConnected: boolean;
   emailConnectedAddress: string | null;
+  hasDebtors: boolean;
+  hasInvoices: boolean;
 }
 
-// 9 user-facing steps mapped to 8 DB step status fields + Go Live
-const STEPS = [
-  { number: 1, label: "Welcome", dbStep: 1, required: true },
-  { number: 2, label: "Connect Xero", dbStep: 2, required: false },
-  { number: 3, label: "Open Banking", dbStep: 3, required: false },
-  { number: 4, label: "Agent Persona", dbStep: 4, required: false },
-  { number: 5, label: "Preferences", dbStep: 5, required: false },
-  { number: 6, label: "Review Debtors", dbStep: 6, required: false },
-  { number: 7, label: "Business Intel", dbStep: 7, required: false },
-  { number: 8, label: "Weekly Review", dbStep: 8, required: false },
-  { number: 9, label: "Go Live", dbStep: 0, required: false },
-];
-
-function getStepStatus(status: OnboardingStatus | undefined, uiStep: number): StepStatus {
-  if (!status) return "NOT_STARTED";
-  if (uiStep === 9) {
-    return status.onboardingCompleted ? "COMPLETED" : "NOT_STARTED";
-  }
-  const dbStep = STEPS.find((s) => s.number === uiStep)?.dbStep || uiStep;
-  const key = `step${dbStep}Status` as keyof OnboardingStatus;
-  return (status[key] as StepStatus) || "NOT_STARTED";
-}
-
-function StepIndicator({
-  step,
-  label,
-  status,
-  isActive,
-  onClick,
-}: {
-  step: number;
-  label: string;
-  status: StepStatus;
-  isActive: boolean;
-  onClick: () => void;
-}) {
-  const isCompleted = status === "COMPLETED";
-  const isSkipped = status === "SKIPPED";
-  const isRunning = status === "RUNNING";
-  const isDone = isCompleted || isSkipped;
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex items-center gap-2 text-left group"
-    >
-      <div
-        className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium border transition-colors ${
-          isActive
-            ? "border-[#14b8a6] bg-[#14b8a6] text-white"
-            : isDone
-            ? "border-[#22c55e] bg-[#22c55e] text-white"
-            : isRunning
-            ? "border-[#f59e0b] bg-[#f59e0b] text-white"
-            : "border-[#e5e7eb] bg-white text-gray-400"
-        }`}
-      >
-        {isDone ? <Check className="w-3.5 h-3.5" /> : isRunning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : step}
-      </div>
-      <span
-        className={`text-[13px] hidden md:inline ${
-          isActive
-            ? "text-gray-900 font-medium"
-            : isDone
-            ? "text-gray-500"
-            : "text-gray-400"
-        }`}
-      >
-        {label}
-      </span>
-    </button>
-  );
-}
+type Screen = "connect-xero" | "test-contact";
 
 export function OnboardingWizard() {
-  const [activeStep, setActiveStep] = useState(1);
-  const [, setLocation] = useLocation();
-  const { toast } = useToast();
+  const [, navigate] = useLocation();
+  const search = useSearch();
+  const { user, clerkUser } = useAuth();
+
+  const stepParam = new URLSearchParams(search).get("step");
+  const [screen, setScreen] = useState<Screen>(
+    stepParam === "test-contact" ? "test-contact" : "connect-xero",
+  );
+
+  // Form state for test contact
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [mobile, setMobile] = useState("");
+  const [prefilled, setPrefilled] = useState(false);
 
   const { data: status, isLoading } = useQuery<OnboardingStatus>({
     queryKey: ["/api/onboarding/full-status"],
-    refetchInterval: 10000,
+    refetchInterval: screen === "connect-xero" ? 3000 : false,
   });
 
-  const stepMutation = useMutation({
-    mutationFn: async ({ step, stepStatus }: { step: number; stepStatus: "COMPLETED" | "SKIPPED" }) => {
-      const res = await apiRequest("POST", "/api/onboarding/step", { step, status: stepStatus });
+  // Prefill from user data once available
+  useEffect(() => {
+    if (prefilled) return;
+    const firstName = clerkUser?.firstName || user?.firstName || "";
+    const lastName = clerkUser?.lastName || user?.lastName || "";
+    const userEmail =
+      clerkUser?.primaryEmailAddress?.emailAddress || user?.email || "";
+    if (firstName || userEmail) {
+      setName(`${firstName} ${lastName}`.trim());
+      setEmail(userEmail);
+      setPrefilled(true);
+    }
+  }, [clerkUser, user, prefilled]);
+
+  // Auto-advance to test-contact when Xero connects
+  useEffect(() => {
+    if (status?.xeroConnected && screen === "connect-xero") {
+      setScreen("test-contact");
+    }
+  }, [status?.xeroConnected, screen]);
+
+  const setupMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/onboarding/complete-setup", {
+        testContactName: name,
+        testContactEmail: email,
+        testContactPhone: mobile,
+      });
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/onboarding/full-status"] });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/onboarding/full-status"],
+      });
+      navigate("/qollections");
     },
   });
 
-  // Auto-advance to first incomplete step
-  useEffect(() => {
-    if (!status) return;
-    for (let i = 1; i <= 9; i++) {
-      const s = getStepStatus(status, i);
-      if (s === "NOT_STARTED" || s === "RUNNING") {
-        setActiveStep(i);
-        return;
-      }
-    }
-    setActiveStep(9);
-  }, [
-    status?.step1Status,
-    status?.step2Status,
-    status?.step3Status,
-    status?.step4Status,
-    status?.step5Status,
-    status?.step6Status,
-    status?.step7Status,
-    status?.step8Status,
-    status?.onboardingCompleted,
-  ]);
-
-  const handleNext = () => {
-    if (activeStep < 9) {
-      setActiveStep(activeStep + 1);
-    }
-  };
-
-  const handleSkip = async () => {
-    if (activeStep === 1) return;
-    const dbStep = STEPS.find((s) => s.number === activeStep)?.dbStep;
-    if (dbStep && dbStep > 0) {
-      await stepMutation.mutateAsync({ step: dbStep, stepStatus: "SKIPPED" });
-    }
-    handleNext();
-  };
-
-  const handleBack = () => {
-    if (activeStep > 1) setActiveStep(activeStep - 1);
-  };
-
-  const handleStepComplete = () => {
-    queryClient.invalidateQueries({ queryKey: ["/api/onboarding/full-status"] });
-    handleNext();
-  };
+  const mobileValid = mobile.startsWith("+") && mobile.length >= 10;
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
-  return (
-    <div className="max-w-5xl mx-auto py-8 px-4">
-      <div className="mb-8">
-        <h1 className="text-lg font-semibold text-gray-900">Set up your account</h1>
-        <p className="text-[13px] text-gray-500 mt-1">
-          Complete the steps below to get your AI collections agent up and running.
-        </p>
-      </div>
-
-      <div className="flex items-center gap-1 mb-8 overflow-x-auto pb-2">
-        {STEPS.map((step, idx) => (
-          <div key={step.number} className="flex items-center">
-            <StepIndicator
-              step={step.number}
-              label={step.label}
-              status={getStepStatus(status, step.number)}
-              isActive={activeStep === step.number}
-              onClick={() => setActiveStep(step.number)}
-            />
-            {idx < STEPS.length - 1 && (
-              <div
-                className={`w-6 md:w-10 h-px mx-1 ${
-                  getStepStatus(status, step.number) === "COMPLETED" ||
-                  getStepStatus(status, step.number) === "SKIPPED"
-                    ? "bg-[#22c55e]"
-                    : "bg-[#e5e7eb]"
-                }`}
-              />
-            )}
+  // ── Screen 1: Connect Xero ──
+  if (screen === "connect-xero") {
+    return (
+      <div className="flex items-center justify-center min-h-screen px-4">
+        <div className="w-full max-w-[480px] text-center space-y-8">
+          <div>
+            <h1 className="text-xl font-bold tracking-tight">Qashivo</h1>
           </div>
-        ))}
+          <div className="space-y-3">
+            <h2 className="text-lg font-semibold">
+              Connect your accounting software
+            </h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              We'll import your invoices and show you exactly where your cash is
+              tied up.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <Button
+              className="w-full h-11 text-white font-medium"
+              style={{ backgroundColor: "#13B5EA" }}
+              onClick={async () => {
+                try {
+                  const res = await apiRequest(
+                    "GET",
+                    "/api/xero/auth-url?returnTo=/onboarding",
+                  );
+                  const data = await res.json();
+                  if (data.url) {
+                    window.location.href = data.url;
+                  }
+                } catch {
+                  // fallback
+                  window.location.href = "/api/xero/auth-url?returnTo=/onboarding";
+                }
+              }}
+            >
+              Connect to Xero
+            </Button>
+            <p className="text-sm text-muted-foreground">
+              QuickBooks &middot; Sage &middot; FreeAgent — coming soon
+            </p>
+          </div>
+        </div>
       </div>
+    );
+  }
 
-      <div className="min-h-[400px]">
-        {activeStep === 1 && (
-          <Step1CompanyDetails
-            status={status}
-            onComplete={handleStepComplete}
-          />
-        )}
-        {activeStep === 2 && (
-          <Step2ConnectXero
-            status={status}
-            onComplete={handleStepComplete}
-            onSkip={handleSkip}
-            onBack={handleBack}
-          />
-        )}
-        {activeStep === 3 && (
-          <Step3OpenBanking
-            status={status}
-            onComplete={handleStepComplete}
-            onSkip={handleSkip}
-            onBack={handleBack}
-          />
-        )}
-        {activeStep === 4 && (
-          <Step4AgentPersona
-            status={status}
-            onComplete={handleStepComplete}
-            onSkip={handleSkip}
-            onBack={handleBack}
-          />
-        )}
-        {activeStep === 5 && (
-          <Step5CommPrefs
-            status={status}
-            onComplete={handleStepComplete}
-            onSkip={handleSkip}
-            onBack={handleBack}
-          />
-        )}
-        {activeStep === 6 && (
-          <Step6ContactAnalysis
-            status={status}
-            onComplete={handleStepComplete}
-            onSkip={handleSkip}
-            onBack={handleBack}
-          />
-        )}
-        {activeStep === 7 && (
-          <Step7BusinessIntel
-            status={status}
-            onComplete={handleStepComplete}
-            onSkip={handleSkip}
-            onBack={handleBack}
-          />
-        )}
-        {activeStep === 8 && (
-          <Step8WeeklyReview
-            status={status}
-            onComplete={handleStepComplete}
-            onSkip={handleSkip}
-            onBack={handleBack}
-          />
-        )}
-        {activeStep === 9 && (
-          <Step9GoLive
-            status={status}
-            onBack={handleBack}
-          />
-        )}
+  // ── Screen 2: Test Contact ──
+  return (
+    <div className="min-h-screen">
+      <SyncProgressBar />
+      <div className="flex items-center justify-center min-h-screen px-4">
+        <div className="w-full max-w-[480px] space-y-8">
+          <div className="space-y-3 text-center">
+            <h2 className="text-lg font-semibold">
+              Almost there — we need somewhere safe to send test emails
+            </h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Until you go live, all emails go to you, not your debtors.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Name</Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Your name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@company.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="mobile">Mobile</Label>
+              <Input
+                id="mobile"
+                type="tel"
+                value={mobile}
+                onChange={(e) => setMobile(e.target.value)}
+                placeholder="+44 7700 900000"
+              />
+            </div>
+          </div>
+          <div className="space-y-3">
+            <Button
+              className="w-full h-11"
+              disabled={
+                !name || !email || !mobileValid || setupMutation.isPending
+              }
+              onClick={() => setupMutation.mutate()}
+            >
+              {setupMutation.isPending && (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              )}
+              Continue
+            </Button>
+            {setupMutation.isError && (
+              <p className="text-sm text-destructive text-center">
+                Something went wrong. Please try again.
+              </p>
+            )}
+            <p className="text-sm text-muted-foreground text-center">
+              You can change these anytime in Settings
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

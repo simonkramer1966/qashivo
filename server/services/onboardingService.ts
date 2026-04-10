@@ -68,6 +68,8 @@ export interface OnboardingStatusResponse {
   xeroConnected: boolean;
   emailConnected: boolean;
   emailConnectedAddress: string | null;
+  hasDebtors: boolean;
+  hasInvoices: boolean;
 }
 
 export class OnboardingService {
@@ -116,6 +118,12 @@ export class OnboardingService {
     const xeroConnected = !!(tenant?.xeroAccessToken && tenant?.xeroTenantId);
     const emailConnected = !!(tenant?.emailConnectionStatus === 'connected');
 
+    // Fast data-presence checks for onboarding resilience
+    const [debtorRow] = await db.select({ count: sql<number>`count(*)::int` }).from(contacts).where(eq(contacts.tenantId, tenantId));
+    const [invoiceRow] = await db.select({ count: sql<number>`count(*)::int` }).from(invoices).where(eq(invoices.tenantId, tenantId));
+    const hasDebtors = (debtorRow?.count ?? 0) > 0;
+    const hasInvoices = (invoiceRow?.count ?? 0) > 0;
+
     if (!progress) {
       return {
         step1Status: "NOT_STARTED",
@@ -135,6 +143,8 @@ export class OnboardingService {
         xeroConnected,
         emailConnected,
         emailConnectedAddress: tenant?.emailConnectedAddress || null,
+        hasDebtors,
+        hasInvoices,
       };
     }
 
@@ -156,6 +166,8 @@ export class OnboardingService {
       xeroConnected,
       emailConnected,
       emailConnectedAddress: tenant?.emailConnectedAddress || null,
+      hasDebtors,
+      hasInvoices,
     };
   }
 
@@ -377,7 +389,7 @@ export class OnboardingService {
     return job;
   }
 
-  private async ensureProgress(tenantId: string): Promise<void> {
+  async ensureProgress(tenantId: string): Promise<void> {
     const existing = await this.getOnboardingProgress(tenantId);
     if (!existing) {
       await this.initializeOnboarding(tenantId);

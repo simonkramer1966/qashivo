@@ -706,8 +706,9 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
 
         if (!isOnboardingComplete) {
           await onboardingService.updateStepStatus(appTenantId, 2, "COMPLETED");
-          redirectUrl = '/onboarding';
-          console.log(`[Xero] Onboarding incomplete — marked step 2 complete, redirecting to: ${redirectUrl}`);
+          // Streamlined onboarding: skip the HTML intermediate page, redirect straight to test contact step
+          console.log(`[Xero] Onboarding incomplete — marked step 2 complete, redirecting to test contact`);
+          return res.redirect('/onboarding?step=test-contact');
         } else {
           console.log(`[Xero] Onboarding complete — redirecting to: ${redirectUrl}`);
         }

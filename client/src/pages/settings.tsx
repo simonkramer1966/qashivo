@@ -103,12 +103,9 @@ function getStatusBadge(status: string) {
 
 function isOnboardingComplete(status: OnboardingStatus | undefined): boolean {
   if (!status) return false;
-  if (status.step1Status !== "COMPLETED") return false;
-  for (const key of ["step2Status", "step3Status", "step4Status", "step5Status", "step6Status"] as const) {
-    const s = status[key as keyof OnboardingStatus] as string;
-    if (s !== "COMPLETED" && s !== "SKIPPED" && s !== "RUNNING") return false;
-  }
-  return true;
+  if (status.hasDebtors || status.hasInvoices) return true;
+  if (status.xeroConnected) return true;
+  return status.onboardingCompleted === true;
 }
 
 function getFirstIncompleteStep(status: OnboardingStatus | undefined): number {
