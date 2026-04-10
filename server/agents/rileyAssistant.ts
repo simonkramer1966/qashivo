@@ -1691,10 +1691,10 @@ export async function getProactiveSuggestions(
     console.error("[Riley] Proactive: new overdue query failed:", err);
   }
 
-  // 9. Unclosed eligible forecast weeks (week ended >24h ago)
+  // 9. Unclosed eligible forecast weeks (week ended >24h ago, within forecast window)
   try {
-    const { getMondayOfWeek } = await import("../services/forecastActualsService");
-    const thisMonday = getMondayOfWeek(now);
+    const { generateInflowForecast } = await import("../services/cashflowForecastService");
+    const forecast = await generateInflowForecast(tenantId);
 
     // Get all completed week starts
     const completedWeeks = await db
@@ -1710,19 +1710,19 @@ export async function getProactiveSuggestions(
       completedWeeks.map((w) => new Date(w.weekStarting).toISOString().slice(0, 10)),
     );
 
-    // Walk back up to 13 weeks to find oldest unclosed eligible week
-    for (let i = 1; i <= 13; i++) {
-      const weekStart = new Date(thisMonday);
-      weekStart.setDate(weekStart.getDate() - i * 7);
-      const weekEnd = new Date(weekStart);
+    // Check forecast weeks — only weeks in the current window are eligible
+    for (let i = 0; i < forecast.weeklyForecasts.length; i++) {
+      const wf = forecast.weeklyForecasts[i];
+      const weekEnd = new Date(wf.weekStarting);
       weekEnd.setDate(weekEnd.getDate() + 7);
       const hoursSinceEnd = (now.getTime() - weekEnd.getTime()) / (1000 * 60 * 60);
 
-      if (hoursSinceEnd > 24 && !completedSet.has(weekStart.toISOString().slice(0, 10))) {
+      if (hoursSinceEnd > 24 && !completedSet.has(wf.weekStarting)) {
+        const weekStart = new Date(wf.weekStarting);
         const weekLabel = weekStart.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
         suggestions.push({
           type: "forecast_close",
-          message: `Week ${i} (w/c ${weekLabel}) is ready to close. Review actuals and roll forward your cashflow forecast.`,
+          message: `Week ${i + 1} (w/c ${weekLabel}) is ready to close. Review actuals and roll forward your cashflow forecast.`,
           priority: "medium",
         });
         break; // Only one reminder for the oldest unclosed week

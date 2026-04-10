@@ -698,6 +698,9 @@ export function registerCashflowRoutes(app: Express): void {
 
         const now = new Date();
 
+        // Generate the current 13-week forecast — this defines the valid window
+        const forecast = await generateInflowForecast(tenantId);
+
         // Find all completed week dates
         const completedWeeks = await db
           .select({ weekStarting: forecastSnapshots.weekStarting })
@@ -712,20 +715,20 @@ export function registerCashflowRoutes(app: Express): void {
           completedWeeks.map((w) => new Date(w.weekStarting).toISOString().slice(0, 10)),
         );
 
-        // Walk backwards from current week to find the oldest eligible unclosed week
-        // Eligible = week has passed (weekStart + 7 days < now) AND not closed
-        const currentMonday = getMondayOfWeek(now);
+        // Find the oldest week in the current forecast window that has passed and is not closed
         let eligibleWeek: Date | null = null;
+        let weekForecast: (typeof forecast.weeklyForecasts)[number] | undefined;
 
-        // Check up to 13 weeks back
-        for (let offset = 1; offset <= 13; offset++) {
-          const candidate = new Date(currentMonday);
-          candidate.setDate(candidate.getDate() - offset * 7);
-          const candidateStr = candidate.toISOString().slice(0, 10);
+        for (const wf of forecast.weeklyForecasts) {
+          const wfStart = new Date(wf.weekStarting);
+          const wfEnd = new Date(wfStart);
+          wfEnd.setDate(wfEnd.getDate() + 7);
 
-          if (!closedWeekDates.has(candidateStr)) {
-            eligibleWeek = candidate;
-            // Keep going to find the OLDEST unclosed week
+          // Week must have ended (wfEnd < now) and not already be closed
+          if (wfEnd < now && !closedWeekDates.has(wf.weekStarting)) {
+            eligibleWeek = wfStart;
+            weekForecast = wf;
+            break; // First (oldest) unclosed past week in the forecast window
           }
         }
 
@@ -735,16 +738,10 @@ export function registerCashflowRoutes(app: Express): void {
 
         const weekEnd = new Date(eligibleWeek);
         weekEnd.setDate(weekEnd.getDate() + 6);
+        const weekStr = eligibleWeek.toISOString().slice(0, 10);
 
         // Get actuals
         const actuals = await captureWeekActuals(tenantId, eligibleWeek);
-
-        // Get forecast for this week from the stored snapshot or current forecast
-        const forecast = await generateInflowForecast(tenantId);
-        const weekStr = eligibleWeek.toISOString().slice(0, 10);
-        const weekForecast = forecast.weeklyForecasts.find(
-          (wf) => wf.weekStarting === weekStr,
-        );
 
         // Also check stored snapshot for the forecast numbers (more accurate if week was in the past)
         const [draftSnapshot] = await db
@@ -873,18 +870,16 @@ export function registerCashflowRoutes(app: Express): void {
           earlierUnclosed.map((w) => new Date(w.weekStarting).toISOString().slice(0, 10)),
         );
 
-        // Check if there's an earlier week that should be closed first
-        const currentMonday = getMondayOfWeek(now);
-        for (let offset = 1; offset <= 13; offset++) {
-          const candidate = new Date(currentMonday);
-          candidate.setDate(candidate.getDate() - offset * 7);
-          const candidateStr = candidate.toISOString().slice(0, 10);
-          const weekStr = weekStart.toISOString().slice(0, 10);
-
-          if (candidateStr === weekStr) break; // Reached our target week
-          if (!closedDates.has(candidateStr)) {
+        // Check if there's an earlier week in the forecast window that should be closed first
+        const forecast = await generateInflowForecast(tenantId);
+        const targetStr = weekStart.toISOString().slice(0, 10);
+        for (const wf of forecast.weeklyForecasts) {
+          if (wf.weekStarting === targetStr) break; // Reached our target week
+          const wfEnd = new Date(wf.weekStarting);
+          wfEnd.setDate(wfEnd.getDate() + 7);
+          if (wfEnd < now && !closedDates.has(wf.weekStarting)) {
             return res.status(400).json({
-              error: `Must close week starting ${candidateStr} first (must close in order)`,
+              error: `Must close week starting ${wf.weekStarting} first (must close in order)`,
             });
           }
         }
@@ -910,8 +905,7 @@ export function registerCashflowRoutes(app: Express): void {
         // Capture final actuals
         const actuals = await captureWeekActuals(tenantId, weekStart);
 
-        // Get forecast for variance calculation
-        const forecast = await generateInflowForecast(tenantId);
+        // Get forecast for variance calculation (reuse forecast from sequential check above)
         const weekForecast = forecast.weeklyForecasts.find(
           (wf) => wf.weekStarting === weekStr,
         );
