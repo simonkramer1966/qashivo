@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,9 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import {
+  Tooltip, TooltipContent, TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Clock, Mail, MessageSquare, Phone, X, Send, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useInvalidateActionCentre } from "@/hooks/useInvalidateActionCentre";
@@ -18,6 +21,53 @@ import { Link } from "wouter";
 import { normalizeChannel } from "./utils";
 import { ReplyBadge } from "./ReplyBadge";
 import { CONVERSATION_TYPE } from "@shared/types/actionMetadata";
+
+// ── Business hours check ──────────────────────────────────
+// Returns whether the current time (in the tenant's timezone) falls
+// within the configured business hours window on a weekday.
+
+function isWithinBusinessHours(
+  startStr: string,
+  endStr: string,
+  timezone: string,
+): boolean {
+  try {
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat("en-GB", {
+      timeZone: timezone,
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+      weekday: "short",
+    });
+    const parts = formatter.formatToParts(now);
+    const hour = Number(parts.find((p) => p.type === "hour")?.value ?? "0");
+    const minute = Number(parts.find((p) => p.type === "minute")?.value ?? "0");
+    const weekday = parts.find((p) => p.type === "weekday")?.value ?? "";
+
+    // Weekend check (Sat/Sun)
+    if (["Sat", "Sun"].includes(weekday)) return false;
+
+    const currentMinutes = hour * 60 + minute;
+    const [sh, sm] = startStr.split(":").map(Number);
+    const [eh, em] = endStr.split(":").map(Number);
+    return currentMinutes >= sh * 60 + sm && currentMinutes < eh * 60 + em;
+  } catch {
+    // If timezone parsing fails, allow sending (fail open for UX)
+    return true;
+  }
+}
+
+function formatHoursLabel(start: string, end: string): string {
+  // Strip leading zero for display: "08:00" → "8am", "18:00" → "6pm"
+  const fmt = (t: string) => {
+    const [h, m] = t.split(":").map(Number);
+    const suffix = h >= 12 ? "pm" : "am";
+    const h12 = h % 12 || 12;
+    return m === 0 ? `${h12}${suffix}` : `${h12}:${String(m).padStart(2, "0")}${suffix}`;
+  };
+  return `${fmt(start)}–${fmt(end)} Mon–Fri`;
+}
 
 interface ScheduledAction {
   id: string;
@@ -92,6 +142,32 @@ export default function ScheduledTab() {
   const { toast } = useToast();
   const invalidate = useInvalidateActionCentre();
   const [previewAction, setPreviewAction] = useState<ScheduledAction | null>(null);
+
+  const { data: tenant } = useQuery<{
+    businessHoursStart?: string | null;
+    businessHoursEnd?: string | null;
+    executionTimezone?: string | null;
+  }>({
+    queryKey: ["/api/tenant"],
+    staleTime: 5 * 60_000,
+  });
+
+  const bhStart = tenant?.businessHoursStart ?? "08:00";
+  const bhEnd = tenant?.businessHoursEnd ?? "18:00";
+  const bhTz = tenant?.executionTimezone ?? "Europe/London";
+
+  // Re-evaluate every 60s so the button enables/disables at hour boundaries
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const canSendNow = useMemo(
+    () => isWithinBusinessHours(bhStart, bhEnd, bhTz),
+    [bhStart, bhEnd, bhTz, tick],
+  );
+  const hoursLabel = useMemo(() => formatHoursLabel(bhStart, bhEnd), [bhStart, bhEnd]);
 
   const { data, isLoading } = useQuery<{
     actions: ScheduledAction[];
@@ -236,20 +312,31 @@ export default function ScheduledTab() {
               </TableCell>
               <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center justify-end gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 px-2 text-xs"
-                    disabled={sendNowMutation.isPending}
-                    onClick={() => sendNowMutation.mutate(action.id)}
-                  >
-                    {sendNowMutation.isPending ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : (
-                      <Send className="h-3 w-3 mr-1" />
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span tabIndex={!canSendNow ? 0 : undefined}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          disabled={!canSendNow || sendNowMutation.isPending}
+                          onClick={() => sendNowMutation.mutate(action.id)}
+                        >
+                          {sendNowMutation.isPending ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Send className="h-3 w-3 mr-1" />
+                          )}
+                          Send Now
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    {!canSendNow && (
+                      <TooltipContent>
+                        Available during business hours ({hoursLabel})
+                      </TooltipContent>
                     )}
-                    Send Now
-                  </Button>
+                  </Tooltip>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -343,19 +430,30 @@ export default function ScheduledTab() {
 
                 {/* Actions */}
                 <div className="flex gap-2 pt-2 border-t">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={sendNowMutation.isPending}
-                    onClick={() => sendNowMutation.mutate(previewAction.id)}
-                  >
-                    {sendNowMutation.isPending ? (
-                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                    ) : (
-                      <Send className="h-3 w-3 mr-1" />
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span tabIndex={!canSendNow ? 0 : undefined}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={!canSendNow || sendNowMutation.isPending}
+                          onClick={() => sendNowMutation.mutate(previewAction.id)}
+                        >
+                          {sendNowMutation.isPending ? (
+                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          ) : (
+                            <Send className="h-3 w-3 mr-1" />
+                          )}
+                          Send Now
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    {!canSendNow && (
+                      <TooltipContent>
+                        Available during business hours ({hoursLabel})
+                      </TooltipContent>
                     )}
-                    Send Now
-                  </Button>
+                  </Tooltip>
                   <Button
                     size="sm"
                     variant="destructive"

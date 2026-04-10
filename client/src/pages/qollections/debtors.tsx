@@ -42,6 +42,7 @@ import {
   StickyNote,
   PauseCircle,
   Star,
+  AlertCircle,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
@@ -211,6 +212,7 @@ export default function QollectionsDebtors() {
         totalOutstanding: 0,
         totalOverdue: 0,
         avgDaysOverdue: 0,
+        overduePercent: 0,
       };
 
     const unmatchedCredits = debtorsResponse?.unmatchedCredits ?? 0;
@@ -228,11 +230,17 @@ export default function QollectionsDebtors() {
           )
         : 0;
 
+    const overduePercent =
+      totalOutstanding > 0
+        ? Math.round((totalOverdue / totalOutstanding) * 1000) / 10
+        : 0;
+
     return {
       totalDebtors: debtors.length,
       totalOutstanding,
       totalOverdue,
       avgDaysOverdue,
+      overduePercent,
     };
   }, [debtors, debtorsResponse]);
 
@@ -340,22 +348,30 @@ export default function QollectionsDebtors() {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100">
-                  <span className="text-lg font-semibold text-amber-600">
-                    #
-                  </span>
+                <div className={cn(
+                  "flex h-10 w-10 items-center justify-center rounded-lg",
+                  kpis.overduePercent > 50 ? "bg-red-100" : kpis.overduePercent >= 25 ? "bg-amber-100" : "bg-green-100",
+                )}>
+                  <AlertCircle className={cn(
+                    "h-5 w-5",
+                    kpis.overduePercent > 50 ? "text-red-600" : kpis.overduePercent >= 25 ? "text-amber-600" : "text-green-600",
+                  )} />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">
-                    Avg Days Overdue
+                    Overdue %
                   </p>
-                  <p className="text-2xl font-bold">
+                  <p className={cn(
+                    "text-2xl font-bold",
+                    kpis.overduePercent > 50 ? "text-red-600" : kpis.overduePercent >= 25 ? "text-amber-600" : "text-green-600",
+                  )}>
                     {isLoading ? (
-                      <Skeleton className="h-8 w-12" />
+                      <Skeleton className="h-8 w-16" />
                     ) : (
-                      kpis.avgDaysOverdue
+                      `${kpis.overduePercent.toFixed(1)}%`
                     )}
                   </p>
+                  <p className="text-xs text-muted-foreground">of outstanding balance</p>
                 </div>
               </div>
             </CardContent>
