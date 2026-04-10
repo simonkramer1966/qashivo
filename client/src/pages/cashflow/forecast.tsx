@@ -647,6 +647,10 @@ export default function ForecastPage() {
       optimisticBalance: Math.round(forecast.runningBalance?.optimistic?.[i] ?? runningOptimistic),
       expectedBalance: Math.round(forecast.runningBalance?.expected?.[i] ?? runningExpected),
       pessimisticBalance: Math.round(forecast.runningBalance?.pessimistic?.[i] ?? runningPessimistic),
+      balanceBand: [
+        Math.round(forecast.runningBalance?.pessimistic?.[i] ?? runningPessimistic),
+        Math.round(forecast.runningBalance?.optimistic?.[i] ?? runningOptimistic),
+      ] as [number, number],
       invoiceCount: wf.invoiceBreakdown.length,
       isFragile: concentration?.isFragile ?? false,
       isCompleted: wf.isCompleted ?? false,
@@ -877,18 +881,13 @@ export default function ForecastPage() {
                 width={55}
               />
               <Tooltip content={<BalanceTooltip />} />
-              {/* Confidence band */}
+              {/* Confidence band (pessimistic to optimistic range) */}
               <Area
-                dataKey="optimisticBalance"
+                dataKey="balanceBand"
+                type="monotone"
                 stroke="none"
-                fill="#3b82f6"
-                fillOpacity={0.08}
-              />
-              <Area
-                dataKey="pessimisticBalance"
-                stroke="none"
-                fill="#ffffff"
-                fillOpacity={1}
+                fill="rgba(59,130,246,0.12)"
+                connectNulls
               />
               {/* Safety threshold */}
               <ReferenceLine
