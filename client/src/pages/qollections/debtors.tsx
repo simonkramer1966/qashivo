@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import SyncStatusBanner from "@/components/sync/SyncStatusBanner";
 import AppShell from "@/components/layout/app-shell";
 import { Card, CardContent } from "@/components/ui/card";
@@ -46,6 +46,8 @@ import {
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { VipPromotionDialog } from "@/components/action-centre/VipPromotionDialog";
 import {
   SortableHeader,
@@ -167,6 +169,8 @@ function compareDebtors(a: Debtor, b: Debtor, sort: SortState): number {
 
 export default function QollectionsDebtors() {
   const [, navigate] = useLocation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [sort, setSort] = useState<SortState>(DEFAULT_SORT);
@@ -177,6 +181,22 @@ export default function QollectionsDebtors() {
     queryKey: ["/api/qollections/debtors"],
   });
   const debtors = debtorsResponse?.debtors;
+
+  const removeVipMutation = useMutation({
+    mutationFn: async (contactId: string) => {
+      const res = await apiRequest("POST", `/api/contacts/${contactId}/vip/return`, {
+        reason: "Removed from debtors list",
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "VIP status removed" });
+      queryClient.invalidateQueries({ queryKey: ["/api/qollections/debtors"] });
+    },
+    onError: () => {
+      toast({ title: "Failed to remove VIP status", variant: "destructive" });
+    },
+  });
 
   const filtered = useMemo(() => {
     if (!debtors) return [];
@@ -564,25 +584,31 @@ export default function QollectionsDebtors() {
                                 <MoreVertical className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
+                            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                               <DropdownMenuLabel>Actions</DropdownMenuLabel>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem onClick={() => navigate(`/qollections/debtors/${debtor.id}`)}>
                                 <Eye className="h-4 w-4 mr-2" /> View Details
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => navigate(`/qollections/debtors/${debtor.id}`)}>
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/qollections/debtors/${debtor.id}`); }}>
                                 <UserPlus className="h-4 w-4 mr-2" /> Add Contact
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => navigate(`/qollections/debtors/${debtor.id}`)}>
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/qollections/debtors/${debtor.id}`); }}>
                                 <StickyNote className="h-4 w-4 mr-2" /> Add Note
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem>
+                              <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
                                 <PauseCircle className="h-4 w-4 mr-2" /> Put On Hold
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => setVipTarget({ id: debtor.id, name: debtor.name })}>
-                                <Star className="h-4 w-4 mr-2" /> Mark as VIP
-                              </DropdownMenuItem>
+                              {debtor.isVip ? (
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); removeVipMutation.mutate(debtor.id); }}>
+                                  <Star className="h-4 w-4 mr-2" /> Remove VIP
+                                </DropdownMenuItem>
+                              ) : (
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setVipTarget({ id: debtor.id, name: debtor.name }); }}>
+                                  <Star className="h-4 w-4 mr-2" /> Mark as VIP
+                                </DropdownMenuItem>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>

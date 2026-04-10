@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useInvalidateActionCentre } from "@/hooks/useInvalidateActionCentre";
@@ -46,6 +46,7 @@ export function VipPromotionDialog({
   companyName,
 }: VipPromotionDialogProps) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const invalidateActionCentre = useInvalidateActionCentre();
   const [reason, setReason] = useState("");
   const [note, setNote] = useState("");
@@ -60,6 +61,7 @@ export function VipPromotionDialog({
       const suffix = cancelled > 0 ? ` — ${cancelled} action${cancelled !== 1 ? "s" : ""} cancelled` : "";
       toast({ title: `${companyName} moved to VIP${suffix}` });
       invalidateActionCentre();
+      queryClient.invalidateQueries({ queryKey: ["/api/qollections/debtors"] });
       onOpenChange(false);
       setReason("");
       setNote("");
