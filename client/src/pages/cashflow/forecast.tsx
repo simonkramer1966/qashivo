@@ -761,11 +761,6 @@ export default function ForecastPage() {
                 ? `${balance.source === "manual" ? "Manual entry" : balance.source} as of ${new Date(balance.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`
                 : "Not set"}
             </p>
-            {balance?.source === "manual" && (
-              <p className="text-xs text-muted-foreground mt-0.5 underline">
-                Connect Open Banking for real-time balance
-              </p>
-            )}
           </CardContent>
         </Card>
 
