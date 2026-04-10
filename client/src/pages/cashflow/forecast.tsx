@@ -2216,6 +2216,55 @@ export default function ForecastPage() {
                 with every payment observed. More data = tighter distributions =
                 more accurate forecasts.
               </p>
+              <hr className="border-border" />
+              <p className="font-medium text-foreground">Recurring revenue</p>
+              <p>
+                The system automatically detects repeating invoice patterns from
+                your Xero history — clients who pay roughly the same amount on a
+                regular cycle (monthly, quarterly, etc.). These are projected
+                forward into the forecast window using the same per-debtor
+                payment timing model as AR collections.
+              </p>
+              <p>
+                Detected patterns appear as "unconfirmed" until you review them.
+                Confirmed patterns carry full weight; unconfirmed ones are
+                included at reduced confidence so the forecast stays
+                conservative until you say otherwise.
+              </p>
+              <hr className="border-border" />
+              <p className="font-medium text-foreground">Pipeline revenue</p>
+              <p>
+                You can add expected future revenue in three confidence levels:
+              </p>
+              <p>
+                <strong>Committed</strong> — revenue where the client has
+                agreed. Included in all three scenarios.
+              </p>
+              <p>
+                <strong>Uncommitted</strong> — revenue you're confident about
+                but the client hasn't confirmed. Included in the optimistic and
+                expected scenarios only.
+              </p>
+              <p>
+                <strong>Stretch</strong> — revenue that's possible but
+                uncertain. Included in the optimistic scenario only.
+              </p>
+              <p>
+                Enter amounts in the week you expect to raise the invoice. The
+                forecast automatically shifts the cash arrival based on how
+                quickly your clients typically pay:
+              </p>
+              <ul className="list-disc list-inside space-y-1 ml-1">
+                <li>Committed revenue uses your actual portfolio payment speed</li>
+                <li>Uncommitted adds a 25% timing buffer</li>
+                <li>Stretch adds a 50% timing buffer</li>
+              </ul>
+              <p>
+                This means the cash appears later than the invoice week — just
+                as it does with your real invoices. The more conservative the
+                confidence level, the later the cash lands and the fewer
+                scenarios it appears in.
+              </p>
             </CardContent>
           </CollapsibleContent>
         </Card>
