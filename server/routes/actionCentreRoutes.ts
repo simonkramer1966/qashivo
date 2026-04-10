@@ -264,9 +264,14 @@ export function registerActionCentreRoutes(app: Express): void {
           action: actions,
           contactName: contacts.name,
           companyName: contacts.companyName,
+          bestContactWindowStart: customerPreferences.bestContactWindowStart,
+          bestContactWindowEnd: customerPreferences.bestContactWindowEnd,
+          bestContactDays: customerPreferences.bestContactDays,
+          contactTimezone: customerPreferences.contactTimezone,
         })
         .from(actions)
         .leftJoin(contacts, eq(actions.contactId, contacts.id))
+        .leftJoin(customerPreferences, eq(customerPreferences.contactId, actions.contactId))
         .where(
           and(
             eq(actions.tenantId, user.tenantId),
@@ -288,6 +293,14 @@ export function registerActionCentreRoutes(app: Express): void {
         ...r.action,
         contactName: r.contactName,
         companyName: r.companyName,
+        debtorContactWindow: (r.bestContactWindowStart || r.bestContactWindowEnd || r.bestContactDays || r.contactTimezone)
+          ? {
+              start: r.bestContactWindowStart ?? null,
+              end: r.bestContactWindowEnd ?? null,
+              days: r.bestContactDays ?? null,
+              timezone: r.contactTimezone ?? null,
+            }
+          : null,
       }));
 
       res.json({

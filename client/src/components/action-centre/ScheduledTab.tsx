@@ -30,6 +30,7 @@ function isWithinBusinessHours(
   startStr: string,
   endStr: string,
   timezone: string,
+  allowedDays?: string[] | null,
 ): boolean {
   try {
     const now = new Date();
@@ -45,28 +46,44 @@ function isWithinBusinessHours(
     const minute = Number(parts.find((p) => p.type === "minute")?.value ?? "0");
     const weekday = parts.find((p) => p.type === "weekday")?.value ?? "";
 
-    // Weekend check (Sat/Sun)
-    if (["Sat", "Sun"].includes(weekday)) return false;
+    // Day-of-week check: use debtor's allowed days if set, else Mon-Fri
+    if (allowedDays && allowedDays.length > 0) {
+      // allowedDays uses full names ("monday"), weekday from formatter is "Mon"
+      const longDay = new Intl.DateTimeFormat("en-US", {
+        timeZone: timezone,
+        weekday: "long",
+      }).format(now).toLowerCase();
+      if (!allowedDays.includes(longDay)) return false;
+    } else {
+      if (["Sat", "Sun"].includes(weekday)) return false;
+    }
 
     const currentMinutes = hour * 60 + minute;
     const [sh, sm] = startStr.split(":").map(Number);
     const [eh, em] = endStr.split(":").map(Number);
     return currentMinutes >= sh * 60 + sm && currentMinutes < eh * 60 + em;
   } catch {
-    // If timezone parsing fails, allow sending (fail open for UX)
     return true;
   }
 }
 
-function formatHoursLabel(start: string, end: string): string {
-  // Strip leading zero for display: "08:00" → "8am", "18:00" → "6pm"
+function formatHoursLabel(start: string, end: string, days?: string[] | null): string {
   const fmt = (t: string) => {
     const [h, m] = t.split(":").map(Number);
     const suffix = h >= 12 ? "pm" : "am";
     const h12 = h % 12 || 12;
     return m === 0 ? `${h12}${suffix}` : `${h12}:${String(m).padStart(2, "0")}${suffix}`;
   };
-  return `${fmt(start)}–${fmt(end)} Mon–Fri`;
+  // Summarise allowed days if custom, otherwise "Mon–Fri"
+  let dayLabel = "Mon–Fri";
+  if (days && days.length > 0 && days.length < 5) {
+    const abbrev: Record<string, string> = {
+      monday: "Mon", tuesday: "Tue", wednesday: "Wed",
+      thursday: "Thu", friday: "Fri", saturday: "Sat", sunday: "Sun",
+    };
+    dayLabel = days.map((d) => abbrev[d] ?? d).join(", ");
+  }
+  return `${fmt(start)}–${fmt(end)} ${dayLabel}`;
 }
 
 interface ScheduledAction {
@@ -86,6 +103,12 @@ interface ScheduledAction {
   approvedAt: string | null;
   createdAt: string;
   metadata: any;
+  debtorContactWindow?: {
+    start: string | null;
+    end: string | null;
+    days: string[] | null;
+    timezone: string | null;
+  } | null;
 }
 
 function ChannelIcon({ type }: { type: string }) {
@@ -163,11 +186,21 @@ export default function ScheduledTab() {
     return () => clearInterval(id);
   }, []);
 
-  const canSendNow = useMemo(
-    () => isWithinBusinessHours(bhStart, bhEnd, bhTz),
-    [bhStart, bhEnd, bhTz, tick],
-  );
-  const hoursLabel = useMemo(() => formatHoursLabel(bhStart, bhEnd), [bhStart, bhEnd]);
+  // Per-action: check the debtor's contact window if set, else tenant defaults.
+  // Returns { allowed, label } for each action.
+  const getActionSendStatus = (action: ScheduledAction) => {
+    const w = action.debtorContactWindow;
+    const start = w?.start ?? bhStart;
+    const end = w?.end ?? bhEnd;
+    const tz = w?.timezone ?? bhTz;
+    const days = w?.days ?? null;
+    const allowed = isWithinBusinessHours(start, end, tz, days);
+    const label = formatHoursLabel(start, end, days);
+    return { allowed, label };
+  };
+
+  // Suppress lint: tick is used to force re-evaluation
+  void tick;
 
   const { data, isLoading } = useQuery<{
     actions: ScheduledAction[];
@@ -311,15 +344,18 @@ export default function ScheduledTab() {
                 )}
               </TableCell>
               <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                {(() => {
+                  const sendStatus = getActionSendStatus(action);
+                  return (
                 <div className="flex items-center justify-end gap-1">
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <span tabIndex={!canSendNow ? 0 : undefined}>
+                      <span tabIndex={!sendStatus.allowed ? 0 : undefined}>
                         <Button
                           variant="ghost"
                           size="sm"
                           className="h-7 px-2 text-xs"
-                          disabled={!canSendNow || sendNowMutation.isPending}
+                          disabled={!sendStatus.allowed || sendNowMutation.isPending}
                           onClick={() => sendNowMutation.mutate(action.id)}
                         >
                           {sendNowMutation.isPending ? (
@@ -331,9 +367,9 @@ export default function ScheduledTab() {
                         </Button>
                       </span>
                     </TooltipTrigger>
-                    {!canSendNow && (
+                    {!sendStatus.allowed && (
                       <TooltipContent>
-                        Available during business hours ({hoursLabel})
+                        Available during business hours ({sendStatus.label})
                       </TooltipContent>
                     )}
                   </Tooltip>
@@ -352,6 +388,8 @@ export default function ScheduledTab() {
                     Cancel
                   </Button>
                 </div>
+                  );
+                })()}
               </TableCell>
             </TableRow>
           ))}
@@ -429,14 +467,17 @@ export default function ScheduledTab() {
                 )}
 
                 {/* Actions */}
+                {(() => {
+                  const sendStatus = getActionSendStatus(previewAction);
+                  return (
                 <div className="flex gap-2 pt-2 border-t">
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <span tabIndex={!canSendNow ? 0 : undefined}>
+                      <span tabIndex={!sendStatus.allowed ? 0 : undefined}>
                         <Button
                           size="sm"
                           variant="outline"
-                          disabled={!canSendNow || sendNowMutation.isPending}
+                          disabled={!sendStatus.allowed || sendNowMutation.isPending}
                           onClick={() => sendNowMutation.mutate(previewAction.id)}
                         >
                           {sendNowMutation.isPending ? (
@@ -448,9 +489,9 @@ export default function ScheduledTab() {
                         </Button>
                       </span>
                     </TooltipTrigger>
-                    {!canSendNow && (
+                    {!sendStatus.allowed && (
                       <TooltipContent>
-                        Available during business hours ({hoursLabel})
+                        Available during business hours ({sendStatus.label})
                       </TooltipContent>
                     )}
                   </Tooltip>
@@ -468,6 +509,8 @@ export default function ScheduledTab() {
                     Cancel
                   </Button>
                 </div>
+                  );
+                })()}
               </div>
             </>
           )}

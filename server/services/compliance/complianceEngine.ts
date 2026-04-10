@@ -93,6 +93,7 @@ export async function checkCompliance(input: ComplianceInput): Promise<Complianc
       columns: {
         bestContactWindowStart: true,
         bestContactWindowEnd: true,
+        bestContactDays: true,
         contactTimezone: true,
         doNotContactFrom: true,
         doNotContactUntil: true,
@@ -177,6 +178,22 @@ export async function checkCompliance(input: ComplianceInput): Promise<Complianc
 
   if (currentHour < startHour || currentHour >= endHour) {
     violations.push(`Time-of-day: current time outside business hours (${debtorStartStr}–${debtorEndStr}${debtorPrefs?.bestContactWindowStart ? ' [debtor override]' : ''})`);
+  }
+
+  // ── Rule 3a: Contact day restrictions ──────────────────
+  if (debtorPrefs?.bestContactDays && Array.isArray(debtorPrefs.bestContactDays)) {
+    const allowedDays = debtorPrefs.bestContactDays as string[];
+    if (allowedDays.length > 0 && allowedDays.length < 7) {
+      try {
+        const dayName = new Intl.DateTimeFormat("en-US", {
+          timeZone: debtorTz,
+          weekday: "long",
+        }).format(new Date()).toLowerCase();
+        if (!allowedDays.includes(dayName)) {
+          violations.push(`Contact day: ${dayName} is not in debtor's allowed days (${allowedDays.join(", ")})`);
+        }
+      } catch { /* invalid timezone — skip day check */ }
+    }
   }
 
   // ── Rule 3b: Blackout / do-not-contact ────────────────

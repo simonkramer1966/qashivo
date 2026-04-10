@@ -17,6 +17,7 @@ import {
   emailMessages,
   timelineEvents,
   customerContactPersons,
+  customerPreferences,
 } from "@shared/schema";
 import { generateCollectionEmail } from "../agents/collectionsAgent";
 import { checkCompliance, type ComplianceResult } from "./compliance/complianceEngine";
@@ -28,6 +29,114 @@ import { generateReplyToEmail, findOrCreateConversation, updateConversationStats
 import { v4 as uuidv4 } from "uuid";
 import type { ActionContext } from "../agents/prompts/collectionEmail";
 import type { CharlieDecision } from "./playbookEngine";
+
+// ── Contact window scheduling ─────────────────────────────
+// Given a candidate send time, snap it forward into the debtor's
+// allowed contact window (hours + days). Falls back to tenant defaults.
+// Searches up to 14 days forward to find a valid slot.
+
+async function snapToContactWindow(
+  candidate: Date,
+  contactId: string | null,
+  tenant: { businessHoursStart: string | null; businessHoursEnd: string | null; executionTimezone: string | null },
+): Promise<Date> {
+  let startStr = tenant.businessHoursStart ?? "08:00";
+  let endStr = tenant.businessHoursEnd ?? "18:00";
+  let tz = tenant.executionTimezone ?? "Europe/London";
+  let allowedDays: string[] | null = null;
+
+  if (contactId) {
+    try {
+      const [prefs] = await db
+        .select({
+          start: customerPreferences.bestContactWindowStart,
+          end: customerPreferences.bestContactWindowEnd,
+          days: customerPreferences.bestContactDays,
+          timezone: customerPreferences.contactTimezone,
+        })
+        .from(customerPreferences)
+        .where(eq(customerPreferences.contactId, contactId))
+        .limit(1);
+
+      if (prefs) {
+        if (prefs.start) startStr = prefs.start;
+        if (prefs.end) endStr = prefs.end;
+        if (prefs.timezone) tz = prefs.timezone;
+        if (prefs.days && Array.isArray(prefs.days) && (prefs.days as string[]).length > 0) {
+          allowedDays = prefs.days as string[];
+        }
+      }
+    } catch (err) {
+      console.warn("[Pipeline] Failed to load debtor preferences for scheduling:", err);
+    }
+  }
+
+  const [sh, sm] = startStr.split(":").map(Number);
+  const [eh, em] = endStr.split(":").map(Number);
+  const windowStartMin = sh * 60 + sm;
+  const windowEndMin = eh * 60 + em;
+
+  // Walk forward from candidate, checking each day
+  const check = new Date(candidate);
+  for (let i = 0; i < 14; i++) {
+    const dayFormatter = new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "long" });
+    const dayName = dayFormatter.format(check).toLowerCase();
+
+    // Check allowed days (if set), otherwise skip weekends
+    const dayAllowed = allowedDays
+      ? allowedDays.includes(dayName)
+      : !["saturday", "sunday"].includes(dayName);
+
+    if (dayAllowed) {
+      // Get current time in debtor timezone
+      const timeFmt = new Intl.DateTimeFormat("en-GB", {
+        timeZone: tz,
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      });
+      const parts = timeFmt.formatToParts(check);
+      const h = Number(parts.find((p) => p.type === "hour")?.value ?? 0);
+      const m = Number(parts.find((p) => p.type === "minute")?.value ?? 0);
+      const currentMin = h * 60 + m;
+
+      if (i === 0 && currentMin >= windowStartMin && currentMin < windowEndMin) {
+        // Candidate is already within the window today
+        return check;
+      }
+
+      if (i === 0 && currentMin < windowStartMin) {
+        // Before window today — snap to window start today
+        const diffMs = (windowStartMin - currentMin) * 60_000;
+        return new Date(check.getTime() + diffMs);
+      }
+
+      if (i > 0) {
+        // Future day — snap to window start
+        // Calculate offset from midnight in the timezone to window start
+        const midnightParts = new Intl.DateTimeFormat("en-GB", {
+          timeZone: tz,
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        }).formatToParts(check);
+        const mh = Number(midnightParts.find((p) => p.type === "hour")?.value ?? 0);
+        const mm = Number(midnightParts.find((p) => p.type === "minute")?.value ?? 0);
+        const currentDayMin = mh * 60 + mm;
+        const diffMs = (windowStartMin - currentDayMin) * 60_000;
+        return new Date(check.getTime() + diffMs);
+      }
+    }
+
+    // Move to start of next day (add enough to get past midnight in tz)
+    // Simple approach: add 24h and zero out to approximate next day
+    check.setDate(check.getDate() + 1);
+    check.setHours(0, 0, 0, 0);
+  }
+
+  // Fallback: return original candidate (compliance will catch it)
+  return candidate;
+}
 import { determineTone, mapToneToActionContext } from "./toneEscalationEngine";
 
 // ── Types ────────────────────────────────────────────────────
@@ -302,7 +411,9 @@ export async function markActionApproved(
   }
 
   if (sendDelayMinutes > 0) {
-    const scheduledFor = new Date(Date.now() + sendDelayMinutes * 60_000);
+    // Calculate send time respecting debtor-level contact window + days.
+    const candidateTime = new Date(Date.now() + sendDelayMinutes * 60_000);
+    const scheduledFor = await snapToContactWindow(candidateTime, row.action.contactId, row.tenant);
     updatePatch.status = "scheduled";
     updatePatch.scheduledFor = scheduledFor;
     await db.update(actions).set(updatePatch).where(eq(actions.id, actionId));
