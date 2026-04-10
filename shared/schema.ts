@@ -6275,6 +6275,57 @@ export const insertPipelineItemSchema = createInsertSchema(pipelineItems).omit({
 export type PipelineItem = typeof pipelineItems.$inferSelect;
 export type InsertPipelineItem = z.infer<typeof insertPipelineItemSchema>;
 
+// ── Phase 5: Forecast Snapshots (Accuracy Tracking) ───────────
+
+export const forecastSnapshots = pgTable("forecast_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  weekStarting: timestamp("week_starting").notNull(),
+  snapshotDate: timestamp("snapshot_date").notNull(),
+  layer1ArCollections: jsonb("layer1_ar_collections"),
+  layer2RecurringRevenue: jsonb("layer2_recurring_revenue"),
+  layer3Pipeline: jsonb("layer3_pipeline"),
+  totalForecast: jsonb("total_forecast"), // { optimistic, expected, pessimistic }
+  invoiceBreakdown: jsonb("invoice_breakdown"),
+  recurringBreakdown: jsonb("recurring_breakdown"),
+  pipelineBreakdown: jsonb("pipeline_breakdown"),
+  actualCollections: decimal("actual_collections", { precision: 12, scale: 2 }),
+  actualInvoicesRaised: decimal("actual_invoices_raised", { precision: 12, scale: 2 }),
+  actualOutflows: decimal("actual_outflows", { precision: 12, scale: 2 }),
+  openingBalance: decimal("opening_balance", { precision: 12, scale: 2 }),
+  closingBalance: decimal("closing_balance", { precision: 12, scale: 2 }),
+  varianceAmount: decimal("variance_amount", { precision: 12, scale: 2 }),
+  variancePercent: decimal("variance_percent", { precision: 5, scale: 2 }),
+  varianceDrivers: jsonb("variance_drivers"),
+  isCompleted: boolean("is_completed").default(false),
+  completedAt: timestamp("completed_at"),
+  completedBy: varchar("completed_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("idx_forecast_snapshots_tenant_week_date").on(table.tenantId, table.weekStarting, table.snapshotDate),
+]);
+
+export const forecastSnapshotsRelations = relations(forecastSnapshots, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [forecastSnapshots.tenantId],
+    references: [tenants.id],
+  }),
+  completedByUser: one(users, {
+    fields: [forecastSnapshots.completedBy],
+    references: [users.id],
+  }),
+}));
+
+export const insertForecastSnapshotSchema = createInsertSchema(forecastSnapshots).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type ForecastSnapshot = typeof forecastSnapshots.$inferSelect;
+export type InsertForecastSnapshot = z.infer<typeof insertForecastSnapshotSchema>;
+
 // ── Sprint 8: Weekly CFO Reviews ──────────────────────────
 
 export const weeklyReviews = pgTable("weekly_reviews", {

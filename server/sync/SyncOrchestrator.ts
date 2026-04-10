@@ -630,6 +630,14 @@ export class SyncOrchestrator {
         .then(m => m.checkPipelineConversions(tenantId))
         .catch(err => console.warn(`[SyncOrchestrator] Pipeline conversion check failed for ${tenantId}:`, err));
 
+      // Non-blocking: capture actuals for current week (forecast accuracy Phase 5)
+      import('../services/forecastActualsService')
+        .then(m => {
+          const monday = m.getMondayOfWeek(new Date());
+          return m.captureWeekActuals(tenantId, monday);
+        })
+        .catch(err => console.warn(`[SyncOrchestrator] Actuals capture failed for ${tenantId}:`, err));
+
       return result;
 
     } catch (err) {

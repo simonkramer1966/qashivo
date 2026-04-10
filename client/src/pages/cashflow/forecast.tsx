@@ -25,6 +25,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { useToast } from "@/hooks/use-toast";
 import {
   ChevronDown,
   ChevronRight,
@@ -41,6 +42,8 @@ import {
   Loader2,
   Plus,
   Trash2,
+  Lock,
+  Target,
 } from "lucide-react";
 import {
   ComposedChart,
@@ -73,6 +76,8 @@ interface WeeklyForecast {
     recurringRevenue: number;
     pipeline: number;
   };
+  isCompleted?: boolean;
+  actualAmount?: number;
 }
 
 interface InvoiceContribution {
@@ -346,6 +351,7 @@ function BalanceTooltip({ active, payload }: any) {
 // ── Main component ─────────────────────────────────────────────
 
 export default function ForecastPage() {
+  const { toast } = useToast();
   const { data: forecast, isLoading } = useQuery<InflowForecast>({
     queryKey: ["/api/cashflow/inflow-forecast"],
     staleTime: 60 * 60 * 1000, // 1 hour
@@ -561,6 +567,72 @@ export default function ForecastPage() {
     }
   }
 
+  // ── Phase 5: Close Week + Accuracy ──
+
+  interface CloseWeekPreview {
+    isEligible: boolean;
+    weekStarting?: string;
+    weekEnding?: string;
+    weekNumber?: number;
+    forecast?: { arCollections: number; recurringRevenue: number; pipeline: number; totalInflows: number; totalOutflows: number; netCashflow: number };
+    actual?: { collections: number; invoicesRaised: number; outflows: number; netCashflow: number };
+    variance?: { amount: number; percent: number };
+    varianceDrivers?: { debtor: string; expected: number; actual: number; delta: number; reason: string }[];
+    openingBalance?: number;
+    closingBalance?: number;
+    newOpeningBalance?: number;
+  }
+
+  interface AccuracyHistory {
+    weeks: {
+      weekStarting: string;
+      forecast: number;
+      actual: number;
+      varianceAmount: number;
+      variancePercent: number;
+      accuracy: number;
+      topDriver: string;
+      completedAt: string | null;
+    }[];
+    rolling4WeekAccuracy: number | null;
+    rolling13WeekAccuracy: number | null;
+    trend: "improving" | "stable" | "declining" | null;
+  }
+
+  const { data: closeWeekPreview } = useQuery<CloseWeekPreview>({
+    queryKey: ["/api/cashflow/close-week-preview"],
+    staleTime: 60 * 60 * 1000,
+    enabled: !!forecast,
+  });
+
+  const { data: accuracyHistory } = useQuery<AccuracyHistory>({
+    queryKey: ["/api/cashflow/accuracy-history"],
+    staleTime: 60 * 60 * 1000,
+    enabled: !!forecast,
+  });
+
+  const [closeWeekModalOpen, setCloseWeekModalOpen] = useState(false);
+
+  const closeWeekMutation = useMutation({
+    mutationFn: async (data: { weekStarting: string }) => {
+      return apiRequest("POST", "/api/cashflow/close-week", data);
+    },
+    onSuccess: (data: any) => {
+      const closingBal = data?.closingBalance;
+      toast({
+        title: "Week closed",
+        description: closingBal != null
+          ? `Opening balance updated to ${fmt(closingBal)}.`
+          : "Forecast recalculated.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/cashflow/inflow-forecast"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/cashflow/close-week-preview"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/cashflow/accuracy-history"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/cashflow/opening-balance"] });
+      setCloseWeekModalOpen(false);
+    },
+  });
+
   // Helper: get outflow amount for a category+week
   function getOutflowAmount(category: string, weekStarting: string): number {
     if (!outflowRows) return 0;
@@ -666,7 +738,7 @@ export default function ForecastPage() {
       label: weekLabel(wf.weekStarting),
       weekNumber: wf.weekNumber,
       optimistic: Math.round(wf.optimistic),
-      expected: Math.round(wf.expected),
+      expected: wf.isCompleted && wf.actualAmount != null ? Math.round(wf.actualAmount) : Math.round(wf.expected),
       pessimistic: Math.round(wf.pessimistic),
       outflow: Math.round(outflowThisWeek),
       net: Math.round(netThisWeek),
@@ -676,6 +748,7 @@ export default function ForecastPage() {
       pessimisticBalance: Math.round(forecast.runningBalance?.pessimistic?.[i] ?? runningPessimistic),
       invoiceCount: wf.invoiceBreakdown.length,
       isFragile: concentration?.isFragile ?? false,
+      isCompleted: wf.isCompleted ?? false,
       topDebtor: concentration?.topDebtor,
       topDebtorAmount: concentration?.topDebtorAmount ?? 0,
       topDebtorPercent: concentration?.topDebtorPercent ?? 0,
@@ -812,6 +885,21 @@ export default function ForecastPage() {
         </Card>
       )}
 
+      {/* Close week banner */}
+      {closeWeekPreview?.isEligible && closeWeekPreview.weekStarting && (
+        <div className="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm">
+          <div className="flex items-center gap-2">
+            <Lock className="h-4 w-4 text-blue-600" />
+            <span>
+              Week {closeWeekPreview.weekNumber} ({weekLabel(closeWeekPreview.weekStarting)}) is ready to close.
+            </span>
+          </div>
+          <Button size="sm" variant="outline" onClick={() => setCloseWeekModalOpen(true)}>
+            Review & close week
+          </Button>
+        </div>
+      )}
+
       {/* C. Chart 1 — Weekly Collections Bar Chart */}
       <Card>
         <CardHeader className="pb-2">
@@ -838,9 +926,9 @@ export default function ForecastPage() {
                 {chartData.map((entry, i) => (
                   <Cell
                     key={i}
-                    fill={entry.isFragile ? "#f59e0b" : "#3b82f6"}
-                    stroke={entry.isFragile ? "#d97706" : "none"}
-                    strokeWidth={entry.isFragile ? 1.5 : 0}
+                    fill={entry.isCompleted ? "#1e40af" : entry.isFragile ? "#f59e0b" : "#3b82f6"}
+                    stroke={entry.isCompleted ? "#1e3a8a" : entry.isFragile ? "#d97706" : "none"}
+                    strokeWidth={entry.isCompleted ? 1 : entry.isFragile ? 1.5 : 0}
                   />
                 ))}
               </Bar>
@@ -1795,7 +1883,22 @@ export default function ForecastPage() {
       </div>
 
       {/* G. Insight Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <Card>
+          <CardContent className="py-3 px-4">
+            <p className="text-xs text-muted-foreground">Accuracy</p>
+            <p className="text-lg font-semibold">
+              {accuracyHistory?.rolling4WeekAccuracy != null
+                ? `${accuracyHistory.rolling4WeekAccuracy.toFixed(1)}%`
+                : "—"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {accuracyHistory?.rolling4WeekAccuracy != null
+                ? `Last 4 wks${accuracyHistory.trend ? ` · ${accuracyHistory.trend}` : ""}`
+                : "No closed weeks yet"}
+            </p>
+          </CardContent>
+        </Card>
         <Card>
           <CardContent className="py-3 px-4">
             <p className="text-xs text-muted-foreground">Forecast recovery</p>
@@ -2117,6 +2220,166 @@ export default function ForecastPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Close Week Modal */}
+      <Dialog open={closeWeekModalOpen} onOpenChange={setCloseWeekModalOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              Close week — {closeWeekPreview?.weekStarting ? weekLabel(closeWeekPreview.weekStarting) : ""}
+            </DialogTitle>
+          </DialogHeader>
+          {closeWeekPreview?.isEligible && (
+            <div className="space-y-4 text-sm">
+              {/* Forecast vs Actual table */}
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-muted-foreground">
+                    <th className="text-left py-1"></th>
+                    <th className="text-right py-1">Forecast</th>
+                    <th className="text-right py-1">Actual</th>
+                    <th className="text-right py-1">Variance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b">
+                    <td className="py-1">AR collections</td>
+                    <td className="text-right">{fmt(closeWeekPreview.forecast?.arCollections ?? 0)}</td>
+                    <td className="text-right">{fmt(closeWeekPreview.actual?.collections ?? 0)}</td>
+                    <td className={`text-right ${(closeWeekPreview.variance?.amount ?? 0) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                      {(closeWeekPreview.variance?.amount ?? 0) >= 0 ? "+" : ""}{fmt(closeWeekPreview.variance?.amount ?? 0)}
+                    </td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="py-1">Recurring revenue</td>
+                    <td className="text-right">{fmt(closeWeekPreview.forecast?.recurringRevenue ?? 0)}</td>
+                    <td className="text-right" colSpan={2}>—</td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="py-1">Pipeline</td>
+                    <td className="text-right">{fmt(closeWeekPreview.forecast?.pipeline ?? 0)}</td>
+                    <td className="text-right" colSpan={2}>—</td>
+                  </tr>
+                  <tr className="border-b font-medium">
+                    <td className="py-1">Total inflow</td>
+                    <td className="text-right">{fmt(closeWeekPreview.forecast?.totalInflows ?? 0)}</td>
+                    <td className="text-right">{fmt(closeWeekPreview.actual?.collections ?? 0)}</td>
+                    <td className={`text-right ${(closeWeekPreview.variance?.amount ?? 0) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                      {(closeWeekPreview.variance?.amount ?? 0) >= 0 ? "+" : ""}{fmt(closeWeekPreview.variance?.amount ?? 0)}
+                    </td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="py-1">Outflows</td>
+                    <td className="text-right">{fmt(closeWeekPreview.forecast?.totalOutflows ?? 0)}</td>
+                    <td className="text-right">{fmt(closeWeekPreview.actual?.outflows ?? 0)}</td>
+                    <td className="text-right">—</td>
+                  </tr>
+                  <tr className="font-medium">
+                    <td className="py-1">Net cashflow</td>
+                    <td className="text-right">{fmt(closeWeekPreview.forecast?.netCashflow ?? 0)}</td>
+                    <td className="text-right">{fmt(closeWeekPreview.actual?.netCashflow ?? 0)}</td>
+                    <td className="text-right">—</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-muted-foreground">Accuracy</p>
+                  <p className="text-lg font-semibold">
+                    {(100 - Math.abs(closeWeekPreview.variance?.percent ?? 0)).toFixed(1)}%
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Opening → Closing</p>
+                  <p className="text-lg font-semibold">
+                    {fmt(closeWeekPreview.openingBalance ?? 0)} → {fmt(closeWeekPreview.closingBalance ?? 0)}
+                  </p>
+                </div>
+              </div>
+
+              {/* Variance drivers */}
+              {closeWeekPreview.varianceDrivers && closeWeekPreview.varianceDrivers.length > 0 && (
+                <div>
+                  <p className="font-medium mb-1">Variance drivers</p>
+                  <ul className="space-y-0.5 text-muted-foreground">
+                    {closeWeekPreview.varianceDrivers.slice(0, 5).map((d, i) => (
+                      <li key={i}>
+                        {d.debtor}: {d.reason} ({d.delta >= 0 ? "+" : ""}{fmt(d.delta)})
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCloseWeekModalOpen(false)}>Not yet</Button>
+            <Button
+              onClick={() => {
+                if (closeWeekPreview?.weekStarting) {
+                  closeWeekMutation.mutate({ weekStarting: closeWeekPreview.weekStarting });
+                }
+              }}
+              disabled={closeWeekMutation.isPending}
+            >
+              {closeWeekMutation.isPending && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+              Confirm & roll forward
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Accuracy History */}
+      {accuracyHistory && accuracyHistory.weeks.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Target className="h-4 w-4" />
+                Forecast Accuracy
+              </span>
+              {accuracyHistory.rolling4WeekAccuracy != null && (
+                <Badge variant="outline" className="text-xs">
+                  Rolling: {accuracyHistory.rolling4WeekAccuracy.toFixed(1)}%
+                  {accuracyHistory.trend === "improving" && <TrendingUp className="h-3 w-3 ml-1 text-emerald-600 inline" />}
+                  {accuracyHistory.trend === "declining" && <TrendingDown className="h-3 w-3 ml-1 text-red-600 inline" />}
+                </Badge>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-muted-foreground text-xs">
+                    <th className="text-left py-1 px-2">Week</th>
+                    <th className="text-right py-1 px-2">Forecast</th>
+                    <th className="text-right py-1 px-2">Actual</th>
+                    <th className="text-right py-1 px-2">Variance</th>
+                    <th className="text-right py-1 px-2">Accuracy</th>
+                    <th className="text-left py-1 px-2">Driver</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {accuracyHistory.weeks.slice(0, 8).map((w) => (
+                    <tr key={w.weekStarting} className="border-b hover:bg-muted/20">
+                      <td className="py-1.5 px-2">{weekLabel(w.weekStarting)}</td>
+                      <td className="text-right py-1.5 px-2">{fmt(w.forecast)}</td>
+                      <td className="text-right py-1.5 px-2">{fmt(w.actual)}</td>
+                      <td className={`text-right py-1.5 px-2 ${w.varianceAmount >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                        {w.varianceAmount >= 0 ? "+" : ""}{fmt(w.varianceAmount)}
+                      </td>
+                      <td className="text-right py-1.5 px-2 font-medium">{w.accuracy.toFixed(1)}%</td>
+                      <td className="py-1.5 px-2 text-muted-foreground text-xs truncate max-w-[180px]">{w.topDriver}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* I. Methodology Card */}
       <Collapsible open={showMethodology} onOpenChange={setShowMethodology}>

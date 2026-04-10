@@ -17,6 +17,7 @@ import {
   paymentPromises,
   messageDrafts,
   weeklyReviews,
+  forecastSnapshots,
   type AiFact,
 } from "@shared/schema";
 import {
@@ -1690,6 +1691,47 @@ export async function getProactiveSuggestions(
     console.error("[Riley] Proactive: new overdue query failed:", err);
   }
 
+  // 9. Unclosed eligible forecast weeks (week ended >24h ago)
+  try {
+    const { getMondayOfWeek } = await import("../services/forecastActualsService");
+    const thisMonday = getMondayOfWeek(now);
+
+    // Get all completed week starts
+    const completedWeeks = await db
+      .select({ weekStarting: forecastSnapshots.weekStarting })
+      .from(forecastSnapshots)
+      .where(
+        and(
+          eq(forecastSnapshots.tenantId, tenantId),
+          eq(forecastSnapshots.isCompleted, true),
+        ),
+      );
+    const completedSet = new Set(
+      completedWeeks.map((w) => new Date(w.weekStarting).toISOString().slice(0, 10)),
+    );
+
+    // Walk back up to 13 weeks to find oldest unclosed eligible week
+    for (let i = 1; i <= 13; i++) {
+      const weekStart = new Date(thisMonday);
+      weekStart.setDate(weekStart.getDate() - i * 7);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 7);
+      const hoursSinceEnd = (now.getTime() - weekEnd.getTime()) / (1000 * 60 * 60);
+
+      if (hoursSinceEnd > 24 && !completedSet.has(weekStart.toISOString().slice(0, 10))) {
+        const weekLabel = weekStart.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+        suggestions.push({
+          type: "forecast_close",
+          message: `Week ${i} (w/c ${weekLabel}) is ready to close. Review actuals and roll forward your cashflow forecast.`,
+          priority: "medium",
+        });
+        break; // Only one reminder for the oldest unclosed week
+      }
+    }
+  } catch (err) {
+    console.error("[Riley] Proactive: forecast close query failed:", err);
+  }
+
   // Sort by priority, then by type tiebreaker
   const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
   const typeOrder: Record<string, number> = {
@@ -1698,9 +1740,10 @@ export async function getProactiveSuggestions(
     new_invoices: 2,
     dso_change: 3,
     weekly_review_ready: 4,
-    forecast_expiring: 5,
-    debtor_deteriorating: 6,
-    new_overdue: 7,
+    forecast_close: 5,
+    forecast_expiring: 6,
+    debtor_deteriorating: 7,
+    new_overdue: 8,
   };
   suggestions.sort((a, b) => {
     const pDiff = (priorityOrder[a.priority] ?? 2) - (priorityOrder[b.priority] ?? 2);

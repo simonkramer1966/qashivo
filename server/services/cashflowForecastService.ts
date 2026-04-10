@@ -23,6 +23,7 @@ import {
   tenants,
   forecastOutflows,
   pipelineItems,
+  forecastSnapshots,
 } from "@shared/schema";
 import { eq, and, sql, isNotNull, inArray } from "drizzle-orm";
 import {
@@ -66,6 +67,8 @@ export interface WeeklyForecast {
     recurringRevenue: number;
     pipeline: number;
   };
+  isCompleted?: boolean;
+  actualAmount?: number;
 }
 
 export interface InflowForecast {
@@ -381,7 +384,7 @@ export async function generateInflowForecast(
 
   // ── a. Fetch all data in parallel ──
 
-  const [invoiceRows, signalsRows, promisesRows, profilesRows, tenantRow, outflowRows, pipelineRows] =
+  const [invoiceRows, signalsRows, promisesRows, profilesRows, tenantRow, outflowRows, pipelineRows, completedSnapshots] =
     await Promise.all([
       // All outstanding invoices (OPEN, not excluded statuses) with contact names
       db
@@ -468,6 +471,20 @@ export async function generateInflowForecast(
           and(
             eq(pipelineItems.tenantId, tenantId),
             inArray(pipelineItems.status, ["active"]),
+          ),
+        ),
+
+      // Completed forecast snapshots for Phase 5 overlay
+      db
+        .select({
+          weekStarting: forecastSnapshots.weekStarting,
+          actualCollections: forecastSnapshots.actualCollections,
+        })
+        .from(forecastSnapshots)
+        .where(
+          and(
+            eq(forecastSnapshots.tenantId, tenantId),
+            eq(forecastSnapshots.isCompleted, true),
           ),
         ),
     ]);
@@ -1236,6 +1253,16 @@ export async function generateInflowForecast(
         pipeline: Math.round(weeklyPipelineExpected[w] * 100) / 100,
       },
     });
+
+    // Phase 5: Overlay completed snapshot data
+    const completedSnapshot = completedSnapshots.find(
+      (s) => formatWeekDate(new Date(s.weekStarting)) === formatWeekDate(bounds.start),
+    );
+    if (completedSnapshot) {
+      const wf = weeklyForecasts[weeklyForecasts.length - 1];
+      wf.isCompleted = true;
+      wf.actualAmount = Number(completedSnapshot.actualCollections) || 0;
+    }
   }
 
   // ── d. Compute signals ──
