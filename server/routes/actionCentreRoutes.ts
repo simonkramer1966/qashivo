@@ -1,5 +1,7 @@
 import type { Express } from "express";
 import { isAuthenticated } from "../auth";
+import { withRBACContext, withMinimumRole } from "../middleware/rbac";
+import { agentRateLimit, mutationRateLimit } from "../middleware/rateLimits";
 import { storage } from "../storage";
 import { db } from "../db";
 import { actions, actionBatches, rejectionPatterns, tenants, messageDrafts, contacts, invoices, disputes, complianceChecks, emailMessages, promisesToPay, paymentPlans, customerLearningProfiles, inboundMessages, paymentPromises, aiFacts, customerPreferences, timelineEvents } from "@shared/schema";
@@ -1566,7 +1568,7 @@ export function registerActionCentreRoutes(app: Express): void {
 
   // ── POST /api/approval-queue/clear ─────────────────────────
   // Soft-cancel all pending items in the approval queue
-  app.post("/api/approval-queue/clear", isAuthenticated, async (req: any, res) => {
+  app.post("/api/approval-queue/clear", ...withMinimumRole('manager'), mutationRateLimit, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
@@ -1597,7 +1599,7 @@ export function registerActionCentreRoutes(app: Express): void {
 
   // ── POST /api/agent/run-now ────────────────────────────────
   // Trigger the collections agent on-demand for all eligible debtors
-  app.post("/api/agent/run-now", isAuthenticated, async (req: any, res) => {
+  app.post("/api/agent/run-now", ...withMinimumRole('manager'), agentRateLimit, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
@@ -2098,7 +2100,7 @@ export function registerActionCentreRoutes(app: Express): void {
 
   // ── POST /api/approval-queue/approve-all ────────────────────
   // Approve all pending actions and send immediately via pipeline
-  app.post("/api/approval-queue/approve-all", isAuthenticated, async (req: any, res) => {
+  app.post("/api/approval-queue/approve-all", ...withMinimumRole('manager'), mutationRateLimit, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });

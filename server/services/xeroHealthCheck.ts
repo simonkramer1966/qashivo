@@ -2,6 +2,7 @@ import cron from 'node-cron';
 import { db } from '../db';
 import { tenants } from '@shared/schema';
 import { eq, isNotNull, and } from 'drizzle-orm';
+import { tryEncryptToken, tryDecryptToken } from '../utils/tokenEncryption';
 
 export class XeroHealthCheckService {
   private isRunning = false;
@@ -46,7 +47,13 @@ export class XeroHealthCheckService {
       console.log(`🔍 Checking ${tenantsWithXero.length} tenants with Xero connections`);
 
       for (const tenant of tenantsWithXero) {
-        await this.checkTenantConnection(tenant);
+        // Decrypt tokens before checking — they may be encrypted at rest
+        const decrypted = {
+          ...tenant,
+          xeroAccessToken: tryDecryptToken(tenant.xeroAccessToken),
+          xeroRefreshToken: tryDecryptToken(tenant.xeroRefreshToken),
+        };
+        await this.checkTenantConnection(decrypted);
       }
 
       console.log('✅ Xero health checks completed');
@@ -110,12 +117,12 @@ export class XeroHealthCheckService {
           return;
         }
 
-        // Persist new tokens — refreshAccessToken does NOT write them back itself.
+        // Persist new tokens (encrypted at rest)
         await db
           .update(tenants)
           .set({
-            xeroAccessToken: refreshedTokens.accessToken,
-            xeroRefreshToken: refreshedTokens.refreshToken,
+            xeroAccessToken: tryEncryptToken(refreshedTokens.accessToken),
+            xeroRefreshToken: tryEncryptToken(refreshedTokens.refreshToken),
             xeroExpiresAt: refreshedTokens.expiresAt,
           })
           .where(eq(tenants.id, tenant.id));

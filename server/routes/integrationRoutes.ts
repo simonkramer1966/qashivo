@@ -4,6 +4,8 @@ import { isAuthenticated, isOwner } from "../auth";
 import { logSecurityEvent, extractClientInfo } from "../services/securityAuditService";
 import { sanitizeObject, stripSensitiveUserFields, stripSensitiveTenantFields, stripSensitiveFields } from "../utils/sanitize";
 import { withPermission, withRole, withMinimumRole, canManageUser, withRBACContext } from "../middleware/rbac";
+import { syncRateLimit } from "../middleware/rateLimits";
+import { tryEncryptToken, tryDecryptToken, decryptTenantTokens } from "../utils/tokenEncryption";
 import { 
   insertContactSchema, insertContactNoteSchema, insertInvoiceSchema, 
   insertActionSchema, insertWorkflowSchema, insertCommunicationTemplateSchema,
@@ -630,8 +632,8 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
       // Save tokens to database and mark connection as healthy
       const xeroOrgName = tokens.tenantName || null;
       const tenantUpdates: Record<string, any> = {
-        xeroAccessToken: tokens.accessToken,
-        xeroRefreshToken: tokens.refreshToken || null,
+        xeroAccessToken: tryEncryptToken(tokens.accessToken),
+        xeroRefreshToken: tryEncryptToken(tokens.refreshToken || null),
         xeroTenantId: xeroTenantId || null,
         xeroOrganisationName: xeroOrgName,
         xeroExpiresAt: tokens.expiresAt || null,
@@ -929,16 +931,19 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
       const tenantId = user.tenantId;
 
       const tenant = await storage.getTenant(tenantId);
-      
-      if (!tenant?.xeroAccessToken) {
+      if (!tenant) {
+        return res.status(400).json({ message: "Tenant not found" });
+      }
+      const decryptedTenant = decryptTenantTokens(tenant);
+      if (!decryptedTenant?.xeroAccessToken) {
         return res.status(400).json({ message: "Xero not connected" });
       }
 
       const tokens = {
-        accessToken: tenant.xeroAccessToken,
-        refreshToken: tenant.xeroRefreshToken!,
-        expiresAt: tenant.xeroExpiresAt || new Date(Date.now() + 30 * 60 * 1000), // Use stored expiry or fallback
-        tenantId: tenant.xeroTenantId!,
+        accessToken: decryptedTenant.xeroAccessToken,
+        refreshToken: decryptedTenant.xeroRefreshToken!,
+        expiresAt: decryptedTenant.xeroExpiresAt || new Date(Date.now() + 30 * 60 * 1000), // Use stored expiry or fallback
+        tenantId: decryptedTenant.xeroTenantId!,
       };
 
       // Parse pagination parameters - if no page/limit provided, fetch all invoices
@@ -1007,7 +1012,7 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
     }
   });
 
-  app.post("/api/xero/sync", ...withMinimumRole('manager'), async (req: any, res) => {
+  app.post("/api/xero/sync", ...withMinimumRole('manager'), syncRateLimit, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {

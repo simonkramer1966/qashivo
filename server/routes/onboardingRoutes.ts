@@ -4,6 +4,8 @@ import { isAuthenticated, isOwner } from "../auth";
 import { logSecurityEvent, extractClientInfo } from "../services/securityAuditService";
 import { sanitizeObject, stripSensitiveUserFields, stripSensitiveTenantFields, stripSensitiveFields } from "../utils/sanitize";
 import { withPermission, withRole, withMinimumRole, canManageUser, withRBACContext } from "../middleware/rbac";
+import { destructiveRateLimit } from "../middleware/rateLimits";
+import { decryptTenantTokens } from "../utils/tokenEncryption";
 import { 
   insertContactSchema, insertContactNoteSchema, insertInvoiceSchema, 
   insertActionSchema, insertWorkflowSchema, insertCommunicationTemplateSchema,
@@ -238,9 +240,10 @@ export function registerOnboardingRoutes(app: Express): void {
       const { tenantId } = req.rbac;
       
       // Get Xero tokens for this tenant (TODO: implement getXeroTokens method)
-      const tenant = await storage.getTenant(tenantId);
+      const rawTenant = await storage.getTenant(tenantId);
+      const tenant = rawTenant ? decryptTenantTokens(rawTenant) : null;
       if (!tenant?.xeroAccessToken || !tenant?.xeroRefreshToken) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           message: "Xero not connected. Please connect your Xero account first.",
           requiresAuth: true
         });
@@ -836,7 +839,7 @@ export function registerOnboardingRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/demo-data/reset-all", isAuthenticated, async (req: any, res) => {
+  app.post("/api/demo-data/reset-all", ...withMinimumRole('owner'), destructiveRateLimit, async (req: any, res) => {
     try {
       const tenantId = req.user?.tenantId;
       if (!tenantId) {
@@ -963,7 +966,7 @@ export function registerOnboardingRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/demo-data/reset-comms", isAuthenticated, async (req: any, res) => {
+  app.post("/api/demo-data/reset-comms", ...withMinimumRole('owner'), destructiveRateLimit, async (req: any, res) => {
     try {
       const tenantId = req.user?.tenantId;
       if (!tenantId) {

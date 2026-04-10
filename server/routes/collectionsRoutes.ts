@@ -5,6 +5,7 @@ import { isAuthenticated, isOwner } from "../auth";
 import { logSecurityEvent, extractClientInfo } from "../services/securityAuditService";
 import { sanitizeObject, stripSensitiveUserFields, stripSensitiveTenantFields, stripSensitiveFields } from "../utils/sanitize";
 import { withPermission, withRole, withMinimumRole, canManageUser, withRBACContext } from "../middleware/rbac";
+import { agentRateLimit } from "../middleware/rateLimits";
 import { 
   insertContactSchema, insertContactNoteSchema, insertInvoiceSchema, 
   insertActionSchema, insertWorkflowSchema, insertCommunicationTemplateSchema,
@@ -2217,7 +2218,7 @@ Guidelines:
     }
   });
 
-  app.post("/api/action-centre/create-test-items", isAuthenticated, async (req: any, res) => {
+  app.post("/api/action-centre/create-test-items", ...withMinimumRole('admin'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
@@ -4708,7 +4709,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
-  app.post("/api/collections/scheduler/run-now", isAuthenticated, async (req: any, res) => {
+  app.post("/api/collections/scheduler/run-now", ...withMinimumRole('manager'), agentRateLimit, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {

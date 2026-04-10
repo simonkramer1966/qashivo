@@ -78,3 +78,33 @@ export function isEncrypted(value: string): boolean {
     return false;
   }
 }
+
+// ─── Graceful wrappers (no-op when encryption key not configured) ─────────
+
+let warnedOnce = false;
+
+export function tryEncryptToken(plaintext: string | null): string | null {
+  if (!plaintext) return null;
+  if (!process.env.PROVIDER_TOKEN_ENCRYPTION_KEY) {
+    if (!warnedOnce) {
+      console.warn('⚠️ PROVIDER_TOKEN_ENCRYPTION_KEY not set — tokens stored unencrypted');
+      warnedOnce = true;
+    }
+    return plaintext;
+  }
+  return encryptToken(plaintext);
+}
+
+export function tryDecryptToken(value: string | null): string | null {
+  if (!value) return null;
+  if (!process.env.PROVIDER_TOKEN_ENCRYPTION_KEY) return value;
+  if (!isEncrypted(value)) return value; // plaintext during migration
+  return decryptToken(value);
+}
+
+export function decryptTenantTokens<T extends { xeroAccessToken?: string | null; xeroRefreshToken?: string | null }>(tenant: T): T {
+  const copy = { ...tenant };
+  if (copy.xeroAccessToken) copy.xeroAccessToken = tryDecryptToken(copy.xeroAccessToken);
+  if (copy.xeroRefreshToken) copy.xeroRefreshToken = tryDecryptToken(copy.xeroRefreshToken);
+  return copy;
+}

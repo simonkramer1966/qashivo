@@ -2,6 +2,7 @@
 // In production, you would use the official Xero API SDK
 
 import { withXeroRefreshLock } from './xeroTokenLock';
+import { tryEncryptToken, tryDecryptToken } from '../utils/tokenEncryption';
 
 interface XeroConfig {
   clientId: string;
@@ -365,12 +366,12 @@ class XeroService {
       await db
         .update(tenants)
         .set({
-          xeroAccessToken: tokens.accessToken,
-          xeroRefreshToken: tokens.refreshToken,
+          xeroAccessToken: tryEncryptToken(tokens.accessToken),
+          xeroRefreshToken: tryEncryptToken(tokens.refreshToken),
           xeroExpiresAt: tokens.expiresAt,
         })
         .where(eq(tenants.id, tenantId));
-        
+
       console.log('✅ Updated tenant Xero tokens in database (expires:', tokens.expiresAt, ')');
     } catch (dbError) {
       console.error('❌ Failed to update tenant tokens in database:', dbError);
@@ -422,19 +423,21 @@ class XeroService {
             })
             .from(tenants)
             .where(eq(tenants.id, currentTenantId));
-          if (row?.xeroAccessToken && row.xeroExpiresAt && !this.isTokenExpired(row.xeroExpiresAt)) {
+          const decryptedAccess = tryDecryptToken(row?.xeroAccessToken ?? null);
+          const decryptedRefresh = tryDecryptToken(row?.xeroRefreshToken ?? null);
+          if (decryptedAccess && row?.xeroExpiresAt && !this.isTokenExpired(row.xeroExpiresAt)) {
             console.log(`🔒 Token already fresh for ${currentTenantId} after waiting on lock`);
             return {
-              accessToken: row.xeroAccessToken,
-              refreshToken: row.xeroRefreshToken ?? refreshToken,
+              accessToken: decryptedAccess,
+              refreshToken: decryptedRefresh ?? refreshToken,
               expiresAt: row.xeroExpiresAt,
               tenantId: row.xeroTenantId ?? '',
             };
           }
           // Use the freshest refresh_token from the DB — the one passed in
           // might be stale if we blocked for a while.
-          if (row?.xeroRefreshToken) {
-            refreshToken = row.xeroRefreshToken;
+          if (decryptedRefresh) {
+            refreshToken = decryptedRefresh;
           }
         } catch (err) {
           console.warn(`⚠️ Could not re-read tenant row before refresh: ${(err as Error).message}`);

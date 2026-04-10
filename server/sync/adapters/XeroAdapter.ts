@@ -11,6 +11,7 @@ import { tenants } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import * as crypto from 'crypto';
 import { withXeroRefreshLock } from '../../services/xeroTokenLock';
+import { tryEncryptToken, decryptTenantTokens } from '../../utils/tokenEncryption';
 import type {
   AccountingAdapter,
   AuthStatus,
@@ -159,10 +160,10 @@ export class XeroAdapter implements AccountingAdapter {
       scopes: this.requiredScopes,
     };
 
-    // Persist new tokens
+    // Persist new tokens (encrypted at rest)
     await db.update(tenants).set({
-      xeroAccessToken: result.accessToken,
-      xeroRefreshToken: result.refreshToken,
+      xeroAccessToken: tryEncryptToken(result.accessToken),
+      xeroRefreshToken: tryEncryptToken(result.refreshToken),
       xeroExpiresAt: result.expiresAt,
       xeroConnectionStatus: 'connected',
     }).where(eq(tenants.id, tenantId));
@@ -668,7 +669,7 @@ export class XeroAdapter implements AccountingAdapter {
   private async getTenant(tenantId: string) {
     const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
     if (!tenant) throw new Error(`Tenant not found: ${tenantId}`);
-    return tenant;
+    return decryptTenantTokens(tenant);
   }
 
   private async getTokens(tenantId: string): Promise<TenantTokens> {
