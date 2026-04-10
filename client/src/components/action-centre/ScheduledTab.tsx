@@ -1,20 +1,29 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/queryClient";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Sheet, SheetContent, SheetHeader, SheetTitle,
-} from "@/components/ui/sheet";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
   Tooltip, TooltipContent, TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Clock, Mail, MessageSquare, Phone, X, Send, Loader2 } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Clock, Mail, MessageSquare, Phone, Send, Loader2, MoreVertical,
+  Ban, CalendarClock, Undo2,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useInvalidateActionCentre } from "@/hooks/useInvalidateActionCentre";
 import { Link } from "wouter";
@@ -23,8 +32,6 @@ import { ReplyBadge } from "./ReplyBadge";
 import { CONVERSATION_TYPE } from "@shared/types/actionMetadata";
 
 // ── Business hours check ──────────────────────────────────
-// Returns whether the current time (in the tenant's timezone) falls
-// within the configured business hours window on a weekday.
 
 function isWithinBusinessHours(
   startStr: string,
@@ -46,9 +53,7 @@ function isWithinBusinessHours(
     const minute = Number(parts.find((p) => p.type === "minute")?.value ?? "0");
     const weekday = parts.find((p) => p.type === "weekday")?.value ?? "";
 
-    // Day-of-week check: use debtor's allowed days if set, else Mon-Fri
     if (allowedDays && allowedDays.length > 0) {
-      // allowedDays uses full names ("monday"), weekday from formatter is "Mon"
       const longDay = new Intl.DateTimeFormat("en-US", {
         timeZone: timezone,
         weekday: "long",
@@ -74,7 +79,6 @@ function formatHoursLabel(start: string, end: string, days?: string[] | null): s
     const h12 = h % 12 || 12;
     return m === 0 ? `${h12}${suffix}` : `${h12}:${String(m).padStart(2, "0")}${suffix}`;
   };
-  // Summarise allowed days if custom, otherwise "Mon–Fri"
   let dayLabel = "Mon–Fri";
   if (days && days.length > 0 && days.length < 5) {
     const abbrev: Record<string, string> = {
@@ -123,10 +127,7 @@ function formatCountdown(scheduledFor: string): { text: string; variant: "sendin
   const now = Date.now();
   const diffMs = target - now;
 
-  // Past due by more than 5 minutes — something may be wrong
   if (diffMs < -5 * 60_000) return { text: "Delayed", variant: "delayed" };
-
-  // Past due — executor should pick it up any second
   if (diffMs <= 0) return { text: "Sending\u2026", variant: "sending" };
 
   const mins = Math.floor(diffMs / 60_000);
@@ -161,10 +162,25 @@ function ToneBadge({ tone }: { tone: string | null }) {
   );
 }
 
+// ── Helper: default datetime-local value (tomorrow 9am) ──
+function defaultDeferDateTime(): string {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  d.setHours(9, 0, 0, 0);
+  return d.toISOString().slice(0, 16);
+}
+
 export default function ScheduledTab() {
   const { toast } = useToast();
   const invalidate = useInvalidateActionCentre();
-  const [previewAction, setPreviewAction] = useState<ScheduledAction | null>(null);
+  // Cancel confirmation dialog state
+  const [cancelTarget, setCancelTarget] = useState<ScheduledAction | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+
+  // Defer popover state
+  const [deferTarget, setDeferTarget] = useState<ScheduledAction | null>(null);
+  const [deferDate, setDeferDate] = useState(defaultDeferDateTime);
+  const [deferReason, setDeferReason] = useState("");
 
   const { data: tenant } = useQuery<{
     businessHoursStart?: string | null;
@@ -179,15 +195,12 @@ export default function ScheduledTab() {
   const bhEnd = tenant?.businessHoursEnd ?? "18:00";
   const bhTz = tenant?.executionTimezone ?? "Europe/London";
 
-  // Re-evaluate every 60s so the button enables/disables at hour boundaries
   const [tick, setTick] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 60_000);
     return () => clearInterval(id);
   }, []);
 
-  // Per-action: check the debtor's contact window if set, else tenant defaults.
-  // Returns { allowed, label } for each action.
   const getActionSendStatus = (action: ScheduledAction) => {
     const w = action.debtorContactWindow;
     const start = w?.start ?? bhStart;
@@ -199,7 +212,6 @@ export default function ScheduledTab() {
     return { allowed, label };
   };
 
-  // Suppress lint: tick is used to force re-evaluation
   void tick;
 
   const { data, isLoading } = useQuery<{
@@ -211,14 +223,15 @@ export default function ScheduledTab() {
   });
 
   const cancelMutation = useMutation({
-    mutationFn: async (actionId: string) => {
+    mutationFn: async ({ actionId, reason }: { actionId: string; reason: string }) => {
       await apiRequest("POST", `/api/actions/${actionId}/cancel`, {
-        reason: "Cancelled by user from Scheduled tab",
+        reason: reason || "Cancelled by user from Scheduled tab",
       });
     },
     onSuccess: () => {
       invalidate();
-      setPreviewAction(null);
+      setCancelTarget(null);
+      setCancelReason("");
       toast({ title: "Action cancelled" });
     },
     onError: () => {
@@ -232,11 +245,42 @@ export default function ScheduledTab() {
     },
     onSuccess: () => {
       invalidate();
-      setPreviewAction(null);
       toast({ title: "Action sent" });
     },
     onError: () => {
       toast({ title: "Failed to send now", variant: "destructive" });
+    },
+  });
+
+  const deferMutation = useMutation({
+    mutationFn: async ({ actionId, scheduledFor, reason }: { actionId: string; scheduledFor: string; reason: string }) => {
+      await apiRequest("POST", `/api/actions/${actionId}/defer-scheduled`, {
+        scheduledFor,
+        reason: reason || undefined,
+      });
+    },
+    onSuccess: () => {
+      invalidate();
+      setDeferTarget(null);
+      setDeferDate(defaultDeferDateTime());
+      setDeferReason("");
+      toast({ title: "Action deferred" });
+    },
+    onError: () => {
+      toast({ title: "Failed to defer", variant: "destructive" });
+    },
+  });
+
+  const returnToApprovalMutation = useMutation({
+    mutationFn: async (actionId: string) => {
+      await apiRequest("POST", `/api/actions/${actionId}/return-to-approval`);
+    },
+    onSuccess: () => {
+      invalidate();
+      toast({ title: "Returned to Approval queue" });
+    },
+    onError: () => {
+      toast({ title: "Failed to return to approval", variant: "destructive" });
     },
   });
 
@@ -266,6 +310,9 @@ export default function ScheduledTab() {
     );
   }
 
+  const debtorDisplayName = (action: ScheduledAction) =>
+    action.companyName || action.contactName || "this debtor";
+
   return (
     <>
       <Table>
@@ -283,8 +330,6 @@ export default function ScheduledTab() {
           {items.map((action) => (
             <TableRow
               key={action.id}
-              className="cursor-pointer hover:bg-muted/50"
-              onClick={() => setPreviewAction(action)}
             >
               <TableCell>
                 <ChannelIcon type={action.agentChannel || action.type} />
@@ -373,20 +418,41 @@ export default function ScheduledTab() {
                       </TooltipContent>
                     )}
                   </Tooltip>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 px-2 text-xs text-destructive hover:text-destructive"
-                    disabled={cancelMutation.isPending}
-                    onClick={() => cancelMutation.mutate(action.id)}
-                  >
-                    {cancelMutation.isPending ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : (
-                      <X className="h-3 w-3 mr-1" />
-                    )}
-                    Cancel
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setCancelTarget(action);
+                          setCancelReason("");
+                        }}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Ban className="h-4 w-4 mr-2" />
+                        Cancel
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setDeferTarget(action);
+                          setDeferDate(defaultDeferDateTime());
+                          setDeferReason("");
+                        }}
+                      >
+                        <CalendarClock className="h-4 w-4 mr-2" />
+                        Defer
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => returnToApprovalMutation.mutate(action.id)}
+                      >
+                        <Undo2 className="h-4 w-4 mr-2" />
+                        Return to Approval
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
                   );
                 })()}
@@ -396,126 +462,101 @@ export default function ScheduledTab() {
         </TableBody>
       </Table>
 
-      {/* Preview sheet */}
-      <Sheet open={!!previewAction} onOpenChange={(open) => !open && setPreviewAction(null)}>
-        <SheetContent className="sm:max-w-xl overflow-y-auto">
-          {previewAction && (
-            <>
-              <SheetHeader>
-                <SheetTitle className="flex items-center gap-2">
-                  <ChannelIcon type={previewAction.agentChannel || previewAction.type} />
-                  {previewAction.companyName || previewAction.contactName || "Scheduled Action"}
-                </SheetTitle>
-              </SheetHeader>
+      {/* Cancel confirmation dialog */}
+      <Dialog open={!!cancelTarget} onOpenChange={(open) => !open && setCancelTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel scheduled action</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to cancel this email to{" "}
+              <strong>{cancelTarget ? debtorDisplayName(cancelTarget) : ""}</strong>?
+              This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="cancel-reason">Reason (optional)</Label>
+            <Textarea
+              id="cancel-reason"
+              placeholder="Why are you cancelling this action?"
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              rows={2}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCancelTarget(null)}>
+              Keep scheduled
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={cancelMutation.isPending}
+              onClick={() => {
+                if (cancelTarget) {
+                  cancelMutation.mutate({ actionId: cancelTarget.id, reason: cancelReason });
+                }
+              }}
+            >
+              {cancelMutation.isPending && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+              Cancel action
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-              <div className="mt-4 space-y-4">
-                {/* Schedule info */}
-                {previewAction.scheduledFor && (
-                  (() => {
-                    const countdown = formatCountdown(previewAction.scheduledFor);
-                    return (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        <span className={
-                          countdown.variant === "delayed" ? "text-amber-600" :
-                          countdown.variant === "sending" ? "text-blue-600" : ""
-                        }>
-                          {countdown.variant === "sending" ? "Sending now" :
-                           countdown.variant === "delayed" ? "Delayed" :
-                           <>Sending in <strong>{countdown.text}</strong></>}
-                          {" "}({formatScheduledTime(previewAction.scheduledFor)})
-                        </span>
-                      </div>
-                    );
-                  })()
-                )}
-
-                {/* Tone + channel */}
-                <div className="flex items-center gap-2">
-                  <ToneBadge tone={previewAction.agentToneLevel} />
-                  <Badge variant="outline" className="capitalize">
-                    {normalizeChannel(previewAction.agentChannel || previewAction.type)}
-                  </Badge>
-                </div>
-
-                {/* Subject */}
-                {previewAction.subject && (
-                  <div>
-                    <div className="text-xs font-medium text-muted-foreground mb-1">Subject</div>
-                    <div className="text-sm font-medium">{previewAction.subject}</div>
-                  </div>
-                )}
-
-                {/* Content preview */}
-                {previewAction.content && (
-                  <div>
-                    <div className="text-xs font-medium text-muted-foreground mb-1">Content</div>
-                    <div className="rounded-md border bg-muted/30 p-3 text-sm whitespace-pre-wrap">
-                      {previewAction.content}
-                    </div>
-                  </div>
-                )}
-
-                {/* Agent reasoning */}
-                {previewAction.agentReasoning && (
-                  <div>
-                    <div className="text-xs font-medium text-muted-foreground mb-1">Agent Reasoning</div>
-                    <div className="text-xs text-muted-foreground italic">
-                      {previewAction.agentReasoning}
-                    </div>
-                  </div>
-                )}
-
-                {/* Actions */}
-                {(() => {
-                  const sendStatus = getActionSendStatus(previewAction);
-                  return (
-                <div className="flex gap-2 pt-2 border-t">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span tabIndex={!sendStatus.allowed ? 0 : undefined}>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={!sendStatus.allowed || sendNowMutation.isPending}
-                          onClick={() => sendNowMutation.mutate(previewAction.id)}
-                        >
-                          {sendNowMutation.isPending ? (
-                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                          ) : (
-                            <Send className="h-3 w-3 mr-1" />
-                          )}
-                          Send Now
-                        </Button>
-                      </span>
-                    </TooltipTrigger>
-                    {!sendStatus.allowed && (
-                      <TooltipContent>
-                        Available during business hours ({sendStatus.label})
-                      </TooltipContent>
-                    )}
-                  </Tooltip>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    disabled={cancelMutation.isPending}
-                    onClick={() => cancelMutation.mutate(previewAction.id)}
-                  >
-                    {cancelMutation.isPending ? (
-                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                    ) : (
-                      <X className="h-3 w-3 mr-1" />
-                    )}
-                    Cancel
-                  </Button>
-                </div>
-                  );
-                })()}
-              </div>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
+      {/* Defer dialog */}
+      <Dialog open={!!deferTarget} onOpenChange={(open) => !open && setDeferTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Defer scheduled action</DialogTitle>
+            <DialogDescription>
+              Reschedule this action to{" "}
+              <strong>{deferTarget ? debtorDisplayName(deferTarget) : ""}</strong>{" "}
+              for a later date and time.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor="defer-datetime">New date and time</Label>
+              <Input
+                id="defer-datetime"
+                type="datetime-local"
+                value={deferDate}
+                onChange={(e) => setDeferDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="defer-reason">Reason (optional)</Label>
+              <Textarea
+                id="defer-reason"
+                placeholder="Why are you deferring this action?"
+                value={deferReason}
+                onChange={(e) => setDeferReason(e.target.value)}
+                rows={2}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeferTarget(null)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={deferMutation.isPending || !deferDate}
+              onClick={() => {
+                if (deferTarget && deferDate) {
+                  deferMutation.mutate({
+                    actionId: deferTarget.id,
+                    scheduledFor: new Date(deferDate).toISOString(),
+                    reason: deferReason,
+                  });
+                }
+              }}
+            >
+              {deferMutation.isPending && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+              Defer action
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

@@ -345,9 +345,112 @@ export function registerActionCentreRoutes(app: Express): void {
         })
         .where(eq(actions.id, actionId));
 
+      // Log cancellation to Activity Feed
+      if (action.contactId) {
+        try {
+          await db.insert(timelineEvents).values({
+            tenantId: user.tenantId,
+            customerId: action.contactId,
+            occurredAt: new Date(),
+            channel: action.type || "email",
+            direction: "internal",
+            summary: `Scheduled ${action.type || "email"} cancelled`,
+            preview: reason || "Cancelled by user",
+            body: reason || null,
+            actionId,
+            createdByType: "user",
+            createdByUserId: user.id,
+          });
+        } catch (err) {
+          console.warn("[cancel] timeline event insert failed:", err);
+        }
+      }
+
       res.json({ message: "Action cancelled", actionId });
     } catch (error: any) {
       console.error("Error cancelling action:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ── POST /api/actions/:actionId/defer-scheduled ─────────────
+  // Defer a scheduled action to a new date/time
+  app.post("/api/actions/:actionId/defer-scheduled", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const { actionId } = req.params;
+      const { scheduledFor, reason } = req.body || {};
+
+      if (!scheduledFor) {
+        return res.status(400).json({ message: "scheduledFor is required" });
+      }
+
+      const newDate = new Date(scheduledFor);
+      if (isNaN(newDate.getTime()) || newDate <= new Date()) {
+        return res.status(400).json({ message: "scheduledFor must be a valid future date" });
+      }
+
+      const [action] = await db
+        .select()
+        .from(actions)
+        .where(and(eq(actions.id, actionId), eq(actions.tenantId, user.tenantId), eq(actions.status, "scheduled")))
+        .limit(1);
+
+      if (!action) {
+        return res.status(404).json({ message: "Action not found or not scheduled" });
+      }
+
+      await db
+        .update(actions)
+        .set({
+          scheduledFor: newDate,
+          deferReason: reason || null,
+          updatedAt: new Date(),
+        })
+        .where(eq(actions.id, actionId));
+
+      res.json({ message: "Action deferred", actionId, scheduledFor: newDate.toISOString() });
+    } catch (error: any) {
+      console.error("Error deferring scheduled action:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ── POST /api/actions/:actionId/return-to-approval ──────────
+  // Move a scheduled action back to the Approval queue
+  app.post("/api/actions/:actionId/return-to-approval", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const { actionId } = req.params;
+
+      const [action] = await db
+        .select()
+        .from(actions)
+        .where(and(eq(actions.id, actionId), eq(actions.tenantId, user.tenantId), eq(actions.status, "scheduled")))
+        .limit(1);
+
+      if (!action) {
+        return res.status(404).json({ message: "Action not found or not scheduled" });
+      }
+
+      await db
+        .update(actions)
+        .set({
+          status: "pending_approval",
+          scheduledFor: null,
+          approvedBy: null,
+          approvedAt: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(actions.id, actionId));
+
+      res.json({ message: "Action returned to approval queue", actionId });
+    } catch (error: any) {
+      console.error("Error returning action to approval:", error);
       res.status(500).json({ message: error.message });
     }
   });
