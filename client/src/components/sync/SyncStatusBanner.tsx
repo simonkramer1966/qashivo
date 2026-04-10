@@ -94,8 +94,7 @@ export default function SyncStatusBanner() {
 
     const handleAction = () => {
       if (classified.requiresReconnect) {
-        // Navigate to Xero OAuth re-auth
-        window.location.href = "/api/integrations/xero/connect";
+        setLocation("/settings/integrations");
       } else {
         retryMutation.mutate();
       }
