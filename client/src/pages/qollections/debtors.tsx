@@ -72,6 +72,7 @@ interface Debtor {
     date: string;
     status: "open" | "broken";
   } | null;
+  conversationState?: string | null;
 }
 
 const PAGE_SIZE = 20;
@@ -114,6 +115,21 @@ function daysOverdueColor(days: number): string {
   if (days < 30) return "text-green-600";
   if (days <= 60) return "text-amber-600";
   return "text-red-600";
+}
+
+function stateLabel(state: string | null | undefined): { label: string; className: string } | null {
+  if (!state || state === 'idle') return null;
+  switch (state) {
+    case 'chase_sent': return { label: 'Awaiting reply', className: 'bg-blue-100 text-blue-700 border-blue-200' };
+    case 'debtor_responded': return { label: 'Processing', className: 'bg-blue-100 text-blue-700 border-blue-200 animate-pulse' };
+    case 'conversing': return { label: 'In conversation', className: 'bg-teal-100 text-teal-700 border-teal-200' };
+    case 'promise_monitor': return { label: 'Promise active', className: 'bg-blue-100 text-blue-700 border-blue-200' };
+    case 'dispute_hold': return { label: 'Dispute', className: 'bg-amber-100 text-amber-700 border-amber-200' };
+    case 'escalated': return { label: 'Escalated', className: 'bg-red-100 text-red-700 border-red-200' };
+    case 'resolved': return { label: 'Resolved', className: 'bg-green-100 text-green-700 border-green-200' };
+    case 'hold': return { label: 'On hold', className: 'bg-zinc-100 text-zinc-600 border-zinc-200' };
+    default: return { label: state, className: 'bg-zinc-100 text-zinc-600 border-zinc-200' };
+  }
 }
 
 type StatusFilter = "all" | "active" | "overdue" | "vip";
@@ -392,6 +408,7 @@ export default function QollectionsDebtors() {
                     <TableHead className="text-center">Promise</TableHead>
                     <TableHead>Last Contact</TableHead>
                     <TableHead>Next Action</TableHead>
+                    <TableHead className="text-center">State</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -418,6 +435,9 @@ export default function QollectionsDebtors() {
                       </TableCell>
                       <TableCell className="py-3 px-3">
                         <Skeleton className="h-3.5 w-16" />
+                      </TableCell>
+                      <TableCell className="py-3 px-3 text-center">
+                        <Skeleton className="h-5 w-16 mx-auto" />
                       </TableCell>
                     </TableRow>
                   ))}
@@ -450,9 +470,10 @@ export default function QollectionsDebtors() {
                       />
                       <SortableHeader column="invoiceCount" label="Invoices" currentSort={sort} onSort={setSort} className="w-[72px] text-center" />
                       <SortableHeader column="oldestOverdueDays" label="Days Overdue" currentSort={sort} onSort={setSort} className="w-[110px] text-center" />
-                      <TableHead className="w-[120px] text-center">Promise</TableHead>
+                      <TableHead className="w-[120px] text-center text-xs font-medium text-muted-foreground">Promise</TableHead>
                       <SortableHeader column="lastContactDate" label="Last Contact" currentSort={sort} onSort={setSort} className="w-[110px]" />
                       <SortableHeader column="nextActionDate" label="Next Action" currentSort={sort} onSort={setSort} className="w-[110px]" />
+                      <TableHead className="w-[100px] text-center text-xs font-medium text-muted-foreground">State</TableHead>
                       <TableHead className="w-[48px]" />
                     </TableRow>
                   </TableHeader>
@@ -466,7 +487,7 @@ export default function QollectionsDebtors() {
                         <TableCell className="py-3 px-3">
                           <div className="min-w-0">
                             <p className="text-sm font-medium leading-tight truncate flex items-center gap-1">
-                              {debtor.isVip && <Star className="h-3.5 w-3.5 text-purple-500 fill-purple-500 flex-shrink-0" />}
+                              {debtor.isVip && <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500 flex-shrink-0" />}
                               {debtor.name}
                             </p>
                             <p className="text-xs text-muted-foreground truncate">
@@ -524,6 +545,17 @@ export default function QollectionsDebtors() {
                         </TableCell>
                         <TableCell className="py-3 px-3 text-sm text-muted-foreground">
                           {formatDate(debtor.nextActionDate)}
+                        </TableCell>
+                        <TableCell className="py-3 px-3 text-center">
+                          {(() => {
+                            const s = stateLabel(debtor.conversationState);
+                            if (!s) return <span className="text-sm text-muted-foreground">—</span>;
+                            return (
+                              <Badge variant="outline" className={cn("text-xs font-medium", s.className)}>
+                                {s.label}
+                              </Badge>
+                            );
+                          })()}
                         </TableCell>
                         <TableCell className="py-3 px-3">
                           <DropdownMenu>

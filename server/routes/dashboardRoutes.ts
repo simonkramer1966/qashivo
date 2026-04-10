@@ -15,7 +15,7 @@ import {
   type Invoice, type Contact, type ContactNote, type Bill, type BankAccount,
   type BankTransaction, type Budget, type ExchangeRate, type ActionItem,
   type ActionLog, type PaymentPromise,
-  invoices, contacts, actions, disputes, bankTransactions, customerLearningProfiles,
+  invoices, contacts, actions, disputes, bankTransactions, customerLearningProfiles, conversationStates,
   inboundMessages, smsMessages, investorLeads, onboardingProgress, messageDrafts,
   tenants, paymentPromises, promisesToPay, smeClients, contactNotes, timelineEvents,
   attentionItems, outcomes, activityLogs, collectionPolicies, paymentPlans,
@@ -2173,18 +2173,23 @@ export function registerDashboardRoutes(app: Express): void {
           nextActionDate: sql<Date>`(SELECT MIN(a.scheduled_for) FROM actions a WHERE a.contact_id = ${contacts.id} AND a.tenant_id = ${user.tenantId} AND a.status IN ('pending', 'pending_approval', 'scheduled'))`,
           isActive: contacts.isActive,
           isVip: contacts.isVip,
+          conversationState: conversationStates.state,
         })
         .from(contacts)
         .leftJoin(
           invoices,
           and(eq(invoices.contactId, contacts.id), eq(invoices.tenantId, user.tenantId)),
         )
+        .leftJoin(
+          conversationStates,
+          and(eq(conversationStates.contactId, contacts.id), eq(conversationStates.tenantId, user.tenantId)),
+        )
         .where(and(
           eq(contacts.tenantId, user.tenantId),
           eq(contacts.isActive, true),
           isNotNull(contacts.xeroContactId),
         ))
-        .groupBy(contacts.id, contacts.name, contacts.companyName, contacts.email, contacts.isActive, contacts.isVip)
+        .groupBy(contacts.id, contacts.name, contacts.companyName, contacts.email, contacts.isActive, contacts.isVip, conversationStates.state)
         .having(
           sql`SUM(CASE WHEN LOWER(${invoices.status}) NOT IN ('paid', 'void', 'voided', 'deleted', 'draft') THEN ${invoices.amount} - ${invoices.amountPaid} ELSE 0 END) > 0`,
         )
@@ -2282,6 +2287,7 @@ export function registerDashboardRoutes(app: Express): void {
           hasCredit: netOutstanding < 0,
           isVip: d.isVip ?? false,
           latestPromise: promiseByContactId.get(d.id) ?? null,
+          conversationState: d.conversationState || null,
         };
       });
 
@@ -2308,6 +2314,7 @@ export function registerDashboardRoutes(app: Express): void {
           hasCredit: true,
           isVip: false,
           latestPromise: promiseByContactId.get(contactId) ?? null,
+          conversationState: null,
         });
       }
 
