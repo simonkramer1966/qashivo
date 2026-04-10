@@ -1097,8 +1097,8 @@ export default function ForecastPage() {
         </Card>
       </div>
 
-      {/* E2. Recurring Revenue Patterns */}
-      {patterns && patterns.length > 0 && (
+      {/* E2. Recurring Revenue Patterns — DISABLED (Layer 2 hidden for now) */}
+      {false && patterns && patterns.length > 0 && (
         <Card>
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
@@ -1305,22 +1305,7 @@ export default function ForecastPage() {
                       {fmt(forecast.weeklyForecasts.reduce((s, wf) => s + wf.sourceBreakdown.arCollections, 0))}
                     </td>
                   </tr>
-                  {/* Recurring Revenue row */}
-                  <tr className="border-b">
-                    <td className="py-1.5 px-3 pl-6 text-blue-600 sticky left-0 bg-background z-10">
-                      Recurring revenue
-                    </td>
-                    {forecast.weeklyForecasts.map((wf) => (
-                      <td key={wf.weekNumber} className="text-right py-1.5 px-2 text-blue-600">
-                        {wf.sourceBreakdown.recurringRevenue > 0
-                          ? fmt(wf.sourceBreakdown.recurringRevenue)
-                          : <span className="text-muted-foreground">—</span>}
-                      </td>
-                    ))}
-                    <td className="text-right py-1.5 px-3 text-blue-600">
-                      {fmt(forecast.weeklyForecasts.reduce((s, wf) => s + wf.sourceBreakdown.recurringRevenue, 0))}
-                    </td>
-                  </tr>
+                  {/* Recurring Revenue row — DISABLED (Layer 2 hidden for now) */}
                   {/* Pipeline rows (Layer 3) — inline editable like outflows */}
                   {PIPELINE_TIERS.map((tier) => (
                     <tr key={tier.category} className="border-b hover:bg-muted/20">
@@ -1918,47 +1903,7 @@ export default function ForecastPage() {
                         + {wf.invoiceBreakdown.length - 10} more invoices
                       </p>
                     )}
-                    {wf.sourceBreakdown.recurringRevenue > 0 &&
-                      forecast.recurringRevenue?.patterns && (
-                        <div className="mt-2 border-t pt-2">
-                          <p className="text-xs font-medium text-blue-600 px-3 mb-1">
-                            Recurring Revenue ({fmt(wf.sourceBreakdown.recurringRevenue)})
-                          </p>
-                          {forecast.recurringRevenue.patterns
-                            .filter(
-                              (p) =>
-                                p.weeklyProjections[wf.weekNumber - 1] > 0,
-                            )
-                            .map((p, i) => (
-                              <div
-                                key={i}
-                                className="grid grid-cols-[2fr_1fr_1fr_1fr_80px] gap-2 text-xs text-blue-600/70 px-3 py-1"
-                              >
-                                <span>
-                                  {p.contactName}{" "}
-                                  <span className="text-blue-400">
-                                    ({p.frequency})
-                                  </span>
-                                </span>
-                                <span className="text-right">
-                                  {fmt(p.averageAmount)}
-                                </span>
-                                <span className="text-right">
-                                  {fmt(p.weeklyProjections[wf.weekNumber - 1])}
-                                </span>
-                                <span className="text-right">projected</span>
-                                <span className="text-center">
-                                  <Badge
-                                    variant="outline"
-                                    className="text-[10px] h-4 bg-blue-50 text-blue-600"
-                                  >
-                                    recurring
-                                  </Badge>
-                                </span>
-                              </div>
-                            ))}
-                        </div>
-                      )}
+                    {/* Recurring revenue breakdown — hidden while Layer 2 is disabled */}
                   </div>
                 </CollapsibleContent>
               </Collapsible>
@@ -2029,11 +1974,7 @@ export default function ForecastPage() {
                       {(closeWeekPreview.variance?.amount ?? 0) >= 0 ? "+" : ""}{fmt(closeWeekPreview.variance?.amount ?? 0)}
                     </td>
                   </tr>
-                  <tr className="border-b">
-                    <td className="py-1">Recurring revenue</td>
-                    <td className="text-right">{fmt(closeWeekPreview.forecast?.recurringRevenue ?? 0)}</td>
-                    <td className="text-right" colSpan={2}>—</td>
-                  </tr>
+                  {/* Recurring revenue row — hidden while Layer 2 is disabled */}
                   <tr className="border-b">
                     <td className="py-1">Pipeline</td>
                     <td className="text-right">{fmt(closeWeekPreview.forecast?.pipeline ?? 0)}</td>
@@ -2215,21 +2156,7 @@ export default function ForecastPage() {
                 with every payment observed. More data = tighter distributions =
                 more accurate forecasts.
               </p>
-              <hr className="border-border" />
-              <p className="font-medium text-foreground">Recurring revenue</p>
-              <p>
-                The system automatically detects repeating invoice patterns from
-                your Xero history — clients who pay roughly the same amount on a
-                regular cycle (monthly, quarterly, etc.). These are projected
-                forward into the forecast window using the same per-debtor
-                payment timing model as AR collections.
-              </p>
-              <p>
-                Detected patterns appear as "unconfirmed" until you review them.
-                Confirmed patterns carry full weight; unconfirmed ones are
-                included at reduced confidence so the forecast stays
-                conservative until you say otherwise.
-              </p>
+              {/* Recurring revenue methodology section — hidden while Layer 2 is disabled */}
               <hr className="border-border" />
               <p className="font-medium text-foreground">Pipeline revenue</p>
               <p>
