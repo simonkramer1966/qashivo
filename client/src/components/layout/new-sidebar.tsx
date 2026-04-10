@@ -82,7 +82,6 @@ const navigationPillars: NavPillar[] = [
       { name: "Weekly Review", href: "/qashflow/weekly-review", icon: Gauge, exact: true },
       { name: "Forecast", href: "/qashflow/forecast", icon: BarChart3 },
       { name: "Scenarios", href: "/qashflow/scenarios", icon: Sliders },
-      { name: "Cash Flow", href: "/qashflow/cashflow", icon: TrendingUp },
     ],
   },
   { label: "Capital", icon: Landmark, href: "/qapital" },
