@@ -56,18 +56,36 @@ export function VipPromotionDialog({
       const res = await apiRequest("POST", `/api/contacts/${contactId}/vip/promote`, { reason, note });
       return res.json();
     },
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ["/api/qollections/debtors"] });
+      const prev = queryClient.getQueryData(["/api/qollections/debtors"]) as { debtors: Array<{ id: string; isVip?: boolean; [key: string]: unknown }>; unmatchedCredits: number } | undefined;
+      if (prev) {
+        queryClient.setQueryData(["/api/qollections/debtors"], {
+          ...prev,
+          debtors: prev.debtors.map((d: { id: string; isVip?: boolean; [key: string]: unknown }) =>
+            d.id === contactId ? { ...d, isVip: true } : d
+          ),
+        });
+      }
+      return { prev };
+    },
     onSuccess: (data: { cancelledCount?: number }) => {
       const cancelled = data?.cancelledCount ?? 0;
       const suffix = cancelled > 0 ? ` — ${cancelled} action${cancelled !== 1 ? "s" : ""} cancelled` : "";
       toast({ title: `${companyName} moved to VIP${suffix}` });
       invalidateActionCentre();
-      queryClient.invalidateQueries({ queryKey: ["/api/qollections/debtors"] });
       onOpenChange(false);
       setReason("");
       setNote("");
     },
-    onError: () => {
+    onError: (_err: unknown, _vars: void, context: { prev?: unknown } | undefined) => {
+      if (context?.prev) {
+        queryClient.setQueryData(["/api/qollections/debtors"], context.prev);
+      }
       toast({ title: "Failed to promote to VIP", variant: "destructive" });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/qollections/debtors"] });
     },
   });
 

@@ -48,7 +48,6 @@ import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { VipPromotionDialog } from "@/components/action-centre/VipPromotionDialog";
 import {
   SortableHeader,
   DualSortHeader,
@@ -175,7 +174,7 @@ export default function QollectionsDebtors() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [sort, setSort] = useState<SortState>(DEFAULT_SORT);
   const [page, setPage] = useState(0);
-  const [vipTarget, setVipTarget] = useState<{ id: string; name: string } | null>(null);
+  // VipPromotionDialog kept for debtor-detail use; menu uses direct addVipMutation
 
   const { data: debtorsResponse, isLoading } = useQuery<{ debtors: Debtor[]; unmatchedCredits: number }>({
     queryKey: ["/api/qollections/debtors"],
@@ -189,12 +188,55 @@ export default function QollectionsDebtors() {
       });
       return res.json();
     },
-    onSuccess: () => {
-      toast({ title: "VIP status removed" });
+    onMutate: async (contactId: string) => {
+      await queryClient.cancelQueries({ queryKey: ["/api/qollections/debtors"] });
+      const prev = queryClient.getQueryData<{ debtors: Debtor[]; unmatchedCredits: number }>(["/api/qollections/debtors"]);
+      if (prev) {
+        queryClient.setQueryData(["/api/qollections/debtors"], {
+          ...prev,
+          debtors: prev.debtors.map(d => d.id === contactId ? { ...d, isVip: false } : d),
+        });
+      }
+      return { prev };
+    },
+    onError: (_err: unknown, _contactId: string, context: { prev?: { debtors: Debtor[]; unmatchedCredits: number } } | undefined) => {
+      if (context?.prev) {
+        queryClient.setQueryData(["/api/qollections/debtors"], context.prev);
+      }
+      toast({ title: "Failed to remove VIP status", variant: "destructive" });
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/qollections/debtors"] });
     },
-    onError: () => {
-      toast({ title: "Failed to remove VIP status", variant: "destructive" });
+  });
+
+  const addVipMutation = useMutation({
+    mutationFn: async (contactId: string) => {
+      const res = await apiRequest("POST", `/api/contacts/${contactId}/vip/promote`, {
+        reason: "Marked from debtors list",
+        note: "",
+      });
+      return res.json();
+    },
+    onMutate: async (contactId: string) => {
+      await queryClient.cancelQueries({ queryKey: ["/api/qollections/debtors"] });
+      const prev = queryClient.getQueryData<{ debtors: Debtor[]; unmatchedCredits: number }>(["/api/qollections/debtors"]);
+      if (prev) {
+        queryClient.setQueryData(["/api/qollections/debtors"], {
+          ...prev,
+          debtors: prev.debtors.map(d => d.id === contactId ? { ...d, isVip: true } : d),
+        });
+      }
+      return { prev };
+    },
+    onError: (_err: unknown, _contactId: string, context: { prev?: { debtors: Debtor[]; unmatchedCredits: number } } | undefined) => {
+      if (context?.prev) {
+        queryClient.setQueryData(["/api/qollections/debtors"], context.prev);
+      }
+      toast({ title: "Failed to mark as VIP", variant: "destructive" });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/qollections/debtors"] });
     },
   });
 
@@ -287,36 +329,6 @@ export default function QollectionsDebtors() {
     >
       <div className="space-y-6">
         <SyncStatusBanner />
-        {/* Search and Filters */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search by name or email..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-              <Select
-                value={statusFilter}
-                onValueChange={(v) => setStatusFilter(v as StatusFilter)}
-              >
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="overdue">Overdue</SelectItem>
-                  <SelectItem value="vip">VIP</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* KPI Summary Row */}
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -412,6 +424,40 @@ export default function QollectionsDebtors() {
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Search + Filter toolbar */}
+        <div className="flex items-center justify-between gap-4">
+          <div className="relative w-full max-w-[280px]">
+            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search debtors..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-9 pl-9 text-sm"
+            />
+          </div>
+          <div className="flex items-center gap-3">
+            <Select
+              value={statusFilter}
+              onValueChange={(v) => setStatusFilter(v as StatusFilter)}
+            >
+              <SelectTrigger className="h-9 w-[100px] text-sm">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="overdue">Overdue</SelectItem>
+                <SelectItem value="vip">VIP</SelectItem>
+              </SelectContent>
+            </Select>
+            {!isLoading && (
+              <span className="text-sm text-muted-foreground whitespace-nowrap">
+                {filtered.length} debtor{filtered.length !== 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Data Table */}
@@ -584,20 +630,26 @@ export default function QollectionsDebtors() {
                                 <MoreVertical className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
+                            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                               <DropdownMenuLabel>Actions</DropdownMenuLabel>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem onSelect={() => navigate(`/qollections/debtors/${debtor.id}`)}>
                                 <Eye className="h-4 w-4 mr-2" /> View Details
                               </DropdownMenuItem>
-                              <DropdownMenuItem onSelect={() => navigate(`/qollections/debtors/${debtor.id}`)}>
+                              <DropdownMenuItem onSelect={() => {
+                                toast({ title: "Add Contact — coming soon" });
+                              }}>
                                 <UserPlus className="h-4 w-4 mr-2" /> Add Contact
                               </DropdownMenuItem>
-                              <DropdownMenuItem onSelect={() => navigate(`/qollections/debtors/${debtor.id}`)}>
+                              <DropdownMenuItem onSelect={() => {
+                                toast({ title: "Add Note — coming soon" });
+                              }}>
                                 <StickyNote className="h-4 w-4 mr-2" /> Add Note
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem onSelect={() => {}}>
+                              <DropdownMenuItem onSelect={() => {
+                                toast({ title: "Hold functionality coming soon" });
+                              }}>
                                 <PauseCircle className="h-4 w-4 mr-2" /> Put On Hold
                               </DropdownMenuItem>
                               {debtor.isVip ? (
@@ -605,7 +657,7 @@ export default function QollectionsDebtors() {
                                   <Star className="h-4 w-4 mr-2" /> Remove VIP
                                 </DropdownMenuItem>
                               ) : (
-                                <DropdownMenuItem onSelect={() => setVipTarget({ id: debtor.id, name: debtor.name })}>
+                                <DropdownMenuItem onSelect={() => addVipMutation.mutate(debtor.id)}>
                                   <Star className="h-4 w-4 mr-2" /> Mark as VIP
                                 </DropdownMenuItem>
                               )}
@@ -652,14 +704,6 @@ export default function QollectionsDebtors() {
           </CardContent>
         </Card>
       </div>
-      {vipTarget && (
-        <VipPromotionDialog
-          open={!!vipTarget}
-          onOpenChange={(open) => { if (!open) setVipTarget(null); }}
-          contactId={vipTarget.id}
-          companyName={vipTarget.name}
-        />
-      )}
     </AppShell>
   );
 }

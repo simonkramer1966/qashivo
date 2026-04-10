@@ -34,6 +34,12 @@ export async function startAll(): Promise<void> {
     throw new Error(`[startup] Missing required environment variables: ${missing.join(", ")}`);
   }
 
+  // Phase 0 — Security status
+  const hasEncryptionKey = !!process.env.PROVIDER_TOKEN_ENCRYPTION_KEY;
+  console.log(hasEncryptionKey
+    ? "[Security] Token encryption: ENABLED (PROVIDER_TOKEN_ENCRYPTION_KEY set)"
+    : "[Security] Token encryption: DISABLED (no PROVIDER_TOKEN_ENCRYPTION_KEY)");
+
   // Phase 0 — Bootstrap
   try {
     await ensureMasterAdminExists();
