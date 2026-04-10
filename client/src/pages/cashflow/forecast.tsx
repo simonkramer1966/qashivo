@@ -920,18 +920,18 @@ export default function ForecastPage() {
               {/* Error whiskers via thin lines */}
               <Line
                 dataKey="optimistic"
-                stroke="#93c5fd"
+                stroke="#22c55e"
                 strokeWidth={1}
-                dot={{ r: 2, fill: "#93c5fd" }}
-                strokeDasharray="4 2"
+                dot={{ r: 2, fill: "#22c55e" }}
+                strokeDasharray="2 3"
                 connectNulls
               />
               <Line
                 dataKey="pessimistic"
-                stroke="#93c5fd"
+                stroke="#ef4444"
                 strokeWidth={1}
-                dot={{ r: 2, fill: "#93c5fd" }}
-                strokeDasharray="4 2"
+                dot={{ r: 2, fill: "#ef4444" }}
+                strokeDasharray="2 3"
                 connectNulls
               />
             </ComposedChart>
