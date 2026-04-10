@@ -432,9 +432,9 @@ export default function ForecastPage() {
 
   // ── Pipeline state (inline editing, same pattern as outflows) ──
   const PIPELINE_TIERS = [
-    { category: "pipeline_committed", label: "Pipeline: Committed", color: "" },
-    { category: "pipeline_uncommitted", label: "Pipeline: Uncommitted", color: "" },
-    { category: "pipeline_stretch", label: "Pipeline: Stretch", color: "" },
+    { category: "pipeline_committed", label: "Pipeline: Committed" },
+    { category: "pipeline_uncommitted", label: "Pipeline: Uncommitted" },
+    { category: "pipeline_stretch", label: "Pipeline: Stretch" },
   ] as const;
 
   const [editingPipelineCell, setEditingPipelineCell] = useState<{ category: string; week: number } | null>(null);
@@ -1382,7 +1382,7 @@ export default function ForecastPage() {
                   {/* Pipeline rows (Layer 3) — inline editable like outflows */}
                   {PIPELINE_TIERS.map((tier) => (
                     <tr key={tier.category} className="border-b hover:bg-muted/20">
-                      <td className={`py-1.5 px-3 pl-6 ${tier.color} sticky left-0 bg-background z-10`}>
+                      <td className="py-1.5 px-3 pl-6 text-muted-foreground sticky left-0 bg-background z-10">
                         {tier.label}
                       </td>
                       {forecast.weeklyForecasts.map((wf, wi) => {
@@ -1444,7 +1444,7 @@ export default function ForecastPage() {
                             ) : (
                               <button
                                 className={`w-full text-right text-xs py-0.5 px-1 rounded hover:bg-muted/50 ${
-                                  amount > 0 ? tier.color : "text-muted-foreground"
+                                  amount > 0 ? "" : "text-muted-foreground"
                                 }`}
                                 onClick={() => {
                                   setPipelineCellValue(amount > 0 ? String(amount) : "");
@@ -1457,7 +1457,7 @@ export default function ForecastPage() {
                           </td>
                         );
                       })}
-                      <td className={`text-right py-1.5 px-3 font-medium ${tier.color}`}>
+                      <td className="text-right py-1.5 px-3 font-medium">
                         {getPipelineTierTotal(tier.category) > 0
                           ? fmt(getPipelineTierTotal(tier.category))
                           : <span className="text-muted-foreground">—</span>}
