@@ -584,28 +584,28 @@ export default function QollectionsDebtors() {
                                 <MoreVertical className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                            <DropdownMenuContent align="end">
                               <DropdownMenuLabel>Actions</DropdownMenuLabel>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={() => navigate(`/qollections/debtors/${debtor.id}`)}>
+                              <DropdownMenuItem onSelect={() => navigate(`/qollections/debtors/${debtor.id}`)}>
                                 <Eye className="h-4 w-4 mr-2" /> View Details
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/qollections/debtors/${debtor.id}`); }}>
+                              <DropdownMenuItem onSelect={() => navigate(`/qollections/debtors/${debtor.id}`)}>
                                 <UserPlus className="h-4 w-4 mr-2" /> Add Contact
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/qollections/debtors/${debtor.id}`); }}>
+                              <DropdownMenuItem onSelect={() => navigate(`/qollections/debtors/${debtor.id}`)}>
                                 <StickyNote className="h-4 w-4 mr-2" /> Add Note
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
+                              <DropdownMenuItem onSelect={() => {}}>
                                 <PauseCircle className="h-4 w-4 mr-2" /> Put On Hold
                               </DropdownMenuItem>
                               {debtor.isVip ? (
-                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); removeVipMutation.mutate(debtor.id); }}>
+                                <DropdownMenuItem onSelect={() => removeVipMutation.mutate(debtor.id)}>
                                   <Star className="h-4 w-4 mr-2" /> Remove VIP
                                 </DropdownMenuItem>
                               ) : (
-                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setVipTarget({ id: debtor.id, name: debtor.name }); }}>
+                                <DropdownMenuItem onSelect={() => setVipTarget({ id: debtor.id, name: debtor.name })}>
                                   <Star className="h-4 w-4 mr-2" /> Mark as VIP
                                 </DropdownMenuItem>
                               )}
