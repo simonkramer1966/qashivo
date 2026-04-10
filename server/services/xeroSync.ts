@@ -719,6 +719,14 @@ export class XeroSyncService {
                 contactId: contact.id, contactName: contact.name,
                 invoiceNumber: cachedInv.invoiceNumber, amount: cachedInv.amount,
               });
+
+              // Conversation state → RESOLVED on payment
+              try {
+                const { transitionState } = await import("./conversationStateService");
+                await transitionState(tenantId, contact.id, 'payment_detected', {
+                  eventId: cachedInv.id, eventType: 'invoice',
+                });
+              } catch { /* non-fatal */ }
             }
           } else {
             // Double-check no duplicate exists (guard against Map collision from prior duplicates)

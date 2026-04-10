@@ -2,6 +2,7 @@ import { eq, and, lt, ne, isNotNull, inArray, sql } from "drizzle-orm";
 import { db } from "../db";
 import { tenants, promisesToPay, invoices, actions, paymentPlans, paymentPlanInvoices, activityLogs } from "@shared/schema";
 import { pauseManager } from "../lib/pause-manager";
+import { transitionState } from "./conversationStateService";
 import { createLogger } from "../lib/logger";
 
 const log = createLogger('ptp-breach');
@@ -325,6 +326,13 @@ class PTPBreachDetector {
             updatedAt: now
           })
           .where(eq(promisesToPay.id, promise.id));
+
+        // Conversation state → IDLE (promise broken, resume chasing)
+        if (promise.contactId) {
+          await transitionState(tenantId, promise.contactId, 'promise_broken', {
+            eventId: promise.id, eventType: 'promise_to_pay',
+          }).catch(err => log.warn(`State promise_broken transition failed: ${(err as Error).message}`));
+        }
 
         // Resume invoice from PTP pause (if it was paused)
         try {

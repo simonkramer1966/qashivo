@@ -5469,4 +5469,115 @@ ${type === 'email' ? 'Generate a JSON object with "subject" (string) and "body" 
     }
   });
 
+  // ── Conversation State Machine endpoints ──
+
+  app.get('/api/contacts/:contactId/conversation-state', isAuthenticated, withRBACContext, async (req, res) => {
+    try {
+      const tenantId = req.rbac?.tenantId;
+      const { contactId } = req.params;
+      if (!tenantId) return res.status(401).json({ message: "Unauthorized" });
+
+      const { getState } = await import("../services/conversationStateService");
+      const state = await getState(tenantId, contactId);
+      res.json(state);
+    } catch (error: any) {
+      console.error("Error fetching conversation state:", error);
+      res.status(500).json({ message: "Failed to fetch conversation state" });
+    }
+  });
+
+  app.patch('/api/contacts/:contactId/conversation-state', isAuthenticated, withRBACContext, withMinimumRole('manager'), async (req, res) => {
+    try {
+      const tenantId = req.rbac?.tenantId;
+      const { contactId } = req.params;
+      if (!tenantId) return res.status(401).json({ message: "Unauthorized" });
+
+      const { silenceTimeoutHours, maxTonePermitted } = req.body;
+      const updates: Record<string, unknown> = { updatedAt: new Date() };
+      if (silenceTimeoutHours !== undefined) updates.silenceTimeoutHours = silenceTimeoutHours;
+      if (maxTonePermitted !== undefined) updates.maxTonePermitted = maxTonePermitted;
+
+      const { conversationStates } = await import("@shared/schema");
+      const [updated] = await db
+        .update(conversationStates)
+        .set(updates as any)
+        .where(and(
+          eq(conversationStates.tenantId, tenantId),
+          eq(conversationStates.contactId, contactId),
+        ))
+        .returning();
+
+      if (!updated) return res.status(404).json({ message: "State not found" });
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating conversation state:", error);
+      res.status(500).json({ message: "Failed to update conversation state" });
+    }
+  });
+
+  app.post('/api/contacts/:contactId/conversation-state/hold', isAuthenticated, withRBACContext, withMinimumRole('manager'), async (req, res) => {
+    try {
+      const tenantId = req.rbac?.tenantId;
+      const userId = req.rbac?.userId;
+      const { contactId } = req.params;
+      if (!tenantId) return res.status(401).json({ message: "Unauthorized" });
+
+      const { transitionState } = await import("../services/conversationStateService");
+      const state = await transitionState(tenantId, contactId, 'manual_hold', {
+        userId, initiatedBy: 'user',
+      });
+      res.json(state);
+    } catch (error: any) {
+      console.error("Error putting contact on hold:", error);
+      res.status(500).json({ message: "Failed to put on hold" });
+    }
+  });
+
+  app.post('/api/contacts/:contactId/conversation-state/release', isAuthenticated, withRBACContext, withMinimumRole('manager'), async (req, res) => {
+    try {
+      const tenantId = req.rbac?.tenantId;
+      const userId = req.rbac?.userId;
+      const { contactId } = req.params;
+      if (!tenantId) return res.status(401).json({ message: "Unauthorized" });
+
+      const { transitionState } = await import("../services/conversationStateService");
+      const state = await transitionState(tenantId, contactId, 'manual_release', {
+        userId, initiatedBy: 'user',
+      });
+      res.json(state);
+    } catch (error: any) {
+      console.error("Error releasing contact hold:", error);
+      res.status(500).json({ message: "Failed to release hold" });
+    }
+  });
+
+  app.get('/api/contacts/:contactId/conversation-state/transitions', isAuthenticated, withRBACContext, async (req, res) => {
+    try {
+      const tenantId = req.rbac?.tenantId;
+      const { contactId } = req.params;
+      if (!tenantId) return res.status(401).json({ message: "Unauthorized" });
+
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
+      const offset = (page - 1) * limit;
+
+      const { conversationStateTransitions } = await import("@shared/schema");
+      const rows = await db
+        .select()
+        .from(conversationStateTransitions)
+        .where(and(
+          eq(conversationStateTransitions.tenantId, tenantId),
+          eq(conversationStateTransitions.contactId, contactId),
+        ))
+        .orderBy(desc(conversationStateTransitions.transitionedAt))
+        .limit(limit)
+        .offset(offset);
+
+      res.json({ transitions: rows, page, limit });
+    } catch (error: any) {
+      console.error("Error fetching transitions:", error);
+      res.status(500).json({ message: "Failed to fetch transitions" });
+    }
+  });
+
 }

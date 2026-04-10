@@ -5,6 +5,7 @@ import { eq, and, desc, inArray, notInArray, asc, sql, gte, lt } from "drizzle-o
 import { getPromiseReliabilityService } from "./promiseReliabilityService.js";
 import { emailClarificationService } from "./emailClarificationService.js";
 import { processInboundReply } from "./inboundReplyPipeline";
+import { transitionState } from "./conversationStateService";
 import { signalCollector } from "../lib/signal-collector";
 
 // Outcome types that map to CharlieIntentType
@@ -526,6 +527,14 @@ CRITICAL EXCEPTIONS — do NOT flag ambiguity when:
             await this.createForecastAdjustmentFromPromise(message, analysis, context);
           }
           // If modification, detectAndHandlePromiseModification already updated the records
+
+          // Conversation state → PROMISE_MONITOR
+          // Confidence tiers: >= 0.92 auto-confirmed, 0.85-0.91 requires confirmation, < 0.85 logged only
+          const needsConfirmation = analysis.confidence >= 0.85 && analysis.confidence < 0.92;
+          await transitionState(message.tenantId, message.contactId, 'intent_classified', {
+            intent: 'promise', eventId: message.id, eventType: 'inbound_message',
+            metadata: { confidence: analysis.confidence, requiresConfirmation: needsConfirmation },
+          }).catch(err => console.warn('[State] promise intent_classified transition failed:', err));
         }
         
         // Handle payment plan requests - update invoice outcome and create notification
@@ -536,12 +545,29 @@ CRITICAL EXCEPTIONS — do NOT flag ambiguity when:
         }
         
         // Handle dispute intents - update invoice outcome
-        if (analysis.intentType === 'dispute' && 
+        if (analysis.intentType === 'dispute' &&
             analysis.confidence >= this.CONFIDENCE_THRESHOLD &&
             message.invoiceId) {
           await this.handleDisputeIntent(message, analysis);
+
+          // Conversation state → DISPUTE_HOLD
+          if (message.contactId) {
+            await transitionState(message.tenantId, message.contactId, 'intent_classified', {
+              intent: 'dispute', eventId: message.id, eventType: 'inbound_message',
+            }).catch(err => console.warn('[State] dispute intent_classified transition failed:', err));
+          }
         }
-        
+
+        // For non-promise/non-dispute intents with sufficient confidence → CONVERSING
+        if (message.contactId &&
+            analysis.intentType !== 'promise_to_pay' &&
+            analysis.intentType !== 'dispute' &&
+            analysis.intentType !== 'unknown') {
+          await transitionState(message.tenantId, message.contactId, 'intent_classified', {
+            intent: 'acknowledge', eventId: message.id, eventType: 'inbound_message',
+          }).catch(err => console.warn('[State] acknowledge intent_classified transition failed:', err));
+        }
+
       } else {
         console.log(`⚠️  Low confidence (${(analysis.confidence * 100).toFixed(0)}%) - flagged for manual review`);
         // Still create action for low confidence - route to Queries tab

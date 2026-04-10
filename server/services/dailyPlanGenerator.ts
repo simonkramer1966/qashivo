@@ -1,6 +1,6 @@
 import { eq, and, sql, inArray } from "drizzle-orm";
 import { db } from "../db";
-import { actions, tenants, invoices, agentPersonas, paymentPromises } from "@shared/schema";
+import { actions, tenants, invoices, agentPersonas } from "@shared/schema";
 import { generateInvoiceTableHtml } from "./collectionsAutomation";
 import { setupDefaultWorkflow } from "./defaultWorkflowSetup";
 import { charlieDecisionEngine } from "./charlieDecisionEngine";
@@ -9,7 +9,7 @@ import { charliePlaybook, prepareMessageFromDecision } from "./charliePlaybook";
 import { prepareMessageFromWorkflowProfile } from "./workflowProfileMessageService";
 import { processCollectionEmail } from "./collectionsPipeline";
 import { getSmallBalancePolicy, isSmallBalance, applySmallBalancePriority } from "./smallBalancePolicy";
-import { getActiveConversationContactIds } from "./emailClarificationService";
+import { bulkGetStates } from "./conversationStateService";
 import { getEffectiveOverdue } from "./arCalculations";
 
 export interface InvoiceSummary {
@@ -369,32 +369,12 @@ async function generateDailyPlanWithCharlie(
   
   console.log(`📊 Grouped ${actionableDecisions.length} decisions into ${decisionsByContact.size} contacts`);
 
-  // Skip debtors with an active conversation (recent inbound or pending reply).
-  // Avoids stacking a chase email on top of a live thread.
-  const activeConvSet = await getActiveConversationContactIds(
-    tenantId,
-    Array.from(decisionsByContact.keys()),
-  );
-  let activeConversationSkips = 0;
-
-  // Batch-fetch active promises for all target contacts (avoids N+1 in the loop).
-  // An active promise is: status='open' AND promisedDate + gracePeriodDays > now.
+  // Batch-load conversation states for all candidate contacts.
+  // States that block chasing: chase_sent, debtor_responded, conversing, promise_monitor, dispute_hold, hold
+  // States that allow chasing: idle, escalated, resolved
   const candidateContactIds = Array.from(decisionsByContact.keys());
-  const activePromiseSet = new Set<string>();
-  if (candidateContactIds.length > 0) {
-    const rows = await db
-      .select({ contactId: paymentPromises.contactId })
-      .from(paymentPromises)
-      .where(
-        and(
-          eq(paymentPromises.tenantId, tenantId),
-          inArray(paymentPromises.contactId, candidateContactIds),
-          eq(paymentPromises.status, 'open'),
-          sql`(${paymentPromises.promisedDate} + (COALESCE(${paymentPromises.gracePeriodDays}, 3) || ' days')::interval) > now()`,
-        ),
-      );
-    for (const r of rows) activePromiseSet.add(r.contactId);
-  }
+  const stateMap = await bulkGetStates(tenantId, candidateContactIds);
+  let conversationStateSkips = 0;
 
   // Batch-compute effective overdue (xero overdue − unallocated) per contact.
   const effectiveOverdueMap = new Map<string, { xeroOverdue: number; unallocatedTotal: number; effectiveOverdue: number; hasUnallocatedPayments: boolean }>();
@@ -408,21 +388,16 @@ async function generateDailyPlanWithCharlie(
 
   // Process each contact ONCE (with all their invoices consolidated)
   for (const [contactId, contactDecisions] of decisionsByContact) {
-    if (activeConvSet.has(contactId)) {
+    // Gate: Conversation state blocks chasing
+    const convState = stateMap.get(contactId);
+    if (convState && !['idle', 'escalated', 'resolved'].includes(convState.state)) {
       const name = contactDecisions[0]?.contact?.name ?? contactId;
-      console.log(`⏭️  Skipped ${name} — active conversation`);
-      activeConversationSkips++;
+      console.log(`⏭️  Skipped ${name} — conversation state: ${convState.state}`);
+      conversationStateSkips++;
       continue;
     }
 
-    // Gate 1: Active promise → skip entirely
-    if (activePromiseSet.has(contactId)) {
-      const name = contactDecisions[0]?.contact?.name ?? contactId;
-      console.log(`⏭️  Skipped ${name} — active promise (within grace period)`);
-      continue;
-    }
-
-    // Gate 2: Effective overdue (net of unallocated payments) is zero → skip
+    // Gate: Effective overdue (net of unallocated payments) is zero → skip
     const eff = effectiveOverdueMap.get(contactId);
     if (eff && eff.effectiveOverdue <= 0) {
       const name = contactDecisions[0]?.contact?.name ?? contactId;
@@ -686,8 +661,8 @@ async function generateDailyPlanWithCharlie(
     ? planActions.reduce((sum, a) => sum + a.daysOverdue, 0) / planActions.length 
     : 0;
   
-  if (activeConversationSkips > 0) {
-    console.log(`💬 Charlie skipped ${activeConversationSkips} debtor(s) with active conversations`);
+  if (conversationStateSkips > 0) {
+    console.log(`💬 Charlie skipped ${conversationStateSkips} debtor(s) due to conversation state`);
   }
   console.log(`✅ Charlie plan: ${planActions.length} actions (${exceptionsCount} exceptions)`);
   console.log(`📧 Email: ${channelCounts.email}, 📱 SMS: ${channelCounts.sms}, 📞 Voice: ${channelCounts.voice}`);

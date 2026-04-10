@@ -92,6 +92,16 @@ export interface ConversationBriefData {
     oldestOverdueDays: number | null;
     hasActiveArrangement: boolean;
   };
+  conversationState?: {
+    state: string;
+    chaseRound: number;
+    currentTone: string | null;
+    maxTonePermitted: string | null;
+    lastOutboundAt: string | null;
+    lastInboundAt: string | null;
+    silenceTimeoutHours: number;
+    enteredAt: string;
+  };
 }
 
 /**
@@ -199,11 +209,31 @@ export async function buildConversationBrief(
   // Load credit balance (needs contact's xeroContactId — sequential after contact load)
   const creditBalance = await loadCreditBalance(tenantId, contact?.xeroContactId ?? null);
 
+  // Load conversation state (non-fatal)
+  let convStateData: ConversationBriefData['conversationState'] | undefined;
+  try {
+    const { getState } = await import("./conversationStateService");
+    const cs = await getState(tenantId, contactId);
+    if (cs && cs.state !== 'idle') {
+      convStateData = {
+        state: cs.state,
+        chaseRound: cs.chaseRound,
+        currentTone: cs.currentTone,
+        maxTonePermitted: cs.maxTonePermitted,
+        lastOutboundAt: cs.lastOutboundAt?.toISOString() ?? null,
+        lastInboundAt: cs.lastInboundAt?.toISOString() ?? null,
+        silenceTimeoutHours: cs.silenceTimeoutHours ?? 48,
+        enteredAt: cs.enteredAt?.toISOString() ?? new Date().toISOString(),
+      };
+    }
+  } catch { /* non-fatal */ }
+
   const data = assembleData(
     contact, timeline, promises, outstandingInvs, signals,
     facts, prefs, intel, recentEmails, recentActions, forecasts, chaseDelayDays, creditBalance,
     chaseContext, unallocatedRows,
   );
+  data.conversationState = convStateData;
   let text = formatBriefText(data, contact, prefs, intel, chaseContext);
 
   // Token guard rail — collapse history to 8 entries if over budget.
@@ -646,6 +676,29 @@ function formatBriefText(
     }
     lines.push('');
   };
+
+  // 0. CONVERSATION STATE — only rendered when non-idle
+  if (data.conversationState) {
+    const cs = data.conversationState;
+    const stateLines: string[] = [];
+    const stateLabels: Record<string, string> = {
+      chase_sent: 'Chase sent — awaiting debtor response',
+      debtor_responded: 'Debtor responded — processing reply',
+      conversing: 'Active conversation in progress',
+      promise_monitor: 'Promise to pay being monitored',
+      dispute_hold: 'Dispute raised — chasing suspended',
+      escalated: 'Escalated — higher tone required',
+      resolved: 'Resolved',
+      hold: 'On hold — no actions permitted',
+    };
+    stateLines.push(`State: ${stateLabels[cs.state] || cs.state} (round ${cs.chaseRound})`);
+    stateLines.push(`Entered: ${cs.enteredAt}`);
+    if (cs.lastOutboundAt) stateLines.push(`Last outbound: ${cs.lastOutboundAt}`);
+    if (cs.lastInboundAt) stateLines.push(`Last inbound: ${cs.lastInboundAt}`);
+    if (cs.currentTone) stateLines.push(`Tone: ${cs.currentTone}${cs.maxTonePermitted ? ` (max: ${cs.maxTonePermitted})` : ''}`);
+    stateLines.push(`Silence timeout: ${cs.silenceTimeoutHours}h (weekends excluded)`);
+    section('CONVERSATION STATE', stateLines);
+  }
 
   // 1. CHASE CONTEXT — always rendered
   const chaseLines: string[] = [];

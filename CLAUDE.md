@@ -37,6 +37,19 @@ Read /docs/QASHIVO_CONTEXT.md completely. It is the canonical product specificat
 - See `CHARLIE_ENGINEERING_SPEC.md` for Charlie decision engine hardening — 14 gaps, schema changes, template fallbacks, verification queries. This is the authoritative implementation brief for all Charlie improvements.
 - See `DISPUTE_RESOLUTION_SPEC.md` (to be created) for statutory dispute workflow driven by UK "Time to Pay Up" legislation
 
+## Security Policy
+
+Read `SECURITY_POLICY.md` before making any code changes. All 12 rules in Section 12 (Claude Code Session Rules) are non-negotiable. Key rules:
+
+- Never introduce plaintext secrets in code
+- Never create unauthenticated endpoints
+- Never bypass tenant isolation
+- Never expose server env vars to the client
+- Always encrypt new token fields at rest
+- Always gate sensitive endpoints behind RBAC
+
+If any requested change would violate these rules, flag it to the user before proceeding.
+
 ## Critical Rules
 1. Every communication is LLM-generated in the agent's persona voice. NO templates. If it reads like a template, it's wrong.
 2. Compliance Agent (rule-based v1) gates ALL outbound communications before delivery.

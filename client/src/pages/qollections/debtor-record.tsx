@@ -577,6 +577,62 @@ export default function DebtorRecord() {
     enabled: !!contactId,
   });
 
+  // Conversation state
+  const convStateQuery = useQuery<{
+    id: string;
+    state: string;
+    chaseRound: number;
+    currentTone: string | null;
+    maxTonePermitted: string | null;
+    silenceTimeoutHours: number;
+    enteredAt: string;
+    lastOutboundAt: string | null;
+    lastInboundAt: string | null;
+    activePromiseId: string | null;
+    resolvedReason: string | null;
+  }>({
+    queryKey: ["conversation-state", contactId],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/contacts/${contactId}/conversation-state`);
+      return res.json();
+    },
+    enabled: !!contactId,
+    refetchInterval: 30000,
+  });
+
+  const holdMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", `/api/contacts/${contactId}/conversation-state/hold`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["conversation-state", contactId] });
+      toast({ title: "Contact put on hold" });
+    },
+    onError: (err: Error) => toast({ title: "Failed", description: err.message, variant: "destructive" }),
+  });
+
+  const releaseMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", `/api/contacts/${contactId}/conversation-state/release`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["conversation-state", contactId] });
+      toast({ title: "Hold released" });
+    },
+    onError: (err: Error) => toast({ title: "Failed", description: err.message, variant: "destructive" }),
+  });
+
+  const updateSilenceTimeoutMutation = useMutation({
+    mutationFn: async (hours: number) => {
+      await apiRequest("PATCH", `/api/contacts/${contactId}/conversation-state`, { silenceTimeoutHours: hours });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["conversation-state", contactId] });
+      toast({ title: "Silence timeout updated" });
+    },
+    onError: (err: Error) => toast({ title: "Failed", description: err.message, variant: "destructive" }),
+  });
+
   const activityQuery = useQuery<ActivityPage>({
     queryKey: ["debtor-activity", contactId, activityCategory, activityRange, activityDirection, activityPage],
     queryFn: async () => {
@@ -1883,6 +1939,15 @@ export default function DebtorRecord() {
                     <ShieldAlert className="h-4 w-4 mr-2" /> Flag Exception
                   </DropdownMenuItem>
                 )}
+                {convStateQuery.data?.state === 'hold' ? (
+                  <DropdownMenuItem onClick={() => releaseMutation.mutate()}>
+                    <RefreshCw className="h-4 w-4 mr-2" /> Release Hold
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem onClick={() => holdMutation.mutate()}>
+                    <Clock className="h-4 w-4 mr-2" /> Put on Hold
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </CardContent>
@@ -2559,6 +2624,49 @@ export default function DebtorRecord() {
           {/* TAB 2: Activity                                                 */}
           {/* ============================================================== */}
           <TabsContent value="activity" className="space-y-4 mt-4">
+            {/* ── Conversation state badge ── */}
+            {convStateQuery.data && convStateQuery.data.state !== 'idle' && (() => {
+              const cs = convStateQuery.data;
+              const config: Record<string, { label: string; color: string }> = {
+                chase_sent: { label: "Awaiting response", color: "bg-blue-100 text-blue-700" },
+                debtor_responded: { label: "Processing reply...", color: "bg-blue-100 text-blue-700 animate-pulse" },
+                conversing: { label: "In conversation", color: "bg-teal-100 text-teal-700" },
+                promise_monitor: { label: "Promise active", color: "bg-blue-100 text-blue-700" },
+                dispute_hold: { label: "Dispute — on hold", color: "bg-amber-100 text-amber-700" },
+                escalated: { label: "Escalated", color: "bg-red-100 text-red-700" },
+                resolved: { label: "Resolved", color: "bg-green-100 text-green-700" },
+                hold: { label: "On hold", color: "bg-zinc-100 text-zinc-500" },
+              };
+              const { label, color } = config[cs.state] || { label: cs.state, color: "bg-zinc-100 text-zinc-500" };
+              return (
+                <div className="flex items-center gap-3 px-3 py-2 rounded-md border bg-card">
+                  <Badge className={cn("text-xs font-medium", color)}>{label}</Badge>
+                  <span className="text-xs text-muted-foreground">Round {cs.chaseRound}</span>
+                  {cs.currentTone && (
+                    <span className="text-xs text-muted-foreground">Tone: {cs.currentTone}</span>
+                  )}
+                  <div className="ml-auto flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">
+                      Silence timeout: {cs.silenceTimeoutHours}h
+                    </span>
+                    <Select
+                      value={String(cs.silenceTimeoutHours)}
+                      onValueChange={(v) => updateSilenceTimeoutMutation.mutate(parseInt(v))}
+                    >
+                      <SelectTrigger className="h-6 w-[70px] text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[24, 48, 72, 96, 168].map(h => (
+                          <SelectItem key={h} value={String(h)}>{h === 168 ? '1 week' : `${h}h`}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── Charlie status banner ── */}
             <DebtorStatusBanner contactId={contactId} />
 

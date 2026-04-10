@@ -15,6 +15,7 @@ import { buildConversationBrief } from "./conversationBriefService";
 import { generateReplyToEmail, findOrCreateConversation, updateConversationStats } from "./emailCommunications";
 import { approveAndSendReply } from "./inboundReplyPipeline";
 import { CONVERSATION_TYPE } from "@shared/types/actionMetadata";
+import { transitionState } from "./conversationStateService";
 import { v4 as uuidv4 } from "uuid";
 
 /**
@@ -131,6 +132,14 @@ export class ActionExecutor {
 
             // Create timeline event for Activity Feed
             await this.createOutboundTimelineEvent(action, contact, invoice, result.data);
+
+            // Conversation state transition (non-fatal)
+            if (action.contactId) {
+              const convTrigger = (action.metadata as any)?.conversationType === CONVERSATION_TYPE.REPLY ? 'reply_sent' : 'chase_sent';
+              await transitionState(action.tenantId, action.contactId, convTrigger as any, {
+                eventId: action.id, eventType: 'action',
+              }).catch(err => console.warn('[State] post-send transition failed:', err));
+            }
 
             // Gap 10: Set legal response window if this was a Legal tone action
             await setLegalResponseWindowIfNeeded(action.id, action.contactId, action.tenantId, action.agentToneLevel);
@@ -261,6 +270,14 @@ export class ActionExecutor {
 
             // Create timeline event for Activity Feed
             await this.createOutboundTimelineEvent(action, contact, invoice, result.data);
+
+            // Conversation state transition (non-fatal)
+            if (action.contactId) {
+              const convTrigger2 = (action.metadata as any)?.conversationType === CONVERSATION_TYPE.REPLY ? 'reply_sent' : 'chase_sent';
+              await transitionState(action.tenantId, action.contactId, convTrigger2 as any, {
+                eventId: action.id, eventType: 'action',
+              }).catch(err => console.warn('[State] post-send transition failed:', err));
+            }
 
             // Gap 10: Set legal response window if this was a Legal tone action
             await setLegalResponseWindowIfNeeded(action.id, action.contactId, action.tenantId, action.agentToneLevel);

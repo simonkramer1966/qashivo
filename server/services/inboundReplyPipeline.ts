@@ -25,6 +25,7 @@ import { sendEmail } from "./sendgrid";
 import { resolvePrimaryEmail } from "./contactEmailResolver";
 import type { ActionContext } from "../agents/prompts/collectionEmail";
 import { CONVERSATION_TYPE } from "@shared/types/actionMetadata";
+import { transitionState, setStateLock } from "./conversationStateService";
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -62,6 +63,13 @@ export async function processInboundReply(
       console.log(`[InboundReply] Skipping auto-reply for intent: ${ctx.intentType}`);
       return { actionId: null, status: "skipped" };
     }
+
+    // Conversation state: lock during intent processing, mark inbound received
+    await setStateLock(ctx.tenantId, ctx.contactId, 30).catch(err =>
+      console.warn('[State] lock failed (non-fatal):', err));
+    await transitionState(ctx.tenantId, ctx.contactId, 'inbound_received', {
+      eventId: ctx.inboundEmailMessageId, eventType: 'email_message',
+    }).catch(err => console.warn('[State] inbound_received transition failed:', err));
 
     // 1. Load tenant
     const [tenant] = await db

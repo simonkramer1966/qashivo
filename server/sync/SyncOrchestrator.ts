@@ -1068,6 +1068,14 @@ export class SyncOrchestrator {
       });
     } catch { /* non-fatal */ }
 
+    // Conversation state → RESOLVED on payment
+    try {
+      const { transitionState } = await import('../services/conversationStateService');
+      await transitionState(tenantId, contact.id, 'payment_detected', {
+        eventId: cachedInv.id, eventType: 'invoice',
+      });
+    } catch { /* non-fatal */ }
+
     // Channel effectiveness attribution (Gap 1)
     try {
       const { processPaymentAttribution } = await import('../services/channelEffectivenessService');

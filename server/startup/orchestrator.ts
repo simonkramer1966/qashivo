@@ -19,6 +19,7 @@ import { startLegalWindowJob } from "../jobs/legalWindowJob";
 import { startPromiseChecker } from "../jobs/promiseChecker";
 import { startEnrichmentJob } from "../jobs/enrichmentJob";
 import { startImpactScheduler } from "../jobs/impactScheduler";
+import { startStateTimeoutChecker } from "../jobs/stateTimeoutChecker";
 import { batchProcessor } from "../services/batchProcessor";
 import { db } from "../db";
 import { tenants, providerConnections } from "@shared/schema";
@@ -234,6 +235,21 @@ export async function startAll(): Promise<void> {
     console.log("[startup] impact scheduler started");
   } catch (error) {
     console.error("[startup] impact scheduler failed:", error);
+  }
+
+  try {
+    startStateTimeoutChecker();
+    console.log("[startup] conversation state timeout checker started");
+  } catch (error) {
+    console.error("[startup] conversation state timeout checker failed:", error);
+  }
+
+  // One-time migration: create conversation_states for VIP/blocked contacts
+  try {
+    const { migrateHeldDebtors } = await import("../services/conversationStateService");
+    await migrateHeldDebtors();
+  } catch (error) {
+    console.error("[startup] conversation state migration failed:", error);
   }
 }
 

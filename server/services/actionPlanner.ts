@@ -25,7 +25,7 @@ import {
 } from "../lib/adaptive-scheduler";
 import { differenceInDays } from "date-fns";
 import { getEffectiveSeasonalAdjustments, type SeasonalAdjustment } from "./paymentDistribution";
-import { getActiveConversationContactIds } from "./emailClarificationService";
+import { bulkGetStates } from "./conversationStateService";
 import { evaluateDecisionTree, type DebtorDecisionInput } from "./decisionTree";
 import { getSmallBalancePolicy, isSmallBalance, applySmallBalancePriority } from "./smallBalancePolicy";
 import { getRolling30DayDSO, getARSummary, getEffectiveOverdue } from "./arCalculations";
@@ -1093,34 +1093,12 @@ export async function planAdaptiveActions(
       activeConversation: 0,
     };
 
-    // Batch-load debtors currently in an active conversation. They are skipped
-    // entirely so the planner doesn't queue chase emails on top of an
-    // unanswered inbound or a pending reply.
-    const activeConvSet = await getActiveConversationContactIds(
-      tenantId,
-      Array.from(invoicesByContact.keys()),
-    );
-    if (activeConvSet.size > 0) {
-      console.log(`[PLAN] ${activeConvSet.size} contact(s) in active conversation — will be skipped`);
-    }
-
-    // Batch-fetch active promises + effective overdue per contact (avoids N+1).
+    // Batch-load conversation states for all candidate contacts.
+    // States that block chasing: chase_sent, debtor_responded, conversing, promise_monitor, dispute_hold, hold
+    // States that allow chasing: idle, escalated, resolved
     const _planContactIds = Array.from(invoicesByContact.keys());
-    const activePromiseSet = new Set<string>();
-    if (_planContactIds.length > 0) {
-      const rows = await db
-        .select({ contactId: paymentPromises.contactId })
-        .from(paymentPromises)
-        .where(
-          and(
-            eq(paymentPromises.tenantId, tenantId),
-            inArray(paymentPromises.contactId, _planContactIds),
-            eq(paymentPromises.status, 'open'),
-            sql`(${paymentPromises.promisedDate} + (COALESCE(${paymentPromises.gracePeriodDays}, 3) || ' days')::interval) > now()`,
-          ),
-        );
-      for (const r of rows) activePromiseSet.add(r.contactId);
-    }
+    const stateMap = await bulkGetStates(tenantId, _planContactIds);
+
     const effectiveOverdueMap = new Map<string, { xeroOverdue: number; unallocatedTotal: number; effectiveOverdue: number; hasUnallocatedPayments: boolean }>();
     for (const cid of _planContactIds) {
       try {
@@ -1138,23 +1116,15 @@ export async function planAdaptiveActions(
     for (const [contactId, contactInvoices] of Array.from(invoicesByContact.entries())) {
       const { contact, behavior } = contactInvoices[0]; // Same contact for all
 
-      // Skip debtors with an active conversation (recent inbound or pending reply).
-      // Charlie should never queue a chase on top of a live thread. Cheap O(1)
-      // Set lookup — runs before the cooldown DB query so we short-circuit
-      // before any per-contact work.
-      if (activeConvSet.has(contactId)) {
-        console.log(`[PLAN] Skipped ${contact.name} — active conversation`);
+      // Gate: Conversation state blocks chasing
+      const convState = stateMap.get(contactId);
+      if (convState && !['idle', 'escalated', 'resolved'].includes(convState.state)) {
+        console.log(`[PLAN] Skipped ${contact.name} — conversation state: ${convState.state}`);
         skipped.activeConversation++;
         continue;
       }
 
-      // Gate 1: Active promise → skip entirely
-      if (activePromiseSet.has(contactId)) {
-        console.log(`[PLAN] Skipped ${contact.name} — active promise (within grace period)`);
-        continue;
-      }
-
-      // Gate 2: Effective overdue (net of unallocated payments) is zero → skip
+      // Gate: Effective overdue (net of unallocated payments) is zero → skip
       const eff = effectiveOverdueMap.get(contactId);
       if (eff && eff.effectiveOverdue <= 0) {
         console.log(`[PLAN] Skipped ${contact.name} — effective overdue £${eff.effectiveOverdue.toFixed(2)} (xero £${eff.xeroOverdue.toFixed(2)} − unallocated £${eff.unallocatedTotal.toFixed(2)})`);

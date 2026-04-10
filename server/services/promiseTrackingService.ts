@@ -22,6 +22,7 @@ import {
   timelineEvents,
 } from "@shared/schema";
 import { getPromiseReliabilityService } from "./promiseReliabilityService";
+import { transitionState } from "./conversationStateService";
 
 const DEFAULT_UNALLOCATED_TIMEOUT_DAYS = 30;
 
@@ -136,6 +137,11 @@ export async function confirmPaymentReceived(args: ConfirmPaymentArgs) {
         updatedAt: new Date(),
       })
       .where(eq(paymentPromises.id, promiseId));
+
+    // Conversation state → RESOLVED (promise kept)
+    await transitionState(tenantId, contactId, 'promise_kept', {
+      eventId: promiseId, eventType: 'payment_promise',
+    }).catch(err => console.warn('[State] promise_kept transition failed:', err));
   }
 
   // 3. Branch on remaining-balance action.

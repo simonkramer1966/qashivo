@@ -3811,6 +3811,11 @@ export const paymentPromises = pgTable("payment_promises", {
   brokenPromiseCount: integer("broken_promise_count").default(0),
   followUpActionId: varchar("follow_up_action_id"),
 
+  // Promise confirmation (conversation state machine)
+  requiresConfirmation: boolean("requires_confirmation").default(false),
+  confirmedAt: timestamp("confirmed_at"),
+  confirmationMethod: varchar("confirmation_method", { length: 30 }), // debtor_email | voice_confirmed | timeout | manual
+
   // Additional context
   notes: text("notes"),
   metadata: jsonb("metadata"), // Additional structured data (call transcript excerpts, email snippets, etc.)
@@ -6377,3 +6382,115 @@ export const insertDecisionAuditLogSchema = createInsertSchema(decisionAuditLog)
 
 export type DecisionAuditLog = typeof decisionAuditLog.$inferSelect;
 export type InsertDecisionAuditLog = z.infer<typeof insertDecisionAuditLogSchema>;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Conversation State Machine
+// ═══════════════════════════════════════════════════════════════════════════
+// DESIGN: State is per-debtor, not per-invoice.
+// A promise on any invoices freezes chasing on ALL invoices for that debtor.
+// This is a commercial decision — the debtor has one relationship with the company.
+// When the promise resolves, remaining unpromised invoices resume chasing.
+
+export const conversationStates = pgTable("conversation_states", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id),
+  state: varchar("state", { length: 30 }).notNull().default("idle"),
+  // Valid states: idle | chase_sent | debtor_responded | conversing | promise_monitor | dispute_hold | escalated | resolved | hold
+  version: integer("version").notNull().default(1),
+  lockedUntil: timestamp("locked_until"),
+  enteredAt: timestamp("entered_at").notNull().defaultNow(),
+  previousState: varchar("previous_state", { length: 30 }),
+  previousStateExitedAt: timestamp("previous_state_exited_at"),
+  conversationId: varchar("conversation_id").references(() => conversations.id),
+  currentActionId: varchar("current_action_id").references(() => actions.id),
+  chaseRound: integer("chase_round").notNull().default(1),
+  currentTone: varchar("current_tone", { length: 20 }).default("friendly"),
+  maxTonePermitted: varchar("max_tone_permitted", { length: 20 }),
+  activePromiseId: varchar("active_promise_id").references(() => paymentPromises.id),
+  lastOutboundAt: timestamp("last_outbound_at"),
+  lastInboundAt: timestamp("last_inbound_at"),
+  silenceTimeoutHours: integer("silence_timeout_hours").default(48),
+  resolvedAt: timestamp("resolved_at"),
+  resolvedReason: varchar("resolved_reason", { length: 50 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("idx_conversation_states_tenant_contact").on(table.tenantId, table.contactId),
+  index("idx_conversation_states_tenant_state").on(table.tenantId, table.state),
+]);
+
+export const conversationStatesRelations = relations(conversationStates, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [conversationStates.tenantId],
+    references: [tenants.id],
+  }),
+  contact: one(contacts, {
+    fields: [conversationStates.contactId],
+    references: [contacts.id],
+  }),
+  conversation: one(conversations, {
+    fields: [conversationStates.conversationId],
+    references: [conversations.id],
+  }),
+  currentAction: one(actions, {
+    fields: [conversationStates.currentActionId],
+    references: [actions.id],
+  }),
+  activePromise: one(paymentPromises, {
+    fields: [conversationStates.activePromiseId],
+    references: [paymentPromises.id],
+  }),
+}));
+
+export const insertConversationStateSchema = createInsertSchema(conversationStates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type ConversationState = typeof conversationStates.$inferSelect;
+export type InsertConversationState = z.infer<typeof insertConversationStateSchema>;
+
+// Conversation State Transitions — full audit trail
+export const conversationStateTransitions = pgTable("conversation_state_transitions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id),
+  stateId: varchar("state_id").notNull().references(() => conversationStates.id),
+  fromState: varchar("from_state", { length: 30 }).notNull(),
+  toState: varchar("to_state", { length: 30 }).notNull(),
+  trigger: varchar("trigger", { length: 50 }).notNull(),
+  triggerEventId: varchar("trigger_event_id"),
+  triggerEventType: varchar("trigger_event_type", { length: 50 }),
+  metadata: jsonb("metadata"),
+  initiatedBy: varchar("initiated_by", { length: 20 }).notNull().default("system"),
+  userId: varchar("user_id"),
+  transitionedAt: timestamp("transitioned_at").notNull().defaultNow(),
+  processingDurationMs: integer("processing_duration_ms"),
+  stateVersion: integer("state_version").notNull(),
+}, (table) => [
+  index("idx_conv_transitions_tenant_contact_at").on(table.tenantId, table.contactId, table.transitionedAt),
+  index("idx_conv_transitions_tenant_at").on(table.tenantId, table.transitionedAt),
+]);
+
+export const conversationStateTransitionsRelations = relations(conversationStateTransitions, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [conversationStateTransitions.tenantId],
+    references: [tenants.id],
+  }),
+  contact: one(contacts, {
+    fields: [conversationStateTransitions.contactId],
+    references: [contacts.id],
+  }),
+  state: one(conversationStates, {
+    fields: [conversationStateTransitions.stateId],
+    references: [conversationStates.id],
+  }),
+}));
+
+export const insertConversationStateTransitionSchema = createInsertSchema(conversationStateTransitions).omit({
+  id: true,
+  transitionedAt: true,
+});
+export type ConversationStateTransition = typeof conversationStateTransitions.$inferSelect;
+export type InsertConversationStateTransition = z.infer<typeof insertConversationStateTransitionSchema>;
