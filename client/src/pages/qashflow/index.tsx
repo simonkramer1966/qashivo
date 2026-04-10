@@ -10,12 +10,17 @@ export default function Qashflow() {
   return (
     <AppShell title="Qashflow" subtitle="Cash flow forecasting & weekly review">
       <Tabs defaultValue="weekly-review" className="w-full">
-        <TabsList>
-          <TabsTrigger value="weekly-review">Weekly Review</TabsTrigger>
-          <TabsTrigger value="forecast">Forecast</TabsTrigger>
-          <TabsTrigger value="scenarios" disabled>Scenarios</TabsTrigger>
-          <TabsTrigger value="cashflow" disabled>Cash Flow</TabsTrigger>
-        </TabsList>
+        <div className="flex items-center justify-between">
+          <TabsList>
+            <TabsTrigger value="weekly-review">Weekly Review</TabsTrigger>
+            <TabsTrigger value="forecast">Forecast</TabsTrigger>
+            <TabsTrigger value="scenarios" disabled>Scenarios</TabsTrigger>
+            <TabsTrigger value="cashflow" disabled>Cash Flow</TabsTrigger>
+          </TabsList>
+          <p className="text-xs text-muted-foreground">
+            Connect Open Banking for real-time balance
+          </p>
+        </div>
 
         <TabsContent value="weekly-review" className="mt-4">
           <WeeklyReview />

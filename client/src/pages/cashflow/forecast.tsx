@@ -685,20 +685,20 @@ export default function ForecastPage() {
 
   return (
     <div className="space-y-6">
-      {/* A. Opening Balance + Safety Threshold */}
-      <div className="flex items-center justify-between py-2">
-        <div className="flex items-start gap-10">
-          {/* Opening cash balance */}
-          <div>
-            <p className="text-sm text-muted-foreground">Opening cash balance</p>
-            <div className="flex items-center gap-2">
+      {/* A. Top Metrics Bar — 6 equal-width cards */}
+      <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(6, 1fr)" }}>
+        {/* Opening balance (editable) */}
+        <Card>
+          <CardContent className="py-3 px-4">
+            <p className="text-xs text-muted-foreground">Opening balance</p>
+            <div className="flex items-center gap-1.5">
               {editingBalance ? (
                 <div className="flex items-center gap-1">
                   <Input
                     type="number"
                     value={balanceInput}
                     onChange={(e) => setBalanceInput(e.target.value)}
-                    className="h-8 w-40 text-lg font-semibold"
+                    className="h-7 w-24 text-base font-semibold"
                     autoFocus
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
@@ -711,7 +711,7 @@ export default function ForecastPage() {
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-8 w-8 p-0"
+                    className="h-6 w-6 p-0"
                     onClick={() => {
                       const val = parseFloat(balanceInput);
                       if (!isNaN(val)) balanceMutation.mutate(val);
@@ -719,59 +719,57 @@ export default function ForecastPage() {
                     disabled={balanceMutation.isPending}
                   >
                     {balanceMutation.isPending ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <Loader2 className="h-3 w-3 animate-spin" />
                     ) : (
-                      <Check className="h-3.5 w-3.5" />
+                      <Check className="h-3 w-3" />
                     )}
                   </Button>
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-8 w-8 p-0"
+                    className="h-6 w-6 p-0"
                     onClick={() => setEditingBalance(false)}
                   >
-                    <X className="h-3.5 w-3.5" />
+                    <X className="h-3 w-3" />
                   </Button>
                 </div>
               ) : (
                 <>
-                  <span className="text-2xl font-semibold">{fmt(openingBal)}</span>
+                  <span className="text-lg font-semibold">{fmt(openingBal)}</span>
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-7 w-7 p-0"
+                    className="h-6 w-6 p-0"
                     onClick={() => {
                       setBalanceInput(String(openingBal));
                       setEditingBalance(true);
                     }}
                   >
-                    <Pencil className="h-3.5 w-3.5" />
+                    <Pencil className="h-3 w-3" />
                   </Button>
                 </>
               )}
             </div>
-            {balance?.date && (
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {balance.source === "manual" ? "Manual entry" : balance.source} as of{" "}
-                {new Date(balance.date).toLocaleDateString("en-GB", {
-                  day: "numeric",
-                  month: "short",
-                })}
-              </p>
-            )}
-          </div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {balance?.date
+                ? `${balance.source === "manual" ? "Manual entry" : balance.source} as of ${new Date(balance.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`
+                : "Not set"}
+            </p>
+          </CardContent>
+        </Card>
 
-          {/* Safety threshold */}
-          <div>
-            <p className="text-sm text-muted-foreground">Safety threshold</p>
-            <div className="flex items-center gap-2">
+        {/* Safety threshold (editable) */}
+        <Card>
+          <CardContent className="py-3 px-4">
+            <p className="text-xs text-muted-foreground">Safety threshold</p>
+            <div className="flex items-center gap-1.5">
               {editingSafety ? (
                 <div className="flex items-center gap-1">
                   <Input
                     type="number"
                     value={safetyInput}
                     onChange={(e) => setSafetyInput(e.target.value)}
-                    className="h-8 w-40 text-lg font-semibold"
+                    className="h-7 w-24 text-base font-semibold"
                     autoFocus
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
@@ -784,7 +782,7 @@ export default function ForecastPage() {
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-8 w-8 p-0"
+                    className="h-6 w-6 p-0"
                     onClick={() => {
                       const val = parseFloat(safetyInput);
                       if (!isNaN(val) && val >= 0) safetyMutation.mutate(val);
@@ -792,46 +790,88 @@ export default function ForecastPage() {
                     disabled={safetyMutation.isPending}
                   >
                     {safetyMutation.isPending ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <Loader2 className="h-3 w-3 animate-spin" />
                     ) : (
-                      <Check className="h-3.5 w-3.5" />
+                      <Check className="h-3 w-3" />
                     )}
                   </Button>
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-8 w-8 p-0"
+                    className="h-6 w-6 p-0"
                     onClick={() => setEditingSafety(false)}
                   >
-                    <X className="h-3.5 w-3.5" />
+                    <X className="h-3 w-3" />
                   </Button>
                 </div>
               ) : (
                 <>
-                  <span className="text-2xl font-semibold">{fmt(safetyThreshold)}</span>
+                  <span className="text-lg font-semibold">{fmt(safetyThreshold)}</span>
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-7 w-7 p-0"
+                    className="h-6 w-6 p-0"
                     onClick={() => {
                       setSafetyInput(String(safetyThreshold));
                       setEditingSafety(true);
                     }}
                   >
-                    <Pencil className="h-3.5 w-3.5" />
+                    <Pencil className="h-3 w-3" />
                   </Button>
                 </>
               )}
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">Balance alert level</p>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        {balance?.source === "manual" && (
-          <p className="text-xs text-muted-foreground">
-            Connect Open Banking for real-time balance
-          </p>
-        )}
+        {/* This week */}
+        <Card>
+          <CardContent className="py-3 px-4">
+            <p className="text-xs text-muted-foreground">This week</p>
+            <p className="text-lg font-semibold">
+              {fmt(forecast.weeklyForecasts[0]?.expected ?? 0)}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {forecast.weeklyForecasts[0]?.invoiceBreakdown.length ?? 0} invoices
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Next week */}
+        <Card>
+          <CardContent className="py-3 px-4">
+            <p className="text-xs text-muted-foreground">Next week</p>
+            <p className="text-lg font-semibold">
+              {fmt(forecast.weeklyForecasts[1]?.expected ?? 0)}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {forecast.weeklyForecasts[1]?.invoiceBreakdown.length ?? 0} invoices
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Peak week */}
+        <Card>
+          <CardContent className="py-3 px-4">
+            <p className="text-xs text-muted-foreground">Peak week</p>
+            <p className="text-lg font-semibold">{fmt(peakWeek.expected)}</p>
+            <p className="text-xs text-muted-foreground">
+              Week {peakWeek.weekNumber}
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Lowest week */}
+        <Card>
+          <CardContent className="py-3 px-4">
+            <p className="text-xs text-muted-foreground">Lowest week</p>
+            <p className="text-lg font-semibold">{fmt(lowestWeek.expected)}</p>
+            <p className="text-xs text-muted-foreground">
+              Week {lowestWeek.weekNumber}
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* B. What Changed */}
@@ -1785,49 +1825,7 @@ export default function ForecastPage() {
         </Card>
       )}
 
-      {/* F. Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card>
-          <CardContent className="py-3 px-4">
-            <p className="text-xs text-muted-foreground">This week</p>
-            <p className="text-lg font-semibold">
-              {fmt(forecast.weeklyForecasts[0]?.expected ?? 0)}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {forecast.weeklyForecasts[0]?.invoiceBreakdown.length ?? 0} invoices
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="py-3 px-4">
-            <p className="text-xs text-muted-foreground">Next week</p>
-            <p className="text-lg font-semibold">
-              {fmt(forecast.weeklyForecasts[1]?.expected ?? 0)}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {forecast.weeklyForecasts[1]?.invoiceBreakdown.length ?? 0} invoices
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="py-3 px-4">
-            <p className="text-xs text-muted-foreground">Peak week</p>
-            <p className="text-lg font-semibold">{fmt(peakWeek.expected)}</p>
-            <p className="text-xs text-muted-foreground">
-              Week {peakWeek.weekNumber}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="py-3 px-4">
-            <p className="text-xs text-muted-foreground">Lowest week</p>
-            <p className="text-lg font-semibold">{fmt(lowestWeek.expected)}</p>
-            <p className="text-xs text-muted-foreground">
-              Week {lowestWeek.weekNumber}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Summary cards moved to top metrics bar */}
 
       {/* Close Week Modal */}
       <Dialog open={closeWeekModalOpen} onOpenChange={setCloseWeekModalOpen}>
