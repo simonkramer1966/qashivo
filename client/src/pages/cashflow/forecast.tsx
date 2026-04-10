@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import AppShell from "@/components/layout/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -615,18 +616,22 @@ export default function ForecastPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-      </div>
+      <AppShell title="Qashflow" subtitle="Cash flow forecast">
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </div>
+      </AppShell>
     );
   }
 
   if (!forecast) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-        <p className="text-lg font-medium">No forecast data</p>
-        <p className="text-sm mt-1">Connect Xero and sync your invoices to generate a forecast.</p>
-      </div>
+      <AppShell title="Qashflow" subtitle="Cash flow forecast">
+        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+          <p className="text-lg font-medium">No forecast data</p>
+          <p className="text-sm mt-1">Connect Xero and sync your invoices to generate a forecast.</p>
+        </div>
+      </AppShell>
     );
   }
 
@@ -684,6 +689,7 @@ export default function ForecastPage() {
   const safetyThreshold = forecast.safetyThreshold ?? 20000;
 
   return (
+    <AppShell title="Qashflow" subtitle="Cash flow forecast">
     <div className="space-y-6">
       {/* A. Top Metrics Bar — 6 equal-width cards */}
       <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(6, 1fr)" }}>
@@ -755,6 +761,11 @@ export default function ForecastPage() {
                 ? `${balance.source === "manual" ? "Manual entry" : balance.source} as of ${new Date(balance.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`
                 : "Not set"}
             </p>
+            {balance?.source === "manual" && (
+              <p className="text-xs text-muted-foreground mt-0.5 underline">
+                Connect Open Banking for real-time balance
+              </p>
+            )}
           </CardContent>
         </Card>
 
@@ -2072,5 +2083,6 @@ export default function ForecastPage() {
         </Card>
       </Collapsible>
     </div>
+    </AppShell>
   );
 }

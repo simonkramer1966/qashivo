@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import AppShell from "@/components/layout/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -103,40 +104,44 @@ export default function WeeklyReview() {
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-48 w-full" />
-        <div className="grid grid-cols-3 gap-4">
-          <Skeleton className="h-32" />
-          <Skeleton className="h-32" />
-          <Skeleton className="h-32" />
+      <AppShell title="Qashflow" subtitle="Weekly review">
+        <div className="space-y-4">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-48 w-full" />
+          <div className="grid grid-cols-3 gap-4">
+            <Skeleton className="h-32" />
+            <Skeleton className="h-32" />
+            <Skeleton className="h-32" />
+          </div>
         </div>
-      </div>
+      </AppShell>
     );
   }
 
   if (error && !review) {
     return (
-      <div className="space-y-4">
-        <div className="text-center py-12">
-          <p className="text-muted-foreground mb-4">No weekly review available yet.</p>
-          <Button
-            onClick={() => generateMutation.mutate()}
-            disabled={generateMutation.isPending}
-          >
-            {generateMutation.isPending ? (
-              <><RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Generating...</>
-            ) : (
-              "Generate Your First Review"
+      <AppShell title="Qashflow" subtitle="Weekly review">
+        <div className="space-y-4">
+          <div className="text-center py-12">
+            <p className="text-muted-foreground mb-4">No weekly review available yet.</p>
+            <Button
+              onClick={() => generateMutation.mutate()}
+              disabled={generateMutation.isPending}
+            >
+              {generateMutation.isPending ? (
+                <><RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Generating...</>
+              ) : (
+                "Generate Your First Review"
+              )}
+            </Button>
+            {generateMutation.error && (
+              <p className="text-destructive text-sm mt-2">
+                {(generateMutation.error as Error).message}
+              </p>
             )}
-          </Button>
-          {generateMutation.error && (
-            <p className="text-destructive text-sm mt-2">
-              {(generateMutation.error as Error).message}
-            </p>
-          )}
+          </div>
         </div>
-      </div>
+      </AppShell>
     );
   }
 
@@ -146,6 +151,7 @@ export default function WeeklyReview() {
   const debtorFocus = review.debtorFocus || [];
 
   return (
+    <AppShell title="Qashflow" subtitle="Weekly review">
     <div className="space-y-6">
       {/* ── Header ─────────────────────────────────── */}
       <div className="flex items-center justify-between">
@@ -348,5 +354,6 @@ export default function WeeklyReview() {
         )}
       </div>
     </div>
+    </AppShell>
   );
 }

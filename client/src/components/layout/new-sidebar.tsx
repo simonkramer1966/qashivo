@@ -74,7 +74,17 @@ const navigationPillars: NavPillar[] = [
       { name: "Reports", href: "/qollections/reports", icon: BarChart3 },
     ],
   },
-  { label: "Cashflow", icon: TrendingUp, href: "/qashflow" },
+  {
+    label: "Cashflow",
+    icon: TrendingUp,
+    defaultHref: "/qashflow/weekly-review",
+    children: [
+      { name: "Weekly Review", href: "/qashflow/weekly-review", icon: Gauge, exact: true },
+      { name: "Forecast", href: "/qashflow/forecast", icon: BarChart3 },
+      { name: "Scenarios", href: "/qashflow/scenarios", icon: Sliders },
+      { name: "Cash Flow", href: "/qashflow/cashflow", icon: TrendingUp },
+    ],
+  },
   { label: "Capital", icon: Landmark, href: "/qapital" },
   { label: "Agent Team", icon: Bot, href: "/agent-team" },
   {

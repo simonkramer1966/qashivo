@@ -39,6 +39,8 @@ const QollectionsDisputes = lazy(() => import("@/pages/qollections/disputes"));
 const QollectionsReports = lazy(() => import("@/pages/qollections/reports"));
 const QollectionsImpact = lazy(() => import("@/pages/qollections/impact"));
 // Pillar pages — Qashflow, Qapital, Agent Team
+const QashflowWeeklyReview = lazy(() => import("@/pages/qashflow/WeeklyReview"));
+const QashflowForecast = lazy(() => import("@/pages/cashflow/forecast"));
 const QashflowPage = lazy(() => import("@/pages/qashflow/index"));
 const QapitalPage = lazy(() => import("@/pages/qapital/index"));
 const AgentTeamPage = lazy(() => import("@/pages/agent-team/index"));
@@ -258,7 +260,11 @@ function Router() {
           <Route path="/qollections" component={QollectionsDashboard} />
 
           {/* Pillar routes — Qashflow, Qapital, Agent Team */}
-          <Route path="/qashflow" component={QashflowPage} />
+          <Route path="/qashflow/weekly-review" component={QashflowWeeklyReview} />
+          <Route path="/qashflow/forecast" component={QashflowForecast} />
+          <Route path="/qashflow/scenarios" component={QashflowPage} />
+          <Route path="/qashflow/cashflow" component={QashflowPage} />
+          <Route path="/qashflow" component={QashflowWeeklyReview} />
           <Route path="/qapital" component={QapitalPage} />
           <Route path="/agent-team" component={AgentTeamPage} />
 
