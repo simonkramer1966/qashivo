@@ -320,18 +320,18 @@ function BalanceTooltip({ active, payload }: any) {
   return (
     <div className="rounded-lg border bg-background p-3 shadow-md text-sm space-y-1">
       <p className="font-medium">{d.label}</p>
-      <p>Balance: {fmt(d.expectedBalance)}</p>
+      <p>Opening balance: {fmt(d.expectedBalance)}</p>
       <p className="text-muted-foreground">
         This week: +{fmt(d.expected)} inflows
         {d.outflow > 0 && <>, -{fmt(d.outflow)} outflows</>}
       </p>
       {d.outflow > 0 && (
         <p className={d.net < 0 ? "text-red-500" : "text-muted-foreground"}>
-          Net: {d.net >= 0 ? "+" : ""}{fmt(d.net)}
+          Net movement: {d.net >= 0 ? "+" : ""}{fmt(d.net)}
         </p>
       )}
       <p className="text-muted-foreground">
-        Range: {fmt(d.pessimisticBalance)} — {fmt(d.optimisticBalance)}
+        Closing balance range: {fmt(d.pessimisticBalance)} — {fmt(d.optimisticBalance)}
       </p>
     </div>
   );
@@ -388,7 +388,8 @@ export default function ForecastPage() {
     enabled: !!forecast,
   });
 
-  const [expandedOutflowCategories, setExpandedOutflowCategories] = useState<Record<string, boolean>>({});
+  const [inflowsExpanded, setInflowsExpanded] = useState(true);
+  const [outflowsExpanded, setOutflowsExpanded] = useState(true);
   const [editingCell, setEditingCell] = useState<{ category: string; week: number } | null>(null);
   const [cellValue, setCellValue] = useState("");
 
@@ -431,9 +432,9 @@ export default function ForecastPage() {
 
   // ── Pipeline state (inline editing, same pattern as outflows) ──
   const PIPELINE_TIERS = [
-    { category: "pipeline_committed", label: "Pipeline: Committed", color: "text-emerald-600" },
-    { category: "pipeline_uncommitted", label: "Pipeline: Uncommitted", color: "text-blue-600" },
-    { category: "pipeline_stretch", label: "Pipeline: Stretch", color: "text-amber-600" },
+    { category: "pipeline_committed", label: "Pipeline: Committed", color: "" },
+    { category: "pipeline_uncommitted", label: "Pipeline: Uncommitted", color: "" },
+    { category: "pipeline_stretch", label: "Pipeline: Stretch", color: "" },
   ] as const;
 
   const [editingPipelineCell, setEditingPipelineCell] = useState<{ category: string; week: number } | null>(null);
@@ -1335,33 +1336,45 @@ export default function ForecastPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {/* ── CASH INFLOWS (read-only, blue text) ── */}
-                  <tr className="border-b bg-blue-50/30">
-                    <td className="py-1.5 px-3 font-medium text-blue-700 sticky left-0 bg-blue-50/30 z-10">
-                      CASH INFLOWS
+                  {/* ── CASH INFLOWS ── */}
+                  <tr
+                    className="border-b bg-emerald-50/40 cursor-pointer select-none"
+                    onClick={() => setInflowsExpanded((v) => !v)}
+                  >
+                    <td className="py-1.5 px-3 font-medium text-emerald-800 sticky left-0 bg-emerald-50/40 z-10">
+                      <span className="flex items-center gap-1">
+                        {inflowsExpanded ? (
+                          <ChevronDown className="h-3 w-3" />
+                        ) : (
+                          <ChevronRight className="h-3 w-3" />
+                        )}
+                        CASH INFLOWS
+                      </span>
                     </td>
                     {forecast.weeklyForecasts.map((wf) => (
-                      <td key={wf.weekNumber} className="text-right py-1.5 px-2 font-medium text-blue-700">
+                      <td key={wf.weekNumber} className="text-right py-1.5 px-2 font-medium text-emerald-800">
                         {fmt(wf.expected)}
                       </td>
                     ))}
-                    <td className="text-right py-1.5 px-3 font-bold text-blue-700">
+                    <td className="text-right py-1.5 px-3 font-bold text-emerald-800">
                       {fmt(forecast.forecastRecovery.expected)}
                     </td>
                   </tr>
+                  {inflowsExpanded && (
+                    <>
                   {/* AR Collections row */}
                   <tr className="border-b">
-                    <td className="py-1.5 px-3 pl-6 text-blue-600 sticky left-0 bg-background z-10">
+                    <td className="py-1.5 px-3 pl-6 sticky left-0 bg-background z-10">
                       AR collections
                     </td>
                     {forecast.weeklyForecasts.map((wf) => (
-                      <td key={wf.weekNumber} className="text-right py-1.5 px-2 text-blue-600">
+                      <td key={wf.weekNumber} className="text-right py-1.5 px-2">
                         {wf.sourceBreakdown.arCollections > 0
                           ? fmt(wf.sourceBreakdown.arCollections)
                           : <span className="text-muted-foreground">—</span>}
                       </td>
                     ))}
-                    <td className="text-right py-1.5 px-3 text-blue-600">
+                    <td className="text-right py-1.5 px-3">
                       {fmt(forecast.weeklyForecasts.reduce((s, wf) => s + wf.sourceBreakdown.arCollections, 0))}
                     </td>
                   </tr>
@@ -1451,11 +1464,23 @@ export default function ForecastPage() {
                       </td>
                     </tr>
                   ))}
+                    </>
+                  )}
 
                   {/* ── CASH OUTFLOWS (editable) ── */}
-                  <tr className="border-b bg-red-50/30">
+                  <tr
+                    className="border-b bg-red-50/30 cursor-pointer select-none"
+                    onClick={() => setOutflowsExpanded((v) => !v)}
+                  >
                     <td className="py-1.5 px-3 font-medium text-red-700 sticky left-0 bg-red-50/30 z-10">
-                      CASH OUTFLOWS
+                      <span className="flex items-center gap-1">
+                        {outflowsExpanded ? (
+                          <ChevronDown className="h-3 w-3" />
+                        ) : (
+                          <ChevronRight className="h-3 w-3" />
+                        )}
+                        CASH OUTFLOWS
+                      </span>
                     </td>
                     {forecast.weeklyForecasts.map((wf, i) => {
                       const total = forecast.outflows?.weeklyTotals?.[i] ?? getWeekOutflowTotal(wf.weekStarting);
@@ -1474,34 +1499,15 @@ export default function ForecastPage() {
                   </tr>
 
                   {/* Outflow category rows */}
-                  {OUTFLOW_CATEGORIES.map((cat) => {
+                  {outflowsExpanded && OUTFLOW_CATEGORIES.map((cat) => {
                     const hasChildren = "children" in cat && cat.children;
-                    const isExpanded = expandedOutflowCategories[cat.category];
 
                     return (
                       <React.Fragment key={cat.category}>
+                        {/* Parent row — Payroll shows as a non-clickable label since children are always visible */}
                         <tr className="border-b hover:bg-muted/20">
                           <td className="py-1 px-3 pl-6 sticky left-0 bg-background z-10">
-                            {hasChildren ? (
-                              <button
-                                className="flex items-center gap-1 hover:text-foreground text-muted-foreground"
-                                onClick={() =>
-                                  setExpandedOutflowCategories((prev) => ({
-                                    ...prev,
-                                    [cat.category]: !prev[cat.category],
-                                  }))
-                                }
-                              >
-                                {isExpanded ? (
-                                  <ChevronDown className="h-3 w-3" />
-                                ) : (
-                                  <ChevronRight className="h-3 w-3" />
-                                )}
-                                {cat.label}
-                              </button>
-                            ) : (
-                              <span className="text-muted-foreground">{cat.label}</span>
-                            )}
+                            <span className="text-muted-foreground">{cat.label}</span>
                           </td>
                           {forecast.weeklyForecasts.map((wf, wi) => {
                             const amount = hasChildren
@@ -1594,9 +1600,8 @@ export default function ForecastPage() {
                           </td>
                         </tr>
 
-                        {/* Child rows when expanded */}
+                        {/* Child rows — always visible for categories with children (e.g. Payroll) */}
                         {hasChildren &&
-                          isExpanded &&
                           cat.children!.map((child) => (
                             <tr
                               key={child.category}
@@ -1781,16 +1786,7 @@ export default function ForecastPage() {
       )}
 
       {/* F. Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <Card>
-          <CardContent className="py-3 px-4">
-            <p className="text-xs text-muted-foreground">Total expected (13 wks)</p>
-            <p className="text-lg font-semibold">{fmt(forecast.forecastRecovery.expected)}</p>
-            <p className="text-xs text-muted-foreground">
-              {fmtPct(forecast.forecastRecovery.percentOfOutstanding)} of outstanding
-            </p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card>
           <CardContent className="py-3 px-4">
             <p className="text-xs text-muted-foreground">This week</p>
@@ -1832,96 +1828,6 @@ export default function ForecastPage() {
           </CardContent>
         </Card>
       </div>
-
-      {/* G. Insight Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <Card>
-          <CardContent className="py-3 px-4">
-            <p className="text-xs text-muted-foreground">Accuracy</p>
-            <p className="text-lg font-semibold">
-              {accuracyHistory?.rolling4WeekAccuracy != null
-                ? `${accuracyHistory.rolling4WeekAccuracy.toFixed(1)}%`
-                : "—"}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {accuracyHistory?.rolling4WeekAccuracy != null
-                ? `Last 4 wks${accuracyHistory.trend ? ` · ${accuracyHistory.trend}` : ""}`
-                : "No closed weeks yet"}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="py-3 px-4">
-            <p className="text-xs text-muted-foreground">Forecast recovery</p>
-            <p className="text-lg font-semibold">
-              {fmtPct(forecast.forecastRecovery.percentOfOutstanding)}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              of {fmt(forecast.totalOutstanding)} outstanding
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="py-3 px-4">
-            <p className="text-xs text-muted-foreground">Data quality</p>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-sm">{forecast.dataQuality.high}% High</span>
-              <span className="text-sm text-muted-foreground">
-                {forecast.dataQuality.medium}% Med
-              </span>
-              <span className="text-sm text-muted-foreground">
-                {forecast.dataQuality.low}% Low
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="py-3 px-4">
-            <p className="text-xs text-muted-foreground">Confidence by horizon</p>
-            <div className="flex items-center gap-2 mt-1 flex-wrap">
-              <span className="text-xs">Wk 1-2: {confidenceBadge(forecast.confidenceByHorizon.weeks1to2)}</span>
-              <span className="text-xs">3-5: {confidenceBadge(forecast.confidenceByHorizon.weeks3to5)}</span>
-              <span className="text-xs">6-9: {confidenceBadge(forecast.confidenceByHorizon.weeks6to9)}</span>
-              <span className="text-xs">10-13: {confidenceBadge(forecast.confidenceByHorizon.weeks10to13)}</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Weekly Breakdown Table — removed from UI, data available via API for Riley */}
-
-      {/* Pipeline Summary */}
-      {forecast.pipeline && (forecast.pipeline.committed + forecast.pipeline.uncommitted + forecast.pipeline.stretch) > 0 && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
-              Pipeline Summary
-              <span className="text-xs font-normal text-muted-foreground ml-2">
-                Portfolio avg: {forecast.pipeline.portfolioAvgDays} days to pay
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-3 gap-4 text-sm">
-              <div>
-                <p className="text-muted-foreground">Committed</p>
-                <p className="text-lg font-semibold text-emerald-700">{fmt(forecast.pipeline.committed)}</p>
-                <p className="text-xs text-muted-foreground">All scenarios, ×1.0 timing</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Uncommitted</p>
-                <p className="text-lg font-semibold text-blue-700">{fmt(forecast.pipeline.uncommitted)}</p>
-                <p className="text-xs text-muted-foreground">Opt + expected, ×1.25 timing</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Stretch</p>
-                <p className="text-lg font-semibold text-amber-700">{fmt(forecast.pipeline.stretch)}</p>
-                <p className="text-xs text-muted-foreground">Optimistic only, ×1.5 timing</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Close Week Modal */}
       <Dialog open={closeWeekModalOpen} onOpenChange={setCloseWeekModalOpen}>
