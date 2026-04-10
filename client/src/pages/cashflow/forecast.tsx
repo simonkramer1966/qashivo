@@ -838,9 +838,6 @@ export default function ForecastPage() {
             <p className="text-lg font-semibold">
               {fmt(forecast.weeklyForecasts[0]?.expected ?? 0)}
             </p>
-            <p className="text-xs text-muted-foreground">
-              {forecast.weeklyForecasts[0]?.invoiceBreakdown.length ?? 0} invoices
-            </p>
           </CardContent>
         </Card>
 
@@ -850,9 +847,6 @@ export default function ForecastPage() {
             <p className="text-xs text-muted-foreground">Next week</p>
             <p className="text-lg font-semibold">
               {fmt(forecast.weeklyForecasts[1]?.expected ?? 0)}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {forecast.weeklyForecasts[1]?.invoiceBreakdown.length ?? 0} invoices
             </p>
           </CardContent>
         </Card>
