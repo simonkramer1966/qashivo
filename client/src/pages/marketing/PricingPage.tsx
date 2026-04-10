@@ -20,15 +20,27 @@ export default function PricingPage() {
 
   const plans = [
     {
-      name: "Starter",
-      monthlyPrice: 99,
-      annualPrice: 79,
-      description: "For SMEs ready to automate collections.",
+      name: "Qollect",
+      monthlyPrice: 149,
+      annualPrice: 124,
+      description: "AI credit control for SMEs ready to automate collections.",
+      channels: [
+        { label: "Email", active: true },
+        { label: "SMS", active: false },
+        { label: "Voice", active: false },
+      ],
       features: [
-        "Automated email & SMS generation with smart escalation",
-        "Live Debtor Dashboard",
-        "3 collection sequences per debtor",
-        "Full Xero & Quickbooks sync",
+        "AI collections agent (Charlie)",
+        "Unlimited debtor chasing",
+        "Intent extraction & promise detection",
+        "Tone escalation engine",
+        "Two-way email pipeline",
+        "Riley AI assistant",
+        "Weekly CFO Review",
+        "Credit risk scoring",
+        "Late payment interest calculator",
+        "Data Health dashboard",
+        "Xero, QuickBooks, Sage, FreeAgent",
       ],
       featured: false,
       ctaLabel: "Start 14-Day Trial",
@@ -36,17 +48,27 @@ export default function PricingPage() {
       ctaStyle: "outline" as const,
     },
     {
-      name: "Growth",
-      monthlyPrice: 199,
-      annualPrice: 159,
-      description: "The complete autonomous credit control solution.",
+      name: "Qollect Pro",
+      monthlyPrice: 299,
+      annualPrice: 249,
+      description: "Multi-channel collections with forecasting and predictions.",
       badge: "Most Effective",
+      channels: [
+        { label: "Email", active: true },
+        { label: "SMS", active: true },
+        { label: "Voice", active: true },
+      ],
+      featureHeader: "Everything in Qollect, plus",
       features: [
-        "All Starter plus:",
-        "Riley: learns your business, answers questions, takes action",
-        "Autonomous multi-channel collection: email, SMS & automated voice calls",
-        "Unlimited escalation sequences",
-        "Weekly cashflow briefing with risks and recommendations",
+        "AI voice calls (Charlie calls debtors)",
+        "SMS outreach & follow-ups",
+        "Multi-channel sequencing",
+        "Cashflow forecasting (13-week)",
+        "Cash Gap scenario builder",
+        "Open Banking integration",
+        "Debtor payment predictions",
+        "Seasonal pattern detection",
+        "Priority support",
       ],
       featured: true,
       ctaLabel: "Start 14-Day Trial",
@@ -54,16 +76,26 @@ export default function PricingPage() {
       ctaStyle: "filled" as const,
     },
     {
-      name: "Scale",
-      monthlyPrice: 399,
-      annualPrice: 319,
-      description: "Full platform with working capital and advanced features.",
+      name: "Qollect + Qapital",
+      monthlyPrice: 499,
+      annualPrice: 415,
+      description: "Collections plus working capital and invoice finance.",
+      channels: [
+        { label: "Email", active: true },
+        { label: "SMS", active: true },
+        { label: "Voice", active: true },
+        { label: "Finance", active: true, purple: true },
+      ],
+      featureHeader: "Everything in Pro, plus",
       features: [
-        "All Growth plus:",
-        "Qapital working capital module",
-        "Advanced scenario & forecast tools",
-        "Priority automated voice calling with custom voice persona",
+        "Invoice finance (selective drawdown)",
+        "Automated eligibility assessment",
+        "Cash gap bridging recommendations",
+        "Riley proactive finance alerts",
+        "Working capital dashboard",
+        "Finance provider marketplace",
         "Dedicated account manager",
+        "Custom integrations",
       ],
       featured: false,
       ctaLabel: "Contact Sales",
@@ -136,7 +168,7 @@ export default function PricingPage() {
               </span>
               {isAnnual && (
                 <span className="text-xs font-bold text-brand-teal bg-brand-teal/10 px-3 py-1 rounded-full">
-                  Save 20%
+                  Save 17%
                 </span>
               )}
             </div>
@@ -160,7 +192,7 @@ export default function PricingPage() {
                     {plan.badge}
                   </span>
                 )}
-                <div className="mb-8">
+                <div className="mb-4">
                   <h3 className="font-headline text-2xl font-extrabold text-brand-navy mb-2">
                     {plan.name}
                   </h3>
@@ -168,6 +200,25 @@ export default function PricingPage() {
                     {plan.description}
                   </p>
                 </div>
+
+                {/* Channel pills */}
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {plan.channels.map((ch) => (
+                    <span
+                      key={ch.label}
+                      className={`text-xs font-bold px-3 py-1 rounded-full ${
+                        ch.purple
+                          ? "bg-[#eeedfa] text-[#534AB7]"
+                          : ch.active
+                            ? "bg-[#e8f5ef] text-[#167a5b]"
+                            : "bg-[#f0f0ee] text-[#999]"
+                      }`}
+                    >
+                      {ch.label}
+                    </span>
+                  ))}
+                </div>
+
                 <div className="mb-8">
                   <div className="flex items-baseline gap-1">
                     <span className="font-headline text-5xl font-extrabold text-brand-navy">
@@ -177,12 +228,16 @@ export default function PricingPage() {
                       /month
                     </span>
                   </div>
-                  {isAnnual && (
-                    <p className="text-xs text-on-surface-variant mt-1">
-                      Billed annually
-                    </p>
-                  )}
+                  <p className="text-xs text-on-surface-variant mt-1">
+                    per company · billed {isAnnual ? "annually" : "monthly"}
+                  </p>
                 </div>
+
+                {plan.featureHeader && (
+                  <p className="text-xs font-bold text-brand-teal uppercase tracking-wider mb-3">
+                    {plan.featureHeader}
+                  </p>
+                )}
                 <ul className="space-y-3 mb-8 flex-1">
                   {plan.features.map((feature, i) => (
                     <li
@@ -218,6 +273,30 @@ export default function PricingPage() {
               </div>
             ))}
           </div>
+
+          {/* Partner Banner */}
+          <div className="mt-12 rounded border border-slate-200 bg-surface-container-lowest p-8 md:p-10 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
+            <div>
+              <h3 className="font-headline text-xl font-extrabold text-brand-navy mb-2">
+                Accounting firm partners
+              </h3>
+              <p className="text-sm text-on-surface-variant font-medium max-w-xl">
+                Deploy Qashivo across your client base with volume pricing, white-label options, and a dedicated partner success team. Earn recurring revenue while improving client retention.
+              </p>
+            </div>
+            <Link
+              to="/contact"
+              className="shrink-0 border border-brand-navy text-brand-navy px-8 py-3 rounded font-headline font-extrabold text-sm hover:bg-brand-navy hover:text-white transition-all"
+            >
+              Partner enquiry
+            </Link>
+          </div>
+
+          {/* Footer Note */}
+          <p className="text-center text-xs text-on-surface-variant mt-8 leading-relaxed">
+            All plans include a 14-day free trial · No credit card required · Cancel anytime<br />
+            SMS and voice usage billed at cost · All prices exclude VAT
+          </p>
         </section>
 
         {/* Trust Bar */}

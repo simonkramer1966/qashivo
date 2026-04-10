@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { CheckCircle2, AlertCircle, Loader2, X } from "lucide-react";
+import { CheckCircle2, AlertCircle, Loader2, X, ChevronDown, ChevronUp } from "lucide-react";
 import { useSyncStatus } from "@/hooks/useSyncStatus";
-import { humanizeSyncError } from "@/lib/syncErrorMessages";
+import { classifySyncError } from "@/lib/syncErrorMessages";
 import { useManualSync } from "@/hooks/useManualSync";
 import { Button } from "@/components/ui/button";
 
@@ -11,15 +11,17 @@ import { Button } from "@/components/ui/button";
  * Idle = unmounted. Per-instance dismissal (component state).
  */
 export default function SyncStatusBanner() {
-  const { phase, progress, summary, error } = useSyncStatus();
+  const { phase, progress, summary, error, lastSync } = useSyncStatus();
   const [, setLocation] = useLocation();
   const [dismissed, setDismissed] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   // Reset dismissal on any phase transition so each new state (start, complete,
   // fail) is shown once. Without this, dismissing a "fetching" banner would
   // also hide the "complete" / "failed" banner that follows.
   useEffect(() => {
     setDismissed(false);
+    setDetailsOpen(false);
   }, [phase]);
 
   const retryMutation = useManualSync();
@@ -86,30 +88,95 @@ export default function SyncStatusBanner() {
     );
   }
 
-  // ── Failed ────────────────────────────────────────────────
+  // ── Failed — collapsible error alert ──────────────────────
   if (phase === "failed") {
+    const classified = classifySyncError(error);
+
+    const handleAction = () => {
+      if (classified.requiresReconnect) {
+        // Navigate to Xero OAuth re-auth
+        window.location.href = "/api/integrations/xero/connect";
+      } else {
+        retryMutation.mutate();
+      }
+    };
+
+    const lastSyncLabel = lastSync
+      ? lastSync.toLocaleString("en-GB", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : "Never";
+
+    // Extract status code from raw error if present
+    const statusCodeMatch = error?.match(/\b(401|403|429|500|502|503)\b/);
+    const statusCode = statusCodeMatch ? statusCodeMatch[1] : null;
+
     return (
-      <BannerShell tone="error" onDismiss={() => setDismissed(true)}>
-        <AlertCircle className="h-4 w-4 shrink-0" />
-        <span className="flex-1">Xero sync failed — {humanizeSyncError(error)}</span>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 px-2 text-destructive hover:bg-red-100"
-          disabled={retryMutation.isPending}
-          onClick={() => retryMutation.mutate()}
-        >
-          Retry
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 px-2 text-destructive hover:bg-red-100"
-          onClick={() => setLocation("/settings/integrations")}
-        >
-          View details
-        </Button>
-      </BannerShell>
+      <div className="rounded-lg border border-red-200 bg-red-50 overflow-hidden">
+        {/* Top bar */}
+        <div className="flex items-center gap-2.5 px-4 py-2.5 text-sm">
+          <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
+          <span className="flex-1 text-red-800 font-medium">
+            Xero sync failed — {classified.message}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-3 text-red-700 hover:text-red-800 hover:bg-red-100 font-semibold"
+            disabled={retryMutation.isPending}
+            onClick={handleAction}
+          >
+            {retryMutation.isPending ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              classified.actionLabel
+            )}
+          </Button>
+          <button
+            onClick={() => setDetailsOpen((o) => !o)}
+            className="flex items-center gap-1 text-xs text-red-600 hover:text-red-800 transition-colors font-medium"
+            aria-label={detailsOpen ? "Hide details" : "Show details"}
+          >
+            Details
+            {detailsOpen ? (
+              <ChevronUp className="h-3 w-3" />
+            ) : (
+              <ChevronDown className="h-3 w-3" />
+            )}
+          </button>
+          <button
+            onClick={() => setDismissed(true)}
+            className="ml-0.5 text-red-400 hover:text-red-700 transition-colors"
+            aria-label="Dismiss"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
+        {/* Expandable details panel */}
+        {detailsOpen && (
+          <div className="border-t border-red-200 bg-red-50/60 px-4 py-3">
+            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-xs">
+              {statusCode && (
+                <>
+                  <dt className="text-red-500 font-medium">Status code</dt>
+                  <dd className="font-mono text-red-700">{statusCode}</dd>
+                </>
+              )}
+              <dt className="text-red-500 font-medium">Error type</dt>
+              <dd className="font-mono text-red-700">{classified.type}</dd>
+              <dt className="text-red-500 font-medium">Error detail</dt>
+              <dd className="font-mono text-red-700 break-all">{error || "No details available"}</dd>
+              <dt className="text-red-500 font-medium">Last successful sync</dt>
+              <dd className="font-mono text-red-700">{lastSyncLabel}</dd>
+            </dl>
+          </div>
+        )}
+      </div>
     );
   }
 
@@ -130,7 +197,7 @@ function BannerShell({ tone, onDismiss, children }: BannerShellProps) {
   }[tone];
 
   return (
-    <div className={`flex items-center gap-2 rounded-md border px-4 py-2 text-sm ${styles}`}>
+    <div className={`flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm ${styles}`}>
       {children}
       <button
         onClick={onDismiss}
