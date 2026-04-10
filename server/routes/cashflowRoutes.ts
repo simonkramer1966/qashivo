@@ -19,8 +19,8 @@ import {
   validatePattern,
 } from "../services/recurringRevenueService";
 import { db } from "../db";
-import { tenants } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { tenants, forecastOutflows } from "@shared/schema";
+import { eq, and } from "drizzle-orm";
 
 export function registerCashflowRoutes(app: Express): void {
   // ── GET /api/cashflow/inflow-forecast ──
@@ -286,6 +286,149 @@ export function registerCashflowRoutes(app: Express): void {
       } catch (error) {
         console.error("[CashflowRoutes] validate pattern error:", error);
         res.status(500).json({ error: "Failed to validate pattern" });
+      }
+    },
+  );
+
+  // ── GET /api/cashflow/outflows ──
+  app.get(
+    "/api/cashflow/outflows",
+    isAuthenticated,
+    async (req: any, res) => {
+      try {
+        const tenantId = req.user?.tenantId || req.rbac?.tenantId;
+        if (!tenantId) {
+          return res.status(401).json({ error: "No tenant context" });
+        }
+
+        const rows = await db
+          .select()
+          .from(forecastOutflows)
+          .where(eq(forecastOutflows.tenantId, tenantId));
+
+        res.json(rows);
+      } catch (error) {
+        console.error("[CashflowRoutes] outflows GET error:", error);
+        res.status(500).json({ error: "Failed to get outflows" });
+      }
+    },
+  );
+
+  // ── PUT /api/cashflow/outflows ──
+  // Upsert by (tenantId, category, weekStarting). Amount=0 deletes.
+  app.put(
+    "/api/cashflow/outflows",
+    isAuthenticated,
+    async (req: any, res) => {
+      try {
+        const tenantId = req.user?.tenantId || req.rbac?.tenantId;
+        if (!tenantId) {
+          return res.status(401).json({ error: "No tenant context" });
+        }
+
+        const { category, weekStarting, amount, description, parentCategory } = req.body;
+        if (!category || !weekStarting) {
+          return res.status(400).json({ error: "category and weekStarting are required" });
+        }
+
+        const weekDate = new Date(weekStarting);
+        if (isNaN(weekDate.getTime())) {
+          return res.status(400).json({ error: "Invalid weekStarting date" });
+        }
+
+        const numAmount = Number(amount);
+
+        // Find existing row
+        const [existing] = await db
+          .select()
+          .from(forecastOutflows)
+          .where(
+            and(
+              eq(forecastOutflows.tenantId, tenantId),
+              eq(forecastOutflows.category, category),
+              eq(forecastOutflows.weekStarting, weekDate),
+            ),
+          );
+
+        if (!numAmount || numAmount === 0) {
+          // Delete if exists
+          if (existing) {
+            await db
+              .delete(forecastOutflows)
+              .where(eq(forecastOutflows.id, existing.id));
+          }
+          invalidateForecastCache(tenantId);
+          return res.json({ deleted: true });
+        }
+
+        if (existing) {
+          // Update
+          await db
+            .update(forecastOutflows)
+            .set({
+              amount: String(numAmount),
+              description: description || existing.description,
+              parentCategory: parentCategory || existing.parentCategory,
+              updatedAt: new Date(),
+            })
+            .where(eq(forecastOutflows.id, existing.id));
+        } else {
+          // Insert
+          await db.insert(forecastOutflows).values({
+            tenantId,
+            category,
+            weekStarting: weekDate,
+            amount: String(numAmount),
+            description: description || null,
+            parentCategory: parentCategory || null,
+          });
+        }
+
+        invalidateForecastCache(tenantId);
+        res.json({ success: true });
+      } catch (error) {
+        console.error("[CashflowRoutes] outflows PUT error:", error);
+        res.status(500).json({ error: "Failed to upsert outflow" });
+      }
+    },
+  );
+
+  // ── DELETE /api/cashflow/outflows/:id ──
+  app.delete(
+    "/api/cashflow/outflows/:id",
+    isAuthenticated,
+    withMinimumRole("manager"),
+    async (req: any, res: any) => {
+      try {
+        const tenantId = req.user?.tenantId || req.rbac?.tenantId;
+        if (!tenantId) {
+          return res.status(401).json({ error: "No tenant context" });
+        }
+
+        const { id } = req.params;
+
+        // Verify ownership
+        const [row] = await db
+          .select()
+          .from(forecastOutflows)
+          .where(
+            and(
+              eq(forecastOutflows.id, id),
+              eq(forecastOutflows.tenantId, tenantId),
+            ),
+          );
+
+        if (!row) {
+          return res.status(404).json({ error: "Outflow not found" });
+        }
+
+        await db.delete(forecastOutflows).where(eq(forecastOutflows.id, id));
+        invalidateForecastCache(tenantId);
+
+        res.json({ deleted: true });
+      } catch (error) {
+        console.error("[CashflowRoutes] outflows DELETE error:", error);
+        res.status(500).json({ error: "Failed to delete outflow" });
       }
     },
   );

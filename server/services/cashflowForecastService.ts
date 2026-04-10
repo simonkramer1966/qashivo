@@ -21,6 +21,7 @@ import {
   customerLearningProfiles,
   paymentPromises,
   tenants,
+  forecastOutflows,
 } from "@shared/schema";
 import { eq, and, sql, isNotNull, inArray } from "drizzle-orm";
 import {
@@ -179,6 +180,36 @@ export interface InflowForecast {
       weeklyProjections: number[];
     }[];
   };
+
+  // Phase 3: Outflows + net cashflow
+  outflows?: {
+    weeklyTotals: number[];
+    categories: {
+      category: string;
+      label: string;
+      weeklyAmounts: number[];
+      total: number;
+      children?: {
+        category: string;
+        label: string;
+        weeklyAmounts: number[];
+        total: number;
+      }[];
+    }[];
+  };
+  netCashflow?: {
+    optimistic: number[];
+    expected: number[];
+    pessimistic: number[];
+  };
+  runningBalance?: {
+    optimistic: number[];
+    expected: number[];
+    pessimistic: number[];
+  };
+  openingBalance?: number;
+  safetyThreshold?: number;
+  safetyBreachWeek?: number | null;
 }
 
 export interface DebtorPaymentProfile {
@@ -330,7 +361,7 @@ export async function generateInflowForecast(
 
   // ── a. Fetch all data in parallel ──
 
-  const [invoiceRows, signalsRows, promisesRows, profilesRows, tenantRow] =
+  const [invoiceRows, signalsRows, promisesRows, profilesRows, tenantRow, outflowRows] =
     await Promise.all([
       // All outstanding invoices (OPEN, not excluded statuses) with contact names
       db
@@ -402,6 +433,12 @@ export async function generateInflowForecast(
         .from(tenants)
         .where(eq(tenants.id, tenantId))
         .then((rows) => rows[0]),
+
+      // All outflow entries for tenant
+      db
+        .select()
+        .from(forecastOutflows)
+        .where(eq(forecastOutflows.tenantId, tenantId)),
     ]);
 
   // Build lookup maps
@@ -838,6 +875,135 @@ export async function generateInflowForecast(
     console.warn("[CashflowForecast] Layer 2 recurring revenue failed:", err);
   }
 
+  // ── Phase 3: Aggregate outflows by week ──
+
+  const weeklyOutflowTotals = new Array(WEEKS).fill(0);
+  const outflowsByCategory = new Map<
+    string,
+    { label: string; weeklyAmounts: number[]; parentCategory: string | null }
+  >();
+
+  // Import category labels
+  const categoryLabels: Record<string, string> = {
+    payroll: "Payroll",
+    payroll_net: "Net pay",
+    payroll_paye: "PAYE/NI to HMRC",
+    payroll_pension: "Pension contributions",
+    overheads: "Overheads",
+    vat: "VAT",
+    corporation_tax: "Corporation tax",
+    suppliers: "Supplier payments",
+    debt_payments: "Debt payments",
+    capex: "Fixed assets / capex",
+    directors_drawings: "Directors' drawings",
+    cis: "CIS deductions",
+    professional_fees: "Professional fees",
+    other: "Other / exceptional",
+  };
+
+  for (const row of outflowRows) {
+    const rowDate = new Date(row.weekStarting);
+    const amt = Number(row.amount);
+    if (!amt || amt === 0) continue;
+
+    // Find which week this outflow belongs to
+    for (let w = 0; w < WEEKS; w++) {
+      const { start, end } = weekBounds[w];
+      if (rowDate >= start && rowDate <= end) {
+        weeklyOutflowTotals[w] += amt;
+
+        // Track per-category
+        const cat = row.category;
+        if (!outflowsByCategory.has(cat)) {
+          outflowsByCategory.set(cat, {
+            label: categoryLabels[cat] || cat,
+            weeklyAmounts: new Array(WEEKS).fill(0),
+            parentCategory: row.parentCategory,
+          });
+        }
+        outflowsByCategory.get(cat)!.weeklyAmounts[w] += amt;
+        break;
+      }
+    }
+  }
+
+  // Build category hierarchy for response
+  interface OutflowCategoryResult {
+    category: string;
+    label: string;
+    weeklyAmounts: number[];
+    total: number;
+    children?: { category: string; label: string; weeklyAmounts: number[]; total: number }[];
+  }
+  const outflowCategories: OutflowCategoryResult[] = [];
+
+  const outflowEntries = Array.from(outflowsByCategory.entries());
+
+  // Parent categories (no parentCategory set, or referenced as parent by a child)
+  const parentCatSet: Record<string, boolean> = {};
+  for (const [cat, data] of outflowEntries) {
+    if (!data.parentCategory) parentCatSet[cat] = true;
+  }
+  for (const [, data] of outflowEntries) {
+    if (data.parentCategory) parentCatSet[data.parentCategory] = true;
+  }
+  const parentCatKeys = Object.keys(parentCatSet);
+
+  for (const parentCat of parentCatKeys) {
+    const parentData = outflowsByCategory.get(parentCat);
+    const children: { category: string; label: string; weeklyAmounts: number[]; total: number }[] = [];
+
+    // Collect children
+    for (const [cat, data] of outflowEntries) {
+      if (data.parentCategory === parentCat) {
+        children.push({
+          category: cat,
+          label: data.label,
+          weeklyAmounts: data.weeklyAmounts.map((v: number) => Math.round(v * 100) / 100),
+          total: Math.round(data.weeklyAmounts.reduce((a: number, b: number) => a + b, 0) * 100) / 100,
+        });
+      }
+    }
+
+    // Parent weekly amounts: either its own data, or sum of children if no direct data
+    const parentWeekly: number[] = parentData
+      ? parentData.weeklyAmounts.slice()
+      : new Array(WEEKS).fill(0);
+
+    // If parent has children but no direct data, sum children into parent totals
+    if (children.length > 0 && !parentData) {
+      for (const child of children) {
+        for (let w = 0; w < WEEKS; w++) {
+          parentWeekly[w] += child.weeklyAmounts[w];
+        }
+      }
+    }
+
+    const result: OutflowCategoryResult = {
+      category: parentCat,
+      label: categoryLabels[parentCat] || parentCat,
+      weeklyAmounts: parentWeekly.map((v: number) => Math.round(v * 100) / 100),
+      total: Math.round(parentWeekly.reduce((a: number, b: number) => a + b, 0) * 100) / 100,
+    };
+    if (children.length > 0) result.children = children;
+    outflowCategories.push(result);
+  }
+
+  // Also include standalone categories (no parent, not a parent of anything)
+  for (const [cat, data] of outflowEntries) {
+    const isParentOfSomething = outflowEntries.some(([, d]) => d.parentCategory === cat);
+    if (!data.parentCategory && !isParentOfSomething) {
+      if (!outflowCategories.some((c) => c.category === cat)) {
+        outflowCategories.push({
+          category: cat,
+          label: data.label,
+          weeklyAmounts: data.weeklyAmounts.map((v: number) => Math.round(v * 100) / 100),
+          total: Math.round(data.weeklyAmounts.reduce((a: number, b: number) => a + b, 0) * 100) / 100,
+        });
+      }
+    }
+  }
+
   // ── c. Build weekly forecasts ──
 
   const totalExpected13 = weeklyExpected.reduce((a, b) => a + b, 0);
@@ -967,6 +1133,64 @@ export async function generateInflowForecast(
   // Total data quality
   const totalInvoices = highCount + mediumCount + lowCount;
 
+  // ── Phase 3: Net cashflow, running balance, pressure weeks ──
+
+  const netCashflowExpected = new Array(WEEKS).fill(0);
+  const netCashflowOptimistic = new Array(WEEKS).fill(0);
+  const netCashflowPessimistic = new Array(WEEKS).fill(0);
+  const runningBalanceExpected = new Array(WEEKS).fill(0);
+  const runningBalanceOptimistic = new Array(WEEKS).fill(0);
+  const runningBalancePessimistic = new Array(WEEKS).fill(0);
+
+  for (let w = 0; w < WEEKS; w++) {
+    netCashflowExpected[w] = Math.round((weeklyExpected[w] - weeklyOutflowTotals[w]) * 100) / 100;
+    netCashflowOptimistic[w] = Math.round((weeklyOptimistic[w] - weeklyOutflowTotals[w]) * 100) / 100;
+    netCashflowPessimistic[w] = Math.round((weeklyPessimistic[w] - weeklyOutflowTotals[w]) * 100) / 100;
+
+    const prevExpected = w === 0 ? openingBalance : runningBalanceExpected[w - 1];
+    const prevOptimistic = w === 0 ? openingBalance : runningBalanceOptimistic[w - 1];
+    const prevPessimistic = w === 0 ? openingBalance : runningBalancePessimistic[w - 1];
+
+    runningBalanceExpected[w] = Math.round((prevExpected + netCashflowExpected[w]) * 100) / 100;
+    runningBalanceOptimistic[w] = Math.round((prevOptimistic + netCashflowOptimistic[w]) * 100) / 100;
+    runningBalancePessimistic[w] = Math.round((prevPessimistic + netCashflowPessimistic[w]) * 100) / 100;
+  }
+
+  // Safety breach: first week where pessimistic balance < threshold
+  let safetyBreachWeek: number | null = null;
+  for (let w = 0; w < WEEKS; w++) {
+    if (runningBalancePessimistic[w] < safetyThreshold) {
+      safetyBreachWeek = w + 1;
+      break;
+    }
+  }
+
+  // Pressure weeks: where outflows > expected inflows
+  const pressureWeeks: InflowForecast["pressureWeeks"] = [];
+  for (let w = 0; w < WEEKS; w++) {
+    if (weeklyOutflowTotals[w] > 0 && weeklyOutflowTotals[w] > weeklyExpected[w]) {
+      // Build description from top outflow categories this week
+      const categoryBreakdown: string[] = [];
+      for (const [, data] of outflowEntries) {
+        if (data.weeklyAmounts[w] > 0 && !data.parentCategory) {
+          categoryBreakdown.push(
+            `${data.label}: £${Math.round(data.weeklyAmounts[w]).toLocaleString()}`,
+          );
+        }
+      }
+
+      pressureWeeks.push({
+        weekNumber: w + 1,
+        totalOutflows: Math.round(weeklyOutflowTotals[w] * 100) / 100,
+        expectedInflows: Math.round(weeklyExpected[w] * 100) / 100,
+        netPosition: Math.round((weeklyExpected[w] - weeklyOutflowTotals[w]) * 100) / 100,
+        description: categoryBreakdown.length > 0
+          ? `Outflows exceed inflows. ${categoryBreakdown.join(", ")}`
+          : "Outflows exceed expected inflows this week",
+      });
+    }
+  }
+
   // ── Build result ──
 
   const forecast: InflowForecast = {
@@ -1048,8 +1272,29 @@ export async function generateInflowForecast(
     debtorTrajectories,
     promiseImpacts,
     cashGapAlerts,
-    pressureWeeks: [], // Phase 1: no outflows yet
+    pressureWeeks,
     confidenceByHorizon,
+
+    // Phase 3: Outflows + net cashflow
+    outflows: outflowCategories.length > 0
+      ? {
+          weeklyTotals: weeklyOutflowTotals.map((v: number) => Math.round(v * 100) / 100),
+          categories: outflowCategories,
+        }
+      : undefined,
+    netCashflow: {
+      optimistic: netCashflowOptimistic,
+      expected: netCashflowExpected,
+      pessimistic: netCashflowPessimistic,
+    },
+    runningBalance: {
+      optimistic: runningBalanceOptimistic,
+      expected: runningBalanceExpected,
+      pessimistic: runningBalancePessimistic,
+    },
+    openingBalance,
+    safetyThreshold,
+    safetyBreachWeek,
 
     // Layer 2: Recurring revenue
     recurringRevenue:

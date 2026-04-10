@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -137,7 +137,41 @@ interface InflowForecast {
       feasibility: string;
     }[];
   }[];
-  pressureWeeks: any[];
+  pressureWeeks: {
+    weekNumber: number;
+    totalOutflows: number;
+    expectedInflows: number;
+    netPosition: number;
+    description: string;
+  }[];
+  outflows?: {
+    weeklyTotals: number[];
+    categories: {
+      category: string;
+      label: string;
+      weeklyAmounts: number[];
+      total: number;
+      children?: {
+        category: string;
+        label: string;
+        weeklyAmounts: number[];
+        total: number;
+      }[];
+    }[];
+  };
+  netCashflow?: {
+    optimistic: number[];
+    expected: number[];
+    pessimistic: number[];
+  };
+  runningBalance?: {
+    optimistic: number[];
+    expected: number[];
+    pessimistic: number[];
+  };
+  openingBalance?: number;
+  safetyThreshold?: number;
+  safetyBreachWeek?: number | null;
   confidenceByHorizon: {
     weeks1to2: string;
     weeks3to5: string;
@@ -259,7 +293,15 @@ function BalanceTooltip({ active, payload }: any) {
     <div className="rounded-lg border bg-background p-3 shadow-md text-sm space-y-1">
       <p className="font-medium">{d.label}</p>
       <p>Balance: {fmt(d.expectedBalance)}</p>
-      <p className="text-muted-foreground">This week: +{fmt(d.expected)} inflows</p>
+      <p className="text-muted-foreground">
+        This week: +{fmt(d.expected)} inflows
+        {d.outflow > 0 && <>, -{fmt(d.outflow)} outflows</>}
+      </p>
+      {d.outflow > 0 && (
+        <p className={d.net < 0 ? "text-red-500" : "text-muted-foreground"}>
+          Net: {d.net >= 0 ? "+" : ""}{fmt(d.net)}
+        </p>
+      )}
       <p className="text-muted-foreground">
         Range: {fmt(d.pessimisticBalance)} — {fmt(d.optimisticBalance)}
       </p>
@@ -299,6 +341,93 @@ export default function ForecastPage() {
   });
 
   const [showRejected, setShowRejected] = useState(false);
+
+  // Outflow data and editing state
+  interface OutflowRow {
+    id: string;
+    category: string;
+    weekStarting: string;
+    amount: string;
+    description: string | null;
+    parentCategory: string | null;
+  }
+
+  const { data: outflowRows, refetch: refetchOutflows } = useQuery<OutflowRow[]>({
+    queryKey: ["/api/cashflow/outflows"],
+    staleTime: 60 * 60 * 1000,
+    enabled: !!forecast,
+  });
+
+  const [expandedOutflowCategories, setExpandedOutflowCategories] = useState<Record<string, boolean>>({});
+  const [editingCell, setEditingCell] = useState<{ category: string; week: number } | null>(null);
+  const [cellValue, setCellValue] = useState("");
+
+  const outflowMutation = useMutation({
+    mutationFn: async (data: {
+      category: string;
+      weekStarting: string;
+      amount: number;
+      parentCategory?: string;
+    }) => {
+      await apiRequest("PUT", "/api/cashflow/outflows", data);
+    },
+    onSuccess: () => {
+      refetchOutflows();
+      queryClient.invalidateQueries({ queryKey: ["/api/cashflow/inflow-forecast"] });
+    },
+  });
+
+  const OUTFLOW_CATEGORIES = [
+    {
+      category: "payroll",
+      label: "Payroll",
+      children: [
+        { category: "payroll_net", label: "Net pay" },
+        { category: "payroll_paye", label: "PAYE/NI to HMRC" },
+        { category: "payroll_pension", label: "Pension contributions" },
+      ],
+    },
+    { category: "overheads", label: "Overheads" },
+    { category: "vat", label: "VAT" },
+    { category: "corporation_tax", label: "Corporation tax" },
+    { category: "suppliers", label: "Supplier payments" },
+    { category: "debt_payments", label: "Debt payments" },
+    { category: "capex", label: "Fixed assets / capex" },
+    { category: "directors_drawings", label: "Directors' drawings" },
+    { category: "cis", label: "CIS deductions" },
+    { category: "professional_fees", label: "Professional fees" },
+    { category: "other", label: "Other / exceptional" },
+  ] as const;
+
+  // Helper: get outflow amount for a category+week
+  function getOutflowAmount(category: string, weekStarting: string): number {
+    if (!outflowRows) return 0;
+    const row = outflowRows.find(
+      (r) => r.category === category && r.weekStarting.slice(0, 10) === weekStarting.slice(0, 10),
+    );
+    return row ? Number(row.amount) : 0;
+  }
+
+  // Helper: sum outflows for a week
+  function getWeekOutflowTotal(weekStarting: string): number {
+    if (!outflowRows) return 0;
+    return outflowRows
+      .filter((r) => r.weekStarting.slice(0, 10) === weekStarting.slice(0, 10))
+      .reduce((sum, r) => sum + Number(r.amount), 0);
+  }
+
+  // Helper: category total across all weeks
+  function getCategoryTotal(category: string): number {
+    if (!outflowRows) return 0;
+    return outflowRows
+      .filter((r) => r.category === category)
+      .reduce((sum, r) => sum + Number(r.amount), 0);
+  }
+
+  // Helper: sum children outflows for a parent category
+  function getParentOutflowAmount(children: readonly { category: string }[], weekStarting: string): number {
+    return children.reduce((sum, c) => sum + getOutflowAmount(c.category, weekStarting), 0);
+  }
 
   const balanceMutation = useMutation({
     mutationFn: async (amount: number) => {
@@ -362,11 +491,14 @@ export default function ForecastPage() {
   let runningPessimistic = openingBal;
 
   const chartData = forecast.weeklyForecasts.map((wf, i) => {
+    // Fallback: client-side running balance if server doesn't provide it
     runningOptimistic += wf.optimistic;
     runningExpected += wf.expected;
     runningPessimistic += wf.pessimistic;
 
     const concentration = forecast.concentrationRisk.weeklyConcentration[i];
+    const outflowThisWeek = forecast.outflows?.weeklyTotals?.[i] ?? 0;
+    const netThisWeek = forecast.netCashflow?.expected?.[i] ?? (wf.expected - outflowThisWeek);
 
     return {
       label: weekLabel(wf.weekStarting),
@@ -374,9 +506,12 @@ export default function ForecastPage() {
       optimistic: Math.round(wf.optimistic),
       expected: Math.round(wf.expected),
       pessimistic: Math.round(wf.pessimistic),
-      optimisticBalance: Math.round(runningOptimistic),
-      expectedBalance: Math.round(runningExpected),
-      pessimisticBalance: Math.round(runningPessimistic),
+      outflow: Math.round(outflowThisWeek),
+      net: Math.round(netThisWeek),
+      // Use server-computed running balance when available (includes outflows)
+      optimisticBalance: Math.round(forecast.runningBalance?.optimistic?.[i] ?? runningOptimistic),
+      expectedBalance: Math.round(forecast.runningBalance?.expected?.[i] ?? runningExpected),
+      pessimisticBalance: Math.round(forecast.runningBalance?.pessimistic?.[i] ?? runningPessimistic),
       invoiceCount: wf.invoiceBreakdown.length,
       isFragile: concentration?.isFragile ?? false,
       topDebtor: concentration?.topDebtor,
@@ -394,8 +529,8 @@ export default function ForecastPage() {
     wf.expected < best.expected ? wf : best,
   );
 
-  // Safety threshold for chart
-  const safetyThreshold = 20000; // Default; could be fetched from tenant
+  // Safety threshold for chart — use server value when available
+  const safetyThreshold = forecast.safetyThreshold ?? 20000;
 
   return (
     <div className="space-y-6">
@@ -959,6 +1094,417 @@ export default function ForecastPage() {
                     </div>
                   </div>
                 ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* E3. Cashflow Grid — Inflows (read-only) + Outflows (editable) */}
+      {forecast.weeklyForecasts.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">
+              Cashflow Grid
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs border-collapse min-w-[900px]">
+                <thead>
+                  <tr className="border-b bg-muted/30">
+                    <th className="text-left py-2 px-3 sticky left-0 bg-muted/30 z-10 min-w-[180px]" />
+                    {forecast.weeklyForecasts.map((wf) => (
+                      <th
+                        key={wf.weekNumber}
+                        className="text-right py-2 px-2 font-medium min-w-[80px]"
+                      >
+                        {weekLabel(wf.weekStarting)}
+                      </th>
+                    ))}
+                    <th className="text-right py-2 px-3 font-medium min-w-[90px]">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* ── CASH INFLOWS (read-only, blue text) ── */}
+                  <tr className="border-b bg-blue-50/30">
+                    <td className="py-1.5 px-3 font-medium text-blue-700 sticky left-0 bg-blue-50/30 z-10">
+                      CASH INFLOWS
+                    </td>
+                    {forecast.weeklyForecasts.map((wf) => (
+                      <td key={wf.weekNumber} className="text-right py-1.5 px-2 font-medium text-blue-700">
+                        {fmt(wf.expected)}
+                      </td>
+                    ))}
+                    <td className="text-right py-1.5 px-3 font-bold text-blue-700">
+                      {fmt(forecast.forecastRecovery.expected)}
+                    </td>
+                  </tr>
+                  {/* AR Collections row */}
+                  <tr className="border-b">
+                    <td className="py-1.5 px-3 pl-6 text-blue-600 sticky left-0 bg-background z-10">
+                      AR collections
+                    </td>
+                    {forecast.weeklyForecasts.map((wf) => (
+                      <td key={wf.weekNumber} className="text-right py-1.5 px-2 text-blue-600">
+                        {wf.sourceBreakdown.arCollections > 0
+                          ? fmt(wf.sourceBreakdown.arCollections)
+                          : <span className="text-muted-foreground">—</span>}
+                      </td>
+                    ))}
+                    <td className="text-right py-1.5 px-3 text-blue-600">
+                      {fmt(forecast.weeklyForecasts.reduce((s, wf) => s + wf.sourceBreakdown.arCollections, 0))}
+                    </td>
+                  </tr>
+                  {/* Recurring Revenue row */}
+                  <tr className="border-b">
+                    <td className="py-1.5 px-3 pl-6 text-blue-600 sticky left-0 bg-background z-10">
+                      Recurring revenue
+                    </td>
+                    {forecast.weeklyForecasts.map((wf) => (
+                      <td key={wf.weekNumber} className="text-right py-1.5 px-2 text-blue-600">
+                        {wf.sourceBreakdown.recurringRevenue > 0
+                          ? fmt(wf.sourceBreakdown.recurringRevenue)
+                          : <span className="text-muted-foreground">—</span>}
+                      </td>
+                    ))}
+                    <td className="text-right py-1.5 px-3 text-blue-600">
+                      {fmt(forecast.weeklyForecasts.reduce((s, wf) => s + wf.sourceBreakdown.recurringRevenue, 0))}
+                    </td>
+                  </tr>
+                  {/* Pipeline row (placeholder) */}
+                  <tr className="border-b">
+                    <td className="py-1.5 px-3 pl-6 text-muted-foreground sticky left-0 bg-background z-10">
+                      Pipeline
+                    </td>
+                    {forecast.weeklyForecasts.map((wf) => (
+                      <td key={wf.weekNumber} className="text-right py-1.5 px-2 text-muted-foreground">—</td>
+                    ))}
+                    <td className="text-right py-1.5 px-3 text-muted-foreground">—</td>
+                  </tr>
+
+                  {/* ── CASH OUTFLOWS (editable) ── */}
+                  <tr className="border-b bg-red-50/30">
+                    <td className="py-1.5 px-3 font-medium text-red-700 sticky left-0 bg-red-50/30 z-10">
+                      CASH OUTFLOWS
+                    </td>
+                    {forecast.weeklyForecasts.map((wf, i) => {
+                      const total = forecast.outflows?.weeklyTotals?.[i] ?? getWeekOutflowTotal(wf.weekStarting);
+                      return (
+                        <td key={wf.weekNumber} className="text-right py-1.5 px-2 font-medium text-red-700">
+                          {total > 0 ? fmt(total) : <span className="text-muted-foreground">—</span>}
+                        </td>
+                      );
+                    })}
+                    <td className="text-right py-1.5 px-3 font-bold text-red-700">
+                      {fmt(
+                        forecast.outflows?.weeklyTotals?.reduce((a: number, b: number) => a + b, 0) ??
+                        (outflowRows?.reduce((s, r) => s + Number(r.amount), 0) ?? 0),
+                      )}
+                    </td>
+                  </tr>
+
+                  {/* Outflow category rows */}
+                  {OUTFLOW_CATEGORIES.map((cat) => {
+                    const hasChildren = "children" in cat && cat.children;
+                    const isExpanded = expandedOutflowCategories[cat.category];
+
+                    return (
+                      <React.Fragment key={cat.category}>
+                        <tr className="border-b hover:bg-muted/20">
+                          <td className="py-1 px-3 pl-6 sticky left-0 bg-background z-10">
+                            {hasChildren ? (
+                              <button
+                                className="flex items-center gap-1 hover:text-foreground text-muted-foreground"
+                                onClick={() =>
+                                  setExpandedOutflowCategories((prev) => ({
+                                    ...prev,
+                                    [cat.category]: !prev[cat.category],
+                                  }))
+                                }
+                              >
+                                {isExpanded ? (
+                                  <ChevronDown className="h-3 w-3" />
+                                ) : (
+                                  <ChevronRight className="h-3 w-3" />
+                                )}
+                                {cat.label}
+                              </button>
+                            ) : (
+                              <span className="text-muted-foreground">{cat.label}</span>
+                            )}
+                          </td>
+                          {forecast.weeklyForecasts.map((wf, wi) => {
+                            const amount = hasChildren
+                              ? getParentOutflowAmount(cat.children!, wf.weekStarting)
+                              : getOutflowAmount(cat.category, wf.weekStarting);
+                            const isEditingThis =
+                              !hasChildren &&
+                              editingCell?.category === cat.category &&
+                              editingCell?.week === wi;
+
+                            return (
+                              <td key={wf.weekNumber} className="text-right py-0.5 px-1">
+                                {hasChildren ? (
+                                  <span className={amount > 0 ? "" : "text-muted-foreground"}>
+                                    {amount > 0 ? fmt(amount) : "—"}
+                                  </span>
+                                ) : isEditingThis ? (
+                                  <input
+                                    type="number"
+                                    className="w-full text-right text-xs border rounded px-1 py-0.5 h-6"
+                                    autoFocus
+                                    value={cellValue}
+                                    onChange={(e) => setCellValue(e.target.value)}
+                                    onBlur={() => {
+                                      const val = Number(cellValue) || 0;
+                                      outflowMutation.mutate({
+                                        category: cat.category,
+                                        weekStarting: wf.weekStarting,
+                                        amount: val,
+                                      });
+                                      setEditingCell(null);
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        (e.target as HTMLInputElement).blur();
+                                      }
+                                      if (e.key === "Escape") {
+                                        setEditingCell(null);
+                                      }
+                                      if (e.key === "Tab") {
+                                        e.preventDefault();
+                                        const val = Number(cellValue) || 0;
+                                        outflowMutation.mutate({
+                                          category: cat.category,
+                                          weekStarting: wf.weekStarting,
+                                          amount: val,
+                                        });
+                                        const nextWeek = wi + 1;
+                                        if (nextWeek < forecast.weeklyForecasts.length) {
+                                          setCellValue(
+                                            String(
+                                              getOutflowAmount(
+                                                cat.category,
+                                                forecast.weeklyForecasts[nextWeek].weekStarting,
+                                              ) || "",
+                                            ),
+                                          );
+                                          setEditingCell({ category: cat.category, week: nextWeek });
+                                        } else {
+                                          setEditingCell(null);
+                                        }
+                                      }
+                                    }}
+                                  />
+                                ) : (
+                                  <button
+                                    className={`w-full text-right text-xs py-0.5 px-1 rounded hover:bg-muted/50 ${
+                                      amount > 0 ? "" : "text-muted-foreground"
+                                    }`}
+                                    onClick={() => {
+                                      setCellValue(amount > 0 ? String(amount) : "");
+                                      setEditingCell({ category: cat.category, week: wi });
+                                    }}
+                                  >
+                                    {amount > 0 ? fmt(amount) : "—"}
+                                  </button>
+                                )}
+                              </td>
+                            );
+                          })}
+                          <td className="text-right py-1.5 px-3 font-medium">
+                            {hasChildren
+                              ? fmt(
+                                  (cat.children ?? []).reduce(
+                                    (s, c) => s + getCategoryTotal(c.category),
+                                    0,
+                                  ),
+                                )
+                              : fmt(getCategoryTotal(cat.category))}
+                          </td>
+                        </tr>
+
+                        {/* Child rows when expanded */}
+                        {hasChildren &&
+                          isExpanded &&
+                          cat.children!.map((child) => (
+                            <tr
+                              key={child.category}
+                              className="border-b hover:bg-muted/20"
+                            >
+                              <td className="py-1 px-3 pl-10 text-muted-foreground sticky left-0 bg-background z-10">
+                                {child.label}
+                              </td>
+                              {forecast.weeklyForecasts.map((wf, wi) => {
+                                const amount = getOutflowAmount(
+                                  child.category,
+                                  wf.weekStarting,
+                                );
+                                const isEditingThis =
+                                  editingCell?.category === child.category &&
+                                  editingCell?.week === wi;
+
+                                return (
+                                  <td
+                                    key={wf.weekNumber}
+                                    className="text-right py-0.5 px-1"
+                                  >
+                                    {isEditingThis ? (
+                                      <input
+                                        type="number"
+                                        className="w-full text-right text-xs border rounded px-1 py-0.5 h-6"
+                                        autoFocus
+                                        value={cellValue}
+                                        onChange={(e) =>
+                                          setCellValue(e.target.value)
+                                        }
+                                        onBlur={() => {
+                                          const val = Number(cellValue) || 0;
+                                          outflowMutation.mutate({
+                                            category: child.category,
+                                            weekStarting: wf.weekStarting,
+                                            amount: val,
+                                            parentCategory: cat.category,
+                                          });
+                                          setEditingCell(null);
+                                        }}
+                                        onKeyDown={(e) => {
+                                          if (e.key === "Enter") {
+                                            (
+                                              e.target as HTMLInputElement
+                                            ).blur();
+                                          }
+                                          if (e.key === "Escape") {
+                                            setEditingCell(null);
+                                          }
+                                          if (e.key === "Tab") {
+                                            e.preventDefault();
+                                            const val =
+                                              Number(cellValue) || 0;
+                                            outflowMutation.mutate({
+                                              category: child.category,
+                                              weekStarting: wf.weekStarting,
+                                              amount: val,
+                                              parentCategory: cat.category,
+                                            });
+                                            const nextWeek = wi + 1;
+                                            if (
+                                              nextWeek <
+                                              forecast.weeklyForecasts.length
+                                            ) {
+                                              setCellValue(
+                                                String(
+                                                  getOutflowAmount(
+                                                    child.category,
+                                                    forecast.weeklyForecasts[
+                                                      nextWeek
+                                                    ].weekStarting,
+                                                  ) || "",
+                                                ),
+                                              );
+                                              setEditingCell({
+                                                category: child.category,
+                                                week: nextWeek,
+                                              });
+                                            } else {
+                                              setEditingCell(null);
+                                            }
+                                          }
+                                        }}
+                                      />
+                                    ) : (
+                                      <button
+                                        className={`w-full text-right text-xs py-0.5 px-1 rounded hover:bg-muted/50 ${
+                                          amount > 0
+                                            ? ""
+                                            : "text-muted-foreground"
+                                        }`}
+                                        onClick={() => {
+                                          setCellValue(
+                                            amount > 0
+                                              ? String(amount)
+                                              : "",
+                                          );
+                                          setEditingCell({
+                                            category: child.category,
+                                            week: wi,
+                                          });
+                                        }}
+                                      >
+                                        {amount > 0 ? fmt(amount) : "—"}
+                                      </button>
+                                    )}
+                                  </td>
+                                );
+                              })}
+                              <td className="text-right py-1.5 px-3">
+                                {fmt(getCategoryTotal(child.category))}
+                              </td>
+                            </tr>
+                          ))}
+                      </React.Fragment>
+                    );
+                  })}
+
+                  {/* ── CALCULATED ROWS ── */}
+                  {/* Net cashflow */}
+                  <tr className="border-t-2 border-b bg-muted/20">
+                    <td className="py-1.5 px-3 font-medium sticky left-0 bg-muted/20 z-10">
+                      NET CASHFLOW
+                    </td>
+                    {forecast.weeklyForecasts.map((wf, i) => {
+                      const net =
+                        forecast.netCashflow?.expected?.[i] ??
+                        wf.expected - (forecast.outflows?.weeklyTotals?.[i] ?? 0);
+                      return (
+                        <td
+                          key={wf.weekNumber}
+                          className={`text-right py-1.5 px-2 font-medium ${
+                            net < 0 ? "text-red-600" : ""
+                          }`}
+                        >
+                          {net >= 0 ? "+" : ""}
+                          {fmt(net)}
+                        </td>
+                      );
+                    })}
+                    <td className="text-right py-1.5 px-3 font-bold">
+                      {fmt(
+                        forecast.netCashflow?.expected?.reduce((a: number, b: number) => a + b, 0) ??
+                        forecast.forecastRecovery.expected -
+                          (forecast.outflows?.weeklyTotals?.reduce((a: number, b: number) => a + b, 0) ?? 0),
+                      )}
+                    </td>
+                  </tr>
+                  {/* Running balance */}
+                  <tr className="border-b bg-muted/30">
+                    <td className="py-1.5 px-3 font-medium sticky left-0 bg-muted/30 z-10">
+                      RUNNING BALANCE
+                    </td>
+                    {forecast.weeklyForecasts.map((wf, i) => {
+                      const bal =
+                        forecast.runningBalance?.expected?.[i] ?? chartData[i]?.expectedBalance ?? 0;
+                      return (
+                        <td
+                          key={wf.weekNumber}
+                          className={`text-right py-1.5 px-2 font-medium ${
+                            bal < safetyThreshold ? "text-red-600" : ""
+                          }`}
+                        >
+                          {fmt(bal)}
+                        </td>
+                      );
+                    })}
+                    <td className="text-right py-1.5 px-3 font-bold">
+                      {fmt(
+                        forecast.runningBalance?.expected?.[12] ??
+                        chartData[chartData.length - 1]?.expectedBalance ??
+                        0,
+                      )}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </CardContent>
         </Card>

@@ -6196,6 +6196,38 @@ export const insertForecastUserAdjustmentSchema = createInsertSchema(forecastUse
 export type ForecastUserAdjustment = typeof forecastUserAdjustments.$inferSelect;
 export type InsertForecastUserAdjustment = z.infer<typeof insertForecastUserAdjustmentSchema>;
 
+// ── Phase 3: Cashflow Outflows ──────────────────────────────
+
+export const forecastOutflows = pgTable("forecast_outflows", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  category: varchar("category").notNull(),
+  description: text("description"),
+  weekStarting: timestamp("week_starting").notNull(),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  isRecurring: boolean("is_recurring").default(false),
+  recurringFrequency: varchar("recurring_frequency"),
+  parentCategory: varchar("parent_category"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const forecastOutflowsRelations = relations(forecastOutflows, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [forecastOutflows.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
+export const insertForecastOutflowSchema = createInsertSchema(forecastOutflows).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type ForecastOutflow = typeof forecastOutflows.$inferSelect;
+export type InsertForecastOutflow = z.infer<typeof insertForecastOutflowSchema>;
+
 // ── Sprint 8: Weekly CFO Reviews ──────────────────────────
 
 export const weeklyReviews = pgTable("weekly_reviews", {

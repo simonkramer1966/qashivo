@@ -1914,3 +1914,29 @@ export class ForecastEngine {
     return quarterStarts.sort((a, b) => a.getTime() - b.getTime());
   }
 }
+
+// ── Phase 3: Outflow Categories ─────────────────────────────
+
+export const OUTFLOW_CATEGORIES = [
+  {
+    category: "payroll",
+    label: "Payroll",
+    children: [
+      { category: "payroll_net", label: "Net pay" },
+      { category: "payroll_paye", label: "PAYE/NI to HMRC" },
+      { category: "payroll_pension", label: "Pension contributions" },
+    ],
+  },
+  { category: "overheads", label: "Overheads" },
+  { category: "vat", label: "VAT" },
+  { category: "corporation_tax", label: "Corporation tax" },
+  { category: "suppliers", label: "Supplier payments" },
+  { category: "debt_payments", label: "Debt payments" },
+  { category: "capex", label: "Fixed assets / capex" },
+  { category: "directors_drawings", label: "Directors' drawings" },
+  { category: "cis", label: "CIS deductions" },
+  { category: "professional_fees", label: "Professional fees" },
+  { category: "other", label: "Other / exceptional" },
+] as const;
+
+export type OutflowCategory = typeof OUTFLOW_CATEGORIES[number];
