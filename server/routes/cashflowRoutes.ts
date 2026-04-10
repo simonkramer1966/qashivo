@@ -1,5 +1,5 @@
 /**
- * Cashflow Forecast Routes — Phase 1
+ * Cashflow Forecast Routes — Phase 1 + 2
  *
  * Endpoints for the 13-week cashflow forecast engine.
  * All endpoints are tenant-scoped via isAuthenticated middleware.
@@ -14,6 +14,10 @@ import {
   compareForecasts,
   invalidateForecastCache,
 } from "../services/cashflowForecastService";
+import {
+  getAllPatterns,
+  validatePattern,
+} from "../services/recurringRevenueService";
 import { db } from "../db";
 import { tenants } from "@shared/schema";
 import { eq } from "drizzle-orm";
@@ -228,6 +232,60 @@ export function registerCashflowRoutes(app: Express): void {
       } catch (error) {
         console.error("[CashflowRoutes] set safety-threshold error:", error);
         res.status(500).json({ error: "Failed to set safety threshold" });
+      }
+    },
+  );
+
+  // ── GET /api/cashflow/recurring-patterns ──
+  // All detected/confirmed/lapsed recurring revenue patterns
+  app.get(
+    "/api/cashflow/recurring-patterns",
+    isAuthenticated,
+    async (req: any, res: any) => {
+      try {
+        const tenantId = req.user?.tenantId || req.rbac?.tenantId;
+        if (!tenantId) {
+          return res.status(401).json({ error: "No tenant context" });
+        }
+
+        const patterns = await getAllPatterns(tenantId);
+        res.json(patterns);
+      } catch (error) {
+        console.error("[CashflowRoutes] recurring-patterns error:", error);
+        res.status(500).json({ error: "Failed to get recurring patterns" });
+      }
+    },
+  );
+
+  // ── POST /api/cashflow/recurring-patterns/:id/validate ──
+  // Confirm or reject a detected pattern (manager+ only)
+  app.post(
+    "/api/cashflow/recurring-patterns/:id/validate",
+    isAuthenticated,
+    withMinimumRole("manager"),
+    async (req: any, res: any) => {
+      try {
+        const tenantId = req.user?.tenantId || req.rbac?.tenantId;
+        if (!tenantId) {
+          return res.status(401).json({ error: "No tenant context" });
+        }
+
+        const { id } = req.params;
+        const { action, reason } = req.body;
+
+        if (!action || !["confirm", "reject"].includes(action)) {
+          return res
+            .status(400)
+            .json({ error: "action must be 'confirm' or 'reject'" });
+        }
+
+        const userId = req.user?.id || req.rbac?.userId || "unknown";
+        await validatePattern(tenantId, id, action, userId, reason);
+
+        res.json({ success: true, action });
+      } catch (error) {
+        console.error("[CashflowRoutes] validate pattern error:", error);
+        res.status(500).json({ error: "Failed to validate pattern" });
       }
     },
   );

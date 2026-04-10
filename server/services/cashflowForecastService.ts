@@ -30,6 +30,11 @@ import {
   type DistributionParams,
 } from "./paymentDistribution";
 import { EXCLUDED_STATUSES } from "./arCalculations";
+import {
+  getConfirmedPatterns,
+  getAllPatterns,
+  type RecurringPattern,
+} from "./recurringRevenueService";
 
 // ── Interfaces ─────────────────────────────────────────────────
 
@@ -159,6 +164,21 @@ export interface InflowForecast {
     weeks6to9: "high" | "medium" | "low";
     weeks10to13: "high" | "medium" | "low";
   };
+
+  // Layer 2: Recurring revenue
+  recurringRevenue?: {
+    confirmedCount: number;
+    detectedCount: number;
+    totalProjected: number;
+    patterns: {
+      contactId: string;
+      contactName: string;
+      frequency: string;
+      averageAmount: number;
+      status: string;
+      weeklyProjections: number[];
+    }[];
+  };
 }
 
 export interface DebtorPaymentProfile {
@@ -260,6 +280,29 @@ function weekNumberForDate(targetDate: Date): number {
   const diffDays = daysBetween(monday, targetDate);
   if (diffDays < 0) return 0;
   return Math.floor(diffDays / 7) + 1;
+}
+
+// ── Layer 2 deduplication ──────────────────────────────────────
+
+function isInvoiceAlreadyRaised(
+  existingInvoices: InvoiceRow[],
+  contactId: string,
+  expectedAmount: number,
+  expectedDate: Date,
+  frequencyDays: number,
+): boolean {
+  const dateWindow = Math.max(frequencyDays / 3, 7); // At least 7 days window
+  return existingInvoices.some((inv) => {
+    if (inv.contactId !== contactId) return false;
+    const invAmount = Number(inv.amount);
+    const amountMatch =
+      expectedAmount > 0
+        ? Math.abs(invAmount - expectedAmount) / expectedAmount < 0.2
+        : false;
+    const invDate = new Date(inv.issueDate);
+    const dateDiff = Math.abs(daysBetween(invDate, expectedDate));
+    return amountMatch && dateDiff < dateWindow;
+  });
 }
 
 // ── Forecast cache ─────────────────────────────────────────────
@@ -657,6 +700,144 @@ export async function generateInflowForecast(
     }
   }
 
+  // ── Layer 2: Recurring Revenue Projection ──
+
+  const weeklyRecurringExpected = new Array(WEEKS).fill(0);
+  const weeklyRecurringOptimistic = new Array(WEEKS).fill(0);
+  const weeklyRecurringPessimistic = new Array(WEEKS).fill(0);
+  const recurringPatternProjections: {
+    contactId: string;
+    contactName: string;
+    frequency: string;
+    averageAmount: number;
+    status: string;
+    weeklyProjections: number[];
+  }[] = [];
+
+  let allPatterns: RecurringPattern[] = [];
+  let confirmedPatterns: RecurringPattern[] = [];
+
+  try {
+    allPatterns = await getAllPatterns(tenantId);
+    confirmedPatterns = allPatterns.filter(
+      (p) => p.status === "confirmed" && p.validatedByUser,
+    );
+
+    const FREQUENCY_DAYS: Record<string, number> = {
+      weekly: 7,
+      fortnightly: 14,
+      monthly: 30,
+      quarterly: 90,
+    };
+
+    for (const pattern of confirmedPatterns) {
+      const freqDays = FREQUENCY_DAYS[pattern.frequency];
+      if (!freqDays || !pattern.nextExpectedDate) continue;
+
+      // Get debtor's payment distribution for timing
+      const signals = signalsMap.get(pattern.contactId);
+      const dist = fitDistribution(
+        signals?.medianDaysToPay ?? 40,
+        signals?.p75DaysToPay ?? null,
+        signals?.volatility ?? null,
+        signals?.trend ?? null,
+        signals?.segment ?? undefined,
+      );
+
+      const perWeekProjections = new Array(WEEKS).fill(0);
+
+      // Project forward: from nextExpectedDate, advance by frequency
+      let projectedDate = new Date(pattern.nextExpectedDate);
+      while (projectedDate <= weekBounds[WEEKS - 1].end) {
+        // Determine which week this projected invoice falls in
+        let targetWeek = -1;
+        for (let w = 0; w < WEEKS; w++) {
+          if (
+            projectedDate >= weekBounds[w].start &&
+            projectedDate <= weekBounds[w].end
+          ) {
+            targetWeek = w;
+            break;
+          }
+        }
+
+        if (targetWeek >= 0) {
+          // Deduplication: check if a matching invoice already exists in Layer 1
+          const alreadyRaised = isInvoiceAlreadyRaised(
+            invoiceRows,
+            pattern.contactId,
+            pattern.averageAmount,
+            projectedDate,
+            freqDays,
+          );
+
+          if (!alreadyRaised) {
+            // Apply the debtor's payment distribution to the projected invoice
+            // Days overdue = 0 since invoice hasn't been raised yet
+            const scenarios = weeklyProbabilitiesThreeScenarios(
+              dist.mu,
+              dist.sigma,
+              0,
+            );
+
+            // The projected invoice will be paid according to the debtor's
+            // typical payment timing. Distribute across weeks from the
+            // projected issue date.
+            for (let pw = 0; pw < WEEKS; pw++) {
+              const payWeek = targetWeek + pw;
+              if (payWeek >= WEEKS) break;
+
+              const optProb =
+                pw < scenarios.optimistic.length
+                  ? scenarios.optimistic[pw].probability
+                  : 0;
+              const expProb =
+                pw < scenarios.expected.length
+                  ? scenarios.expected[pw].probability
+                  : 0;
+              const pesProb =
+                pw < scenarios.pessimistic.length
+                  ? scenarios.pessimistic[pw].probability
+                  : 0;
+
+              weeklyRecurringOptimistic[payWeek] +=
+                pattern.averageAmount * optProb;
+              weeklyRecurringExpected[payWeek] +=
+                pattern.averageAmount * expProb;
+              weeklyRecurringPessimistic[payWeek] +=
+                pattern.averageAmount * pesProb;
+              perWeekProjections[payWeek] +=
+                Math.round(pattern.averageAmount * expProb * 100) / 100;
+            }
+          }
+        }
+
+        // Advance to next occurrence
+        projectedDate = new Date(projectedDate);
+        projectedDate.setDate(projectedDate.getDate() + freqDays);
+      }
+
+      recurringPatternProjections.push({
+        contactId: pattern.contactId,
+        contactName: pattern.contactName,
+        frequency: pattern.frequency,
+        averageAmount: pattern.averageAmount,
+        status: pattern.status,
+        weeklyProjections: perWeekProjections,
+      });
+    }
+
+    // Add Layer 2 to weekly totals
+    for (let w = 0; w < WEEKS; w++) {
+      weeklyExpected[w] += weeklyRecurringExpected[w];
+      weeklyOptimistic[w] += weeklyRecurringOptimistic[w];
+      weeklyPessimistic[w] += weeklyRecurringPessimistic[w];
+    }
+  } catch (err) {
+    // Layer 2 is non-fatal — if it fails, Layer 1 still works
+    console.warn("[CashflowForecast] Layer 2 recurring revenue failed:", err);
+  }
+
   // ── c. Build weekly forecasts ──
 
   const totalExpected13 = weeklyExpected.reduce((a, b) => a + b, 0);
@@ -687,6 +868,10 @@ export async function generateInflowForecast(
             ? "medium"
             : "low";
 
+    const arAmount = Math.round(
+      (weeklyExpected[w] - weeklyRecurringExpected[w]) * 100,
+    ) / 100;
+
     weeklyForecasts.push({
       weekNumber: w + 1,
       weekStarting: formatWeekDate(bounds.start),
@@ -699,8 +884,9 @@ export async function generateInflowForecast(
         (a, b) => b.amountDue * b.probability - a.amountDue * a.probability,
       ),
       sourceBreakdown: {
-        arCollections: Math.round(weeklyExpected[w] * 100) / 100,
-        recurringRevenue: 0, // Phase 2
+        arCollections: arAmount,
+        recurringRevenue:
+          Math.round(weeklyRecurringExpected[w] * 100) / 100,
         pipeline: 0, // Phase 4
       },
     });
@@ -864,6 +1050,25 @@ export async function generateInflowForecast(
     cashGapAlerts,
     pressureWeeks: [], // Phase 1: no outflows yet
     confidenceByHorizon,
+
+    // Layer 2: Recurring revenue
+    recurringRevenue:
+      allPatterns.length > 0
+        ? {
+            confirmedCount: confirmedPatterns.length,
+            detectedCount: allPatterns.filter(
+              (p) => p.status === "detected",
+            ).length,
+            totalProjected:
+              Math.round(
+                weeklyRecurringExpected.reduce(
+                  (a: number, b: number) => a + b,
+                  0,
+                ) * 100,
+              ) / 100,
+            patterns: recurringPatternProjections,
+          }
+        : undefined,
   };
 
   // Cache the result

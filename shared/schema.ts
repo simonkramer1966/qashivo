@@ -349,6 +349,30 @@ export const probablePayments = pgTable("probable_payments", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Recurring Revenue Patterns (Layer 2 forecast)
+export const recurringRevenuePatterns = pgTable("recurring_revenue_patterns", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id),
+  frequency: varchar("frequency").notNull(), // weekly | fortnightly | monthly | quarterly
+  averageAmount: decimal("average_amount", { precision: 12, scale: 2 }).notNull(),
+  amountVariance: decimal("amount_variance", { precision: 5, scale: 4 }),
+  invoiceCount: integer("invoice_count").notNull(),
+  firstInvoiceDate: timestamp("first_invoice_date"),
+  lastInvoiceDate: timestamp("last_invoice_date"),
+  nextExpectedDate: timestamp("next_expected_date"),
+  status: varchar("status").default("detected").notNull(), // detected | confirmed | rejected | lapsed | paused
+  confidence: varchar("confidence").notNull(), // high | medium | low
+  validatedByUser: boolean("validated_by_user").default(false),
+  validatedAt: timestamp("validated_at"),
+  validatedBy: varchar("validated_by"),
+  rejectedReason: text("rejected_reason"),
+  lastCheckedAt: timestamp("last_checked_at"),
+  breakCount: integer("break_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Contact Notes table
 export const contactNotes = pgTable("contact_notes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1976,6 +2000,17 @@ export const probablePaymentsRelations = relations(probablePayments, ({ one }) =
   invoice: one(invoices, {
     fields: [probablePayments.invoiceId],
     references: [invoices.id],
+  }),
+}));
+
+export const recurringRevenuePatternsRelations = relations(recurringRevenuePatterns, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [recurringRevenuePatterns.tenantId],
+    references: [tenants.id],
+  }),
+  contact: one(contacts, {
+    fields: [recurringRevenuePatterns.contactId],
+    references: [contacts.id],
   }),
 }));
 

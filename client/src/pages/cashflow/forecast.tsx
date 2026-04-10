@@ -144,6 +144,33 @@ interface InflowForecast {
     weeks6to9: string;
     weeks10to13: string;
   };
+  recurringRevenue?: {
+    confirmedCount: number;
+    detectedCount: number;
+    totalProjected: number;
+    patterns: {
+      contactId: string;
+      contactName: string;
+      frequency: string;
+      averageAmount: number;
+      status: string;
+      weeklyProjections: number[];
+    }[];
+  };
+}
+
+interface RecurringPattern {
+  id: string;
+  contactId: string;
+  contactName: string;
+  frequency: string;
+  averageAmount: number;
+  amountVariance: number;
+  invoiceCount: number;
+  status: string;
+  confidence: string;
+  validatedByUser: boolean;
+  nextExpectedDate: string | null;
 }
 
 interface ForecastChanges {
@@ -265,6 +292,14 @@ export default function ForecastPage() {
   const [expandedGap, setExpandedGap] = useState<number | null>(null);
   const [showMethodology, setShowMethodology] = useState(false);
 
+  const { data: patterns } = useQuery<RecurringPattern[]>({
+    queryKey: ["/api/cashflow/recurring-patterns"],
+    staleTime: 60 * 60 * 1000,
+    enabled: !!forecast,
+  });
+
+  const [showRejected, setShowRejected] = useState(false);
+
   const balanceMutation = useMutation({
     mutationFn: async (amount: number) => {
       await apiRequest("PATCH", "/api/cashflow/opening-balance", { amount });
@@ -274,6 +309,32 @@ export default function ForecastPage() {
       refetchBalance();
       queryClient.invalidateQueries({ queryKey: ["/api/cashflow/inflow-forecast"] });
       queryClient.invalidateQueries({ queryKey: ["/api/cashflow/forecast-changes"] });
+    },
+  });
+
+  const validatePatternMutation = useMutation({
+    mutationFn: async ({
+      id,
+      action,
+      reason,
+    }: {
+      id: string;
+      action: "confirm" | "reject";
+      reason?: string;
+    }) => {
+      await apiRequest(
+        "POST",
+        `/api/cashflow/recurring-patterns/${id}/validate`,
+        { action, reason },
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["/api/cashflow/recurring-patterns"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/cashflow/inflow-forecast"],
+      });
     },
   });
 
@@ -751,6 +812,158 @@ export default function ForecastPage() {
         </Card>
       </div>
 
+      {/* E2. Recurring Revenue Patterns */}
+      {patterns && patterns.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                Recurring Revenue
+                {patterns.filter((p) => p.status === "detected").length > 0 && (
+                  <Badge
+                    variant="outline"
+                    className="bg-emerald-50 text-emerald-700 text-xs"
+                  >
+                    {patterns.filter((p) => p.status === "detected").length}{" "}
+                    detected
+                  </Badge>
+                )}
+                {patterns.filter((p) => p.status === "confirmed").length > 0 && (
+                  <Badge
+                    variant="outline"
+                    className="bg-blue-50 text-blue-700 text-xs"
+                  >
+                    {patterns.filter((p) => p.status === "confirmed").length}{" "}
+                    confirmed
+                  </Badge>
+                )}
+              </CardTitle>
+              {forecast.recurringRevenue?.totalProjected ? (
+                <span className="text-sm font-medium text-blue-600">
+                  {fmt(forecast.recurringRevenue.totalProjected)} projected
+                </span>
+              ) : null}
+            </div>
+          </CardHeader>
+          <CardContent>
+            {/* Validation banner */}
+            {patterns.some((p) => p.status === "detected") && (
+              <div className="rounded-md bg-amber-50 border border-amber-200 p-3 mb-4 text-sm">
+                <p className="text-amber-800">
+                  {patterns.filter((p) => p.status === "detected").length}{" "}
+                  recurring revenue pattern
+                  {patterns.filter((p) => p.status === "detected").length !== 1
+                    ? "s"
+                    : ""}{" "}
+                  detected. Confirm which are still active to improve your
+                  forecast accuracy.
+                </p>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              {patterns
+                .filter((p) => showRejected || p.status !== "rejected")
+                .map((pattern) => (
+                  <div
+                    key={pattern.id}
+                    className={`flex items-center justify-between py-2 px-3 rounded-md text-sm ${
+                      pattern.status === "confirmed"
+                        ? "bg-blue-50/50"
+                        : pattern.status === "lapsed"
+                          ? "bg-amber-50/50"
+                          : "bg-muted/30"
+                    }`}
+                  >
+                    <div className="flex-1">
+                      <span
+                        className={
+                          pattern.status === "confirmed"
+                            ? "text-blue-700 font-medium"
+                            : pattern.status === "lapsed"
+                              ? "text-amber-700"
+                              : "text-muted-foreground"
+                        }
+                      >
+                        {pattern.contactName}
+                      </span>
+                      <span className="text-muted-foreground ml-2">
+                        ({pattern.frequency}, {fmt(pattern.averageAmount)})
+                      </span>
+                      <span className="ml-2">
+                        {confidenceBadge(pattern.confidence)}
+                      </span>
+                      {pattern.invoiceCount < 3 && (
+                        <span className="text-xs text-muted-foreground ml-2">
+                          — too early ({pattern.invoiceCount} invoices)
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {pattern.status === "confirmed" && (
+                        <Badge
+                          variant="outline"
+                          className="bg-blue-100 text-blue-700 text-xs"
+                        >
+                          Confirmed
+                        </Badge>
+                      )}
+                      {pattern.status === "lapsed" && (
+                        <Badge
+                          variant="outline"
+                          className="bg-amber-100 text-amber-700 text-xs"
+                        >
+                          Lapsed
+                        </Badge>
+                      )}
+                      {pattern.status === "detected" && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs"
+                            disabled={validatePatternMutation.isPending}
+                            onClick={() =>
+                              validatePatternMutation.mutate({
+                                id: pattern.id,
+                                action: "confirm",
+                              })
+                            }
+                          >
+                            <Check className="h-3 w-3 mr-1" />
+                            Confirm
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs text-muted-foreground"
+                            disabled={validatePatternMutation.isPending}
+                            onClick={() =>
+                              validatePatternMutation.mutate({
+                                id: pattern.id,
+                                action: "reject",
+                              })
+                            }
+                          >
+                            <X className="h-3 w-3 mr-1" />
+                            Reject
+                          </Button>
+                        </>
+                      )}
+                      {pattern.status === "detected" && (
+                        <span className="text-xs text-muted-foreground">
+                          Not in forecast
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* F. Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <Card>
@@ -919,6 +1132,47 @@ export default function ForecastPage() {
                         + {wf.invoiceBreakdown.length - 10} more invoices
                       </p>
                     )}
+                    {wf.sourceBreakdown.recurringRevenue > 0 &&
+                      forecast.recurringRevenue?.patterns && (
+                        <div className="mt-2 border-t pt-2">
+                          <p className="text-xs font-medium text-blue-600 px-3 mb-1">
+                            Recurring Revenue ({fmt(wf.sourceBreakdown.recurringRevenue)})
+                          </p>
+                          {forecast.recurringRevenue.patterns
+                            .filter(
+                              (p) =>
+                                p.weeklyProjections[wf.weekNumber - 1] > 0,
+                            )
+                            .map((p, i) => (
+                              <div
+                                key={i}
+                                className="grid grid-cols-[2fr_1fr_1fr_1fr_80px] gap-2 text-xs text-blue-600/70 px-3 py-1"
+                              >
+                                <span>
+                                  {p.contactName}{" "}
+                                  <span className="text-blue-400">
+                                    ({p.frequency})
+                                  </span>
+                                </span>
+                                <span className="text-right">
+                                  {fmt(p.averageAmount)}
+                                </span>
+                                <span className="text-right">
+                                  {fmt(p.weeklyProjections[wf.weekNumber - 1])}
+                                </span>
+                                <span className="text-right">projected</span>
+                                <span className="text-center">
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[10px] h-4 bg-blue-50 text-blue-600"
+                                  >
+                                    recurring
+                                  </Badge>
+                                </span>
+                              </div>
+                            ))}
+                        </div>
+                      )}
                   </div>
                 </CollapsibleContent>
               </Collapsible>

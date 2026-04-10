@@ -620,6 +620,11 @@ export class SyncOrchestrator {
         .then(m => m.reconcileUnallocatedPayments(tenantId))
         .catch(err => console.warn(`[SyncOrchestrator] Reconcile unallocated payments failed for ${tenantId}:`, err));
 
+      // Non-blocking: detect recurring revenue patterns for cashflow forecast Layer 2
+      import('../services/recurringRevenueService')
+        .then(m => m.detectRecurringPatterns(tenantId))
+        .catch(err => console.warn(`[SyncOrchestrator] Recurring pattern detection failed for ${tenantId}:`, err));
+
       return result;
 
     } catch (err) {
