@@ -66,7 +66,7 @@ interface NavPillar {
 const navigationPillars: NavPillar[] = [
   { label: "Home", icon: Home, href: "/" },
   {
-    label: "Credit Control",
+    label: "Qollections",
     icon: ClipboardList,
     defaultHref: "/qollections",
     children: [
@@ -79,7 +79,7 @@ const navigationPillars: NavPillar[] = [
     ],
   },
   {
-    label: "Cashflow",
+    label: "Qashflow",
     icon: TrendingUp,
     defaultHref: "/qashflow/weekly-review",
     children: [
@@ -89,7 +89,7 @@ const navigationPillars: NavPillar[] = [
     ],
   },
   {
-    label: "Capital",
+    label: "Qapital",
     icon: Landmark,
     defaultHref: "/qapital/bridge",
     statusDot: "green",
@@ -130,7 +130,7 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
   const { hasPermission, canViewCapital, canManageUsers, canAccessAutonomy, canAccessBilling, canConfigureCharlie, canViewAuditLog } = usePermissions();
 
   function isPillarVisible(pillar: NavPillar): boolean {
-    if (pillar.label === "Capital") return canViewCapital;
+    if (pillar.label === "Qapital") return canViewCapital;
     return true;
   }
   function isChildVisible(child: NavChild): boolean {
@@ -238,7 +238,7 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
         initial.add(pillar.label);
       }
     }
-    if (initial.size === 0) initial.add("Credit Control");
+    if (initial.size === 0) initial.add("Qollections");
     return initial;
   });
 

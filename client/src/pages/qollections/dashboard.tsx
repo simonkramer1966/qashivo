@@ -387,15 +387,15 @@ export default function QollectionsDashboard() {
 
         {/* ── ROW 3: Three Actionable Panels ── */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Panel 1: Credit Control Activity */}
-          <Card className="border-l-2 border-l-blue-600">
+          {/* Panel 1: Qollections */}
+          <Card className="border-l-2 border-l-blue-600 flex flex-col">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
                 <ShieldCheck className="h-4 w-4 text-blue-600" />
-                Credit Control
+                Qollections
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="flex flex-col flex-1 space-y-2">
               {actionSummaryLoading ? (
                 <div className="space-y-2">
                   <Skeleton className="h-4 w-full" />
@@ -409,23 +409,23 @@ export default function QollectionsDashboard() {
                   <PanelLine label="Exceptions" value={actionSummary?.exceptions?.total ?? 0} accent={actionSummary?.exceptions?.total ? "red" : undefined} />
                 </>
               )}
-              <Link href="/qollections/action-centre">
+              <Link href="/qollections/action-centre" className="mt-auto">
                 <Button variant="ghost" size="sm" className="w-full mt-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50">
-                  View Action Centre <ArrowRight className="h-3 w-3 ml-1" />
+                  View Qollections <ArrowRight className="h-3 w-3 ml-1" />
                 </Button>
               </Link>
             </CardContent>
           </Card>
 
-          {/* Panel 2: Cashflow This Week */}
-          <Card className="border-l-2 border-l-amber-500">
+          {/* Panel 2: Qashflow */}
+          <Card className="border-l-2 border-l-amber-500 flex flex-col">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
                 <Activity className="h-4 w-4 text-amber-500" />
-                Cashflow
+                Qashflow
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="flex flex-col flex-1 space-y-2">
               {forecastLoading ? (
                 <div className="space-y-2">
                   <Skeleton className="h-4 w-full" />
@@ -444,23 +444,23 @@ export default function QollectionsDashboard() {
                   </div>
                 </>
               )}
-              <Link href="/cashflow/forecast">
+              <Link href="/cashflow/forecast" className="mt-auto">
                 <Button variant="ghost" size="sm" className="w-full mt-2 text-amber-600 hover:text-amber-700 hover:bg-amber-50">
-                  View Forecast <ArrowRight className="h-3 w-3 ml-1" />
+                  View Qashflow <ArrowRight className="h-3 w-3 ml-1" />
                 </Button>
               </Link>
             </CardContent>
           </Card>
 
-          {/* Panel 3: Capital / Bridge */}
-          <Card className="border-l-2 border-l-emerald-500">
+          {/* Panel 3: Qapital */}
+          <Card className="border-l-2 border-l-emerald-500 flex flex-col">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
                 <Landmark className="h-4 w-4 text-emerald-500" />
-                Capital
+                Qapital
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="flex flex-col flex-1 space-y-2">
               {forecastLoading ? (
                 <div className="space-y-2">
                   <Skeleton className="h-4 w-full" />
@@ -477,9 +477,9 @@ export default function QollectionsDashboard() {
                   <PanelLine label="Facility available" value={fmt(facilityHeadroom)} />
                 </>
               )}
-              <Link href={firstGap ? "/qapital/bridge" : "/qapital"}>
+              <Link href={firstGap ? "/qapital/bridge" : "/qapital"} className="mt-auto">
                 <Button variant="ghost" size="sm" className="w-full mt-2 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50">
-                  {firstGap ? "View Bridge" : "View Capital"} <ArrowRight className="h-3 w-3 ml-1" />
+                  {firstGap ? "View Bridge" : "View Qapital"} <ArrowRight className="h-3 w-3 ml-1" />
                 </Button>
               </Link>
             </CardContent>
