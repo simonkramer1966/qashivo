@@ -2,6 +2,10 @@ import { RequestHandler } from 'express';
 import { PermissionService, Permission } from '../services/permissionService';
 import { storage } from '../storage';
 import { isAuthenticated } from './clerkAuth';
+import { db } from '../db';
+import { userDelegations } from '@shared/schema';
+import { and, eq } from 'drizzle-orm';
+import { logAuditFromReq } from '../services/auditLogService';
 
 // Extend Express Request interface to include user (from Clerk auth) and RBAC context
 declare global {
@@ -578,4 +582,193 @@ export const requirePlatformAdmin: RequestHandler = async (req, res, next) => {
  */
 export function withPlatformAdmin(): RequestHandler[] {
   return [isAuthenticated, requirePlatformAdmin];
+}
+
+// ─── RBAC Phase 1 — Delegation-aware middleware ─────────────────────────────
+
+/** Delegatable permission keys (spec Section 8.1) */
+export type DelegatablePermission =
+  | "capital_view"
+  | "capital_request"
+  | "autonomy_access"
+  | "manage_users"
+  | "billing_access";
+
+/**
+ * Check if a user has an active delegation for a given permission.
+ */
+async function hasDelegation(
+  userId: string,
+  tenantId: string,
+  permission: string,
+): Promise<boolean> {
+  const rows = await db
+    .select({ id: userDelegations.id })
+    .from(userDelegations)
+    .where(
+      and(
+        eq(userDelegations.userId, userId),
+        eq(userDelegations.tenantId, tenantId),
+        eq(userDelegations.permission, permission),
+        eq(userDelegations.isActive, true),
+      ),
+    )
+    .limit(1);
+  return rows.length > 0;
+}
+
+/**
+ * Get all active delegations for a user in a tenant.
+ */
+export async function getActiveDelegations(
+  userId: string,
+  tenantId: string,
+): Promise<string[]> {
+  const rows = await db
+    .select({ permission: userDelegations.permission })
+    .from(userDelegations)
+    .where(
+      and(
+        eq(userDelegations.userId, userId),
+        eq(userDelegations.tenantId, tenantId),
+        eq(userDelegations.isActive, true),
+      ),
+    );
+  return rows.map((r) => r.permission);
+}
+
+/**
+ * Middleware: Owner always passes. Others need an active delegation.
+ * Usage: requireDelegation('capital_view')
+ */
+export function requireDelegation(permission: DelegatablePermission): RequestHandler {
+  return async (req, res, next) => {
+    try {
+      if (!req.rbac) {
+        return res.status(500).json({ message: "RBAC context not initialized" });
+      }
+
+      const { userId, tenantId, tenantRole } = req.rbac;
+
+      // Owner always passes
+      if (tenantRole === "owner") {
+        return next();
+      }
+
+      const has = await hasDelegation(userId, tenantId, permission);
+      if (!has) {
+        logAuditFromReq(req, "delegation_denied", "operational", undefined, {
+          permission,
+          tenantRole,
+        });
+        return res.status(403).json({
+          message: "Insufficient permissions",
+          required: permission,
+          type: "delegation",
+        });
+      }
+
+      next();
+    } catch (error) {
+      console.error("Delegation check failed:", error);
+      res.status(500).json({ message: "Authorization system error" });
+    }
+  };
+}
+
+/**
+ * Middleware: Pass if user has one of the listed tenant roles OR the delegation.
+ * Usage: requireRoleOrDelegation(['owner', 'manager'], 'autonomy_access')
+ */
+export function requireRoleOrDelegation(
+  roles: string[],
+  permission: DelegatablePermission,
+): RequestHandler {
+  return async (req, res, next) => {
+    try {
+      if (!req.rbac) {
+        return res.status(500).json({ message: "RBAC context not initialized" });
+      }
+
+      const { userId, tenantId, tenantRole } = req.rbac;
+
+      // Check role match first (cheap)
+      if (tenantRole && roles.includes(tenantRole)) {
+        return next();
+      }
+
+      // Check delegation
+      const has = await hasDelegation(userId, tenantId, permission);
+      if (has) {
+        return next();
+      }
+
+      logAuditFromReq(req, "role_or_delegation_denied", "operational", undefined, {
+        requiredRoles: roles,
+        requiredDelegation: permission,
+        tenantRole,
+      });
+
+      return res.status(403).json({
+        message: "Insufficient permissions",
+        requiredRoles: roles,
+        requiredDelegation: permission,
+      });
+    } catch (error) {
+      console.error("Role/delegation check failed:", error);
+      res.status(500).json({ message: "Authorization system error" });
+    }
+  };
+}
+
+/** Tenant role hierarchy for spec's 4-role model */
+const TENANT_ROLE_HIERARCHY = [
+  "credit_controller",
+  "manager",
+  "accountant",
+  "admin",
+  "owner",
+];
+
+/**
+ * Middleware: check tenantRole against the hierarchy (uses tenantRole, not global role).
+ * Usage: withMinimumTenantRole('manager') — allows manager, accountant, admin, owner
+ */
+export function withMinimumTenantRole(minimumRole: string): RequestHandler[] {
+  const middleware: RequestHandler = async (req, res, next) => {
+    try {
+      if (!req.rbac) {
+        return res.status(500).json({ message: "RBAC context not initialized" });
+      }
+
+      const { tenantRole } = req.rbac;
+      if (!tenantRole) {
+        return res.status(403).json({
+          message: "No tenant role assigned",
+        });
+      }
+
+      const userIdx = TENANT_ROLE_HIERARCHY.indexOf(tenantRole);
+      const requiredIdx = TENANT_ROLE_HIERARCHY.indexOf(minimumRole);
+
+      if (userIdx === -1 || requiredIdx === -1 || userIdx < requiredIdx) {
+        logAuditFromReq(req, "tenant_role_denied", "operational", undefined, {
+          required: minimumRole,
+          actual: tenantRole,
+        });
+        return res.status(403).json({
+          message: "Insufficient role level",
+          required: `${minimumRole} or higher`,
+          tenantRole,
+        });
+      }
+
+      next();
+    } catch (error) {
+      console.error("Tenant role check failed:", error);
+      res.status(500).json({ message: "Authorization system error" });
+    }
+  };
+
+  return [isAuthenticated, withRBACContext, middleware];
 }

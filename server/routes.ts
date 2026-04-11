@@ -13,7 +13,7 @@ import { setupAuth, regenerateSessionOnLogin } from "./auth";
 import { isAuthenticated, isOwner } from "./middleware/clerkAuth";
 import { logSecurityEvent, extractClientInfo } from "./services/securityAuditService";
 import { sanitizeObject, stripSensitiveUserFields, stripSensitiveTenantFields, stripSensitiveFields } from "./utils/sanitize";
-import { withPermission, withRole, withMinimumRole, canManageUser } from "./middleware/rbac";
+import { withPermission, withRole, withMinimumRole, canManageUser, withRBACContext, getActiveDelegations } from "./middleware/rbac";
 import { 
   insertContactSchema,
   insertContactNoteSchema, 
@@ -723,6 +723,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // RBAC Phase 1 — Permissions endpoint for frontend hook
+  app.get('/api/auth/permissions', isAuthenticated, withRBACContext, async (req, res) => {
+    try {
+      if (!req.rbac) {
+        return res.status(500).json({ message: 'RBAC context not initialized' });
+      }
+
+      const { userId, tenantId, tenantRole } = req.rbac;
+      const role = tenantRole || 'credit_controller';
+
+      // Get active delegations
+      const delegations = await getActiveDelegations(userId, tenantId);
+
+      const isOwner = role === 'owner';
+      const isAdmin = role === 'admin';
+      const isAccountant = role === 'accountant';
+      const isManager = role === 'manager';
+
+      // Owner and admin get everything; accountant gets everything except 5 delegatable permissions
+      const hasDel = (perm: string) => delegations.includes(perm);
+      const ownerOrAdmin = isOwner || isAdmin;
+
+      const permissions = {
+        canViewAuditLog: ownerOrAdmin || isAccountant || isManager,
+        canConfigureCharlie: ownerOrAdmin || isAccountant,
+        canAccessAutonomy: ownerOrAdmin || isAccountant || hasDel('autonomy_access'),
+        canEditForecast: ownerOrAdmin || isAccountant || isManager,
+        canViewCapital: ownerOrAdmin || hasDel('capital_view'),
+        canRequestFinance: ownerOrAdmin || hasDel('capital_request'),
+        canInviteManagers: ownerOrAdmin || isAccountant,
+        canInviteControllers: ownerOrAdmin || isAccountant || isManager,
+        canInviteAccountants: isOwner,
+        canManageUsers: ownerOrAdmin || hasDel('manage_users'),
+        canAccessBilling: ownerOrAdmin || hasDel('billing_access'),
+        canDeleteTenant: isOwner,
+        canTransferOwnership: isOwner,
+        canSetDelegations: isOwner,
+      };
+
+      res.json({
+        userId,
+        tenantId,
+        role,
+        delegations,
+        permissions,
+      });
+    } catch (error) {
+      console.error('Failed to get permissions:', error);
+      res.status(500).json({ message: 'Failed to retrieve permissions' });
+    }
+  });
+
   // Get accessible tenants for partner users
   app.get('/api/partner/tenants', isAuthenticated, async (req, res) => {
     try {
@@ -975,7 +1027,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Tenant User Management Routes
   // Import RBAC middleware  
-  const { withRBACContext, requireTenantAdmin, enforceContactAccess, getContactFilter } = await import('./middleware/rbac');
+  const { requireTenantAdmin, enforceContactAccess, getContactFilter } = await import('./middleware/rbac');
 
   // Get users in tenant (requires tenant admin or higher)
   app.get('/api/tenants/:tenantId/users', isAuthenticated, withRBACContext, requireTenantAdmin, async (req, res) => {

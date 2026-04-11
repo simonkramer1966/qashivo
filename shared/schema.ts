@@ -49,6 +49,14 @@ export const users = pgTable("users", {
   resetTokenExpiry: timestamp("reset_token_expiry"), // When reset token expires
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+  // RBAC Phase 1 — multi-user fields
+  invitedBy: varchar("invited_by"), // FK to users.id (self-ref, can't use references() here)
+  invitedAt: timestamp("invited_at"),
+  acceptedAt: timestamp("accepted_at"),
+  status: varchar("status").default("active"), // 'invited' | 'active' | 'removed'
+  removedAt: timestamp("removed_at"),
+  removedBy: varchar("removed_by"), // FK to users.id (self-ref)
+  lastActiveAt: timestamp("last_active_at"),
 });
 
 // Tenants table for multi-tenancy
@@ -6701,3 +6709,147 @@ export const insertConversationStateTransitionSchema = createInsertSchema(conver
 });
 export type ConversationStateTransition = typeof conversationStateTransitions.$inferSelect;
 export type InsertConversationStateTransition = z.infer<typeof insertConversationStateTransitionSchema>;
+
+// ─── RBAC Phase 1 — Multi-user tables ───────────────────────────────────────
+
+// User delegations — granular permissions delegated from owner to other roles
+export const userDelegations = pgTable("user_delegations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  permission: varchar("permission").notNull(),
+    // 'capital_view' | 'capital_request' | 'autonomy_access' | 'manage_users' | 'billing_access'
+  grantedBy: varchar("granted_by").notNull().references(() => users.id),
+  grantedAt: timestamp("granted_at").defaultNow(),
+  revokedAt: timestamp("revoked_at"),
+  revokedBy: varchar("revoked_by").references(() => users.id),
+  isActive: boolean("is_active").default(true),
+});
+
+export const userDelegationsRelations = relations(userDelegations, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [userDelegations.tenantId],
+    references: [tenants.id],
+  }),
+  user: one(users, {
+    fields: [userDelegations.userId],
+    references: [users.id],
+    relationName: "delegationUser",
+  }),
+  grantor: one(users, {
+    fields: [userDelegations.grantedBy],
+    references: [users.id],
+    relationName: "delegationGrantor",
+  }),
+}));
+
+export const insertUserDelegationSchema = createInsertSchema(userDelegations).omit({
+  id: true,
+  grantedAt: true,
+});
+export type UserDelegation = typeof userDelegations.$inferSelect;
+export type InsertUserDelegation = z.infer<typeof insertUserDelegationSchema>;
+
+// Audit log — tracks all significant actions for compliance and accountability
+export const auditLog = pgTable("audit_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  userName: text("user_name"),
+  userRole: varchar("user_role"),
+  action: varchar("action").notNull(),
+  category: varchar("category").notNull(), // 'financial' | 'operational'
+  entityType: varchar("entity_type"),
+  entityId: varchar("entity_id"),
+  entityName: text("entity_name"),
+  details: jsonb("details"), // { before, after, metadata }
+  ipAddress: varchar("ip_address"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_audit_log_tenant_created").on(table.tenantId, table.createdAt),
+  index("idx_audit_log_entity").on(table.tenantId, table.entityType, table.entityId),
+]);
+
+export const auditLogRelations = relations(auditLog, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [auditLog.tenantId],
+    references: [tenants.id],
+  }),
+  user: one(users, {
+    fields: [auditLog.userId],
+    references: [users.id],
+  }),
+}));
+
+export const insertAuditLogSchema = createInsertSchema(auditLog).omit({
+  id: true,
+  createdAt: true,
+});
+export type AuditLogEntry = typeof auditLog.$inferSelect;
+export type InsertAuditLogEntry = z.infer<typeof insertAuditLogSchema>;
+
+// User invitations — pending invitations to join a tenant
+export const userInvitations = pgTable("user_invitations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  email: text("email").notNull(),
+  role: varchar("role").notNull(),
+  invitedBy: varchar("invited_by").notNull().references(() => users.id),
+  invitedAt: timestamp("invited_at").defaultNow(),
+  expiresAt: timestamp("expires_at"),
+  acceptedAt: timestamp("accepted_at"),
+  acceptedBy: varchar("accepted_by").references(() => users.id),
+  token: varchar("token").notNull().unique(),
+  status: varchar("status").default("pending"), // 'pending' | 'accepted' | 'expired' | 'revoked'
+  previousInvitationId: varchar("previous_invitation_id"),
+});
+
+export const userInvitationsRelations = relations(userInvitations, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [userInvitations.tenantId],
+    references: [tenants.id],
+  }),
+  inviter: one(users, {
+    fields: [userInvitations.invitedBy],
+    references: [users.id],
+  }),
+}));
+
+export const insertUserInvitationSchema = createInsertSchema(userInvitations).omit({
+  id: true,
+  invitedAt: true,
+});
+export type UserInvitation = typeof userInvitations.$inferSelect;
+export type InsertUserInvitation = z.infer<typeof insertUserInvitationSchema>;
+
+// Owner failsafe — emergency contact for owner lockout/incapacity
+export const ownerFailsafe = pgTable("owner_failsafe", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id).unique(),
+  emergencyContactName: text("emergency_contact_name").notNull(),
+  emergencyContactEmail: text("emergency_contact_email").notNull(),
+  emergencyContactPhone: text("emergency_contact_phone"),
+  emergencyContactRelationship: text("emergency_contact_relationship"),
+  setBy: varchar("set_by").notNull().references(() => users.id),
+  setAt: timestamp("set_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const ownerFailsafeRelations = relations(ownerFailsafe, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [ownerFailsafe.tenantId],
+    references: [tenants.id],
+  }),
+  setter: one(users, {
+    fields: [ownerFailsafe.setBy],
+    references: [users.id],
+  }),
+}));
+
+export const insertOwnerFailsafeSchema = createInsertSchema(ownerFailsafe).omit({
+  id: true,
+  setAt: true,
+  updatedAt: true,
+});
+export type OwnerFailsafe = typeof ownerFailsafe.$inferSelect;
+export type InsertOwnerFailsafe = z.infer<typeof insertOwnerFailsafeSchema>;
