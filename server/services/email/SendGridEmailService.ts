@@ -607,7 +607,7 @@ export async function sendUserInvitationEmail(params: {
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 0; color: #0B0F17;">
         <div style="padding: 32px 0 24px 0; border-bottom: 1px solid #E6E8EC;">
           <h1 style="font-size: 20px; font-weight: 600; margin: 0 0 4px 0; color: #0B0F17;">Qashivo</h1>
-          <p style="font-size: 13px; color: #556070; margin: 0;">Intelligent Credit Control</p>
+          <p style="font-size: 13px; color: #556070; margin: 0;">Working Capital Intelligence</p>
         </div>
         <div style="padding: 32px 0;">
           <h2 style="font-size: 18px; font-weight: 600; margin: 0 0 12px 0; color: #0B0F17;">You're invited to join ${tenantName}</h2>
@@ -725,7 +725,7 @@ export async function sendDelegationChangedEmail(params: {
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 0; color: #0B0F17;">
         <div style="padding: 32px 0 24px 0; border-bottom: 1px solid #E6E8EC;">
           <h1 style="font-size: 20px; font-weight: 600; margin: 0 0 4px 0; color: #0B0F17;">Qashivo</h1>
-          <p style="font-size: 13px; color: #556070; margin: 0;">Intelligent Credit Control</p>
+          <p style="font-size: 13px; color: #556070; margin: 0;">Working Capital Intelligence</p>
         </div>
         <div style="padding: 32px 0;">
           <h2 style="font-size: 18px; font-weight: 600; margin: 0 0 12px 0; color: #0B0F17;">Your access has been updated</h2>
@@ -775,7 +775,7 @@ export async function sendUserRemovedEmail(params: {
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 0; color: #0B0F17;">
         <div style="padding: 32px 0 24px 0; border-bottom: 1px solid #E6E8EC;">
           <h1 style="font-size: 20px; font-weight: 600; margin: 0 0 4px 0; color: #0B0F17;">Qashivo</h1>
-          <p style="font-size: 13px; color: #556070; margin: 0;">Intelligent Credit Control</p>
+          <p style="font-size: 13px; color: #556070; margin: 0;">Working Capital Intelligence</p>
         </div>
         <div style="padding: 32px 0;">
           <h2 style="font-size: 18px; font-weight: 600; margin: 0 0 12px 0; color: #0B0F17;">Your access has been removed</h2>
