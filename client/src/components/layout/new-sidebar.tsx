@@ -92,7 +92,6 @@ const navigationPillars: NavPillar[] = [
     label: "Qapital",
     icon: Landmark,
     defaultHref: "/qapital/bridge",
-    statusDot: "green",
     children: [
       { name: "Bridge", href: "/qapital/bridge", icon: ArrowRightLeft, exact: true },
       { name: "Facility", href: "/qapital/facility", icon: Building2 },

@@ -467,22 +467,22 @@ export default function BridgePage() {
     <AppShell title="Capital" subtitle="Bridge">
       <div className="space-y-6">
 
-        {/* Toggle: own facility / Qashivo */}
-        <div className="flex items-center justify-end gap-3">
-          <span className={cn("text-sm", !useOwnFacility && "font-medium")}>Qashivo financing</span>
-          <Switch checked={useOwnFacility} onCheckedChange={setUseOwnFacility} />
-          <span className={cn("text-sm", useOwnFacility && "font-medium")}>Your facility</span>
-        </div>
-
-        {/* Section 1: Cash gap banner */}
+        {/* Section 1: Cash gap banner + financing toggle */}
         {gapInfo && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50/50 px-4 py-3 flex items-center gap-2 text-sm text-amber-900">
-            <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
-            <span>
-              Cash gap of <span className="font-semibold">{fmt(gapInfo.gapAmount)}</span> detected in Week {gapInfo.weekNumber} (w/c {gapInfo.weekLabel})
-              {" · "}Pessimistic: <span className="font-medium">{fmtSigned(gapInfo.pessimisticBalance)}</span>
-              {" · "}Expected: <span className="font-medium">{fmt(gapInfo.expectedBalance)}</span>
-            </span>
+          <div className="rounded-lg border border-amber-200 bg-amber-50/50 px-4 py-3 flex items-center justify-between gap-4 text-sm text-amber-900">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+              <span>
+                Cash gap of <span className="font-semibold">{fmt(gapInfo.gapAmount)}</span> detected in Week {gapInfo.weekNumber} (w/c {gapInfo.weekLabel})
+                {" · "}Pessimistic: <span className="font-medium">{fmtSigned(gapInfo.pessimisticBalance)}</span>
+                {" · "}Expected: <span className="font-medium">{fmt(gapInfo.expectedBalance)}</span>
+              </span>
+            </div>
+            <div className="flex items-center gap-3 shrink-0">
+              <span className={cn("text-sm", !useOwnFacility && "font-medium")}>Qashivo financing</span>
+              <Switch checked={useOwnFacility} onCheckedChange={setUseOwnFacility} />
+              <span className={cn("text-sm", useOwnFacility && "font-medium")}>Your facility</span>
+            </div>
           </div>
         )}
 
