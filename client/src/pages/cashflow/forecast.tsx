@@ -401,11 +401,13 @@ export default function ForecastPage() {
     safetyThreshold: string;
     dismissed: boolean;
   }
-  const { data: cashGapAlerts = [] } = useQuery<CashGapAlert[]>({
+  const { data: cashGapAlertsData } = useQuery<CashGapAlert[]>({
     queryKey: ["/api/cashflow/cash-gap-alerts"],
     staleTime: 5 * 60 * 1000,
     enabled: !!forecast,
+    retry: false,
   });
+  const cashGapAlerts = cashGapAlertsData ?? [];
   const dismissAlertMutation = useMutation({
     mutationFn: (alertId: string) =>
       apiRequest("PATCH", `/api/cashflow/cash-gap-alerts/${alertId}/dismiss`),
@@ -1127,14 +1129,14 @@ export default function ForecastPage() {
       {/* E. Signal Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {/* Cash gap alert */}
-        {forecast.cashGapAlerts.length > 0 && (
+        {(forecast.cashGapAlerts?.length ?? 0) > 0 && (
           <Card className="border-red-200 bg-red-50/50">
             <CardContent className="py-3 px-4">
               <div className="flex items-center gap-2 mb-1">
                 <AlertTriangle className="h-4 w-4 text-red-500" />
                 <span className="text-sm font-medium text-red-700">Cash Gap Alert</span>
               </div>
-              {forecast.cashGapAlerts.slice(0, 2).map((alert, i) => (
+              {(forecast.cashGapAlerts ?? []).slice(0, 2).map((alert, i) => (
                 <div key={i}>
                   <p className="text-sm">
                     {fmt(alert.gapAmount)} gap in Week {alert.weekNumber} ({alert.scenario})
@@ -1217,7 +1219,7 @@ export default function ForecastPage() {
         )}
 
         {/* Debtor trajectory */}
-        {forecast.debtorTrajectories.filter((t) => t.trend === "deteriorating")
+        {(forecast.debtorTrajectories ?? []).filter((t) => t.trend === "deteriorating")
           .length > 0 && (
           <Card className="border-amber-200 bg-amber-50/50">
             <CardContent className="py-3 px-4">
@@ -1245,7 +1247,7 @@ export default function ForecastPage() {
         )}
 
         {/* Promise impact */}
-        {forecast.promiseImpacts.length > 0 && (
+        {(forecast.promiseImpacts?.length ?? 0) > 0 && (
           <Card className="border-blue-200 bg-blue-50/50">
             <CardContent className="py-3 px-4">
               <div className="flex items-center gap-2 mb-1">
@@ -1254,7 +1256,7 @@ export default function ForecastPage() {
                   Promise Impact
                 </span>
               </div>
-              {forecast.promiseImpacts.slice(0, 2).map((p, i) => (
+              {(forecast.promiseImpacts ?? []).slice(0, 2).map((p, i) => (
                 <div key={i} className="text-sm">
                   <p>
                     {fmt(p.promisedAmount)} promise from {p.contactName}
