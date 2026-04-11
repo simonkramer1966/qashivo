@@ -50,6 +50,11 @@ export interface InvoiceContribution {
   confidence: "high" | "medium" | "low";
   basedOn: string;
   promiseOverride: boolean;
+  dueDate: string;
+  daysOverdue: number;
+  promiseWeek?: number;
+  isDisputed?: boolean;
+  isOnHold?: boolean;
 }
 
 export interface WeeklyForecast {
@@ -390,6 +395,8 @@ export async function generateInflowForecast(
           amountPaid: invoices.amountPaid,
           issueDate: invoices.issueDate,
           dueDate: invoices.dueDate,
+          isOnHold: invoices.isOnHold,
+          pauseState: invoices.pauseState,
         })
         .from(invoices)
         .innerJoin(contacts, eq(contacts.id, invoices.contactId))
@@ -652,6 +659,11 @@ export async function generateInflowForecast(
             confidence,
             basedOn: `Promise (PRS ${Math.round(prs)}%)`,
             promiseOverride: true,
+            dueDate: new Date(inv.dueDate).toISOString(),
+            daysOverdue,
+            promiseWeek: promiseWeekNum,
+            isDisputed: inv.pauseState === "dispute",
+            isOnHold: inv.isOnHold ?? false,
           });
         }
 
@@ -707,6 +719,11 @@ export async function generateInflowForecast(
                 ? "System defaults (no payment history)"
                 : `${signals?.invoiceCount ?? 0} historical payments`,
             promiseOverride: false,
+            dueDate: new Date(inv.dueDate).toISOString(),
+            daysOverdue,
+            promiseWeek: promiseWeekNum > 0 ? promiseWeekNum : undefined,
+            isDisputed: inv.pauseState === "dispute",
+            isOnHold: inv.isOnHold ?? false,
           });
         }
 

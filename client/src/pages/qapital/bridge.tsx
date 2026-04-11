@@ -28,6 +28,11 @@ interface InvoiceContribution {
   confidence: "high" | "medium" | "low";
   basedOn: string;
   promiseOverride: boolean;
+  dueDate: string;
+  daysOverdue: number;
+  promiseWeek?: number;
+  isDisputed?: boolean;
+  isOnHold?: boolean;
 }
 
 interface WeeklyForecast {
@@ -81,6 +86,7 @@ interface BridgeInvoice {
   totalCost: number;
   isRileyRecommended: boolean;
   isBlindPick: boolean;
+  exclusionReason?: string; // null = eligible
 }
 
 // ── Cost calculation helpers ───────────────────────────────────
@@ -154,12 +160,13 @@ function deriveRiskScore(confidence: "high" | "medium" | "low", invoiceId: strin
 function buildBridgeInvoices(
   forecast: InflowForecast,
   gapAmount: number,
+  gapWeek: number,
 ): BridgeInvoice[] {
-  // Collect unique invoices from all weekly breakdowns
+  // Collect unique invoices from all weekly breakdowns (include all, filter later)
   const invoiceMap = new Map<string, InvoiceContribution>();
   for (const wf of forecast.weeklyForecasts) {
     for (const ic of wf.invoiceBreakdown) {
-      if (ic.amountDue >= MIN_INVOICE_AMOUNT && !invoiceMap.has(ic.invoiceId)) {
+      if (!invoiceMap.has(ic.invoiceId)) {
         invoiceMap.set(ic.invoiceId, ic);
       }
     }
@@ -191,8 +198,34 @@ function buildBridgeInvoices(
     });
   }
 
-  // ── Blind selection: largest invoices first, stop when advance covers gap ───
-  const blindSorted = [...all].sort((a, b) => b.amountDue - a.amountDue);
+  // ── Business rule filtering: split into eligible + excluded ───
+  const eligible: BridgeInvoice[] = [];
+  const excluded: BridgeInvoice[] = [];
+
+  for (const inv of all) {
+    const ic = invoiceMap.get(inv.invoiceId)!;
+    if (inv.amountDue < MIN_INVOICE_AMOUNT) {
+      inv.exclusionReason = "Below £500 threshold";
+      excluded.push(inv);
+    } else if (ic.daysOverdue > 120) {
+      inv.exclusionReason = ">120 days overdue";
+      excluded.push(inv);
+    } else if (ic.isDisputed) {
+      inv.exclusionReason = "Disputed";
+      excluded.push(inv);
+    } else if (ic.isOnHold) {
+      inv.exclusionReason = "On hold";
+      excluded.push(inv);
+    } else if (ic.promiseOverride && ic.promiseWeek != null && ic.promiseWeek <= gapWeek) {
+      inv.exclusionReason = "Promise to pay before gap week";
+      excluded.push(inv);
+    } else {
+      eligible.push(inv);
+    }
+  }
+
+  // ── Blind selection: largest eligible invoices first ───
+  const blindSorted = [...eligible].sort((a, b) => b.amountDue - a.amountDue);
   let blindSum = 0;
   for (const inv of blindSorted) {
     if (blindSum >= gapAmount) break;
@@ -200,28 +233,85 @@ function buildBridgeInvoices(
     blindSum += inv.advance;
   }
 
-  // ── Qashivo optimised: lowest cost per £ advanced, stop when advance covers gap ───
-  const rileySorted = [...all].sort((a, b) => {
-    const effA = a.totalCost / a.advance;
-    const effB = b.totalCost / b.advance;
-    return effA - effB;
-  });
+  // ── Qashivo optimised: greedy-with-improvement ───
+  const costEfficiency = (inv: BridgeInvoice) => inv.totalCost / inv.advance;
+  const rileySorted = [...eligible].sort((a, b) => costEfficiency(a) - costEfficiency(b));
+
+  // Phase 1: greedy walk
+  const greedySet: BridgeInvoice[] = [];
   let rileySum = 0;
   for (const inv of rileySorted) {
     if (rileySum >= gapAmount) break;
-    inv.isRileyRecommended = true;
+    greedySet.push(inv);
     rileySum += inv.advance;
   }
 
-  // Sort: Riley recommended first, then by cost-efficiency ascending
-  all.sort((a, b) => {
+  // Phase 2: improvement pass — try swapping the last invoice for cheaper alternatives
+  if (greedySet.length >= 2 && rileySum > gapAmount) {
+    const lastInv = greedySet[greedySet.length - 1];
+    const advanceWithoutLast = rileySum - lastInv.advance;
+    const deficit = gapAmount - advanceWithoutLast;
+
+    if (deficit > 0) {
+      const usedIds = new Set(greedySet.slice(0, -1).map((i) => i.invoiceId));
+      // Find unused invoices that could fill the deficit at lower cost
+      const candidates = eligible
+        .filter((i) => !usedIds.has(i.invoiceId) && i.invoiceId !== lastInv.invoiceId && i.advance >= deficit)
+        .sort((a, b) => a.totalCost - b.totalCost);
+
+      if (candidates.length > 0 && candidates[0].totalCost < lastInv.totalCost) {
+        // Swap: replace last with cheaper candidate
+        greedySet[greedySet.length - 1] = candidates[0];
+        rileySum = advanceWithoutLast + candidates[0].advance;
+      } else {
+        // Try two smaller invoices to fill deficit
+        const smallCandidates = eligible
+          .filter((i) => !usedIds.has(i.invoiceId) && i.invoiceId !== lastInv.invoiceId && i.advance < deficit)
+          .sort((a, b) => costEfficiency(a) - costEfficiency(b));
+
+        let pairSum = 0;
+        let pairCost = 0;
+        const pairInvs: BridgeInvoice[] = [];
+        for (const sc of smallCandidates) {
+          pairInvs.push(sc);
+          pairSum += sc.advance;
+          pairCost += sc.totalCost;
+          if (pairSum >= deficit) break;
+        }
+
+        if (pairSum >= deficit && pairCost < lastInv.totalCost) {
+          greedySet.splice(greedySet.length - 1, 1, ...pairInvs);
+          rileySum = advanceWithoutLast + pairSum;
+        }
+      }
+    }
+  }
+
+  // Mark Riley recommendations
+  const rileyIds = new Set(greedySet.map((i) => i.invoiceId));
+  for (const inv of eligible) {
+    if (rileyIds.has(inv.invoiceId)) {
+      inv.isRileyRecommended = true;
+    }
+  }
+
+  // Invariant check
+  const rileyCostTotal = greedySet.reduce((s, i) => s + i.totalCost, 0);
+  const blindCostTotal = eligible.filter((i) => i.isBlindPick).reduce((s, i) => s + i.totalCost, 0);
+  if (rileyCostTotal > blindCostTotal && blindCostTotal > 0) {
+    console.warn("Bridge: Qashivo selection costs more than blind — algorithm bug");
+  }
+
+  // Sort eligible: Riley recommended first, then by cost-efficiency ascending
+  eligible.sort((a, b) => {
     if (a.isRileyRecommended !== b.isRileyRecommended) return a.isRileyRecommended ? -1 : 1;
-    const effA = a.totalCost / a.advance;
-    const effB = b.totalCost / b.advance;
-    return effA - effB;
+    return costEfficiency(a) - costEfficiency(b);
   });
 
-  return all;
+  // Sort excluded by amount descending
+  excluded.sort((a, b) => b.amountDue - a.amountDue);
+
+  return [...eligible, ...excluded];
 }
 
 // ── Format helpers ─────────────────────────────────────────────
@@ -300,7 +390,7 @@ export default function BridgePage() {
       safetyThreshold,
     };
 
-    const bridgeInvoices = buildBridgeInvoices(forecast, gapAmount);
+    const bridgeInvoices = buildBridgeInvoices(forecast, gapAmount, gapInfo.weekNumber);
 
     // Pre-select Riley recommendations
     const rileyIds = new Set(bridgeInvoices.filter((i) => i.isRileyRecommended).map((i) => i.invoiceId));
@@ -324,7 +414,7 @@ export default function BridgePage() {
   const blindCost = useMemo(() => computeSelectionCost(blindSelection), [blindSelection]);
   const rileyCost = useMemo(() => computeSelectionCost(rileySelection), [rileySelection]);
   const manualSelection = useMemo(
-    () => bridgeInvoices.filter((i) => selectedIds.has(i.invoiceId)),
+    () => bridgeInvoices.filter((i) => selectedIds.has(i.invoiceId) && !i.exclusionReason),
     [bridgeInvoices, selectedIds],
   );
   const manualCost = useMemo(() => computeSelectionCost(manualSelection), [manualSelection]);
@@ -454,44 +544,54 @@ export default function BridgePage() {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {bridgeInvoices.map((inv) => (
-                  <tr
-                    key={inv.invoiceId}
-                    className={cn(
-                      "hover:bg-muted/20 transition-colors",
-                      selectedIds.has(inv.invoiceId) && "bg-blue-50/30",
-                    )}
-                  >
-                    <td className="px-3 py-3 text-center">
-                      <Checkbox
-                        checked={selectedIds.has(inv.invoiceId)}
-                        onCheckedChange={() => toggleInvoice(inv.invoiceId)}
-                      />
-                    </td>
-                    <td className="px-3 py-3 font-mono text-xs">{inv.invoiceNumber}</td>
-                    <td className="px-3 py-3">{inv.contactName}</td>
-                    <td className="px-3 py-3 text-right tabular-nums">{fmt(inv.amountDue)}</td>
-                    <td className="px-3 py-3 text-right tabular-nums">{inv.expectedDuration} days</td>
-                    <td className="px-3 py-3 text-right">
-                      <RiskBadge score={inv.riskScore} />
-                    </td>
-                    <td className="px-3 py-3 text-right tabular-nums text-muted-foreground">{fmt(inv.totalCost)}</td>
-                    <td className="px-3 py-3">
-                      <div className="flex gap-1.5">
-                        {inv.isRileyRecommended && (
-                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-violet-100 text-violet-700 border-violet-200">
-                            <Sparkles className="h-2.5 w-2.5 mr-0.5" />Riley
-                          </Badge>
-                        )}
-                        {inv.isBlindPick && !inv.isRileyRecommended && (
-                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 text-muted-foreground">
-                            Blind pick
-                          </Badge>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {bridgeInvoices.map((inv) => {
+                  const isExcluded = !!inv.exclusionReason;
+                  return (
+                    <tr
+                      key={inv.invoiceId}
+                      className={cn(
+                        "hover:bg-muted/20 transition-colors",
+                        selectedIds.has(inv.invoiceId) && "bg-blue-50/30",
+                        isExcluded && "opacity-50",
+                      )}
+                    >
+                      <td className="px-3 py-3 text-center">
+                        <Checkbox
+                          checked={selectedIds.has(inv.invoiceId)}
+                          onCheckedChange={() => toggleInvoice(inv.invoiceId)}
+                          disabled={isExcluded}
+                        />
+                      </td>
+                      <td className="px-3 py-3 font-mono text-xs">{inv.invoiceNumber}</td>
+                      <td className="px-3 py-3">{inv.contactName}</td>
+                      <td className="px-3 py-3 text-right tabular-nums">{fmt(inv.amountDue)}</td>
+                      <td className="px-3 py-3 text-right tabular-nums">{inv.expectedDuration} days</td>
+                      <td className="px-3 py-3 text-right">
+                        <RiskBadge score={inv.riskScore} />
+                      </td>
+                      <td className="px-3 py-3 text-right tabular-nums text-muted-foreground">{fmt(inv.totalCost)}</td>
+                      <td className="px-3 py-3">
+                        <div className="flex gap-1.5">
+                          {isExcluded && (
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-zinc-100 text-zinc-500">
+                              {inv.exclusionReason}
+                            </Badge>
+                          )}
+                          {!isExcluded && inv.isRileyRecommended && (
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-violet-100 text-violet-700 border-violet-200">
+                              <Sparkles className="h-2.5 w-2.5 mr-0.5" />Riley
+                            </Badge>
+                          )}
+                          {!isExcluded && inv.isBlindPick && !inv.isRileyRecommended && (
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 text-muted-foreground">
+                              Blind pick
+                            </Badge>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
                 {bridgeInvoices.length === 0 && (
                   <tr>
                     <td colSpan={8} className="px-3 py-8 text-center text-muted-foreground">
