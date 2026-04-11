@@ -135,11 +135,17 @@ function deriveExpectedDuration(
 
 // ── Derive risk score from confidence tier ─────────────────────
 
-function deriveRiskScore(confidence: "high" | "medium" | "low"): number {
+function deriveRiskScore(confidence: "high" | "medium" | "low", invoiceId: string): number {
+  // Deterministic hash so risk scores are stable across re-renders
+  let hash = 0;
+  for (let i = 0; i < invoiceId.length; i++) {
+    hash = ((hash << 5) - hash + invoiceId.charCodeAt(i)) | 0;
+  }
+  const frac = Math.abs(hash % 100) / 100;
   switch (confidence) {
-    case "high": return 20 + Math.floor(Math.random() * 15); // 20–34
-    case "medium": return 40 + Math.floor(Math.random() * 20); // 40–59
-    case "low": return 65 + Math.floor(Math.random() * 20); // 65–84
+    case "high": return 20 + Math.floor(frac * 15); // 20–34
+    case "medium": return 40 + Math.floor(frac * 20); // 40–59
+    case "low": return 65 + Math.floor(frac * 20); // 65–84
   }
 }
 
@@ -163,7 +169,7 @@ function buildBridgeInvoices(
   const all: BridgeInvoice[] = [];
   for (const ic of invoiceMap.values()) {
     const duration = deriveExpectedDuration(ic.invoiceId, forecast.weeklyForecasts);
-    const riskScore = deriveRiskScore(ic.confidence);
+    const riskScore = deriveRiskScore(ic.confidence, ic.invoiceId);
     const advance = computeAdvance(ic.amountDue);
     const interestCost = computeInterest(ic.amountDue, duration);
 
@@ -185,7 +191,7 @@ function buildBridgeInvoices(
     });
   }
 
-  // ── Blind selection: fewest largest invoices to cover gap ───
+  // ── Blind selection: largest invoices first, stop when advance covers gap ───
   const blindSorted = [...all].sort((a, b) => b.amountDue - a.amountDue);
   let blindSum = 0;
   for (const inv of blindSorted) {
@@ -194,10 +200,7 @@ function buildBridgeInvoices(
     blindSum += inv.advance;
   }
 
-  // ── Qashivo optimised: lowest cost-efficiency (cost per £ advanced) ───
-  // Sort by cost-efficiency ascending — invoices where debtor pays fast
-  // and risk is low rank highest. This ensures the FEWEST invoices at
-  // the LOWEST total cost, not just the cheapest absolute invoices.
+  // ── Qashivo optimised: lowest cost per £ advanced, stop when advance covers gap ───
   const rileySorted = [...all].sort((a, b) => {
     const effA = a.totalCost / a.advance;
     const effB = b.totalCost / b.advance;
