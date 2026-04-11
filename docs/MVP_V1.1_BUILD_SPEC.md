@@ -19,9 +19,9 @@ MVP v1 delivered the core Collections Agent pipeline (LLM email generation, comp
 
 ---
 
-## SPRINT 5: XERO PRODUCTION + DATA HEALTH + COLLECTIONS HARDENING (Current)
+## SPRINT 5: XERO PRODUCTION + DATA HEALTH + COLLECTIONS HARDENING (Near Complete)
 
-*Updated: 6 April 2026 — Xero sync rewritten with Sync Abstraction Layer. Multiple sync bugs fixed. UI polish across sidebar, filters, debtor detail.*
+*Updated: 10 April 2026 — Sprint 5 effectively complete. 19 sub-sections delivered (5.1–5.19). Only remaining item: Xero redirect URI fix (trivial) and onboarding integration with Data Health. Sprint 8 cashflow forecast pulled forward and delivered (5.19). Conversation state machine, security hardening, promise tracking all added.*
 
 ### 5.1 Xero Foundations Fix
 
@@ -36,9 +36,9 @@ MVP v1 delivered the core Collections Agent pipeline (LLM email generation, comp
 | Two-pass bounded fetch | Force and reconciliation syncs use two passes (open invoices, then recent paid) to prevent timeout | ✅ Done (6 Apr) |
 | Xero /Date()/ format parsing | Parse Xero's /Date(timestamp+offset)/ format for UpdatedDateUTC before DB insert | ✅ Done (6 Apr) |
 | Database clearing script | scripts/clear-sync-data.mjs — clears sync tables while preserving tenant/user config for fresh start | ✅ Done (6 Apr) |
-| Sync status API | GET /api/xero/sync-status returning { status, invoiceCount, contactCount } for onboarding polling. | ⬜ Pending |
-| Sync banner | Show "Sync in progress" banner on Debtors/Data Health pages that auto-refreshes on completion. | ⬜ Pending |
-| Background sync mode | Ensure scheduled 4-hour sync uses mode='ongoing' (upsert, never delete). AR overlay fields never overwritten. | ⬜ Pending |
+| Sync status API | GET /api/sync/current returns status, invoiceCount, contactCount, syncScheduleTimes, executionTimezone, nextScheduledSyncAt. Extended from basic status. | ✅ Done (9 Apr) |
+| Sync banner | Ambient progress bar in header during sync, sidebar indicator with next sync time, contextual banner on Debtors/Data Health | ✅ Done (9 Apr) |
+| Background sync mode | Replaced 4-hour setInterval with 60-second tick checking crossedScheduledSlot() per tenant. Configurable syncScheduleTimes with DST-aware scheduling. | ✅ Done (9 Apr) |
 
 ### 5.2 Data Health Page
 
@@ -182,6 +182,71 @@ MVP v1 delivered the core Collections Agent pipeline (LLM email generation, comp
 | Xero sync silent failure fix | Error logging + test contacts excluded from AR figures | ✅ Done (6 Apr) |
 | Xero health check false positive | 403 now treated as auth failure, not just 401 | ✅ Done (6 Apr) |
 | Xero webhook URL | Dynamic URL from APP_URL env var instead of stale hardcoded | ✅ Done (6 Apr) |
+
+### 5.14 Sync UX + Token Hardening (added 9 Apr)
+
+| Task | Detail | Status |
+|------|--------|--------|
+| Sync UX: ambient progress bar | Visual sync feedback in header, sidebar indicator, contextual banner | ✅ Done (9 Apr) |
+| Configurable sync schedule | Tenant-level syncScheduleTimes with DST-aware crossedScheduledSlot(). Sidebar shows next sync + manual trigger (manager+). | ✅ Done (9 Apr) |
+| Xero token refresh race fix | Shared withXeroRefreshLock(tenantId, fn) serializes all refresh attempts. Health check no longer rotates tokens unconditionally. | ✅ Done (9 Apr) |
+| Agent notifications | Charlie/Riley stacked notification cards with progress indication | ✅ Done (9 Apr) |
+
+### 5.15 Promise Tracking + Exceptions (added 9 Apr)
+
+| Task | Detail | Status |
+|------|--------|--------|
+| Promise tracking | Active promise gate blocks chasing. Net effective overdue calculation. Broken promise detection + unallocated payment timeout. | ✅ Done (9 Apr) |
+| Promises sub-tab | New sub-tab in Exceptions showing promise status, broken promises, unallocated payments | ✅ Done (9 Apr) |
+| Failed sends routed to Exceptions | Failed sends no longer appear in Activity Feed — routed to Exceptions tab | ✅ Done (9 Apr) |
+| Debtor detail totals fix | Excludes drafts, nets credit notes to match Xero AR | ✅ Done (9 Apr) |
+| Debtors Promise column | New column showing active promise status per debtor in list view | ✅ Done (9 Apr) |
+| Header sync indicator | Compact indicator in page header | ✅ Done (9 Apr) |
+| Enrichment batching | Batched Companies House lookups instead of sequential | ✅ Done (9 Apr) |
+| Integrations UI polish | Shadcn disconnect dialog + redesigned Xero callback page | ✅ Done (9 Apr) |
+
+### 5.16 Security Hardening (added 10 Apr)
+
+| Task | Detail | Status |
+|------|--------|--------|
+| RBAC role gating | Test/debug endpoints gated behind manager/admin/owner roles | ✅ Done (10 Apr) |
+| Rate limiting | Rate limiters on sync, agent, destructive, and mutation endpoints | ✅ Done (10 Apr) |
+| Xero token encryption at rest | AES-256-GCM via tryEncryptToken/tryDecryptToken. All 4 write + 5 read sites. Migration script. | ✅ Done (10 Apr) |
+| npm audit fix | Patched qs, rollup, picomatch, yaml vulnerabilities | ✅ Done (10 Apr) |
+
+### 5.17 Conversation State Machine (added 10 Apr)
+
+| Task | Detail | Status |
+|------|--------|--------|
+| 9-state lifecycle | idle → chase_sent → debtor_responded → conversing → promise_monitor → dispute_hold → escalated → resolved → hold | ✅ Done (10 Apr) |
+| Optimistic locking | Prevents concurrent state transitions on same debtor | ✅ Done (10 Apr) |
+| Weekend-aware silence timeouts | Configurable timeouts that respect business hours | ✅ Done (10 Apr) |
+| Audit trail | conversationStateHistory table for full lifecycle tracking | ✅ Done (10 Apr) |
+| Planner integration | Replaces scattered getActiveConversationContactIds() + activePromiseSet with bulkGetStates() | ✅ Done (10 Apr) |
+
+### 5.18 Debtors + VIP + Onboarding (added 10 Apr)
+
+| Task | Detail | Status |
+|------|--------|--------|
+| Debtors list UI polish | Amber VIP star, state column, font consistency | ✅ Done (10 Apr) |
+| VIP fixes | Menu click navigation fixed, Remove VIP option, optimistic UI, compact search bar | ✅ Done (10 Apr) |
+| Streamlined onboarding | 9-step wizard → 2-screen flow (Connect Xero → Test Contact → Dashboard). Resilience guard checks data not flags. | ✅ Done (10 Apr) |
+| Scheduled tab three-dot menu | Cancel button replaced with three-dot menu, detail drawer removed | ✅ Done (10 Apr) |
+| Sync error banner redesign | Clearer error messaging + action buttons | ✅ Done (10 Apr) |
+| Reconnect Xero fix | Button navigates to Settings instead of raw API endpoint | ✅ Done (10 Apr) |
+
+### 5.19 13-Week Cashflow Forecast — SPRINT 8 PULLED FORWARD (added 10 Apr)
+
+| Task | Detail | Status |
+|------|--------|--------|
+| Forecast engine | cashflowForecastService.ts (~1,325 lines). Per-debtor log-normal distributions, three-scenario modelling, promise overrides, 8 signal intelligence computations. | ✅ Done (10 Apr) |
+| Forecast API | 6 endpoints at /api/cashflow/forecast/* — weekly breakdown, signals, scenarios, manual adjustments | ✅ Done (10 Apr) |
+| Forecast UI | Full page with dual Recharts charts, signal cards, weekly breakdown table | ✅ Done (10 Apr) |
+| Recurring revenue detection (Layer 2) | Auto-detects recurring patterns from invoice history, projects forward with decay confidence | ✅ Done (10 Apr) |
+| Outflow grid + net cashflow (Layer 3) | Manual outflow entry per week, running balance calculation | ✅ Done (10 Apr) |
+| User pipeline layer (Layer 4) | Confidence-tiered payment timing (Committed/Expected/Stretch), inline grid editing, scenario weighting | ✅ Done (10 Apr) |
+| Rolling window + manual close (Layer 5) | Weeks auto-roll, manual close locks actuals, accuracy tracking vs forecasted | ✅ Done (10 Apr) |
+| Forecast methodology card | Recurring revenue and pipeline sections explaining the model | ✅ Done (10 Apr) |
 
 ---
 

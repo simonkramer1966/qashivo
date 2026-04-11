@@ -27,6 +27,9 @@ import {
   Home,
   HeartPulse,
   Target,
+  ArrowRightLeft,
+  Building2,
+  ShieldCheck,
 } from "lucide-react";
 import {
   Tooltip,
@@ -57,6 +60,7 @@ interface NavPillar {
   href?: string;
   defaultHref?: string; // for collapsed mode: click icon → navigate here
   children?: NavChild[];
+  statusDot?: "green" | "amber" | "red";
 }
 
 const navigationPillars: NavPillar[] = [
@@ -84,7 +88,17 @@ const navigationPillars: NavPillar[] = [
       { name: "Scenarios", href: "/qashflow/scenarios", icon: Sliders },
     ],
   },
-  { label: "Capital", icon: Landmark, href: "/qapital" },
+  {
+    label: "Capital",
+    icon: Landmark,
+    defaultHref: "/qapital/bridge",
+    statusDot: "green",
+    children: [
+      { name: "Bridge", href: "/qapital/bridge", icon: ArrowRightLeft, exact: true },
+      { name: "Facility", href: "/qapital/facility", icon: Building2 },
+      { name: "Pre-authorisation", href: "/qapital/pre-authorisation", icon: ShieldCheck },
+    ],
+  },
   { label: "Agent Team", icon: Bot, href: "/agent-team" },
   {
     label: "Settings",
@@ -438,7 +452,17 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
                       isPillarActive ? "text-[hsl(var(--sidebar-primary))]" : ""
                     )}
                   />
-                  <span className="flex-1 text-left">{pillar.label}</span>
+                  <span className="flex-1 text-left flex items-center gap-1.5">
+                    {pillar.label}
+                    {pillar.statusDot && (
+                      <span className={cn(
+                        "w-2 h-2 rounded-full",
+                        pillar.statusDot === "green" && "bg-emerald-400",
+                        pillar.statusDot === "amber" && "bg-amber-400",
+                        pillar.statusDot === "red" && "bg-red-400",
+                      )} />
+                    )}
+                  </span>
                   {isExpanded ? (
                     <ChevronDown className="w-3.5 h-3.5 opacity-50" />
                   ) : (

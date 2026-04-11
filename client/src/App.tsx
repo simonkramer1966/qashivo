@@ -43,6 +43,9 @@ const QashflowWeeklyReview = lazy(() => import("@/pages/qashflow/WeeklyReview"))
 const QashflowForecast = lazy(() => import("@/pages/cashflow/forecast"));
 const QashflowPage = lazy(() => import("@/pages/qashflow/index"));
 const QapitalPage = lazy(() => import("@/pages/qapital/index"));
+const QapitalBridge = lazy(() => import("@/pages/qapital/bridge"));
+const QapitalFacility = lazy(() => import("@/pages/qapital/facility"));
+const QapitalPreAuth = lazy(() => import("@/pages/qapital/pre-authorisation"));
 const AgentTeamPage = lazy(() => import("@/pages/agent-team/index"));
 // Pillar pages — Settings
 const SettingsAgentPersonas = lazy(() => import("@/pages/settings/agent-personas"));
@@ -265,7 +268,10 @@ function Router() {
           <Route path="/qashflow/scenarios" component={QashflowPage} />
           <Route path="/qashflow/cashflow" component={QashflowPage} />
           <Route path="/qashflow" component={QashflowWeeklyReview} />
-          <Route path="/qapital" component={QapitalPage} />
+          <Route path="/qapital/bridge" component={QapitalBridge} />
+          <Route path="/qapital/facility" component={QapitalFacility} />
+          <Route path="/qapital/pre-authorisation" component={QapitalPreAuth} />
+          <Route path="/qapital" component={QapitalBridge} />
           <Route path="/agent-team" component={AgentTeamPage} />
 
           {/* Pillar routes — Settings */}
