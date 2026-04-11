@@ -383,22 +383,13 @@ export default function BridgePage() {
 
         {/* Section 1: Cash gap banner */}
         {gapInfo && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-5">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
-              <div className="space-y-1">
-                <p className="text-sm font-semibold text-amber-900">
-                  Cash gap detected in Week {gapInfo.weekNumber} (w/c {gapInfo.weekLabel})
-                </p>
-                <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-amber-800">
-                  <span>Pessimistic scenario: <span className="font-medium">{fmtSigned(gapInfo.pessimisticBalance)}</span></span>
-                  <span>Expected scenario: <span className="font-medium">{fmt(gapInfo.expectedBalance)}</span></span>
-                </div>
-                <p className="text-sm font-medium text-amber-900">
-                  Gap to cover: {fmt(gapInfo.gapAmount)} <span className="font-normal text-amber-700">(to maintain {fmt(gapInfo.safetyThreshold)} safety threshold)</span>
-                </p>
-              </div>
-            </div>
+          <div className="rounded-lg border border-amber-200 bg-amber-50/50 px-4 py-3 flex items-center gap-2 text-sm text-amber-900">
+            <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+            <span>
+              Cash gap of <span className="font-semibold">{fmt(gapInfo.gapAmount)}</span> detected in Week {gapInfo.weekNumber} (w/c {gapInfo.weekLabel})
+              {" · "}Pessimistic: <span className="font-medium">{fmtSigned(gapInfo.pessimisticBalance)}</span>
+              {" · "}Expected: <span className="font-medium">{fmt(gapInfo.expectedBalance)}</span>
+            </span>
           </div>
         )}
 
