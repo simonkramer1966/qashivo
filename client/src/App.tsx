@@ -28,7 +28,7 @@ const SmeOnboarding = lazy(() => import("@/pages/sme-onboarding"));
 const QashivoAdminDashboard = lazy(() => import("@/pages/qashivo-admin"));
 const InvestorInterest = lazy(() => import("@/pages/investor-interest"));
 
-const HomeDashboard = lazy(() => import("@/pages/home"));
+const HomeDashboard = lazy(() => import("@/pages/Home"));
 
 // Pillar pages — Qollections
 const QollectionsDashboard = lazy(() => import("@/pages/qollections/dashboard"));
