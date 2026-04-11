@@ -1062,18 +1062,17 @@ export default function ForecastPage() {
                 tick={{ fontSize: 11 }}
                 tickFormatter={(v) => `£${(v / 1000).toFixed(0)}k`}
                 width={55}
+                allowDataOverflow
               />
               <Tooltip content={<BalanceTooltip />} />
-              {/* Negative territory — faint red fill below zero */}
-              {Math.min(...chartData.map(d => d.pessimisticBalance)) < 0 && (
-                <ReferenceArea
-                  y1={0}
-                  y2={Math.min(...chartData.map(d => d.pessimisticBalance)) * 1.1}
-                  fill="rgba(220,38,38,0.08)"
-                  fillOpacity={1}
-                  isFront={false}
-                />
-              )}
+              {/* Negative territory — faint red fill below zero, extends to chart bottom */}
+              <ReferenceArea
+                y1={0}
+                y2={-999_999}
+                fill="rgba(220,38,38,0.08)"
+                fillOpacity={1}
+                isFront={false}
+              />
               {/* Confidence band (pessimistic to optimistic range) */}
               <Area
                 dataKey="balanceBand"
