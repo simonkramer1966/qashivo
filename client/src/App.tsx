@@ -28,6 +28,8 @@ const SmeOnboarding = lazy(() => import("@/pages/sme-onboarding"));
 const QashivoAdminDashboard = lazy(() => import("@/pages/qashivo-admin"));
 const InvestorInterest = lazy(() => import("@/pages/investor-interest"));
 
+const HomeDashboard = lazy(() => import("@/pages/home"));
+
 // Pillar pages — Qollections
 const QollectionsDashboard = lazy(() => import("@/pages/qollections/dashboard"));
 const QollectionsDebtors = lazy(() => import("@/pages/qollections/debtors"));
@@ -249,15 +251,16 @@ function Router() {
         <SyncStatusProvider>
         <AgentNotificationProvider>
         <Switch>
-          {/* Auth redirects — already signed in, go to dashboard */}
-          <Route path="/login">{() => <Redirect to="/qollections" />}</Route>
-          <Route path="/signup">{() => <Redirect to="/qollections" />}</Route>
-          <Route path="/signin">{() => <Redirect to="/qollections" />}</Route>
-          {/* Old marketing paths → redirect to dashboard */}
-          <Route path="/home">{() => <Redirect to="/qollections" />}</Route>
-          <Route path="/homepage">{() => <Redirect to="/qollections" />}</Route>
-          <Route path="/product">{() => <Redirect to="/qollections" />}</Route>
-          <Route path="/partners">{() => <Redirect to="/qollections" />}</Route>
+          {/* Auth redirects — already signed in, go to home */}
+          <Route path="/login">{() => <Redirect to="/home" />}</Route>
+          <Route path="/signup">{() => <Redirect to="/home" />}</Route>
+          <Route path="/signin">{() => <Redirect to="/home" />}</Route>
+          {/* Three-pillar home dashboard */}
+          <Route path="/home" component={HomeDashboard} />
+          {/* Old marketing paths → redirect to home */}
+          <Route path="/homepage">{() => <Redirect to="/home" />}</Route>
+          <Route path="/product">{() => <Redirect to="/home" />}</Route>
+          <Route path="/partners">{() => <Redirect to="/home" />}</Route>
           {/* Marketing pages (accessible when authenticated too) */}
           <Route path="/features" component={MarketingFeatures} />
           <Route path="/why-qashivo" component={MarketingWhyQashivo} />
@@ -336,8 +339,8 @@ function Router() {
             return Component ? <Component /> : <Redirect to="/investors" />;
           }}</Route>
 
-          {/* Home → Qollections Dashboard */}
-          <Route path="/" component={QollectionsDashboard} />
+          {/* Home → Three-pillar dashboard */}
+          <Route path="/" component={HomeDashboard} />
           <Route path="/:rest*" component={NotFound} />
         </Switch>
         <FloatingRileyChat />

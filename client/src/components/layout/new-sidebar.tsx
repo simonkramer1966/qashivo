@@ -64,7 +64,7 @@ interface NavPillar {
 }
 
 const navigationPillars: NavPillar[] = [
-  { label: "Home", icon: Home, href: "/" },
+  { label: "Home", icon: Home, href: "/home" },
   {
     label: "Qollections",
     icon: ClipboardList,
