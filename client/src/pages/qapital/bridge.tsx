@@ -62,6 +62,7 @@ const ADVANCE_RATE = 0.80;
 const MONTHLY_INTEREST_RATE = 0.035; // 3.5% per month
 const DAILY_INTEREST_RATE = MONTHLY_INTEREST_RATE / 30;
 const FEE_PER_INVOICE = 50;
+const MIN_INVOICE_AMOUNT = 500; // Exclude invoices below £500 — £50 fee on a £100 invoice is never efficient
 
 // ── Derived invoice type for bridge selection ──────────────────
 
@@ -152,7 +153,7 @@ function buildBridgeInvoices(
   const invoiceMap = new Map<string, InvoiceContribution>();
   for (const wf of forecast.weeklyForecasts) {
     for (const ic of wf.invoiceBreakdown) {
-      if (ic.amountDue > 0 && !invoiceMap.has(ic.invoiceId)) {
+      if (ic.amountDue >= MIN_INVOICE_AMOUNT && !invoiceMap.has(ic.invoiceId)) {
         invoiceMap.set(ic.invoiceId, ic);
       }
     }
@@ -184,28 +185,37 @@ function buildBridgeInvoices(
     });
   }
 
-  // Mark blind picks (largest by amount)
+  // ── Blind selection: fewest largest invoices to cover gap ───
   const blindSorted = [...all].sort((a, b) => b.amountDue - a.amountDue);
   let blindSum = 0;
   for (const inv of blindSorted) {
-    if (blindSum >= gapAmount && blindSum > 0) break;
+    if (blindSum >= gapAmount) break;
     inv.isBlindPick = true;
     blindSum += inv.advance;
   }
 
-  // Mark Riley recommendations (lowest cost to cover gap — optimised by duration × risk)
-  const rileySorted = [...all].sort((a, b) => a.totalCost - b.totalCost);
+  // ── Qashivo optimised: lowest cost-efficiency (cost per £ advanced) ───
+  // Sort by cost-efficiency ascending — invoices where debtor pays fast
+  // and risk is low rank highest. This ensures the FEWEST invoices at
+  // the LOWEST total cost, not just the cheapest absolute invoices.
+  const rileySorted = [...all].sort((a, b) => {
+    const effA = a.totalCost / a.advance;
+    const effB = b.totalCost / b.advance;
+    return effA - effB;
+  });
   let rileySum = 0;
   for (const inv of rileySorted) {
-    if (rileySum >= gapAmount && rileySum > 0) break;
+    if (rileySum >= gapAmount) break;
     inv.isRileyRecommended = true;
     rileySum += inv.advance;
   }
 
-  // Sort: Riley recommended first, then by amount desc
+  // Sort: Riley recommended first, then by cost-efficiency ascending
   all.sort((a, b) => {
     if (a.isRileyRecommended !== b.isRileyRecommended) return a.isRileyRecommended ? -1 : 1;
-    return b.amountDue - a.amountDue;
+    const effA = a.totalCost / a.advance;
+    const effB = b.totalCost / b.advance;
+    return effA - effB;
   });
 
   return all;
