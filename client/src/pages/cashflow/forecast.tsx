@@ -983,7 +983,7 @@ export default function ForecastPage() {
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium">
-            Running Balance
+            13w Qashflow Forecast
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -1357,7 +1357,7 @@ export default function ForecastPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">
-              Cashflow Grid
+              Cashflow Detail
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
