@@ -52,6 +52,7 @@ const SettingsAgentPersonas = lazy(() => import("@/pages/settings/agent-personas
 const SettingsAutonomyRules = lazy(() => import("@/pages/settings/autonomy-rules"));
 const SettingsIntegrations = lazy(() => import("@/pages/settings/integrations"));
 const SettingsUsersRoles = lazy(() => import("@/pages/settings/users-roles"));
+const SettingsTeam = lazy(() => import("@/pages/settings/team"));
 const SettingsBilling = lazy(() => import("@/pages/settings/billing"));
 const SettingsDataHealth = lazy(() => import("@/pages/settings/data-health"));
 const InvestorsHome = lazy(() => import("@/pages/investors/index"));
@@ -278,6 +279,7 @@ function Router() {
           <Route path="/settings/agent-personas" component={SettingsAgentPersonas} />
           <Route path="/settings/autonomy-rules" component={SettingsAutonomyRules} />
           <Route path="/settings/integrations" component={SettingsIntegrations} />
+          <Route path="/settings/team" component={SettingsTeam} />
           <Route path="/settings/users-roles" component={SettingsUsersRoles} />
           <Route path="/settings/billing" component={SettingsBilling} />
           <Route path="/settings/data-health" component={SettingsDataHealth} />

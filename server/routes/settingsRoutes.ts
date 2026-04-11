@@ -20,6 +20,7 @@ import {
   tenants, paymentPromises, promisesToPay, smeClients, contactNotes, timelineEvents,
   attentionItems, outcomes, activityLogs, collectionPolicies, paymentPlans,
   emailMessages, customerContactPersons, scheduledReports,
+  userInvitations, userDelegations, ownerFailsafe, users,
 } from "@shared/schema";
 import { computeNextRunAt } from "../services/reportScheduler";
 import { REPORT_TYPE_LABELS, type ReportType } from "../services/reportGenerator";
@@ -45,6 +46,7 @@ import { subscriptionService } from "../services/subscriptionService";
 import { getDashboardMetrics } from "../services/metricsService";
 import { computeCashInflow } from "../services/dashboardCashInflowService";
 import { PermissionService } from "../services/permissionService";
+import { logAuditFromReq } from "../services/auditLogService";
 import { signalCollector } from "../lib/signal-collector";
 import { getAssignedContactIds, hasContactAccess } from "./routeHelpers";
 
@@ -658,22 +660,36 @@ export async function registerSettingsRoutes(app: Express): Promise<void> {
         return res.status(400).json({ valid: false, message: "Token is required" });
       }
 
-      const allTenants = await storage.getAllTenants();
-      for (const tenant of allTenants) {
-        const settings = tenant.settings as any || {};
-        const invitations = settings.invitations || [];
-        const invitation = invitations.find((inv: any) => inv.inviteToken === token && inv.status === 'pending');
-        if (invitation) {
-          return res.json({
-            valid: true,
-            email: invitation.email,
-            role: invitation.role,
-            tenantName: tenant.name,
-          });
-        }
+      const rows = await db
+        .select({
+          email: userInvitations.email,
+          role: userInvitations.role,
+          expiresAt: userInvitations.expiresAt,
+          tenantName: tenants.name,
+        })
+        .from(userInvitations)
+        .innerJoin(tenants, eq(tenants.id, userInvitations.tenantId))
+        .where(and(
+          eq(userInvitations.token, token),
+          eq(userInvitations.status, 'pending'),
+        ))
+        .limit(1);
+
+      if (rows.length === 0) {
+        return res.json({ valid: false, message: "Invalid or expired invitation" });
       }
 
-      return res.json({ valid: false, message: "Invalid or expired invitation" });
+      const inv = rows[0];
+      if (inv.expiresAt && new Date(inv.expiresAt) < new Date()) {
+        return res.json({ valid: false, message: "Invalid or expired invitation" });
+      }
+
+      return res.json({
+        valid: true,
+        email: inv.email,
+        role: inv.role,
+        tenantName: inv.tenantName,
+      });
     } catch (error) {
       console.error("Error verifying invitation:", error);
       res.status(500).json({ valid: false, message: "Failed to verify invitation" });
@@ -797,27 +813,69 @@ export async function registerSettingsRoutes(app: Express): Promise<void> {
     }
   });
 
-  app.delete("/api/rbac/users/:userId", ...withRole('owner'), canManageUser(), async (req: any, res) => {
+  app.delete("/api/rbac/users/:userId", isAuthenticated, withRBACContext, canManageUser(), async (req: any, res) => {
     try {
       const { userId } = req.params;
-      const { userId: actorId, tenantId } = req.rbac;
-      
+      const { userId: actorId, tenantId, tenantRole: actorTenantRole } = req.rbac;
+
       // Cannot remove yourself
       if (userId === actorId) {
         return res.status(400).json({ message: "Cannot remove yourself from the tenant" });
       }
 
-      // Set user's tenantId to null to remove them from the tenant
-      await storage.updateUser(userId, { tenantId: null });
-      
-      // Log the removal
-      await PermissionService.logPermissionChange(
-        actorId,
-        userId,
-        tenantId,
-        'role_change',
-        'User removed from tenant'
-      );
+      // Load target user
+      const targetUser = await storage.getUser(userId);
+      if (!targetUser || targetUser.tenantId !== tenantId) {
+        return res.status(404).json({ message: "User not found in this tenant" });
+      }
+
+      // Gate: owner can remove anyone. Manager can remove controllers they invited.
+      const actorRole = actorTenantRole || req.rbac.userRole;
+      const targetRole = targetUser.tenantRole || targetUser.role;
+      if (actorRole === 'owner') {
+        // allowed
+      } else if (actorRole === 'manager' && targetRole === 'credit_controller' && targetUser.invitedBy === actorId) {
+        // allowed — manager removing controller they invited
+      } else {
+        return res.status(403).json({ message: "You do not have permission to remove this user" });
+      }
+
+      // Soft-remove: keep tenantId, set status to 'removed'
+      await db.update(users).set({
+        status: 'removed',
+        removedAt: new Date(),
+        removedBy: actorId,
+      }).where(eq(users.id, userId));
+
+      // Revoke all active delegations
+      await db.update(userDelegations).set({
+        isActive: false,
+        revokedAt: new Date(),
+        revokedBy: actorId,
+      }).where(and(
+        eq(userDelegations.userId, userId),
+        eq(userDelegations.tenantId, tenantId),
+        eq(userDelegations.isActive, true),
+      ));
+
+      // Audit log
+      logAuditFromReq(req, 'remove_user', 'operational', { type: 'user', id: userId }, {
+        targetEmail: targetUser.email,
+        previousRole: targetRole,
+      });
+
+      // Fire-and-forget removal email
+      try {
+        const tenant = await storage.getTenant(tenantId);
+        const { sendUserRemovedEmail } = await import("../services/email/SendGridEmailService");
+        await sendUserRemovedEmail({
+          email: targetUser.email,
+          tenantName: tenant?.name || 'your organisation',
+          removedByName: req.user?.claims?.email || 'An administrator',
+        });
+      } catch (emailErr: any) {
+        console.error('⚠️ User removed but email notification failed:', emailErr.message);
+      }
 
       res.json({
         success: true,
@@ -832,10 +890,10 @@ export async function registerSettingsRoutes(app: Express): Promise<void> {
   app.get("/api/rbac/role-hierarchy", ...withPermission('admin:users'), async (req: any, res) => {
     try {
       const { userRole } = req.rbac;
-      
+
       const availableRoles = PermissionService.getAvailableRoles();
       const assignableRoles = storage.getAssignableRoles(userRole);
-      
+
       res.json({
         availableRoles,
         assignableRoles,
@@ -845,6 +903,354 @@ export async function registerSettingsRoutes(app: Express): Promise<void> {
     } catch (error) {
       console.error("Error fetching role hierarchy:", error);
       res.status(500).json({ message: "Failed to fetch role hierarchy" });
+    }
+  });
+
+  // ── Team endpoint — single query for Team page ──────────────────────
+
+  app.get("/api/rbac/team", ...withPermission('admin:users'), async (req: any, res) => {
+    try {
+      const { userId: currentUserId, tenantId, tenantRole } = req.rbac;
+      const currentRole = tenantRole || req.rbac.userRole;
+
+      // Batch queries in parallel
+      const [allUsers, pendingInvs, delegations, failsafeRow] = await Promise.all([
+        db.select().from(users).where(eq(users.tenantId, tenantId)).orderBy(users.createdAt),
+        db.select().from(userInvitations).where(and(
+          eq(userInvitations.tenantId, tenantId),
+          eq(userInvitations.status, 'pending'),
+        )).orderBy(desc(userInvitations.invitedAt)),
+        db.select().from(userDelegations).where(and(
+          eq(userDelegations.tenantId, tenantId),
+          eq(userDelegations.isActive, true),
+        )),
+        db.select().from(ownerFailsafe).where(eq(ownerFailsafe.tenantId, tenantId)).limit(1),
+      ]);
+
+      // Group delegations by userId
+      const delegationsByUser = new Map<string, string[]>();
+      for (const d of delegations) {
+        const existing = delegationsByUser.get(d.userId) || [];
+        existing.push(d.permission);
+        delegationsByUser.set(d.userId, existing);
+      }
+
+      // Build inviter name lookup
+      const userMap = new Map(allUsers.map(u => [u.id, u]));
+
+      const activeMembers = allUsers
+        .filter(u => u.status !== 'removed')
+        .map(u => ({
+          id: u.id,
+          email: u.email,
+          firstName: u.firstName,
+          lastName: u.lastName,
+          role: u.tenantRole || u.role,
+          createdAt: u.createdAt,
+          lastActiveAt: u.lastActiveAt,
+          status: 'active' as const,
+          delegations: delegationsByUser.get(u.id) || [],
+          invitedBy: u.invitedBy ? (() => {
+            const inviter = userMap.get(u.invitedBy!);
+            return inviter ? `${inviter.firstName || ''} ${inviter.lastName || ''}`.trim() || inviter.email : null;
+          })() : null,
+          isCurrentUser: u.id === currentUserId,
+        }));
+
+      // Sort: owner first, then by role hierarchy, then name
+      const roleOrder: Record<string, number> = { owner: 0, admin: 1, accountant: 2, manager: 3, credit_controller: 4, readonly: 5 };
+      activeMembers.sort((a, b) => {
+        const ra = roleOrder[a.role] ?? 6;
+        const rb = roleOrder[b.role] ?? 6;
+        if (ra !== rb) return ra - rb;
+        return (a.firstName || a.email).localeCompare(b.firstName || b.email);
+      });
+
+      const pendingInvitations = pendingInvs.map(inv => {
+        const inviter = userMap.get(inv.invitedBy);
+        return {
+          id: inv.id,
+          email: inv.email,
+          role: inv.role,
+          invitedBy: inviter ? { id: inviter.id, name: `${inviter.firstName || ''} ${inviter.lastName || ''}`.trim() || inviter.email } : { id: inv.invitedBy, name: 'Unknown' },
+          invitedAt: inv.invitedAt,
+          expiresAt: inv.expiresAt,
+        };
+      });
+
+      const removedUsers = allUsers
+        .filter(u => u.status === 'removed')
+        .map(u => {
+          const remover = u.removedBy ? userMap.get(u.removedBy) : null;
+          return {
+            id: u.id,
+            email: u.email,
+            firstName: u.firstName,
+            lastName: u.lastName,
+            previousRole: u.tenantRole || u.role,
+            removedAt: u.removedAt,
+            removedBy: remover ? { id: remover.id, name: `${remover.firstName || ''} ${remover.lastName || ''}`.trim() || remover.email } : null,
+          };
+        });
+
+      const failsafe = failsafeRow.length > 0 ? {
+        name: failsafeRow[0].emergencyContactName,
+        email: failsafeRow[0].emergencyContactEmail,
+        phone: failsafeRow[0].emergencyContactPhone,
+        relationship: failsafeRow[0].emergencyContactRelationship,
+      } : null;
+
+      res.json({
+        activeMembers,
+        pendingInvitations,
+        removedUsers,
+        failsafe,
+        currentUserRole: currentRole,
+        assignableRoles: storage.getAssignableRoles(currentRole),
+      });
+    } catch (error) {
+      console.error("Error fetching team data:", error);
+      res.status(500).json({ message: "Failed to fetch team data" });
+    }
+  });
+
+  // ── Delegation endpoints ──────────────────────────────────
+
+  app.get("/api/rbac/users/:userId/delegations", ...withPermission('admin:users'), async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const { tenantId } = req.rbac;
+
+      const activeDelegations = await db
+        .select({ permission: userDelegations.permission })
+        .from(userDelegations)
+        .where(and(
+          eq(userDelegations.userId, userId),
+          eq(userDelegations.tenantId, tenantId),
+          eq(userDelegations.isActive, true),
+        ));
+
+      res.json({ userId, delegations: activeDelegations.map(d => d.permission) });
+    } catch (error) {
+      console.error("Error fetching delegations:", error);
+      res.status(500).json({ message: "Failed to fetch delegations" });
+    }
+  });
+
+  const VALID_DELEGATIONS = ['capital_view', 'capital_request', 'autonomy_access', 'manage_users', 'billing_access'] as const;
+  const ROLE_ALLOWED_DELEGATIONS: Record<string, readonly string[]> = {
+    manager: ['capital_view', 'capital_request', 'autonomy_access'],
+    accountant: ['capital_view', 'capital_request', 'autonomy_access', 'manage_users', 'billing_access'],
+    admin: ['capital_view', 'capital_request', 'autonomy_access', 'manage_users', 'billing_access'],
+  };
+
+  const DELEGATION_LABELS: Record<string, string> = {
+    capital_view: 'Capital pages (Bridge, Facility, Pre-auth)',
+    capital_request: 'Invoice financing requests',
+    autonomy_access: 'Autonomy and communication settings',
+    manage_users: 'User management',
+    billing_access: 'Billing and subscription',
+  };
+
+  app.post("/api/rbac/users/:userId/delegations", isAuthenticated, withRBACContext, async (req: any, res) => {
+    try {
+      const { userId: targetUserId } = req.params;
+      const { userId: actorId, tenantId, tenantRole: actorTenantRole } = req.rbac;
+      const actorRole = actorTenantRole || req.rbac.userRole;
+
+      // Only owner can set delegations
+      if (actorRole !== 'owner') {
+        return res.status(403).json({ message: "Only the account owner can set delegations" });
+      }
+
+      const { delegations } = req.body;
+      if (!Array.isArray(delegations)) {
+        return res.status(400).json({ message: "delegations must be an array of permission strings" });
+      }
+
+      // Validate all delegation keys
+      const invalid = delegations.filter((d: string) => !VALID_DELEGATIONS.includes(d as any));
+      if (invalid.length > 0) {
+        return res.status(400).json({ message: `Invalid delegations: ${invalid.join(', ')}` });
+      }
+
+      // Check target user exists in tenant
+      const targetUser = await storage.getUser(targetUserId);
+      if (!targetUser || targetUser.tenantId !== tenantId) {
+        return res.status(404).json({ message: "User not found in this tenant" });
+      }
+
+      const targetRole = targetUser.tenantRole || targetUser.role;
+      const allowed = ROLE_ALLOWED_DELEGATIONS[targetRole] || [];
+      const notAllowed = delegations.filter((d: string) => !allowed.includes(d));
+      if (notAllowed.length > 0) {
+        return res.status(400).json({ message: `Role ${targetRole} cannot receive: ${notAllowed.join(', ')}` });
+      }
+
+      // Get current active delegations
+      const current = await db
+        .select()
+        .from(userDelegations)
+        .where(and(
+          eq(userDelegations.userId, targetUserId),
+          eq(userDelegations.tenantId, tenantId),
+          eq(userDelegations.isActive, true),
+        ));
+
+      const currentPerms = new Set(current.map(d => d.permission));
+      const desiredPerms = new Set(delegations as string[]);
+
+      // Grants: in desired but not current
+      const toGrant = delegations.filter((d: string) => !currentPerms.has(d));
+      // Revocations: in current but not desired
+      const toRevoke = current.filter(d => !desiredPerms.has(d.permission));
+
+      const now = new Date();
+
+      // Insert grants
+      for (const perm of toGrant) {
+        await db.insert(userDelegations).values({
+          tenantId,
+          userId: targetUserId,
+          permission: perm,
+          grantedBy: actorId,
+          grantedAt: now,
+          isActive: true,
+        });
+        logAuditFromReq(req, 'delegate_permission', 'operational', { type: 'delegation', id: targetUserId }, {
+          permission: perm, action: 'grant', targetEmail: targetUser.email,
+        });
+      }
+
+      // Revoke
+      for (const del of toRevoke) {
+        await db.update(userDelegations).set({
+          isActive: false,
+          revokedAt: now,
+          revokedBy: actorId,
+        }).where(eq(userDelegations.id, del.id));
+        logAuditFromReq(req, 'revoke_permission', 'operational', { type: 'delegation', id: targetUserId }, {
+          permission: del.permission, action: 'revoke', targetEmail: targetUser.email,
+        });
+      }
+
+      // Fire-and-forget email notifications
+      if (toGrant.length > 0 || toRevoke.length > 0) {
+        try {
+          const tenant = await storage.getTenant(tenantId);
+          const { sendDelegationChangedEmail } = await import("../services/email/SendGridEmailService");
+          for (const perm of toGrant) {
+            sendDelegationChangedEmail({
+              email: targetUser.email,
+              tenantName: tenant?.name || 'your organisation',
+              ownerName: req.user?.claims?.email || 'Account owner',
+              action: 'granted',
+              permissionLabel: DELEGATION_LABELS[perm] || perm,
+            }).catch(e => console.error('⚠️ Delegation email failed:', e.message));
+          }
+          for (const del of toRevoke) {
+            sendDelegationChangedEmail({
+              email: targetUser.email,
+              tenantName: tenant?.name || 'your organisation',
+              ownerName: req.user?.claims?.email || 'Account owner',
+              action: 'removed',
+              permissionLabel: DELEGATION_LABELS[del.permission] || del.permission,
+            }).catch(e => console.error('⚠️ Delegation email failed:', e.message));
+          }
+        } catch (emailErr: any) {
+          console.error('⚠️ Delegation email setup failed:', emailErr.message);
+        }
+      }
+
+      res.json({ delegations: delegations as string[] });
+    } catch (error) {
+      console.error("Error updating delegations:", error);
+      res.status(500).json({ message: "Failed to update delegations" });
+    }
+  });
+
+  // ── Failsafe endpoints ──────────────────────────────────
+
+  app.get("/api/rbac/failsafe", isAuthenticated, withRBACContext, async (req: any, res) => {
+    try {
+      const actorRole = req.rbac.tenantRole || req.rbac.userRole;
+      if (actorRole !== 'owner') {
+        return res.status(403).json({ message: "Only the account owner can view the failsafe contact" });
+      }
+
+      const { tenantId } = req.rbac;
+      const [row] = await db.select().from(ownerFailsafe).where(eq(ownerFailsafe.tenantId, tenantId)).limit(1);
+
+      if (!row) {
+        return res.json(null);
+      }
+
+      res.json({
+        name: row.emergencyContactName,
+        email: row.emergencyContactEmail,
+        phone: row.emergencyContactPhone,
+        relationship: row.emergencyContactRelationship,
+      });
+    } catch (error) {
+      console.error("Error fetching failsafe:", error);
+      res.status(500).json({ message: "Failed to fetch failsafe" });
+    }
+  });
+
+  app.post("/api/rbac/failsafe", isAuthenticated, withRBACContext, async (req: any, res) => {
+    try {
+      const actorRole = req.rbac.tenantRole || req.rbac.userRole;
+      if (actorRole !== 'owner') {
+        return res.status(403).json({ message: "Only the account owner can set the failsafe contact" });
+      }
+
+      const { tenantId, userId } = req.rbac;
+      const { emergencyContactName, emergencyContactEmail, emergencyContactPhone, emergencyContactRelationship } = req.body;
+
+      if (!emergencyContactName || !emergencyContactEmail) {
+        return res.status(400).json({ message: "Name and email are required" });
+      }
+
+      // Upsert — ownerFailsafe has unique(tenantId)
+      const existing = await db.select({ id: ownerFailsafe.id }).from(ownerFailsafe).where(eq(ownerFailsafe.tenantId, tenantId)).limit(1);
+
+      const now = new Date();
+      if (existing.length > 0) {
+        await db.update(ownerFailsafe).set({
+          emergencyContactName,
+          emergencyContactEmail,
+          emergencyContactPhone: emergencyContactPhone || null,
+          emergencyContactRelationship: emergencyContactRelationship || null,
+          setBy: userId,
+          updatedAt: now,
+        }).where(eq(ownerFailsafe.id, existing[0].id));
+      } else {
+        await db.insert(ownerFailsafe).values({
+          tenantId,
+          emergencyContactName,
+          emergencyContactEmail,
+          emergencyContactPhone: emergencyContactPhone || null,
+          emergencyContactRelationship: emergencyContactRelationship || null,
+          setBy: userId,
+          setAt: now,
+          updatedAt: now,
+        });
+      }
+
+      logAuditFromReq(req, 'set_failsafe', 'operational', { type: 'failsafe' }, {
+        contactName: emergencyContactName,
+        contactEmail: emergencyContactEmail,
+      });
+
+      res.json({
+        name: emergencyContactName,
+        email: emergencyContactEmail,
+        phone: emergencyContactPhone || null,
+        relationship: emergencyContactRelationship || null,
+      });
+    } catch (error) {
+      console.error("Error saving failsafe:", error);
+      res.status(500).json({ message: "Failed to save failsafe" });
     }
   });
 

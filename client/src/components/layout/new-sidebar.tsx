@@ -109,7 +109,7 @@ const navigationPillars: NavPillar[] = [
       { name: "Autonomy & Rules", href: "/settings/autonomy-rules", icon: Sliders },
       { name: "Data Health", href: "/settings/data-health", icon: HeartPulse },
       { name: "Integrations", href: "/settings/integrations", icon: Link },
-      { name: "Users & Roles", href: "/settings/users-roles", icon: Users },
+      { name: "Team", href: "/settings/team", icon: Users },
       { name: "Billing", href: "/settings/billing", icon: Receipt },
     ],
   },

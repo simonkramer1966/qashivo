@@ -30,6 +30,9 @@ import {
   globalTemplates,
   tenantTemplates,
   activityLogs,
+  userInvitations,
+  userDelegations,
+  ownerFailsafe,
   type User,
   type UpsertUser,
   type Tenant,
@@ -3522,136 +3525,106 @@ export class DatabaseStorage implements IStorage {
     return roleHierarchy.slice(0, userLevel);
   }
 
-  // User invitation system (simplified implementation)
-  async createUserInvitation(invitation: { 
-    email: string; 
-    role: string; 
-    tenantId: string; 
-    invitedBy: string; 
+  // User invitation system — backed by userInvitations table (Phase 2)
+  async createUserInvitation(invitation: {
+    email: string;
+    role: string;
+    tenantId: string;
+    invitedBy: string;
   }): Promise<{ id: string; inviteToken: string }> {
-    // For now, we'll create a simple invitation system using a simple approach
-    // In a full implementation, you'd want a dedicated invitations table
-    
-    const inviteToken = crypto.randomUUID();
-    const invitationId = crypto.randomUUID();
-    
-    // Store invitation in tenant settings (temporary approach)
-    const tenant = await this.getTenant(invitation.tenantId);
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const token = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
-    const existingSettings = tenant.settings as any || {};
-    const invitations = existingSettings.invitations || [];
-    
-    const newInvitation = {
-      id: invitationId,
-      email: invitation.email,
-      role: invitation.role,
-      invitedBy: invitation.invitedBy,
-      inviteToken,
-      createdAt: new Date(),
-      status: 'pending'
-    };
-
-    invitations.push(newInvitation);
-    
-    await this.updateTenant(invitation.tenantId, {
-      settings: {
-        ...existingSettings,
-        invitations
-      }
-    });
+    const [row] = await db
+      .insert(userInvitations)
+      .values({
+        tenantId: invitation.tenantId,
+        email: invitation.email,
+        role: invitation.role,
+        invitedBy: invitation.invitedBy,
+        token,
+        expiresAt,
+        status: 'pending',
+      })
+      .returning();
 
     console.log(`📧 RBAC: Invitation created for ${invitation.email} as ${invitation.role} by ${invitation.invitedBy}`);
-    
-    return { id: invitationId, inviteToken };
+
+    return { id: row.id, inviteToken: row.token };
   }
 
-  async acceptUserInvitation(inviteToken: string, userData: { 
-    firstName?: string; 
+  async acceptUserInvitation(inviteToken: string, userData: {
+    firstName?: string;
     lastName?: string;
-    password?: string; 
+    password?: string;
   }): Promise<User> {
-    // Find invitation across all tenants
-    const allTenants = await this.getAllTenants();
-    let foundInvitation: any = null;
-    let tenantId: string = '';
+    // Find pending invitation by token
+    const [invitation] = await db
+      .select()
+      .from(userInvitations)
+      .where(and(
+        eq(userInvitations.token, inviteToken),
+        eq(userInvitations.status, 'pending'),
+      ))
+      .limit(1);
 
-    for (const tenant of allTenants) {
-      const settings = tenant.settings as any || {};
-      const invitations = settings.invitations || [];
-      
-      const invitation = invitations.find((inv: any) => inv.inviteToken === inviteToken && inv.status === 'pending');
-      if (invitation) {
-        foundInvitation = invitation;
-        tenantId = tenant.id;
-        break;
-      }
-    }
-
-    if (!foundInvitation) {
+    if (!invitation) {
       throw new Error('Invalid or expired invitation token');
     }
 
-    // Create user with invitation details including password
+    // Check expiry
+    if (invitation.expiresAt && new Date(invitation.expiresAt) < new Date()) {
+      await db.update(userInvitations).set({ status: 'expired' }).where(eq(userInvitations.id, invitation.id));
+      throw new Error('Invalid or expired invitation token');
+    }
+
+    // Create user with invitation details
+    const now = new Date();
     const newUser = await this.upsertUser({
       id: crypto.randomUUID(),
-      email: foundInvitation.email,
+      email: invitation.email,
       firstName: userData.firstName || '',
       lastName: userData.lastName || '',
       password: userData.password || '',
-      tenantId,
-      role: foundInvitation.role,
+      tenantId: invitation.tenantId,
+      role: invitation.role,
     });
+
+    // Set RBAC fields on user
+    await db.update(users).set({
+      tenantRole: invitation.role,
+      invitedBy: invitation.invitedBy,
+      invitedAt: invitation.invitedAt,
+      acceptedAt: now,
+      status: 'active',
+    }).where(eq(users.id, newUser.id));
 
     // Mark invitation as accepted
-    const tenant = await this.getTenant(tenantId);
-    const settings = tenant!.settings as any || {};
-    const invitations = settings.invitations || [];
-    
-    const updatedInvitations = invitations.map((inv: any) => 
-      inv.id === foundInvitation.id ? { ...inv, status: 'accepted', acceptedAt: new Date() } : inv
-    );
+    await db.update(userInvitations).set({
+      status: 'accepted',
+      acceptedAt: now,
+    }).where(eq(userInvitations.id, invitation.id));
 
-    await this.updateTenant(tenantId, {
-      settings: {
-        ...settings,
-        invitations: updatedInvitations
-      }
-    });
+    console.log(`✅ RBAC: Invitation accepted by ${invitation.email} as ${invitation.role}`);
 
-    console.log(`✅ RBAC: Invitation accepted by ${foundInvitation.email} as ${foundInvitation.role}`);
-    
-    return newUser;
+    return { ...newUser, tenantRole: invitation.role, status: 'active', acceptedAt: now } as User;
   }
 
   async revokeUserInvitation(invitationId: string): Promise<void> {
-    // Find and revoke invitation across all tenants
-    const allTenants = await this.getAllTenants();
-    
-    for (const tenant of allTenants) {
-      const settings = tenant.settings as any || {};
-      const invitations = settings.invitations || [];
-      
-      const invitationIndex = invitations.findIndex((inv: any) => inv.id === invitationId);
-      if (invitationIndex !== -1) {
-        invitations[invitationIndex].status = 'revoked';
-        invitations[invitationIndex].revokedAt = new Date();
-        
-        await this.updateTenant(tenant.id, {
-          settings: {
-            ...settings,
-            invitations
-          }
-        });
+    const result = await db
+      .update(userInvitations)
+      .set({ status: 'revoked' })
+      .where(and(
+        eq(userInvitations.id, invitationId),
+        eq(userInvitations.status, 'pending'),
+      ))
+      .returning({ id: userInvitations.id });
 
-        console.log(`🔐 RBAC: Invitation ${invitationId} revoked`);
-        return;
-      }
+    if (result.length === 0) {
+      throw new Error('Invitation not found');
     }
 
-    throw new Error('Invitation not found');
+    console.log(`🔐 RBAC: Invitation ${invitationId} revoked`);
   }
 
   async getPendingInvitations(tenantId: string): Promise<{
@@ -3661,23 +3634,26 @@ export class DatabaseStorage implements IStorage {
     invitedBy: string;
     createdAt: Date;
   }[]> {
-    const tenant = await this.getTenant(tenantId);
-    if (!tenant) {
-      return [];
-    }
+    const rows = await db
+      .select({
+        id: userInvitations.id,
+        email: userInvitations.email,
+        role: userInvitations.role,
+        invitedBy: userInvitations.invitedBy,
+        createdAt: userInvitations.invitedAt,
+      })
+      .from(userInvitations)
+      .where(and(
+        eq(userInvitations.tenantId, tenantId),
+        eq(userInvitations.status, 'pending'),
+      ))
+      .orderBy(desc(userInvitations.invitedAt));
 
-    const settings = tenant.settings as any || {};
-    const invitations = settings.invitations || [];
-    
-    return invitations
-      .filter((inv: any) => inv.status === 'pending')
-      .map((inv: any) => ({
-        id: inv.id,
-        email: inv.email,
-        role: inv.role,
-        invitedBy: inv.invitedBy,
-        createdAt: new Date(inv.createdAt),
-      }));
+    return rows.map(r => ({
+      ...r,
+      invitedBy: r.invitedBy,
+      createdAt: r.createdAt ?? new Date(),
+    }));
   }
 
   // Action Centre operations implementations

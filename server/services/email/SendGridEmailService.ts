@@ -687,3 +687,110 @@ export async function sendPasswordResetEmail(email: string, resetToken: string):
 
   console.log(`✅ Password reset email sent to ${email}`);
 }
+
+export async function sendDelegationChangedEmail(params: {
+  email: string;
+  tenantName: string;
+  ownerName: string;
+  action: 'granted' | 'removed';
+  permissionLabel: string;
+}): Promise<void> {
+  const { email, tenantName, ownerName, action, permissionLabel } = params;
+
+  const apiKey = process.env.SENDGRID_API_KEY;
+  if (!apiKey) {
+    console.error('❌ SENDGRID_API_KEY not configured — delegation email cannot be sent');
+    return;
+  }
+
+  const config: EmailServiceConfig = {
+    provider: 'sendgrid',
+    apiKey,
+    defaultFrom: {
+      email: process.env.SENDGRID_FROM_EMAIL || 'cc@qashivo.com',
+      name: process.env.SENDGRID_FROM_NAME || 'Qashivo'
+    },
+    maxRetries: 2,
+    retryDelay: 1000
+  };
+
+  const verb = action === 'granted' ? 'granted' : 'removed';
+  const preposition = action === 'granted' ? 'to' : 'from';
+  const emailService = new SendGridEmailService(config);
+
+  await emailService.sendEmail({
+    to: [{ email }],
+    subject: `Access updated — ${tenantName} on Qashivo`,
+    html: `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 0; color: #0B0F17;">
+        <div style="padding: 32px 0 24px 0; border-bottom: 1px solid #E6E8EC;">
+          <h1 style="font-size: 20px; font-weight: 600; margin: 0 0 4px 0; color: #0B0F17;">Qashivo</h1>
+          <p style="font-size: 13px; color: #556070; margin: 0;">Intelligent Credit Control</p>
+        </div>
+        <div style="padding: 32px 0;">
+          <h2 style="font-size: 18px; font-weight: 600; margin: 0 0 12px 0; color: #0B0F17;">Your access has been updated</h2>
+          <p style="font-size: 14px; line-height: 1.6; color: #556070; margin: 0 0 8px 0;">
+            <strong>${ownerName}</strong> has ${verb} your access ${preposition} <strong>${permissionLabel}</strong> on ${tenantName}.
+          </p>
+        </div>
+        <div style="padding: 20px 0 0 0; border-top: 1px solid #E6E8EC;">
+          <p style="font-size: 12px; color: #8C95A3; margin: 0;">If you have questions, contact your account owner.</p>
+        </div>
+      </div>
+    `,
+    text: `Access updated — ${tenantName} on Qashivo\n\n${ownerName} has ${verb} your access ${preposition} ${permissionLabel} on ${tenantName}.\n\nIf you have questions, contact your account owner.`
+  });
+}
+
+export async function sendUserRemovedEmail(params: {
+  email: string;
+  tenantName: string;
+  removedByName: string;
+}): Promise<void> {
+  const { email, tenantName, removedByName } = params;
+
+  const apiKey = process.env.SENDGRID_API_KEY;
+  if (!apiKey) {
+    console.error('❌ SENDGRID_API_KEY not configured — removal email cannot be sent');
+    return;
+  }
+
+  const config: EmailServiceConfig = {
+    provider: 'sendgrid',
+    apiKey,
+    defaultFrom: {
+      email: process.env.SENDGRID_FROM_EMAIL || 'cc@qashivo.com',
+      name: process.env.SENDGRID_FROM_NAME || 'Qashivo'
+    },
+    maxRetries: 2,
+    retryDelay: 1000
+  };
+
+  const emailService = new SendGridEmailService(config);
+
+  await emailService.sendEmail({
+    to: [{ email }],
+    subject: `Access removed — ${tenantName} on Qashivo`,
+    html: `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 0; color: #0B0F17;">
+        <div style="padding: 32px 0 24px 0; border-bottom: 1px solid #E6E8EC;">
+          <h1 style="font-size: 20px; font-weight: 600; margin: 0 0 4px 0; color: #0B0F17;">Qashivo</h1>
+          <p style="font-size: 13px; color: #556070; margin: 0;">Intelligent Credit Control</p>
+        </div>
+        <div style="padding: 32px 0;">
+          <h2 style="font-size: 18px; font-weight: 600; margin: 0 0 12px 0; color: #0B0F17;">Your access has been removed</h2>
+          <p style="font-size: 14px; line-height: 1.6; color: #556070; margin: 0 0 8px 0;">
+            Your access to <strong>${tenantName}</strong> has been removed by <strong>${removedByName}</strong>.
+          </p>
+          <p style="font-size: 14px; line-height: 1.6; color: #556070; margin: 0 0 8px 0;">
+            You will no longer be able to sign in to this account. If you believe this was a mistake, please contact your administrator.
+          </p>
+        </div>
+        <div style="padding: 20px 0 0 0; border-top: 1px solid #E6E8EC;">
+          <p style="font-size: 12px; color: #8C95A3; margin: 0;">This is an automated notification from Qashivo.</p>
+        </div>
+      </div>
+    `,
+    text: `Access removed — ${tenantName} on Qashivo\n\nYour access to ${tenantName} has been removed by ${removedByName}.\n\nYou will no longer be able to sign in to this account. If you believe this was a mistake, please contact your administrator.`
+  });
+}
