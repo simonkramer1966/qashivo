@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import AppShell from "@/components/layout/app-shell";
@@ -389,6 +390,30 @@ export default function ForecastPage() {
     enabled: !!forecast,
   });
 
+  // Cash gap alerts
+  const [, setLocation] = useLocation();
+  interface CashGapAlert {
+    id: string;
+    gapWeek: number;
+    weekStarting: string;
+    gapAmount: string;
+    pessimisticBalance: string;
+    safetyThreshold: string;
+    dismissed: boolean;
+  }
+  const { data: cashGapAlerts = [] } = useQuery<CashGapAlert[]>({
+    queryKey: ["/api/cashflow/cash-gap-alerts"],
+    staleTime: 5 * 60 * 1000,
+    enabled: !!forecast,
+  });
+  const dismissAlertMutation = useMutation({
+    mutationFn: (alertId: string) =>
+      apiRequest("PATCH", `/api/cashflow/cash-gap-alerts/${alertId}/dismiss`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/cashflow/cash-gap-alerts"] });
+    },
+  });
+
   const [inflowsExpanded, setInflowsExpanded] = useState(true);
   const [outflowsExpanded, setOutflowsExpanded] = useState(true);
   const [editingCell, setEditingCell] = useState<{ category: string; week: number } | null>(null);
@@ -691,6 +716,42 @@ export default function ForecastPage() {
   return (
     <AppShell title="Qashflow" subtitle="Cash flow forecast">
     <div className="space-y-6">
+      {/* Cash Gap Alert Banner */}
+      {cashGapAlerts.length > 0 && (() => {
+        const alert = cashGapAlerts[0];
+        const gap = Number(alert.gapAmount);
+        const weekLabel = (() => {
+          try {
+            const d = new Date(alert.weekStarting);
+            return `w/c ${d.getDate()} ${d.toLocaleString("en-GB", { month: "short" })}`;
+          } catch { return alert.weekStarting; }
+        })();
+        return (
+          <div className="rounded-lg border border-amber-300 bg-amber-50 px-5 py-3.5 flex items-center gap-3">
+            <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
+            <p className="flex-1 text-sm text-amber-900">
+              Cash gap of <span className="font-semibold">{fmt(gap)}</span> detected in Week {alert.gapWeek} ({weekLabel})
+            </p>
+            <Button
+              size="sm"
+              variant="default"
+              onClick={() => setLocation("/qapital/bridge")}
+              className="shrink-0"
+            >
+              Go to finance
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => dismissAlertMutation.mutate(alert.id)}
+              className="shrink-0 text-amber-700 hover:text-amber-900"
+            >
+              Dismiss
+            </Button>
+          </div>
+        );
+      })()}
+
       {/* A. Top Metrics Bar — 6 equal-width cards */}
       <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(6, 1fr)" }}>
         {/* Opening balance (editable) */}
@@ -1001,6 +1062,14 @@ export default function ForecastPage() {
                 width={55}
               />
               <Tooltip content={<BalanceTooltip />} />
+              {/* Negative territory — faint red fill below zero */}
+              <ReferenceArea
+                y1={0}
+                y2={-10_000_000}
+                fill="rgba(220,38,38,0.08)"
+                stroke="none"
+                ifOverflow="hidden"
+              />
               {/* Confidence band (pessimistic to optimistic range) */}
               <Area
                 dataKey="balanceBand"

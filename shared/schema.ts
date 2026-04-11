@@ -6326,6 +6326,41 @@ export const insertForecastSnapshotSchema = createInsertSchema(forecastSnapshots
 export type ForecastSnapshot = typeof forecastSnapshots.$inferSelect;
 export type InsertForecastSnapshot = z.infer<typeof insertForecastSnapshotSchema>;
 
+// ── Cash Gap Alert History ────────────────────────────────
+
+export const cashGapAlertHistory = pgTable("cash_gap_alert_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  gapWeek: integer("gap_week").notNull(),
+  weekStarting: varchar("week_starting").notNull(),
+  gapAmount: decimal("gap_amount", { precision: 12, scale: 2 }).notNull(),
+  pessimisticBalance: decimal("pessimistic_balance", { precision: 12, scale: 2 }).notNull(),
+  safetyThreshold: decimal("safety_threshold", { precision: 12, scale: 2 }).notNull(),
+  scenario: varchar("scenario").notNull().default("pessimistic"),
+  alertType: varchar("alert_type").notNull(), // 'in_app' | 'sms'
+  smsRecipient: varchar("sms_recipient"),
+  smsMessageId: varchar("sms_message_id"),
+  dismissed: boolean("dismissed").default(false),
+  dismissedAt: timestamp("dismissed_at"),
+  financingApplied: boolean("financing_applied").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const cashGapAlertHistoryRelations = relations(cashGapAlertHistory, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [cashGapAlertHistory.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
+export const insertCashGapAlertHistorySchema = createInsertSchema(cashGapAlertHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type CashGapAlertHistoryRecord = typeof cashGapAlertHistory.$inferSelect;
+export type InsertCashGapAlertHistory = z.infer<typeof insertCashGapAlertHistorySchema>;
+
 // ── Sprint 8: Weekly CFO Reviews ──────────────────────────
 
 export const weeklyReviews = pgTable("weekly_reviews", {

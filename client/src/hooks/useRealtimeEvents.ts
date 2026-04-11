@@ -17,7 +17,8 @@ type RealtimeEventType =
   | "sync_started"
   | "sync_progress"
   | "sync_complete"
-  | "sync_failed";
+  | "sync_failed"
+  | "cash_gap_alert";
 
 interface RealtimeEvent {
   type: RealtimeEventType;
@@ -89,6 +90,9 @@ const INVALIDATION_MAP: Record<RealtimeEventType, string[][]> = {
   ],
   sync_failed: [
     ["/api/sync/current"],
+  ],
+  cash_gap_alert: [
+    ["/api/cashflow/cash-gap-alerts"],
   ],
 };
 

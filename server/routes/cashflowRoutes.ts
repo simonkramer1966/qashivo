@@ -23,8 +23,9 @@ import {
   generateVarianceDrivers,
   getMondayOfWeek,
 } from "../services/forecastActualsService";
+import { getActiveAlerts, dismissAlert, checkAndAlertCashGaps } from "../services/cashGapAlertService";
 import { db } from "../db";
-import { tenants, forecastOutflows, forecastSnapshots } from "@shared/schema";
+import { tenants, forecastOutflows, forecastSnapshots, cashGapAlertHistory } from "@shared/schema";
 import { eq, and, sql, desc, asc } from "drizzle-orm";
 
 export function registerCashflowRoutes(app: Express): void {
@@ -55,6 +56,16 @@ export function registerCashflowRoutes(app: Express): void {
               err,
             ),
           );
+
+        // Non-blocking: check for cash gaps and fire alerts
+        checkAndAlertCashGaps(
+          tenantId,
+          forecast.runningBalance,
+          forecast.safetyThreshold ?? 20000,
+          forecast.weeklyForecasts,
+        ).catch((err: Error) =>
+          console.warn("[CashflowRoutes] Cash gap alert check failed:", err),
+        );
 
         res.json(forecast);
       } catch (error) {
@@ -869,6 +880,44 @@ export function registerCashflowRoutes(app: Express): void {
       } catch (error) {
         console.error("[CashflowRoutes] accuracy-history error:", error);
         res.status(500).json({ error: "Failed to get accuracy history" });
+      }
+    },
+  );
+
+  // ── GET /api/cashflow/cash-gap-alerts ──────────────────────
+  // Returns active (non-dismissed) cash gap alerts for the tenant.
+  app.get(
+    "/api/cashflow/cash-gap-alerts",
+    isAuthenticated,
+    async (req: any, res) => {
+      try {
+        const tenantId = req.rbac?.tenantId;
+        if (!tenantId) return res.status(401).json({ error: "No tenant context" });
+
+        const alerts = await getActiveAlerts(tenantId);
+        res.json(alerts);
+      } catch (error) {
+        console.error("[CashflowRoutes] cash-gap-alerts error:", error);
+        res.status(500).json({ error: "Failed to get cash gap alerts" });
+      }
+    },
+  );
+
+  // ── PATCH /api/cashflow/cash-gap-alerts/:id/dismiss ────────
+  // Dismiss a cash gap alert. Returns on next recalculation if gap persists.
+  app.patch(
+    "/api/cashflow/cash-gap-alerts/:id/dismiss",
+    isAuthenticated,
+    async (req: any, res) => {
+      try {
+        const tenantId = req.rbac?.tenantId;
+        if (!tenantId) return res.status(401).json({ error: "No tenant context" });
+
+        await dismissAlert(req.params.id, tenantId);
+        res.json({ success: true });
+      } catch (error) {
+        console.error("[CashflowRoutes] dismiss alert error:", error);
+        res.status(500).json({ error: "Failed to dismiss alert" });
       }
     },
   );
