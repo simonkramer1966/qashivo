@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { usePermissions } from "@/hooks/usePermissions";
 import AppShell from "@/components/layout/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -343,6 +344,7 @@ function BalanceTooltip({ active, payload }: any) {
 
 export default function ForecastPage() {
   const { toast } = useToast();
+  const { canEditForecast } = usePermissions();
   const { data: forecast, isLoading } = useQuery<InflowForecast>({
     queryKey: ["/api/cashflow/inflow-forecast"],
     staleTime: 60 * 60 * 1000, // 1 hour
@@ -805,17 +807,19 @@ export default function ForecastPage() {
               ) : (
                 <>
                   <span className="text-lg font-semibold">{fmt(openingBal)}</span>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-6 w-6 p-0"
-                    onClick={() => {
-                      setBalanceInput(String(openingBal));
-                      setEditingBalance(true);
-                    }}
-                  >
-                    <Pencil className="h-3 w-3" />
-                  </Button>
+                  {canEditForecast && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 w-6 p-0"
+                      onClick={() => {
+                        setBalanceInput(String(openingBal));
+                        setEditingBalance(true);
+                      }}
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                  )}
                 </>
               )}
             </div>
@@ -876,17 +880,19 @@ export default function ForecastPage() {
               ) : (
                 <>
                   <span className="text-lg font-semibold">{fmt(safetyThreshold)}</span>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-6 w-6 p-0"
-                    onClick={() => {
-                      setSafetyInput(String(safetyThreshold));
-                      setEditingSafety(true);
-                    }}
-                  >
-                    <Pencil className="h-3 w-3" />
-                  </Button>
+                  {canEditForecast && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 w-6 p-0"
+                      onClick={() => {
+                        setSafetyInput(String(safetyThreshold));
+                        setEditingSafety(true);
+                      }}
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                  )}
                 </>
               )}
             </div>
@@ -982,9 +988,11 @@ export default function ForecastPage() {
               Week {closeWeekPreview.weekNumber} ({weekLabel(closeWeekPreview.weekStarting)}) is ready to close.
             </span>
           </div>
-          <Button size="sm" variant="outline" onClick={() => setCloseWeekModalOpen(true)}>
-            Review & close week
-          </Button>
+          {canEditForecast && (
+            <Button size="sm" variant="outline" onClick={() => setCloseWeekModalOpen(true)}>
+              Review & close week
+            </Button>
+          )}
         </div>
       )}
 
@@ -1561,6 +1569,7 @@ export default function ForecastPage() {
                                   amount > 0 ? "" : "text-muted-foreground"
                                 }`}
                                 onClick={() => {
+                                  if (!canEditForecast) return;
                                   setPipelineCellValue(amount > 0 ? String(amount) : "");
                                   setEditingPipelineCell({ category: tier.category, week: wi });
                                 }}
@@ -1692,6 +1701,7 @@ export default function ForecastPage() {
                                       amount > 0 ? "" : "text-muted-foreground"
                                     }`}
                                     onClick={() => {
+                                      if (!canEditForecast) return;
                                       setCellValue(amount > 0 ? String(amount) : "");
                                       setEditingCell({ category: cat.category, week: wi });
                                     }}
@@ -1809,6 +1819,7 @@ export default function ForecastPage() {
                                             : "text-muted-foreground"
                                         }`}
                                         onClick={() => {
+                                          if (!canEditForecast) return;
                                           setCellValue(
                                             amount > 0
                                               ? String(amount)

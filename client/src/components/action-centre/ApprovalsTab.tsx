@@ -4,6 +4,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAgentNotifications } from "@/hooks/useAgentNotifications";
 import { useInvalidateActionCentre } from "@/hooks/useInvalidateActionCentre";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -736,7 +737,9 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
 
   const totalQueuedAmount = useMemo(() => actions.reduce((s, a) => s + a.totalAmount, 0), [actions]);
   const uniqueDebtors = useMemo(() => new Set(actions.map(a => a.contactId).filter(Boolean)).size, [actions]);
-  const showRunAgent = actions.length === 0 || justCleared;
+  const { hasMinimumRole } = usePermissions();
+  const isManagerOrAbove = hasMinimumRole('manager');
+  const showRunAgent = (actions.length === 0 || justCleared) && isManagerOrAbove;
 
   // Reset justCleared when new items arrive
   useEffect(() => {
@@ -1048,7 +1051,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
                     variant="ghost"
                     size="sm"
                     className="h-7 text-xs gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
-                    disabled={clearQueueMutation.isPending}
+                    disabled={clearQueueMutation.isPending || !isManagerOrAbove}
                   >
                     {clearQueueMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
                     Clear queue
@@ -1102,16 +1105,18 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
             <Check className="mb-3 h-10 w-10 text-green-500" />
             <h3 className="text-lg font-semibold">Queue is clear</h3>
             <p className="text-sm text-muted-foreground mb-4">All actions have been reviewed.</p>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5"
-              onClick={handleRunAgent}
-              disabled={runAgentMutation.isPending}
-            >
-              {runAgentMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-              {runAgentMutation.isPending ? "Generating..." : "Run agent now"}
-            </Button>
+            {isManagerOrAbove && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={handleRunAgent}
+                disabled={runAgentMutation.isPending}
+              >
+                {runAgentMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                {runAgentMutation.isPending ? "Generating..." : "Run agent now"}
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (

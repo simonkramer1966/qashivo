@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useInvalidateActionCentre } from "@/hooks/useInvalidateActionCentre";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -246,6 +247,8 @@ export default function OverviewTab() {
   const { toast } = useToast();
   const invalidateActionCentre = useInvalidateActionCentre();
   const queryClient = useQueryClient();
+  const { hasMinimumRole } = usePermissions();
+  const isManagerOrAbove = hasMinimumRole('manager');
 
   // Period state
   const [period, setPeriod] = useState<Period>("week");
@@ -549,7 +552,7 @@ export default function OverviewTab() {
               size="sm"
               variant="ghost"
               className="text-destructive hover:text-destructive"
-              disabled={queued.total === 0 || clearQueueMutation.isPending}
+              disabled={queued.total === 0 || clearQueueMutation.isPending || !isManagerOrAbove}
               onClick={() => setConfirmAction("clear")}
             >
               {clearQueueMutation.isPending ? (

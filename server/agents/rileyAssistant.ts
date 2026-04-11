@@ -26,6 +26,7 @@ import {
   generateJSON,
   type ConversationMessage,
 } from "../services/llm/claude";
+import { getActiveDelegations } from "../middleware/rbac";
 
 // ── Types ───────────────────────────────────────────────────
 
@@ -60,6 +61,13 @@ export interface RileyContext {
   relevantFacts: AiFact[];
   relatedEntityType?: string;
   relatedEntityId?: string;
+  userPermissions?: {
+    canConfigureCharlie: boolean;
+    canAccessAutonomy: boolean;
+    canEditForecast: boolean;
+    canViewCapital: boolean;
+    canManageUsers: boolean;
+  };
 }
 
 interface TenantSnapshot {
@@ -937,10 +945,18 @@ export function buildRileySystemPrompt(context: RileyContext, pageContextBlock?:
           .join("\n")}`
       : "";
 
+  const permBlock = context.userPermissions ? `\nUSER ACCESS:
+${context.userPermissions.canConfigureCharlie ? '- Can configure Charlie (agent settings, personas, tone)' : '- Cannot configure Charlie — suggest asking account owner'}
+${context.userPermissions.canEditForecast ? '- Can edit cashflow forecasts' : '- Cannot edit forecasts — read-only view'}
+${context.userPermissions.canViewCapital ? '- Can view Capital (Bridge, Facility, Pre-auth)' : '- Cannot access Capital pages'}
+${context.userPermissions.canManageUsers ? '- Can manage team members' : ''}
+RULE: Only suggest actions the user can take. If they ask about something they lack access to, explain who can help (their account owner) and how (Settings > Team > delegation toggles).` : '';
+
   const parts = [
     RILEY_IDENTITY,
     PRODUCT_KNOWLEDGE,
     `\nCURRENT USER: ${userName} (${userRole})`,
+    permBlock,
     `CURRENT PAGE: ${pageContext}`,
     `CONVERSATION TOPIC: ${topic}`,
     `\nTENANT SNAPSHOT (${tenantSnapshot.tenantName}):`,
@@ -1089,7 +1105,19 @@ export async function getRileyResponse(params: {
 
   const userName =
     [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "User";
-  const userRole = user?.role || "owner";
+  const userRole = (user as any)?.tenantRole || user?.role || "owner";
+
+  // Compute user permissions for Riley context
+  const delegations = await getActiveDelegations(userId, tenantId);
+  const isOwnerAdmin = userRole === 'owner' || userRole === 'admin';
+  const hasDel = (p: string) => delegations.includes(p);
+  const userPermissions = {
+    canConfigureCharlie: isOwnerAdmin || userRole === 'accountant',
+    canAccessAutonomy: isOwnerAdmin || userRole === 'accountant' || hasDel('autonomy_access'),
+    canEditForecast: isOwnerAdmin || userRole === 'accountant' || userRole === 'manager',
+    canViewCapital: isOwnerAdmin || hasDel('capital_view'),
+    canManageUsers: isOwnerAdmin || hasDel('manage_users'),
+  };
 
   // 3. Build system prompt
   const systemPrompt = buildRileySystemPrompt({
@@ -1102,6 +1130,7 @@ export async function getRileyResponse(params: {
     relevantFacts: relevantFacts.slice(0, 30), // Cap to avoid token bloat
     relatedEntityType,
     relatedEntityId,
+    userPermissions,
   }, pageContextBlock);
 
   // 4. Build conversation messages (last 20)
@@ -1203,7 +1232,19 @@ export async function getRileyResponseStreaming(params: {
 
   const userName =
     [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "User";
-  const userRole = user?.role || "owner";
+  const userRole = (user as any)?.tenantRole || user?.role || "owner";
+
+  // Compute user permissions for Riley context
+  const delegations = await getActiveDelegations(userId, tenantId);
+  const isOwnerAdmin = userRole === 'owner' || userRole === 'admin';
+  const hasDel = (p: string) => delegations.includes(p);
+  const userPermissions = {
+    canConfigureCharlie: isOwnerAdmin || userRole === 'accountant',
+    canAccessAutonomy: isOwnerAdmin || userRole === 'accountant' || hasDel('autonomy_access'),
+    canEditForecast: isOwnerAdmin || userRole === 'accountant' || userRole === 'manager',
+    canViewCapital: isOwnerAdmin || hasDel('capital_view'),
+    canManageUsers: isOwnerAdmin || hasDel('manage_users'),
+  };
 
   // 3. Build system prompt
   const systemPrompt = buildRileySystemPrompt({
@@ -1216,6 +1257,7 @@ export async function getRileyResponseStreaming(params: {
     relevantFacts: relevantFacts.slice(0, 30),
     relatedEntityType,
     relatedEntityId,
+    userPermissions,
   }, pageContextBlock);
 
   // 4. Build conversation messages (last 20)

@@ -126,7 +126,19 @@ interface SidebarProps {
 
 export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
   const { user } = useAuth();
-  const { hasPermission } = usePermissions();
+  const { hasPermission, canViewCapital, canManageUsers, canAccessAutonomy, canAccessBilling, canConfigureCharlie } = usePermissions();
+
+  function isPillarVisible(pillar: NavPillar): boolean {
+    if (pillar.label === "Capital") return canViewCapital;
+    return true;
+  }
+  function isChildVisible(child: NavChild): boolean {
+    if (child.name === "Team") return canManageUsers;
+    if (child.name === "Autonomy & Rules") return canAccessAutonomy;
+    if (child.name === "Billing") return canAccessBilling;
+    if (child.name === "Agent Personas") return canConfigureCharlie;
+    return true;
+  }
   const [location, setLocation] = useLocation();
   const queryClient = useQueryClient();
 
@@ -307,6 +319,7 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
       <nav className={cn("flex-1 overflow-y-auto py-3 space-y-0.5", isCollapsed ? "px-2" : "px-3")}>
         <TooltipProvider delayDuration={0}>
           {navigationPillars.map((pillar) => {
+            if (!isPillarVisible(pillar)) return null;
             const PillarIcon = pillar.icon;
             const isPillarActive = pillar.href
               ? isActivePath(pillar.href)
@@ -341,7 +354,7 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
 
               // Collapsible group — show flyout on click
               const filteredChildren = (pillar.children || []).filter(
-                (c) => !c.permission || hasPermission(c.permission)
+                (c) => isChildVisible(c) && (!c.permission || hasPermission(c.permission))
               );
               if (filteredChildren.length === 0) return null;
 

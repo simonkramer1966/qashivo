@@ -97,6 +97,23 @@ function PermissionGuard({ permission, children }: { permission: string; childre
   return <>{children}</>;
 }
 
+function RoleGuard({ check, children }: { check: (p: ReturnType<typeof usePermissions>) => boolean; children: React.ReactNode }) {
+  const perms = usePermissions();
+  if (perms.isLoading) return <PageLoader />;
+  if (!check(perms)) return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="text-center space-y-3">
+        <h2 className="text-lg font-semibold">Access denied</h2>
+        <p className="text-sm text-muted-foreground max-w-sm">
+          You don't have permission to view this page. Contact your account owner to request access.
+        </p>
+        <a href="/qollections" className="text-sm text-primary underline">Go to Dashboard</a>
+      </div>
+    </div>
+  );
+  return <>{children}</>;
+}
+
 function isOnboardingComplete(status: OnboardingStatus | undefined): boolean {
   if (!status) return false;
   // Primary: data presence — immune to flag resets from schema migrations
@@ -269,19 +286,19 @@ function Router() {
           <Route path="/qashflow/scenarios" component={QashflowPage} />
           <Route path="/qashflow/cashflow" component={QashflowPage} />
           <Route path="/qashflow" component={QashflowWeeklyReview} />
-          <Route path="/qapital/bridge" component={QapitalBridge} />
-          <Route path="/qapital/facility" component={QapitalFacility} />
-          <Route path="/qapital/pre-authorisation" component={QapitalPreAuth} />
-          <Route path="/qapital" component={QapitalBridge} />
+          <Route path="/qapital/bridge">{() => <RoleGuard check={p => p.canViewCapital}><QapitalBridge /></RoleGuard>}</Route>
+          <Route path="/qapital/facility">{() => <RoleGuard check={p => p.canViewCapital}><QapitalFacility /></RoleGuard>}</Route>
+          <Route path="/qapital/pre-authorisation">{() => <RoleGuard check={p => p.canViewCapital}><QapitalPreAuth /></RoleGuard>}</Route>
+          <Route path="/qapital">{() => <RoleGuard check={p => p.canViewCapital}><QapitalBridge /></RoleGuard>}</Route>
           <Route path="/agent-team" component={AgentTeamPage} />
 
           {/* Pillar routes — Settings */}
-          <Route path="/settings/agent-personas" component={SettingsAgentPersonas} />
-          <Route path="/settings/autonomy-rules" component={SettingsAutonomyRules} />
+          <Route path="/settings/agent-personas">{() => <RoleGuard check={p => p.canConfigureCharlie}><SettingsAgentPersonas /></RoleGuard>}</Route>
+          <Route path="/settings/autonomy-rules">{() => <RoleGuard check={p => p.canAccessAutonomy}><SettingsAutonomyRules /></RoleGuard>}</Route>
           <Route path="/settings/integrations" component={SettingsIntegrations} />
-          <Route path="/settings/team" component={SettingsTeam} />
+          <Route path="/settings/team">{() => <RoleGuard check={p => p.canManageUsers}><SettingsTeam /></RoleGuard>}</Route>
           <Route path="/settings/users-roles" component={SettingsUsersRoles} />
-          <Route path="/settings/billing" component={SettingsBilling} />
+          <Route path="/settings/billing">{() => <RoleGuard check={p => p.canAccessBilling}><SettingsBilling /></RoleGuard>}</Route>
           <Route path="/settings/data-health" component={SettingsDataHealth} />
 
           {/* Onboarding */}

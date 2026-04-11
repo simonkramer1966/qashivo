@@ -334,7 +334,7 @@ export function registerCashflowRoutes(app: Express): void {
   // Upsert by (tenantId, category, weekStarting). Amount=0 deletes.
   app.put(
     "/api/cashflow/outflows",
-    isAuthenticated,
+    ...withMinimumRole('manager'),
     async (req: any, res) => {
       try {
         const tenantId = req.user?.tenantId || req.rbac?.tenantId;
@@ -907,7 +907,7 @@ export function registerCashflowRoutes(app: Express): void {
   // Dismiss a cash gap alert. Returns on next recalculation if gap persists.
   app.patch(
     "/api/cashflow/cash-gap-alerts/:id/dismiss",
-    isAuthenticated,
+    ...withMinimumRole('manager'),
     async (req: any, res) => {
       try {
         const tenantId = req.rbac?.tenantId;

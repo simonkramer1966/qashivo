@@ -305,7 +305,7 @@ export function registerCollectionsRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/actions", isAuthenticated, async (req: any, res) => {
+  app.post("/api/actions", ...withMinimumRole('credit_controller'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
@@ -336,7 +336,7 @@ export function registerCollectionsRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/action-centre/generate-outbound", isAuthenticated, async (req: any, res) => {
+  app.post("/api/action-centre/generate-outbound", ...withMinimumRole('credit_controller'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
@@ -441,7 +441,7 @@ Guidelines:
     }
   });
 
-  app.post("/api/action-centre/send-action", isAuthenticated, async (req: any, res) => {
+  app.post("/api/action-centre/send-action", ...withMinimumRole('credit_controller'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
@@ -493,7 +493,7 @@ Guidelines:
     }
   });
 
-  app.post("/api/action-centre/escalate", isAuthenticated, async (req: any, res) => {
+  app.post("/api/action-centre/escalate", ...withMinimumRole('credit_controller'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
@@ -1394,7 +1394,7 @@ Guidelines:
     }
   });
 
-  app.post("/api/actions/schedule", isAuthenticated, async (req: any, res) => {
+  app.post("/api/actions/schedule", ...withMinimumRole('credit_controller'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
@@ -1678,7 +1678,7 @@ Guidelines:
   // Old approve endpoint deleted — was shadowing Sprint 2.1 approve endpoint
   // which calls approveAndSend() for immediate delivery. See line ~3966.
 
-  app.patch("/api/actions/:id/edit", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/actions/:id/edit", ...withMinimumRole('credit_controller'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
@@ -1745,7 +1745,7 @@ Guidelines:
     }
   });
 
-  app.post("/api/actions/:id/snooze", isAuthenticated, async (req: any, res) => {
+  app.post("/api/actions/:id/snooze", ...withMinimumRole('credit_controller'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
@@ -1802,7 +1802,7 @@ Guidelines:
     }
   });
 
-  app.post("/api/actions/:id/escalate", isAuthenticated, async (req: any, res) => {
+  app.post("/api/actions/:id/escalate", ...withMinimumRole('credit_controller'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
@@ -1848,7 +1848,7 @@ Guidelines:
     }
   });
 
-  app.patch("/api/actions/:id/assign", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/actions/:id/assign", ...withMinimumRole('credit_controller'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
@@ -1947,7 +1947,7 @@ Guidelines:
     }
   });
 
-  app.post("/api/actions/:id/voice-call", isAuthenticated, async (req: any, res) => {
+  app.post("/api/actions/:id/voice-call", ...withMinimumRole('credit_controller'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
@@ -2057,7 +2057,7 @@ Guidelines:
     }
   });
 
-  app.post("/api/actions/:id/email", isAuthenticated, async (req: any, res) => {
+  app.post("/api/actions/:id/email", ...withMinimumRole('credit_controller'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
@@ -2138,7 +2138,7 @@ Guidelines:
     }
   });
 
-  app.post("/api/actions/:id/sms", isAuthenticated, async (req: any, res) => {
+  app.post("/api/actions/:id/sms", ...withMinimumRole('credit_controller'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
@@ -2402,7 +2402,7 @@ Guidelines:
     }
   });
 
-  app.post("/api/action-centre/priority/refresh", isAuthenticated, async (req: any, res) => {
+  app.post("/api/action-centre/priority/refresh", ...withMinimumRole('credit_controller'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {

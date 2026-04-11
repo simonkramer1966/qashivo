@@ -317,7 +317,7 @@ export function registerActionCentreRoutes(app: Express): void {
 
   // ── POST /api/actions/:actionId/cancel ──────────────────────
   // Cancel a scheduled action before it's sent
-  app.post("/api/actions/:actionId/cancel", isAuthenticated, async (req: any, res) => {
+  app.post("/api/actions/:actionId/cancel", ...withMinimumRole('credit_controller'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
@@ -377,7 +377,7 @@ export function registerActionCentreRoutes(app: Express): void {
 
   // ── POST /api/actions/:actionId/defer-scheduled ─────────────
   // Defer a scheduled action to a new date/time
-  app.post("/api/actions/:actionId/defer-scheduled", isAuthenticated, async (req: any, res) => {
+  app.post("/api/actions/:actionId/defer-scheduled", ...withMinimumRole('credit_controller'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
@@ -422,7 +422,7 @@ export function registerActionCentreRoutes(app: Express): void {
 
   // ── POST /api/actions/:actionId/return-to-approval ──────────
   // Move a scheduled action back to the Approval queue
-  app.post("/api/actions/:actionId/return-to-approval", isAuthenticated, async (req: any, res) => {
+  app.post("/api/actions/:actionId/return-to-approval", ...withMinimumRole('credit_controller'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
@@ -459,7 +459,7 @@ export function registerActionCentreRoutes(app: Express): void {
 
   // ── POST /api/actions/:actionId/send-now ────────────────────
   // Execute a scheduled action immediately (bypasses executor polling)
-  app.post("/api/actions/:actionId/send-now", isAuthenticated, async (req: any, res) => {
+  app.post("/api/actions/:actionId/send-now", ...withMinimumRole('credit_controller'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
@@ -495,7 +495,7 @@ export function registerActionCentreRoutes(app: Express): void {
   // ── POST /api/actions/:actionId/retry-send ──────────────────
   // Retry a failed send — resets status to scheduled and re-executes.
   // Used by the Exceptions tab for delivery failures.
-  app.post("/api/actions/:actionId/retry-send", isAuthenticated, async (req: any, res) => {
+  app.post("/api/actions/:actionId/retry-send", ...withMinimumRole('credit_controller'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
@@ -1011,7 +1011,7 @@ export function registerActionCentreRoutes(app: Express): void {
 
   // ── POST /api/actions/:actionId/resolve ──────────────────────
   // Resolve an exception — sets exceptionStatus to 'resolved' with notes
-  app.post("/api/actions/:actionId/resolve", isAuthenticated, async (req: any, res) => {
+  app.post("/api/actions/:actionId/resolve", ...withMinimumRole('credit_controller'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
@@ -1043,7 +1043,7 @@ export function registerActionCentreRoutes(app: Express): void {
 
   // ── POST /api/actions/:actionId/dismiss ─────────────────────
   // Dismiss an exception — same as resolve but with 'dismissed' note
-  app.post("/api/actions/:actionId/dismiss", isAuthenticated, async (req: any, res) => {
+  app.post("/api/actions/:actionId/dismiss", ...withMinimumRole('credit_controller'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
@@ -1074,7 +1074,7 @@ export function registerActionCentreRoutes(app: Express): void {
 
   // ── POST /api/actions/:actionId/start-working ─────────────────
   // Move exception from 'new' to 'in_progress'
-  app.post("/api/actions/:actionId/start-working", isAuthenticated, async (req: any, res) => {
+  app.post("/api/actions/:actionId/start-working", ...withMinimumRole('credit_controller'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
@@ -1102,7 +1102,7 @@ export function registerActionCentreRoutes(app: Express): void {
 
   // ── POST /api/actions/:actionId/reopen ────────────────────────
   // Reopen a resolved exception — back to 'new'
-  app.post("/api/actions/:actionId/reopen", isAuthenticated, async (req: any, res) => {
+  app.post("/api/actions/:actionId/reopen", ...withMinimumRole('credit_controller'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
@@ -1133,7 +1133,7 @@ export function registerActionCentreRoutes(app: Express): void {
 
   // ── POST /api/actions/:actionId/defer ─────────────────────────
   // Defer an action — optionally with reason, duration, and note
-  app.post("/api/actions/:actionId/defer", isAuthenticated, async (req: any, res) => {
+  app.post("/api/actions/:actionId/defer", ...withMinimumRole('credit_controller'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
@@ -1279,7 +1279,7 @@ export function registerActionCentreRoutes(app: Express): void {
 
   // ── POST /api/actions/:actionId/tone-override ───────────────────
   // Override the agent tone and regenerate email content
-  app.post("/api/actions/:actionId/tone-override", isAuthenticated, async (req: any, res) => {
+  app.post("/api/actions/:actionId/tone-override", ...withMinimumRole('credit_controller'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
@@ -1339,7 +1339,7 @@ export function registerActionCentreRoutes(app: Express): void {
 
   // ── POST /api/action-centre/batch/process-now ─────────────────
   // Force-process the current pending batch immediately
-  app.post("/api/action-centre/batch/process-now", isAuthenticated, async (req: any, res) => {
+  app.post("/api/action-centre/batch/process-now", ...withMinimumRole('manager'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
@@ -1380,7 +1380,7 @@ export function registerActionCentreRoutes(app: Express): void {
     approvalTimeoutHours: z.number().min(1).max(168).optional(),
   });
 
-  app.patch("/api/action-centre/settings", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/action-centre/settings", ...withMinimumRole('manager'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
@@ -1413,7 +1413,7 @@ export function registerActionCentreRoutes(app: Express): void {
 
   // ── POST /api/actions/:actionId/reject-chat ────────────────────
   // Riley inline rejection chat
-  app.post("/api/actions/:actionId/reject-chat", isAuthenticated, async (req: any, res) => {
+  app.post("/api/actions/:actionId/reject-chat", ...withMinimumRole('credit_controller'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
@@ -1510,7 +1510,7 @@ export function registerActionCentreRoutes(app: Express): void {
   });
 
   // POST /api/drafts/:id/approve — Approve a draft and mark for sending
-  app.post("/api/drafts/:id/approve", isAuthenticated, async (req: any, res) => {
+  app.post("/api/drafts/:id/approve", ...withMinimumRole('credit_controller'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
@@ -1536,7 +1536,7 @@ export function registerActionCentreRoutes(app: Express): void {
   });
 
   // POST /api/drafts/:id/reject — Reject a draft with a note
-  app.post("/api/drafts/:id/reject", isAuthenticated, async (req: any, res) => {
+  app.post("/api/drafts/:id/reject", ...withMinimumRole('credit_controller'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
