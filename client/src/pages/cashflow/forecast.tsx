@@ -1070,7 +1070,10 @@ export default function ForecastPage() {
                 tick={{ fontSize: 11 }}
                 tickFormatter={(v) => `£${(v / 1000).toFixed(0)}k`}
                 width={55}
-                allowDataOverflow
+                domain={[
+                  (dataMin: number) => dataMin >= 0 ? 0 : Math.floor((dataMin - 10_000) / 10_000) * 10_000,
+                  'auto',
+                ]}
               />
               <Tooltip content={<BalanceTooltip />} />
               {/* Negative territory — faint red fill below zero, extends to chart bottom */}
