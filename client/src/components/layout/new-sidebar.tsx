@@ -110,6 +110,7 @@ const navigationPillars: NavPillar[] = [
       { name: "Data Health", href: "/settings/data-health", icon: HeartPulse },
       { name: "Integrations", href: "/settings/integrations", icon: Link },
       { name: "Team", href: "/settings/team", icon: Users },
+      { name: "Audit Log", href: "/settings/audit-log", icon: Activity },
       { name: "Billing", href: "/settings/billing", icon: Receipt },
     ],
   },
@@ -126,7 +127,7 @@ interface SidebarProps {
 
 export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
   const { user } = useAuth();
-  const { hasPermission, canViewCapital, canManageUsers, canAccessAutonomy, canAccessBilling, canConfigureCharlie } = usePermissions();
+  const { hasPermission, canViewCapital, canManageUsers, canAccessAutonomy, canAccessBilling, canConfigureCharlie, canViewAuditLog } = usePermissions();
 
   function isPillarVisible(pillar: NavPillar): boolean {
     if (pillar.label === "Capital") return canViewCapital;
@@ -136,6 +137,7 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
     if (child.name === "Team") return canManageUsers;
     if (child.name === "Autonomy & Rules") return canAccessAutonomy;
     if (child.name === "Billing") return canAccessBilling;
+    if (child.name === "Audit Log") return canViewAuditLog;
     if (child.name === "Agent Personas") return canConfigureCharlie;
     return true;
   }
@@ -444,7 +446,7 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
 
             // Collapsible group
             const filteredChildren = (pillar.children || []).filter(
-              (c) => !c.permission || hasPermission(c.permission)
+              (c) => isChildVisible(c) && (!c.permission || hasPermission(c.permission))
             );
             if (filteredChildren.length === 0) return null;
 

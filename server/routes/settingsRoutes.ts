@@ -21,6 +21,7 @@ import {
   attentionItems, outcomes, activityLogs, collectionPolicies, paymentPlans,
   emailMessages, customerContactPersons, scheduledReports,
   userInvitations, userDelegations, ownerFailsafe, users,
+  auditLog,
 } from "@shared/schema";
 import { computeNextRunAt } from "../services/reportScheduler";
 import { REPORT_TYPE_LABELS, type ReportType } from "../services/reportGenerator";
@@ -1663,6 +1664,181 @@ export async function registerSettingsRoutes(app: Express): Promise<void> {
         return res.status(400).json({ message: "Invalid request data", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to update tenant metadata" });
+    }
+  });
+
+  // ── Audit Log endpoints ──────────────────────────────────
+
+  app.get("/api/rbac/audit-log", ...withMinimumRole('manager'), async (req: any, res) => {
+    try {
+      const { tenantId } = req.rbac;
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 50));
+      const offset = (page - 1) * limit;
+      const { startDate, endDate, userId: filterUserId, category, entityId } = req.query;
+
+      const conditions: any[] = [eq(auditLog.tenantId, tenantId)];
+
+      if (startDate) {
+        conditions.push(gte(auditLog.createdAt, new Date(startDate as string)));
+      }
+      if (endDate) {
+        const end = new Date(endDate as string);
+        end.setHours(23, 59, 59, 999);
+        conditions.push(lte(auditLog.createdAt, end));
+      }
+      if (filterUserId) {
+        conditions.push(eq(auditLog.userId, filterUserId as string));
+      }
+      if (category && category !== "all") {
+        conditions.push(eq(auditLog.category, category as string));
+      }
+      if (entityId) {
+        conditions.push(eq(auditLog.entityId, entityId as string));
+      }
+
+      const [entries, totalResult] = await Promise.all([
+        db.select()
+          .from(auditLog)
+          .where(and(...conditions))
+          .orderBy(desc(auditLog.createdAt))
+          .limit(limit)
+          .offset(offset),
+        db.select({ count: count() })
+          .from(auditLog)
+          .where(and(...conditions)),
+      ]);
+
+      const total = totalResult[0]?.count ?? 0;
+
+      res.json({
+        entries,
+        total,
+        page,
+        limit,
+        hasMore: offset + entries.length < total,
+      });
+    } catch (error) {
+      console.error("[AuditLog] Failed to fetch entries:", error);
+      res.status(500).json({ message: "Failed to fetch audit log" });
+    }
+  });
+
+  app.get("/api/rbac/audit-log/export", ...withMinimumRole('accountant'), async (req: any, res) => {
+    try {
+      const { tenantId } = req.rbac;
+      const { startDate, endDate, userId: filterUserId, category } = req.query;
+
+      const conditions: any[] = [eq(auditLog.tenantId, tenantId)];
+
+      if (startDate) {
+        conditions.push(gte(auditLog.createdAt, new Date(startDate as string)));
+      }
+      if (endDate) {
+        const end = new Date(endDate as string);
+        end.setHours(23, 59, 59, 999);
+        conditions.push(lte(auditLog.createdAt, end));
+      }
+      if (filterUserId) {
+        conditions.push(eq(auditLog.userId, filterUserId as string));
+      }
+      if (category && category !== "all") {
+        conditions.push(eq(auditLog.category, category as string));
+      }
+
+      const entries = await db.select()
+        .from(auditLog)
+        .where(and(...conditions))
+        .orderBy(desc(auditLog.createdAt))
+        .limit(10000);
+
+      // Build CSV
+      const header = "Date,Time,User,Role,Action,Category,Entity Type,Entity Name,Details";
+      const rows = entries.map((e) => {
+        const dt = e.createdAt ? new Date(e.createdAt) : new Date();
+        const date = dt.toLocaleDateString("en-GB");
+        const time = dt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+        const esc = (v: string | null | undefined) => {
+          if (!v) return "";
+          return `"${v.replace(/"/g, '""')}"`;
+        };
+        const details = e.details ? JSON.stringify(e.details).slice(0, 200) : "";
+        return [date, time, esc(e.userName), esc(e.userRole), esc(e.action), esc(e.category), esc(e.entityType), esc(e.entityName), esc(details)].join(",");
+      });
+
+      const csv = [header, ...rows].join("\n");
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", `attachment; filename="audit-log-export.csv"`);
+      res.send(csv);
+    } catch (error) {
+      console.error("[AuditLog] Export failed:", error);
+      res.status(500).json({ message: "Failed to export audit log" });
+    }
+  });
+
+  // ── Owner Transfer endpoint ──────────────────────────────
+
+  app.post("/api/rbac/transfer-ownership", isAuthenticated, withRBACContext, async (req: any, res) => {
+    try {
+      const actorRole = req.rbac.tenantRole || req.rbac.userRole;
+      if (actorRole !== "owner") {
+        return res.status(403).json({ message: "Only the owner can transfer ownership" });
+      }
+
+      const { targetUserId } = req.body;
+      if (!targetUserId) {
+        return res.status(400).json({ message: "targetUserId is required" });
+      }
+
+      const { tenantId, userId: currentUserId } = req.rbac;
+
+      // Validate target user exists and is in this tenant
+      const [targetUser] = await db.select()
+        .from(users)
+        .where(and(eq(users.id, targetUserId), eq(users.tenantId, tenantId)));
+
+      if (!targetUser) {
+        return res.status(404).json({ message: "Target user not found in this tenant" });
+      }
+
+      const targetRole = targetUser.tenantRole || targetUser.role;
+      if (!["manager", "accountant", "admin"].includes(targetRole)) {
+        return res.status(400).json({ message: "Target must be a manager, accountant, or admin" });
+      }
+
+      if (targetUserId === currentUserId) {
+        return res.status(400).json({ message: "Cannot transfer ownership to yourself" });
+      }
+
+      // Update target → owner
+      await db.update(users)
+        .set({ tenantRole: "owner" })
+        .where(eq(users.id, targetUserId));
+
+      // Update current owner → manager
+      await db.update(users)
+        .set({ tenantRole: "manager" })
+        .where(eq(users.id, currentUserId));
+
+      // Delete all delegations for the old owner (they're now Manager with inherent permissions)
+      await db.delete(userDelegations)
+        .where(and(
+          eq(userDelegations.userId, currentUserId),
+          eq(userDelegations.tenantId, tenantId),
+        ));
+
+      // Audit log
+      const targetName = [targetUser.firstName, targetUser.lastName].filter(Boolean).join(" ") || targetUser.email;
+      logAuditFromReq(req, "ownership_transferred", "financial", {
+        type: "user",
+        id: targetUserId,
+        name: targetName,
+      }, { previousOwner: currentUserId });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("[OwnerTransfer] Failed:", error);
+      res.status(500).json({ message: "Failed to transfer ownership" });
     }
   });
 }

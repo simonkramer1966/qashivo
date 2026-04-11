@@ -733,8 +733,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { userId, tenantId, tenantRole } = req.rbac;
       const role = tenantRole || 'credit_controller';
 
-      // Get active delegations
-      const delegations = await getActiveDelegations(userId, tenantId);
+      // Get active delegations (graceful if table not yet migrated)
+      let delegations: string[] = [];
+      try {
+        delegations = await getActiveDelegations(userId, tenantId);
+      } catch (e) {
+        console.warn('[permissions] getActiveDelegations failed (table may not exist):', (e as Error).message);
+      }
 
       const isOwner = role === 'owner';
       const isAdmin = role === 'admin';

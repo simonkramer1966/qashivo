@@ -55,6 +55,7 @@ const SettingsUsersRoles = lazy(() => import("@/pages/settings/users-roles"));
 const SettingsTeam = lazy(() => import("@/pages/settings/team"));
 const SettingsBilling = lazy(() => import("@/pages/settings/billing"));
 const SettingsDataHealth = lazy(() => import("@/pages/settings/data-health"));
+const SettingsAuditLog = lazy(() => import("@/pages/settings/audit-log"));
 const InvestorsHome = lazy(() => import("@/pages/investors/index"));
 const InvestorsHowItWorks = lazy(() => import("@/pages/investors/how-it-works"));
 const InvestorsDemoPage = lazy(() => import("@/pages/investors/demo"));
@@ -300,6 +301,7 @@ function Router() {
           <Route path="/settings/users-roles" component={SettingsUsersRoles} />
           <Route path="/settings/billing">{() => <RoleGuard check={p => p.canAccessBilling}><SettingsBilling /></RoleGuard>}</Route>
           <Route path="/settings/data-health" component={SettingsDataHealth} />
+          <Route path="/settings/audit-log">{() => <RoleGuard check={p => p.canViewAuditLog}><SettingsAuditLog /></RoleGuard>}</Route>
 
           {/* Onboarding */}
           <Route path="/onboarding" component={UserOnboarding} />

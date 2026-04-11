@@ -139,6 +139,7 @@ export default function TeamPageContent() {
               currentUserId={currentUserId}
               assignableRoles={data.assignableRoles}
               failsafe={member.role === "owner" ? data.failsafe : undefined}
+              allMembers={data.activeMembers}
             />
           ))}
           {filteredMembers.length === 0 && (

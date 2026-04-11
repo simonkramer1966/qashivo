@@ -20,6 +20,7 @@ import { startPromiseChecker } from "../jobs/promiseChecker";
 import { startEnrichmentJob } from "../jobs/enrichmentJob";
 import { startImpactScheduler } from "../jobs/impactScheduler";
 import { startStateTimeoutChecker } from "../jobs/stateTimeoutChecker";
+import { startAuditLogRetentionJob } from "../jobs/auditLogRetention";
 import { batchProcessor } from "../services/batchProcessor";
 import { db } from "../db";
 import { tenants, providerConnections } from "@shared/schema";
@@ -248,6 +249,13 @@ export async function startAll(): Promise<void> {
     console.log("[startup] conversation state timeout checker started");
   } catch (error) {
     console.error("[startup] conversation state timeout checker failed:", error);
+  }
+
+  try {
+    startAuditLogRetentionJob();
+    console.log("[startup] audit log retention job scheduled");
+  } catch (error) {
+    console.error("[startup] audit log retention job failed:", error);
   }
 
   // One-time migration: create conversation_states for VIP/blocked contacts

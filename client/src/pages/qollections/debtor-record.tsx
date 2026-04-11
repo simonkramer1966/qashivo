@@ -107,6 +107,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { CURRENCIES, SUPPORTED_LANGUAGES, getLanguageName, getCurrencySymbol } from "@shared/currencies";
 import DebtorStatusBanner from "@/components/DebtorStatusBanner";
+import { usePermissions } from "@/hooks/usePermissions";
+import { formatAuditAction, formatRole } from "@/lib/auditDescriptions";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -462,6 +464,83 @@ function behaviourColour(b: string): string {
 type SortDir = "asc" | "desc";
 
 // ---------------------------------------------------------------------------
+// Debtor Audit History (collapsible section)
+// ---------------------------------------------------------------------------
+
+function DebtorAuditSection({ contactId }: { contactId: string }) {
+  const [open, setOpen] = useState(false);
+
+  const { data, isLoading } = useQuery<{
+    entries: Array<{
+      id: string;
+      userName: string | null;
+      userRole: string | null;
+      action: string;
+      entityName: string | null;
+      details: Record<string, unknown> | null;
+      createdAt: string;
+    }>;
+  }>({
+    queryKey: ["/api/rbac/audit-log", { entityId: contactId, limit: 20 }],
+    queryFn: async () => {
+      const res = await fetch(`/api/rbac/audit-log?entityId=${contactId}&limit=20`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch audit log");
+      return res.json();
+    },
+    enabled: open,
+    staleTime: 60_000,
+  });
+
+  return (
+    <Card>
+      <button
+        className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-accent/30 transition-colors"
+        onClick={() => setOpen(!open)}
+      >
+        {open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+        <span className="text-sm font-medium">Audit History</span>
+      </button>
+      {open && (
+        <CardContent className="pt-0 pb-3">
+          {isLoading ? (
+            <div className="py-4 text-center text-xs text-muted-foreground">Loading...</div>
+          ) : !data?.entries?.length ? (
+            <div className="py-4 text-center text-xs text-muted-foreground">No audit entries for this debtor</div>
+          ) : (
+            <div className="space-y-1">
+              {data.entries.map((entry) => {
+                const { title, detail } = formatAuditAction(entry);
+                return (
+                  <div key={entry.id} className="flex items-start gap-3 px-2 py-1.5 text-xs">
+                    <span className="text-muted-foreground w-10 shrink-0 tabular-nums">
+                      {new Date(entry.createdAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <span className="font-medium">{entry.userName || "System"}</span>
+                      {entry.userRole && (
+                        <span className="text-muted-foreground ml-1">({formatRole(entry.userRole)})</span>
+                      )}
+                      <span className="text-muted-foreground ml-1">— {title}</span>
+                      {detail && <span className="text-muted-foreground/70 ml-1">{detail}</span>}
+                    </div>
+                  </div>
+                );
+              })}
+              <a
+                href={`/settings/audit-log?entityId=${contactId}`}
+                className="block text-xs text-primary hover:underline mt-2 px-2"
+              >
+                View full audit log
+              </a>
+            </div>
+          )}
+        </CardContent>
+      )}
+    </Card>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
@@ -471,6 +550,7 @@ export default function DebtorRecord() {
   const contactId = params?.id ?? "";
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { canViewAuditLog } = usePermissions();
 
   // --- Tabs state ---
   const [activeTab, setActiveTab] = useState("activity");
@@ -2804,6 +2884,9 @@ export default function DebtorRecord() {
                 </CardContent>
               </Card>
             )}
+
+            {/* ── Audit History (collapsible) ── */}
+            {canViewAuditLog && <DebtorAuditSection contactId={contactId} />}
           </TabsContent>
 
           {/* ============================================================== */}

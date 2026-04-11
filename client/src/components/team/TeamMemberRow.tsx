@@ -1,7 +1,27 @@
 import { useState } from "react";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import DelegationToggles from "./DelegationToggles";
 import FailsafeSection from "./FailsafeSection";
 import ThreeDotMenu from "./ThreeDotMenu";
@@ -49,6 +69,7 @@ interface TeamMemberRowProps {
   currentUserId: string;
   assignableRoles: string[];
   failsafe?: FailsafeData | null;
+  allMembers?: TeamMember[];
 }
 
 function formatLastActive(dateStr: string | null): string {
@@ -79,8 +100,10 @@ export default function TeamMemberRow({
   currentUserId,
   assignableRoles,
   failsafe,
+  allMembers,
 }: TeamMemberRowProps) {
   const [expanded, setExpanded] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
   const badge = ROLE_BADGE[member.role] || { label: member.role, className: "" };
   const displayName = [member.firstName, member.lastName].filter(Boolean).join(" ") || member.email;
   const allowedDelegations = ROLE_ALLOWED_DELEGATIONS[member.role] || [];
@@ -91,6 +114,13 @@ export default function TeamMemberRow({
   const isSelf = member.id === currentUserId;
   const canRemove = !isSelf && (isOwner || (canManageUsers && member.role === "credit_controller"));
   const canChangeRole = !isSelf && isOwner && member.role !== "owner";
+
+  // Transfer targets — managers, accountants, admins (exclude owner)
+  const transferTargets = (allMembers || []).filter(
+    (m) => m.id !== currentUserId && ["manager", "accountant", "admin"].includes(m.role)
+  );
+
+  const isCurrentUserOwner = isOwner && isSelf;
 
   return (
     <div className="border rounded-lg">
@@ -179,8 +209,134 @@ export default function TeamMemberRow({
               Day-to-day credit control. Can approve and send agent actions, manage debtor records, add notes, and put accounts on hold.
             </p>
           )}
+          {isCurrentUserOwner && member.role === "owner" && transferTargets.length > 0 && (
+            <div className="border-t pt-3 mt-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowTransferModal(true);
+                }}
+              >
+                Transfer ownership
+              </Button>
+            </div>
+          )}
         </div>
       )}
+
+      {/* Transfer ownership modal */}
+      {showTransferModal && (
+        <TransferOwnershipModal
+          open={showTransferModal}
+          onClose={() => setShowTransferModal(false)}
+          targets={transferTargets}
+        />
+      )}
     </div>
+  );
+}
+
+function TransferOwnershipModal({
+  open,
+  onClose,
+  targets,
+}: {
+  open: boolean;
+  onClose: () => void;
+  targets: TeamMember[];
+}) {
+  const [targetUserId, setTargetUserId] = useState("");
+  const [confirmText, setConfirmText] = useState("");
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const transferMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/rbac/transfer-ownership", { targetUserId }),
+    onSuccess: () => {
+      toast({ title: "Ownership transferred", description: "You are now a Manager. The page will reload." });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/permissions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rbac/team"] });
+      onClose();
+      setTimeout(() => window.location.reload(), 1000);
+    },
+    onError: (err: Error) => {
+      toast({ title: "Transfer failed", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const canSubmit = targetUserId && confirmText === "TRANSFER" && !transferMutation.isPending;
+
+  const selectedTarget = targets.find((t) => t.id === targetUserId);
+  const selectedName = selectedTarget
+    ? [selectedTarget.firstName, selectedTarget.lastName].filter(Boolean).join(" ") || selectedTarget.email
+    : "";
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="sm:max-w-md" onClick={(e) => e.stopPropagation()}>
+        <DialogHeader>
+          <DialogTitle>Transfer ownership</DialogTitle>
+          <DialogDescription>
+            This is immediate and cannot be undone. The new Owner gets full control of this account. You will become a Manager.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-2">
+          <div>
+            <label className="text-sm font-medium mb-1.5 block">New owner</label>
+            <Select value={targetUserId} onValueChange={setTargetUserId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a team member" />
+              </SelectTrigger>
+              <SelectContent>
+                {targets.map((t) => {
+                  const name = [t.firstName, t.lastName].filter(Boolean).join(" ") || t.email;
+                  const roleBadge = ROLE_BADGE[t.role];
+                  return (
+                    <SelectItem key={t.id} value={t.id}>
+                      {name} ({roleBadge?.label || t.role})
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {targetUserId && (
+            <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-md p-3 text-sm text-amber-800 dark:text-amber-200">
+              <strong>{selectedName}</strong> will become the Owner with full control. You will become a Manager.
+            </div>
+          )}
+
+          <div>
+            <label className="text-sm font-medium mb-1.5 block">
+              Type <span className="font-mono text-xs bg-muted px-1 py-0.5 rounded">TRANSFER</span> to confirm
+            </label>
+            <Input
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value)}
+              placeholder="TRANSFER"
+              className="font-mono"
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={transferMutation.isPending}>
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={() => transferMutation.mutate()}
+            disabled={!canSubmit}
+          >
+            {transferMutation.isPending && <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />}
+            Transfer ownership
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
