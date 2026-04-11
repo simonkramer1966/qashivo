@@ -400,6 +400,7 @@ export default function BridgePage() {
             subtitle="Largest invoices"
             data={blindCost}
             muted
+            gapAmount={gapInfo?.gapAmount}
           />
           <CostColumn
             title="Qashivo optimised"
@@ -407,6 +408,7 @@ export default function BridgePage() {
             data={rileyCost}
             saving={blindSaving > 0 ? { amount: blindSaving, percent: blindSavingPct } : undefined}
             recommended
+            gapAmount={gapInfo?.gapAmount}
           />
           <CostColumn
             title="Manual selection"
@@ -414,6 +416,7 @@ export default function BridgePage() {
             data={manualCost}
             saving={manualSaving > 0 ? { amount: manualSaving, percent: manualSavingPct } : undefined}
             live
+            gapAmount={gapInfo?.gapAmount}
           />
         </div>
 
@@ -577,9 +580,11 @@ interface CostColumnProps {
   recommended?: boolean;
   muted?: boolean;
   live?: boolean;
+  gapAmount?: number;
 }
 
-function CostColumn({ title, subtitle, data, saving, recommended, muted, live }: CostColumnProps) {
+function CostColumn({ title, subtitle, data, saving, recommended, muted, live, gapAmount }: CostColumnProps) {
+  const advanceShortfall = gapAmount != null && data.totalAdvance < gapAmount;
   return (
     <div
       className={cn(
@@ -604,6 +609,11 @@ function CostColumn({ title, subtitle, data, saving, recommended, muted, live }:
       <div className="space-y-1.5 text-sm">
         <Row label="Invoices" value={String(data.count)} />
         <Row label="Total financed" value={fmt(data.totalFinanced)} />
+        <Row
+          label="Total advance"
+          value={`${fmt(data.totalAdvance)}  (80%)`}
+          warn={advanceShortfall}
+        />
         <Row label="Avg duration" value={`${data.avgDuration} days`} />
         <Row label="Est. interest" value={fmt(data.totalInterest)} />
         <Row label="Facility fee" value={fmt(data.totalFees)} />
@@ -620,7 +630,7 @@ function CostColumn({ title, subtitle, data, saving, recommended, muted, live }:
   );
 }
 
-function Row({ label, value, bold, highlight }: { label: string; value: string; bold?: boolean; highlight?: boolean }) {
+function Row({ label, value, bold, highlight, warn }: { label: string; value: string; bold?: boolean; highlight?: boolean; warn?: boolean }) {
   return (
     <div className="flex justify-between">
       <span className={cn("text-muted-foreground", bold && "text-foreground font-medium")}>{label}</span>
@@ -628,6 +638,7 @@ function Row({ label, value, bold, highlight }: { label: string; value: string; 
         "tabular-nums",
         bold && "font-semibold",
         highlight && "text-emerald-700 font-semibold",
+        warn && "text-rose-600 font-medium",
       )}>{value}</span>
     </div>
   );
