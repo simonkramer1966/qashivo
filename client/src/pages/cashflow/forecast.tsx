@@ -1063,13 +1063,15 @@ export default function ForecastPage() {
               />
               <Tooltip content={<BalanceTooltip />} />
               {/* Negative territory — faint red fill below zero */}
-              <ReferenceArea
-                y1={0}
-                y2={-10_000_000}
-                fill="rgba(220,38,38,0.08)"
-                stroke="none"
-                ifOverflow="hidden"
-              />
+              {Math.min(...chartData.map(d => d.pessimisticBalance)) < 0 && (
+                <ReferenceArea
+                  y1={0}
+                  y2={Math.min(...chartData.map(d => d.pessimisticBalance)) * 1.1}
+                  fill="rgba(220,38,38,0.08)"
+                  fillOpacity={1}
+                  isFront={false}
+                />
+              )}
               {/* Confidence band (pessimistic to optimistic range) */}
               <Area
                 dataKey="balanceBand"
