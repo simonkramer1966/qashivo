@@ -224,7 +224,6 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
         initial.add(pillar.label);
       }
     }
-    if (initial.size === 0) initial.add("Qollections");
     return initial;
   });
 
