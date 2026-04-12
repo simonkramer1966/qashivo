@@ -15,9 +15,8 @@ import { FilterPill } from "@/components/ui/filter-pill";
 import { cn } from "@/lib/utils";
 import {
   AlertTriangle, TrendingDown, CheckCircle2, ChevronRight,
-  ShieldAlert, Users, HelpCircle, ExternalLink, ChevronDown,
+  ExternalLink, ChevronDown,
   Mail, MessageSquare, Phone, Circle, CircleDot, Check, RefreshCw,
-  Handshake,
 } from "lucide-react";
 import { formatRelativeTime } from "./utils";
 import { type ExceptionSubTab, classifyException, EXCEPTION_SUB_TABS } from "@/lib/exceptionConfig";
@@ -66,34 +65,19 @@ interface ExceptionsTabProps {
 // ── Category metadata ─────────────────────────────────────────
 
 const CATEGORY_META: Record<ExceptionSubTab, {
-  icon: typeof ShieldAlert;
   description: string;
-  colour: string;
-  bgColour: string;
 }> = {
   collections: {
-    icon: ShieldAlert,
     description: "Low confidence intents, delivery failures, compliance blocks",
-    colour: "text-[var(--q-risk-text)]",
-    bgColour: "bg-[var(--q-risk-bg)] border-[var(--q-risk-border)] hover:bg-[var(--q-risk-bg)]",
   },
   debtor_situations: {
-    icon: Users,
     description: "Payment plan requests, disputes, wrong person, promise modifications",
-    colour: "text-[var(--q-attention-text)]",
-    bgColour: "bg-[var(--q-attention-bg)] border-[var(--q-attention-border)] hover:bg-[var(--q-attention-bg)]",
   },
   promises: {
-    icon: Handshake,
     description: "Broken promises and unallocated payment timeouts",
-    colour: "text-[var(--q-info-text)]",
-    bgColour: "bg-[var(--q-info-bg)] border-[var(--q-info-border)] hover:bg-[var(--q-info-bg)]",
   },
   other: {
-    icon: HelpCircle,
     description: "Unclear intents, unmatched inbound, system errors",
-    colour: "text-[var(--q-text-tertiary)]",
-    bgColour: "bg-[var(--q-bg-surface-alt)] border-[var(--q-border-default)] hover:bg-[var(--q-bg-surface-alt)]",
   },
 };
 
@@ -285,46 +269,40 @@ export default function ExceptionsTab({ subTab, onNavigateSubTab }: ExceptionsTa
     return (
       <div className="space-y-4">
         {mostUrgent && (
-          <div className="rounded-lg bg-[var(--q-bg-surface-alt)] border px-4 py-2.5 text-sm flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-[var(--q-attention-text)] shrink-0" />
-            <span className="text-[var(--q-text-tertiary)]">Most urgent:</span>
-            <span className="font-medium truncate">
+          <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-md)] px-4 py-2 flex items-center gap-2">
+            <AlertTriangle className="h-3.5 w-3.5 text-[var(--q-attention-text)] shrink-0" />
+            <span className="text-[14px] text-[var(--q-text-tertiary)]">Most urgent:</span>
+            <span className="text-[14px] text-[var(--q-text-secondary)] font-medium truncate">
               {formatExceptionTitle(mostUrgent)}
               {(mostUrgent.companyName || mostUrgent.contactName) && (
                 <span className="text-[var(--q-text-tertiary)] font-normal"> from {mostUrgent.companyName || mostUrgent.contactName}</span>
               )}
             </span>
-            <span className="text-xs text-[var(--q-text-tertiary)] shrink-0 ml-auto">
+            <span className="text-[13px] text-[var(--q-text-tertiary)] shrink-0 ml-auto">
               {formatRelativeTime(mostUrgent.createdAt)}
             </span>
           </div>
         )}
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[var(--q-space-md)]">
           {EXCEPTION_SUB_TABS.map(({ value, label }) => {
             const meta = CATEGORY_META[value];
-            const Icon = meta.icon;
             const count = categoryCounts[value];
 
             return (
               <div
                 key={value}
-                className={cn("cursor-pointer transition-colors border rounded-[var(--q-radius-lg)] p-4", meta.bgColour)}
+                className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] p-5 cursor-pointer hover:border-[var(--q-border-hover)] transition-colors"
                 onClick={() => onNavigateSubTab?.(value)}
               >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <Icon className={cn("h-5 w-5", meta.colour)} />
-                    <span className="font-semibold text-sm">{label}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <span className={cn("text-2xl font-bold", count > 0 ? meta.colour : "text-[var(--q-text-tertiary)]")}>
-                      {count}
-                    </span>
-                    <ChevronRight className="h-4 w-4 text-[var(--q-text-tertiary)]" />
-                  </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[14px] font-medium text-[var(--q-text-primary)]">{label}</span>
+                  <ChevronRight className="h-4 w-4 text-[var(--q-text-tertiary)]" />
                 </div>
-                <p className="text-xs text-[var(--q-text-tertiary)]">{meta.description}</p>
+                <p className={cn("text-[24px] font-semibold q-mono tabular-nums mt-1", count > 0 ? "text-[var(--q-risk-text)]" : "text-[var(--q-text-muted)]")}>
+                  {count}
+                </p>
+                <p className="text-[13px] text-[var(--q-text-tertiary)] mt-2">{meta.description}</p>
               </div>
             );
           })}
