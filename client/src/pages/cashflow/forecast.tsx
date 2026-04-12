@@ -7,6 +7,7 @@ import AppShell from "@/components/layout/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { QBadge } from "@/components/ui/q-badge";
+import { QMetricCard } from "@/components/ui/q-metric-card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Dialog,
@@ -805,47 +806,20 @@ export default function ForecastPage() {
 
       {/* A. Top Metrics Bar — 4 equal-width cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {/* This week */}
-        <Card>
-          <CardContent className="py-3 px-4">
-            <p className="text-xs text-[var(--q-text-tertiary)]">This week</p>
-            <p className="text-lg font-semibold">
-              {fmt(forecast.weeklyForecasts[0]?.expected ?? 0)}
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Next week */}
-        <Card>
-          <CardContent className="py-3 px-4">
-            <p className="text-xs text-[var(--q-text-tertiary)]">Next week</p>
-            <p className="text-lg font-semibold">
-              {fmt(forecast.weeklyForecasts[1]?.expected ?? 0)}
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Peak week */}
-        <Card>
-          <CardContent className="py-3 px-4">
-            <p className="text-xs text-[var(--q-text-tertiary)]">Peak week</p>
-            <p className="text-lg font-semibold">{fmt(peakWeek.expected)}</p>
-            <p className="text-xs text-[var(--q-text-tertiary)]">
-              Week {peakWeek.weekNumber}
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Lowest week */}
-        <Card>
-          <CardContent className="py-3 px-4">
-            <p className="text-xs text-[var(--q-text-tertiary)]">Lowest week</p>
-            <p className="text-lg font-semibold">{fmt(lowestWeek.expected)}</p>
-            <p className="text-xs text-[var(--q-text-tertiary)]">
-              Week {lowestWeek.weekNumber}
-            </p>
-          </CardContent>
-        </Card>
+        <QMetricCard label="This week" value={forecast.weeklyForecasts[0]?.expected ?? 0} format="currency" />
+        <QMetricCard label="Next week" value={forecast.weeklyForecasts[1]?.expected ?? 0} format="currency" />
+        <QMetricCard
+          label="Peak week"
+          value={peakWeek.expected}
+          format="currency"
+          trend={{ direction: "flat", value: `Week ${peakWeek.weekNumber}` }}
+        />
+        <QMetricCard
+          label="Lowest week"
+          value={lowestWeek.expected}
+          format="currency"
+          trend={{ direction: "flat", value: `Week ${lowestWeek.weekNumber}` }}
+        />
       </div>
 
       {/* B. What Changed */}
@@ -901,11 +875,11 @@ export default function ForecastPage() {
         </div>
       )}
 
-      {/* C. Chart 1 — Weekly Collections Bar Chart */}
+      {/* C. Chart 1 — Weekly Qollections Bar Chart */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium">
-            Weekly Collections Forecast
+          <CardTitle className="text-sm font-semibold text-[var(--q-text-primary)]">
+            Weekly Qollections Forecast
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -958,7 +932,7 @@ export default function ForecastPage() {
       {/* D. Chart 2 — Running Balance Line Chart */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium">
+          <CardTitle className="text-sm font-semibold text-[var(--q-text-primary)]">
             13w Qashflow Forecast
           </CardTitle>
         </CardHeader>
@@ -1195,7 +1169,7 @@ export default function ForecastPage() {
         <Card>
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <CardTitle className="text-sm font-semibold text-[var(--q-text-primary)] flex items-center gap-2">
                 Recurring Revenue
                 {patterns.filter((p) => p.status === "detected").length > 0 && (
                   <QBadge
@@ -1453,7 +1427,7 @@ export default function ForecastPage() {
       {accuracyHistory && accuracyHistory.weeks.length > 0 && (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center justify-between">
+            <CardTitle className="text-sm font-semibold text-[var(--q-text-primary)] flex items-center justify-between">
               <span className="flex items-center gap-2">
                 <Target className="h-4 w-4" />
                 Forecast Accuracy

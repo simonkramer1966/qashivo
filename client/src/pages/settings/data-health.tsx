@@ -1,7 +1,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import AppShell from "@/components/layout/app-shell";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -20,21 +20,7 @@ import {
   Users,
   ShieldAlert,
   MailWarning,
-  MoreVertical,
-  Eye,
-  UserPlus,
-  StickyNote,
-  PauseCircle,
-  Star,
 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { useLocation } from "wouter";
 import { ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { type SortState, nextSortState } from "@/components/ui/sortable-header";
@@ -87,7 +73,7 @@ function DhSortTh({ field, label, sort, onSort, className = "" }: {
       <button
         type="button"
         onClick={() => onSort(nextSortState(sort, field))}
-        className={`inline-flex items-center gap-1 text-xs font-medium transition-colors cursor-pointer ${active ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+        className={`inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-[0.3px] transition-colors cursor-pointer ${active ? "text-[var(--q-text-primary)]" : "text-[var(--q-text-tertiary)] hover:text-[var(--q-text-primary)]"}`}
       >
         {label}
         {active && sort.dir === "asc" ? (
@@ -102,9 +88,6 @@ function DhSortTh({ field, label, sort, onSort, className = "" }: {
   );
 }
 
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount);
-}
 
 export function DataHealthContent() {
   return <SettingsDataHealth embedded />;
@@ -203,11 +186,11 @@ export default function SettingsDataHealth({ embedded }: { embedded?: boolean })
   const summary = data?.summary ?? { total: 0, ready: 0, needsEmail: 0, genericEmail: 0, needsPhone: 0, needsAttention: 0 };
 
   const summaryCards = [
-    { key: 'all' as FilterTab, label: 'Total Debtors', value: summary.total, icon: Users, color: 'text-slate-600' },
-    { key: 'ready' as FilterTab, label: 'Ready', value: summary.ready, icon: CheckCircle2, color: 'text-green-600' },
-    { key: 'needs_email' as FilterTab, label: 'Needs Email', value: summary.needsEmail, icon: Mail, color: 'text-red-600' },
-    { key: 'generic_email' as FilterTab, label: 'Generic Email', value: summary.genericEmail, icon: MailWarning, color: 'text-amber-600' },
-    { key: 'needs_phone' as FilterTab, label: 'Needs Phone', value: summary.needsPhone, icon: Phone, color: 'text-orange-600' },
+    { key: 'all' as FilterTab, label: 'Total Debtors', value: summary.total, icon: Users, color: 'text-[var(--q-text-tertiary)]' },
+    { key: 'ready' as FilterTab, label: 'Ready', value: summary.ready, icon: CheckCircle2, color: 'text-[var(--q-money-in-text)]' },
+    { key: 'needs_email' as FilterTab, label: 'Needs Email', value: summary.needsEmail, icon: Mail, color: 'text-[var(--q-risk-text)]' },
+    { key: 'generic_email' as FilterTab, label: 'Generic Email', value: summary.genericEmail, icon: MailWarning, color: 'text-[var(--q-attention-text)]' },
+    { key: 'needs_phone' as FilterTab, label: 'Needs Phone', value: summary.needsPhone, icon: Phone, color: 'text-[var(--q-attention-text)]' },
   ];
 
   const content = (
@@ -215,25 +198,23 @@ export default function SettingsDataHealth({ embedded }: { embedded?: boolean })
       {/* Summary Cards */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           {summaryCards.map(card => (
-            <Card
+            <div
               key={card.key}
-              className={`cursor-pointer transition-all ${activeFilter === card.key ? 'ring-2 ring-primary' : 'hover:shadow-md'}`}
+              className={`cursor-pointer transition-all rounded-[var(--q-radius-lg)] border bg-[var(--q-bg-surface)] p-[var(--q-space-xl)] ${activeFilter === card.key ? 'border-[var(--q-accent)] ring-1 ring-[var(--q-accent)]' : 'border-[var(--q-border-default)] hover:bg-[var(--q-bg-surface-hover)]'}`}
               onClick={() => setActiveFilter(card.key)}
             >
-              <CardContent className="pt-4 pb-4">
-                <div className="flex items-center justify-between">
-                  <card.icon className={`h-5 w-5 ${card.color}`} />
-                  <span className={`text-2xl font-bold ${card.color}`}>{card.value}</span>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">{card.label}</p>
-              </CardContent>
-            </Card>
+              <div className="flex items-center justify-between">
+                <card.icon className={`h-5 w-5 ${card.color}`} />
+                <span className={`text-[28px] font-semibold q-mono ${card.color}`}>{card.value}</span>
+              </div>
+              <p className="text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)] mt-1">{card.label}</p>
+            </div>
           ))}
         </div>
 
         {/* Search */}
         <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--q-text-tertiary)]" />
           <Input
             placeholder="Search by name, company, or email..."
             value={searchQuery}
@@ -243,32 +224,27 @@ export default function SettingsDataHealth({ embedded }: { embedded?: boolean })
         </div>
 
         {/* Table */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">
+        <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] overflow-hidden">
+          <div className="px-5 py-3 border-b border-[var(--q-border-default)]">
+            <h3 className="text-sm font-semibold text-[var(--q-text-primary)]">
               {activeFilter === 'all' ? 'All Debtors' : STATUS_CONFIG[activeFilter]?.label ?? 'Debtors'} ({filteredContacts.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
+            </h3>
+          </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm table-fixed">
+              <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b bg-muted/50">
+                  <tr className="border-b border-[var(--q-border-default)] bg-[var(--q-bg-surface-alt)]/30">
                     <DhSortTh field="name" label="Name" sort={sort} onSort={setSort} />
-                    <th className="w-[100px] text-left py-3 px-3 text-xs font-medium text-muted-foreground">Status</th>
-                    <th className="w-[180px] text-left py-3 px-3 text-xs font-medium text-muted-foreground">Email</th>
-                    <th className="w-[130px] text-left py-3 px-3 text-xs font-medium text-muted-foreground">Phone</th>
-                    <DhSortTh field="totalOutstanding" label="Outstanding" sort={sort} onSort={setSort} className="w-[110px] text-right" />
-                    <DhSortTh field="totalOverdue" label="Overdue" sort={sort} onSort={setSort} className="w-[100px] text-right" />
-                    <DhSortTh field="oldestOverdueDays" label="Days" sort={sort} onSort={setSort} className="w-[70px] text-right" />
-                    <th className="w-[60px] text-center py-3 px-3 text-xs font-medium text-muted-foreground">Edit</th>
-                    <th className="w-[40px] py-3 px-3" />
+                    <th className="w-[100px] text-left py-3 px-3 text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)]">Status</th>
+                    <th className="w-[220px] text-left py-3 px-3 text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)]">Email</th>
+                    <th className="w-[160px] text-left py-3 px-3 text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)]">Phone</th>
+                    <th className="w-[60px] text-center py-3 px-3 text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)]">Edit</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredContacts.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="text-center py-8 px-3 text-muted-foreground">
+                      <td colSpan={5} className="text-center py-8 px-3 text-[var(--q-text-tertiary)]">
                         No debtors found for this filter.
                       </td>
                     </tr>
@@ -278,11 +254,11 @@ export default function SettingsDataHealth({ embedded }: { embedded?: boolean })
                       const isEditing = editingId === contact.id;
 
                       return (
-                        <tr key={contact.id} className="border-b hover:bg-muted/30 cursor-pointer" onClick={() => navigate(`/qollections/debtors/${contact.id}`)}>
+                        <tr key={contact.id} className="border-b border-[var(--q-border-default)] hover:bg-[var(--q-bg-surface-hover)] cursor-pointer h-12" onClick={() => navigate(`/qollections/debtors/${contact.id}`)}>
                           <td className="py-3 px-3">
                             <div className="font-medium truncate">{contact.name}</div>
                             {contact.companyName && (
-                              <div className="text-xs text-muted-foreground truncate">{contact.companyName}</div>
+                              <div className="text-xs text-[var(--q-text-tertiary)] truncate">{contact.companyName}</div>
                             )}
                           </td>
                           <td className="py-3 px-3">
@@ -301,7 +277,7 @@ export default function SettingsDataHealth({ embedded }: { embedded?: boolean })
                                 placeholder="email@example.com"
                               />
                             ) : (
-                              <span className={contact.missingFields.includes('email') ? 'text-red-500 italic' : contact.missingFields.includes('generic_email') ? 'text-amber-600' : ''}>
+                              <span className={contact.missingFields.includes('email') ? 'text-[var(--q-risk-text)] italic' : contact.missingFields.includes('generic_email') ? 'text-[var(--q-attention-text)]' : ''}>
                                 {contact.email || 'Missing'}
                               </span>
                             )}
@@ -315,28 +291,9 @@ export default function SettingsDataHealth({ embedded }: { embedded?: boolean })
                                 placeholder="+44..."
                               />
                             ) : (
-                              <span className={contact.missingFields.includes('phone') ? 'text-orange-500 italic' : ''}>
+                              <span className={contact.missingFields.includes('phone') ? 'text-[var(--q-attention-text)] italic' : ''}>
                                 {contact.phone || 'Missing'}
                               </span>
-                            )}
-                          </td>
-                          <td className="py-3 px-3 text-right font-medium">
-                            {formatCurrency(contact.totalOutstanding)}
-                          </td>
-                          <td className="py-3 px-3 text-right">
-                            {contact.totalOverdue > 0 ? (
-                              <span className="text-red-600 font-medium">{formatCurrency(contact.totalOverdue)}</span>
-                            ) : (
-                              <span className="text-muted-foreground">-</span>
-                            )}
-                          </td>
-                          <td className="py-3 px-3 text-right">
-                            {contact.oldestOverdueDays > 0 ? (
-                              <span className={contact.oldestOverdueDays > 90 ? 'text-red-600 font-medium' : contact.oldestOverdueDays > 30 ? 'text-amber-600' : ''}>
-                                {contact.oldestOverdueDays}d
-                              </span>
-                            ) : (
-                              <span className="text-muted-foreground">-</span>
                             )}
                           </td>
                           <td className="py-3 px-3 text-center" onClick={(e) => e.stopPropagation()}>
@@ -368,35 +325,6 @@ export default function SettingsDataHealth({ embedded }: { embedded?: boolean })
                               </Button>
                             )}
                           </td>
-                          <td className="p-3" onClick={(e) => e.stopPropagation()}>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-7 w-7">
-                                  <MoreVertical className="h-3.5 w-3.5" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => navigate(`/qollections/debtors/${contact.id}`)}>
-                                  <Eye className="h-4 w-4 mr-2" /> View Details
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => navigate(`/qollections/debtors/${contact.id}`)}>
-                                  <UserPlus className="h-4 w-4 mr-2" /> Add Contact
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => navigate(`/qollections/debtors/${contact.id}`)}>
-                                  <StickyNote className="h-4 w-4 mr-2" /> Add Note
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem>
-                                  <PauseCircle className="h-4 w-4 mr-2" /> Put On Hold
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <Star className="h-4 w-4 mr-2" /> Mark as VIP
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </td>
                         </tr>
                       );
                     })
@@ -404,8 +332,7 @@ export default function SettingsDataHealth({ embedded }: { embedded?: boolean })
                 </tbody>
               </table>
             </div>
-          </CardContent>
-        </Card>
+        </div>
     </div>
   );
 

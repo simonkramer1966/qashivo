@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { usePermissions } from "@/hooks/usePermissions";
 import AppShell from "@/components/layout/app-shell";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -314,7 +314,7 @@ export default function ScenariosPage() {
     return (
       <AppShell title="Qashflow" subtitle="Scenarios">
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          <Loader2 className="h-5 w-5 animate-spin text-[var(--q-text-tertiary)]" />
         </div>
       </AppShell>
     );
@@ -323,7 +323,7 @@ export default function ScenariosPage() {
   if (!forecast) {
     return (
       <AppShell title="Qashflow" subtitle="Scenarios">
-        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+        <div className="flex flex-col items-center justify-center py-20 text-[var(--q-text-tertiary)]">
           <p className="text-lg font-medium">No forecast data</p>
           <p className="text-sm mt-1">Connect Xero and sync your invoices to generate a forecast.</p>
         </div>
@@ -351,9 +351,8 @@ export default function ScenariosPage() {
         {/* Three editable cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {/* Opening Balance */}
-          <Card>
-            <CardContent className="py-3 px-4">
-              <p className="text-xs text-muted-foreground">Opening balance</p>
+          <div className="rounded-[var(--q-radius-lg)] border border-[var(--q-border-default)] bg-[var(--q-bg-surface)] p-[var(--q-space-xl)]">
+              <p className="text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)]">Opening balance</p>
               <div className="flex items-center gap-1.5">
                 {editingBalance ? (
                   <div className="flex items-center gap-1">
@@ -398,7 +397,7 @@ export default function ScenariosPage() {
                   </div>
                 ) : (
                   <>
-                    <span className="text-lg font-semibold">{fmt(openingBal)}</span>
+                    <span className="text-[28px] font-semibold leading-none tracking-tight q-mono">{fmt(openingBal)}</span>
                     {canEditForecast && (
                       <Button
                         size="sm"
@@ -415,18 +414,16 @@ export default function ScenariosPage() {
                   </>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <p className="text-xs text-[var(--q-text-tertiary)] mt-0.5">
                 {balance?.date
                   ? `${balance.source === "manual" ? "Manual entry" : balance.source} as of ${new Date(balance.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`
                   : "Not set"}
               </p>
-            </CardContent>
-          </Card>
+          </div>
 
           {/* Safety Threshold */}
-          <Card>
-            <CardContent className="py-3 px-4">
-              <p className="text-xs text-muted-foreground">Safety threshold</p>
+          <div className="rounded-[var(--q-radius-lg)] border border-[var(--q-border-default)] bg-[var(--q-bg-surface)] p-[var(--q-space-xl)]">
+              <p className="text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)]">Safety threshold</p>
               <div className="flex items-center gap-1.5">
                 {editingSafety ? (
                   <div className="flex items-center gap-1">
@@ -471,7 +468,7 @@ export default function ScenariosPage() {
                   </div>
                 ) : (
                   <>
-                    <span className="text-lg font-semibold">{fmt(safetyThreshold)}</span>
+                    <span className="text-[28px] font-semibold leading-none tracking-tight q-mono">{fmt(safetyThreshold)}</span>
                     {canEditForecast && (
                       <Button
                         size="sm"
@@ -488,14 +485,12 @@ export default function ScenariosPage() {
                   </>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground mt-0.5">Balance alert level</p>
-            </CardContent>
-          </Card>
+              <p className="text-xs text-[var(--q-text-tertiary)] mt-0.5">Balance alert level</p>
+          </div>
 
           {/* Overdraft Facility */}
-          <Card>
-            <CardContent className="py-3 px-4">
-              <p className="text-xs text-muted-foreground">Overdraft facility</p>
+          <div className="rounded-[var(--q-radius-lg)] border border-[var(--q-border-default)] bg-[var(--q-bg-surface)] p-[var(--q-space-xl)]">
+              <p className="text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)]">Overdraft facility</p>
               <div className="flex items-center gap-1.5">
                 {editingOverdraft ? (
                   <div className="flex items-center gap-1">
@@ -540,7 +535,7 @@ export default function ScenariosPage() {
                   </div>
                 ) : (
                   <>
-                    <span className="text-lg font-semibold">{fmt(overdraftFacility)}</span>
+                    <span className="text-[28px] font-semibold leading-none tracking-tight q-mono">{fmt(overdraftFacility)}</span>
                     {canEditForecast && (
                       <Button
                         size="sm"
@@ -557,29 +552,27 @@ export default function ScenariosPage() {
                   </>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <p className="text-xs text-[var(--q-text-tertiary)] mt-0.5">
                 {overdraftFacility > 0
                   ? `Effective safety: ${fmt(safetyThreshold - overdraftFacility)}`
                   : "Not set"}
               </p>
-            </CardContent>
-          </Card>
+          </div>
         </div>
 
         {/* Cashflow Detail Grid */}
         {forecast.weeklyForecasts.length > 0 && (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">
+          <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] overflow-hidden">
+            <div className="px-5 py-3">
+              <h3 className="text-sm font-semibold text-[var(--q-text-primary)]">
                 Cashflow Detail
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
+              </h3>
+            </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs border-collapse min-w-[900px]">
                   <thead>
-                    <tr className="border-b bg-muted/30">
-                      <th className="text-left py-2 px-3 sticky left-0 bg-muted/30 z-10 min-w-[180px]" />
+                    <tr className="border-b bg-[var(--q-bg-surface-alt)]/30">
+                      <th className="text-left py-2 px-3 sticky left-0 bg-[var(--q-bg-surface-alt)]/30 z-10 min-w-[180px]" />
                       {forecast.weeklyForecasts.map((wf) => (
                         <th
                           key={wf.weekNumber}
@@ -627,7 +620,7 @@ export default function ScenariosPage() {
                         <td key={wf.weekNumber} className="text-right py-1.5 px-2">
                           {wf.sourceBreakdown.arCollections > 0
                             ? fmt(wf.sourceBreakdown.arCollections)
-                            : <span className="text-muted-foreground">—</span>}
+                            : <span className="text-[var(--q-text-tertiary)]">—</span>}
                         </td>
                       ))}
                       <td className="text-right py-1.5 px-3">
@@ -636,8 +629,8 @@ export default function ScenariosPage() {
                     </tr>
                     {/* Pipeline rows (Layer 3) — inline editable like outflows */}
                     {PIPELINE_TIERS.map((tier) => (
-                      <tr key={tier.category} className="border-b hover:bg-muted/20">
-                        <td className="py-1.5 px-3 pl-6 text-muted-foreground sticky left-0 bg-background z-10">
+                      <tr key={tier.category} className="border-b hover:bg-[var(--q-bg-surface-hover)]">
+                        <td className="py-1.5 px-3 pl-6 text-[var(--q-text-tertiary)] sticky left-0 bg-background z-10">
                           {tier.label}
                         </td>
                         {forecast.weeklyForecasts.map((wf, wi) => {
@@ -698,8 +691,8 @@ export default function ScenariosPage() {
                                 />
                               ) : (
                                 <button
-                                  className={`w-full text-right text-xs py-0.5 px-1 rounded hover:bg-muted/50 ${
-                                    amount > 0 ? "" : "text-muted-foreground"
+                                  className={`w-full text-right text-xs py-0.5 px-1 rounded hover:bg-[var(--q-bg-surface-hover)] ${
+                                    amount > 0 ? "" : "text-[var(--q-text-tertiary)]"
                                   }`}
                                   onClick={() => {
                                     if (!canEditForecast) return;
@@ -716,7 +709,7 @@ export default function ScenariosPage() {
                         <td className="text-right py-1.5 px-3 font-medium">
                           {getPipelineTierTotal(tier.category) > 0
                             ? fmt(getPipelineTierTotal(tier.category))
-                            : <span className="text-muted-foreground">—</span>}
+                            : <span className="text-[var(--q-text-tertiary)]">—</span>}
                         </td>
                       </tr>
                     ))}
@@ -742,7 +735,7 @@ export default function ScenariosPage() {
                         const total = forecast.outflows?.weeklyTotals?.[i] ?? getWeekOutflowTotal(wf.weekStarting);
                         return (
                           <td key={wf.weekNumber} className="text-right py-1.5 px-2 font-medium text-red-700">
-                            {total > 0 ? fmt(total) : <span className="text-muted-foreground">—</span>}
+                            {total > 0 ? fmt(total) : <span className="text-[var(--q-text-tertiary)]">—</span>}
                           </td>
                         );
                       })}
@@ -760,9 +753,9 @@ export default function ScenariosPage() {
 
                       return (
                         <React.Fragment key={cat.category}>
-                          <tr className="border-b hover:bg-muted/20">
+                          <tr className="border-b hover:bg-[var(--q-bg-surface-hover)]">
                             <td className="py-1 px-3 pl-6 sticky left-0 bg-background z-10">
-                              <span className="text-muted-foreground">{cat.label}</span>
+                              <span className="text-[var(--q-text-tertiary)]">{cat.label}</span>
                             </td>
                             {forecast.weeklyForecasts.map((wf, wi) => {
                               const amount = hasChildren
@@ -776,7 +769,7 @@ export default function ScenariosPage() {
                               return (
                                 <td key={wf.weekNumber} className="text-right py-0.5 px-1">
                                   {hasChildren ? (
-                                    <span className={amount > 0 ? "" : "text-muted-foreground"}>
+                                    <span className={amount > 0 ? "" : "text-[var(--q-text-tertiary)]"}>
                                       {amount > 0 ? fmt(amount) : "—"}
                                     </span>
                                   ) : isEditingThis ? (
@@ -829,8 +822,8 @@ export default function ScenariosPage() {
                                     />
                                   ) : (
                                     <button
-                                      className={`w-full text-right text-xs py-0.5 px-1 rounded hover:bg-muted/50 ${
-                                        amount > 0 ? "" : "text-muted-foreground"
+                                      className={`w-full text-right text-xs py-0.5 px-1 rounded hover:bg-[var(--q-bg-surface-hover)] ${
+                                        amount > 0 ? "" : "text-[var(--q-text-tertiary)]"
                                       }`}
                                       onClick={() => {
                                         if (!canEditForecast) return;
@@ -861,9 +854,9 @@ export default function ScenariosPage() {
                             cat.children!.map((child) => (
                               <tr
                                 key={child.category}
-                                className="border-b hover:bg-muted/20"
+                                className="border-b hover:bg-[var(--q-bg-surface-hover)]"
                               >
-                                <td className="py-1 px-3 pl-10 text-muted-foreground sticky left-0 bg-background z-10">
+                                <td className="py-1 px-3 pl-10 text-[var(--q-text-tertiary)] sticky left-0 bg-background z-10">
                                   {child.label}
                                 </td>
                                 {forecast.weeklyForecasts.map((wf, wi) => {
@@ -945,10 +938,10 @@ export default function ScenariosPage() {
                                         />
                                       ) : (
                                         <button
-                                          className={`w-full text-right text-xs py-0.5 px-1 rounded hover:bg-muted/50 ${
+                                          className={`w-full text-right text-xs py-0.5 px-1 rounded hover:bg-[var(--q-bg-surface-hover)] ${
                                             amount > 0
                                               ? ""
-                                              : "text-muted-foreground"
+                                              : "text-[var(--q-text-tertiary)]"
                                           }`}
                                           onClick={() => {
                                             if (!canEditForecast) return;
@@ -980,8 +973,8 @@ export default function ScenariosPage() {
 
                     {/* ── CALCULATED ROWS ── */}
                     {/* Net cashflow */}
-                    <tr className="border-t-2 border-b bg-muted/20">
-                      <td className="py-1.5 px-3 font-medium sticky left-0 bg-muted/20 z-10">
+                    <tr className="border-t-2 border-b bg-[var(--q-bg-surface-hover)]">
+                      <td className="py-1.5 px-3 font-medium sticky left-0 bg-[var(--q-bg-surface-hover)] z-10">
                         NET CASHFLOW
                       </td>
                       {forecast.weeklyForecasts.map((wf, i) => {
@@ -1009,8 +1002,8 @@ export default function ScenariosPage() {
                       </td>
                     </tr>
                     {/* Running balance */}
-                    <tr className="border-b bg-muted/30">
-                      <td className="py-1.5 px-3 font-medium sticky left-0 bg-muted/30 z-10">
+                    <tr className="border-b bg-[var(--q-bg-surface-alt)]/30">
+                      <td className="py-1.5 px-3 font-medium sticky left-0 bg-[var(--q-bg-surface-alt)]/30 z-10">
                         RUNNING BALANCE
                       </td>
                       {forecast.weeklyForecasts.map((wf, i) => {
@@ -1039,8 +1032,7 @@ export default function ScenariosPage() {
                   </tbody>
                 </table>
               </div>
-            </CardContent>
-          </Card>
+          </div>
         )}
       </div>
     </AppShell>
