@@ -4,7 +4,7 @@ import AppShell from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
+import { QBadge } from "@/components/ui/q-badge";
 import {
   Dialog,
   DialogContent,
@@ -443,7 +443,7 @@ export default function BridgePage() {
     return (
       <AppShell title="Capital" subtitle="Bridge">
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <Loader2 className="h-6 w-6 animate-spin text-[var(--q-text-tertiary)]" />
         </div>
       </AppShell>
     );
@@ -460,26 +460,26 @@ export default function BridgePage() {
             ═══════════════════════════════════════════════════════════════ */}
 
         {hasRealGap && gapInfo ? (
-          <div className="rounded-xl border bg-card p-6 md:p-8 space-y-5">
+          <div className="rounded-xl border bg-[var(--q-bg-surface)] p-6 md:p-8 space-y-5">
             {/* Cash gap headline + facility toggle — same row */}
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0" />
+                <AlertTriangle className="h-5 w-5 text-[var(--q-attention-text)] shrink-0" />
                 <h2 className="text-lg font-semibold">
                   Cash gap: {fmt(gapInfo.gapAmount)} in Week {gapInfo.weekNumber} (w/c {gapInfo.weekLabel})
                 </h2>
               </div>
               <div className="flex items-center gap-3">
-                <span className={cn("text-sm", !useOwnFacility && "font-medium text-foreground", useOwnFacility && "text-muted-foreground")}>Qashivo financing</span>
+                <span className={cn("text-sm", !useOwnFacility && "font-medium text-[var(--q-text-primary)]", useOwnFacility && "text-[var(--q-text-tertiary)]")}>Qashivo financing</span>
                 <Switch checked={useOwnFacility} onCheckedChange={setUseOwnFacility} />
-                <span className={cn("text-sm", useOwnFacility && "font-medium text-foreground", !useOwnFacility && "text-muted-foreground")}>Your facility</span>
+                <span className={cn("text-sm", useOwnFacility && "font-medium text-[var(--q-text-primary)]", !useOwnFacility && "text-[var(--q-text-tertiary)]")}>Your facility</span>
               </div>
             </div>
 
             {/* Recommendation + action — two-column layout */}
             <div className="flex items-start justify-between gap-6">
               {/* Left: recommendation text */}
-              <div className="flex-1 space-y-2 text-sm text-muted-foreground leading-relaxed">
+              <div className="flex-1 space-y-2 text-sm text-[var(--q-text-tertiary)] leading-relaxed">
                 <p>
                   Riley recommends financing{" "}
                   <button
@@ -488,8 +488,8 @@ export default function BridgePage() {
                   >
                     {activeSelection.length} invoice{activeSelection.length !== 1 ? "s" : ""}
                   </button>.{" "}
-                  You'll receive <span className="font-medium text-foreground">{fmt(activeCost.totalAdvance)}</span> within 24 hours.{" "}
-                  This will cost <span className="font-medium text-foreground">{fmt(activeCost.totalCost)}</span> in interest.
+                  You'll receive <span className="font-medium text-[var(--q-text-primary)]">{fmt(activeCost.totalAdvance)}</span> within 24 hours.{" "}
+                  This will cost <span className="font-medium text-[var(--q-text-primary)]">{fmt(activeCost.totalCost)}</span> in interest.
                 </p>
                 <p>
                   {activeCost.totalAdvance >= gapInfo.gapAmount
@@ -505,7 +505,7 @@ export default function BridgePage() {
               <div className="flex flex-col items-end gap-2 shrink-0">
                 {!useOwnFacility && (
                   requestState === "approved" ? (
-                    <Button variant="outline" className="border-emerald-300 text-emerald-700 bg-emerald-50 pointer-events-none">
+                    <Button variant="outline" className="border-[var(--q-money-in-border)] text-[var(--q-money-in-text)] bg-[var(--q-money-in-bg)] pointer-events-none">
                       <CheckCircle2 className="h-4 w-4 mr-1.5" />
                       Approved
                     </Button>
@@ -523,7 +523,7 @@ export default function BridgePage() {
                 )}
                 <button
                   onClick={() => setShowAdvanced(!showAdvanced)}
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                  className="text-xs text-[var(--q-text-tertiary)] hover:text-[var(--q-text-primary)] transition-colors flex items-center gap-1"
                 >
                   <span className="underline">{showAdvanced ? "Hide advanced" : "Advanced options"}</span>
                   {showAdvanced ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
@@ -533,26 +533,26 @@ export default function BridgePage() {
           </div>
         ) : (
           /* ── No cash gap state ── */
-          <div className="rounded-xl border bg-card p-6 md:p-8 space-y-4">
+          <div className="rounded-xl border bg-[var(--q-bg-surface)] p-6 md:p-8 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />
+                <CheckCircle2 className="h-5 w-5 text-[var(--q-money-in-text)] shrink-0" />
                 <h2 className="text-lg font-semibold">No cash gap detected</h2>
               </div>
               <div className="flex items-center gap-3">
-                <span className={cn("text-sm", !useOwnFacility && "font-medium text-foreground", useOwnFacility && "text-muted-foreground")}>Qashivo financing</span>
+                <span className={cn("text-sm", !useOwnFacility && "font-medium text-[var(--q-text-primary)]", useOwnFacility && "text-[var(--q-text-tertiary)]")}>Qashivo financing</span>
                 <Switch checked={useOwnFacility} onCheckedChange={setUseOwnFacility} />
-                <span className={cn("text-sm", useOwnFacility && "font-medium text-foreground", !useOwnFacility && "text-muted-foreground")}>Your facility</span>
+                <span className={cn("text-sm", useOwnFacility && "font-medium text-[var(--q-text-primary)]", !useOwnFacility && "text-[var(--q-text-tertiary)]")}>Your facility</span>
               </div>
             </div>
-            <p className="text-sm text-muted-foreground leading-relaxed">
+            <p className="text-sm text-[var(--q-text-tertiary)] leading-relaxed">
               Your forecast stays above your safety threshold for the full 13-week period.
               If you'd like to finance invoices anyway to accelerate cash, select from the list below.
             </p>
 
             <button
               onClick={() => setShowAdvanced(!showAdvanced)}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+              className="text-sm text-[var(--q-text-tertiary)] hover:text-[var(--q-text-primary)] transition-colors flex items-center gap-1"
             >
               <span className="underline">{showAdvanced ? "Hide advanced" : "Advanced options"}</span>
               {showAdvanced ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
@@ -628,20 +628,20 @@ export default function BridgePage() {
 
           {/* Coverage warning */}
           {coverageShortfall > 0 && manualSelection.length > 0 && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50/40 px-4 py-2.5 mb-3 text-sm text-amber-800">
+            <div className="rounded-lg border border-[var(--q-attention-border)] bg-[var(--q-attention-bg)] px-4 py-2.5 mb-3 text-sm text-[var(--q-attention-text)]">
               Selection covers {fmt(manualAdvance)} of {fmt(gapInfo!.gapAmount)} gap — shortfall of {fmt(coverageShortfall)}
             </div>
           )}
           {coverageExcess > 5_000 && (
-            <div className="rounded-lg border border-blue-200 bg-blue-50/40 px-4 py-2.5 mb-3 text-sm text-blue-800">
+            <div className="rounded-lg border border-[var(--q-info-border)] bg-[var(--q-info-bg)] px-4 py-2.5 mb-3 text-sm text-[var(--q-info-text)]">
               Selection exceeds gap by {fmt(coverageExcess)} — you'll pay interest on capital you may not need
             </div>
           )}
 
-          <div className="rounded-lg border bg-card overflow-x-auto">
+          <div className="rounded-lg border bg-[var(--q-bg-surface)] overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b bg-muted/40 text-left text-xs text-muted-foreground">
+                <tr className="border-b bg-[var(--q-bg-surface-alt)] text-left text-xs text-[var(--q-text-tertiary)]">
                   <th className="px-3 py-2.5 w-10" />
                   <th className="px-3 py-2.5 font-medium">Invoice</th>
                   <th className="px-3 py-2.5 font-medium">Debtor</th>
@@ -659,8 +659,8 @@ export default function BridgePage() {
                     <tr
                       key={inv.invoiceId}
                       className={cn(
-                        "hover:bg-muted/20 transition-colors",
-                        selectedIds.has(inv.invoiceId) && "bg-blue-50/30",
+                        "hover:bg-[var(--q-bg-surface-hover)] transition-colors",
+                        selectedIds.has(inv.invoiceId) && "bg-[var(--q-info-bg)]",
                         isExcluded && "opacity-50",
                       )}
                     >
@@ -678,23 +678,23 @@ export default function BridgePage() {
                       <td className="px-3 py-3 text-right">
                         <RiskBadge score={inv.riskScore} />
                       </td>
-                      <td className="px-3 py-3 text-right tabular-nums text-muted-foreground">{fmt(inv.totalCost)}</td>
+                      <td className="px-3 py-3 text-right tabular-nums text-[var(--q-text-tertiary)]">{fmt(inv.totalCost)}</td>
                       <td className="px-3 py-3">
                         <div className="flex gap-1.5">
                           {isExcluded && (
-                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-zinc-100 text-zinc-500">
+                            <QBadge variant="neutral" className="text-[10px] px-1.5 py-0 bg-[var(--q-bg-surface-alt)] text-[var(--q-text-tertiary)]">
                               {inv.exclusionReason}
-                            </Badge>
+                            </QBadge>
                           )}
                           {!isExcluded && inv.isRileyRecommended && (
-                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-violet-100 text-violet-700 border-violet-200">
+                            <QBadge variant="neutral" className="text-[10px] px-1.5 py-0 bg-[var(--q-info-bg)] text-[var(--q-info-text)] border-[var(--q-border-default)]">
                               <Sparkles className="h-2.5 w-2.5 mr-0.5" />Riley
-                            </Badge>
+                            </QBadge>
                           )}
                           {!isExcluded && inv.isBlindPick && !inv.isRileyRecommended && (
-                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 text-muted-foreground">
+                            <QBadge variant="neutral" className="text-[10px] px-1.5 py-0 text-[var(--q-text-tertiary)]">
                               Largest
-                            </Badge>
+                            </QBadge>
                           )}
                         </div>
                       </td>
@@ -703,7 +703,7 @@ export default function BridgePage() {
                 })}
                 {bridgeInvoices.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="px-3 py-8 text-center text-muted-foreground">
+                    <td colSpan={8} className="px-3 py-8 text-center text-[var(--q-text-tertiary)]">
                       No eligible invoices found in the forecast.
                     </td>
                   </tr>
@@ -713,15 +713,15 @@ export default function BridgePage() {
           </div>
 
           {/* Action bar below table */}
-          <div className="flex items-center justify-between rounded-lg border bg-card p-5 mt-3">
-            <div className="text-sm text-muted-foreground">
+          <div className="flex items-center justify-between rounded-lg border bg-[var(--q-bg-surface)] p-5 mt-3">
+            <div className="text-sm text-[var(--q-text-tertiary)]">
               {useOwnFacility
                 ? "Present this selection to your finance provider for optimal cost."
                 : `${manualSelection.length} invoice${manualSelection.length !== 1 ? "s" : ""} selected · ${fmt(manualCost.totalAdvance)} advance · ${fmt(manualCost.totalInterest)} interest`}
             </div>
             {!useOwnFacility && (
               requestState === "approved" ? (
-                <Button variant="outline" className="border-emerald-300 text-emerald-700 bg-emerald-50 pointer-events-none">
+                <Button variant="outline" className="border-[var(--q-money-in-border)] text-[var(--q-money-in-text)] bg-[var(--q-money-in-bg)] pointer-events-none">
                   <CheckCircle2 className="h-4 w-4 mr-1.5" />
                   Approved
                 </Button>
@@ -747,23 +747,23 @@ export default function BridgePage() {
             </DialogHeader>
             <div className="space-y-4 py-2">
               <div className="grid grid-cols-2 gap-y-2 text-sm">
-                <span className="text-muted-foreground">Invoices selected</span>
+                <span className="text-[var(--q-text-tertiary)]">Invoices selected</span>
                 <span className="text-right font-medium">{manualSelection.length}</span>
-                <span className="text-muted-foreground">Total to finance</span>
+                <span className="text-[var(--q-text-tertiary)]">Total to finance</span>
                 <span className="text-right font-medium">{fmt(manualCost.totalFinanced)}</span>
-                <span className="text-muted-foreground">Estimated advance (80%)</span>
+                <span className="text-[var(--q-text-tertiary)]">Estimated advance (80%)</span>
                 <span className="text-right font-medium">{fmt(manualCost.totalAdvance)}</span>
                 <div className="col-span-2 border-t my-1" />
                 <span className="font-medium">Estimated interest</span>
                 <span className="text-right font-semibold">{fmt(manualCost.totalInterest)}</span>
               </div>
 
-              <div className="rounded-lg bg-muted/40 p-3 space-y-1">
-                <p className="text-xs font-medium text-muted-foreground">Invoices</p>
+              <div className="rounded-lg bg-[var(--q-bg-surface-alt)] p-3 space-y-1">
+                <p className="text-xs font-medium text-[var(--q-text-tertiary)]">Invoices</p>
                 {manualSelection.map((inv) => (
                   <p key={inv.invoiceId} className="text-sm">
                     <span className="font-mono text-xs">{inv.invoiceNumber}</span>{" "}
-                    <span className="text-muted-foreground">{inv.contactName}</span>{" "}
+                    <span className="text-[var(--q-text-tertiary)]">{inv.contactName}</span>{" "}
                     <span className="font-medium">{fmt(inv.amountDue)}</span>
                   </p>
                 ))}
@@ -799,21 +799,21 @@ function CostColumn({ title, subtitle, data, saving, recommended, muted, live, g
     <div
       className={cn(
         "rounded-lg border p-5 space-y-3",
-        recommended && "border-blue-200 bg-blue-50/30 ring-1 ring-blue-100",
-        muted && "bg-muted/20",
-        live && "bg-card",
+        recommended && "border-[var(--q-info-border)] bg-[var(--q-info-bg)] ring-1 ring-[var(--q-info-border)]",
+        muted && "bg-[var(--q-bg-surface-alt)]",
+        live && "bg-[var(--q-bg-surface)]",
       )}
     >
       <div>
         <div className="flex items-center gap-2">
           <h4 className="text-sm font-semibold">{title}</h4>
           {recommended && (
-            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-blue-100 text-blue-700">
+            <QBadge variant="neutral" className="text-[10px] px-1.5 py-0 bg-[var(--q-info-bg)] text-[var(--q-info-text)]">
               Recommended
-            </Badge>
+            </QBadge>
           )}
         </div>
-        <p className="text-xs text-muted-foreground">{subtitle}</p>
+        <p className="text-xs text-[var(--q-text-tertiary)]">{subtitle}</p>
       </div>
 
       <div className="space-y-1.5 text-sm">
@@ -841,12 +841,12 @@ function CostColumn({ title, subtitle, data, saving, recommended, muted, live, g
 function CostRow({ label, value, bold, highlight, warn }: { label: string; value: string; bold?: boolean; highlight?: boolean; warn?: boolean }) {
   return (
     <div className="flex justify-between">
-      <span className={cn("text-muted-foreground", bold && "text-foreground font-medium")}>{label}</span>
+      <span className={cn("text-[var(--q-text-tertiary)]", bold && "text-[var(--q-text-primary)] font-medium")}>{label}</span>
       <span className={cn(
         "tabular-nums",
         bold && "font-semibold",
-        highlight && "text-emerald-700 font-semibold",
-        warn && "text-rose-600 font-medium",
+        highlight && "text-[var(--q-money-in-text)] font-semibold",
+        warn && "text-[var(--q-risk-text)] font-medium",
       )}>{value}</span>
     </div>
   );
@@ -855,10 +855,10 @@ function CostRow({ label, value, bold, highlight, warn }: { label: string; value
 function RiskBadge({ score }: { score: number }) {
   const label = riskLabel(score);
   const cls = score < 35
-    ? "text-emerald-700 bg-emerald-50"
+    ? "text-[var(--q-money-in-text)] bg-[var(--q-money-in-bg)]"
     : score < 60
-      ? "text-amber-700 bg-amber-50"
-      : "text-red-700 bg-red-50";
+      ? "text-[var(--q-attention-text)] bg-[var(--q-attention-bg)]"
+      : "text-[var(--q-risk-text)] bg-[var(--q-risk-bg)]";
   return (
     <span className={cn("inline-block px-1.5 py-0.5 rounded text-[10px] font-medium", cls)}>
       {label}

@@ -68,19 +68,19 @@ function signedFmt(n: number): string {
 }
 
 const TYPE_STYLES: Record<TxnType, string> = {
-  Drawdown: "text-blue-700 bg-blue-50",
-  Repayment: "text-emerald-700 bg-emerald-50",
-  "20% release": "text-emerald-700 bg-emerald-50",
-  Fee: "text-zinc-500 bg-zinc-100",
-  "Interest charge": "text-zinc-500 bg-zinc-100",
+  Drawdown: "text-[var(--q-info-text)] bg-[var(--q-info-bg)]",
+  Repayment: "text-[var(--q-money-in-text)] bg-[var(--q-money-in-bg)]",
+  "20% release": "text-[var(--q-money-in-text)] bg-[var(--q-money-in-bg)]",
+  Fee: "text-[var(--q-text-tertiary)] bg-[var(--q-bg-surface-alt)]",
+  "Interest charge": "text-[var(--q-text-tertiary)] bg-[var(--q-bg-surface-alt)]",
 };
 
 const AMOUNT_COLOR: Record<TxnType, string> = {
-  Drawdown: "text-blue-700",
-  Repayment: "text-emerald-700",
-  "20% release": "text-emerald-700",
-  Fee: "text-muted-foreground",
-  "Interest charge": "text-muted-foreground",
+  Drawdown: "text-[var(--q-info-text)]",
+  Repayment: "text-[var(--q-money-in-text)]",
+  "20% release": "text-[var(--q-money-in-text)]",
+  Fee: "text-[var(--q-text-tertiary)]",
+  "Interest charge": "text-[var(--q-text-tertiary)]",
 };
 
 // ── Component ─────────────────────────────────────────────────────
@@ -119,10 +119,10 @@ export default function FacilityPage() {
 
         {/* Active drawdowns */}
         {tab === "drawdowns" && (
-          <div className="rounded-lg border bg-card overflow-x-auto">
+          <div className="rounded-lg border border-[var(--q-border-default)] bg-[var(--q-bg-surface)] overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b bg-muted/40 text-left text-xs text-muted-foreground">
+                <tr className="border-b bg-[var(--q-bg-surface-alt)]/40 text-left text-xs text-[var(--q-text-tertiary)]">
                   <th className="px-4 py-2.5 font-medium">Invoice</th>
                   <th className="px-4 py-2.5 font-medium">Debtor</th>
                   <th className="px-4 py-2.5 font-medium text-right">Amount</th>
@@ -135,16 +135,16 @@ export default function FacilityPage() {
               </thead>
               <tbody className="divide-y">
                 {ACTIVE_DRAWDOWNS.map((d) => (
-                  <tr key={d.invoice} className="hover:bg-muted/20">
+                  <tr key={d.invoice} className="hover:bg-[var(--q-bg-surface-hover)]">
                     <td className="px-4 py-3 font-mono text-xs">{d.invoice}</td>
                     <td className="px-4 py-3">{d.debtor}</td>
                     <td className="px-4 py-3 text-right tabular-nums">{fmt(d.amount)}</td>
-                    <td className="px-4 py-3 text-right tabular-nums font-medium text-blue-700">{fmt(d.advanced)}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{d.dateDrawn}</td>
+                    <td className="px-4 py-3 text-right tabular-nums font-medium text-[var(--q-info-text)]">{fmt(d.advanced)}</td>
+                    <td className="px-4 py-3 text-[var(--q-text-tertiary)]">{d.dateDrawn}</td>
                     <td className="px-4 py-3 text-right tabular-nums">{d.daysActive}</td>
-                    <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">{fmt(d.interestAccrued)}</td>
+                    <td className="px-4 py-3 text-right tabular-nums text-[var(--q-text-tertiary)]">{fmt(d.interestAccrued)}</td>
                     <td className="px-4 py-3">
-                      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
+                      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--q-money-in-text)]">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                         {d.status}
                       </span>
@@ -153,12 +153,12 @@ export default function FacilityPage() {
                 ))}
               </tbody>
               <tfoot>
-                <tr className="border-t bg-muted/20 font-medium text-sm">
+                <tr className="border-t bg-[var(--q-bg-surface-alt)]/20 font-medium text-sm">
                   <td className="px-4 py-2.5" colSpan={2}>Total</td>
                   <td className="px-4 py-2.5 text-right tabular-nums">{fmt(ACTIVE_DRAWDOWNS.reduce((s, d) => s + d.amount, 0))}</td>
-                  <td className="px-4 py-2.5 text-right tabular-nums text-blue-700">{fmt(ACTIVE_DRAWDOWNS.reduce((s, d) => s + d.advanced, 0))}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums text-[var(--q-info-text)]">{fmt(ACTIVE_DRAWDOWNS.reduce((s, d) => s + d.advanced, 0))}</td>
                   <td className="px-4 py-2.5" colSpan={2} />
-                  <td className="px-4 py-2.5 text-right tabular-nums text-muted-foreground">{fmt(ACTIVE_DRAWDOWNS.reduce((s, d) => s + d.interestAccrued, 0))}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums text-[var(--q-text-tertiary)]">{fmt(ACTIVE_DRAWDOWNS.reduce((s, d) => s + d.interestAccrued, 0))}</td>
                   <td className="px-4 py-2.5" />
                 </tr>
               </tfoot>
@@ -168,10 +168,10 @@ export default function FacilityPage() {
 
         {/* Transaction history */}
         {tab === "history" && (
-          <div className="rounded-lg border bg-card overflow-x-auto">
+          <div className="rounded-lg border border-[var(--q-border-default)] bg-[var(--q-bg-surface)] overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b bg-muted/40 text-left text-xs text-muted-foreground">
+                <tr className="border-b bg-[var(--q-bg-surface-alt)]/40 text-left text-xs text-[var(--q-text-tertiary)]">
                   <th className="px-4 py-2.5 font-medium">Date</th>
                   <th className="px-4 py-2.5 font-medium">Type</th>
                   <th className="px-4 py-2.5 font-medium">Invoice</th>
@@ -184,8 +184,8 @@ export default function FacilityPage() {
               </thead>
               <tbody className="divide-y">
                 {TRANSACTIONS.map((t, i) => (
-                  <tr key={i} className="hover:bg-muted/20">
-                    <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{t.date}</td>
+                  <tr key={i} className="hover:bg-[var(--q-bg-surface-hover)]">
+                    <td className="px-4 py-3 text-[var(--q-text-tertiary)] whitespace-nowrap">{t.date}</td>
                     <td className="px-4 py-3">
                       <span className={cn("inline-block px-2 py-0.5 rounded text-xs font-medium", TYPE_STYLES[t.type])}>
                         {t.type}
@@ -196,10 +196,10 @@ export default function FacilityPage() {
                     <td className={cn("px-4 py-3 text-right tabular-nums font-medium", AMOUNT_COLOR[t.type])}>
                       {signedFmt(t.amount)}
                     </td>
-                    <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
+                    <td className="px-4 py-3 text-right tabular-nums text-[var(--q-text-tertiary)]">
                       {t.interest != null ? fmt(t.interest) : "—"}
                     </td>
-                    <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
+                    <td className="px-4 py-3 text-right tabular-nums text-[var(--q-text-tertiary)]">
                       {t.fee != null ? fmt(t.fee) : "—"}
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums font-medium">{fmt(t.balance)}</td>
@@ -222,7 +222,7 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
       onClick={onClick}
       className={cn(
         "pb-2.5 text-sm font-medium border-b-2 -mb-px transition-colors",
-        active ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
+        active ? "border-[var(--q-text-primary)] text-[var(--q-text-primary)]" : "border-transparent text-[var(--q-text-tertiary)] hover:text-[var(--q-text-primary)]",
       )}
     >
       {label}
@@ -232,18 +232,18 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
 
 function SummaryCard({ label, value, sub, highlight }: { label: string; value: string; sub?: string; highlight?: boolean }) {
   return (
-    <div className="rounded-lg border bg-card p-4">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className={cn("text-xl font-semibold mt-1 tabular-nums", highlight && "text-emerald-700")}>{value}</p>
-      {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
+    <div className="rounded-lg border border-[var(--q-border-default)] bg-[var(--q-bg-surface)] p-4">
+      <p className="text-xs text-[var(--q-text-tertiary)]">{label}</p>
+      <p className={cn("text-xl font-semibold mt-1 tabular-nums", highlight && "text-[var(--q-money-in-text)]")}>{value}</p>
+      {sub && <p className="text-xs text-[var(--q-text-tertiary)] mt-0.5">{sub}</p>}
     </div>
   );
 }
 
 function MetricCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border bg-muted/30 px-4 py-3">
-      <p className="text-xs text-muted-foreground">{label}</p>
+    <div className="rounded-lg border border-[var(--q-border-default)] bg-[var(--q-bg-surface-alt)]/30 px-4 py-3">
+      <p className="text-xs text-[var(--q-text-tertiary)]">{label}</p>
       <p className="text-sm font-semibold mt-0.5 tabular-nums">{value}</p>
     </div>
   );

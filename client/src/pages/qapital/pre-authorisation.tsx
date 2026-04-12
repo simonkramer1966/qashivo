@@ -81,15 +81,15 @@ function getOverallStatus(checks: PreAuthCheck[]): { label: string; color: strin
   const failed = checks.filter((c) => c.status === "failed").length;
   const actionNeeded = checks.filter((c) => c.status === "action_needed").length;
 
-  if (failed > 0) return { label: "NOT APPROVED", color: "bg-red-100 text-red-800", dot: "red" };
-  if (actionNeeded > 0) return { label: "ACTION NEEDED", color: "bg-amber-100 text-amber-800", dot: "amber" };
-  return { label: "APPROVED", color: "bg-emerald-100 text-emerald-800", dot: "green" };
+  if (failed > 0) return { label: "NOT APPROVED", color: "bg-[var(--q-risk-bg)] text-[var(--q-risk-text)]", dot: "red" };
+  if (actionNeeded > 0) return { label: "ACTION NEEDED", color: "bg-[var(--q-attention-bg)] text-[var(--q-attention-text)]", dot: "amber" };
+  return { label: "APPROVED", color: "bg-[var(--q-money-in-bg)] text-[var(--q-money-in-text)]", dot: "green" };
 }
 
 const STATUS_ICON: Record<CheckStatus, React.ReactNode> = {
-  passed: <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />,
-  action_needed: <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0" />,
-  failed: <XCircle className="h-5 w-5 text-red-500 shrink-0" />,
+  passed: <CheckCircle2 className="h-5 w-5 text-[var(--q-money-in-text)] shrink-0" />,
+  action_needed: <AlertTriangle className="h-5 w-5 text-[var(--q-attention-text)] shrink-0" />,
+  failed: <XCircle className="h-5 w-5 text-[var(--q-risk-text)] shrink-0" />,
 };
 
 export default function PreAuthorisationPage() {
@@ -100,9 +100,9 @@ export default function PreAuthorisationPage() {
     <AppShell title="Capital" subtitle="Pre-authorisation">
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-start gap-4 rounded-lg border bg-card p-6">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100">
-            <ShieldCheck className="h-6 w-6 text-emerald-700" />
+        <div className="flex items-start gap-4 rounded-lg border border-[var(--q-border-default)] bg-[var(--q-bg-surface)] p-6">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--q-money-in-bg)]">
+            <ShieldCheck className="h-6 w-6 text-[var(--q-money-in-text)]" />
           </div>
           <div className="flex-1 space-y-1">
             <div className="flex items-center gap-3">
@@ -111,31 +111,31 @@ export default function PreAuthorisationPage() {
                 {overall.label}
               </span>
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-[var(--q-text-tertiary)]">
               Your business meets all requirements for invoice financing. When you need it, you're ready.
             </p>
           </div>
-          <div className="text-right text-xs text-muted-foreground hidden sm:block">
+          <div className="text-right text-xs text-[var(--q-text-tertiary)] hidden sm:block">
             <span>{passedCount}/{PRE_AUTH_CHECKS.length} passed</span>
           </div>
         </div>
 
         {/* Checklist */}
-        <div className="rounded-lg border bg-card divide-y">
+        <div className="rounded-lg border border-[var(--q-border-default)] bg-[var(--q-bg-surface)] divide-y">
           {PRE_AUTH_CHECKS.map((check, i) => (
             <div key={check.id} className="flex items-start gap-3 p-4">
               <div className="pt-0.5">{STATUS_ICON[check.status]}</div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline gap-2">
-                  <span className="text-xs text-muted-foreground font-mono">{i + 1}.</span>
+                  <span className="text-xs text-[var(--q-text-tertiary)] font-mono">{i + 1}.</span>
                   <span className="text-sm font-medium">{check.name}</span>
                 </div>
-                <p className="text-sm text-muted-foreground mt-0.5 ml-5">{check.detail}</p>
+                <p className="text-sm text-[var(--q-text-tertiary)] mt-0.5 ml-5">{check.detail}</p>
                 {check.source && (
-                  <p className="text-xs text-muted-foreground/70 mt-0.5 ml-5">{check.source}</p>
+                  <p className="text-xs text-[var(--q-text-tertiary)]/70 mt-0.5 ml-5">{check.source}</p>
                 )}
                 {check.action && check.status !== "passed" && (
-                  <p className="text-xs text-amber-700 mt-1 ml-5 font-medium">{check.action}</p>
+                  <p className="text-xs text-[var(--q-attention-text)] mt-1 ml-5 font-medium">{check.action}</p>
                 )}
               </div>
             </div>
@@ -143,11 +143,11 @@ export default function PreAuthorisationPage() {
         </div>
 
         {/* Footer */}
-        <div className="rounded-lg border bg-muted/30 px-6 py-4 space-y-1">
-          <p className="text-sm text-muted-foreground">
+        <div className="rounded-lg border border-[var(--q-border-default)] bg-[var(--q-bg-surface-alt)]/30 px-6 py-4 space-y-1">
+          <p className="text-sm text-[var(--q-text-tertiary)]">
             Pre-authorisation is monitored continuously. If any requirement changes status, you'll be notified immediately.
           </p>
-          <p className="text-xs text-muted-foreground/70">
+          <p className="text-xs text-[var(--q-text-tertiary)]/70">
             Last checked: 11 April 2026
           </p>
         </div>
