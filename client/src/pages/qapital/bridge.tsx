@@ -66,7 +66,6 @@ interface InflowForecast {
 const ADVANCE_RATE = 0.80;
 const MONTHLY_INTEREST_RATE = 0.035;
 const DAILY_INTEREST_RATE = MONTHLY_INTEREST_RATE / 30;
-const FEE_PER_INVOICE = 50;
 const MIN_INVOICE_AMOUNT = 500;
 
 // ── Derived invoice type for bridge selection ──────────────────
@@ -82,7 +81,6 @@ interface BridgeInvoice {
   confidence: "high" | "medium" | "low";
   advance: number;
   interestCost: number;
-  feeCost: number;
   totalCost: number;
   isRileyRecommended: boolean;
   isBlindPick: boolean;
@@ -103,12 +101,11 @@ function computeSelectionCost(invoices: BridgeInvoice[]) {
   const totalFinanced = invoices.reduce((s, inv) => s + inv.amountDue, 0);
   const totalAdvance = invoices.reduce((s, inv) => s + inv.advance, 0);
   const totalInterest = invoices.reduce((s, inv) => s + inv.interestCost, 0);
-  const totalFees = invoices.length * FEE_PER_INVOICE;
-  const totalCost = totalInterest + totalFees;
+  const totalCost = totalInterest;
   const avgDuration = invoices.length > 0
     ? Math.round(invoices.reduce((s, inv) => s + inv.expectedDuration, 0) / invoices.length)
     : 0;
-  return { count: invoices.length, totalFinanced, totalAdvance, totalInterest, totalFees, totalCost, avgDuration };
+  return { count: invoices.length, totalFinanced, totalAdvance, totalInterest, totalCost, avgDuration };
 }
 
 // ── Derive expected duration from weekly probability spread ────
@@ -183,8 +180,7 @@ function buildBridgeInvoices(
       confidence: ic.confidence,
       advance,
       interestCost,
-      feeCost: FEE_PER_INVOICE,
-      totalCost: interestCost + FEE_PER_INVOICE,
+      totalCost: interestCost,
       isRileyRecommended: false,
       isBlindPick: false,
     });
@@ -496,7 +492,7 @@ export default function BridgePage() {
                   {activeSelection.length} invoice{activeSelection.length !== 1 ? "s" : ""}
                 </button>.{" "}
                 You'll receive <span className="font-medium text-foreground">{fmt(activeCost.totalAdvance)}</span> within 24 hours.{" "}
-                This will cost <span className="font-medium text-foreground">{fmt(activeCost.totalCost)}</span> in interest and fees.
+                This will cost <span className="font-medium text-foreground">{fmt(activeCost.totalCost)}</span> in interest.
               </p>
               <p>
                 {activeCost.totalAdvance >= gapInfo.gapAmount
@@ -654,7 +650,7 @@ export default function BridgePage() {
                   <th className="px-3 py-2.5 font-medium text-right">Amount</th>
                   <th className="px-3 py-2.5 font-medium text-right">Expected days to pay</th>
                   <th className="px-3 py-2.5 font-medium text-right">Risk</th>
-                  <th className="px-3 py-2.5 font-medium text-right">Finance cost</th>
+                  <th className="px-3 py-2.5 font-medium text-right">Interest</th>
                   <th className="px-3 py-2.5 font-medium" />
                 </tr>
               </thead>
@@ -723,7 +719,7 @@ export default function BridgePage() {
             <div className="text-sm text-muted-foreground">
               {useOwnFacility
                 ? "Present this selection to your finance provider for optimal cost."
-                : `${manualSelection.length} invoice${manualSelection.length !== 1 ? "s" : ""} selected · ${fmt(manualCost.totalAdvance)} advance · ${fmt(manualCost.totalCost)} estimated cost`}
+                : `${manualSelection.length} invoice${manualSelection.length !== 1 ? "s" : ""} selected · ${fmt(manualCost.totalAdvance)} advance · ${fmt(manualCost.totalInterest)} interest`}
             </div>
             {requestState === "approved" ? (
               <Button variant="outline" className="border-emerald-300 text-emerald-700 bg-emerald-50 pointer-events-none">
@@ -757,13 +753,9 @@ export default function BridgePage() {
                 <span className="text-right font-medium">{fmt(manualCost.totalFinanced)}</span>
                 <span className="text-muted-foreground">Estimated advance (80%)</span>
                 <span className="text-right font-medium">{fmt(manualCost.totalAdvance)}</span>
-                <span className="text-muted-foreground">Estimated interest</span>
-                <span className="text-right font-medium">{fmt(manualCost.totalInterest)}</span>
-                <span className="text-muted-foreground">Facility fee</span>
-                <span className="text-right font-medium">{fmt(manualCost.totalFees)}</span>
                 <div className="col-span-2 border-t my-1" />
-                <span className="font-medium">Total estimated cost</span>
-                <span className="text-right font-semibold">{fmt(manualCost.totalCost)}</span>
+                <span className="font-medium">Estimated interest</span>
+                <span className="text-right font-semibold">{fmt(manualCost.totalInterest)}</span>
               </div>
 
               <div className="rounded-lg bg-muted/40 p-3 space-y-1">
@@ -833,10 +825,8 @@ function CostColumn({ title, subtitle, data, saving, recommended, muted, live, g
           warn={advanceShortfall}
         />
         <CostRow label="Avg days to pay" value={`${data.avgDuration} days`} />
-        <CostRow label="Interest" value={fmt(data.totalInterest)} />
-        <CostRow label="Facility fee" value={fmt(data.totalFees)} />
         <div className="border-t pt-1.5">
-          <CostRow label="Total cost" value={fmt(data.totalCost)} bold />
+          <CostRow label="Interest cost" value={fmt(data.totalInterest)} bold />
         </div>
         {saving && saving.amount > 0 && (
           <div className="pt-0.5">
