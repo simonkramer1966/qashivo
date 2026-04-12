@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { QMetricCard } from "@/components/ui/q-metric-card";
 import { QBadge } from "@/components/ui/q-badge";
 import { QMetricCardSkeleton } from "@/components/ui/q-skeleton";
-import { QPageHeader } from "@/components/ui/q-page-header";
 import { QEmptyState } from "@/components/ui/q-empty-state";
 import { QSkeleton } from "@/components/ui/q-skeleton";
 import {
@@ -180,9 +179,8 @@ export default function HomeDashboard() {
   const facilityHeadroom = FACILITY.limit - FACILITY.drawn;
 
   return (
-    <AppShell title="" subtitle="">
+    <AppShell title="Dashboard" subtitle="Credit Control · Cashflow · Capital">
       <div className="space-y-[var(--q-space-2xl)]">
-        <QPageHeader title="Dashboard" subtitle="Credit Control · Cashflow · Capital" />
         <SyncStatusBanner />
 
         {/* ── ROW 1: Six Headline Metric Cards ── */}
@@ -215,9 +213,9 @@ export default function HomeDashboard() {
             />
             <QMetricCard
               label="Cash gap"
-              value={firstGap ? firstGap.gapAmount : "None"}
-              format={firstGap ? "currency" : "text"}
-              valueClassName={firstGap ? "text-[var(--q-risk-text)]" : "text-[var(--q-money-in-text)]"}
+              value={firstGap ? firstGap.gapAmount : 0}
+              format="currency"
+              valueClassName={firstGap ? "text-[var(--q-risk-text)]" : undefined}
             />
             <QMetricCard
               label="Facility headroom"

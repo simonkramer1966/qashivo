@@ -75,11 +75,18 @@ function QMetricCard({
       onKeyDown={onClick ? (e) => { if (e.key === "Enter" || e.key === " ") onClick(); } : undefined}
       {...props}
     >
-      <p className="text-[11px] font-medium uppercase tracking-[0.5px] text-[var(--q-text-tertiary)]">
+      <p className="text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)]">
         {label}
       </p>
       <p className={cn("mt-[var(--q-space-sm)] text-[28px] font-semibold leading-none tracking-tight text-[var(--q-text-primary)] q-mono", valueClassName)}>
-        {formatValue(value, format)}
+        {format === "days" ? (
+          <>
+            {typeof value === "string" ? value : Math.round(value)}
+            <span className="text-[13px] font-normal text-[var(--q-text-tertiary)] ml-1">days</span>
+          </>
+        ) : (
+          formatValue(value, format)
+        )}
       </p>
       {trend && TrendIcon && (
         <div className={cn("mt-[var(--q-space-md)] flex items-center gap-1 text-xs", trendClasses[trend.direction])}>

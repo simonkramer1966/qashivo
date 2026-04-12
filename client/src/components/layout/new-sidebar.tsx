@@ -261,7 +261,7 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
   return (
     <aside
       className={cn(
-        "flex flex-col h-full bg-q-bg-sidebar text-q-text-primary border-r border-q-border transition-[width] duration-200 ease-in-out",
+        "flex flex-col h-full bg-q-bg-page text-q-text-primary transition-[width] duration-200 ease-in-out",
         mobile ? "w-full" : isCollapsed ? "hidden lg:flex w-16 shrink-0" : "hidden lg:flex w-[240px] shrink-0"
       )}
     >

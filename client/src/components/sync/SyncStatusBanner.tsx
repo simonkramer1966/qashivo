@@ -115,17 +115,17 @@ export default function SyncStatusBanner() {
     const statusCode = statusCodeMatch ? statusCodeMatch[1] : null;
 
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 overflow-hidden">
+      <div className="rounded-lg bg-[var(--q-attention-bg)] overflow-hidden">
         {/* Top bar */}
-        <div className="flex items-center gap-2.5 px-4 py-2.5 text-sm">
-          <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
-          <span className="flex-1 text-red-800 font-medium">
+        <div className="flex items-center gap-2.5 px-4 py-2 text-[13px]">
+          <AlertCircle className="h-3.5 w-3.5 text-[var(--q-attention-text)] shrink-0" />
+          <span className="flex-1 text-[var(--q-attention-text)] font-medium">
             Xero sync failed — {classified.message}
           </span>
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 px-3 text-red-700 hover:text-red-800 hover:bg-red-100 font-semibold"
+            className="h-7 px-3 text-[13px] font-medium text-[var(--q-accent)] hover:text-[var(--q-accent-hover)] hover:bg-[var(--q-accent-bg)]"
             disabled={retryMutation.isPending}
             onClick={handleAction}
           >
@@ -137,7 +137,7 @@ export default function SyncStatusBanner() {
           </Button>
           <button
             onClick={() => setDetailsOpen((o) => !o)}
-            className="flex items-center gap-1 text-xs text-red-600 hover:text-red-800 transition-colors font-medium"
+            className="flex items-center gap-1 text-xs text-[var(--q-attention-text)] hover:opacity-80 transition-opacity font-medium"
             aria-label={detailsOpen ? "Hide details" : "Show details"}
           >
             Details
@@ -149,7 +149,7 @@ export default function SyncStatusBanner() {
           </button>
           <button
             onClick={() => setDismissed(true)}
-            className="ml-0.5 text-red-400 hover:text-red-700 transition-colors"
+            className="ml-0.5 text-[var(--q-attention-text)] opacity-50 hover:opacity-100 transition-opacity"
             aria-label="Dismiss"
           >
             <X className="h-3.5 w-3.5" />
@@ -158,20 +158,20 @@ export default function SyncStatusBanner() {
 
         {/* Expandable details panel */}
         {detailsOpen && (
-          <div className="border-t border-red-200 bg-red-50/60 px-4 py-3">
+          <div className="border-t border-[var(--q-attention-border)] bg-[var(--q-attention-bg)] px-4 py-3">
             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-xs">
               {statusCode && (
                 <>
-                  <dt className="text-red-500 font-medium">Status code</dt>
-                  <dd className="font-mono text-red-700">{statusCode}</dd>
+                  <dt className="text-[var(--q-text-tertiary)] font-medium">Status code</dt>
+                  <dd className="font-mono text-[var(--q-attention-text)]">{statusCode}</dd>
                 </>
               )}
-              <dt className="text-red-500 font-medium">Error type</dt>
-              <dd className="font-mono text-red-700">{classified.type}</dd>
-              <dt className="text-red-500 font-medium">Error detail</dt>
-              <dd className="font-mono text-red-700 break-all">{error || "No details available"}</dd>
-              <dt className="text-red-500 font-medium">Last successful sync</dt>
-              <dd className="font-mono text-red-700">{lastSyncLabel}</dd>
+              <dt className="text-[var(--q-text-tertiary)] font-medium">Error type</dt>
+              <dd className="font-mono text-[var(--q-attention-text)]">{classified.type}</dd>
+              <dt className="text-[var(--q-text-tertiary)] font-medium">Error detail</dt>
+              <dd className="font-mono text-[var(--q-attention-text)] break-all">{error || "No details available"}</dd>
+              <dt className="text-[var(--q-text-tertiary)] font-medium">Last successful sync</dt>
+              <dd className="font-mono text-[var(--q-attention-text)]">{lastSyncLabel}</dd>
             </dl>
           </div>
         )}
