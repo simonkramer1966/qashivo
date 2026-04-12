@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { QBadge } from "@/components/ui/q-badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -93,83 +93,83 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
 
   const getRiskColor = (risk: RiskLevel) => {
     switch (risk) {
-      case 'low': return 'text-green-600';
-      case 'medium': return 'text-yellow-600';
-      case 'high': return 'text-orange-600';
-      case 'critical': return 'text-red-600';
-      default: return 'text-muted-foreground';
+      case 'low': return 'text-[var(--q-money-in-text)]';
+      case 'medium': return 'text-[var(--q-attention-text)]';
+      case 'high': return 'text-[var(--q-attention-text)]';
+      case 'critical': return 'text-[var(--q-risk-text)]';
+      default: return 'text-[var(--q-text-tertiary)]';
     }
   };
 
   return (
-    <div className="glass-card p-4 shadow-lg min-w-[320px] border border-white/20">
-      <p className="font-semibold text-foreground mb-2">{formattedDate}</p>
+    <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] p-4 shadow-lg min-w-[320px]">
+      <p className="font-semibold text-[var(--q-text-primary)] mb-2">{formattedDate}</p>
       <div className="space-y-2 text-sm">
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-1">
-            <div className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Cash Position</div>
+            <div className="text-[var(--q-text-tertiary)] text-xs font-medium uppercase tracking-wide">Cash Position</div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Opening:</span>
+              <span className="text-[var(--q-text-tertiary)]">Opening:</span>
               <span className="font-medium">${data.openingBalance?.toLocaleString()}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Closing:</span>
-              <span className={`font-medium ${data.closingBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              <span className="text-[var(--q-text-tertiary)]">Closing:</span>
+              <span className={`font-medium ${data.closingBalance >= 0 ? 'text-[var(--q-money-in-text)]' : 'text-[var(--q-risk-text)]'}`}>
                 ${data.closingBalance?.toLocaleString()}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Net Flow:</span>
-              <span className={`font-medium ${data.netCashFlow >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              <span className="text-[var(--q-text-tertiary)]">Net Flow:</span>
+              <span className={`font-medium ${data.netCashFlow >= 0 ? 'text-[var(--q-money-in-text)]' : 'text-[var(--q-risk-text)]'}`}>
                 ${data.netCashFlow >= 0 ? '+' : ''}${data.netCashFlow?.toLocaleString()}
               </span>
             </div>
           </div>
-          
+
           <div className="space-y-1">
-            <div className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Flows</div>
+            <div className="text-[var(--q-text-tertiary)] text-xs font-medium uppercase tracking-wide">Flows</div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">AR Collections:</span>
-              <span className="font-medium text-[#17B6C3]">
+              <span className="text-[var(--q-text-tertiary)]">AR Collections:</span>
+              <span className="font-medium text-[var(--q-accent)]">
                 ${data.arCollections?.toLocaleString()}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">AP Payments:</span>
-              <span className="font-medium text-amber-600">
+              <span className="text-[var(--q-text-tertiary)]">AP Payments:</span>
+              <span className="font-medium text-[var(--q-attention-text)]">
                 ${data.apPayments?.toLocaleString()}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Budget Items:</span>
-              <span className="font-medium text-foreground">
+              <span className="text-[var(--q-text-tertiary)]">Budget Items:</span>
+              <span className="font-medium text-[var(--q-text-primary)]">
                 ${(data.budgetIncome - data.budgetExpenses)?.toLocaleString()}
               </span>
             </div>
           </div>
         </div>
-        
-        <Separator className="bg-muted" />
-        
+
+        <Separator className="bg-[var(--q-bg-surface-alt)]" />
+
         <div className="flex justify-between items-center">
-          <span className="text-muted-foreground">Status:</span>
+          <span className="text-[var(--q-text-tertiary)]">Status:</span>
           <span className={`font-medium capitalize ${getRiskColor(data.riskLevel)}`}>
             {data.riskLevel === 'low' ? 'Healthy' : data.riskLevel === 'medium' ? 'Monitor' : 'Attention needed'}
           </span>
         </div>
-        
+
         {data.daysOfCashRemaining && (
           <div className="flex justify-between items-center">
-            <span className="text-muted-foreground">Cash Runway:</span>
-            <span className="font-medium text-foreground">
+            <span className="text-[var(--q-text-tertiary)]">Cash Runway:</span>
+            <span className="font-medium text-[var(--q-text-primary)]">
               {data.daysOfCashRemaining} days
             </span>
           </div>
         )}
-        
+
         <div className="flex justify-between items-center">
-          <span className="text-muted-foreground">Confidence:</span>
-          <span className="font-medium text-foreground">
+          <span className="text-[var(--q-text-tertiary)]">Confidence:</span>
+          <span className="font-medium text-[var(--q-text-primary)]">
             ${data.confidenceInterval[0]?.toLocaleString()} - ${data.confidenceInterval[1]?.toLocaleString()}
           </span>
         </div>
@@ -206,11 +206,11 @@ export default function CashFlowForecast() {
 
   if (isLoading) {
     return (
-      <Card className="glass-card">
+      <Card className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)]">
         <CardHeader>
           <CardTitle className="text-xl font-bold flex items-center">
-            <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3 animate-pulse">
-              <BarChart3 className="text-[#17B6C3] h-5 w-5" />
+            <div className="p-2 bg-[var(--q-accent)]/10 rounded-lg mr-3 animate-pulse">
+              <BarChart3 className="text-[var(--q-accent)] h-5 w-5" />
             </div>
             Cash Flow Forecast
           </CardTitle>
@@ -220,14 +220,14 @@ export default function CashFlowForecast() {
             {/* Loading Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {[...Array(6)].map((_, i) => (
-                <div key={i} className="glass-card p-4 animate-pulse">
-                  <div className="h-20 bg-muted/30 rounded" />
+                <div key={i} className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] p-4 animate-pulse">
+                  <div className="h-20 bg-[var(--q-bg-surface-alt)]/30 rounded" />
                 </div>
               ))}
             </div>
             {/* Loading Chart */}
-            <div className="glass-card p-6 animate-pulse">
-              <div className="h-96 bg-muted/30 rounded" />
+            <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] p-6 animate-pulse">
+              <div className="h-96 bg-[var(--q-bg-surface-alt)]/30 rounded" />
             </div>
           </div>
         </CardContent>
@@ -237,22 +237,22 @@ export default function CashFlowForecast() {
 
   if (error) {
     return (
-      <Card className="glass-card">
+      <Card className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)]">
         <CardHeader>
           <CardTitle className="text-xl font-bold flex items-center">
-            <div className="p-2 bg-red-100 rounded-lg mr-3">
-              <AlertTriangle className="text-red-600 h-5 w-5" />
+            <div className="p-2 bg-[var(--q-risk-bg)] rounded-lg mr-3">
+              <AlertTriangle className="text-[var(--q-risk-text)] h-5 w-5" />
             </div>
             Cash Flow Forecast
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
           <div className="text-center py-8">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <AlertTriangle className="h-8 w-8 text-red-600" />
+            <div className="w-16 h-16 bg-[var(--q-risk-bg)] rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="h-8 w-8 text-[var(--q-risk-text)]" />
             </div>
-            <p className="text-lg font-semibold text-foreground mb-2">Unable to load forecast</p>
-            <p className="text-sm text-muted-foreground mb-4">Please try again later</p>
+            <p className="text-lg font-semibold text-[var(--q-text-primary)] mb-2">Unable to load forecast</p>
+            <p className="text-sm text-[var(--q-text-tertiary)] mb-4">Please try again later</p>
             <Button onClick={() => refetch()} variant="outline" size="sm">
               <RefreshCw className="h-4 w-4 mr-2" />
               Try Again
@@ -305,22 +305,22 @@ export default function CashFlowForecast() {
 
   if (!forecast?.dailyPositions?.length) {
     return (
-      <Card className="glass-card">
+      <Card className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)]">
         <CardHeader>
           <CardTitle className="text-xl font-bold flex items-center">
-            <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
-              <BarChart3 className="text-[#17B6C3] h-5 w-5" />
+            <div className="p-2 bg-[var(--q-accent)]/10 rounded-lg mr-3">
+              <BarChart3 className="text-[var(--q-accent)] h-5 w-5" />
             </div>
             Cash Flow Forecast
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
           <div className="text-center py-8">
-            <div className="w-16 h-16 bg-[#17B6C3]/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <BarChart3 className="h-8 w-8 text-[#17B6C3]" />
+            <div className="w-16 h-16 bg-[var(--q-accent)]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <BarChart3 className="h-8 w-8 text-[var(--q-accent)]" />
             </div>
-            <p className="text-lg font-semibold text-foreground mb-2">No forecast data available</p>
-            <p className="text-sm text-muted-foreground">Import invoices to generate projections</p>
+            <p className="text-lg font-semibold text-[var(--q-text-primary)] mb-2">No forecast data available</p>
+            <p className="text-sm text-[var(--q-text-tertiary)]">Import invoices to generate projections</p>
           </div>
         </CardContent>
       </Card>
@@ -333,9 +333,9 @@ export default function CashFlowForecast() {
 
   // Calculate scenario indicators
   const scenarioColor = {
-    base: '#17B6C3',
-    optimistic: '#22c55e', 
-    pessimistic: '#f59e0b',
+    base: 'var(--q-chart-primary)',
+    optimistic: 'var(--q-money-in-text)',
+    pessimistic: 'var(--q-attention-text)',
     custom: '#8b5cf6'
   }[selectedScenario];
 
@@ -398,12 +398,12 @@ export default function CashFlowForecast() {
   ] : [];
 
   return (
-    <Card className="glass-card" data-testid="card-cashflow-forecast">
+    <Card className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)]" data-testid="card-cashflow-forecast">
       <CardHeader>
         <div className="flex items-center justify-between flex-wrap gap-4">
           <CardTitle className="text-xl font-bold flex items-center" data-testid="text-cashflow-title">
-            <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
-              <BarChart3 className="text-[#17B6C3] h-5 w-5" />
+            <div className="p-2 bg-[var(--q-accent)]/10 rounded-lg mr-3">
+              <BarChart3 className="text-[var(--q-accent)] h-5 w-5" />
             </div>
             {forecastWeeks}-Week Cash Flow Forecast
           </CardTitle>
@@ -456,23 +456,23 @@ export default function CashFlowForecast() {
 
             {/* Status Badges */}
             <div className="flex items-center space-x-2">
-              <Badge 
+              <QBadge
                 style={{ backgroundColor: `${scenarioColor}20`, color: scenarioColor }}
                 data-testid="badge-scenario"
               >
                 {scenarioLabel}
-              </Badge>
-              
+              </QBadge>
+
               {negativePeriods.length > 0 && (
-                <Badge variant="destructive" className="text-xs" data-testid="badge-cash-flow-warning">
+                <QBadge variant="risk" className="text-xs" data-testid="badge-cash-flow-warning">
                   {negativePeriods.length} negative periods
-                </Badge>
+                </QBadge>
               )}
-              
+
               {highRiskPeriods.length > 0 && (
-                <Badge variant="outline" className="text-xs border-orange-300 text-orange-700" data-testid="badge-risk-warning">
+                <QBadge variant="neutral" className="text-xs border-[var(--q-attention-border)] text-[var(--q-attention-text)]" data-testid="badge-risk-warning">
                   {highRiskPeriods.length} days need attention
-                </Badge>
+                </QBadge>
               )}
             </div>
           </div>
@@ -492,33 +492,33 @@ export default function CashFlowForecast() {
             {/* Key Metrics Summary */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
               {keyMetrics.map((metric) => (
-                <div 
-                  key={metric.title} 
-                  className="glass-card p-4"
+                <div
+                  key={metric.title}
+                  className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] p-4"
                   data-testid={metric.testId}
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
-                      <metric.icon className="h-4 w-4 text-[#17B6C3]" />
+                    <div className="p-2 bg-[var(--q-accent)]/10 rounded-lg">
+                      <metric.icon className="h-4 w-4 text-[var(--q-accent)]" />
                     </div>
                     {metric.changeType === 'positive' && (
-                      <TrendingUp className="h-3 w-3 text-green-600" />
+                      <TrendingUp className="h-3 w-3 text-[var(--q-money-in-text)]" />
                     )}
                     {metric.changeType === 'negative' && (
-                      <TrendingDown className="h-3 w-3 text-red-600" />
+                      <TrendingDown className="h-3 w-3 text-[var(--q-risk-text)]" />
                     )}
                   </div>
                   <div>
-                    <p className="text-xs font-medium text-muted-foreground mb-1">
+                    <p className="text-xs font-medium text-[var(--q-text-tertiary)] mb-1">
                       {metric.title}
                     </p>
-                    <p className="text-sm font-bold text-foreground" data-testid={`${metric.testId}-value`}>
+                    <p className="text-sm font-bold text-[var(--q-text-primary)]" data-testid={`${metric.testId}-value`}>
                       {metric.value}
                     </p>
                     <p className={`text-xs ${
-                      metric.changeType === 'positive' ? 'text-green-600' :
-                      metric.changeType === 'negative' ? 'text-red-600' :
-                      'text-muted-foreground'
+                      metric.changeType === 'positive' ? 'text-[var(--q-money-in-text)]' :
+                      metric.changeType === 'negative' ? 'text-[var(--q-risk-text)]' :
+                      'text-[var(--q-text-tertiary)]'
                     }`} data-testid={`${metric.testId}-change`}>
                       {metric.change}
                     </p>
@@ -528,23 +528,23 @@ export default function CashFlowForecast() {
             </div>
 
             {/* Cash Flow Chart */}
-            <div className="glass-card p-6">
+            <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-foreground" data-testid="text-chart-title">
+                <h3 className="text-lg font-semibold text-[var(--q-text-primary)]" data-testid="text-chart-title">
                   Daily Cash Position & Flow Analysis
                 </h3>
                 <div className="flex items-center space-x-4 text-xs">
                   <div className="flex items-center space-x-2">
                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: scenarioColor }}></div>
-                    <span className="text-muted-foreground">Cash Balance</span>
+                    <span className="text-[var(--q-text-tertiary)]">Cash Balance</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <div className="w-3 h-3 bg-green-500/30 border border-green-500 rounded-full"></div>
-                    <span className="text-muted-foreground">AR Collections</span>
+                    <span className="text-[var(--q-text-tertiary)]">AR Collections</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <div className="w-3 h-3 bg-amber-500/30 border border-amber-500 rounded-full"></div>
-                    <span className="text-muted-foreground">AP Payments</span>
+                    <span className="text-[var(--q-text-tertiary)]">AP Payments</span>
                   </div>
                 </div>
               </div>
@@ -552,65 +552,62 @@ export default function CashFlowForecast() {
               <div className="h-96" data-testid="chart-cashflow-forecast">
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" opacity={0.5} />
-                    <XAxis 
-                      dataKey="date" 
-                      stroke="#64748b"
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--q-chart-grid)" opacity={0.5} />
+                    <XAxis
+                      dataKey="date"
                       fontSize={11}
-                      tick={{ fill: '#64748b' }}
+                      tick={{ fontSize: 11, fill: 'var(--q-text-tertiary)' }}
                       angle={-45}
                       textAnchor="end"
                       height={60}
                     />
-                    <YAxis 
+                    <YAxis
                       yAxisId="left"
-                      stroke="#64748b"
                       fontSize={11}
-                      tick={{ fill: '#64748b' }}
+                      tick={{ fontSize: 11, fill: 'var(--q-text-tertiary)' }}
                       tickFormatter={(value) => value >= 1000000 ? `$${(value / 1000000).toFixed(1)}M` : `$${(value / 1000).toFixed(0)}k`}
                     />
-                    <YAxis 
+                    <YAxis
                       yAxisId="right"
                       orientation="right"
-                      stroke="#64748b"
                       fontSize={11}
-                      tick={{ fill: '#64748b' }}
+                      tick={{ fontSize: 11, fill: 'var(--q-text-tertiary)' }}
                       tickFormatter={(value) => value >= 1000000 ? `$${(value / 1000000).toFixed(1)}M` : `$${(value / 1000).toFixed(0)}k`}
                     />
-                    <RechartsTooltip content={<CustomTooltip />} />
-                    <ReferenceLine yAxisId="left" y={0} stroke="#ef4444" strokeDasharray="5 5" />
-                    
+                    <RechartsTooltip content={<CustomTooltip />} cursor={false} />
+                    <ReferenceLine yAxisId="left" y={0} stroke="var(--q-risk-text)" strokeDasharray="5 5" />
+
                     {/* Cash Balance Line */}
-                    <Line 
+                    <Line
                       yAxisId="left"
-                      type="monotone" 
-                      dataKey="closingBalance" 
+                      type="monotone"
+                      dataKey="closingBalance"
                       stroke={scenarioColor}
                       strokeWidth={3}
                       dot={false}
                       name="Cash Balance"
                     />
-                    
+
                     {/* AR Collections Bars */}
-                    <Bar 
+                    <Bar
                       yAxisId="right"
-                      dataKey="arCollections" 
-                      fill="#22c55e"
+                      dataKey="arCollections"
+                      fill="var(--q-money-in-text)"
                       fillOpacity={0.3}
                       name="AR Collections"
                       radius={[2, 2, 0, 0]}
                     />
-                    
+
                     {/* AP Payments Bars (negative) */}
-                    <Bar 
+                    <Bar
                       yAxisId="right"
-                      dataKey="apPayments" 
-                      fill="#f59e0b"
+                      dataKey="apPayments"
+                      fill="var(--q-attention-text)"
                       fillOpacity={0.3}
                       name="AP Payments"
                       radius={[0, 0, 2, 2]}
                     />
-                    
+
                     {/* Confidence Band */}
                     <Area
                       yAxisId="left"
@@ -626,20 +623,20 @@ export default function CashFlowForecast() {
               </div>
 
               {/* Chart Legend & Info */}
-              <div className="mt-4 p-3 bg-muted/80 rounded-lg">
+              <div className="mt-4 p-3 bg-[var(--q-bg-surface-alt)]/80 rounded-lg">
                 <div className="flex items-start space-x-2">
-                  <Info className="h-4 w-4 text-[#17B6C3] mt-0.5 flex-shrink-0" />
-                  <div className="text-sm text-foreground">
+                  <Info className="h-4 w-4 text-[var(--q-accent)] mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-[var(--q-text-primary)]">
                     <p className="font-medium mb-1">{scenarioLabel} Forecast Analysis</p>
                     <p>
                       Based on {chartData.length} days of {scenarioLabel.toLowerCase()} scenario projections with {data?.metadata?.dataPoints?.invoices || 0} invoices, {data?.metadata?.dataPoints?.bills || 0} bills, and {data?.metadata?.dataPoints?.budgets || 0} budget items.
                       {negativePeriods.length > 0 && (
-                        <span className="text-amber-700 font-medium ml-1">
+                        <span className="text-[var(--q-attention-text)] font-medium ml-1">
                           ⚠️ {negativePeriods.length} periods show negative cash flow.
                         </span>
                       )}
                       {negativePeriods.length === 0 && (
-                        <span className="text-green-700 font-medium ml-1">
+                        <span className="text-[var(--q-money-in-text)] font-medium ml-1">
                           ✅ All periods maintain positive cash flow.
                         </span>
                       )}
@@ -651,35 +648,35 @@ export default function CashFlowForecast() {
 
             {/* Alert Cards */}
             {negativePeriods.length > 0 && (
-              <div className="glass-card p-4 border-l-4 border-amber-500" data-testid="alert-negative-periods">
+              <div className="bg-[var(--q-attention-bg)] border border-[var(--q-attention-border)] rounded-[var(--q-radius-lg)] p-4 border-l-4 border-l-amber-500" data-testid="alert-negative-periods">
                 <div className="flex items-center space-x-2 mb-2">
-                  <AlertTriangle className="h-5 w-5 text-amber-600" />
-                  <h4 className="font-semibold text-amber-900">Cash Flow Alert</h4>
+                  <AlertTriangle className="h-5 w-5 text-[var(--q-attention-text)]" />
+                  <h4 className="font-semibold text-[var(--q-attention-text)]">Cash Flow Alert</h4>
                 </div>
-                <p className="text-sm text-amber-800 mb-3">
+                <p className="text-sm text-[var(--q-attention-text)] mb-3">
                   {negativePeriods.length} periods show potential negative cash flow. Consider these actions:
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="text-amber-700 border-amber-300 hover:bg-amber-50"
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-[var(--q-attention-text)] border-[var(--q-attention-border)] hover:bg-[var(--q-attention-bg)]"
                     data-testid="button-accelerate-collections"
                   >
                     Accelerate Collections
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="text-amber-700 border-amber-300 hover:bg-amber-50"
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-[var(--q-attention-text)] border-[var(--q-attention-border)] hover:bg-[var(--q-attention-bg)]"
                     data-testid="button-review-payment-terms"
                   >
                     Review Payment Terms
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="text-amber-700 border-amber-300 hover:bg-amber-50"
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-[var(--q-attention-text)] border-[var(--q-attention-border)] hover:bg-[var(--q-attention-bg)]"
                     data-testid="button-explore-financing"
                   >
                     Explore Financing
@@ -689,12 +686,12 @@ export default function CashFlowForecast() {
             )}
 
             {negativePeriods.length === 0 && (
-              <div className="glass-card p-4 border-l-4 border-green-500" data-testid="success-positive-forecast">
+              <div className="bg-[var(--q-money-in-bg)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] p-4 border-l-4 border-l-green-500" data-testid="success-positive-forecast">
                 <div className="flex items-center space-x-2">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                  <h4 className="font-semibold text-green-900">Healthy Cash Flow Projected</h4>
+                  <CheckCircle className="h-5 w-5 text-[var(--q-money-in-text)]" />
+                  <h4 className="font-semibold text-[var(--q-money-in-text)]">Healthy Cash Flow Projected</h4>
                 </div>
-                <p className="text-sm text-green-800 mt-1">
+                <p className="text-sm text-[var(--q-money-in-text)] mt-1">
                   No negative cash flow periods detected over the next {forecastWeeks} weeks.
                 </p>
               </div>
@@ -704,44 +701,44 @@ export default function CashFlowForecast() {
           <TabsContent value="metrics" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Working Capital Metrics */}
-              <div className="glass-card p-6">
+              <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] p-6">
                 <h3 className="text-lg font-semibold mb-4 flex items-center">
-                  <Activity className="h-5 w-5 mr-2 text-[#17B6C3]" />
+                  <Activity className="h-5 w-5 mr-2 text-[var(--q-accent)]" />
                   Working Capital
                 </h3>
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Days Sales Outstanding (DSO)</span>
+                    <span className="text-[var(--q-text-tertiary)]">Days Sales Outstanding (DSO)</span>
                     <span className="font-semibold">{Math.round(metrics?.dso || 0)} days</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Days Payable Outstanding (DPO)</span>
+                    <span className="text-[var(--q-text-tertiary)]">Days Payable Outstanding (DPO)</span>
                     <span className="font-semibold">{Math.round(metrics?.dpo || 0)} days</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Cash Conversion Cycle (CCC)</span>
+                    <span className="text-[var(--q-text-tertiary)]">Cash Conversion Cycle (CCC)</span>
                     <span className="font-semibold">{Math.round(metrics?.ccc || 0)} days</span>
                   </div>
                 </div>
               </div>
 
               {/* Exposure Analysis */}
-              <div className="glass-card p-6">
+              <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] p-6">
                 <h3 className="text-lg font-semibold mb-4 flex items-center">
-                  <Shield className="h-5 w-5 mr-2 text-[#17B6C3]" />
+                  <Shield className="h-5 w-5 mr-2 text-[var(--q-accent)]" />
                   Exposure Analysis
                 </h3>
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Cash at Risk (VaR)</span>
-                    <span className="font-semibold text-red-600">{formatCurrency(metrics?.cashAtRisk || 0)}</span>
+                    <span className="text-[var(--q-text-tertiary)]">Cash at Risk (VaR)</span>
+                    <span className="font-semibold text-[var(--q-risk-text)]">{formatCurrency(metrics?.cashAtRisk || 0)}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Stress Test Result</span>
-                    <span className="font-semibold text-orange-600">{formatCurrency(metrics?.stressTestResult || 0)}</span>
+                    <span className="text-[var(--q-text-tertiary)]">Stress Test Result</span>
+                    <span className="font-semibold text-[var(--q-attention-text)]">{formatCurrency(metrics?.stressTestResult || 0)}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">FX Exposure</span>
+                    <span className="text-[var(--q-text-tertiary)]">FX Exposure</span>
                     <span className="font-semibold">{formatCurrency(metrics?.fxExposure || 0)}</span>
                   </div>
                 </div>
@@ -751,9 +748,9 @@ export default function CashFlowForecast() {
 
           <TabsContent value="scenarios" className="space-y-6">
             <div className="text-center py-8">
-              <Zap className="h-12 w-12 text-[#17B6C3] mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-foreground mb-2">Scenario Comparison</h3>
-              <p className="text-sm text-muted-foreground mb-4">
+              <Zap className="h-12 w-12 text-[var(--q-accent)] mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-[var(--q-text-primary)] mb-2">Scenario Comparison</h3>
+              <p className="text-sm text-[var(--q-text-tertiary)] mb-4">
                 Compare different forecast scenarios to understand potential outcomes
               </p>
               <Button variant="outline" size="sm">
@@ -766,21 +763,21 @@ export default function CashFlowForecast() {
             {recommendations.length > 0 ? (
               <div className="space-y-4">
                 {recommendations.map((rec, index) => (
-                  <div key={index} className="glass-card p-4 border-l-4 border-[#17B6C3]">
+                  <div key={index} className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] p-4 border-l-4 border-l-[var(--q-accent)]">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center space-x-2 mb-2">
-                          {rec.type === 'collection' && <Users className="h-4 w-4 text-[#17B6C3]" />}
-                          {rec.type === 'payment' && <DollarSign className="h-4 w-4 text-[#17B6C3]" />}
-                          {rec.type === 'financing' && <TrendingUp className="h-4 w-4 text-[#17B6C3]" />}
-                          {rec.type === 'working_capital' && <Activity className="h-4 w-4 text-[#17B6C3]" />}
-                          <Badge variant={rec.priority === 'high' ? 'destructive' : rec.priority === 'medium' ? 'secondary' : 'outline'} className="text-xs">
+                          {rec.type === 'collection' && <Users className="h-4 w-4 text-[var(--q-accent)]" />}
+                          {rec.type === 'payment' && <DollarSign className="h-4 w-4 text-[var(--q-accent)]" />}
+                          {rec.type === 'financing' && <TrendingUp className="h-4 w-4 text-[var(--q-accent)]" />}
+                          {rec.type === 'working_capital' && <Activity className="h-4 w-4 text-[var(--q-accent)]" />}
+                          <QBadge variant={rec.priority === 'high' ? 'risk' : rec.priority === 'medium' ? 'neutral' : 'neutral'} className="text-xs">
                             {rec.priority} priority
-                          </Badge>
+                          </QBadge>
                         </div>
-                        <h4 className="font-semibold text-foreground mb-1">{rec.title}</h4>
-                        <p className="text-sm text-muted-foreground mb-2">{rec.description}</p>
-                        <div className="flex items-center space-x-4 text-xs text-muted-foreground">
+                        <h4 className="font-semibold text-[var(--q-text-primary)] mb-1">{rec.title}</h4>
+                        <p className="text-sm text-[var(--q-text-tertiary)] mb-2">{rec.description}</p>
+                        <div className="flex items-center space-x-4 text-xs text-[var(--q-text-tertiary)]">
                           <span>Impact: {formatCurrency(rec.impact)}</span>
                           <span>Effort: {rec.effort}</span>
                           <span>Timeline: {rec.timeline}</span>
@@ -792,9 +789,9 @@ export default function CashFlowForecast() {
               </div>
             ) : (
               <div className="text-center py-8">
-                <Target className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-foreground mb-2">No Recommendations</h3>
-                <p className="text-sm text-muted-foreground">
+                <Target className="h-12 w-12 text-[var(--q-text-tertiary)] mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-[var(--q-text-primary)] mb-2">No Recommendations</h3>
+                <p className="text-sm text-[var(--q-text-tertiary)]">
                   Your cash flow forecast looks healthy. No specific recommendations at this time.
                 </p>
               </div>

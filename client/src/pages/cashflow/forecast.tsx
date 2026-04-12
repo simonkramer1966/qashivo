@@ -6,7 +6,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import AppShell from "@/components/layout/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { QBadge } from "@/components/ui/q-badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Dialog,
@@ -278,14 +278,14 @@ function weekLabel(dateStr: string): string {
 
 function confidenceBadge(c: string) {
   const colors: Record<string, string> = {
-    high: "bg-emerald-100 text-emerald-700",
-    medium: "bg-amber-100 text-amber-700",
-    low: "bg-zinc-100 text-zinc-600",
+    high: "bg-[var(--q-money-in-bg)] text-[var(--q-money-in-text)]",
+    medium: "bg-[var(--q-attention-bg)] text-[var(--q-attention-text)]",
+    low: "bg-[var(--q-bg-surface-alt)] text-[var(--q-text-tertiary)]",
   };
   return (
-    <Badge variant="outline" className={`text-xs ${colors[c] || colors.low}`}>
+    <QBadge variant="neutral" className={`text-xs ${colors[c] || colors.low}`}>
       {c}
-    </Badge>
+    </QBadge>
   );
 }
 
@@ -301,16 +301,16 @@ function CollectionsTooltip({ active, payload, label }: any) {
     <div className="rounded-lg border bg-background p-3 shadow-md text-sm space-y-1">
       <p className="font-medium">{d.label}</p>
       <p>Expected: {fmt(d.expected)} ({d.invoiceCount} invoices)</p>
-      <p className="text-muted-foreground">
+      <p className="text-[var(--q-text-tertiary)]">
         Range: {fmt(d.pessimistic)} — {fmt(d.optimistic)}
       </p>
       {d.topDebtor && (
-        <p className="text-muted-foreground">
+        <p className="text-[var(--q-text-tertiary)]">
           Top: {d.topDebtor} {fmt(d.topDebtorAmount)} ({fmtPct(d.topDebtorPercent)})
         </p>
       )}
       {concentration?.isFragile && (
-        <p className="text-amber-600">
+        <p className="text-[var(--q-attention-text)]">
           {fmtPct(concentration.topDebtorPercent)} from {concentration.topDebtor} (concentration risk)
         </p>
       )}
@@ -327,16 +327,16 @@ function BalanceTooltip({ active, payload }: any) {
     <div className="rounded-lg border bg-background p-3 shadow-md text-sm space-y-1">
       <p className="font-medium">{d.label}</p>
       <p>Opening balance: {fmt(d.expectedBalance)}</p>
-      <p className="text-muted-foreground">
+      <p className="text-[var(--q-text-tertiary)]">
         This week: +{fmt(d.expected)} inflows
         {d.outflow > 0 && <>, -{fmt(d.outflow)} outflows</>}
       </p>
       {d.outflow > 0 && (
-        <p className={d.net < 0 ? "text-red-500" : "text-muted-foreground"}>
+        <p className={d.net < 0 ? "text-[var(--q-risk-text)]" : "text-[var(--q-text-tertiary)]"}>
           Net movement: {d.net >= 0 ? "+" : ""}{fmt(d.net)}
         </p>
       )}
-      <p className="text-muted-foreground">
+      <p className="text-[var(--q-text-tertiary)]">
         Closing balance range: {fmt(d.pessimisticBalance)} — {fmt(d.optimisticBalance)}
       </p>
     </div>
@@ -404,7 +404,7 @@ export default function ForecastPage() {
       Built from your debtors' actual payment history
       <button
         onClick={() => setShowMethodology(true)}
-        className="inline-flex items-center text-muted-foreground hover:text-foreground transition-colors"
+        className="inline-flex items-center text-[var(--q-text-tertiary)] hover:text-[var(--q-text-primary)] transition-colors"
         title="How this forecast works"
       >
         <Info className="h-3 w-3" />
@@ -577,7 +577,7 @@ export default function ForecastPage() {
     return (
       <AppShell title="Qashflow" subtitle={forecastSubtitle}>
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          <Loader2 className="h-5 w-5 animate-spin text-[var(--q-text-tertiary)]" />
         </div>
       </AppShell>
     );
@@ -586,7 +586,7 @@ export default function ForecastPage() {
   if (!forecast) {
     return (
       <AppShell title="Qashflow" subtitle={forecastSubtitle}>
-        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+        <div className="flex flex-col items-center justify-center py-20 text-[var(--q-text-tertiary)]">
           <p className="text-lg font-medium">No forecast data</p>
           <p className="text-sm mt-1">Connect Xero and sync your invoices to generate a forecast.</p>
         </div>
@@ -660,28 +660,28 @@ export default function ForecastPage() {
             className="w-full flex items-center justify-between px-5 py-3.5 text-left"
           >
             <div className="flex items-center gap-2">
-              <ClipboardList className="h-4 w-4 text-muted-foreground" />
+              <ClipboardList className="h-4 w-4 text-[var(--q-text-tertiary)]" />
               <span className="text-sm font-semibold">Weekly Review</span>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-xs text-[var(--q-text-tertiary)]">
                 {formatReviewDate(latestReview.weekStartDate)} – {formatReviewDate(latestReview.weekEndDate)}
               </span>
             </div>
             <div className="flex items-center gap-2">
               {!reviewExpanded && (
-                <span className="text-xs text-muted-foreground max-w-[400px] truncate hidden md:inline">
+                <span className="text-xs text-[var(--q-text-tertiary)] max-w-[400px] truncate hidden md:inline">
                   {extractSummary(latestReview.summaryText)}
                 </span>
               )}
               {reviewExpanded ? (
-                <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                <ChevronUp className="h-4 w-4 text-[var(--q-text-tertiary)]" />
               ) : (
-                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                <ChevronDown className="h-4 w-4 text-[var(--q-text-tertiary)]" />
               )}
             </div>
           </button>
           {reviewExpanded && (
             <div className="border-t px-5 py-4 space-y-4">
-              <div className="prose prose-sm max-w-none text-sm text-foreground [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-sm [&_h1]:font-semibold [&_h2]:font-semibold [&_h3]:font-medium [&_p]:text-muted-foreground [&_li]:text-muted-foreground [&_ul]:my-1 [&_ol]:my-1 [&_p]:my-1.5">
+              <div className="prose prose-sm max-w-none text-sm text-[var(--q-text-primary)] [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-sm [&_h1]:font-semibold [&_h2]:font-semibold [&_h3]:font-medium [&_p]:text-[var(--q-text-tertiary)] [&_li]:text-[var(--q-text-tertiary)] [&_ul]:my-1 [&_ol]:my-1 [&_p]:my-1.5">
                 <ReactMarkdown>{latestReview.summaryText}</ReactMarkdown>
               </div>
               <div className="flex items-center gap-3 pt-1 border-t">
@@ -690,23 +690,23 @@ export default function ForecastPage() {
                     setShowPreviousReviews(true);
                     queryClient.refetchQueries({ queryKey: ["/api/weekly-review/history"] });
                   }}
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  className="text-xs text-[var(--q-text-tertiary)] hover:text-[var(--q-text-primary)] transition-colors"
                 >
                   Previous reviews
                 </button>
-                <span className="text-muted-foreground/30">·</span>
+                <span className="text-[var(--q-text-tertiary)]/30">·</span>
                 <button
                   onClick={() => archiveReviewMutation.mutate(latestReview.id)}
                   disabled={archiveReviewMutation.isPending}
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  className="text-xs text-[var(--q-text-tertiary)] hover:text-[var(--q-text-primary)] transition-colors"
                 >
                   {archiveReviewMutation.isPending ? "Archiving…" : "Archive"}
                 </button>
-                <span className="text-muted-foreground/30">·</span>
+                <span className="text-[var(--q-text-tertiary)]/30">·</span>
                 <button
                   onClick={() => generateReviewMutation.mutate()}
                   disabled={generateReviewMutation.isPending}
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  className="text-xs text-[var(--q-text-tertiary)] hover:text-[var(--q-text-primary)] transition-colors"
                 >
                   {generateReviewMutation.isPending ? "Generating…" : "Regenerate"}
                 </button>
@@ -716,7 +716,7 @@ export default function ForecastPage() {
         </div>
       ) : (
         <div className="rounded-lg border border-dashed bg-card px-5 py-3.5 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-muted-foreground">
+          <div className="flex items-center gap-2 text-[var(--q-text-tertiary)]">
             <ClipboardList className="h-4 w-4" />
             <span className="text-sm">No weekly review yet</span>
           </div>
@@ -751,16 +751,16 @@ export default function ForecastPage() {
                         {formatReviewDate(r.weekStartDate)} – {formatReviewDate(r.weekEndDate)}
                       </span>
                       {r.isArchived && (
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Archived</Badge>
+                        <QBadge variant="neutral" className="text-[10px] px-1.5 py-0">Archived</QBadge>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground line-clamp-3">
+                    <p className="text-xs text-[var(--q-text-tertiary)] line-clamp-3">
                       {extractSummary(r.summaryText)}
                     </p>
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-muted-foreground py-4 text-center">No previous reviews</p>
+                <p className="text-sm text-[var(--q-text-tertiary)] py-4 text-center">No previous reviews</p>
               )}
             </div>
           </ScrollArea>
@@ -778,9 +778,9 @@ export default function ForecastPage() {
           } catch { return alert.weekStarting; }
         })();
         return (
-          <div className="rounded-lg border border-amber-300 bg-amber-50 px-5 py-3.5 flex items-center gap-3">
-            <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
-            <p className="flex-1 text-sm text-amber-900">
+          <div className="rounded-lg border border-[var(--q-attention-border)] bg-[var(--q-attention-bg)] px-5 py-3.5 flex items-center gap-3">
+            <AlertTriangle className="h-5 w-5 text-[var(--q-attention-text)] shrink-0" />
+            <p className="flex-1 text-sm text-[var(--q-attention-text)]">
               Cash gap of <span className="font-semibold">{fmt(gap)}</span> detected in Week {alert.gapWeek} ({weekLabel})
             </p>
             <Button
@@ -795,7 +795,7 @@ export default function ForecastPage() {
               size="sm"
               variant="ghost"
               onClick={() => dismissAlertMutation.mutate(alert.id)}
-              className="shrink-0 text-amber-700 hover:text-amber-900"
+              className="shrink-0 text-[var(--q-attention-text)] hover:text-[var(--q-attention-text)]"
             >
               Dismiss
             </Button>
@@ -808,7 +808,7 @@ export default function ForecastPage() {
         {/* This week */}
         <Card>
           <CardContent className="py-3 px-4">
-            <p className="text-xs text-muted-foreground">This week</p>
+            <p className="text-xs text-[var(--q-text-tertiary)]">This week</p>
             <p className="text-lg font-semibold">
               {fmt(forecast.weeklyForecasts[0]?.expected ?? 0)}
             </p>
@@ -818,7 +818,7 @@ export default function ForecastPage() {
         {/* Next week */}
         <Card>
           <CardContent className="py-3 px-4">
-            <p className="text-xs text-muted-foreground">Next week</p>
+            <p className="text-xs text-[var(--q-text-tertiary)]">Next week</p>
             <p className="text-lg font-semibold">
               {fmt(forecast.weeklyForecasts[1]?.expected ?? 0)}
             </p>
@@ -828,9 +828,9 @@ export default function ForecastPage() {
         {/* Peak week */}
         <Card>
           <CardContent className="py-3 px-4">
-            <p className="text-xs text-muted-foreground">Peak week</p>
+            <p className="text-xs text-[var(--q-text-tertiary)]">Peak week</p>
             <p className="text-lg font-semibold">{fmt(peakWeek.expected)}</p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-[var(--q-text-tertiary)]">
               Week {peakWeek.weekNumber}
             </p>
           </CardContent>
@@ -839,9 +839,9 @@ export default function ForecastPage() {
         {/* Lowest week */}
         <Card>
           <CardContent className="py-3 px-4">
-            <p className="text-xs text-muted-foreground">Lowest week</p>
+            <p className="text-xs text-[var(--q-text-tertiary)]">Lowest week</p>
             <p className="text-lg font-semibold">{fmt(lowestWeek.expected)}</p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-[var(--q-text-tertiary)]">
               Week {lowestWeek.weekNumber}
             </p>
           </CardContent>
@@ -850,7 +850,7 @@ export default function ForecastPage() {
 
       {/* B. What Changed */}
       {changes && changes.changes.length > 0 && !changesDismissed && (
-        <Card className="border-blue-200 bg-blue-50/50">
+        <Card className="border-[var(--q-info-border)] bg-[var(--q-info-bg)]/50">
           <CardContent className="py-3 px-4">
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm font-medium">
@@ -870,13 +870,13 @@ export default function ForecastPage() {
               {changes.changes.slice(0, 5).map((c, i) => (
                 <div key={i} className="flex items-center gap-2 text-sm">
                   {c.direction === "up" ? (
-                    <ArrowUpRight className="h-3.5 w-3.5 text-emerald-600" />
+                    <ArrowUpRight className="h-3.5 w-3.5 text-[var(--q-money-in-text)]" />
                   ) : c.direction === "down" ? (
-                    <ArrowDownRight className="h-3.5 w-3.5 text-red-500" />
+                    <ArrowDownRight className="h-3.5 w-3.5 text-[var(--q-risk-text)]" />
                   ) : (
-                    <Minus className="h-3.5 w-3.5 text-blue-500" />
+                    <Minus className="h-3.5 w-3.5 text-[var(--q-info-text)]" />
                   )}
-                  <span className="text-muted-foreground">{c.reason}</span>
+                  <span className="text-[var(--q-text-tertiary)]">{c.reason}</span>
                 </div>
               ))}
             </div>
@@ -886,15 +886,15 @@ export default function ForecastPage() {
 
       {/* Close week banner */}
       {closeWeekPreview?.isEligible && closeWeekPreview.weekStarting && (
-        <div className="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm">
+        <div className="flex items-center justify-between rounded-lg border border-[var(--q-info-border)] bg-[var(--q-info-bg)] p-3 text-sm">
           <div className="flex items-center gap-2">
-            <Lock className="h-4 w-4 text-blue-600" />
+            <Lock className="h-4 w-4 text-[var(--q-info-text)]" />
             <span>
               Week {closeWeekPreview.weekNumber} ({weekLabel(closeWeekPreview.weekStarting)}) is ready to close.
             </span>
           </div>
           {canEditForecast && (
-            <Button size="sm" variant="outline" onClick={() => setCloseWeekModalOpen(true)}>
+            <Button size="sm" variant="neutral" onClick={() => setCloseWeekModalOpen(true)}>
               Review & close week
             </Button>
           )}
@@ -911,7 +911,7 @@ export default function ForecastPage() {
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
             <ComposedChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 10 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--q-chart-grid)" />
               <XAxis
                 dataKey="label"
                 tick={{ fontSize: 11 }}
@@ -927,8 +927,8 @@ export default function ForecastPage() {
                 {chartData.map((entry, i) => (
                   <Cell
                     key={i}
-                    fill={entry.isCompleted ? "#1e40af" : entry.isFragile ? "#f59e0b" : "#3b82f6"}
-                    stroke={entry.isCompleted ? "#1e3a8a" : entry.isFragile ? "#d97706" : "none"}
+                    fill={entry.isCompleted ? "var(--q-info-text)" : entry.isFragile ? "var(--q-attention-text)" : "var(--q-info-text)"}
+                    stroke={entry.isCompleted ? "var(--q-info-border)" : entry.isFragile ? "var(--q-attention-border)" : "none"}
                     strokeWidth={entry.isCompleted ? 1 : entry.isFragile ? 1.5 : 0}
                   />
                 ))}
@@ -936,17 +936,17 @@ export default function ForecastPage() {
               {/* Error whiskers via thin lines */}
               <Line
                 dataKey="optimistic"
-                stroke="#22c55e"
+                stroke="var(--q-money-in-text)"
                 strokeWidth={1}
-                dot={{ r: 2, fill: "#22c55e" }}
+                dot={{ r: 2, fill: "var(--q-money-in-text)" }}
                 strokeDasharray="2 3"
                 connectNulls
               />
               <Line
                 dataKey="pessimistic"
-                stroke="#ef4444"
+                stroke="var(--q-risk-text)"
                 strokeWidth={1}
-                dot={{ r: 2, fill: "#ef4444" }}
+                dot={{ r: 2, fill: "var(--q-risk-text)" }}
                 strokeDasharray="2 3"
                 connectNulls
               />
@@ -965,7 +965,7 @@ export default function ForecastPage() {
         <CardContent>
           <ResponsiveContainer width="100%" height={250}>
             <ComposedChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 10 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--q-chart-grid)" />
               <XAxis
                 dataKey="label"
                 tick={{ fontSize: 11 }}
@@ -1000,7 +1000,7 @@ export default function ForecastPage() {
               {/* Safety threshold — adjusted for overdraft headroom */}
               <ReferenceLine
                 y={effectiveSafetyThreshold}
-                stroke="#f87171"
+                stroke="var(--q-risk-text)"
                 strokeDasharray="6 3"
                 strokeWidth={1}
                 label={{
@@ -1009,33 +1009,33 @@ export default function ForecastPage() {
                     : `Safety: ${fmt(safetyThreshold)}`,
                   position: "right",
                   fontSize: 10,
-                  fill: "#f87171",
+                  fill: "var(--q-risk-text)",
                 }}
               />
               {/* Optimistic balance line — dotted green */}
               <Line
                 dataKey="optimisticBalance"
-                stroke="#22c55e"
+                stroke="var(--q-money-in-text)"
                 strokeWidth={1}
-                dot={{ r: 2, fill: "#22c55e" }}
+                dot={{ r: 2, fill: "var(--q-money-in-text)" }}
                 strokeDasharray="2 3"
                 connectNulls
               />
               {/* Pessimistic balance line — dotted deep red */}
               <Line
                 dataKey="pessimisticBalance"
-                stroke="#dc2626"
+                stroke="var(--q-risk-text)"
                 strokeWidth={1}
-                dot={{ r: 2, fill: "#dc2626" }}
+                dot={{ r: 2, fill: "var(--q-risk-text)" }}
                 strokeDasharray="2 3"
                 connectNulls
               />
               {/* Expected balance line — solid blue */}
               <Line
                 dataKey="expectedBalance"
-                stroke="#3b82f6"
+                stroke="var(--q-info-text)"
                 strokeWidth={2}
-                dot={{ r: 3, fill: "#3b82f6" }}
+                dot={{ r: 3, fill: "var(--q-info-text)" }}
                 connectNulls
               />
             </ComposedChart>
@@ -1047,11 +1047,11 @@ export default function ForecastPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {/* Cash gap alert */}
         {(forecast.cashGapAlerts?.length ?? 0) > 0 && (
-          <Card className="border-red-200 bg-red-50/50">
+          <Card className="border-[var(--q-risk-border)] bg-[var(--q-risk-bg)]/50">
             <CardContent className="py-3 px-4">
               <div className="flex items-center gap-2 mb-1">
-                <AlertTriangle className="h-4 w-4 text-red-500" />
-                <span className="text-sm font-medium text-red-700">Cash Gap Alert</span>
+                <AlertTriangle className="h-4 w-4 text-[var(--q-risk-text)]" />
+                <span className="text-sm font-medium text-[var(--q-risk-text)]">Cash Gap Alert</span>
               </div>
               {(forecast.cashGapAlerts ?? []).slice(0, 2).map((alert, i) => (
                 <div key={i}>
@@ -1074,26 +1074,26 @@ export default function ForecastPage() {
                         {alert.resolutionOptions.map((opt, j) => (
                           <div
                             key={j}
-                            className="text-xs p-2 bg-white rounded border"
+                            className="text-xs p-2 bg-[var(--q-bg-surface)] rounded border"
                           >
                             <div className="flex items-center justify-between">
                               <span className="font-medium capitalize">
                                 {opt.type.replace("_", " ")}
                               </span>
-                              <Badge
-                                variant="outline"
+                              <QBadge
+                                variant="neutral"
                                 className={`text-xs ${
                                   opt.feasibility === "high"
-                                    ? "bg-emerald-50 text-emerald-700"
+                                    ? "bg-[var(--q-money-in-bg)] text-[var(--q-money-in-text)]"
                                     : opt.feasibility === "medium"
-                                      ? "bg-amber-50 text-amber-700"
-                                      : "bg-zinc-50 text-zinc-600"
+                                      ? "bg-[var(--q-attention-bg)] text-[var(--q-attention-text)]"
+                                      : "bg-[var(--q-bg-surface-alt)] text-[var(--q-text-tertiary)]"
                                 }`}
                               >
                                 {opt.feasibility}
-                              </Badge>
+                              </QBadge>
                             </div>
-                            <p className="text-muted-foreground mt-1">
+                            <p className="text-[var(--q-text-tertiary)] mt-1">
                               {opt.description}
                               {opt.amount > 0 && ` (${fmt(opt.amount)})`}
                             </p>
@@ -1110,11 +1110,11 @@ export default function ForecastPage() {
 
         {/* Concentration risk */}
         {forecast.concentrationRisk.top3Percent > 50 && (
-          <Card className="border-amber-200 bg-amber-50/50">
+          <Card className="border-[var(--q-attention-border)] bg-[var(--q-attention-bg)]/50">
             <CardContent className="py-3 px-4">
               <div className="flex items-center gap-2 mb-1">
-                <AlertTriangle className="h-4 w-4 text-amber-500" />
-                <span className="text-sm font-medium text-amber-700">
+                <AlertTriangle className="h-4 w-4 text-[var(--q-attention-text)]" />
+                <span className="text-sm font-medium text-[var(--q-attention-text)]">
                   Concentration Risk
                 </span>
               </div>
@@ -1126,7 +1126,7 @@ export default function ForecastPage() {
                 .filter((w) => w.isFragile)
                 .slice(0, 2)
                 .map((w, i) => (
-                  <p key={i} className="text-xs text-muted-foreground">
+                  <p key={i} className="text-xs text-[var(--q-text-tertiary)]">
                     Week {w.weekNumber} fragile — {fmtPct(w.topDebtorPercent)} from{" "}
                     {w.topDebtor}
                   </p>
@@ -1138,11 +1138,11 @@ export default function ForecastPage() {
         {/* Debtor trajectory */}
         {(forecast.debtorTrajectories ?? []).filter((t) => t.trend === "deteriorating")
           .length > 0 && (
-          <Card className="border-amber-200 bg-amber-50/50">
+          <Card className="border-[var(--q-attention-border)] bg-[var(--q-attention-bg)]/50">
             <CardContent className="py-3 px-4">
               <div className="flex items-center gap-2 mb-1">
-                <TrendingDown className="h-4 w-4 text-amber-500" />
-                <span className="text-sm font-medium text-amber-700">
+                <TrendingDown className="h-4 w-4 text-[var(--q-attention-text)]" />
+                <span className="text-sm font-medium text-[var(--q-attention-text)]">
                   Debtor Trajectory
                 </span>
               </div>
@@ -1154,7 +1154,7 @@ export default function ForecastPage() {
                     <p>
                       {t.contactName} slowing — {t.previousAvg} → {t.currentAvg} days
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-[var(--q-text-tertiary)]">
                       {fmt(t.forecastImpact)} at risk of shifting later
                     </p>
                   </div>
@@ -1165,11 +1165,11 @@ export default function ForecastPage() {
 
         {/* Promise impact */}
         {(forecast.promiseImpacts?.length ?? 0) > 0 && (
-          <Card className="border-blue-200 bg-blue-50/50">
+          <Card className="border-[var(--q-info-border)] bg-[var(--q-info-bg)]/50">
             <CardContent className="py-3 px-4">
               <div className="flex items-center gap-2 mb-1">
-                <TrendingUp className="h-4 w-4 text-blue-500" />
-                <span className="text-sm font-medium text-blue-700">
+                <TrendingUp className="h-4 w-4 text-[var(--q-info-text)]" />
+                <span className="text-sm font-medium text-[var(--q-info-text)]">
                   Promise Impact
                 </span>
               </div>
@@ -1178,7 +1178,7 @@ export default function ForecastPage() {
                   <p>
                     {fmt(p.promisedAmount)} promise from {p.contactName}
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-[var(--q-text-tertiary)]">
                     {fmt(p.swingAmount)} swing if broken (
                     {Math.round(p.reliabilityPercent)}% reliability)
                   </p>
@@ -1198,26 +1198,26 @@ export default function ForecastPage() {
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 Recurring Revenue
                 {patterns.filter((p) => p.status === "detected").length > 0 && (
-                  <Badge
-                    variant="outline"
-                    className="bg-emerald-50 text-emerald-700 text-xs"
+                  <QBadge
+                    variant="neutral"
+                    className="bg-[var(--q-money-in-bg)] text-[var(--q-money-in-text)] text-xs"
                   >
                     {patterns.filter((p) => p.status === "detected").length}{" "}
                     detected
-                  </Badge>
+                  </QBadge>
                 )}
                 {patterns.filter((p) => p.status === "confirmed").length > 0 && (
-                  <Badge
-                    variant="outline"
-                    className="bg-blue-50 text-blue-700 text-xs"
+                  <QBadge
+                    variant="neutral"
+                    className="bg-[var(--q-info-bg)] text-[var(--q-info-text)] text-xs"
                   >
                     {patterns.filter((p) => p.status === "confirmed").length}{" "}
                     confirmed
-                  </Badge>
+                  </QBadge>
                 )}
               </CardTitle>
               {forecast.recurringRevenue?.totalProjected ? (
-                <span className="text-sm font-medium text-blue-600">
+                <span className="text-sm font-medium text-[var(--q-info-text)]">
                   {fmt(forecast.recurringRevenue.totalProjected)} projected
                 </span>
               ) : null}
@@ -1226,8 +1226,8 @@ export default function ForecastPage() {
           <CardContent>
             {/* Validation banner */}
             {patterns.some((p) => p.status === "detected") && (
-              <div className="rounded-md bg-amber-50 border border-amber-200 p-3 mb-4 text-sm">
-                <p className="text-amber-800">
+              <div className="rounded-md bg-[var(--q-attention-bg)] border border-[var(--q-attention-border)] p-3 mb-4 text-sm">
+                <p className="text-[var(--q-attention-text)]">
                   {patterns.filter((p) => p.status === "detected").length}{" "}
                   recurring revenue pattern
                   {patterns.filter((p) => p.status === "detected").length !== 1
@@ -1247,32 +1247,32 @@ export default function ForecastPage() {
                     key={pattern.id}
                     className={`flex items-center justify-between py-2 px-3 rounded-md text-sm ${
                       pattern.status === "confirmed"
-                        ? "bg-blue-50/50"
+                        ? "bg-[var(--q-info-bg)]/50"
                         : pattern.status === "lapsed"
-                          ? "bg-amber-50/50"
-                          : "bg-muted/30"
+                          ? "bg-[var(--q-attention-bg)]/50"
+                          : "bg-[var(--q-bg-surface-alt)]"
                     }`}
                   >
                     <div className="flex-1">
                       <span
                         className={
                           pattern.status === "confirmed"
-                            ? "text-blue-700 font-medium"
+                            ? "text-[var(--q-info-text)] font-medium"
                             : pattern.status === "lapsed"
-                              ? "text-amber-700"
-                              : "text-muted-foreground"
+                              ? "text-[var(--q-attention-text)]"
+                              : "text-[var(--q-text-tertiary)]"
                         }
                       >
                         {pattern.contactName}
                       </span>
-                      <span className="text-muted-foreground ml-2">
+                      <span className="text-[var(--q-text-tertiary)] ml-2">
                         ({pattern.frequency}, {fmt(pattern.averageAmount)})
                       </span>
                       <span className="ml-2">
                         {confidenceBadge(pattern.confidence)}
                       </span>
                       {pattern.invoiceCount < 3 && (
-                        <span className="text-xs text-muted-foreground ml-2">
+                        <span className="text-xs text-[var(--q-text-tertiary)] ml-2">
                           — too early ({pattern.invoiceCount} invoices)
                         </span>
                       )}
@@ -1280,25 +1280,25 @@ export default function ForecastPage() {
 
                     <div className="flex items-center gap-2">
                       {pattern.status === "confirmed" && (
-                        <Badge
-                          variant="outline"
-                          className="bg-blue-100 text-blue-700 text-xs"
+                        <QBadge
+                          variant="neutral"
+                          className="bg-[var(--q-info-bg)] text-[var(--q-info-text)] text-xs"
                         >
                           Confirmed
-                        </Badge>
+                        </QBadge>
                       )}
                       {pattern.status === "lapsed" && (
-                        <Badge
-                          variant="outline"
-                          className="bg-amber-100 text-amber-700 text-xs"
+                        <QBadge
+                          variant="neutral"
+                          className="bg-[var(--q-attention-bg)] text-[var(--q-attention-text)] text-xs"
                         >
                           Lapsed
-                        </Badge>
+                        </QBadge>
                       )}
                       {pattern.status === "detected" && (
                         <>
                           <Button
-                            variant="outline"
+                            variant="neutral"
                             size="sm"
                             className="h-7 text-xs"
                             disabled={validatePatternMutation.isPending}
@@ -1315,7 +1315,7 @@ export default function ForecastPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-7 text-xs text-muted-foreground"
+                            className="h-7 text-xs text-[var(--q-text-tertiary)]"
                             disabled={validatePatternMutation.isPending}
                             onClick={() =>
                               validatePatternMutation.mutate({
@@ -1330,7 +1330,7 @@ export default function ForecastPage() {
                         </>
                       )}
                       {pattern.status === "detected" && (
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-xs text-[var(--q-text-tertiary)]">
                           Not in forecast
                         </span>
                       )}
@@ -1357,7 +1357,7 @@ export default function ForecastPage() {
               {/* Forecast vs Actual table */}
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b text-muted-foreground">
+                  <tr className="border-b text-[var(--q-text-tertiary)]">
                     <th className="text-left py-1"></th>
                     <th className="text-right py-1">Forecast</th>
                     <th className="text-right py-1">Actual</th>
@@ -1369,7 +1369,7 @@ export default function ForecastPage() {
                     <td className="py-1">AR collections</td>
                     <td className="text-right">{fmt(closeWeekPreview.forecast?.arCollections ?? 0)}</td>
                     <td className="text-right">{fmt(closeWeekPreview.actual?.collections ?? 0)}</td>
-                    <td className={`text-right ${(closeWeekPreview.variance?.amount ?? 0) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                    <td className={`text-right ${(closeWeekPreview.variance?.amount ?? 0) >= 0 ? "text-[var(--q-money-in-text)]" : "text-[var(--q-risk-text)]"}`}>
                       {(closeWeekPreview.variance?.amount ?? 0) >= 0 ? "+" : ""}{fmt(closeWeekPreview.variance?.amount ?? 0)}
                     </td>
                   </tr>
@@ -1383,7 +1383,7 @@ export default function ForecastPage() {
                     <td className="py-1">Total inflow</td>
                     <td className="text-right">{fmt(closeWeekPreview.forecast?.totalInflows ?? 0)}</td>
                     <td className="text-right">{fmt(closeWeekPreview.actual?.collections ?? 0)}</td>
-                    <td className={`text-right ${(closeWeekPreview.variance?.amount ?? 0) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                    <td className={`text-right ${(closeWeekPreview.variance?.amount ?? 0) >= 0 ? "text-[var(--q-money-in-text)]" : "text-[var(--q-risk-text)]"}`}>
                       {(closeWeekPreview.variance?.amount ?? 0) >= 0 ? "+" : ""}{fmt(closeWeekPreview.variance?.amount ?? 0)}
                     </td>
                   </tr>
@@ -1404,13 +1404,13 @@ export default function ForecastPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-muted-foreground">Accuracy</p>
+                  <p className="text-[var(--q-text-tertiary)]">Accuracy</p>
                   <p className="text-lg font-semibold">
                     {(100 - Math.abs(closeWeekPreview.variance?.percent ?? 0)).toFixed(1)}%
                   </p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Opening → Closing</p>
+                  <p className="text-[var(--q-text-tertiary)]">Opening → Closing</p>
                   <p className="text-lg font-semibold">
                     {fmt(closeWeekPreview.openingBalance ?? 0)} → {fmt(closeWeekPreview.closingBalance ?? 0)}
                   </p>
@@ -1421,7 +1421,7 @@ export default function ForecastPage() {
               {closeWeekPreview.varianceDrivers && closeWeekPreview.varianceDrivers.length > 0 && (
                 <div>
                   <p className="font-medium mb-1">Variance drivers</p>
-                  <ul className="space-y-0.5 text-muted-foreground">
+                  <ul className="space-y-0.5 text-[var(--q-text-tertiary)]">
                     {closeWeekPreview.varianceDrivers.slice(0, 5).map((d, i) => (
                       <li key={i}>
                         {d.debtor}: {d.reason} ({d.delta >= 0 ? "+" : ""}{fmt(d.delta)})
@@ -1433,7 +1433,7 @@ export default function ForecastPage() {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCloseWeekModalOpen(false)}>Not yet</Button>
+            <Button variant="neutral" onClick={() => setCloseWeekModalOpen(false)}>Not yet</Button>
             <Button
               onClick={() => {
                 if (closeWeekPreview?.weekStarting) {
@@ -1459,11 +1459,11 @@ export default function ForecastPage() {
                 Forecast Accuracy
               </span>
               {accuracyHistory.rolling4WeekAccuracy != null && (
-                <Badge variant="outline" className="text-xs">
+                <QBadge variant="neutral" className="text-xs">
                   Rolling: {accuracyHistory.rolling4WeekAccuracy.toFixed(1)}%
-                  {accuracyHistory.trend === "improving" && <TrendingUp className="h-3 w-3 ml-1 text-emerald-600 inline" />}
-                  {accuracyHistory.trend === "declining" && <TrendingDown className="h-3 w-3 ml-1 text-red-600 inline" />}
-                </Badge>
+                  {accuracyHistory.trend === "improving" && <TrendingUp className="h-3 w-3 ml-1 text-[var(--q-money-in-text)] inline" />}
+                  {accuracyHistory.trend === "declining" && <TrendingDown className="h-3 w-3 ml-1 text-[var(--q-risk-text)] inline" />}
+                </QBadge>
               )}
             </CardTitle>
           </CardHeader>
@@ -1471,7 +1471,7 @@ export default function ForecastPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b text-muted-foreground text-xs">
+                  <tr className="border-b text-[var(--q-text-tertiary)] text-xs">
                     <th className="text-left py-1 px-2">Week</th>
                     <th className="text-right py-1 px-2">Forecast</th>
                     <th className="text-right py-1 px-2">Actual</th>
@@ -1482,15 +1482,15 @@ export default function ForecastPage() {
                 </thead>
                 <tbody>
                   {accuracyHistory.weeks.slice(0, 8).map((w) => (
-                    <tr key={w.weekStarting} className="border-b hover:bg-muted/20">
+                    <tr key={w.weekStarting} className="border-b hover:bg-[var(--q-bg-surface-alt)]">
                       <td className="py-1.5 px-2">{weekLabel(w.weekStarting)}</td>
                       <td className="text-right py-1.5 px-2">{fmt(w.forecast)}</td>
                       <td className="text-right py-1.5 px-2">{fmt(w.actual)}</td>
-                      <td className={`text-right py-1.5 px-2 ${w.varianceAmount >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                      <td className={`text-right py-1.5 px-2 ${w.varianceAmount >= 0 ? "text-[var(--q-money-in-text)]" : "text-[var(--q-risk-text)]"}`}>
                         {w.varianceAmount >= 0 ? "+" : ""}{fmt(w.varianceAmount)}
                       </td>
                       <td className="text-right py-1.5 px-2 font-medium">{w.accuracy.toFixed(1)}%</td>
-                      <td className="py-1.5 px-2 text-muted-foreground text-xs truncate max-w-[180px]">{w.topDriver}</td>
+                      <td className="py-1.5 px-2 text-[var(--q-text-tertiary)] text-xs truncate max-w-[180px]">{w.topDriver}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1506,7 +1506,7 @@ export default function ForecastPage() {
           <DialogHeader>
             <DialogTitle>How this forecast works</DialogTitle>
           </DialogHeader>
-          <div className="text-sm text-muted-foreground space-y-2">
+          <div className="text-sm text-[var(--q-text-tertiary)] space-y-2">
             <p>
               <strong>Data source:</strong> Every forecast number traces back to
               a specific outstanding invoice and your debtor's historical payment
@@ -1540,7 +1540,7 @@ export default function ForecastPage() {
               more accurate forecasts.
             </p>
             <hr className="border-border" />
-            <p className="font-medium text-foreground">Pipeline revenue</p>
+            <p className="font-medium text-[var(--q-text-primary)]">Pipeline revenue</p>
             <p>
               You can add expected future revenue in three confidence levels:
             </p>
