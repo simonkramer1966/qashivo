@@ -261,7 +261,7 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
   return (
     <aside
       className={cn(
-        "flex flex-col h-full bg-[hsl(var(--sidebar-background))] text-[hsl(var(--sidebar-foreground))] transition-[width] duration-200 ease-in-out",
+        "flex flex-col h-full bg-q-bg-sidebar text-q-text-primary border-r border-q-border transition-[width] duration-200 ease-in-out",
         mobile ? "w-full" : isCollapsed ? "hidden lg:flex w-16 shrink-0" : "hidden lg:flex w-[240px] shrink-0"
       )}
     >
@@ -273,10 +273,10 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
           </div>
           {!isCollapsed && (
             <>
-              <span className="text-lg font-bold tracking-tight text-white flex-1">Qashivo</span>
+              <span className="text-lg font-bold tracking-tight text-q-text-primary flex-1">Qashivo</span>
               <button
                 onClick={toggleCollapsed}
-                className="w-6 h-6 flex items-center justify-center rounded text-[hsl(var(--sidebar-foreground))]/50 hover:text-white transition-colors"
+                className="w-6 h-6 flex items-center justify-center rounded text-q-text-tertiary hover:text-q-text-primary transition-colors"
                 title="Collapse sidebar"
               >
                 <ChevronLeft className="w-4 h-4" />
@@ -288,7 +288,7 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
           <div className="flex justify-center mb-2">
             <button
               onClick={toggleCollapsed}
-              className="w-6 h-6 flex items-center justify-center rounded text-[hsl(var(--sidebar-foreground))]/50 hover:text-white transition-colors"
+              className="w-6 h-6 flex items-center justify-center rounded text-q-text-tertiary hover:text-q-text-primary transition-colors"
               title="Expand sidebar"
             >
               <ChevronRight className="w-4 h-4" />
@@ -296,7 +296,7 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
           </div>
         )}
         {!isCollapsed && companyName && (
-          <p className="text-xs text-[hsl(var(--sidebar-foreground))]/60 truncate px-0.5">
+          <p className="text-xs text-q-text-tertiary truncate px-0.5">
             {companyName}
           </p>
         )}
@@ -325,11 +325,11 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
                         className={cn(
                           "w-full flex items-center justify-center py-2.5 rounded-md transition-colors",
                           isPillarActive
-                            ? "bg-[hsl(var(--sidebar-accent))] text-white"
-                            : "text-[hsl(var(--sidebar-foreground))]/70 hover:bg-[hsl(var(--sidebar-accent))] hover:text-white"
+                            ? "bg-q-bg-surface-alt text-q-text-primary"
+                            : "text-q-text-secondary hover:bg-q-bg-surface-hover hover:text-q-text-primary"
                         )}
                       >
-                        <PillarIcon className={cn("w-4 h-4", isPillarActive ? "text-[hsl(var(--sidebar-primary))]" : "")} />
+                        <PillarIcon className={cn("w-4 h-4", isPillarActive ? "text-q-accent" : "")} />
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="right" sideOffset={8}>
@@ -357,11 +357,11 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
                         className={cn(
                           "w-full flex items-center justify-center py-2.5 rounded-md transition-colors",
                           isPillarActive
-                            ? "bg-[hsl(var(--sidebar-accent))] text-white"
-                            : "text-[hsl(var(--sidebar-foreground))]/70 hover:bg-[hsl(var(--sidebar-accent))] hover:text-white"
+                            ? "bg-q-bg-surface-alt text-q-text-primary"
+                            : "text-q-text-secondary hover:bg-q-bg-surface-hover hover:text-q-text-primary"
                         )}
                       >
-                        <PillarIcon className={cn("w-4 h-4", isPillarActive ? "text-[hsl(var(--sidebar-primary))]" : "")} />
+                        <PillarIcon className={cn("w-4 h-4", isPillarActive ? "text-q-accent" : "")} />
                       </button>
                     </TooltipTrigger>
                     {flyout !== pillar.label && (
@@ -414,14 +414,14 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
                   className={cn(
                     "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
                     isPillarActive
-                      ? "bg-[hsl(var(--sidebar-accent))] text-white font-medium"
-                      : "text-[hsl(var(--sidebar-foreground))]/70 hover:bg-[hsl(var(--sidebar-accent))] hover:text-white"
+                      ? "bg-q-bg-surface-alt text-q-text-primary font-medium"
+                      : "text-q-text-secondary hover:bg-q-bg-surface-hover hover:text-q-text-primary"
                   )}
                 >
                   <PillarIcon
                     className={cn(
                       "w-4 h-4 shrink-0",
-                      isPillarActive ? "text-[hsl(var(--sidebar-primary))]" : ""
+                      isPillarActive ? "text-q-accent" : ""
                     )}
                   />
                   <span>{pillar.label}</span>
@@ -442,14 +442,14 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
                   className={cn(
                     "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
                     isPillarActive
-                      ? "text-white font-medium"
-                      : "text-[hsl(var(--sidebar-foreground))]/70 hover:bg-[hsl(var(--sidebar-accent))] hover:text-white"
+                      ? "text-q-text-primary font-medium"
+                      : "text-q-text-secondary hover:bg-q-bg-surface-hover hover:text-q-text-primary"
                   )}
                 >
                   <PillarIcon
                     className={cn(
                       "w-4 h-4 shrink-0",
-                      isPillarActive ? "text-[hsl(var(--sidebar-primary))]" : ""
+                      isPillarActive ? "text-q-accent" : ""
                     )}
                   />
                   <span className="flex-1 text-left flex items-center gap-1.5">
@@ -471,7 +471,7 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
                 </button>
 
                 {isExpanded && (
-                  <div className="ml-3 pl-3 border-l border-[hsl(var(--sidebar-border))] space-y-0.5">
+                  <div className="ml-3 pl-3 border-l border-q-border space-y-0.5">
                     {filteredChildren.map((child) => {
                       const ChildIcon = child.icon;
                       const isChildActive = isActivePath(child.href);
@@ -482,14 +482,14 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
                           className={cn(
                             "w-full flex items-center gap-3 px-3 py-1.5 rounded-md text-sm transition-colors",
                             isChildActive
-                              ? "bg-[hsl(var(--sidebar-accent))] text-white font-medium"
-                              : "text-[hsl(var(--sidebar-foreground))]/60 hover:bg-[hsl(var(--sidebar-accent))] hover:text-white"
+                              ? "bg-q-bg-surface-alt text-q-text-primary font-medium"
+                              : "text-q-text-tertiary hover:bg-q-bg-surface-hover hover:text-q-text-primary"
                           )}
                         >
                           <ChildIcon
                             className={cn(
                               "w-3.5 h-3.5 shrink-0",
-                              isChildActive ? "text-[hsl(var(--sidebar-primary))]" : ""
+                              isChildActive ? "text-q-accent" : ""
                             )}
                           />
                           <span>{child.name}</span>
@@ -505,15 +505,15 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
       </nav>
 
       {/* Footer — user profile (sync indicator moved to header) */}
-      <div className={cn("border-t border-[hsl(var(--sidebar-border))] pb-4 pt-3", isCollapsed ? "px-2" : "px-3")}>
+      <div className={cn("border-t border-q-border pb-4 pt-3", isCollapsed ? "px-2" : "px-3")}>
         {isCollapsed ? (
           <Tooltip>
             <TooltipTrigger asChild>
               <button
                 onClick={() => logoutMutation.mutate()}
-                className="w-full flex items-center justify-center py-2 rounded-md text-[hsl(var(--sidebar-foreground))]/70 hover:bg-[hsl(var(--sidebar-accent))] hover:text-white transition-colors"
+                className="w-full flex items-center justify-center py-2 rounded-md text-q-text-secondary hover:bg-q-bg-surface-hover hover:text-q-text-primary transition-colors"
               >
-                <div className="w-7 h-7 rounded-full bg-[hsl(var(--sidebar-accent))] flex items-center justify-center text-xs font-medium text-white shrink-0">
+                <div className="w-7 h-7 rounded-full bg-q-bg-surface-alt flex items-center justify-center text-xs font-medium text-q-text-primary shrink-0">
                   {initials}
                 </div>
               </button>
@@ -525,9 +525,9 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
         ) : (
           <button
             onClick={() => logoutMutation.mutate()}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm text-[hsl(var(--sidebar-foreground))]/70 hover:bg-[hsl(var(--sidebar-accent))] hover:text-white transition-colors"
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm text-q-text-secondary hover:bg-q-bg-surface-hover hover:text-q-text-primary transition-colors"
           >
-            <div className="w-7 h-7 rounded-full bg-[hsl(var(--sidebar-accent))] flex items-center justify-center text-xs font-medium text-white shrink-0">
+            <div className="w-7 h-7 rounded-full bg-q-bg-surface-alt flex items-center justify-center text-xs font-medium text-q-text-primary shrink-0">
               {initials}
             </div>
             <div className="flex-1 text-left min-w-0">

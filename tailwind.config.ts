@@ -9,6 +9,10 @@ export default {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        "q-sm": "4px",
+        "q-md": "8px",
+        "q-lg": "12px",
+        "q-xl": "16px",
       },
       colors: {
         background: "hsl(var(--background))",
@@ -117,6 +121,55 @@ export default {
         "inverse-primary": "#bec6e0",
         // Quiz-specific teal (darker than brand-teal, matches Stitch)
         "mkt-teal": "#00687a",
+        // Qashivo q- design tokens
+        "q-bg": {
+          page: "var(--q-bg-page)",
+          surface: "var(--q-bg-surface)",
+          "surface-hover": "var(--q-bg-surface-hover)",
+          "surface-alt": "var(--q-bg-surface-alt)",
+          input: "var(--q-bg-input)",
+          sidebar: "var(--q-bg-sidebar)",
+        },
+        "q-text": {
+          primary: "var(--q-text-primary)",
+          secondary: "var(--q-text-secondary)",
+          tertiary: "var(--q-text-tertiary)",
+          muted: "var(--q-text-muted)",
+        },
+        "q-border": {
+          DEFAULT: "var(--q-border-default)",
+          hover: "var(--q-border-hover)",
+          strong: "var(--q-border-strong)",
+        },
+        "q-money-in": {
+          DEFAULT: "var(--q-money-in-text)",
+          bg: "var(--q-money-in-bg)",
+          border: "var(--q-money-in-border)",
+        },
+        "q-risk": {
+          DEFAULT: "var(--q-risk-text)",
+          bg: "var(--q-risk-bg)",
+          border: "var(--q-risk-border)",
+        },
+        "q-attention": {
+          DEFAULT: "var(--q-attention-text)",
+          bg: "var(--q-attention-bg)",
+          border: "var(--q-attention-border)",
+        },
+        "q-info": {
+          DEFAULT: "var(--q-info-text)",
+          bg: "var(--q-info-bg)",
+          border: "var(--q-info-border)",
+        },
+        "q-accent": {
+          DEFAULT: "var(--q-accent)",
+          hover: "var(--q-accent-hover)",
+          bg: "var(--q-accent-bg)",
+        },
+        "q-vip": {
+          DEFAULT: "var(--q-vip-text)",
+          bg: "var(--q-vip-bg)",
+        },
       },
       fontFamily: {
         sans: ["DM Sans", "-apple-system", "BlinkMacSystemFont", "San Francisco", "Segoe UI", "system-ui", "sans-serif"],
@@ -127,6 +180,28 @@ export default {
         headline: ["Manrope", "sans-serif"],
         body: ["Inter", "sans-serif"],
         label: ["Inter", "sans-serif"],
+        // Qashivo q- fonts
+        "q-sans": ["Inter", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
+        "q-mono": ["JetBrains Mono", "SF Mono", "Fira Code", "Cascadia Code", "monospace"],
+      },
+      spacing: {
+        "q-xs": "4px",
+        "q-sm": "8px",
+        "q-md": "12px",
+        "q-lg": "16px",
+        "q-xl": "24px",
+        "q-2xl": "32px",
+        "q-3xl": "48px",
+      },
+      fontSize: {
+        "q-hero": ["32px", { lineHeight: "1.1", fontWeight: "600" }],
+        "q-metric": ["24px", { lineHeight: "1.2", fontWeight: "600" }],
+        "q-page-title": ["20px", { lineHeight: "1.3", fontWeight: "600" }],
+        "q-section": ["16px", { lineHeight: "1.4", fontWeight: "600" }],
+        "q-body": ["14px", { lineHeight: "1.6", fontWeight: "400" }],
+        "q-body-medium": ["14px", { lineHeight: "1.6", fontWeight: "500" }],
+        "q-small": ["13px", { lineHeight: "1.5", fontWeight: "400" }],
+        "q-caption": ["11px", { lineHeight: "1.4", fontWeight: "500" }],
       },
       keyframes: {
         "accordion-down": {

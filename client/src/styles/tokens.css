@@ -1,0 +1,177 @@
+/* ========== QASHIVO DESIGN TOKENS ========== */
+/* Warm premium fintech — Mercury meets Stripe  */
+/* All tokens prefixed q- to sit alongside existing shadcn system */
+
+:root {
+  /* ── Neutrals (warm gray family) ── */
+  --q-bg-page: #F8F7F5;
+  --q-bg-surface: #FFFFFF;
+  --q-bg-surface-hover: #F4F3F0;
+  --q-bg-surface-alt: #F1F0EC;
+  --q-bg-input: #FFFFFF;
+  --q-bg-sidebar: #FFFFFF;
+
+  --q-text-primary: #1A1918;
+  --q-text-secondary: #6B6A66;
+  --q-text-tertiary: #9C9B97;
+  --q-text-muted: #C4C3BF;
+
+  --q-border-default: rgba(0, 0, 0, 0.08);
+  --q-border-hover: rgba(0, 0, 0, 0.15);
+  --q-border-strong: rgba(0, 0, 0, 0.25);
+
+  /* ── Money in (green) ── */
+  --q-money-in-bg: #ECFAEF;
+  --q-money-in-text: #15803D;
+  --q-money-in-border: #BBF7D0;
+
+  /* ── Risk / money out (red) ── */
+  --q-risk-bg: #FEF2F2;
+  --q-risk-text: #DC2626;
+  --q-risk-border: #FECACA;
+
+  /* ── Attention / warning (amber) ── */
+  --q-attention-bg: #FFFBEB;
+  --q-attention-text: #B45309;
+  --q-attention-border: #FDE68A;
+
+  /* ── Information (blue) ── */
+  --q-info-bg: #EFF6FF;
+  --q-info-text: #1D4ED8;
+  --q-info-border: #BFDBFE;
+
+  /* ── Qashivo brand accent (deep teal) ── */
+  --q-accent: #0F766E;
+  --q-accent-hover: #0D6D66;
+  --q-accent-bg: #F0FDFA;
+
+  /* ── VIP (purple) ── */
+  --q-vip-bg: #F5F3FF;
+  --q-vip-text: #6D28D9;
+
+  /* ── Chart palette ── */
+  --q-chart-primary: #0F766E;
+  --q-chart-secondary: #6B6A66;
+  --q-chart-positive: #15803D;
+  --q-chart-negative: #DC2626;
+  --q-chart-band: rgba(15, 118, 110, 0.08);
+  --q-chart-grid: rgba(0, 0, 0, 0.05);
+  --q-chart-tooltip-bg: #1A1918;
+  --q-chart-tooltip-text: #FFFFFF;
+
+  /* ── Typography ── */
+  --q-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --q-font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+
+  /* ── Spacing (4px grid) ── */
+  --q-space-xs: 4px;
+  --q-space-sm: 8px;
+  --q-space-md: 12px;
+  --q-space-lg: 16px;
+  --q-space-xl: 24px;
+  --q-space-2xl: 32px;
+  --q-space-3xl: 48px;
+
+  /* ── Border radius ── */
+  --q-radius-sm: 4px;
+  --q-radius-md: 8px;
+  --q-radius-lg: 12px;
+  --q-radius-xl: 16px;
+
+  /* ── Transitions ── */
+  --q-transition-fast: 0.1s ease;
+  --q-transition-default: 0.15s ease;
+  --q-transition-slow: 0.3s ease;
+}
+
+/* ── Dark mode (class-based for shadcn compat) ── */
+.dark {
+  --q-bg-page: #141413;
+  --q-bg-surface: #1E1E1C;
+  --q-bg-surface-hover: #2A2A27;
+  --q-bg-surface-alt: #252523;
+  --q-bg-input: #1E1E1C;
+  --q-bg-sidebar: #1A1A18;
+
+  --q-text-primary: #EDECEA;
+  --q-text-secondary: #9C9B97;
+  --q-text-tertiary: #6B6A66;
+  --q-text-muted: #44443F;
+
+  --q-border-default: rgba(255, 255, 255, 0.08);
+  --q-border-hover: rgba(255, 255, 255, 0.15);
+  --q-border-strong: rgba(255, 255, 255, 0.25);
+
+  --q-money-in-bg: #0C2912;
+  --q-money-in-text: #4ADE80;
+  --q-money-in-border: #166534;
+
+  --q-risk-bg: #2D0F0F;
+  --q-risk-text: #FCA5A5;
+  --q-risk-border: #7F1D1D;
+
+  --q-attention-bg: #2D2006;
+  --q-attention-text: #FCD34D;
+  --q-attention-border: #78350F;
+
+  --q-info-bg: #0C1929;
+  --q-info-text: #93C5FD;
+  --q-info-border: #1E3A5F;
+
+  --q-accent: #2DD4BF;
+  --q-accent-hover: #5EEAD4;
+  --q-accent-bg: #0D2D2A;
+
+  --q-vip-bg: #1E1833;
+  --q-vip-text: #C4B5FD;
+
+  --q-chart-band: rgba(45, 212, 191, 0.08);
+  --q-chart-grid: rgba(255, 255, 255, 0.05);
+}
+
+/* ── Dark mode (media query fallback) ── */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --q-bg-page: #141413;
+    --q-bg-surface: #1E1E1C;
+    --q-bg-surface-hover: #2A2A27;
+    --q-bg-surface-alt: #252523;
+    --q-bg-input: #1E1E1C;
+    --q-bg-sidebar: #1A1A18;
+
+    --q-text-primary: #EDECEA;
+    --q-text-secondary: #9C9B97;
+    --q-text-tertiary: #6B6A66;
+    --q-text-muted: #44443F;
+
+    --q-border-default: rgba(255, 255, 255, 0.08);
+    --q-border-hover: rgba(255, 255, 255, 0.15);
+    --q-border-strong: rgba(255, 255, 255, 0.25);
+
+    --q-money-in-bg: #0C2912;
+    --q-money-in-text: #4ADE80;
+    --q-money-in-border: #166534;
+
+    --q-risk-bg: #2D0F0F;
+    --q-risk-text: #FCA5A5;
+    --q-risk-border: #7F1D1D;
+
+    --q-attention-bg: #2D2006;
+    --q-attention-text: #FCD34D;
+    --q-attention-border: #78350F;
+
+    --q-info-bg: #0C1929;
+    --q-info-text: #93C5FD;
+    --q-info-border: #1E3A5F;
+
+    --q-accent: #2DD4BF;
+    --q-accent-hover: #5EEAD4;
+    --q-accent-bg: #0D2D2A;
+
+    --q-vip-bg: #1E1833;
+    --q-vip-text: #C4B5FD;
+
+    --q-chart-band: rgba(45, 212, 191, 0.08);
+    --q-chart-grid: rgba(255, 255, 255, 0.05);
+  }
+}

@@ -1,0 +1,98 @@
+/* ========== QASHIVO BASE STYLES ========== */
+/* Global styles applying q- design tokens    */
+
+/* ── Utility classes ── */
+
+.q-mono {
+  font-family: var(--q-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.q-amount {
+  font-family: var(--q-font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--q-text-primary);
+}
+
+.q-amount--overdue {
+  color: var(--q-risk-text);
+}
+
+.q-amount--positive {
+  color: var(--q-money-in-text);
+}
+
+.q-col-header {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--q-text-tertiary);
+}
+
+.q-section-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--q-text-tertiary);
+}
+
+/* ── Trend indicators ── */
+
+.q-trend--up {
+  color: var(--q-money-in-text);
+}
+
+.q-trend--down {
+  color: var(--q-risk-text);
+}
+
+.q-trend--flat {
+  color: var(--q-text-tertiary);
+}
+
+/* ── Skeleton loading ── */
+
+.q-skeleton {
+  background: var(--q-bg-surface-alt);
+  border-radius: var(--q-radius-md);
+  animation: q-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes q-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ── Selection colour ── */
+
+::selection {
+  background: var(--q-accent-bg);
+  color: var(--q-text-primary);
+}
+
+/* ── Scrollbar styling (q- variant) ── */
+
+.q-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--q-text-muted) transparent;
+}
+
+.q-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.q-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.q-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--q-text-muted);
+  border-radius: 3px;
+}
+
+.q-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--q-text-tertiary);
+}
