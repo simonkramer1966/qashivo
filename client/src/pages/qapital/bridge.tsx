@@ -644,17 +644,17 @@ export default function BridgePage() {
               </h3>
             </div>
             <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-sm">
+            <table className="w-full border-collapse table-fixed">
               <thead>
                 <tr>
-                  <th className="w-[48px] text-center px-3 py-2 text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)] border-b border-[var(--q-border-default)] sticky top-0 bg-[var(--q-bg-surface)] z-10" />
-                  <th className="text-left px-3 py-2 text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)] border-b border-[var(--q-border-default)] sticky top-0 bg-[var(--q-bg-surface)] z-10">Invoice</th>
-                  <th className="text-left px-3 py-2 text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)] border-b border-[var(--q-border-default)] sticky top-0 bg-[var(--q-bg-surface)] z-10">Debtor</th>
-                  <th className="text-right px-3 py-2 text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)] border-b border-[var(--q-border-default)] sticky top-0 bg-[var(--q-bg-surface)] z-10">Amount</th>
-                  <th className="text-center px-3 py-2 text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)] border-b border-[var(--q-border-default)] sticky top-0 bg-[var(--q-bg-surface)] z-10 w-[130px]">Days to pay</th>
-                  <th className="text-center px-3 py-2 text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)] border-b border-[var(--q-border-default)] sticky top-0 bg-[var(--q-bg-surface)] z-10 w-[80px]">Risk</th>
-                  <th className="text-right px-3 py-2 text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)] border-b border-[var(--q-border-default)] sticky top-0 bg-[var(--q-bg-surface)] z-10">Interest</th>
-                  <th className="px-3 py-2 text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)] border-b border-[var(--q-border-default)] sticky top-0 bg-[var(--q-bg-surface)] z-10 w-[80px]" />
+                  <BridgeTH className="w-[48px] text-center" />
+                  <BridgeTH className="w-[120px]">Invoice</BridgeTH>
+                  <BridgeTH>Debtor</BridgeTH>
+                  <BridgeTH className="w-[120px] text-right">Amount</BridgeTH>
+                  <BridgeTH className="w-[110px] text-center">Days to pay</BridgeTH>
+                  <BridgeTH className="w-[80px] text-center">Risk</BridgeTH>
+                  <BridgeTH className="w-[100px] text-right">Interest</BridgeTH>
+                  <BridgeTH className="w-[80px]" />
                 </tr>
               </thead>
               <tbody>
@@ -677,13 +677,13 @@ export default function BridgePage() {
                           disabled={isExcluded}
                         />
                       </td>
-                      <td className="px-3 py-3 font-mono text-xs">{inv.invoiceNumber}</td>
+                      <td className="px-3 py-3 text-[14px] font-mono">{inv.invoiceNumber}</td>
                       <td className="px-3 py-3 text-[14px] text-[var(--q-text-primary)]">{inv.contactName}</td>
                       <td className="px-3 py-3 text-right">
                         <QAmount value={inv.amountDue} decimals={0} className="text-[14px] font-semibold" />
                       </td>
                       <td className="px-3 py-3 text-center">
-                        <span className="text-[14px] font-medium font-[var(--q-font-mono)] tabular-nums">{inv.expectedDuration}</span>
+                        <span className="text-[14px] font-medium q-mono tabular-nums">{inv.expectedDuration}</span>
                         <span className="text-[var(--q-text-tertiary)] text-xs ml-1">days</span>
                       </td>
                       <td className="px-3 py-3 text-center">
@@ -718,7 +718,7 @@ export default function BridgePage() {
                 })}
                 {bridgeInvoices.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="px-3 py-8 text-center text-[var(--q-text-tertiary)]">
+                    <td colSpan={8} className="px-3 py-8 text-center text-[14px] text-[var(--q-text-tertiary)]">
                       No eligible invoices found in the forecast.
                     </td>
                   </tr>
@@ -867,6 +867,17 @@ function CostRow({ label, value, bold, highlight, warn }: { label: string; value
     </div>
   );
 }
+
+// ── Table header cell — matches Debtors list TH ─────────────
+
+const BridgeTH = ({ children, className }: { children?: React.ReactNode; className?: string }) => (
+  <th className={cn(
+    "text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)] text-left px-3 py-2 border-b border-[var(--q-border-default)] sticky top-0 bg-[var(--q-bg-surface)] z-10",
+    className
+  )}>
+    {children}
+  </th>
+);
 
 // ── Date formatting ────────────────────────────────────────────
 
