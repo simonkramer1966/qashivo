@@ -5,6 +5,8 @@ import AppShell from "@/components/layout/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { QBadge } from "@/components/ui/q-badge";
+import { QAmount } from "@/components/ui/q-amount";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -301,12 +303,12 @@ function daysOverdue(dueDate: string): number {
   return Math.floor((now.getTime() - due.getTime()) / 86400000);
 }
 
-function ageingBadge(days: number): { label: string; colour: string } {
-  if (days <= 0) return { label: "Current", colour: "bg-green-100 text-green-800" };
-  if (days <= 30) return { label: "1-30d", colour: "bg-yellow-100 text-yellow-800" };
-  if (days <= 60) return { label: "31-60d", colour: "bg-orange-100 text-orange-800" };
-  if (days <= 90) return { label: "61-90d", colour: "bg-red-100 text-red-800" };
-  return { label: "90d+", colour: "bg-red-200 text-red-900" };
+function ageingBadge(days: number): { label: string; variant: "ready" | "attention" | "risk" } {
+  if (days <= 0) return { label: "Current", variant: "ready" };
+  if (days <= 30) return { label: "1-30d", variant: "attention" };
+  if (days <= 60) return { label: "31-60d", variant: "attention" };
+  if (days <= 90) return { label: "61-90d", variant: "risk" };
+  return { label: "90d+", variant: "risk" };
 }
 
 // ── Event type visual config for Activity timeline ──────────────────────────
@@ -440,25 +442,25 @@ function categoryIcon(category: string) {
 }
 
 function riskColour(score: number | null | undefined): string {
-  if (score == null) return "text-muted-foreground";
-  if (score < 30) return "text-green-600";
-  if (score <= 60) return "text-amber-600";
-  return "text-red-600";
+  if (score == null) return "text-[var(--q-text-tertiary)]";
+  if (score < 30) return "text-[var(--q-money-in-text)]";
+  if (score <= 60) return "text-[var(--q-attention-text)]";
+  return "text-[var(--q-risk-text)]";
 }
 
 function riskBg(score: number | null | undefined): string {
-  if (score == null) return "bg-muted";
-  if (score < 30) return "bg-green-100";
-  if (score <= 60) return "bg-amber-100";
-  return "bg-red-100";
+  if (score == null) return "bg-[var(--q-bg-surface-alt)]";
+  if (score < 30) return "bg-[var(--q-money-in-bg)]";
+  if (score <= 60) return "bg-[var(--q-attention-bg)]";
+  return "bg-[var(--q-risk-bg)]";
 }
 
 function behaviourColour(b: string): string {
   const lower = b.toLowerCase();
-  if (lower.includes("on time") || lower.includes("early")) return "text-green-600";
-  if (lower.includes("severely") || lower.includes("chronically")) return "text-red-600";
-  if (lower.includes("late")) return "text-amber-600";
-  return "text-muted-foreground";
+  if (lower.includes("on time") || lower.includes("early")) return "text-[var(--q-money-in-text)]";
+  if (lower.includes("severely") || lower.includes("chronically")) return "text-[var(--q-risk-text)]";
+  if (lower.includes("late")) return "text-[var(--q-attention-text)]";
+  return "text-[var(--q-text-tertiary)]";
 }
 
 type SortDir = "asc" | "desc";
@@ -492,51 +494,51 @@ function DebtorAuditSection({ contactId }: { contactId: string }) {
   });
 
   return (
-    <Card>
+    <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)]">
       <button
-        className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-accent/30 transition-colors"
+        className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-[var(--q-bg-surface-hover)] transition-colors rounded-[var(--q-radius-lg)]"
         onClick={() => setOpen(!open)}
       >
-        {open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
-        <span className="text-sm font-medium">Audit History</span>
+        {open ? <ChevronDown className="h-4 w-4 text-[var(--q-text-tertiary)]" /> : <ChevronRight className="h-4 w-4 text-[var(--q-text-tertiary)]" />}
+        <span className="text-sm font-medium text-[var(--q-text-primary)]">Audit History</span>
       </button>
       {open && (
-        <CardContent className="pt-0 pb-3">
+        <div className="px-4 pb-3">
           {isLoading ? (
-            <div className="py-4 text-center text-xs text-muted-foreground">Loading...</div>
+            <div className="py-4 text-center text-xs text-[var(--q-text-tertiary)]">Loading...</div>
           ) : !data?.entries?.length ? (
-            <div className="py-4 text-center text-xs text-muted-foreground">No audit entries for this debtor</div>
+            <div className="py-4 text-center text-xs text-[var(--q-text-tertiary)]">No audit entries for this debtor</div>
           ) : (
             <div className="space-y-1">
               {data.entries.map((entry) => {
                 const { title, detail } = formatAuditAction(entry);
                 return (
                   <div key={entry.id} className="flex items-start gap-3 px-2 py-1.5 text-xs">
-                    <span className="text-muted-foreground w-10 shrink-0 tabular-nums">
+                    <span className="text-[var(--q-text-tertiary)] w-10 shrink-0 tabular-nums">
                       {new Date(entry.createdAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <span className="font-medium">{entry.userName || "System"}</span>
+                      <span className="font-medium text-[var(--q-text-primary)]">{entry.userName || "System"}</span>
                       {entry.userRole && (
-                        <span className="text-muted-foreground ml-1">({formatRole(entry.userRole)})</span>
+                        <span className="text-[var(--q-text-tertiary)] ml-1">({formatRole(entry.userRole)})</span>
                       )}
-                      <span className="text-muted-foreground ml-1">— {title}</span>
-                      {detail && <span className="text-muted-foreground/70 ml-1">{detail}</span>}
+                      <span className="text-[var(--q-text-tertiary)] ml-1">— {title}</span>
+                      {detail && <span className="text-[var(--q-text-tertiary)] opacity-70 ml-1">{detail}</span>}
                     </div>
                   </div>
                 );
               })}
               <a
                 href={`/settings/audit-log?entityId=${contactId}`}
-                className="block text-xs text-primary hover:underline mt-2 px-2"
+                className="block text-xs text-[var(--q-accent)] hover:underline mt-2 px-2"
               >
                 View full audit log
               </a>
             </div>
           )}
-        </CardContent>
+        </div>
       )}
-    </Card>
+    </div>
   );
 }
 
@@ -1570,7 +1572,7 @@ export default function DebtorRecord() {
   if (!matched) {
     return (
       <AppShell title="Not Found">
-        <p className="p-8 text-muted-foreground">Debtor not found.</p>
+        <p className="p-8 text-[var(--q-text-tertiary)]">Debtor not found.</p>
       </AppShell>
     );
   }
@@ -1581,16 +1583,16 @@ export default function DebtorRecord() {
 
   if (profileQuery.isLoading) {
     return (
-      <AppShell title="Debtor Detail">
-        <div className="space-y-4 p-6">
+      <AppShell title="Loading...">
+        <div className="space-y-4 p-4 md:p-6 max-w-[1400px] mx-auto">
           <Skeleton className="h-8 w-64" />
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {Array.from({ length: 10 }).map((_, i) => (
-              <Skeleton key={i} className="h-20" />
+              <Skeleton key={i} className="h-20 rounded-[var(--q-radius-lg)]" />
             ))}
           </div>
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-96 w-full" />
+          <Skeleton className="h-12 w-full rounded-[var(--q-radius-lg)]" />
+          <Skeleton className="h-96 w-full rounded-[var(--q-radius-lg)]" />
         </div>
       </AppShell>
     );
@@ -1598,12 +1600,12 @@ export default function DebtorRecord() {
 
   if (profileQuery.isError || !contact) {
     return (
-      <AppShell title="Debtor Detail">
+      <AppShell title="Error">
         <div className="p-8">
           <Button variant="ghost" size="sm" onClick={() => setLocation("/qollections/debtors")}>
             <ArrowLeft className="h-4 w-4 mr-1" /> Back
           </Button>
-          <p className="mt-4 text-destructive">
+          <p className="mt-4 text-[var(--q-risk-text)]">
             Failed to load debtor profile. {profileQuery.error?.message}
           </p>
         </div>
@@ -1616,7 +1618,10 @@ export default function DebtorRecord() {
   // ---------------------------------------------------------------------------
 
   return (
-    <AppShell title="Debtor Detail">
+    <AppShell
+      title={contact.name}
+      subtitle={`${gbp.format(metrics?.totalOutstanding ?? 0)} outstanding${(metrics?.totalOverdue ?? 0) > 0 ? ` · ${gbp.format(metrics!.totalOverdue)} overdue` : ""}`}
+    >
       <div className="space-y-4 p-4 md:p-6 max-w-[1400px] mx-auto">
         {/* ----------------------------------------------------------------- */}
         {/* Back + Header                                                     */}
@@ -1632,64 +1637,53 @@ export default function DebtorRecord() {
           </Button>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-2xl font-bold truncate">{contact.name}</h1>
+              <h1 className="text-2xl font-bold truncate text-[var(--q-text-primary)]">{contact.name}</h1>
               {contact.manualBlocked && (
-                <Badge variant="destructive">Blocked</Badge>
+                <QBadge variant="risk">Blocked</QBadge>
               )}
               {contact.riskBand && (
-                <Badge
-                  className={cn(
-                    "text-xs",
-                    contact.riskBand === "low"
-                      ? "bg-green-100 text-green-800"
-                      : contact.riskBand === "medium"
-                      ? "bg-amber-100 text-amber-800"
-                      : "bg-red-100 text-red-800"
-                  )}
+                <QBadge
+                  variant={contact.riskBand === "low" ? "ready" : contact.riskBand === "medium" ? "attention" : "risk"}
                 >
                   {contact.riskBand} risk
-                </Badge>
+                </QBadge>
               )}
               {metrics?.riskTag && metrics.riskTag !== "Insufficient data" && (
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    "text-xs",
-                    metrics.riskTag === "Critical" ? "border-red-300 bg-red-50 text-red-700" :
-                    metrics.riskTag === "High Risk" ? "border-orange-300 bg-orange-50 text-orange-700" :
-                    metrics.riskTag === "Elevated" ? "border-amber-300 bg-amber-50 text-amber-700" :
-                    metrics.riskTag === "Low Risk" ? "border-green-300 bg-green-50 text-green-700" :
-                    ""
-                  )}
+                <QBadge
+                  variant={
+                    metrics.riskTag === "Critical" || metrics.riskTag === "High Risk" ? "risk" :
+                    metrics.riskTag === "Elevated" ? "attention" :
+                    metrics.riskTag === "Low Risk" ? "ready" : "neutral"
+                  }
                 >
                   {metrics.riskTag}
                   {metrics.creditRiskScore != null && (
                     <span className="ml-1 opacity-70">{metrics.creditRiskScore}/100</span>
                   )}
-                </Badge>
+                </QBadge>
               )}
               {metrics && (
                 <button
                   onClick={() => toggleLpiMutation.mutate(!metrics.lpiEnabled)}
                   className={cn(
-                    "text-xs px-2 py-0.5 rounded-full border transition-colors",
+                    "text-[11px] font-medium px-2 py-0.5 rounded-[var(--q-radius-sm)] border transition-colors",
                     metrics.lpiEnabled
-                      ? "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
-                      : "border-zinc-200 text-muted-foreground hover:bg-zinc-50"
+                      ? "border-[var(--q-attention-border)] bg-[var(--q-attention-bg)] text-[var(--q-attention-text)] hover:opacity-80"
+                      : "border-[var(--q-border-default)] text-[var(--q-text-tertiary)] hover:bg-[var(--q-bg-surface-alt)]"
                   )}
                 >
                   LPI {metrics.lpiEnabled ? "ON" : "OFF"}
                 </button>
               )}
               {contact.isException && (
-                <Badge variant="destructive" className="gap-1">
+                <QBadge variant="risk" className="gap-1">
                   <ShieldAlert className="h-3 w-3" />
                   Exception{contact.exceptionType ? `: ${contact.exceptionType}` : ""}
-                </Badge>
+                </QBadge>
               )}
             </div>
             {contact.companyName && contact.companyName !== contact.name && (
-              <p className="text-sm text-muted-foreground">{contact.companyName}</p>
+              <p className="text-sm text-[var(--q-text-tertiary)]">{contact.companyName}</p>
             )}
           </div>
         </div>
@@ -1702,18 +1696,18 @@ export default function DebtorRecord() {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Card className="p-3 cursor-default">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">
+                <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] p-3 cursor-default">
+                  <p className="text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)]">
                     Total Outstanding
                   </p>
                   {metricsQuery.isLoading ? (
                     <Skeleton className="h-6 w-20 mt-1" />
                   ) : (
-                    <p className="text-lg font-bold tabular-nums">
+                    <p className="text-lg font-bold tabular-nums text-[var(--q-text-primary)] q-mono">
                       {gbp.format(metrics?.totalOutstanding ?? 0)}
                     </p>
                   )}
-                </Card>
+                </div>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="p-0">
                 {(() => {
@@ -1744,8 +1738,8 @@ export default function DebtorRecord() {
           </TooltipProvider>
 
           {/* 2 - Total Overdue */}
-          <Card className="p-3">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">
+          <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] p-3">
+            <p className="text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)]">
               Total Overdue
             </p>
             {metricsQuery.isLoading ? (
@@ -1753,50 +1747,50 @@ export default function DebtorRecord() {
             ) : (
               <p
                 className={cn(
-                  "text-lg font-bold tabular-nums",
-                  (metrics?.totalOverdue ?? 0) > 0 && "text-red-600"
+                  "text-lg font-bold tabular-nums q-mono",
+                  (metrics?.totalOverdue ?? 0) > 0 ? "text-[var(--q-risk-text)]" : "text-[var(--q-text-primary)]"
                 )}
               >
                 {gbp.format(metrics?.totalOverdue ?? 0)}
               </p>
             )}
-          </Card>
+          </div>
 
           {/* 3 - Oldest Overdue */}
-          <Card className="p-3">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">
+          <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] p-3">
+            <p className="text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)]">
               Oldest Overdue
             </p>
             {metricsQuery.isLoading ? (
               <Skeleton className="h-6 w-20 mt-1" />
             ) : (
-              <p className="text-lg font-bold tabular-nums">
+              <p className="text-lg font-bold tabular-nums text-[var(--q-text-primary)]">
                 {metrics?.oldestInvoice
                   ? `${metrics.oldestInvoice.daysOverdue}d — ${metrics.oldestInvoice.invoiceNumber}`
                   : "—"}
               </p>
             )}
-          </Card>
+          </div>
 
           {/* 4 - Avg Days to Pay */}
-          <Card className="p-3">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">
+          <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] p-3">
+            <p className="text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)]">
               Avg Days to Pay
             </p>
             {metricsQuery.isLoading ? (
               <Skeleton className="h-6 w-20 mt-1" />
             ) : (
-              <p className="text-lg font-bold tabular-nums">
+              <p className="text-lg font-bold tabular-nums text-[var(--q-text-primary)]">
                 {metrics?.avgDaysToPay != null
                   ? `${Math.round(metrics.avgDaysToPay)} days`
                   : "—"}
               </p>
             )}
-          </Card>
+          </div>
 
           {/* 5 - Payment Behaviour */}
-          <Card className="p-3">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">
+          <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] p-3">
+            <p className="text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)]">
               Payment Behaviour
             </p>
             {metricsQuery.isLoading ? (
@@ -1805,130 +1799,124 @@ export default function DebtorRecord() {
               <>
                 <p
                   className={cn(
-                    "text-lg font-bold tabular-nums",
+                    "text-lg font-bold",
                     behaviourColour(metrics?.paymentBehaviour ?? "")
                   )}
                 >
                   {metrics?.paymentBehaviour || "—"}
                 </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-[11px] text-[var(--q-text-tertiary)] mt-0.5">
                   vs {metrics?.paymentTerms ?? 30}d terms
                 </p>
               </>
             )}
-          </Card>
+          </div>
 
           {/* 6 - % Paid on Time */}
-          <Card className="p-3">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">
+          <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] p-3">
+            <p className="text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)]">
               % Paid on Time
             </p>
             {metricsQuery.isLoading ? (
               <Skeleton className="h-6 w-20 mt-1" />
             ) : (
-              <p className="text-lg font-bold tabular-nums">
+              <p className="text-lg font-bold tabular-nums text-[var(--q-text-primary)] q-mono">
                 {metrics?.pctPaidOnTime != null
                   ? `${Math.round(metrics.pctPaidOnTime)}%`
                   : "—"}
               </p>
             )}
-          </Card>
+          </div>
 
           {/* LPI Card */}
-          <Card className="p-3">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">
+          <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] p-3">
+            <p className="text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)]">
               Late Payment Interest
             </p>
             {metricsQuery.isLoading ? (
               <Skeleton className="h-6 w-20 mt-1" />
             ) : !metrics?.lpiEnabled ? (
-              <p className="text-lg font-bold text-muted-foreground">Disabled</p>
+              <p className="text-lg font-bold text-[var(--q-text-tertiary)]">Disabled</p>
             ) : (
               <>
-                <p className={cn("text-lg font-bold tabular-nums", metrics.totalLPI > 0 && "text-amber-600")}>
+                <p className={cn("text-lg font-bold tabular-nums q-mono", metrics.totalLPI > 0 && "text-[var(--q-attention-text)]")}>
                   {gbp.format(metrics.totalLPI)}
                 </p>
                 {metrics.lpiAccruingCount > 0 && (
-                  <p className="text-xs text-muted-foreground">{metrics.lpiAccruingCount} invoices accruing</p>
+                  <p className="text-[11px] text-[var(--q-text-tertiary)]">{metrics.lpiAccruingCount} invoices accruing</p>
                 )}
               </>
             )}
-          </Card>
+          </div>
 
           {/* 7 - Last Payment */}
-          <Card className="p-3">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">
+          <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] p-3">
+            <p className="text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)]">
               Last Payment
             </p>
             {metricsQuery.isLoading ? (
               <Skeleton className="h-6 w-20 mt-1" />
             ) : (
-              <p className="text-lg tabular-nums truncate">
+              <p className="text-lg tabular-nums truncate text-[var(--q-text-primary)]">
                 {metrics?.lastPayment
-                  ? <><span className="font-bold">{gbp.format(metrics.lastPayment.amount)}</span> ({formatDate(metrics.lastPayment.date)})</>
+                  ? <><span className="font-bold q-mono">{gbp.format(metrics.lastPayment.amount)}</span> <span className="text-[var(--q-text-tertiary)]">({formatDate(metrics.lastPayment.date)})</span></>
                   : "—"}
               </p>
             )}
-          </Card>
-
-
+          </div>
 
           {/* 9 - Risk Score */}
-          <Card className="p-3">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">Risk Score</p>
+          <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] p-3">
+            <p className="text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)]">Risk Score</p>
             {metricsQuery.isLoading ? (
               <Skeleton className="h-6 w-20 mt-1" />
             ) : (
               <p
-                className={cn("text-lg font-bold tabular-nums", riskColour(metrics?.riskScore))}
+                className={cn("text-lg font-bold tabular-nums q-mono", riskColour(metrics?.riskScore))}
               >
                 {metrics?.riskScore ?? "—"}
               </p>
             )}
-          </Card>
+          </div>
 
           {/* 10 - Promise to Pay */}
-          <Card className="p-3">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">
+          <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] p-3">
+            <p className="text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)]">
               Promise to Pay
             </p>
             {metricsQuery.isLoading ? (
               <Skeleton className="h-6 w-20 mt-1" />
             ) : metrics?.promiseToPay ? (
               <div className="flex items-center gap-2 flex-wrap">
-                <p className="text-lg tabular-nums">
+                <p className="text-lg tabular-nums text-[var(--q-text-primary)]">
                   {metrics.promiseToPay.amount != null
-                    ? <><span className="font-bold">{gbp.format(metrics.promiseToPay.amount)}</span> ({formatDate(metrics.promiseToPay.date)})</>
+                    ? <><span className="font-bold q-mono">{gbp.format(metrics.promiseToPay.amount)}</span> <span className="text-[var(--q-text-tertiary)]">({formatDate(metrics.promiseToPay.date)})</span></>
                     : formatDate(metrics.promiseToPay.date)}
                 </p>
                 {(metrics.promiseToPay as any).broken ? (
-                  <Badge variant="destructive" className="text-xs">
+                  <QBadge variant="risk">
                     BROKEN{(metrics.promiseToPay as any).brokenDaysAgo != null
                       ? ` (${(metrics.promiseToPay as any).brokenDaysAgo} days ago)`
                       : ""}
-                  </Badge>
+                  </QBadge>
                 ) : metrics.promiseToPay.overdue ? (
-                  <Badge variant="destructive" className="text-xs">
-                    Overdue
-                  </Badge>
+                  <QBadge variant="risk">Overdue</QBadge>
                 ) : null}
                 {(metrics.promiseToPay as any).modified && (
-                  <Badge variant="outline" className="text-xs">
-                    Modified
-                  </Badge>
+                  <QBadge variant="neutral">Modified</QBadge>
                 )}
               </div>
             ) : (
-              <p className="text-lg tabular-nums text-muted-foreground">None logged</p>
+              <p className="text-lg tabular-nums text-[var(--q-text-tertiary)]">None logged</p>
             )}
-          </Card>
+          </div>
         </div>
 
         {/* ----------------------------------------------------------------- */}
         {/* Action Bar                                                        */}
         {/* ----------------------------------------------------------------- */}
-        <Card>
-          <CardContent className="flex items-center gap-0 w-full py-3 px-4">
+        <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)]">
+          <div className="flex items-center gap-0 w-full py-3 px-4">
             {/* Reach Out group */}
             <div className="flex flex-1 gap-2">
               <Button variant="outline" size="sm" className="flex-1" onClick={openEmailSheet}>
@@ -1950,23 +1938,23 @@ export default function DebtorRecord() {
 
             {/* Record group — visible on md+ */}
             <div className="hidden md:flex flex-1 gap-2">
-              <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground" onClick={openStatementDialog}>
+              <Button variant="ghost" size="sm" className="flex-1 text-[var(--q-text-secondary)]" onClick={openStatementDialog}>
                 <FileText className="h-4 w-4 mr-1" /> Statement
               </Button>
-              <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground" onClick={openPromiseDialog}>
+              <Button variant="ghost" size="sm" className="flex-1 text-[var(--q-text-secondary)]" onClick={openPromiseDialog}>
                 <Handshake className="h-4 w-4 mr-1" /> Promise
               </Button>
-              <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground" onClick={openDisputeDialog}>
+              <Button variant="ghost" size="sm" className="flex-1 text-[var(--q-text-secondary)]" onClick={openDisputeDialog}>
                 <AlertTriangle className="h-4 w-4 mr-1" /> Dispute
               </Button>
-              <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground" onClick={openNoteDialog}>
+              <Button variant="ghost" size="sm" className="flex-1 text-[var(--q-text-secondary)]" onClick={openNoteDialog}>
                 <StickyNote className="h-4 w-4 mr-1" /> Note
               </Button>
               {contact.isException ? (
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="flex-1 text-green-600 hover:text-green-700"
+                  className="flex-1 text-[var(--q-money-in-text)] hover:opacity-80"
                   onClick={() => flagExceptionMutation.mutate({ flag: false })}
                   disabled={flagExceptionMutation.isPending}
                 >
@@ -2006,7 +1994,7 @@ export default function DebtorRecord() {
                 </DropdownMenuItem>
                 {contact.isException ? (
                   <DropdownMenuItem
-                    className="text-green-600"
+                    className="text-[var(--q-money-in-text)]"
                     onClick={() => flagExceptionMutation.mutate({ flag: false })}
                   >
                     <CheckCircle2 className="h-4 w-4 mr-2" /> Resolve Exception
@@ -2030,8 +2018,8 @@ export default function DebtorRecord() {
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* ----------------------------------------------------------------- */}
         {/* Tabs                                                              */}
@@ -2052,45 +2040,45 @@ export default function DebtorRecord() {
           <TabsContent value="details" className="space-y-4 mt-4">
             <div className="grid md:grid-cols-3 gap-4 items-stretch">
               {/* Company info */}
-              <Card className="h-full">
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Building className="h-4 w-4" /> Company Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3 text-sm">
+              <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] h-full">
+                <div className="px-5 pt-5 pb-3">
+                  <h3 className="text-sm font-semibold text-[var(--q-text-primary)] flex items-center gap-2">
+                    <Building className="h-4 w-4 text-[var(--q-text-tertiary)]" /> Company Information
+                  </h3>
+                </div>
+                <div className="px-5 pb-5 space-y-3 text-sm">
                   <div>
-                    <span className="text-muted-foreground">Name:</span>{" "}
-                    <span className="font-medium">{contact.name}</span>
+                    <span className="text-[var(--q-text-tertiary)]">Name:</span>{" "}
+                    <span className="font-medium text-[var(--q-text-primary)]">{contact.name}</span>
                   </div>
                   {contact.address && (
                     <div>
-                      <span className="text-muted-foreground">Address:</span>{" "}
-                      <span className="font-medium">{contact.address}</span>
+                      <span className="text-[var(--q-text-tertiary)]">Address:</span>{" "}
+                      <span className="font-medium text-[var(--q-text-primary)]">{contact.address}</span>
                     </div>
                   )}
                   {contact.email && (
                     <div>
-                      <span className="text-muted-foreground">Email:</span>{" "}
-                      <span className="font-medium">{contact.email}</span>
+                      <span className="text-[var(--q-text-tertiary)]">Email:</span>{" "}
+                      <span className="font-medium text-[var(--q-text-primary)]">{contact.email}</span>
                     </div>
                   )}
                   {contact.phone && (
                     <div>
-                      <span className="text-muted-foreground">Phone:</span>{" "}
-                      <span className="font-medium">{contact.phone}</span>
+                      <span className="text-[var(--q-text-tertiary)]">Phone:</span>{" "}
+                      <span className="font-medium text-[var(--q-text-primary)]">{contact.phone}</span>
                     </div>
                   )}
                   {contact.paymentTerms && (
                     <div>
-                      <span className="text-muted-foreground">Payment Terms:</span>{" "}
-                      <span className="font-medium">{contact.paymentTerms}</span>
+                      <span className="text-[var(--q-text-tertiary)]">Payment Terms:</span>{" "}
+                      <span className="font-medium text-[var(--q-text-primary)]">{contact.paymentTerms}</span>
                     </div>
                   )}
                   {contact.creditLimit && (
                     <div>
-                      <span className="text-muted-foreground">Credit Limit:</span>{" "}
-                      <span className="font-medium">
+                      <span className="text-[var(--q-text-tertiary)]">Credit Limit:</span>{" "}
+                      <span className="font-medium text-[var(--q-text-primary)]">
                         {gbp.format(num(contact.creditLimit))}
                       </span>
                     </div>
@@ -2101,37 +2089,35 @@ export default function DebtorRecord() {
                         href={`https://go.xero.com/Contacts/View/${contact.xeroContactId}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline text-xs inline-flex items-center gap-1"
+                        className="text-[var(--q-accent)] hover:underline text-xs inline-flex items-center gap-1"
                       >
                         <ExternalLink className="h-3 w-3" /> View in Xero
                       </a>
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
               {/* AR Primary Contact */}
               {(() => {
                 const primary = persons.find((p) => p.isPrimaryCreditControl);
                 return (
-                  <Card className="h-full">
-                    <CardHeader>
-                      <CardTitle className="text-base flex items-center justify-between">
-                        <span className="flex items-center gap-2">
-                          <Star className="h-4 w-4" /> AR Primary Contact
-                        </span>
-                        <Button variant="ghost" size="sm" onClick={() => setPrimaryPickerOpen(true)}>
-                          <Pencil className="h-3 w-3 mr-1" /> Edit
-                        </Button>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2 text-sm">
+                  <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] h-full">
+                    <div className="px-5 pt-5 pb-3 flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-[var(--q-text-primary)] flex items-center gap-2">
+                        <Star className="h-4 w-4 text-[var(--q-text-tertiary)]" /> AR Primary Contact
+                      </h3>
+                      <Button variant="ghost" size="sm" onClick={() => setPrimaryPickerOpen(true)}>
+                        <Pencil className="h-3 w-3 mr-1" /> Edit
+                      </Button>
+                    </div>
+                    <div className="px-5 pb-5 space-y-2 text-sm">
                       <div>
                         <span className="text-muted-foreground">Name:</span>{" "}
                         {primary?.name ? (
                           <span className="font-medium">{primary.name}</span>
                         ) : (
-                          <span className="italic text-muted-foreground/70">Not set</span>
+                          <span className="italic text-[var(--q-text-tertiary)] opacity-70">Not set</span>
                         )}
                       </div>
                       <div>
@@ -2139,7 +2125,7 @@ export default function DebtorRecord() {
                         {primary?.email ? (
                           <span className="font-medium">{primary.email}</span>
                         ) : (
-                          <span className="italic text-muted-foreground/70">Not set</span>
+                          <span className="italic text-[var(--q-text-tertiary)] opacity-70">Not set</span>
                         )}
                       </div>
                       <div>
@@ -2147,11 +2133,11 @@ export default function DebtorRecord() {
                         {primary?.phone ? (
                           <span className="font-medium">{primary.phone}</span>
                         ) : (
-                          <span className="italic text-muted-foreground/70">Not set</span>
+                          <span className="italic text-[var(--q-text-tertiary)] opacity-70">Not set</span>
                         )}
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 );
               })()}
 
@@ -2159,24 +2145,22 @@ export default function DebtorRecord() {
               {(() => {
                 const escalation = persons.find((p) => p.isEscalation);
                 return (
-                  <Card className="h-full">
-                    <CardHeader>
-                      <CardTitle className="text-base flex items-center justify-between">
-                        <span className="flex items-center gap-2">
-                          <AlertCircle className="h-4 w-4" /> AR Escalation Contact
-                        </span>
-                        <Button variant="ghost" size="sm" onClick={() => setEscalationPickerOpen(true)}>
-                          <Pencil className="h-3 w-3 mr-1" /> Edit
-                        </Button>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2 text-sm">
+                  <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] h-full">
+                    <div className="px-5 pt-5 pb-3 flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-[var(--q-text-primary)] flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4 text-[var(--q-text-tertiary)]" /> AR Escalation Contact
+                      </h3>
+                      <Button variant="ghost" size="sm" onClick={() => setEscalationPickerOpen(true)}>
+                        <Pencil className="h-3 w-3 mr-1" /> Edit
+                      </Button>
+                    </div>
+                    <div className="px-5 pb-5 space-y-2 text-sm">
                       <div>
                         <span className="text-muted-foreground">Name:</span>{" "}
                         {escalation?.name ? (
                           <span className="font-medium">{escalation.name}</span>
                         ) : (
-                          <span className="italic text-muted-foreground/70">Not set</span>
+                          <span className="italic text-[var(--q-text-tertiary)] opacity-70">Not set</span>
                         )}
                       </div>
                       <div>
@@ -2184,7 +2168,7 @@ export default function DebtorRecord() {
                         {escalation?.email ? (
                           <span className="font-medium">{escalation.email}</span>
                         ) : (
-                          <span className="italic text-muted-foreground/70">Not set</span>
+                          <span className="italic text-[var(--q-text-tertiary)] opacity-70">Not set</span>
                         )}
                       </div>
                       <div>
@@ -2192,27 +2176,27 @@ export default function DebtorRecord() {
                         {escalation?.phone ? (
                           <span className="font-medium">{escalation.phone}</span>
                         ) : (
-                          <span className="italic text-muted-foreground/70">Not set</span>
+                          <span className="italic text-[var(--q-text-tertiary)] opacity-70">Not set</span>
                         )}
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 );
               })()}
             </div>
 
             {/* Communication Preferences */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4" /> Communication Preferences
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+            <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)]">
+              <div className="px-5 pt-5 pb-3">
+                <h3 className="text-sm font-semibold text-[var(--q-text-primary)] flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4 text-[var(--q-text-tertiary)]" /> Communication Preferences
+                </h3>
+              </div>
+              <div className="px-5 pb-5">
                 {(() => {
                   const SavedTick = ({ field }: { field: string }) => (
                     prefSaveField === field ? (
-                      <CheckCircle2 className="h-3.5 w-3.5 text-green-500 animate-in fade-in duration-200" />
+                      <CheckCircle2 className="h-3.5 w-3.5 text-[var(--q-money-in-text)] animate-in fade-in duration-200" />
                     ) : null
                   );
 
@@ -2438,7 +2422,7 @@ export default function DebtorRecord() {
                                 className={cn(
                                   "w-9 h-9 text-xs font-medium rounded-md border transition-colors",
                                   active
-                                    ? "bg-teal-600 text-white border-teal-600"
+                                    ? "bg-[var(--q-accent)] text-white border-[var(--q-accent)]"
                                     : "bg-background text-muted-foreground border-border hover:bg-muted"
                                 )}
                               >
@@ -2507,8 +2491,8 @@ export default function DebtorRecord() {
                     </div>
                   );
                 })()}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* Primary Contact Picker Dialog */}
             <Dialog open={primaryPickerOpen} onOpenChange={setPrimaryPickerOpen}>
@@ -2527,7 +2511,7 @@ export default function DebtorRecord() {
                         key={p.id}
                         className={cn(
                           "w-full text-left rounded-lg border p-3 hover:bg-muted/50 transition-colors",
-                          p.isPrimaryCreditControl && "border-blue-400 bg-blue-50"
+                          p.isPrimaryCreditControl && "border-[var(--q-info-border)] bg-[var(--q-info-bg)]"
                         )}
                         onClick={() => {
                           setPrimaryMutation.mutate(p.id);
@@ -2537,7 +2521,7 @@ export default function DebtorRecord() {
                         <div className="font-medium text-sm flex items-center gap-2">
                           {p.name}
                           {p.isPrimaryCreditControl && (
-                            <Badge className="text-[10px] bg-blue-100 text-blue-800">Current</Badge>
+                            <QBadge variant="info">Current</QBadge>
                           )}
                         </div>
                         <div className="text-xs text-muted-foreground mt-0.5">
@@ -2567,7 +2551,7 @@ export default function DebtorRecord() {
                         key={p.id}
                         className={cn(
                           "w-full text-left rounded-lg border p-3 hover:bg-muted/50 transition-colors",
-                          p.isEscalation && "border-orange-400 bg-orange-50"
+                          p.isEscalation && "border-[var(--q-attention-border)] bg-[var(--q-attention-bg)]"
                         )}
                         onClick={() => {
                           setEscalationMutation.mutate(p.id);
@@ -2577,7 +2561,7 @@ export default function DebtorRecord() {
                         <div className="font-medium text-sm flex items-center gap-2">
                           {p.name}
                           {p.isEscalation && (
-                            <Badge className="text-[10px] bg-orange-100 text-orange-800">Current</Badge>
+                            <QBadge variant="attention">Current</QBadge>
                           )}
                         </div>
                         <div className="text-xs text-muted-foreground mt-0.5">
@@ -2591,16 +2575,14 @@ export default function DebtorRecord() {
             </Dialog>
 
             {/* Contact Persons */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base flex items-center justify-between">
-                  <span>Contact Persons</span>
-                  <Button variant="outline" size="sm" onClick={openAddPerson}>
-                    <Plus className="h-3 w-3 mr-1" /> Add Person
-                  </Button>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+            <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)]">
+              <div className="px-5 pt-5 pb-3 flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-[var(--q-text-primary)]">Contact Persons</h3>
+                <Button variant="outline" size="sm" onClick={openAddPerson}>
+                  <Plus className="h-3 w-3 mr-1" /> Add Person
+                </Button>
+              </div>
+              <div className="px-5 pb-5">
                 {personsQuery.isLoading ? (
                   <div className="space-y-2">
                     <Skeleton className="h-12 w-full" />
@@ -2641,14 +2623,10 @@ export default function DebtorRecord() {
                           <TableCell>
                             <div className="flex gap-1">
                               {p.isPrimaryCreditControl && (
-                                <Badge className="text-[10px] bg-blue-100 text-blue-800">
-                                  Primary
-                                </Badge>
+                                <QBadge variant="info">Primary</QBadge>
                               )}
                               {p.isEscalation && (
-                                <Badge className="text-[10px] bg-orange-100 text-orange-800">
-                                  Escalation
-                                </Badge>
+                                <QBadge variant="attention">Escalation</QBadge>
                               )}
                             </div>
                           </TableCell>
@@ -2661,7 +2639,7 @@ export default function DebtorRecord() {
                                 onClick={() => setPrimaryMutation.mutate(p.id)}
                                 title={p.isPrimaryCreditControl ? "Remove primary" : "Set as primary"}
                               >
-                                <Star className={cn("h-3 w-3", p.isPrimaryCreditControl && "fill-blue-500 text-blue-500")} />
+                                <Star className={cn("h-3 w-3", p.isPrimaryCreditControl && "fill-[var(--q-info-text)] text-[var(--q-info-text)]")} />
                               </Button>
                               <Button
                                 variant="ghost"
@@ -2670,7 +2648,7 @@ export default function DebtorRecord() {
                                 onClick={() => setEscalationMutation.mutate(p.id)}
                                 title={p.isEscalation ? "Remove escalation" : "Set as escalation"}
                               >
-                                <AlertCircle className={cn("h-3 w-3", p.isEscalation && "fill-orange-500 text-orange-500")} />
+                                <AlertCircle className={cn("h-3 w-3", p.isEscalation && "fill-[var(--q-attention-text)] text-[var(--q-attention-text)]")} />
                               </Button>
                               <Button
                                 variant="ghost"
@@ -2695,8 +2673,8 @@ export default function DebtorRecord() {
                     </TableBody>
                   </Table>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
           </TabsContent>
 
@@ -2707,26 +2685,26 @@ export default function DebtorRecord() {
             {/* ── Conversation state badge ── */}
             {convStateQuery.data && convStateQuery.data.state !== 'idle' && (() => {
               const cs = convStateQuery.data;
-              const config: Record<string, { label: string; color: string }> = {
-                chase_sent: { label: "Awaiting response", color: "bg-blue-100 text-blue-700" },
-                debtor_responded: { label: "Processing reply...", color: "bg-blue-100 text-blue-700 animate-pulse" },
-                conversing: { label: "In conversation", color: "bg-teal-100 text-teal-700" },
-                promise_monitor: { label: "Promise active", color: "bg-blue-100 text-blue-700" },
-                dispute_hold: { label: "Dispute — on hold", color: "bg-amber-100 text-amber-700" },
-                escalated: { label: "Escalated", color: "bg-red-100 text-red-700" },
-                resolved: { label: "Resolved", color: "bg-green-100 text-green-700" },
-                hold: { label: "On hold", color: "bg-zinc-100 text-zinc-500" },
+              const config: Record<string, { label: string; variant: "info" | "ready" | "attention" | "risk" | "neutral" }> = {
+                chase_sent: { label: "Awaiting response", variant: "info" },
+                debtor_responded: { label: "Processing reply...", variant: "info" },
+                conversing: { label: "In conversation", variant: "info" },
+                promise_monitor: { label: "Promise active", variant: "info" },
+                dispute_hold: { label: "Dispute — on hold", variant: "attention" },
+                escalated: { label: "Escalated", variant: "risk" },
+                resolved: { label: "Resolved", variant: "ready" },
+                hold: { label: "On hold", variant: "neutral" },
               };
-              const { label, color } = config[cs.state] || { label: cs.state, color: "bg-zinc-100 text-zinc-500" };
+              const { label, variant: badgeVariant } = config[cs.state] || { label: cs.state, variant: "neutral" as const };
               return (
-                <div className="flex items-center gap-3 px-3 py-2 rounded-md border bg-card">
-                  <Badge className={cn("text-xs font-medium", color)}>{label}</Badge>
-                  <span className="text-xs text-muted-foreground">Round {cs.chaseRound}</span>
+                <div className="flex items-center gap-3 px-3 py-2 rounded-[var(--q-radius-md)] border border-[var(--q-border-default)] bg-[var(--q-bg-surface)]">
+                  <QBadge variant={badgeVariant} dot>{label}</QBadge>
+                  <span className="text-xs text-[var(--q-text-tertiary)]">Round {cs.chaseRound}</span>
                   {cs.currentTone && (
-                    <span className="text-xs text-muted-foreground">Tone: {cs.currentTone}</span>
+                    <span className="text-xs text-[var(--q-text-tertiary)]">Tone: {cs.currentTone}</span>
                   )}
                   <div className="ml-auto flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-xs text-[var(--q-text-tertiary)]">
                       Silence timeout: {cs.silenceTimeoutHours}h
                     </span>
                     <Select
@@ -2788,11 +2766,11 @@ export default function DebtorRecord() {
               </Card>
             ) : (activityQuery.data?.events ?? []).length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="rounded-full bg-zinc-100 p-4 mb-4">
-                  <Activity className="h-6 w-6 text-zinc-400" />
+                <div className="rounded-full bg-[var(--q-bg-surface-alt)] p-4 mb-4">
+                  <Activity className="h-6 w-6 text-[var(--q-text-tertiary)]" />
                 </div>
-                <p className="text-sm font-medium text-zinc-700">No activity yet</p>
-                <p className="text-xs text-muted-foreground mt-1 max-w-xs">
+                <p className="text-sm font-medium text-[var(--q-text-primary)]">No activity yet</p>
+                <p className="text-xs text-[var(--q-text-tertiary)] mt-1 max-w-xs">
                   Communications, payments, and events will appear here once collection activity begins for this debtor.
                 </p>
               </div>
@@ -2929,7 +2907,7 @@ export default function DebtorRecord() {
               )}
             >
               <div className="overflow-hidden">
-                <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
+                <div className="flex items-center gap-3 p-3 bg-[var(--q-info-bg)] rounded-[var(--q-radius-md)] border border-[var(--q-info-border)]">
                   <span className="text-sm font-medium">{selectedInvoiceIds.size} selected</span>
                   <Separator orientation="vertical" className="h-5" />
                   <Button variant="outline" size="sm" onClick={openEmailSheet}>
@@ -3028,7 +3006,7 @@ export default function DebtorRecord() {
                               key={inv.id}
                               className={cn(
                                 "hover:bg-muted/50 transition-colors",
-                                isSelected && "bg-blue-50 dark:bg-blue-950/50"
+                                isSelected && "bg-[var(--q-info-bg)]"
                               )}
                             >
                               <TableCell>
@@ -3055,9 +3033,7 @@ export default function DebtorRecord() {
                                 <div className="flex items-center gap-1.5">
                                   {inv.invoiceNumber}
                                   {inv.isDisputed && (
-                                    <Badge className="text-[10px] bg-amber-100 text-amber-800 hover:bg-amber-100">
-                                      Dispute
-                                    </Badge>
+                                    <QBadge variant="attention">Dispute</QBadge>
                                   )}
                                 </div>
                               </TableCell>
@@ -3076,16 +3052,16 @@ export default function DebtorRecord() {
                                   <div className="flex items-center gap-2">
                                     <span className={cn(
                                       "tabular-nums",
-                                      days > 30 ? "text-destructive font-bold" : ""
+                                      days > 30 ? "text-[var(--q-risk-text)] font-bold" : "text-[var(--q-text-primary)]"
                                     )}>
                                       {days}d
                                     </span>
-                                    <Badge className={cn("text-[10px]", ageing.colour)}>
+                                    <QBadge variant={ageing.variant}>
                                       {ageing.label}
-                                    </Badge>
+                                    </QBadge>
                                   </div>
                                 ) : (
-                                  <span className="text-muted-foreground">Current</span>
+                                  <span className="text-[var(--q-text-tertiary)]">Current</span>
                                 )}
                               </TableCell>
                               <TableCell className="text-right tabular-nums">
@@ -3096,7 +3072,7 @@ export default function DebtorRecord() {
                                   return (
                                     <Tooltip>
                                       <TooltipTrigger>
-                                        <span className="text-amber-600 font-medium">{gbp.format(lpi.lpiAmount)}</span>
+                                        <span className="text-[var(--q-attention-text)] font-medium">{gbp.format(lpi.lpiAmount)}</span>
                                       </TooltipTrigger>
                                       <TooltipContent>
                                         <div className="text-xs">
@@ -3113,7 +3089,7 @@ export default function DebtorRecord() {
                                   <span className="text-muted-foreground">{formatDate(inv.lastChasedAt)}</span>
                                 ) : (
                                   <button
-                                    className="text-amber-600 hover:text-amber-700 hover:underline font-medium whitespace-nowrap"
+                                    className="text-[var(--q-accent)] hover:opacity-80 hover:underline font-medium whitespace-nowrap"
                                     onClick={() => {
                                       setSelectedInvoiceIds(new Set([inv.id]));
                                       openEmailSheet();
@@ -3411,7 +3387,7 @@ export default function DebtorRecord() {
                 {(disputeActivityQuery.data?.events ?? []).map((evt) => (
                   <Card key={evt.id} className="p-3">
                     <div className="flex items-start gap-3">
-                      <div className="mt-0.5 text-amber-600">
+                      <div className="mt-0.5 text-[var(--q-attention-text)]">
                         <AlertTriangle className="h-4 w-4" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -3458,13 +3434,13 @@ export default function DebtorRecord() {
           <TabsContent value="risk" className="space-y-4 mt-4">
             <div className="grid md:grid-cols-2 gap-4 items-stretch">
               {/* Risk Score */}
-              <Card className="h-full">
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <ShieldAlert className="h-4 w-4" /> Risk Score
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="flex items-center justify-center py-8">
+              <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] h-full">
+                <div className="px-5 pt-5 pb-3">
+                  <h3 className="text-sm font-semibold text-[var(--q-text-primary)] flex items-center gap-2">
+                    <ShieldAlert className="h-4 w-4 text-[var(--q-text-tertiary)]" /> Risk Score
+                  </h3>
+                </div>
+                <div className="px-5 pb-5 flex items-center justify-center py-8">
                   {metrics?.riskScore != null ? (
                     <div className="text-center">
                       <div
@@ -3478,18 +3454,12 @@ export default function DebtorRecord() {
                       </div>
                       {contact.riskBand && (
                         <div className="mt-3">
-                          <Badge
-                            className={cn(
-                              "text-sm",
-                              contact.riskBand === "low"
-                                ? "bg-green-100 text-green-800"
-                                : contact.riskBand === "medium"
-                                ? "bg-amber-100 text-amber-800"
-                                : "bg-red-100 text-red-800"
-                            )}
+                          <QBadge
+                            variant={contact.riskBand === "low" ? "ready" : contact.riskBand === "medium" ? "attention" : "risk"}
+                            className="text-sm"
                           >
                             {contact.riskBand} risk
-                          </Badge>
+                          </QBadge>
                         </div>
                       )}
                     </div>
@@ -3519,20 +3489,20 @@ export default function DebtorRecord() {
                       </Button>
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
               {/* Credit Details */}
-              <Card className="h-full">
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <CreditCard className="h-4 w-4" /> Credit Details
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
+              <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] h-full">
+                <div className="px-5 pt-5 pb-3">
+                  <h3 className="text-sm font-semibold text-[var(--q-text-primary)] flex items-center gap-2">
+                    <CreditCard className="h-4 w-4 text-[var(--q-text-tertiary)]" /> Credit Details
+                  </h3>
+                </div>
+                <div className="px-5 pb-5 space-y-4">
                   <div>
-                    <span className="text-sm text-muted-foreground">Credit Limit</span>
-                    <p className="text-xl font-bold tabular-nums">
+                    <span className="text-sm text-[var(--q-text-tertiary)]">Credit Limit</span>
+                    <p className="text-xl font-bold tabular-nums q-mono text-[var(--q-text-primary)]">
                       {contact.creditLimit
                         ? gbp.format(num(contact.creditLimit))
                         : "Not set"}
@@ -3540,12 +3510,12 @@ export default function DebtorRecord() {
                   </div>
                   <Separator />
                   <div>
-                    <span className="text-sm text-muted-foreground">Payment Terms</span>
-                    <p className="text-xl font-bold">{contact.paymentTerms || "Not set"}</p>
+                    <span className="text-sm text-[var(--q-text-tertiary)]">Payment Terms</span>
+                    <p className="text-xl font-bold text-[var(--q-text-primary)]">{contact.paymentTerms || "Not set"}</p>
                   </div>
                   <Separator />
                   <div>
-                    <span className="text-sm text-muted-foreground">Payment Behaviour</span>
+                    <span className="text-sm text-[var(--q-text-tertiary)]">Payment Behaviour</span>
                     <p
                       className={cn(
                         "text-xl font-bold",
@@ -3557,27 +3527,27 @@ export default function DebtorRecord() {
                   </div>
                   <Separator />
                   <div>
-                    <span className="text-sm text-muted-foreground">Avg Days to Pay</span>
-                    <p className="text-xl font-bold tabular-nums">
+                    <span className="text-sm text-[var(--q-text-tertiary)]">Avg Days to Pay</span>
+                    <p className="text-xl font-bold tabular-nums q-mono text-[var(--q-text-primary)]">
                       {metrics?.avgDaysToPay != null
                         ? `${Math.round(metrics.avgDaysToPay)} days`
                         : "—"}
                     </p>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
 
             {/* Risk History placeholder */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Risk History</CardTitle>
-              </CardHeader>
-              <CardContent className="py-8 text-center text-muted-foreground">
+            <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)]">
+              <div className="px-5 pt-5 pb-3">
+                <h3 className="text-sm font-semibold text-[var(--q-text-primary)]">Risk History</h3>
+              </div>
+              <div className="px-5 pb-5 py-8 text-center text-[var(--q-text-tertiary)]">
                 <TrendingUp className="h-8 w-8 mx-auto mb-2" />
                 <p>Risk score trend chart coming soon</p>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
 
