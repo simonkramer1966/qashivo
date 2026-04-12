@@ -1,3 +1,4 @@
+import { useState } from "react";
 import AppShell from "@/components/layout/app-shell";
 import { cn } from "@/lib/utils";
 
@@ -84,7 +85,10 @@ const AMOUNT_COLOR: Record<TxnType, string> = {
 
 // ── Component ─────────────────────────────────────────────────────
 
+type FacilityTab = "drawdowns" | "history";
+
 export default function FacilityPage() {
+  const [tab, setTab] = useState<FacilityTab>("drawdowns");
   const utilisation = Math.round((FACILITY.currentDrawdown / FACILITY.limit) * 100);
 
   return (
@@ -101,15 +105,20 @@ export default function FacilityPage() {
 
         {/* Cost metrics row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <MetricCard label="Total interest paid" value={fmt(FACILITY.totalInterestPaid)} />
-          <MetricCard label="Total fees paid" value={fmt(FACILITY.totalFeesPaid)} />
-          <MetricCard label="Active invoices" value={String(FACILITY.activeInvoices)} />
-          <MetricCard label="Avg drawdown duration" value={`${FACILITY.avgDrawdownDays} days`} />
+          <MetricCard label="Total interest paid (YTD)" value={fmt(FACILITY.totalInterestPaid)} />
+          <MetricCard label="Total fees paid (YTD)" value={fmt(FACILITY.totalFeesPaid)} />
+          <MetricCard label="Invoices financed (YTD)" value={fmt(34_413)} />
+          <MetricCard label="Qapital Saving (YTD)" value={fmt(475)} />
+        </div>
+
+        {/* Tabs */}
+        <div className="border-b flex gap-6">
+          <TabButton label={`Active Invoices (${ACTIVE_DRAWDOWNS.length})`} active={tab === "drawdowns"} onClick={() => setTab("drawdowns")} />
+          <TabButton label="Transaction History" active={tab === "history"} onClick={() => setTab("history")} />
         </div>
 
         {/* Active drawdowns */}
-        <section>
-          <h3 className="text-sm font-semibold mb-3">Active drawdowns</h3>
+        {tab === "drawdowns" && (
           <div className="rounded-lg border bg-card overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -155,11 +164,10 @@ export default function FacilityPage() {
               </tfoot>
             </table>
           </div>
-        </section>
+        )}
 
         {/* Transaction history */}
-        <section>
-          <h3 className="text-sm font-semibold mb-3">Transaction history</h3>
+        {tab === "history" && (
           <div className="rounded-lg border bg-card overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -200,13 +208,27 @@ export default function FacilityPage() {
               </tbody>
             </table>
           </div>
-        </section>
+        )}
       </div>
     </AppShell>
   );
 }
 
 // ── Sub-components ────────────────────────────────────────────────
+
+function TabButton({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "pb-2.5 text-sm font-medium border-b-2 -mb-px transition-colors",
+        active ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
+      )}
+    >
+      {label}
+    </button>
+  );
+}
 
 function SummaryCard({ label, value, sub, highlight }: { label: string; value: string; sub?: string; highlight?: boolean }) {
   return (
