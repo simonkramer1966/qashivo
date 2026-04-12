@@ -165,7 +165,7 @@ export default function SettingsDataHealth({ embedded }: { embedded?: boolean })
   };
 
   const loadingSkeleton = (
-    <div className="p-6 space-y-6">
+    <div className="space-y-[var(--q-space-2xl)]">
       <Skeleton className="h-8 w-48" />
       <div className="grid grid-cols-5 gap-4">
         {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-24" />)}
@@ -194,9 +194,9 @@ export default function SettingsDataHealth({ embedded }: { embedded?: boolean })
   ];
 
   const content = (
-    <div className="p-6 space-y-6">
+    <div className="space-y-[var(--q-space-2xl)]">
       {/* Summary Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-[var(--q-space-md)]">
           {summaryCards.map(card => (
             <div
               key={card.key}
