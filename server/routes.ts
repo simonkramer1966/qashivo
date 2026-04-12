@@ -72,6 +72,7 @@ import {
   customerContactPersons,
   insertScheduledReportSchema,
   scheduledReports,
+  invoices,
 } from "@shared/schema";
 import { computeNextRunAt } from "./services/reportScheduler";
 import { REPORT_TYPE_LABELS, type ReportType } from "./services/reportGenerator";
@@ -291,6 +292,7 @@ import { registerQuizRoutes } from "./routes/quizRoutes";
 import { registerDemoRoutes } from "./routes/demoRoutes";
 import { registerImpactRoutes } from "./routes/impactRoutes";
 import { registerCashflowRoutes } from "./routes/cashflowRoutes";
+import { buildConversationBrief } from "./services/conversationBriefService";
 import { ForecastEngine, type ForecastConfig, type ForecastScenario } from "../shared/forecast";
 import { subscriptionService } from "./services/subscriptionService";
 import { cleanEmailContent } from "./services/messagePostProcessor";
@@ -661,6 +663,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerDemoRoutes(app);
   registerImpactRoutes(app);
   registerCashflowRoutes(app);
+
+  // ── Temporary diagnostic: conversation brief inspector ──
+  // Remove after verification. Auth-gated, non-destructive read-only.
+  app.get("/api/debug/conversation-brief/:contactId", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) return res.status(400).json({ message: "No tenant" });
+
+      const contactId = req.params.contactId;
+
+      // Build chase context from overdue invoices for realism
+      const allInvoices = await db.select()
+        .from(invoices)
+        .where(and(
+          eq(invoices.tenantId, user.tenantId),
+          eq(invoices.contactId, contactId),
+          not(inArray(invoices.status, ["paid", "voided", "void", "deleted", "draft"])),
+        ));
+
+      const overdue = allInvoices.filter((inv: any) => inv.dueDate && new Date(inv.dueDate) < new Date());
+      const chaseAmount = overdue.reduce((s: number, inv: any) => s + Number(inv.amount || 0) - Number(inv.amountPaid || 0), 0);
+
+      const chaseContext = overdue.length > 0
+        ? { chaseAmount, chaseInvoiceCount: overdue.length, currency: "£" }
+        : undefined;
+
+      const brief = await buildConversationBrief(user.tenantId, contactId, chaseContext);
+
+      console.log("\n" + "=".repeat(80));
+      console.log("[DEBUG] Conversation brief for contact:", contactId);
+      console.log("Chase context:", chaseContext ? `${chaseContext.chaseInvoiceCount} invoices, £${chaseAmount.toFixed(2)}` : "none (no overdue)");
+      console.log("=".repeat(80));
+      console.log(brief.text);
+      console.log("=".repeat(80) + "\n");
+
+      res.type("text/plain").send(brief.text);
+    } catch (error: any) {
+      console.error("[DEBUG] Brief error:", error);
+      res.status(500).send("Error: " + error.message);
+    }
+  });
 
   // ── SSE endpoint for real-time UI updates ──────────────────────
   // EventSource API doesn't support Authorization headers, so we also
