@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import { Badge } from "@/components/ui/badge";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { QBadge } from "@/components/ui/q-badge";
 import {
   Select,
   SelectContent,
@@ -47,13 +47,22 @@ interface FailsafeData {
   relationship?: string | null;
 }
 
-const ROLE_BADGE: Record<string, { label: string; className: string }> = {
-  owner: { label: "Owner", className: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
-  admin: { label: "Admin", className: "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300" },
-  accountant: { label: "Accountant", className: "bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200" },
-  manager: { label: "Manager", className: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200" },
-  credit_controller: { label: "Controller", className: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300" },
-  readonly: { label: "Read Only", className: "bg-zinc-50 text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400" },
+const ROLE_BADGE_VARIANT: Record<string, "info" | "attention" | "neutral" | "ready" | "risk"> = {
+  owner: "info",
+  admin: "attention",
+  accountant: "ready",
+  manager: "neutral",
+  credit_controller: "neutral",
+  readonly: "neutral",
+};
+
+const ROLE_LABELS: Record<string, string> = {
+  owner: "Owner",
+  admin: "Admin",
+  accountant: "Accountant",
+  manager: "Manager",
+  credit_controller: "Controller",
+  readonly: "Read Only",
 };
 
 const ROLE_ALLOWED_DELEGATIONS: Record<string, string[]> = {
@@ -87,12 +96,6 @@ function formatLastActive(dateStr: string | null): string {
   return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
 
-function getInitials(firstName: string | null, lastName: string | null, email: string): string {
-  if (firstName && lastName) return `${firstName[0]}${lastName[0]}`.toUpperCase();
-  if (firstName) return firstName[0].toUpperCase();
-  return email[0].toUpperCase();
-}
-
 export default function TeamMemberRow({
   member,
   isOwner,
@@ -104,18 +107,15 @@ export default function TeamMemberRow({
 }: TeamMemberRowProps) {
   const [expanded, setExpanded] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
-  const badge = ROLE_BADGE[member.role] || { label: member.role, className: "" };
   const displayName = [member.firstName, member.lastName].filter(Boolean).join(" ") || member.email;
   const allowedDelegations = ROLE_ALLOWED_DELEGATIONS[member.role] || [];
   const hasDelegations = allowedDelegations.length > 0;
   const isExpandable = member.role === "owner" || hasDelegations;
 
-  // Menu visibility
   const isSelf = member.id === currentUserId;
   const canRemove = !isSelf && (isOwner || (canManageUsers && member.role === "credit_controller"));
   const canChangeRole = !isSelf && isOwner && member.role !== "owner";
 
-  // Transfer targets — managers, accountants, admins (exclude owner)
   const transferTargets = (allMembers || []).filter(
     (m) => m.id !== currentUserId && ["manager", "accountant", "admin"].includes(m.role)
   );
@@ -123,62 +123,50 @@ export default function TeamMemberRow({
   const isCurrentUserOwner = isOwner && isSelf;
 
   return (
-    <div className="border rounded-lg">
-      <div
+    <>
+      <tr
         className={cn(
-          "flex items-center gap-3 px-4 py-3",
-          isExpandable && "cursor-pointer hover:bg-accent/30"
+          "h-12 border-b border-[var(--q-border-default)] hover:bg-[var(--q-bg-surface-hover)] transition-colors duration-100",
+          isExpandable && "cursor-pointer",
         )}
         onClick={() => isExpandable && setExpanded(!expanded)}
       >
         {/* Expand indicator */}
-        <div className="w-4 shrink-0">
-          {isExpandable &&
-            (expanded ? (
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
-            ) : (
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            ))}
-        </div>
+        <td className="px-3 py-3 w-[32px]">
+          {isExpandable && (
+            expanded
+              ? <ChevronDown className="h-3.5 w-3.5 text-[var(--q-text-tertiary)]" />
+              : <ChevronRight className="h-3.5 w-3.5 text-[var(--q-text-tertiary)]" />
+          )}
+        </td>
 
-        {/* Avatar */}
-        <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0">
-          <span className="text-xs font-medium text-muted-foreground">
-            {getInitials(member.firstName, member.lastName, member.email)}
-          </span>
-        </div>
+        {/* Name */}
+        <td className="px-3 py-3 text-[14px] font-medium text-[var(--q-text-primary)] truncate">
+          {displayName}
+          {member.isCurrentUser && (
+            <span className="text-[12px] text-[var(--q-text-tertiary)] ml-1.5">(you)</span>
+          )}
+        </td>
 
-        {/* Name + email */}
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <p className="text-sm font-medium truncate">{displayName}</p>
-            {member.isCurrentUser && (
-              <span className="text-xs text-muted-foreground">(you)</span>
-            )}
-          </div>
-          <p className="text-xs text-muted-foreground truncate">
-            {member.email}
-          </p>
-        </div>
+        {/* Email */}
+        <td className="px-3 py-3 text-[14px] text-[var(--q-text-secondary)] truncate">
+          {member.email}
+        </td>
 
-        {/* Role badge */}
-        <Badge
-          variant="secondary"
-          className={cn("shrink-0 text-xs", badge.className)}
-        >
-          {badge.label}
-        </Badge>
+        {/* Role */}
+        <td className="px-3 py-3">
+          <QBadge variant={ROLE_BADGE_VARIANT[member.role] || "neutral"} dot>
+            {ROLE_LABELS[member.role] || member.role}
+          </QBadge>
+        </td>
 
         {/* Last active */}
-        <span className="text-xs text-muted-foreground shrink-0 w-16 text-right hidden sm:block">
+        <td className="px-3 py-3 text-[14px] text-[var(--q-text-tertiary)] text-right">
           {formatLastActive(member.lastActiveAt)}
-        </span>
+        </td>
 
         {/* Three-dot menu */}
-        <div
-          className="shrink-0"
-          onClick={(e) => e.stopPropagation()}
-        >
+        <td className="px-3 py-3 text-center" onClick={(e) => e.stopPropagation()}>
           <ThreeDotMenu
             userId={member.id}
             userName={displayName}
@@ -187,43 +175,47 @@ export default function TeamMemberRow({
             canRemove={canRemove}
             canChangeRole={canChangeRole}
           />
-        </div>
-      </div>
+        </td>
+      </tr>
 
       {/* Expanded content */}
       {expanded && (
-        <div className="px-4 pb-4 pt-1 border-t ml-7 space-y-4">
-          {member.role === "owner" && (
-            <FailsafeSection failsafe={failsafe ?? null} />
-          )}
-          {hasDelegations && (
-            <DelegationToggles
-              userId={member.id}
-              currentDelegations={member.delegations}
-              allowedDelegations={allowedDelegations}
-              editable={isOwner}
-            />
-          )}
-          {member.role === "credit_controller" && (
-            <p className="text-sm text-muted-foreground">
-              Day-to-day credit control. Can approve and send agent actions, manage debtor records, add notes, and put accounts on hold.
-            </p>
-          )}
-          {isCurrentUserOwner && member.role === "owner" && transferTargets.length > 0 && (
-            <div className="border-t pt-3 mt-3">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowTransferModal(true);
-                }}
-              >
-                Transfer ownership
-              </Button>
+        <tr className="border-b border-[var(--q-border-default)]">
+          <td colSpan={6} className="px-5 py-4 bg-[var(--q-bg-surface-alt)]/20">
+            <div className="space-y-4 ml-4">
+              {member.role === "owner" && (
+                <FailsafeSection failsafe={failsafe ?? null} />
+              )}
+              {hasDelegations && (
+                <DelegationToggles
+                  userId={member.id}
+                  currentDelegations={member.delegations}
+                  allowedDelegations={allowedDelegations}
+                  editable={isOwner}
+                />
+              )}
+              {member.role === "credit_controller" && (
+                <p className="text-sm text-[var(--q-text-tertiary)]">
+                  Day-to-day credit control. Can approve and send agent actions, manage debtor records, add notes, and put accounts on hold.
+                </p>
+              )}
+              {isCurrentUserOwner && member.role === "owner" && transferTargets.length > 0 && (
+                <div className="border-t border-[var(--q-border-default)] pt-3 mt-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowTransferModal(true);
+                    }}
+                  >
+                    Transfer ownership
+                  </Button>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </td>
+        </tr>
       )}
 
       {/* Transfer ownership modal */}
@@ -234,7 +226,7 @@ export default function TeamMemberRow({
           targets={transferTargets}
         />
       )}
-    </div>
+    </>
   );
 }
 
@@ -293,10 +285,9 @@ function TransferOwnershipModal({
               <SelectContent>
                 {targets.map((t) => {
                   const name = [t.firstName, t.lastName].filter(Boolean).join(" ") || t.email;
-                  const roleBadge = ROLE_BADGE[t.role];
                   return (
                     <SelectItem key={t.id} value={t.id}>
-                      {name} ({roleBadge?.label || t.role})
+                      {name} ({ROLE_LABELS[t.role] || t.role})
                     </SelectItem>
                   );
                 })}
@@ -305,14 +296,14 @@ function TransferOwnershipModal({
           </div>
 
           {targetUserId && (
-            <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-md p-3 text-sm text-amber-800 dark:text-amber-200">
+            <div className="bg-[var(--q-attention-bg)] border border-[var(--q-attention-border)] rounded-[var(--q-radius-md)] p-3 text-sm text-[var(--q-attention-text)]">
               <strong>{selectedName}</strong> will become the Owner with full control. You will become a Manager.
             </div>
           )}
 
           <div>
             <label className="text-sm font-medium mb-1.5 block">
-              Type <span className="font-mono text-xs bg-muted px-1 py-0.5 rounded">TRANSFER</span> to confirm
+              Type <span className="font-mono text-xs bg-[var(--q-bg-surface-alt)] px-1 py-0.5 rounded">TRANSFER</span> to confirm
             </label>
             <Input
               value={confirmText}

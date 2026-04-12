@@ -44,14 +44,14 @@ export default function SettingsTeam() {
     >
       <div className="space-y-6">
         {/* Tab bar */}
-        <div className="flex gap-1 border-b">
+        <div className="flex gap-6 border-b border-[var(--q-border-default)]">
           <button
             onClick={() => setActiveTab("members")}
             className={cn(
-              "px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
+              "pb-2.5 text-[14px] font-medium border-b-2 -mb-px transition-colors",
               activeTab === "members"
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                ? "border-[var(--q-accent)] text-[var(--q-text-primary)]"
+                : "border-transparent text-[var(--q-text-tertiary)] hover:text-[var(--q-text-primary)]"
             )}
           >
             Members
@@ -60,10 +60,10 @@ export default function SettingsTeam() {
             <button
               onClick={() => setActiveTab("audit-log")}
               className={cn(
-                "px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
+                "pb-2.5 text-[14px] font-medium border-b-2 -mb-px transition-colors",
                 activeTab === "audit-log"
-                  ? "border-primary text-primary"
-                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                  ? "border-[var(--q-accent)] text-[var(--q-text-primary)]"
+                  : "border-transparent text-[var(--q-text-tertiary)] hover:text-[var(--q-text-primary)]"
               )}
             >
               Audit Log
@@ -72,11 +72,7 @@ export default function SettingsTeam() {
         </div>
 
         {/* Tab content */}
-        {activeTab === "members" && (
-          <div className="max-w-3xl mx-auto">
-            <TeamPageContent />
-          </div>
-        )}
+        {activeTab === "members" && <TeamPageContent />}
         {activeTab === "audit-log" && <AuditLogContent />}
       </div>
     </AppShell>
