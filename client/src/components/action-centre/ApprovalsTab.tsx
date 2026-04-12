@@ -198,7 +198,7 @@ function ordinalChase(priorCount: number): string {
 
 function ApprovalTH({ children, className }: { children?: React.ReactNode; className?: string }) {
   return (
-    <th className={`h-12 text-[11px] font-medium tracking-[0.3px] text-[var(--q-text-tertiary)] text-left px-3 py-2 border-b border-[var(--q-border-default)] ${className || ""}`}>
+    <th className={`h-12 text-[11px] font-medium tracking-[0.3px] text-[var(--q-text-tertiary)] text-left px-3 py-2 border-b border-[var(--q-border-default)] whitespace-nowrap ${className || ""}`}>
       {children}
     </th>
   );
@@ -215,7 +215,7 @@ function SortableTH({ field, label, sort, onSort, className }: {
     return onSort({ field, dir: "desc" });
   };
   return (
-    <th className={`h-12 text-left px-3 py-2 border-b border-[var(--q-border-default)] ${className || ""}`}>
+    <th className={`h-12 text-left px-3 py-2 border-b border-[var(--q-border-default)] whitespace-nowrap ${className || ""}`}>
       <button
         type="button"
         onClick={toggle}
