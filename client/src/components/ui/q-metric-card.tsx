@@ -65,7 +65,7 @@ function QMetricCard({
   return (
     <div
       className={cn(
-        "rounded-[var(--q-radius-lg)] border border-[var(--q-border-default)] bg-[var(--q-bg-surface)] p-[var(--q-space-xl)]",
+        "rounded-[var(--q-radius-lg)] border border-[var(--q-border-default)] bg-[var(--q-bg-surface)] p-[var(--q-space-xl)] min-h-[100px]",
         onClick && "cursor-pointer hover:bg-[var(--q-bg-surface-hover)] transition-colors duration-[var(--q-transition-default)]",
         className
       )}
