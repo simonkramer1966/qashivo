@@ -31,6 +31,8 @@ import {
   Sparkles,
   PenLine,
   AlertTriangle,
+  Eye,
+  Pencil,
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -143,6 +145,7 @@ export default function SendEmailDrawer({
   const [body, setBody] = useState("");
   const [hasBeenEdited, setHasBeenEdited] = useState(false);
   const [confirmRegenOpen, setConfirmRegenOpen] = useState(false);
+  const [previewMode, setPreviewMode] = useState(true);
 
   // Data from draft response (invoices)
   const [chaseableInvoices, setChaseableInvoices] = useState<ChaseableInvoice[]>([]);
@@ -254,7 +257,10 @@ export default function SendEmailDrawer({
       }
       if (data.chaseable) {
         setChaseableInvoices(data.chaseable);
-        setSelectedInvoiceIds(new Set(data.chaseable.map((c) => c.id)));
+        const overdueOnly = data.chaseable.filter((c) => (c.daysOverdue ?? 0) > 0);
+        setSelectedInvoiceIds(new Set(
+          overdueOnly.length > 0 ? overdueOnly.map((c) => c.id) : []
+        ));
       }
       if (data.disputed) setDisputedInvoices(data.disputed);
       if (data.summary) setSummary(data.summary);
@@ -297,6 +303,7 @@ export default function SendEmailDrawer({
       if (data.disputed) setDisputedInvoices(data.disputed);
       if (data.summary) setSummary(data.summary);
       setMode("generated");
+      setPreviewMode(true);
     },
   });
 
@@ -342,6 +349,7 @@ export default function SendEmailDrawer({
 
   const handleWriteManually = useCallback(() => {
     setMode("manual");
+    setPreviewMode(false);
     setSubject(subject || defaultSubject);
     setBody("");
     setHasBeenEdited(false);
@@ -631,16 +639,53 @@ export default function SendEmailDrawer({
                       />
                     </div>
                     <div>
-                      <label className="text-xs text-muted-foreground">Body</label>
-                      <Textarea
-                        value={body}
-                        onChange={(e) => {
-                          setBody(e.target.value);
-                          setHasBeenEdited(true);
-                        }}
-                        placeholder={mode === "manual" ? "Write your email…" : "Email body"}
-                        className="min-h-[200px] font-mono text-sm"
-                      />
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs text-muted-foreground">Body</label>
+                        {mode === "generated" && (
+                          <div className="flex gap-1">
+                            <button
+                              type="button"
+                              onClick={() => setPreviewMode(true)}
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs ${
+                                previewMode
+                                  ? "bg-primary text-primary-foreground"
+                                  : "text-muted-foreground hover:bg-muted"
+                              }`}
+                            >
+                              <Eye className="h-3 w-3" />
+                              Preview
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setPreviewMode(false)}
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs ${
+                                !previewMode
+                                  ? "bg-primary text-primary-foreground"
+                                  : "text-muted-foreground hover:bg-muted"
+                              }`}
+                            >
+                              <Pencil className="h-3 w-3" />
+                              Edit
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      {mode === "generated" && previewMode ? (
+                        <div
+                          className="border rounded-md p-4 min-h-[200px] overflow-auto bg-white text-[13px] leading-[1.6] text-foreground [&_p]:m-0 [&_p]:text-[13px] [&_p]:leading-[1.6] [&_br]:leading-[1.6] [&_table]:my-3 [&_td]:text-[13px] [&_th]:text-[13px]"
+                          dangerouslySetInnerHTML={{ __html: body }}
+                        />
+                      ) : (
+                        <Textarea
+                          value={body}
+                          onChange={(e) => {
+                            setBody(e.target.value);
+                            setHasBeenEdited(true);
+                          }}
+                          placeholder={mode === "manual" ? "Write your email…" : "Email body"}
+                          className="min-h-[200px] font-mono text-sm"
+                        />
+                      )}
                     </div>
 
                     {/* Summary */}

@@ -276,7 +276,8 @@ export async function generateDebtorEmail(
   });
 
   const subject = result.subject || "Payment Reminder";
-  const body = result.body || "";
+  const rawBody = result.body || "";
+  const body = ensureHtmlFormatting(rawBody, chaseInvoices, currency);
   const agentReasoning = result.agentReasoning || "";
 
   // 8. Validation — non-throwing in Phase 1 so existing callers continue
@@ -309,6 +310,83 @@ export async function generateDebtorEmail(
     },
     agentReasoning,
   };
+}
+
+// ── HTML post-processing safety net ──────────────────────────
+
+/**
+ * Ensures the LLM-generated body contains proper HTML formatting:
+ * 1. If body already has a `<table>` → pass through.
+ * 2. If no `<table>` and invoices exist → build one from the invoice data.
+ * 3. If body lacks `<p>` tags → wrap paragraphs.
+ * 4. Insert the table after the first or second `</p>`.
+ *
+ * The table is built from the invoice objects, NOT parsed from LLM text.
+ */
+function ensureHtmlFormatting(
+  body: string,
+  chaseInvoices: OutstandingInvoice[],
+  currency: string,
+): string {
+  if (!body) return body;
+
+  let html = body;
+
+  // If the body has no <p> tags, wrap paragraphs
+  if (!/<p[\s>]/i.test(html)) {
+    html = html
+      .split(/\n\n+/)
+      .filter((p) => p.trim())
+      .map((p) => `<p>${p.replace(/\n/g, "<br>")}</p>`)
+      .join("\n");
+  }
+
+  // If the LLM already rendered a table, we're done
+  if (/<table[\s>]/i.test(html)) return html;
+
+  // No table but we have invoices — build one from data
+  if (chaseInvoices.length > 0) {
+    const fmt = new Intl.NumberFormat("en-GB", {
+      style: "currency",
+      currency: currency || "GBP",
+    });
+    const thStyle =
+      'style="border:1px solid #ddd;padding:8px;background:#f5f5f5;text-align:left"';
+    const tdStyle = 'style="border:1px solid #ddd;padding:8px"';
+
+    const rows = chaseInvoices.map((inv) => {
+      const outstanding = inv.amount - (inv.amountPaid || 0);
+      const due = inv.dueDate instanceof Date
+        ? inv.dueDate.toLocaleDateString("en-GB")
+        : new Date(inv.dueDate).toLocaleDateString("en-GB");
+      return `<tr><td ${tdStyle}>${inv.invoiceNumber}</td><td ${tdStyle}>${fmt.format(outstanding)}</td><td ${tdStyle}>${due}</td></tr>`;
+    });
+
+    const table = [
+      '<table style="border-collapse:collapse;width:100%;margin:16px 0">',
+      `<thead><tr><th ${thStyle}>Invoice #</th><th ${thStyle}>Amount</th><th ${thStyle}>Due Date</th></tr></thead>`,
+      `<tbody>${rows.join("")}</tbody>`,
+      "</table>",
+    ].join("");
+
+    // Insert after the first or second </p>
+    const closingPs: number[] = [];
+    const closingPRegex = /<\/p>/gi;
+    let m: RegExpExecArray | null;
+    while ((m = closingPRegex.exec(html)) !== null) {
+      closingPs.push(m.index + m[0].length);
+    }
+    const insertAfterIdx = closingPs.length >= 2 ? 1 : 0;
+    if (closingPs.length > 0) {
+      const pos = closingPs[insertAfterIdx];
+      html = html.slice(0, pos) + "\n" + table + "\n" + html.slice(pos);
+    } else {
+      // No </p> found — prepend table
+      html = table + "\n" + html;
+    }
+  }
+
+  return html;
 }
 
 // ── Helpers ──────────────────────────────────────────────────
