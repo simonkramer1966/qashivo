@@ -54,6 +54,7 @@ import {
   type SortState,
   nextSortState,
 } from "@/components/ui/sortable-header";
+import { DataHealthContent } from "@/pages/settings/data-health";
 
 interface Debtor {
   id: string;
@@ -166,10 +167,17 @@ function compareDebtors(a: Debtor, b: Debtor, sort: SortState): number {
   }
 }
 
+type PageTab = "debtors" | "data-health";
+
 export default function QollectionsDebtors() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const tabParam = urlParams.get("tab") as PageTab | null;
+  const [activeTab, setActiveTab] = useState<PageTab>(tabParam === "data-health" ? "data-health" : "debtors");
+
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [sort, setSort] = useState<SortState>(DEFAULT_SORT);
@@ -329,6 +337,37 @@ export default function QollectionsDebtors() {
     >
       <div className="space-y-6">
         <SyncStatusBanner />
+
+        {/* Tab bar */}
+        <div className="flex gap-1 border-b">
+          <button
+            onClick={() => setActiveTab("debtors")}
+            className={cn(
+              "px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
+              activeTab === "debtors"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+            )}
+          >
+            All Debtors
+          </button>
+          <button
+            onClick={() => setActiveTab("data-health")}
+            className={cn(
+              "px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
+              activeTab === "data-health"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+            )}
+          >
+            Data Health
+          </button>
+        </div>
+
+        {activeTab === "data-health" ? (
+          <DataHealthContent />
+        ) : (
+        <>
 
         {/* KPI Summary Row */}
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -703,6 +742,8 @@ export default function QollectionsDebtors() {
             )}
           </CardContent>
         </Card>
+        </>
+        )}
       </div>
     </AppShell>
   );

@@ -50,14 +50,11 @@ const QapitalFacility = lazy(() => import("@/pages/qapital/facility"));
 const QapitalPreAuth = lazy(() => import("@/pages/qapital/pre-authorisation"));
 const AgentTeamPage = lazy(() => import("@/pages/agent-team/index"));
 // Pillar pages — Settings
-const SettingsAgentPersonas = lazy(() => import("@/pages/settings/agent-personas"));
-const SettingsAutonomyRules = lazy(() => import("@/pages/settings/autonomy-rules"));
+const SettingsAgentSettings = lazy(() => import("@/pages/settings/agent-settings"));
 const SettingsIntegrations = lazy(() => import("@/pages/settings/integrations"));
 const SettingsUsersRoles = lazy(() => import("@/pages/settings/users-roles"));
 const SettingsTeam = lazy(() => import("@/pages/settings/team"));
 const SettingsBilling = lazy(() => import("@/pages/settings/billing"));
-const SettingsDataHealth = lazy(() => import("@/pages/settings/data-health"));
-const SettingsAuditLog = lazy(() => import("@/pages/settings/audit-log"));
 const InvestorsHome = lazy(() => import("@/pages/investors/index"));
 const InvestorsHowItWorks = lazy(() => import("@/pages/investors/how-it-works"));
 const InvestorsDemoPage = lazy(() => import("@/pages/investors/demo"));
@@ -294,17 +291,19 @@ function Router() {
           <Route path="/qapital/facility">{() => <RoleGuard check={p => p.canViewCapital}><QapitalFacility /></RoleGuard>}</Route>
           <Route path="/qapital/pre-authorisation">{() => <RoleGuard check={p => p.canViewCapital}><QapitalPreAuth /></RoleGuard>}</Route>
           <Route path="/qapital">{() => <RoleGuard check={p => p.canViewCapital}><QapitalBridge /></RoleGuard>}</Route>
-          <Route path="/agent-team" component={AgentTeamPage} />
+          {/* Redirects — old routes to new locations */}
+          <Route path="/agent-team">{() => <Redirect to="/settings/agent?tab=charlie" />}</Route>
+          <Route path="/settings/agent-personas">{() => <Redirect to="/settings/agent?tab=personas" />}</Route>
+          <Route path="/settings/autonomy-rules">{() => <Redirect to="/settings/agent?tab=autonomy" />}</Route>
+          <Route path="/settings/data-health">{() => <Redirect to="/qollections/debtors?tab=data-health" />}</Route>
+          <Route path="/settings/audit-log">{() => <Redirect to="/settings/team?tab=audit-log" />}</Route>
 
           {/* Pillar routes — Settings */}
-          <Route path="/settings/agent-personas">{() => <RoleGuard check={p => p.canConfigureCharlie}><SettingsAgentPersonas /></RoleGuard>}</Route>
-          <Route path="/settings/autonomy-rules">{() => <RoleGuard check={p => p.canAccessAutonomy}><SettingsAutonomyRules /></RoleGuard>}</Route>
+          <Route path="/settings/agent">{() => <RoleGuard check={p => p.canConfigureCharlie || p.canAccessAutonomy}><SettingsAgentSettings /></RoleGuard>}</Route>
           <Route path="/settings/integrations" component={SettingsIntegrations} />
           <Route path="/settings/team">{() => <RoleGuard check={p => p.canManageUsers}><SettingsTeam /></RoleGuard>}</Route>
           <Route path="/settings/users-roles" component={SettingsUsersRoles} />
           <Route path="/settings/billing">{() => <RoleGuard check={p => p.canAccessBilling}><SettingsBilling /></RoleGuard>}</Route>
-          <Route path="/settings/data-health" component={SettingsDataHealth} />
-          <Route path="/settings/audit-log">{() => <RoleGuard check={p => p.canViewAuditLog}><SettingsAuditLog /></RoleGuard>}</Route>
 
           {/* Onboarding */}
           <Route path="/onboarding" component={UserOnboarding} />

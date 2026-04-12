@@ -18,14 +18,12 @@ import {
   Landmark,
   AlertTriangle,
   Activity,
-  UserCog,
   Link,
   Receipt,
   Sliders,
   BarChart3,
   ClipboardList,
   Home,
-  HeartPulse,
   Target,
   ArrowRightLeft,
   Building2,
@@ -98,18 +96,14 @@ const navigationPillars: NavPillar[] = [
       { name: "Pre-authorisation", href: "/qapital/pre-authorisation", icon: ShieldCheck },
     ],
   },
-  { label: "Agent Team", icon: Bot, href: "/agent-team" },
   {
     label: "Settings",
     icon: Settings,
-    defaultHref: "/settings/agent-personas",
+    defaultHref: "/settings/team",
     children: [
-      { name: "Agent Personas", href: "/settings/agent-personas", icon: UserCog },
-      { name: "Autonomy & Rules", href: "/settings/autonomy-rules", icon: Sliders },
-      { name: "Data Health", href: "/settings/data-health", icon: HeartPulse },
-      { name: "Integrations", href: "/settings/integrations", icon: Link },
       { name: "Team", href: "/settings/team", icon: Users },
-      { name: "Audit Log", href: "/settings/audit-log", icon: Activity },
+      { name: "Agent Settings", href: "/settings/agent", icon: Bot },
+      { name: "Integrations", href: "/settings/integrations", icon: Link },
       { name: "Billing", href: "/settings/billing", icon: Receipt },
     ],
   },
@@ -126,7 +120,7 @@ interface SidebarProps {
 
 export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
   const { user } = useAuth();
-  const { hasPermission, canViewCapital, canManageUsers, canAccessAutonomy, canAccessBilling, canConfigureCharlie, canViewAuditLog } = usePermissions();
+  const { hasPermission, canViewCapital, canManageUsers, canAccessAutonomy, canAccessBilling, canConfigureCharlie } = usePermissions();
 
   function isPillarVisible(pillar: NavPillar): boolean {
     if (pillar.label === "Qapital") return canViewCapital;
@@ -134,10 +128,8 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
   }
   function isChildVisible(child: NavChild): boolean {
     if (child.name === "Team") return canManageUsers;
-    if (child.name === "Autonomy & Rules") return canAccessAutonomy;
+    if (child.name === "Agent Settings") return canConfigureCharlie || canAccessAutonomy;
     if (child.name === "Billing") return canAccessBilling;
-    if (child.name === "Audit Log") return canViewAuditLog;
-    if (child.name === "Agent Personas") return canConfigureCharlie;
     return true;
   }
   const [location, setLocation] = useLocation();

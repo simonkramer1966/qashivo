@@ -90,7 +90,11 @@ function getToneBadgeClass(tone: string): string {
   return TONE_OPTIONS.find((t) => t.value === tone)?.color ?? "bg-gray-100 text-gray-700";
 }
 
-export default function SettingsAgentPersonas() {
+export function AgentPersonasContent() {
+  return <SettingsAgentPersonas embedded />;
+}
+
+export default function SettingsAgentPersonas({ embedded }: { embedded?: boolean }) {
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -187,36 +191,40 @@ export default function SettingsAgentPersonas() {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
+  const loadingSkeleton = (
+    <div className="max-w-5xl mx-auto space-y-4">
+      <div className="flex justify-between items-center">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-10 w-32" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {[1, 2, 3].map((i) => (
+          <Card key={i}>
+            <CardHeader>
+              <Skeleton className="h-5 w-32" />
+              <Skeleton className="h-4 w-24 mt-1" />
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-6 w-16 rounded-full" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+
   if (isLoading) {
+    if (embedded) return loadingSkeleton;
     return (
       <AppShell title="Agent Personas" subtitle="Configure agent personalities and behaviour">
-        <div className="max-w-5xl mx-auto space-y-4">
-          <div className="flex justify-between items-center">
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-10 w-32" />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[1, 2, 3].map((i) => (
-              <Card key={i}>
-                <CardHeader>
-                  <Skeleton className="h-5 w-32" />
-                  <Skeleton className="h-4 w-24 mt-1" />
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <Skeleton className="h-4 w-20" />
-                  <Skeleton className="h-6 w-16 rounded-full" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
+        {loadingSkeleton}
       </AppShell>
     );
   }
 
-  return (
-    <AppShell title="Agent Personas" subtitle="Configure agent personalities and behaviour">
-      <div className="max-w-5xl mx-auto space-y-6">
+  const content = (
+    <div className="max-w-5xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex justify-between items-center">
           <p className="text-sm text-muted-foreground">
@@ -500,7 +508,14 @@ export default function SettingsAgentPersonas() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
+    </div>
+  );
+
+  if (embedded) return content;
+
+  return (
+    <AppShell title="Agent Personas" subtitle="Configure agent personalities and behaviour">
+      {content}
     </AppShell>
   );
 }

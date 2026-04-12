@@ -133,7 +133,11 @@ const MODES = [
   },
 ] as const;
 
-export default function SettingsAutonomyRules() {
+export function AutonomyRulesContent() {
+  return <SettingsAutonomyRules embedded />;
+}
+
+export default function SettingsAutonomyRules({ embedded }: { embedded?: boolean }) {
   const { toast } = useToast();
 
   const { data: settings, isLoading } = useQuery<TenantSettings>({
@@ -259,84 +263,82 @@ export default function SettingsAutonomyRules() {
     },
   });
 
+  const loadingSkeleton = (
+    <div className="max-w-3xl mx-auto space-y-6">
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-4 w-72 mt-1" />
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="rounded-lg border-2 border-border p-4">
+              <div className="flex items-start gap-3">
+                <Skeleton className="h-5 w-5 mt-0.5 rounded" />
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-5 w-16 rounded-full" />
+                  </div>
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-3/4" />
+                </div>
+                <Skeleton className="h-4 w-4 rounded-full mt-0.5" />
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-5 w-36" />
+          <Skeleton className="h-4 w-80 mt-1" />
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i}>
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Skeleton className="h-4 w-48" />
+                  <Skeleton className="h-3 w-64" />
+                </div>
+                <Skeleton className="h-5 w-9 rounded-full" />
+              </div>
+              {i < 4 && <Separator className="mt-5" />}
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    </div>
+  );
+
   if (isLoading) {
+    if (embedded) return loadingSkeleton;
     return (
       <AppShell title="Autonomy & Rules" subtitle="Set agent decision boundaries and escalation rules">
-        <div className="max-w-3xl mx-auto space-y-6">
-          {/* Autonomy Mode skeleton */}
-          <Card>
-            <CardHeader>
-              <Skeleton className="h-5 w-40" />
-              <Skeleton className="h-4 w-72 mt-1" />
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="rounded-lg border-2 border-border p-4">
-                  <div className="flex items-start gap-3">
-                    <Skeleton className="h-5 w-5 mt-0.5 rounded" />
-                    <div className="flex-1 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Skeleton className="h-4 w-24" />
-                        <Skeleton className="h-5 w-16 rounded-full" />
-                      </div>
-                      <Skeleton className="h-3 w-full" />
-                      <Skeleton className="h-3 w-3/4" />
-                    </div>
-                    <Skeleton className="h-4 w-4 rounded-full mt-0.5" />
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          {/* Exception Rules skeleton */}
-          <Card>
-            <CardHeader>
-              <Skeleton className="h-5 w-36" />
-              <Skeleton className="h-4 w-80 mt-1" />
-            </CardHeader>
-            <CardContent className="space-y-5">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i}>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <Skeleton className="h-4 w-48" />
-                      <Skeleton className="h-3 w-64" />
-                    </div>
-                    <Skeleton className="h-5 w-9 rounded-full" />
-                  </div>
-                  {i < 4 && <Separator className="mt-5" />}
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
+        {loadingSkeleton}
       </AppShell>
     );
   }
 
-  return (
-    <AppShell
-      title="Autonomy & Rules"
-      subtitle="Set agent decision boundaries and escalation rules"
-      action={
-        hasChanges ? (
-          <Button
-            onClick={() => saveMutation.mutate()}
-            disabled={saveMutation.isPending || conversationDelayInvalid}
-            className="bg-primary hover:bg-primary/90 text-white"
-          >
-            {saveMutation.isPending ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Save className="h-4 w-4 mr-2" />
-            )}
-            Save Changes
-          </Button>
-        ) : undefined
-      }
+  const saveAction = hasChanges ? (
+    <Button
+      onClick={() => saveMutation.mutate()}
+      disabled={saveMutation.isPending || conversationDelayInvalid}
+      className="bg-primary hover:bg-primary/90 text-white"
     >
-      <div className="max-w-3xl mx-auto space-y-6">
+      {saveMutation.isPending ? (
+        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+      ) : (
+        <Save className="h-4 w-4 mr-2" />
+      )}
+      Save Changes
+    </Button>
+  ) : undefined;
+
+  const content = (
+    <div className="max-w-3xl mx-auto space-y-6">
+      {embedded && saveAction && <div className="flex justify-end">{saveAction}</div>}
           {/* Autonomy Mode Selection */}
           <Card>
             <CardHeader>
@@ -853,7 +855,18 @@ export default function SettingsAutonomyRules() {
               )}
             </CardContent>
           </Card>
-      </div>
+    </div>
+  );
+
+  if (embedded) return content;
+
+  return (
+    <AppShell
+      title="Autonomy & Rules"
+      subtitle="Set agent decision boundaries and escalation rules"
+      action={saveAction}
+    >
+      {content}
     </AppShell>
   );
 }

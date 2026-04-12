@@ -87,7 +87,11 @@ const ROLE_BADGE_CLASS: Record<string, string> = {
   readonly: "bg-zinc-50 text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400",
 };
 
-export default function AuditLogPage() {
+export function AuditLogContent() {
+  return <AuditLogPage embedded />;
+}
+
+export default function AuditLogPage({ embedded }: { embedded?: boolean }) {
   const { isOwner, isAccountant } = usePermissions();
   const [dateRange, setDateRange] = useState<DateRange>("30d");
   const [filterUserId, setFilterUserId] = useState<string>("all");
@@ -150,8 +154,8 @@ export default function AuditLogPage() {
     return groups;
   }, [data?.entries]);
 
-  return (
-    <AppShell title="Audit Log" subtitle="View all activity across your account">
+  const content = (
+    <>
       {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-3 mb-6">
         <Select value={dateRange} onValueChange={(v) => { setDateRange(v as DateRange); setPage(1); }}>
@@ -285,6 +289,14 @@ export default function AuditLogPage() {
           </Button>
         </div>
       )}
+    </>
+  );
+
+  if (embedded) return content;
+
+  return (
+    <AppShell title="Audit Log" subtitle="View all activity across your account">
+      {content}
     </AppShell>
   );
 }

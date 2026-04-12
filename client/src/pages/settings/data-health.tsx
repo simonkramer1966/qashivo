@@ -106,7 +106,11 @@ function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount);
 }
 
-export default function SettingsDataHealth() {
+export function DataHealthContent() {
+  return <SettingsDataHealth embedded />;
+}
+
+export default function SettingsDataHealth({ embedded }: { embedded?: boolean }) {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
@@ -177,16 +181,21 @@ export default function SettingsDataHealth() {
     updateMutation.mutate({ id, email: editValues.email, phone: editValues.phone });
   };
 
+  const loadingSkeleton = (
+    <div className="p-6 space-y-6">
+      <Skeleton className="h-8 w-48" />
+      <div className="grid grid-cols-5 gap-4">
+        {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-24" />)}
+      </div>
+      <Skeleton className="h-96" />
+    </div>
+  );
+
   if (isLoading) {
+    if (embedded) return loadingSkeleton;
     return (
       <AppShell title="Data Health">
-        <div className="p-6 space-y-6">
-          <Skeleton className="h-8 w-48" />
-          <div className="grid grid-cols-5 gap-4">
-            {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-24" />)}
-          </div>
-          <Skeleton className="h-96" />
-        </div>
+        {loadingSkeleton}
       </AppShell>
     );
   }
@@ -201,10 +210,9 @@ export default function SettingsDataHealth() {
     { key: 'needs_phone' as FilterTab, label: 'Needs Phone', value: summary.needsPhone, icon: Phone, color: 'text-orange-600' },
   ];
 
-  return (
-    <AppShell title="Data Health">
-      <div className="p-6 space-y-6">
-        {/* Summary Cards */}
+  const content = (
+    <div className="p-6 space-y-6">
+      {/* Summary Cards */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           {summaryCards.map(card => (
             <Card
@@ -398,7 +406,14 @@ export default function SettingsDataHealth() {
             </div>
           </CardContent>
         </Card>
-      </div>
+    </div>
+  );
+
+  if (embedded) return content;
+
+  return (
+    <AppShell title="Data Health">
+      {content}
     </AppShell>
   );
 }
