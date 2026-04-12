@@ -10,12 +10,15 @@ import {
   users,
   invoices,
   tenants,
+  actions,
+  disputes,
+  promisesToPay,
   insertSmeClientSchema,
   insertSmeContactSchema,
   type Partner,
   type SmeClient,
 } from "@shared/schema";
-import { eq, and, sql, count, sum, desc, gte, lte, inArray, ne } from "drizzle-orm";
+import { eq, and, sql, count, sum, desc, gte, lte, inArray, ne, lt } from "drizzle-orm";
 import { z } from "zod";
 import crypto from "crypto";
 import { sendEmail } from "../services/sendgrid";
@@ -984,13 +987,151 @@ export function registerPartnerRoutes(app: Express) {
       const weightedBalance = Number(dsoResult[0]?.weightedBalance || 0);
       const portfolioDSO = weightedBalance > 0 ? Math.round(weightedDays / weightedBalance) : 0;
 
+      // Attention metrics across all linked tenants
+      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+      // Pending approvals
+      const [pendingResult] = await db
+        .select({ count: sql<string>`COUNT(*)` })
+        .from(actions)
+        .where(and(
+          inArray(actions.tenantId, tenantIds),
+          inArray(actions.status, ["pending_approval", "pending"])
+        ));
+      const pendingActions = Number(pendingResult?.count || 0);
+
+      // Active disputes this week
+      const [disputeResult] = await db
+        .select({ count: sql<string>`COUNT(*)` })
+        .from(disputes)
+        .where(and(
+          inArray(disputes.tenantId, tenantIds),
+          eq(disputes.status, "pending"),
+          gte(disputes.createdAt, sevenDaysAgo)
+        ));
+      const disputesThisWeek = Number(disputeResult?.count || 0);
+
+      // Broken promises (PTP past promisedDate still active)
+      const [brokenPtpResult] = await db
+        .select({ count: sql<string>`COUNT(*)` })
+        .from(promisesToPay)
+        .where(and(
+          inArray(promisesToPay.tenantId, tenantIds),
+          eq(promisesToPay.status, "active"),
+          lt(promisesToPay.promisedDate, now)
+        ));
+      const brokenPromises = Number(brokenPtpResult?.count || 0);
+
+      // Exceptions needing review
+      const [exceptionResult] = await db
+        .select({ count: sql<string>`COUNT(*)` })
+        .from(actions)
+        .where(and(
+          inArray(actions.tenantId, tenantIds),
+          eq(actions.status, "exception")
+        ));
+      const exceptionsCount = Number(exceptionResult?.count || 0);
+
+      // DSO trend — weekly snapshots for last 8 weeks
+      const dsoTrend: { week: string; dso: number }[] = [];
+      for (let i = 7; i >= 0; i--) {
+        const weekEnd = new Date(now.getTime() - i * 7 * 24 * 60 * 60 * 1000);
+        const weekLabel = weekEnd.toISOString().slice(0, 10);
+
+        const [weekDso] = await db
+          .select({
+            weightedDays: sql<string>`COALESCE(SUM(
+              (CAST(${invoices.amount} AS DECIMAL) - CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL))
+              * GREATEST(EXTRACT(EPOCH FROM (${weekEnd}::timestamp - ${invoices.issueDate})) / 86400, 0)
+            ), 0)`,
+            weightedBalance: sql<string>`COALESCE(SUM(CAST(${invoices.amount} AS DECIMAL) - CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL)), 0)`,
+          })
+          .from(invoices)
+          .where(and(
+            inArray(invoices.tenantId, tenantIds),
+            sql`${invoices.status} NOT IN ('paid', 'void', 'voided', 'deleted', 'draft')`,
+            lte(invoices.issueDate, weekEnd)
+          ));
+
+        const wd = Number(weekDso?.weightedDays || 0);
+        const wb = Number(weekDso?.weightedBalance || 0);
+        dsoTrend.push({ week: weekLabel, dso: wb > 0 ? Math.round(wd / wb) : 0 });
+      }
+
+      // Weekly collections — paid amounts per week for last 8 weeks
+      const weeklyCollections: { week: string; collected: number }[] = [];
+      for (let i = 7; i >= 0; i--) {
+        const weekStart = new Date(now.getTime() - (i + 1) * 7 * 24 * 60 * 60 * 1000);
+        const weekEnd = new Date(now.getTime() - i * 7 * 24 * 60 * 60 * 1000);
+        const weekLabel = weekEnd.toISOString().slice(0, 10);
+
+        const [weekPaid] = await db
+          .select({
+            total: sql<string>`COALESCE(SUM(CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL)), 0)`,
+          })
+          .from(invoices)
+          .where(and(
+            inArray(invoices.tenantId, tenantIds),
+            eq(invoices.status, "paid"),
+            gte(invoices.paidDate, weekStart),
+            lt(invoices.paidDate, weekEnd)
+          ));
+
+        weeklyCollections.push({ week: weekLabel, collected: Number(weekPaid?.total || 0) });
+      }
+
+      // Per-tenant health data for heatmap
+      const heatmapClients = await Promise.all(tenantIds.map(async (tenantId) => {
+        const link = links.find(l => l.tenantId === tenantId);
+        const [tenantRow] = await db.select({ name: tenants.name, xeroOrganisationName: tenants.xeroOrganisationName }).from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+
+        const [stats] = await db
+          .select({
+            outstanding: sql<string>`COALESCE(SUM(CAST(${invoices.amount} AS DECIMAL) - CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL)), 0)`,
+            overdue: sql<string>`COALESCE(SUM(CASE WHEN ${invoices.dueDate} < NOW() THEN CAST(${invoices.amount} AS DECIMAL) - CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL) ELSE 0 END), 0)`,
+            oldestOverdueDays: sql<string>`COALESCE(MAX(CASE WHEN ${invoices.dueDate} < NOW() THEN EXTRACT(EPOCH FROM (NOW() - ${invoices.dueDate})) / 86400 ELSE 0 END), 0)`,
+          })
+          .from(invoices)
+          .where(and(
+            eq(invoices.tenantId, tenantId),
+            sql`${invoices.status} NOT IN ('paid', 'void', 'voided', 'deleted', 'draft')`
+          ));
+
+        // Find display name from link
+        const linkRow = await db
+          .select({ clientDisplayName: partnerTenantLinks.clientDisplayName })
+          .from(partnerTenantLinks)
+          .where(and(
+            eq(partnerTenantLinks.partnerId, user.partnerId),
+            eq(partnerTenantLinks.tenantId, tenantId)
+          ))
+          .limit(1);
+
+        return {
+          tenantId,
+          name: linkRow[0]?.clientDisplayName || tenantRow?.xeroOrganisationName || tenantRow?.name || "Unknown",
+          outstanding: Number(stats?.outstanding || 0),
+          overdue: Number(stats?.overdue || 0),
+          oldestOverdueDays: Math.round(Number(stats?.oldestOverdueDays || 0)),
+        };
+      }));
+
       res.json({
         activeClients: tenantIds.length,
         totalAR,
         totalOverdue,
         portfolioDSO,
         collectionRate,
-        cashGaps: 0, // placeholder — requires forecast data
+        cashGaps: 0,
+        attention: {
+          pendingActions,
+          disputesThisWeek,
+          brokenPromises,
+          exceptionsCount,
+        },
+        dsoTrend,
+        weeklyCollections,
+        heatmapClients,
       });
     } catch (error) {
       console.error("GET /api/partner/portfolio-summary error:", error);
@@ -1120,6 +1261,94 @@ export function registerPartnerRoutes(app: Express) {
     } catch (error) {
       console.error("GET /api/partner/client-list error:", error);
       res.status(500).json({ message: "Failed to load client list" });
+    }
+  });
+
+  // POST /api/partner/add-client — create tenant + link + optional invite
+  const addClientSchema = z.object({
+    companyName: z.string().min(1, "Company name is required"),
+    contactName: z.string().optional(),
+    contactEmail: z.string().email("Valid email required").optional(),
+    clientNumber: z.string().optional(),
+    notes: z.string().optional(),
+  });
+
+  app.post("/api/partner/add-client", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      if (!user?.partnerId) {
+        return res.status(403).json({ message: "Not a partner user" });
+      }
+
+      const parsed = addClientSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid request", errors: parsed.error.flatten() });
+      }
+
+      const { companyName, contactName, contactEmail, clientNumber, notes } = parsed.data;
+
+      // Create a new tenant for this client
+      const [newTenant] = await db.insert(tenants).values({
+        name: companyName,
+        currency: "GBP",
+      }).returning();
+
+      // Create the org-level link
+      await db.insert(partnerTenantLinks).values({
+        partnerId: user.partnerId,
+        tenantId: newTenant.id,
+        status: "active",
+        accessLevel: "full",
+        clientDisplayName: companyName,
+        clientNumber: clientNumber || null,
+        notes: notes || null,
+        linkedBy: user.id,
+      });
+
+      // Also create smeClient record for controller assignment tracking
+      await db.insert(smeClients).values({
+        partnerId: user.partnerId,
+        name: companyName,
+        tenantId: newTenant.id,
+        status: contactEmail ? "INVITED" : "DRAFT",
+      });
+
+      // Send invitation email if contact email provided
+      if (contactEmail) {
+        const [partner] = await db.select().from(partners).where(eq(partners.id, user.partnerId)).limit(1);
+        const partnerDisplayName = partner?.brandName || partner?.name || "Your accounting firm";
+
+        try {
+          await sendEmail({
+            to: contactEmail,
+            from: `${partner?.emailFromName || partnerDisplayName} <${partner?.emailReplyTo || process.env.SENDGRID_FROM_EMAIL || "noreply@qashivo.com"}>`,
+            subject: `${partnerDisplayName} invites you to connect your accounts`,
+            html: `
+              <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+                <h2 style="color: #1a1918; font-size: 20px; margin-bottom: 16px;">You're invited to connect</h2>
+                <p style="color: #57534e; font-size: 15px; line-height: 1.6;">
+                  ${partnerDisplayName} has added ${companyName} to their credit control platform.
+                  ${contactName ? `Hi ${contactName}, ` : ""}Please connect your accounting system to get started.
+                </p>
+                <p style="color: #78716c; font-size: 13px; margin-top: 24px;">
+                  Contact ${partnerDisplayName} at ${partner?.email || ""} for questions.
+                </p>
+              </div>`,
+            tenantId: newTenant.id,
+          });
+        } catch (emailErr) {
+          console.error("Failed to send add-client invite email:", emailErr);
+        }
+      }
+
+      res.status(201).json({
+        tenantId: newTenant.id,
+        name: companyName,
+        message: contactEmail ? "Client added and invitation sent" : "Client added",
+      });
+    } catch (error) {
+      console.error("POST /api/partner/add-client error:", error);
+      res.status(500).json({ message: "Failed to add client" });
     }
   });
 }
