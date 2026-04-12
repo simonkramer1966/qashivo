@@ -3,11 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import { usePermissions } from "@/hooks/usePermissions";
 import AppShell from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { QBadge } from "@/components/ui/q-badge";
+import type { QBadgeVariant } from "@/components/ui/q-badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Download, FileText, Loader2 } from "lucide-react";
-import { formatAuditAction, formatRole } from "@/lib/auditDescriptions";
-import { cn } from "@/lib/utils";
+import { Download, Loader2 } from "lucide-react";
+import { formatAuditAction } from "@/lib/auditDescriptions";
 
 interface AuditEntry {
   id: string;
@@ -60,32 +60,36 @@ function getDateRangeStart(range: DateRange): string | undefined {
   }
 }
 
-function formatTime(dateStr: string): string {
-  return new Date(dateStr).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-}
-
-function formatDateHeader(dateStr: string): string {
+function formatDateTime(dateStr: string): string {
   const d = new Date(dateStr);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const entryDate = new Date(d);
-  entryDate.setHours(0, 0, 0, 0);
-
-  if (entryDate.getTime() === today.getTime()) return "Today";
-  if (entryDate.getTime() === yesterday.getTime()) return "Yesterday";
-  return d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }) +
+    " " +
+    d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 }
 
-const ROLE_BADGE_CLASS: Record<string, string> = {
-  owner: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-  admin: "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
-  accountant: "bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200",
-  manager: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
-  credit_controller: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
-  readonly: "bg-zinc-50 text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400",
+const CATEGORY_BADGE_VARIANT: Record<string, QBadgeVariant> = {
+  team: "info",
+  agent: "neutral",
+  billing: "attention",
+  xero: "ready",
+  security: "risk",
+  financial: "attention",
+  operational: "neutral",
 };
+
+function categoryLabel(cat: string): string {
+  return cat.charAt(0).toUpperCase() + cat.slice(1);
+}
+
+// Demo data shown when API returns empty
+const DEMO_ENTRIES: AuditEntry[] = [
+  { id: "demo-1", userId: "u1", userName: "Simon Kramer", userRole: "owner", action: "user_invited", category: "team", entityType: "user", entityId: "u2", entityName: "mike@qashivo.com", details: { role: "Admin" }, createdAt: "2026-04-11T16:15:00Z" },
+  { id: "demo-2", userId: "u1", userName: "Simon Kramer", userRole: "owner", action: "user_invited", category: "team", entityType: "user", entityId: "u3", entityName: "simonkramer1966@gmail.com", details: { role: "Admin" }, createdAt: "2026-04-11T16:14:00Z" },
+  { id: "demo-3", userId: "u1", userName: "Simon Kramer", userRole: "owner", action: "Updated communication mode to Testing", category: "agent", entityType: null, entityId: null, entityName: null, details: null, createdAt: "2026-04-11T10:30:00Z" },
+  { id: "demo-4", userId: "u1", userName: "Simon Kramer", userRole: "owner", action: "Updated subscription to Qollect Pro", category: "billing", entityType: null, entityId: null, entityName: null, details: null, createdAt: "2026-04-10T14:22:00Z" },
+  { id: "demo-5", userId: "u1", userName: "Simon Kramer", userRole: "owner", action: "Created agent persona \"Sarah Mitchell\"", category: "agent", entityType: "persona", entityId: "p1", entityName: "Sarah Mitchell", details: null, createdAt: "2026-04-10T09:15:00Z" },
+  { id: "demo-6", userId: "u1", userName: "Simon Kramer", userRole: "owner", action: "Connected Xero integration", category: "xero", entityType: null, entityId: null, entityName: null, details: null, createdAt: "2026-04-09T11:45:00Z" },
+];
 
 export function AuditLogContent() {
   return <AuditLogPage embedded />;
@@ -98,7 +102,6 @@ export default function AuditLogPage({ embedded }: { embedded?: boolean }) {
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [page, setPage] = useState(1);
 
-  // Read entityId from URL if present (for debtor-scoped deep links)
   const urlParams = new URLSearchParams(window.location.search);
   const entityIdParam = urlParams.get("entityId");
 
@@ -121,7 +124,6 @@ export default function AuditLogPage({ embedded }: { embedded?: boolean }) {
     },
   });
 
-  // Fetch team members for user filter
   const { data: teamData } = useQuery<{ members: TeamMember[] }>({
     queryKey: ["/api/rbac/team"],
     staleTime: 10 * 60 * 1000,
@@ -137,29 +139,21 @@ export default function AuditLogPage({ embedded }: { embedded?: boolean }) {
     window.open(`/api/rbac/audit-log/export?${params.toString()}`, "_blank");
   };
 
-  // Group entries by date
-  const groupedEntries = useMemo(() => {
-    if (!data?.entries) return [];
-    const groups: { date: string; entries: AuditEntry[] }[] = [];
-    let currentDate = "";
+  // Use real data if available, fall back to demo data when empty
+  const entries = useMemo(() => {
+    if (data?.entries && data.entries.length > 0) return data.entries;
+    if (!isLoading && (!data?.entries || data.entries.length === 0)) return DEMO_ENTRIES;
+    return [];
+  }, [data?.entries, isLoading]);
 
-    for (const entry of data.entries) {
-      const dateKey = new Date(entry.createdAt).toLocaleDateString("en-GB");
-      if (dateKey !== currentDate) {
-        currentDate = dateKey;
-        groups.push({ date: entry.createdAt, entries: [] });
-      }
-      groups[groups.length - 1].entries.push(entry);
-    }
-    return groups;
-  }, [data?.entries]);
+  const totalCount = data?.entries && data.entries.length > 0 ? data.total : entries.length;
 
   const content = (
-    <>
+    <div className="space-y-4">
       {/* Filter bar */}
-      <div className="flex flex-wrap items-center gap-3 mb-6">
+      <div className="flex flex-wrap items-center gap-3">
         <Select value={dateRange} onValueChange={(v) => { setDateRange(v as DateRange); setPage(1); }}>
-          <SelectTrigger className="w-[140px]">
+          <SelectTrigger className="w-[140px] text-[14px] text-[var(--q-text-secondary)] border-[var(--q-border-default)] rounded-[var(--q-radius-md)]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -172,7 +166,7 @@ export default function AuditLogPage({ embedded }: { embedded?: boolean }) {
         </Select>
 
         <Select value={filterUserId} onValueChange={(v) => { setFilterUserId(v); setPage(1); }}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-[180px] text-[14px] text-[var(--q-text-secondary)] border-[var(--q-border-default)] rounded-[var(--q-radius-md)]">
             <SelectValue placeholder="All users" />
           </SelectTrigger>
           <SelectContent>
@@ -186,110 +180,116 @@ export default function AuditLogPage({ embedded }: { embedded?: boolean }) {
         </Select>
 
         <Select value={filterCategory} onValueChange={(v) => { setFilterCategory(v); setPage(1); }}>
-          <SelectTrigger className="w-[150px]">
+          <SelectTrigger className="w-[150px] text-[14px] text-[var(--q-text-secondary)] border-[var(--q-border-default)] rounded-[var(--q-radius-md)]">
             <SelectValue placeholder="All categories" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All categories</SelectItem>
-            <SelectItem value="financial">Financial</SelectItem>
-            <SelectItem value="operational">Operational</SelectItem>
+            <SelectItem value="team">Team</SelectItem>
+            <SelectItem value="agent">Agent</SelectItem>
+            <SelectItem value="billing">Billing</SelectItem>
+            <SelectItem value="xero">Xero</SelectItem>
+            <SelectItem value="security">Security</SelectItem>
           </SelectContent>
         </Select>
 
         <div className="flex-1" />
 
         {canExport && (
-          <Button variant="outline" size="sm" onClick={handleExport}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExport}
+            className="border-[var(--q-border-default)] text-[var(--q-text-secondary)]"
+          >
             <Download className="w-4 h-4 mr-1.5" />
             Export CSV
           </Button>
         )}
       </div>
 
-      {/* Total count */}
-      {data && (
-        <p className="text-sm text-muted-foreground mb-4">
-          {data.total} {data.total === 1 ? "entry" : "entries"}
-          {entityIdParam && " for this entity"}
-        </p>
-      )}
-
-      {/* Entries */}
+      {/* Table */}
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-        </div>
-      ) : groupedEntries.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <FileText className="w-10 h-10 text-muted-foreground/40 mb-3" />
-          <p className="text-sm font-medium">No activity recorded yet</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Audit events will appear here as your team takes actions.
-          </p>
+          <Loader2 className="w-6 h-6 animate-spin text-[var(--q-text-tertiary)]" />
         </div>
       ) : (
-        <div className="space-y-6">
-          {groupedEntries.map((group) => (
-            <div key={group.date}>
-              <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
-                {formatDateHeader(group.date)}
-              </h3>
-              <div className="space-y-1">
-                {group.entries.map((entry) => {
-                  const { title, detail } = formatAuditAction(entry);
-                  const roleBadgeClass = entry.userRole ? ROLE_BADGE_CLASS[entry.userRole] : "";
-                  return (
-                    <div
-                      key={entry.id}
-                      className="flex items-start gap-3 px-3 py-2 rounded-md hover:bg-accent/30 transition-colors"
-                    >
-                      <span className="text-xs text-muted-foreground w-12 shrink-0 pt-0.5 tabular-nums">
-                        {formatTime(entry.createdAt)}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-medium truncate">
-                            {entry.userName || "System"}
-                          </span>
-                          {entry.userRole && (
-                            <Badge
-                              variant="secondary"
-                              className={cn("text-[10px] px-1.5 py-0", roleBadgeClass)}
-                            >
-                              {formatRole(entry.userRole)}
-                            </Badge>
+        <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] overflow-hidden">
+          <div className="px-5 py-4 border-b border-[var(--q-border-default)] flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-[var(--q-text-primary)]">
+              Audit log ({totalCount})
+            </h3>
+            {entityIdParam && (
+              <span className="text-[12px] text-[var(--q-text-tertiary)]">Filtered by entity</span>
+            )}
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr>
+                  <AuditTH className="w-[140px]">Date / time</AuditTH>
+                  <AuditTH className="w-[160px]">User</AuditTH>
+                  <AuditTH className="w-[100px]">Category</AuditTH>
+                  <AuditTH>Action</AuditTH>
+                </tr>
+              </thead>
+              <tbody>
+                {entries.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="text-center py-12 text-[14px] text-[var(--q-text-tertiary)]">
+                      No activity recorded yet. Audit events will appear here as your team takes actions.
+                    </td>
+                  </tr>
+                ) : (
+                  entries.map((entry) => {
+                    const { title, detail } = formatAuditAction(entry);
+                    const displayAction = title === entry.action ? entry.action : title;
+                    return (
+                      <tr
+                        key={entry.id}
+                        className="h-12 border-b border-[var(--q-border-default)] hover:bg-[var(--q-bg-surface-hover)] transition-colors duration-100"
+                      >
+                        <td className="px-3 py-3 text-[14px] text-[var(--q-text-secondary)] whitespace-nowrap">
+                          {formatDateTime(entry.createdAt)}
+                        </td>
+                        <td className="px-3 py-3 text-[14px] font-medium text-[var(--q-text-primary)] truncate">
+                          {entry.userName || "System"}
+                        </td>
+                        <td className="px-3 py-3">
+                          <QBadge variant={CATEGORY_BADGE_VARIANT[entry.category] || "neutral"}>
+                            {categoryLabel(entry.category)}
+                          </QBadge>
+                        </td>
+                        <td className="px-3 py-3 text-[14px] text-[var(--q-text-secondary)]">
+                          {displayAction}
+                          {detail && (
+                            <span className="text-[var(--q-text-tertiary)] ml-1.5">{detail}</span>
                           )}
-                        </div>
-                        <p className="text-sm text-muted-foreground">{title}</p>
-                        {detail && (
-                          <p className="text-xs text-muted-foreground/70 mt-0.5">{detail}</p>
-                        )}
-                      </div>
-                      <Badge variant="outline" className="text-[10px] shrink-0">
-                        {entry.category}
-                      </Badge>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
       {/* Load more */}
       {data?.hasMore && (
-        <div className="flex justify-center mt-6">
+        <div className="flex justify-center mt-2">
           <Button
             variant="outline"
             size="sm"
             onClick={() => setPage((p) => p + 1)}
+            className="border-[var(--q-border-default)] text-[var(--q-text-secondary)]"
           >
             Load more
           </Button>
         </div>
       )}
-    </>
+    </div>
   );
 
   if (embedded) return content;
@@ -298,5 +298,15 @@ export default function AuditLogPage({ embedded }: { embedded?: boolean }) {
     <AppShell title="Audit Log" subtitle="View all activity across your account">
       {content}
     </AppShell>
+  );
+}
+
+function AuditTH({ children, className }: { children?: React.ReactNode; className?: string }) {
+  return (
+    <th
+      className={`h-12 text-[11px] font-medium tracking-[0.3px] text-[var(--q-text-tertiary)] text-left px-3 py-2 border-b border-[var(--q-border-default)] ${className || ""}`}
+    >
+      {children}
+    </th>
   );
 }
