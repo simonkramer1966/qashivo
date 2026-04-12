@@ -508,21 +508,23 @@ export default function BridgePage() {
 
               {/* Right: approve button + advanced toggle */}
               <div className="flex flex-col items-end gap-2 shrink-0">
-                {requestState === "approved" ? (
-                  <Button variant="outline" className="border-emerald-300 text-emerald-700 bg-emerald-50 pointer-events-none">
-                    <CheckCircle2 className="h-4 w-4 mr-1.5" />
-                    Approved
-                  </Button>
-                ) : (
-                  <Button
-                    size="lg"
-                    onClick={() => setConfirmOpen(true)}
-                    disabled={activeSelection.length === 0 || requestState === "requesting"}
-                  >
-                    {requestState === "requesting" && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
-                    {requestState === "requesting" ? "Requesting..." : approveLabel}
-                    {requestState === "idle" && <ArrowRight className="h-4 w-4 ml-1.5" />}
-                  </Button>
+                {!useOwnFacility && (
+                  requestState === "approved" ? (
+                    <Button variant="outline" className="border-emerald-300 text-emerald-700 bg-emerald-50 pointer-events-none">
+                      <CheckCircle2 className="h-4 w-4 mr-1.5" />
+                      Approved
+                    </Button>
+                  ) : (
+                    <Button
+                      size="lg"
+                      onClick={() => setConfirmOpen(true)}
+                      disabled={activeSelection.length === 0 || requestState === "requesting"}
+                    >
+                      {requestState === "requesting" && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
+                      {requestState === "requesting" ? "Requesting..." : approveLabel}
+                      {requestState === "idle" && <ArrowRight className="h-4 w-4 ml-1.5" />}
+                    </Button>
+                  )
                 )}
                 <button
                   onClick={() => setShowAdvanced(!showAdvanced)}
@@ -722,20 +724,22 @@ export default function BridgePage() {
                 ? "Present this selection to your finance provider for optimal cost."
                 : `${manualSelection.length} invoice${manualSelection.length !== 1 ? "s" : ""} selected · ${fmt(manualCost.totalAdvance)} advance · ${fmt(manualCost.totalInterest)} interest`}
             </div>
-            {requestState === "approved" ? (
-              <Button variant="outline" className="border-emerald-300 text-emerald-700 bg-emerald-50 pointer-events-none">
-                <CheckCircle2 className="h-4 w-4 mr-1.5" />
-                Approved
-              </Button>
-            ) : (
-              <Button
-                onClick={() => setConfirmOpen(true)}
-                disabled={manualSelection.length === 0 || requestState === "requesting"}
-              >
-                {requestState === "requesting" && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
-                {requestState === "requesting" ? "Requesting..." : approveLabel}
-                {requestState === "idle" && <ArrowRight className="h-4 w-4 ml-1.5" />}
-              </Button>
+            {!useOwnFacility && (
+              requestState === "approved" ? (
+                <Button variant="outline" className="border-emerald-300 text-emerald-700 bg-emerald-50 pointer-events-none">
+                  <CheckCircle2 className="h-4 w-4 mr-1.5" />
+                  Approved
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => setConfirmOpen(true)}
+                  disabled={manualSelection.length === 0 || requestState === "requesting"}
+                >
+                  {requestState === "requesting" && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
+                  {requestState === "requesting" ? "Requesting..." : approveLabel}
+                  {requestState === "idle" && <ArrowRight className="h-4 w-4 ml-1.5" />}
+                </Button>
+              )
             )}
           </div>
         </section>
