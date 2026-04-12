@@ -1626,15 +1626,13 @@ export default function DebtorRecord() {
         {/* ----------------------------------------------------------------- */}
         {/* Back + Header                                                     */}
         {/* ----------------------------------------------------------------- */}
-        <div className="flex items-start gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="mt-1 shrink-0"
+        <div className="flex items-center gap-4">
+          <button
+            className="shrink-0 bg-[var(--q-bg-surface)] rounded-[var(--q-radius-md)] p-1.5 hover:bg-[var(--q-bg-surface-hover)] transition-colors"
             onClick={() => setLocation("/qollections/debtors")}
           >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+            <ArrowLeft className="h-4 w-4 text-[var(--q-text-secondary)]" />
+          </button>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl font-bold truncate text-[var(--q-text-primary)]">{contact.name}</h1>

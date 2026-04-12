@@ -46,6 +46,9 @@ export default function DebtorStatusBanner({ contactId }: { contactId: string })
 
   if (!data) return null;
 
+  // VIP status is shown in the page header — don't duplicate here
+  if (data.variant === "vip") return null;
+
   const config = VARIANT_CONFIG[data.variant] || VARIANT_CONFIG.no_action;
   const Icon = config.icon;
 
