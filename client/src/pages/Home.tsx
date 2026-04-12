@@ -1,16 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import AppShell from "@/components/layout/app-shell";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { QMetricCard } from "@/components/ui/q-metric-card";
+import { QBadge } from "@/components/ui/q-badge";
+import { QMetricCardSkeleton } from "@/components/ui/q-skeleton";
+import { QPageHeader } from "@/components/ui/q-page-header";
+import { QEmptyState } from "@/components/ui/q-empty-state";
+import { QSkeleton } from "@/components/ui/q-skeleton";
 import {
   TrendingUp,
   BarChart3,
-  CalendarClock,
   Banknote,
-  AlertTriangle,
   ShieldCheck,
   ArrowRight,
   Landmark,
@@ -109,18 +111,6 @@ const BUCKET_LABELS: Record<string, string> = {
 };
 const BUCKET_COLORS = ["hsl(var(--chart-3))", "hsl(var(--chart-1))", "hsl(var(--chart-4))", "#f97316", "hsl(var(--chart-5))"];
 
-const PILLAR_COLORS = {
-  credit: "border-blue-600",
-  cashflow: "border-amber-500",
-  capital: "border-emerald-500",
-} as const;
-
-const PILLAR_LABEL_COLORS = {
-  credit: "text-blue-600",
-  cashflow: "text-amber-500",
-  capital: "text-emerald-500",
-} as const;
-
 // Mock facility data (static until Capital module is built)
 const FACILITY = { limit: 500_000, drawn: 0 };
 
@@ -190,227 +180,233 @@ export default function HomeDashboard() {
   const facilityHeadroom = FACILITY.limit - FACILITY.drawn;
 
   return (
-    <AppShell title="Dashboard" subtitle="Credit Control · Cashflow · Capital">
-      <div className="space-y-6">
+    <AppShell title="" subtitle="">
+      <div className="space-y-[var(--q-space-2xl)]">
+        <QPageHeader title="Dashboard" subtitle="Credit Control · Cashflow · Capital" />
         <SyncStatusBanner />
 
         {/* ── ROW 1: Six Headline Metric Cards ── */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          <PillarCard
-            pillar="credit"
-            title="Total Outstanding"
-            value={fmt(summary?.totalOutstanding ?? 0)}
-            subtitle={`${summary?.totalInvoices ?? 0} invoices`}
-            loading={summaryLoading}
-          />
-          <PillarCard
-            pillar="credit"
-            title="Total Overdue"
-            value={fmt(summary?.totalOverdue ?? 0)}
-            subtitle={`${summary?.overdueCount ?? 0} invoices`}
-            loading={summaryLoading}
-            subtitleAccent="red"
-          />
-          <PillarCard
-            pillar="credit"
-            title="DSO"
-            value={`${summary?.dso ?? 0} days`}
-            subtitle="Last 90 days"
-            loading={summaryLoading}
-          />
-          <PillarCard
-            pillar="cashflow"
-            title="13w Expected Inflow"
-            value={fmt(totalExpectedInflow)}
-            subtitle={overallConfidence !== "—" ? `${overallConfidence} confidence` : "—"}
-            loading={forecastLoading}
-          />
-          <PillarCard
-            pillar="cashflow"
-            title="Cash Gap"
-            value={firstGap ? fmt(firstGap.gapAmount) : "None"}
-            subtitle={firstGap ? `Week ${firstGap.weekNumber}` : "No shortfalls"}
-            loading={forecastLoading}
-            valueAccent={firstGap ? "red" : "green"}
-          />
-          <PillarCard
-            pillar="capital"
-            title="Facility Headroom"
-            value={fmt(facilityHeadroom)}
-            subtitle={`${fmt(FACILITY.drawn)} / ${fmt(FACILITY.limit)} drawn`}
-            loading={false}
-          />
-        </div>
+        {summaryLoading || forecastLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[var(--q-space-md)]">
+            {Array.from({ length: 6 }).map((_, i) => <QMetricCardSkeleton key={i} />)}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[var(--q-space-md)]">
+            <QMetricCard
+              label="Total outstanding"
+              value={summary?.totalOutstanding ?? 0}
+              format="currency"
+            />
+            <QMetricCard
+              label="Total overdue"
+              value={summary?.totalOverdue ?? 0}
+              format="currency"
+              valueClassName={(summary?.totalOverdue ?? 0) > 0 ? "text-[var(--q-risk-text)]" : undefined}
+            />
+            <QMetricCard
+              label="DSO"
+              value={summary?.dso ?? 0}
+              format="days"
+            />
+            <QMetricCard
+              label="13-week expected inflow"
+              value={totalExpectedInflow}
+              format="currency"
+            />
+            <QMetricCard
+              label="Cash gap"
+              value={firstGap ? firstGap.gapAmount : "None"}
+              format={firstGap ? "currency" : "text"}
+              valueClassName={firstGap ? "text-[var(--q-risk-text)]" : "text-[var(--q-money-in-text)]"}
+            />
+            <QMetricCard
+              label="Facility headroom"
+              value={facilityHeadroom}
+              format="currency"
+            />
+          </div>
+        )}
 
         {/* ── ROW 2: Ageing + Cashflow Mini-Chart ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Ageing Analysis — kept as-is */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-primary" />
-                Ageing Analysis
-              </CardTitle>
-              <CardDescription className="text-xs">Outstanding receivables by age bucket</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {summaryLoading ? (
-                <div className="space-y-3">
-                  <Skeleton className="h-[250px] w-full" />
-                  <div className="flex gap-4">
-                    {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-4 w-16" />)}
-                  </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-[var(--q-space-lg)]">
+          {/* Ageing Analysis */}
+          <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] p-5">
+            <div className="flex items-center gap-2 mb-1">
+              <TrendingUp className="h-4 w-4 text-[var(--q-text-tertiary)]" />
+              <h3 className="text-sm font-semibold text-[var(--q-text-primary)]">Ageing Analysis</h3>
+            </div>
+            <p className="text-[11px] text-[var(--q-text-tertiary)] mb-4">Outstanding receivables by age bucket</p>
+            {summaryLoading ? (
+              <div className="space-y-3">
+                <QSkeleton variant="chart" />
+                <div className="flex gap-4">
+                  {[...Array(5)].map((_, i) => <QSkeleton key={i} variant="text" className="w-16" />)}
                 </div>
-              ) : chartData.length === 0 ? (
-                <EmptyState icon={<BarChart3 className="h-8 w-8" />} message="No receivables data yet" />
-              ) : (
-                <>
-                  <ResponsiveContainer width="100%" height={250}>
-                    <BarChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                      <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                      <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => v >= 1000 ? `£${(v / 1000).toFixed(0)}k` : `£${v}`} />
-                      <Tooltip formatter={(value: number) => [fmt(value), "Amount"]} labelStyle={{ fontWeight: 600 }} />
-                      <Bar dataKey="amount" radius={[4, 4, 0, 0]}>
-                        {chartData.map((entry, idx) => <Cell key={idx} fill={entry.fill} />)}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                  <div className="flex gap-3 mt-3 flex-wrap">
-                    {chartData.map((b, idx) => (
-                      <div key={b.name} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: BUCKET_COLORS[idx] }} />
-                        {b.name}: {b.count}
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
+              </div>
+            ) : chartData.length === 0 ? (
+              <QEmptyState
+                icon={<BarChart3 className="h-8 w-8" />}
+                title="No receivables data yet"
+              />
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--q-border-default)" />
+                    <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => v >= 1000 ? `£${(v / 1000).toFixed(0)}k` : `£${v}`} />
+                    <Tooltip formatter={(value: number) => [fmt(value), "Amount"]} labelStyle={{ fontWeight: 600 }} />
+                    <Bar dataKey="amount" radius={[4, 4, 0, 0]}>
+                      {chartData.map((entry, idx) => <Cell key={idx} fill={entry.fill} />)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+                <div className="flex gap-3 mt-3 flex-wrap">
+                  {chartData.map((b, idx) => (
+                    <div key={b.name} className="flex items-center gap-1.5 text-xs text-[var(--q-text-tertiary)]">
+                      <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: BUCKET_COLORS[idx] }} />
+                      {b.name}: {b.count}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
 
           {/* 13-Week Cashflow Mini-Chart */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <LineChartIcon className="h-4 w-4 text-amber-500" />
-                13-Week Cashflow Forecast
-              </CardTitle>
-              <CardDescription className="text-xs">Running balance with confidence band</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {forecastLoading ? (
-                <Skeleton className="h-[250px] w-full" />
-              ) : cashflowChartData.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
-                  <div className="mb-2 opacity-40"><Banknote className="h-8 w-8" /></div>
-                  <p className="text-sm text-center max-w-xs">Set opening balance to see cashflow forecast</p>
+          <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] p-5">
+            <div className="flex items-center gap-2 mb-1">
+              <LineChartIcon className="h-4 w-4 text-[var(--q-text-tertiary)]" />
+              <h3 className="text-sm font-semibold text-[var(--q-text-primary)]">13-Week Cashflow Forecast</h3>
+            </div>
+            <p className="text-[11px] text-[var(--q-text-tertiary)] mb-4">Running balance with confidence band</p>
+            {forecastLoading ? (
+              <QSkeleton variant="chart" className="h-[250px]" />
+            ) : cashflowChartData.length === 0 ? (
+              <QEmptyState
+                icon={<Banknote className="h-8 w-8" />}
+                title="Set opening balance to see cashflow forecast"
+                action={
                   <Link href="/cashflow/forecast">
-                    <Button variant="link" size="sm" className="mt-2 text-amber-600">
+                    <Button variant="ghost" size="sm" className="text-[var(--q-accent)]">
                       Go to Forecast <ArrowRight className="h-3 w-3 ml-1" />
                     </Button>
                   </Link>
-                </div>
-              ) : (
-                <>
-                  <ResponsiveContainer width="100%" height={250}>
-                    <ComposedChart data={cashflowChartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                      <XAxis dataKey="label" tick={{ fontSize: 11 }} tickLine={false} />
-                      <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `£${(v / 1000).toFixed(0)}k`} width={55} />
-                      <Tooltip content={<CashflowMiniTooltip />} />
-                      {/* Confidence band */}
-                      <Area
-                        dataKey="balanceBand"
-                        type="monotone"
-                        stroke="none"
-                        fill="rgba(245,158,11,0.15)"
-                        connectNulls
-                      />
-                      {/* Safety threshold */}
-                      {safetyThreshold > 0 && (
-                        <ReferenceLine
-                          y={safetyThreshold}
-                          stroke="#f87171"
-                          strokeDasharray="6 3"
-                          strokeWidth={1}
-                          label={{ value: `Safety: ${fmt(safetyThreshold)}`, position: "right", fontSize: 10, fill: "#f87171" }}
-                        />
-                      )}
-                      {/* Expected balance line */}
-                      <Line
-                        dataKey="expectedBalance"
-                        type="monotone"
-                        stroke="#f59e0b"
-                        strokeWidth={2}
-                        dot={{ r: 2, fill: "#f59e0b" }}
-                        connectNulls
-                      />
-                      {/* Optimistic — faint */}
-                      <Line
-                        dataKey="optimisticBalance"
-                        type="monotone"
-                        stroke="#22c55e"
+                }
+              />
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height={250}>
+                  <ComposedChart data={cashflowChartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--q-border-default)" />
+                    <XAxis dataKey="label" tick={{ fontSize: 11 }} tickLine={false} />
+                    <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `£${(v / 1000).toFixed(0)}k`} width={55} />
+                    <Tooltip content={<CashflowMiniTooltip />} />
+                    {/* Confidence band */}
+                    <Area
+                      dataKey="balanceBand"
+                      type="monotone"
+                      stroke="none"
+                      fill="rgba(245,158,11,0.15)"
+                      connectNulls
+                    />
+                    {/* Safety threshold */}
+                    {safetyThreshold > 0 && (
+                      <ReferenceLine
+                        y={safetyThreshold}
+                        stroke="#f87171"
+                        strokeDasharray="6 3"
                         strokeWidth={1}
-                        strokeDasharray="2 3"
-                        dot={false}
-                        connectNulls
+                        label={{ value: `Safety: ${fmt(safetyThreshold)}`, position: "right", fontSize: 10, fill: "#f87171" }}
                       />
-                      {/* Pessimistic — faint */}
-                      <Line
-                        dataKey="pessimisticBalance"
-                        type="monotone"
-                        stroke="#dc2626"
-                        strokeWidth={1}
-                        strokeDasharray="2 3"
-                        dot={false}
-                        connectNulls
-                      />
-                    </ComposedChart>
-                  </ResponsiveContainer>
-                  <div className="flex gap-4 mt-2">
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <span className="w-4 h-0.5 rounded" style={{ background: "#f59e0b" }} /> Expected
-                    </div>
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <span className="w-4 h-0.5 rounded" style={{ background: "#22c55e" }} /> Optimistic
-                    </div>
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <span className="w-4 h-0.5 rounded" style={{ background: "#dc2626" }} /> Pessimistic
-                    </div>
+                    )}
+                    {/* Expected balance line */}
+                    <Line
+                      dataKey="expectedBalance"
+                      type="monotone"
+                      stroke="#f59e0b"
+                      strokeWidth={2}
+                      dot={{ r: 2, fill: "#f59e0b" }}
+                      connectNulls
+                    />
+                    {/* Optimistic — faint */}
+                    <Line
+                      dataKey="optimisticBalance"
+                      type="monotone"
+                      stroke="#22c55e"
+                      strokeWidth={1}
+                      strokeDasharray="2 3"
+                      dot={false}
+                      connectNulls
+                    />
+                    {/* Pessimistic — faint */}
+                    <Line
+                      dataKey="pessimisticBalance"
+                      type="monotone"
+                      stroke="#dc2626"
+                      strokeWidth={1}
+                      strokeDasharray="2 3"
+                      dot={false}
+                      connectNulls
+                    />
+                  </ComposedChart>
+                </ResponsiveContainer>
+                <div className="flex gap-4 mt-2">
+                  <div className="flex items-center gap-1.5 text-xs text-[var(--q-text-tertiary)]">
+                    <span className="w-4 h-0.5 rounded" style={{ background: "#f59e0b" }} /> Expected
                   </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
+                  <div className="flex items-center gap-1.5 text-xs text-[var(--q-text-tertiary)]">
+                    <span className="w-4 h-0.5 rounded" style={{ background: "#22c55e" }} /> Optimistic
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-[var(--q-text-tertiary)]">
+                    <span className="w-4 h-0.5 rounded" style={{ background: "#dc2626" }} /> Pessimistic
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {/* ── ROW 3: Three Actionable Panels ── */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-[var(--q-space-md)]">
           {/* Panel 1: Qollections */}
-          <div className="border-l-2 border-l-blue-600 pl-3 flex flex-col">
+          <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] p-[var(--q-space-xl)] flex flex-col">
             <div className="pb-3">
-              <div className="text-sm font-semibold flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-blue-600" />
+              <div className="text-sm font-semibold flex items-center gap-2 text-[var(--q-text-primary)]">
+                <ShieldCheck className="h-4 w-4 text-[var(--q-text-tertiary)]" />
                 Qollections
               </div>
             </div>
             <div className="flex flex-col flex-1 space-y-2">
               {actionSummaryLoading ? (
                 <div className="space-y-2">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-4 w-1/2" />
+                  <QSkeleton variant="text" />
+                  <QSkeleton variant="text" className="w-3/4" />
+                  <QSkeleton variant="text" className="w-1/2" />
                 </div>
               ) : (
                 <>
-                  <PanelLine label="Awaiting approval" value={actionSummary?.queued?.total ?? 0} />
-                  <PanelLine label="Emails sent this week" value={actionSummary?.actioned?.emailsSent ?? 0} />
-                  <PanelLine label="Exceptions" value={actionSummary?.exceptions?.total ?? 0} accent={actionSummary?.exceptions?.total ? "red" : undefined} />
+                  <PanelLine label="Awaiting approval">
+                    {(actionSummary?.queued?.total ?? 0) > 0 ? (
+                      <QBadge variant="attention" dot>{actionSummary?.queued?.total}</QBadge>
+                    ) : (
+                      <span className="font-medium text-[var(--q-text-primary)]">0</span>
+                    )}
+                  </PanelLine>
+                  <PanelLine label="Emails sent this week">
+                    <span className="font-medium text-[var(--q-text-primary)]">{actionSummary?.actioned?.emailsSent ?? 0}</span>
+                  </PanelLine>
+                  <PanelLine label="Exceptions">
+                    {(actionSummary?.exceptions?.total ?? 0) > 0 ? (
+                      <QBadge variant="risk" dot>{actionSummary?.exceptions?.total}</QBadge>
+                    ) : (
+                      <span className="font-medium text-[var(--q-text-primary)]">0</span>
+                    )}
+                  </PanelLine>
                 </>
               )}
               <Link href="/qollections/action-centre" className="mt-auto">
-                <Button variant="ghost" size="sm" className="w-full mt-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                <Button variant="ghost" size="sm" className="w-full mt-2 text-[var(--q-accent)] hover:bg-[var(--q-bg-surface-hover)]">
                   View Qollections <ArrowRight className="h-3 w-3 ml-1" />
                 </Button>
               </Link>
@@ -418,34 +414,39 @@ export default function HomeDashboard() {
           </div>
 
           {/* Panel 2: Qashflow */}
-          <div className="border-l-2 border-l-amber-500 pl-3 flex flex-col">
+          <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] p-[var(--q-space-xl)] flex flex-col">
             <div className="pb-3">
-              <div className="text-sm font-semibold flex items-center gap-2">
-                <Activity className="h-4 w-4 text-amber-500" />
+              <div className="text-sm font-semibold flex items-center gap-2 text-[var(--q-text-primary)]">
+                <Activity className="h-4 w-4 text-[var(--q-text-tertiary)]" />
                 Qashflow
               </div>
             </div>
             <div className="flex flex-col flex-1 space-y-2">
               {forecastLoading ? (
                 <div className="space-y-2">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-4 w-1/2" />
+                  <QSkeleton variant="text" />
+                  <QSkeleton variant="text" className="w-3/4" />
+                  <QSkeleton variant="text" className="w-1/2" />
                 </div>
               ) : !week1 ? (
-                <p className="text-xs text-muted-foreground">No forecast data available</p>
+                <p className="text-xs text-[var(--q-text-tertiary)]">No forecast data available</p>
               ) : (
                 <>
-                  <PanelLine label="Expected" value={fmt(week1.expected)} />
-                  <PanelLine label="Range" value={`${fmt(week1.pessimistic)} – ${fmt(week1.optimistic)}`} />
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">Confidence</span>
-                    <ConfidenceBadge level={week1.confidence} />
-                  </div>
+                  <PanelLine label="Expected">
+                    <span className="font-medium text-[var(--q-text-primary)]">{fmt(week1.expected)}</span>
+                  </PanelLine>
+                  <PanelLine label="Range">
+                    <span className="font-medium text-[var(--q-text-primary)]">{fmt(week1.pessimistic)} – {fmt(week1.optimistic)}</span>
+                  </PanelLine>
+                  <PanelLine label="Confidence">
+                    <QBadge variant={week1.confidence === "high" ? "ready" : week1.confidence === "medium" ? "attention" : "risk"}>
+                      {week1.confidence}
+                    </QBadge>
+                  </PanelLine>
                 </>
               )}
               <Link href="/cashflow/forecast" className="mt-auto">
-                <Button variant="ghost" size="sm" className="w-full mt-2 text-amber-600 hover:text-amber-700 hover:bg-amber-50">
+                <Button variant="ghost" size="sm" className="w-full mt-2 text-[var(--q-accent)] hover:bg-[var(--q-bg-surface-hover)]">
                   View Qashflow <ArrowRight className="h-3 w-3 ml-1" />
                 </Button>
               </Link>
@@ -453,32 +454,40 @@ export default function HomeDashboard() {
           </div>
 
           {/* Panel 3: Qapital */}
-          <div className="border-l-2 border-l-emerald-500 pl-3 flex flex-col">
+          <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] p-[var(--q-space-xl)] flex flex-col">
             <div className="pb-3">
-              <div className="text-sm font-semibold flex items-center gap-2">
-                <Landmark className="h-4 w-4 text-emerald-500" />
+              <div className="text-sm font-semibold flex items-center gap-2 text-[var(--q-text-primary)]">
+                <Landmark className="h-4 w-4 text-[var(--q-text-tertiary)]" />
                 Qapital
               </div>
             </div>
             <div className="flex flex-col flex-1 space-y-2">
               {forecastLoading ? (
                 <div className="space-y-2">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-3/4" />
+                  <QSkeleton variant="text" />
+                  <QSkeleton variant="text" className="w-3/4" />
                 </div>
               ) : firstGap ? (
                 <>
-                  <PanelLine label="Cash gap" value={fmt(firstGap.gapAmount)} accent="red" />
-                  <PanelLine label="Gap week" value={`Week ${firstGap.weekNumber}`} />
+                  <PanelLine label="Cash gap">
+                    <span className="font-medium text-[var(--q-risk-text)]">{fmt(firstGap.gapAmount)}</span>
+                  </PanelLine>
+                  <PanelLine label="Gap week">
+                    <span className="font-medium text-[var(--q-text-primary)]">Week {firstGap.weekNumber}</span>
+                  </PanelLine>
                 </>
               ) : (
                 <>
-                  <PanelLine label="Status" value="No cash gap detected" accent="green" />
-                  <PanelLine label="Facility available" value={fmt(facilityHeadroom)} />
+                  <PanelLine label="Status">
+                    <span className="font-medium text-[var(--q-money-in-text)]">No cash gap detected</span>
+                  </PanelLine>
+                  <PanelLine label="Facility available">
+                    <span className="font-medium text-[var(--q-text-primary)]">{fmt(facilityHeadroom)}</span>
+                  </PanelLine>
                 </>
               )}
               <Link href={firstGap ? "/qapital/bridge" : "/qapital"} className="mt-auto">
-                <Button variant="ghost" size="sm" className="w-full mt-2 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50">
+                <Button variant="ghost" size="sm" className="w-full mt-2 text-[var(--q-accent)] hover:bg-[var(--q-bg-surface-hover)]">
                   {firstGap ? "View Bridge" : "View Qapital"} <ArrowRight className="h-3 w-3 ml-1" />
                 </Button>
               </Link>
@@ -497,76 +506,12 @@ export default function HomeDashboard() {
 
 // ── Sub-Components ─────────────────────────────────────────
 
-function EmptyState({ icon, message }: { icon: React.ReactNode; message: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
-      <div className="mb-2 opacity-40">{icon}</div>
-      <p className="text-sm text-center max-w-xs">{message}</p>
-    </div>
-  );
-}
-
-type Pillar = "credit" | "cashflow" | "capital";
-
-function PillarCard({ pillar, title, value, subtitle, loading, subtitleAccent, valueAccent }: {
-  pillar: Pillar;
-  title: string;
-  value: string;
-  subtitle: string;
-  loading: boolean;
-  subtitleAccent?: "red";
-  valueAccent?: "red" | "green";
-}) {
-  const pillarLabel = pillar === "credit" ? "Qollections" : pillar === "cashflow" ? "Qashflow" : "Qapital";
-  const valueCls = valueAccent === "red" ? "text-rose-600"
-    : valueAccent === "green" ? "text-emerald-600"
-    : "text-foreground";
-  const subtitleCls = subtitleAccent === "red" ? "text-rose-500" : "text-muted-foreground";
-
-  return (
-    <div className={`border-l-2 ${PILLAR_COLORS[pillar]} pl-3`}>
-      <div className="pt-4 pb-3">
-        <span className={`text-[10px] font-semibold uppercase tracking-widest ${PILLAR_LABEL_COLORS[pillar]}`}>
-          {pillarLabel}
-        </span>
-        <div className="text-xs font-semibold text-muted-foreground mt-1 mb-1">{title}</div>
-        {loading ? (
-          <div className="space-y-1.5">
-            <Skeleton className="h-5 w-20" />
-            <Skeleton className="h-3 w-14" />
-          </div>
-        ) : (
-          <>
-            <div className={`text-lg font-bold tracking-tight ${valueCls}`}>{value}</div>
-            <div className={`text-xs mt-0.5 ${subtitleCls}`}>{subtitle}</div>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function PanelLine({ label, value, accent }: { label: string; value: string | number; accent?: "red" | "green" }) {
-  const valCls = accent === "red" ? "text-rose-600 font-medium"
-    : accent === "green" ? "text-emerald-600 font-medium"
-    : "font-medium";
+function PanelLine({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between text-xs">
-      <span className="text-muted-foreground">{label}</span>
-      <span className={valCls}>{value}</span>
+      <span className="text-[var(--q-text-tertiary)]">{label}</span>
+      {children}
     </div>
-  );
-}
-
-function ConfidenceBadge({ level }: { level: string }) {
-  const variant = level === "high" ? "bg-emerald-100 text-emerald-700"
-    : level === "medium" ? "bg-amber-100 text-amber-700"
-    : level === "low" ? "bg-rose-100 text-rose-700"
-    : "bg-zinc-100 text-zinc-600";
-  return (
-    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${variant}`}>
-      {level}
-    </span>
   );
 }
 
@@ -576,18 +521,18 @@ function CashflowMiniTooltip({ active, payload, label }: any) {
   if (!data) return null;
   return (
     <div className="bg-popover border rounded-lg shadow-lg p-3 text-xs space-y-1">
-      <div className="font-semibold">{label} <span className="font-normal text-muted-foreground">({data.weekDates})</span></div>
+      <div className="font-semibold">{label} <span className="font-normal text-[var(--q-text-tertiary)]">({data.weekDates})</span></div>
       <div className="flex justify-between gap-4">
-        <span className="text-muted-foreground">Optimistic</span>
-        <span className="text-emerald-600 font-medium">{fmt(data.optimisticBalance)}</span>
+        <span className="text-[var(--q-text-tertiary)]">Optimistic</span>
+        <span className="text-[var(--q-money-in-text)] font-medium">{fmt(data.optimisticBalance)}</span>
       </div>
       <div className="flex justify-between gap-4">
-        <span className="text-muted-foreground">Expected</span>
-        <span className="text-amber-600 font-medium">{fmt(data.expectedBalance)}</span>
+        <span className="text-[var(--q-text-tertiary)]">Expected</span>
+        <span className="text-[var(--q-attention-text)] font-medium">{fmt(data.expectedBalance)}</span>
       </div>
       <div className="flex justify-between gap-4">
-        <span className="text-muted-foreground">Pessimistic</span>
-        <span className="text-rose-600 font-medium">{fmt(data.pessimisticBalance)}</span>
+        <span className="text-[var(--q-text-tertiary)]">Pessimistic</span>
+        <span className="text-[var(--q-risk-text)] font-medium">{fmt(data.pessimisticBalance)}</span>
       </div>
     </div>
   );

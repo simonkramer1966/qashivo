@@ -7,6 +7,7 @@ type TrendDirection = "up" | "down" | "flat";
 interface QMetricCardProps extends React.HTMLAttributes<HTMLDivElement> {
   label: string;
   value: string | number;
+  valueClassName?: string;
   trend?: {
     direction: TrendDirection;
     value: string;
@@ -52,6 +53,7 @@ const trendClasses: Record<TrendDirection, string> = {
 function QMetricCard({
   label,
   value,
+  valueClassName,
   trend,
   format,
   onClick,
@@ -76,7 +78,7 @@ function QMetricCard({
       <p className="text-[11px] font-medium uppercase tracking-[0.5px] text-[var(--q-text-tertiary)]">
         {label}
       </p>
-      <p className="mt-[var(--q-space-sm)] text-[28px] font-semibold leading-none tracking-tight text-[var(--q-text-primary)] q-mono">
+      <p className={cn("mt-[var(--q-space-sm)] text-[28px] font-semibold leading-none tracking-tight text-[var(--q-text-primary)] q-mono", valueClassName)}>
         {formatValue(value, format)}
       </p>
       {trend && TrendIcon && (
