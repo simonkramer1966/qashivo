@@ -481,57 +481,58 @@ export default function BridgePage() {
               </div>
             </div>
 
-            {/* Riley's recommendation text */}
-            <div className="space-y-2 text-sm text-muted-foreground leading-relaxed">
-              <p>
-                Riley recommends financing{" "}
+            {/* Recommendation + action — two-column layout */}
+            <div className="flex items-start justify-between gap-6">
+              {/* Left: recommendation text */}
+              <div className="flex-1 space-y-2 text-sm text-muted-foreground leading-relaxed">
+                <p>
+                  Riley recommends financing{" "}
+                  <button
+                    onClick={() => setShowRecommendedInvoices(true)}
+                    className="text-primary underline underline-offset-2 hover:text-primary/80 transition-colors"
+                  >
+                    {activeSelection.length} invoice{activeSelection.length !== 1 ? "s" : ""}
+                  </button>.{" "}
+                  You'll receive <span className="font-medium text-foreground">{fmt(activeCost.totalAdvance)}</span> within 24 hours.{" "}
+                  This will cost <span className="font-medium text-foreground">{fmt(activeCost.totalCost)}</span> in interest.
+                </p>
+                <p>
+                  {activeCost.totalAdvance >= gapInfo.gapAmount
+                    ? "Your cash gap will be fully covered and your forecast balance stays above your safety threshold for the full 13-week period."
+                    : `This covers ${fmt(activeCost.totalAdvance)} of the ${fmt(gapInfo.gapAmount)} gap. You may want to select additional invoices below.`}
+                </p>
+                {useOwnFacility && (
+                  <p>Present this selection to your finance provider.</p>
+                )}
+              </div>
+
+              {/* Right: approve button + advanced toggle */}
+              <div className="flex flex-col items-end gap-2 shrink-0">
+                {requestState === "approved" ? (
+                  <Button variant="outline" className="border-emerald-300 text-emerald-700 bg-emerald-50 pointer-events-none">
+                    <CheckCircle2 className="h-4 w-4 mr-1.5" />
+                    Approved
+                  </Button>
+                ) : (
+                  <Button
+                    size="lg"
+                    onClick={() => setConfirmOpen(true)}
+                    disabled={activeSelection.length === 0 || requestState === "requesting"}
+                  >
+                    {requestState === "requesting" && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
+                    {requestState === "requesting" ? "Requesting..." : approveLabel}
+                    {requestState === "idle" && <ArrowRight className="h-4 w-4 ml-1.5" />}
+                  </Button>
+                )}
                 <button
-                  onClick={() => setShowRecommendedInvoices(true)}
-                  className="text-primary underline underline-offset-2 hover:text-primary/80 transition-colors"
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
                 >
-                  {activeSelection.length} invoice{activeSelection.length !== 1 ? "s" : ""}
-                </button>.{" "}
-                You'll receive <span className="font-medium text-foreground">{fmt(activeCost.totalAdvance)}</span> within 24 hours.{" "}
-                This will cost <span className="font-medium text-foreground">{fmt(activeCost.totalCost)}</span> in interest.
-              </p>
-              <p>
-                {activeCost.totalAdvance >= gapInfo.gapAmount
-                  ? "Your cash gap will be fully covered and your forecast balance stays above your safety threshold for the full 13-week period."
-                  : `This covers ${fmt(activeCost.totalAdvance)} of the ${fmt(gapInfo.gapAmount)} gap. You may want to select additional invoices below.`}
-              </p>
-              {useOwnFacility && (
-                <p>Present this selection to your finance provider.</p>
-              )}
+                  <span className="underline">{showAdvanced ? "Hide advanced" : "Advanced options"}</span>
+                  {showAdvanced ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                </button>
+              </div>
             </div>
-
-            {/* Primary action */}
-            <div>
-              {requestState === "approved" ? (
-                <Button variant="outline" className="border-emerald-300 text-emerald-700 bg-emerald-50 pointer-events-none">
-                  <CheckCircle2 className="h-4 w-4 mr-1.5" />
-                  Approved
-                </Button>
-              ) : (
-                <Button
-                  size="lg"
-                  onClick={() => setConfirmOpen(true)}
-                  disabled={activeSelection.length === 0 || requestState === "requesting"}
-                >
-                  {requestState === "requesting" && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
-                  {requestState === "requesting" ? "Requesting..." : approveLabel}
-                  {requestState === "idle" && <ArrowRight className="h-4 w-4 ml-1.5" />}
-                </Button>
-              )}
-            </div>
-
-            {/* Advanced options toggle */}
-            <button
-              onClick={() => setShowAdvanced(!showAdvanced)}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-            >
-              <span className="underline">{showAdvanced ? "Hide advanced" : "Advanced options"}</span>
-              {showAdvanced ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-            </button>
           </div>
         ) : (
           /* ── No cash gap state ── */
