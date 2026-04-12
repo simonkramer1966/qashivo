@@ -57,7 +57,7 @@ import {
   PauseCircle, Star,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useLocation, Link } from "wouter";
+import { useLocation } from "wouter";
 import { useDrawer } from "@/contexts/DrawerContext";
 import { formatRelativeTime, normalizeChannel, formatCurrencyCompact } from "./utils";
 import ApprovalDrawer from "./ApprovalDrawer";
@@ -191,9 +191,6 @@ function ordinalChase(priorCount: number): string {
   return `${n}th chase`;
 }
 
-function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-}
 
 function ApprovalTH({ children, className }: { children?: React.ReactNode; className?: string }) {
   return (
@@ -262,7 +259,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
   const [, navigate] = useLocation();
   const { openDrawer, closeDrawer } = useDrawer();
   const [drawerActionId, setDrawerActionId] = useState<string | null>(null);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+
   const [editAction, setEditAction] = useState<{ id: string; subject: string; body: string } | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [sortField, setSortField] = useState<SortField>("priority");
@@ -924,7 +921,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
           break;
         case " ":
           e.preventDefault();
-          if (focused) setExpandedId(prev => prev === focused.id ? null : focused.id);
+          if (focused) setDrawerActionId(prev => prev === focused.id ? null : focused.id);
           break;
         case "a":
           if (e.shiftKey) {
@@ -1182,21 +1179,19 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
                 {actions.map((action, idx) => {
                   const isSelected = selectedIds.has(action.id);
                   const isFocused = focusedIndex === idx;
-                  const isExpanded = expandedId === action.id;
                   const currentTone = toneOverrides.get(action.id) || action.agentToneLevel || "professional";
                   const toneKey = (currentTone || "professional").toLowerCase();
                   const isConversationReply = action.metadata?.conversationType === CONVERSATION_TYPE.REPLY;
 
                   return (
-                    <React.Fragment key={action.id}>
-                      <tr
+                      <tr key={action.id}
                         className={cn(
                           "h-12 border-b border-[var(--q-border-default)] hover:bg-[var(--q-bg-surface-hover)] transition-colors duration-100 cursor-pointer",
                           isFocused && "ring-2 ring-[var(--q-accent)]/30 ring-inset",
-                          isExpanded && "bg-[var(--q-bg-surface-hover)]",
+                          drawerActionId === action.id && "bg-[var(--q-accent-bg)]",
                         )}
                         onClick={() => {
-                          setExpandedId(prev => prev === action.id ? null : action.id);
+                          setDrawerActionId(prev => prev === action.id ? null : action.id);
                           setFocusedIndex(idx);
                         }}
                       >
@@ -1341,37 +1336,6 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
                           </div>
                         </td>
                       </tr>
-
-                      {/* Expanded preview row */}
-                      {isExpanded && (
-                        <tr className="border-b border-[var(--q-border-default)]">
-                          <td colSpan={9} className="px-5 py-4 bg-[var(--q-bg-surface-alt)]/20">
-                            <div className="space-y-2 ml-4">
-                              <p className="text-[14px] font-medium text-[var(--q-text-primary)]">
-                                {action.subject || "No subject"}
-                              </p>
-                              <div className="text-[13px] text-[var(--q-text-secondary)] leading-relaxed max-h-[200px] overflow-y-auto">
-                                {action.content
-                                  ? stripHtml(action.content).slice(0, 500) + (stripHtml(action.content).length > 500 ? "…" : "")
-                                  : action.actionSummary || "No preview available"}
-                              </div>
-                              <div className="flex items-center gap-2 pt-2">
-                                <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={(e) => { e.stopPropagation(); setDrawerActionId(action.id); }}>
-                                  <Eye className="h-3 w-3" /> Full preview
-                                </Button>
-                                {action.contactId && (
-                                  <Link href={`/qollections/debtors/${action.contactId}`}>
-                                    <Button size="sm" variant="ghost" className="h-7 text-xs gap-1">
-                                      View debtor
-                                    </Button>
-                                  </Link>
-                                )}
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </React.Fragment>
                   );
                 })}
               </tbody>
