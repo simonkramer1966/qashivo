@@ -329,6 +329,7 @@ export default function BridgePage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [requestState, setRequestState] = useState<"idle" | "requesting" | "approved">("idle");
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showRecommendedInvoices, setShowRecommendedInvoices] = useState(false);
 
   // Fetch forecast data
   const { data: forecast, isLoading } = useQuery<InflowForecast>({
@@ -418,10 +419,10 @@ export default function BridgePage() {
   const coverageShortfall = gapInfo ? gapInfo.gapAmount - manualAdvance : 0;
   const coverageExcess = gapInfo ? manualAdvance - gapInfo.gapAmount : 0;
 
-  // Determine which selection is active for Layer 1 display
-  const isManualOverridden = showAdvanced && !manualSelection.every(
+  // Determine which selection is active for display
+  const isManualOverridden = !manualSelection.every(
     (inv) => rileySelection.some((r) => r.invoiceId === inv.invoiceId),
-  );
+  ) || manualSelection.length !== rileySelection.length;
   const activeSelection = isManualOverridden ? manualSelection : rileySelection;
   const activeCost = isManualOverridden ? manualCost : rileyCost;
 
@@ -463,62 +464,52 @@ export default function BridgePage() {
     <AppShell title="Capital" subtitle="Bridge">
       <div className="space-y-6">
 
-        {/* Facility toggle — top right */}
-        <div className="flex justify-end">
-          <div className="flex items-center gap-3">
-            <span className={cn("text-sm", !useOwnFacility && "font-medium text-foreground", useOwnFacility && "text-muted-foreground")}>Qashivo financing</span>
-            <Switch checked={useOwnFacility} onCheckedChange={setUseOwnFacility} />
-            <span className={cn("text-sm", useOwnFacility && "font-medium text-foreground", !useOwnFacility && "text-muted-foreground")}>Your facility</span>
-          </div>
-        </div>
-
         {/* ═══════════════════════════════════════════════════════════════
             LAYER 1 — SIMPLE VIEW
             ═══════════════════════════════════════════════════════════════ */}
 
         {hasRealGap && gapInfo ? (
           <div className="rounded-xl border bg-card p-6 md:p-8 space-y-5">
-            {/* Cash gap headline */}
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
-              <h2 className="text-lg font-semibold">
-                Cash gap: {fmt(gapInfo.gapAmount)} in Week {gapInfo.weekNumber} (w/c {gapInfo.weekLabel})
-              </h2>
+            {/* Cash gap headline + facility toggle — same row */}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0" />
+                <h2 className="text-lg font-semibold">
+                  Cash gap: {fmt(gapInfo.gapAmount)} in Week {gapInfo.weekNumber} (w/c {gapInfo.weekLabel})
+                </h2>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className={cn("text-sm", !useOwnFacility && "font-medium text-foreground", useOwnFacility && "text-muted-foreground")}>Qashivo financing</span>
+                <Switch checked={useOwnFacility} onCheckedChange={setUseOwnFacility} />
+                <span className={cn("text-sm", useOwnFacility && "font-medium text-foreground", !useOwnFacility && "text-muted-foreground")}>Your facility</span>
+              </div>
             </div>
 
-            {/* Plain English summary */}
+            {/* Riley's recommendation text */}
             <div className="space-y-2 text-sm text-muted-foreground leading-relaxed">
               <p>
-                Riley recommends financing {activeSelection.length} invoice{activeSelection.length !== 1 ? "s" : ""}.{" "}
+                Riley recommends financing{" "}
+                <button
+                  onClick={() => setShowRecommendedInvoices(true)}
+                  className="text-primary underline underline-offset-2 hover:text-primary/80 transition-colors"
+                >
+                  {activeSelection.length} invoice{activeSelection.length !== 1 ? "s" : ""}
+                </button>.{" "}
                 You'll receive <span className="font-medium text-foreground">{fmt(activeCost.totalAdvance)}</span> within 24 hours.{" "}
                 This will cost <span className="font-medium text-foreground">{fmt(activeCost.totalCost)}</span> in interest and fees.
               </p>
               <p>
                 {activeCost.totalAdvance >= gapInfo.gapAmount
                   ? "Your cash gap will be fully covered and your forecast balance stays above your safety threshold for the full 13-week period."
-                  : `This covers ${fmt(activeCost.totalAdvance)} of the ${fmt(gapInfo.gapAmount)} gap. You may want to select additional invoices in the advanced options.`}
+                  : `This covers ${fmt(activeCost.totalAdvance)} of the ${fmt(gapInfo.gapAmount)} gap. You may want to select additional invoices below.`}
               </p>
               {useOwnFacility && (
                 <p>Present this selection to your finance provider.</p>
               )}
             </div>
 
-            {/* Invoice list — simple */}
-            <div className="space-y-1">
-              <p className="text-sm font-medium">Invoices selected:</p>
-              <ul className="space-y-0.5">
-                {activeSelection.map((inv) => (
-                  <li key={inv.invoiceId} className="text-sm text-muted-foreground flex items-center gap-2">
-                    <span className="text-foreground">·</span>
-                    <span>{inv.contactName}</span>
-                    <span className="text-foreground font-medium tabular-nums">{fmt(inv.amountDue)}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
             {/* Primary action */}
-            <div className="pt-2">
+            <div>
               {requestState === "approved" ? (
                 <Button variant="outline" className="border-emerald-300 text-emerald-700 bg-emerald-50 pointer-events-none">
                   <CheckCircle2 className="h-4 w-4 mr-1.5" />
@@ -537,60 +528,74 @@ export default function BridgePage() {
               )}
             </div>
 
-            {/* Toggle to advanced */}
-            {!showAdvanced && (
-              <button
-                onClick={() => setShowAdvanced(true)}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-              >
-                Want to customise? <span className="underline">Advanced options</span>
-                <ChevronDown className="h-3.5 w-3.5" />
-              </button>
-            )}
+            {/* Advanced options toggle */}
+            <button
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+            >
+              <span className="underline">{showAdvanced ? "Hide advanced" : "Advanced options"}</span>
+              {showAdvanced ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            </button>
           </div>
         ) : (
           /* ── No cash gap state ── */
           <div className="rounded-xl border bg-card p-6 md:p-8 space-y-4">
-            <div className="flex items-start gap-3">
-              <CheckCircle2 className="h-5 w-5 text-emerald-500 mt-0.5 shrink-0" />
-              <div className="space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />
                 <h2 className="text-lg font-semibold">No cash gap detected</h2>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Your forecast stays above your safety threshold for the full 13-week period.
-                </p>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  If you'd like to finance invoices anyway to accelerate cash, use the advanced options below.
-                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className={cn("text-sm", !useOwnFacility && "font-medium text-foreground", useOwnFacility && "text-muted-foreground")}>Qashivo financing</span>
+                <Switch checked={useOwnFacility} onCheckedChange={setUseOwnFacility} />
+                <span className={cn("text-sm", useOwnFacility && "font-medium text-foreground", !useOwnFacility && "text-muted-foreground")}>Your facility</span>
               </div>
             </div>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Your forecast stays above your safety threshold for the full 13-week period.
+              If you'd like to finance invoices anyway to accelerate cash, select from the list below.
+            </p>
 
-            {!showAdvanced && (
-              <button
-                onClick={() => setShowAdvanced(true)}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-              >
-                <span className="underline">Advanced options</span>
-                <ChevronDown className="h-3.5 w-3.5" />
-              </button>
-            )}
+            <button
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+            >
+              <span className="underline">{showAdvanced ? "Hide advanced" : "Advanced options"}</span>
+              {showAdvanced ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            </button>
           </div>
         )}
 
+        {/* Riley's recommended invoices modal */}
+        <Dialog open={showRecommendedInvoices} onOpenChange={setShowRecommendedInvoices}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Riley's recommended invoices</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-1 py-2">
+              {activeSelection.map((inv) => (
+                <div key={inv.invoiceId} className="flex justify-between text-sm py-1">
+                  <span>{inv.contactName}</span>
+                  <span className="font-medium tabular-nums">{fmt(inv.amountDue)}</span>
+                </div>
+              ))}
+              <div className="border-t pt-2 mt-2 flex justify-between text-sm font-semibold">
+                <span>Total</span>
+                <span className="tabular-nums">{fmt(activeSelection.reduce((s, i) => s + i.amountDue, 0))}</span>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowRecommendedInvoices(false)}>Close</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {/* ═══════════════════════════════════════════════════════════════
-            LAYER 2 — ADVANCED VIEW
+            LAYER 2 — ADVANCED VIEW (three-column comparison)
             ═══════════════════════════════════════════════════════════════ */}
 
         {showAdvanced && (
           <div className="space-y-6">
-            {/* Collapse toggle */}
-            <button
-              onClick={() => setShowAdvanced(false)}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-            >
-              <span className="underline">Simple view</span>
-              <ChevronUp className="h-3.5 w-3.5" />
-            </button>
-
             {/* Three-column cost comparison */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <CostColumn
@@ -617,123 +622,126 @@ export default function BridgePage() {
                 gapAmount={gapInfo?.gapAmount}
               />
             </div>
-
-            {/* Invoice selection list */}
-            <section>
-              <h3 className="text-sm font-semibold mb-3">Eligible invoices</h3>
-
-              {/* Coverage warning */}
-              {coverageShortfall > 0 && manualSelection.length > 0 && (
-                <div className="rounded-lg border border-amber-200 bg-amber-50/40 px-4 py-2.5 mb-3 text-sm text-amber-800">
-                  Selection covers {fmt(manualAdvance)} of {fmt(gapInfo!.gapAmount)} gap — shortfall of {fmt(coverageShortfall)}
-                </div>
-              )}
-              {coverageExcess > 5_000 && (
-                <div className="rounded-lg border border-blue-200 bg-blue-50/40 px-4 py-2.5 mb-3 text-sm text-blue-800">
-                  Selection exceeds gap by {fmt(coverageExcess)} — you'll pay interest on capital you may not need
-                </div>
-              )}
-
-              <div className="rounded-lg border bg-card overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b bg-muted/40 text-left text-xs text-muted-foreground">
-                      <th className="px-3 py-2.5 w-10" />
-                      <th className="px-3 py-2.5 font-medium">Invoice</th>
-                      <th className="px-3 py-2.5 font-medium">Debtor</th>
-                      <th className="px-3 py-2.5 font-medium text-right">Amount</th>
-                      <th className="px-3 py-2.5 font-medium text-right">Expected days to pay</th>
-                      <th className="px-3 py-2.5 font-medium text-right">Risk</th>
-                      <th className="px-3 py-2.5 font-medium text-right">Finance cost</th>
-                      <th className="px-3 py-2.5 font-medium" />
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {bridgeInvoices.map((inv) => {
-                      const isExcluded = !!inv.exclusionReason;
-                      return (
-                        <tr
-                          key={inv.invoiceId}
-                          className={cn(
-                            "hover:bg-muted/20 transition-colors",
-                            selectedIds.has(inv.invoiceId) && "bg-blue-50/30",
-                            isExcluded && "opacity-50",
-                          )}
-                        >
-                          <td className="px-3 py-3 text-center">
-                            <Checkbox
-                              checked={selectedIds.has(inv.invoiceId)}
-                              onCheckedChange={() => toggleInvoice(inv.invoiceId)}
-                              disabled={isExcluded}
-                            />
-                          </td>
-                          <td className="px-3 py-3 font-mono text-xs">{inv.invoiceNumber}</td>
-                          <td className="px-3 py-3">{inv.contactName}</td>
-                          <td className="px-3 py-3 text-right tabular-nums">{fmt(inv.amountDue)}</td>
-                          <td className="px-3 py-3 text-right tabular-nums">{inv.expectedDuration} days</td>
-                          <td className="px-3 py-3 text-right">
-                            <RiskBadge score={inv.riskScore} />
-                          </td>
-                          <td className="px-3 py-3 text-right tabular-nums text-muted-foreground">{fmt(inv.totalCost)}</td>
-                          <td className="px-3 py-3">
-                            <div className="flex gap-1.5">
-                              {isExcluded && (
-                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-zinc-100 text-zinc-500">
-                                  {inv.exclusionReason}
-                                </Badge>
-                              )}
-                              {!isExcluded && inv.isRileyRecommended && (
-                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-violet-100 text-violet-700 border-violet-200">
-                                  <Sparkles className="h-2.5 w-2.5 mr-0.5" />Riley
-                                </Badge>
-                              )}
-                              {!isExcluded && inv.isBlindPick && !inv.isRileyRecommended && (
-                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 text-muted-foreground">
-                                  Largest
-                                </Badge>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                    {bridgeInvoices.length === 0 && (
-                      <tr>
-                        <td colSpan={8} className="px-3 py-8 text-center text-muted-foreground">
-                          No eligible invoices found in the forecast.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-
-            {/* Action bar (advanced view) */}
-            <div className="flex items-center justify-between rounded-lg border bg-card p-5">
-              <div className="text-sm text-muted-foreground">
-                {useOwnFacility
-                  ? "Present this selection to your finance provider for optimal cost."
-                  : `${manualSelection.length} invoice${manualSelection.length !== 1 ? "s" : ""} selected · ${fmt(manualCost.totalAdvance)} advance · ${fmt(manualCost.totalCost)} estimated cost`}
-              </div>
-              {requestState === "approved" ? (
-                <Button variant="outline" className="border-emerald-300 text-emerald-700 bg-emerald-50 pointer-events-none">
-                  <CheckCircle2 className="h-4 w-4 mr-1.5" />
-                  Approved
-                </Button>
-              ) : (
-                <Button
-                  onClick={() => setConfirmOpen(true)}
-                  disabled={manualSelection.length === 0 || requestState === "requesting"}
-                >
-                  {requestState === "requesting" && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
-                  {requestState === "requesting" ? "Requesting..." : approveLabel}
-                  {requestState === "idle" && <ArrowRight className="h-4 w-4 ml-1.5" />}
-                </Button>
-              )}
-            </div>
           </div>
         )}
+
+        {/* ═══════════════════════════════════════════════════════════════
+            ELIGIBLE INVOICES TABLE — ALWAYS VISIBLE
+            ═══════════════════════════════════════════════════════════════ */}
+
+        <section>
+          <h3 className="text-sm font-semibold mb-3">Eligible invoices</h3>
+
+          {/* Coverage warning */}
+          {coverageShortfall > 0 && manualSelection.length > 0 && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50/40 px-4 py-2.5 mb-3 text-sm text-amber-800">
+              Selection covers {fmt(manualAdvance)} of {fmt(gapInfo!.gapAmount)} gap — shortfall of {fmt(coverageShortfall)}
+            </div>
+          )}
+          {coverageExcess > 5_000 && (
+            <div className="rounded-lg border border-blue-200 bg-blue-50/40 px-4 py-2.5 mb-3 text-sm text-blue-800">
+              Selection exceeds gap by {fmt(coverageExcess)} — you'll pay interest on capital you may not need
+            </div>
+          )}
+
+          <div className="rounded-lg border bg-card overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/40 text-left text-xs text-muted-foreground">
+                  <th className="px-3 py-2.5 w-10" />
+                  <th className="px-3 py-2.5 font-medium">Invoice</th>
+                  <th className="px-3 py-2.5 font-medium">Debtor</th>
+                  <th className="px-3 py-2.5 font-medium text-right">Amount</th>
+                  <th className="px-3 py-2.5 font-medium text-right">Expected days to pay</th>
+                  <th className="px-3 py-2.5 font-medium text-right">Risk</th>
+                  <th className="px-3 py-2.5 font-medium text-right">Finance cost</th>
+                  <th className="px-3 py-2.5 font-medium" />
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {bridgeInvoices.map((inv) => {
+                  const isExcluded = !!inv.exclusionReason;
+                  return (
+                    <tr
+                      key={inv.invoiceId}
+                      className={cn(
+                        "hover:bg-muted/20 transition-colors",
+                        selectedIds.has(inv.invoiceId) && "bg-blue-50/30",
+                        isExcluded && "opacity-50",
+                      )}
+                    >
+                      <td className="px-3 py-3 text-center">
+                        <Checkbox
+                          checked={selectedIds.has(inv.invoiceId)}
+                          onCheckedChange={() => toggleInvoice(inv.invoiceId)}
+                          disabled={isExcluded}
+                        />
+                      </td>
+                      <td className="px-3 py-3 font-mono text-xs">{inv.invoiceNumber}</td>
+                      <td className="px-3 py-3">{inv.contactName}</td>
+                      <td className="px-3 py-3 text-right tabular-nums">{fmt(inv.amountDue)}</td>
+                      <td className="px-3 py-3 text-right tabular-nums">{inv.expectedDuration} days</td>
+                      <td className="px-3 py-3 text-right">
+                        <RiskBadge score={inv.riskScore} />
+                      </td>
+                      <td className="px-3 py-3 text-right tabular-nums text-muted-foreground">{fmt(inv.totalCost)}</td>
+                      <td className="px-3 py-3">
+                        <div className="flex gap-1.5">
+                          {isExcluded && (
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-zinc-100 text-zinc-500">
+                              {inv.exclusionReason}
+                            </Badge>
+                          )}
+                          {!isExcluded && inv.isRileyRecommended && (
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-violet-100 text-violet-700 border-violet-200">
+                              <Sparkles className="h-2.5 w-2.5 mr-0.5" />Riley
+                            </Badge>
+                          )}
+                          {!isExcluded && inv.isBlindPick && !inv.isRileyRecommended && (
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 text-muted-foreground">
+                              Largest
+                            </Badge>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {bridgeInvoices.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="px-3 py-8 text-center text-muted-foreground">
+                      No eligible invoices found in the forecast.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Action bar below table */}
+          <div className="flex items-center justify-between rounded-lg border bg-card p-5 mt-3">
+            <div className="text-sm text-muted-foreground">
+              {useOwnFacility
+                ? "Present this selection to your finance provider for optimal cost."
+                : `${manualSelection.length} invoice${manualSelection.length !== 1 ? "s" : ""} selected · ${fmt(manualCost.totalAdvance)} advance · ${fmt(manualCost.totalCost)} estimated cost`}
+            </div>
+            {requestState === "approved" ? (
+              <Button variant="outline" className="border-emerald-300 text-emerald-700 bg-emerald-50 pointer-events-none">
+                <CheckCircle2 className="h-4 w-4 mr-1.5" />
+                Approved
+              </Button>
+            ) : (
+              <Button
+                onClick={() => setConfirmOpen(true)}
+                disabled={manualSelection.length === 0 || requestState === "requesting"}
+              >
+                {requestState === "requesting" && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
+                {requestState === "requesting" ? "Requesting..." : approveLabel}
+                {requestState === "idle" && <ArrowRight className="h-4 w-4 ml-1.5" />}
+              </Button>
+            )}
+          </div>
+        </section>
 
         {/* Confirmation modal */}
         <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
