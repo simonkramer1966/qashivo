@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -53,7 +53,7 @@ import {
 import {
   Check, X, Clock, Mail, MessageSquare, Phone,
   RefreshCw, Trash2, Loader2, Info, ChevronDown,
-  Sparkles, ArrowUpDown, MoreVertical, Eye, StickyNote,
+  MoreVertical, Eye, StickyNote,
   PauseCircle, Star,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -175,6 +175,34 @@ function addDays(d: Date, n: number): Date {
   return r;
 }
 
+const TONE_BADGE_VARIANT: Record<string, "ready" | "info" | "attention" | "risk"> = {
+  friendly: "ready",
+  professional: "info",
+  firm: "attention",
+  formal: "risk",
+  legal: "risk",
+};
+
+function ordinalChase(priorCount: number): string {
+  const n = priorCount + 1;
+  if (n === 1) return "1st chase";
+  if (n === 2) return "2nd chase";
+  if (n === 3) return "3rd chase";
+  return `${n}th chase`;
+}
+
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function ApprovalTH({ children, className }: { children?: React.ReactNode; className?: string }) {
+  return (
+    <th className={`h-12 text-[11px] font-medium tracking-[0.3px] text-[var(--q-text-tertiary)] text-left px-3 py-2 border-b border-[var(--q-border-default)] ${className || ""}`}>
+      {children}
+    </th>
+  );
+}
+
 // ── Sub-components ──────────────────────────────────────────
 
 function TonePill({ tone, onClick }: { tone: string; onClick?: () => void }) {
@@ -234,6 +262,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
   const [, navigate] = useLocation();
   const { openDrawer, closeDrawer } = useDrawer();
   const [drawerActionId, setDrawerActionId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editAction, setEditAction] = useState<{ id: string; subject: string; body: string } | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [sortField, setSortField] = useState<SortField>("priority");
@@ -895,7 +924,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
           break;
         case " ":
           e.preventDefault();
-          if (focused) setDrawerActionId(prev => prev === focused.id ? null : focused.id);
+          if (focused) setExpandedId(prev => prev === focused.id ? null : focused.id);
           break;
         case "a":
           if (e.shiftKey) {
@@ -933,18 +962,33 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
   if (isLoading) {
     return (
       <div className="space-y-3">
-        {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} className="h-20 w-full" />
-        ))}
+        <Skeleton className="h-8 w-64" />
+        <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] overflow-hidden">
+          <div className="px-5 py-4 border-b border-[var(--q-border-default)]">
+            <Skeleton className="h-5 w-48" />
+          </div>
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-12 border-b border-[var(--q-border-default)] px-3 py-3">
+              <Skeleton className="h-4 w-full" />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
   // ── Render ─────────────────────────────────────────────────
 
+  const sortLabels: Record<SortField, string> = {
+    priority: "Priority",
+    daysOverdue: "Days overdue",
+    totalAmount: "Amount",
+    companyName: "Company A–Z",
+  };
+
   return (
     <div className="space-y-3" ref={containerRef}>
-      {/* Part 9 — Yesterday's outcomes strip */}
+      {/* Yesterday's outcomes strip */}
       {yesterday && (yesterday.sent > 0 || yesterday.responses > 0 || yesterday.promises > 0 || yesterday.paid.count > 0) && (
         <div className="rounded-md bg-[var(--q-bg-surface-alt)] border border-[var(--q-border-default)] px-4 py-2 text-xs text-[var(--q-text-tertiary)]">
           Yesterday: {yesterday.sent > 0 && <><strong>{yesterday.sent}</strong> emails sent</>}
@@ -954,70 +998,105 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
         </div>
       )}
 
-      {/* Part 10 — Value summary header */}
+      {/* Sort tabs + bulk selection + run agent */}
       {actions.length > 0 && (
-        <div className="text-sm text-[var(--q-text-tertiary)]">
-          <strong>{actions.length}</strong> actions pending · <strong>{formatAmount(totalQueuedAmount)}</strong> queued for sending · <strong>{uniqueDebtors}</strong> debtors
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="flex items-center gap-4">
+            <span className="text-[11px] font-medium tracking-[0.3px] text-[var(--q-text-tertiary)]">Sort</span>
+            {(["priority", "daysOverdue", "totalAmount", "companyName"] as SortField[]).map(f => (
+              <button
+                key={f}
+                className={`text-[13px] font-medium transition-colors ${
+                  sortField === f
+                    ? "text-[var(--q-text-primary)]"
+                    : "text-[var(--q-text-tertiary)] hover:text-[var(--q-text-primary)]"
+                }`}
+                onClick={() => setSortField(f)}
+              >
+                {sortLabels[f]}
+              </button>
+            ))}
+          </div>
+          <div className="ml-auto flex items-center gap-2">
+            {selectedIds.size > 0 && (
+              <>
+                <span className="text-xs text-[var(--q-text-tertiary)]">{selectedIds.size} selected</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs gap-1"
+                  disabled={bulkApproveMutation.isPending}
+                  onClick={() => bulkApproveMutation.mutate(Array.from(selectedIds))}
+                >
+                  {bulkApproveMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                  Approve selected
+                </Button>
+              </>
+            )}
+            {showRunAgent && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 h-7 text-xs"
+                onClick={handleRunAgent}
+                disabled={runAgentMutation.isPending}
+              >
+                {runAgentMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                {runAgentMutation.isPending ? "Generating..." : "Run agent now"}
+              </Button>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Part 11 — Bulk actions toolbar + Part 13 — Sort */}
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-2">
-          {actions.length > 0 && (
-            <>
-              <Checkbox
-                checked={selectedIds.size === actions.length && actions.length > 0}
-                onCheckedChange={toggleSelectAll}
-                className="h-4 w-4"
-              />
-              {selectedIds.size > 0 && (
-                <>
-                  <span className="text-xs text-[var(--q-text-tertiary)]">{selectedIds.size} selected</span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 text-xs gap-1"
-                    disabled={bulkApproveMutation.isPending}
-                    onClick={() => bulkApproveMutation.mutate(Array.from(selectedIds))}
-                  >
-                    {bulkApproveMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
-                    Approve selected
-                  </Button>
-                </>
-              )}
-              <div className="h-4 w-px bg-[var(--q-border-default)] mx-1" />
-              <span className="text-[11px] text-[var(--q-text-tertiary)]">Sort:</span>
-              {(["priority", "daysOverdue", "totalAmount", "companyName"] as SortField[]).map(f => (
-                <Button
-                  key={f}
-                  variant={sortField === f ? "secondary" : "ghost"}
-                  size="sm"
-                  className="h-6 text-[11px] px-2"
-                  onClick={() => setSortField(f)}
-                >
-                  {f === "priority" ? "Priority" : f === "daysOverdue" ? "Days overdue" : f === "totalAmount" ? "Amount" : "Company A-Z"}
-                </Button>
-              ))}
-            </>
-          )}
-        </div>
+      {/* Live Mode Warning */}
+      <AlertDialog open={showLiveWarning} onOpenChange={setShowLiveWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>You are in Live mode</AlertDialogTitle>
+            <AlertDialogDescription>
+              Generated emails will be sent to real debtors after approval. Continue?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setShowLiveWarning(false); runAgentMutation.mutate(); }}>
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-        <div className="flex items-center gap-2">
-          {showRunAgent && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5 h-7 text-xs"
-              onClick={handleRunAgent}
-              disabled={runAgentMutation.isPending}
-            >
-              {runAgentMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
-              {runAgentMutation.isPending ? "Generating..." : "Run agent now"}
-            </Button>
-          )}
-          {actions.length > 0 && (
-            <>
+      {/* Queue — empty state */}
+      {actions.length === 0 ? (
+        <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)]">
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <Check className="mb-3 h-10 w-10 text-[var(--q-money-in-text)]" />
+            <h3 className="text-lg font-semibold text-[var(--q-text-primary)]">Queue is clear</h3>
+            <p className="text-sm text-[var(--q-text-tertiary)] mb-4">All actions have been reviewed.</p>
+            {isManagerOrAbove && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={handleRunAgent}
+                disabled={runAgentMutation.isPending}
+              >
+                {runAgentMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                {runAgentMutation.isPending ? "Generating..." : "Run agent now"}
+              </Button>
+            )}
+          </div>
+        </div>
+      ) : (
+        /* Queue — table */
+        <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] overflow-hidden">
+          {/* Card header */}
+          <div className="px-5 py-4 border-b border-[var(--q-border-default)] flex items-center justify-between">
+            <span className="text-sm text-[var(--q-text-secondary)]">
+              <strong>{actions.length}</strong> actions pending · <strong className="q-mono">{formatAmount(totalQueuedAmount)}</strong> queued · <strong>{uniqueDebtors}</strong> debtors
+            </span>
+            <div className="flex items-center gap-2">
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button
@@ -1074,226 +1153,237 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Live Mode Warning */}
-      <AlertDialog open={showLiveWarning} onOpenChange={setShowLiveWarning}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>You are in Live mode</AlertDialogTitle>
-            <AlertDialogDescription>
-              Generated emails will be sent to real debtors after approval. Continue?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => { setShowLiveWarning(false); runAgentMutation.mutate(); }}>
-              Continue
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Queue items */}
-      {actions.length === 0 ? (
-        <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)]">
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <Check className="mb-3 h-10 w-10 text-[var(--q-money-in-text)]" />
-            <h3 className="text-lg font-semibold text-[var(--q-text-primary)]">Queue is clear</h3>
-            <p className="text-sm text-[var(--q-text-tertiary)] mb-4">All actions have been reviewed.</p>
-            {isManagerOrAbove && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5"
-                onClick={handleRunAgent}
-                disabled={runAgentMutation.isPending}
-              >
-                {runAgentMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-                {runAgentMutation.isPending ? "Generating..." : "Run agent now"}
-              </Button>
-            )}
+            </div>
           </div>
-        </div>
-      ) : (
-        <div className="space-y-1">
-          {actions.map((action, idx) => {
-            const isSelected = selectedIds.has(action.id);
-            const isFocused = focusedIndex === idx;
-            const currentTone = toneOverrides.get(action.id) || action.agentToneLevel || "professional";
-            const isConversationReply = action.metadata?.conversationType === CONVERSATION_TYPE.REPLY;
-            const replyDescription = isConversationReply
-              ? `Responding to debtor message ${formatRelativeTime(action.metadata?.originalMessageReceivedAt ?? action.createdAt)}`
-              : null;
 
-            return (
-              <div
-                key={action.id}
-                className={cn(
-                  "rounded-[var(--q-radius-lg)] border border-[var(--q-border-default)] bg-[var(--q-bg-surface)] transition-all",
-                  isFocused && "ring-2 ring-[var(--q-accent)]/30",
-                  "hover:bg-[var(--q-bg-surface-hover)]",
-                )}
-              >
-                {/* Row — Part 1 */}
-                <div
-                  className="flex items-center gap-3 px-3 py-2.5 cursor-pointer"
-                  onClick={() => {
-                    setDrawerActionId(prev => prev === action.id ? null : action.id);
-                    setFocusedIndex(idx);
-                  }}
-                >
-                  {/* Checkbox */}
-                  <div onClick={(e) => e.stopPropagation()}>
+          {/* Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr>
+                  <ApprovalTH className="w-[32px]">
                     <Checkbox
-                      checked={isSelected}
-                      onCheckedChange={() => toggleSelect(action.id)}
+                      checked={selectedIds.size === actions.length && actions.length > 0}
+                      onCheckedChange={toggleSelectAll}
                       className="h-4 w-4"
                     />
-                  </div>
+                  </ApprovalTH>
+                  <ApprovalTH>Debtor</ApprovalTH>
+                  <ApprovalTH className="w-[80px] text-right">Invoices</ApprovalTH>
+                  <ApprovalTH className="w-[100px] text-right">Amount</ApprovalTH>
+                  <ApprovalTH className="w-[80px] text-right">Overdue</ApprovalTH>
+                  <ApprovalTH className="w-[90px]">Chase</ApprovalTH>
+                  <ApprovalTH className="w-[100px]">Tone</ApprovalTH>
+                  <ApprovalTH className="w-[80px] text-right">Confidence</ApprovalTH>
+                  <ApprovalTH className="w-[120px] text-center">Actions</ApprovalTH>
+                </tr>
+              </thead>
+              <tbody>
+                {actions.map((action, idx) => {
+                  const isSelected = selectedIds.has(action.id);
+                  const isFocused = focusedIndex === idx;
+                  const isExpanded = expandedId === action.id;
+                  const currentTone = toneOverrides.get(action.id) || action.agentToneLevel || "professional";
+                  const toneKey = (currentTone || "professional").toLowerCase();
+                  const isConversationReply = action.metadata?.conversationType === CONVERSATION_TYPE.REPLY;
 
-                  {/* Main content */}
-                  <div className="flex-1 min-w-0">
-                    {/* Line 1 — Who */}
-                    <div className="flex items-center gap-1.5">
-                      <span className={cn("inline-block h-1.5 w-1.5 rounded-full flex-shrink-0", urgencyColor(action.priority, action.daysOverdue))} />
-                      {action.contactId ? (
-                        <Link
-                          href={`/qollections/debtors/${action.contactId}`}
-                          className="text-[13px] font-medium truncate hover:underline"
-                          onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                        >
-                          {action.companyName || action.contactName || "Unknown debtor"}
-                        </Link>
-                      ) : (
-                        <span className="text-[13px] font-medium truncate">
-                          {action.companyName || action.contactName || "Unknown debtor"}
-                        </span>
+                  return (
+                    <React.Fragment key={action.id}>
+                      <tr
+                        className={cn(
+                          "h-12 border-b border-[var(--q-border-default)] hover:bg-[var(--q-bg-surface-hover)] transition-colors duration-100 cursor-pointer",
+                          isFocused && "ring-2 ring-[var(--q-accent)]/30 ring-inset",
+                          isExpanded && "bg-[var(--q-bg-surface-hover)]",
+                        )}
+                        onClick={() => {
+                          setExpandedId(prev => prev === action.id ? null : action.id);
+                          setFocusedIndex(idx);
+                        }}
+                      >
+                        {/* Checkbox */}
+                        <td className="px-3 py-3 w-[32px]" onClick={e => e.stopPropagation()}>
+                          <Checkbox checked={isSelected} onCheckedChange={() => toggleSelect(action.id)} className="h-4 w-4" />
+                        </td>
+
+                        {/* Debtor */}
+                        <td className="px-3 py-3">
+                          <div className="flex items-center gap-1.5">
+                            <span className={cn("inline-block h-1.5 w-1.5 rounded-full flex-shrink-0", urgencyColor(action.priority, action.daysOverdue))} />
+                            <span className="text-[14px] font-medium text-[var(--q-text-primary)] truncate max-w-[200px]">
+                              {action.companyName || action.contactName || "Unknown"}
+                            </span>
+                            {isConversationReply && <ReplyBadge />}
+                          </div>
+                          <div className="text-[12px] text-[var(--q-text-tertiary)] mt-0.5 flex items-center gap-1 ml-3">
+                            <ChannelIcon type={action.type} />
+                            <span className="capitalize">{normalizeChannel(action.type)}</span>
+                          </div>
+                        </td>
+
+                        {/* Invoices */}
+                        <td className="px-3 py-3 text-[14px] text-[var(--q-text-secondary)] q-mono tabular-nums text-right">
+                          {action.invoiceCount}
+                        </td>
+
+                        {/* Amount */}
+                        <td className="px-3 py-3 text-[14px] text-[var(--q-text-primary)] q-mono tabular-nums text-right font-medium">
+                          {formatAmount(action.totalAmount)}
+                        </td>
+
+                        {/* Days overdue */}
+                        <td className="px-3 py-3 text-right whitespace-nowrap">
+                          <span className="text-[14px] q-mono tabular-nums text-[var(--q-text-secondary)]">{action.daysOverdue}</span>
+                          <span className="text-[12px] text-[var(--q-text-tertiary)] ml-0.5">days</span>
+                        </td>
+
+                        {/* Chase */}
+                        <td className="px-3 py-3 text-[14px] text-[var(--q-text-secondary)] whitespace-nowrap">
+                          {ordinalChase(action.priorContactCount)}
+                        </td>
+
+                        {/* Tone */}
+                        <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <button className="cursor-pointer">
+                                <QBadge variant={TONE_BADGE_VARIANT[toneKey] || "info"}>
+                                  <span className="capitalize">{toneKey}</span>
+                                  <ChevronDown className="h-3 w-3 ml-0.5 inline" />
+                                </QBadge>
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-40 p-1" align="end">
+                              {TONE_LEVELS.map(t => (
+                                <button
+                                  key={t}
+                                  className={cn(
+                                    "w-full text-left px-2 py-1.5 text-xs rounded hover:bg-[var(--q-bg-surface-alt)] capitalize",
+                                    currentTone === t && "bg-[var(--q-bg-surface-alt)] font-medium",
+                                  )}
+                                  onClick={() => handleToneChange(action.id, t)}
+                                >
+                                  {t}
+                                </button>
+                              ))}
+                            </PopoverContent>
+                          </Popover>
+                          {toneOverrides.has(action.id) && (
+                            <span className="text-[10px] text-[var(--q-attention-text)] ml-1">changed</span>
+                          )}
+                        </td>
+
+                        {/* Confidence */}
+                        <td className="px-3 py-3 text-right">
+                          {action.confidenceScore ? (
+                            <span className="text-[14px] q-mono tabular-nums text-[var(--q-text-secondary)]">
+                              {Math.round(parseFloat(action.confidenceScore) * 100)}%
+                            </span>
+                          ) : (
+                            <span className="text-[14px] text-[var(--q-text-tertiary)]">—</span>
+                          )}
+                        </td>
+
+                        {/* Actions */}
+                        <td className="px-3 py-3 text-center" onClick={e => e.stopPropagation()}>
+                          <div className="flex items-center justify-center gap-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 w-7 p-0 text-[var(--q-money-in-text)] hover:text-[var(--q-money-in-text)] hover:bg-[var(--q-money-in-bg)]"
+                              onClick={() => handleApprove(action.id)}
+                              disabled={approveMutation.isPending}
+                              title="Approve"
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 w-7 p-0 text-[var(--q-attention-text)] hover:text-[var(--q-attention-text)] hover:bg-[var(--q-attention-bg)]"
+                              onClick={() => setDrawerActionId(action.id)}
+                              title="Defer"
+                            >
+                              <Clock className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 w-7 p-0 text-[var(--q-risk-text)] hover:text-[var(--q-risk-text)] hover:bg-[var(--q-risk-bg)]"
+                              onClick={() => setDrawerActionId(action.id)}
+                              title="Reject"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                                  <MoreVertical className="h-3.5 w-3.5" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => handleMenuAction(action, "vip")}>
+                                  <Star className="h-4 w-4 mr-2" /> Mark as VIP
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleMenuAction(action, "view")}>
+                                  <Eye className="h-4 w-4 mr-2" /> View debtor detail
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleMenuAction(action, "note")}>
+                                  <StickyNote className="h-4 w-4 mr-2" /> Add note
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => handleMenuAction(action, "hold")}>
+                                  <PauseCircle className="h-4 w-4 mr-2" /> Put on hold
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </td>
+                      </tr>
+
+                      {/* Expanded preview row */}
+                      {isExpanded && (
+                        <tr className="border-b border-[var(--q-border-default)]">
+                          <td colSpan={9} className="px-5 py-4 bg-[var(--q-bg-surface-alt)]/20">
+                            <div className="space-y-2 ml-4">
+                              <p className="text-[14px] font-medium text-[var(--q-text-primary)]">
+                                {action.subject || "No subject"}
+                              </p>
+                              <div className="text-[13px] text-[var(--q-text-secondary)] leading-relaxed max-h-[200px] overflow-y-auto">
+                                {action.content
+                                  ? stripHtml(action.content).slice(0, 500) + (stripHtml(action.content).length > 500 ? "…" : "")
+                                  : action.actionSummary || "No preview available"}
+                              </div>
+                              <div className="flex items-center gap-2 pt-2">
+                                <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={(e) => { e.stopPropagation(); setDrawerActionId(action.id); }}>
+                                  <Eye className="h-3 w-3" /> Full preview
+                                </Button>
+                                {action.contactId && (
+                                  <Link href={`/qollections/debtors/${action.contactId}`}>
+                                    <Button size="sm" variant="ghost" className="h-7 text-xs gap-1">
+                                      View debtor
+                                    </Button>
+                                  </Link>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
                       )}
-                      {isConversationReply && <ReplyBadge />}
-                    </div>
-
-                    {/* Line 2 — Why */}
-                    <div className="text-[11px] text-[var(--q-text-tertiary)] mt-0.5 truncate">
-                      <ChannelIcon type={action.type} />
-                      <span className="ml-1 capitalize">{normalizeChannel(action.type)}</span>
-                      {" · "}{action.daysOverdue}d overdue
-                      {" · "}{formatAmount(action.totalAmount)}
-                      {" · "}{action.priorContactCount === 0 ? "first chase" : `${action.priorContactCount} prior contacts`}
-                      {action.prsScore !== null && <> · PRS {Math.round(action.prsScore)}</>}
-                    </div>
-
-                    {/* Line 3 — What */}
-                    <div className="text-xs text-[var(--q-text-tertiary)]/80 mt-0.5 truncate">
-                      {replyDescription || action.actionSummary || action.subject || `${action.type} action`}
-                    </div>
-                  </div>
-
-                  {/* Meta */}
-                  <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <div>
-                          <TonePill tone={currentTone} onClick={() => {}} />
-                        </div>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-40 p-1" align="end">
-                        {TONE_LEVELS.map(t => (
-                          <button
-                            key={t}
-                            className={cn(
-                              "w-full text-left px-2 py-1.5 text-xs rounded hover:bg-[var(--q-bg-surface-alt)] capitalize",
-                              currentTone === t && "bg-[var(--q-bg-surface-alt)] font-medium",
-                            )}
-                            onClick={() => handleToneChange(action.id, t)}
-                          >
-                            {t}
-                          </button>
-                        ))}
-                      </PopoverContent>
-                    </Popover>
-                    {toneOverrides.has(action.id) && (
-                      <span className="text-[10px] text-[var(--q-attention-text)]">changed</span>
-                    )}
-                    <ConfidenceWithTooltip score={action.confidenceScore} />
-                  </div>
-
-                  {/* Action buttons */}
-                  <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 w-7 p-0 text-[var(--q-money-in-text)] hover:text-[var(--q-money-in-text)] hover:bg-[var(--q-money-in-bg)]"
-                      onClick={() => handleApprove(action.id)}
-                      disabled={approveMutation.isPending}
-                    >
-                      <Check className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 w-7 p-0 text-[var(--q-attention-text)] hover:text-[var(--q-attention-text)] hover:bg-[var(--q-attention-bg)]"
-                      onClick={() => setDrawerActionId(action.id)}
-                    >
-                      <Clock className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 w-7 p-0 text-[var(--q-risk-text)] hover:text-[var(--q-risk-text)] hover:bg-[var(--q-risk-bg)]"
-                      onClick={() => setDrawerActionId(action.id)}
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 w-7 p-0 text-[var(--q-text-tertiary)] hover:text-[var(--q-accent)] hover:bg-[var(--q-bg-surface-alt)]"
-                      title="Mark as VIP"
-                      onClick={() => handleMenuAction(action, "vip")}
-                    >
-                      <Star className="h-3.5 w-3.5" />
-                    </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                          <MoreVertical className="h-3.5 w-3.5" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => handleMenuAction(action, "vip")}>
-                          <Star className="h-4 w-4 mr-2" /> Mark as VIP
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleMenuAction(action, "view")}>
-                          <Eye className="h-4 w-4 mr-2" /> View debtor detail
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleMenuAction(action, "note")}>
-                          <StickyNote className="h-4 w-4 mr-2" /> Add note
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => handleMenuAction(action, "hold")}>
-                          <PauseCircle className="h-4 w-4 mr-2" /> Put on hold
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-
-              </div>
-            );
-          })}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
-      {/* Part 12 — Keyboard shortcut hints */}
+      {/* Keyboard shortcut hints */}
       {actions.length > 0 && showShortcutHints && (
-        <div className="flex items-center justify-between rounded-md bg-[var(--q-bg-surface-alt)] px-3 py-1.5 text-[11px] text-[var(--q-text-tertiary)]">
-          <span>Shortcuts: ↑↓ navigate · Space preview · A approve · D defer · R reject · Shift+A approve all</span>
+        <div className="flex items-center justify-between px-3 py-1.5 text-[12px] text-[var(--q-text-tertiary)]">
+          <span>↑↓ navigate · Space preview · A approve · D defer · R reject · Shift+A approve all</span>
           <button className="ml-2 hover:text-[var(--q-text-primary)]" onClick={() => setShowShortcutHints(false)}>
             <X className="h-3 w-3" />
           </button>
