@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { QBadge } from "@/components/ui/q-badge";
+import { QAmount } from "@/components/ui/q-amount";
 import {
   Dialog,
   DialogContent,
@@ -624,8 +625,6 @@ export default function BridgePage() {
             ═══════════════════════════════════════════════════════════════ */}
 
         <section>
-          <h3 className="text-sm font-semibold mb-3">Eligible invoices</h3>
-
           {/* Coverage warning */}
           {coverageShortfall > 0 && manualSelection.length > 0 && (
             <div className="rounded-lg border border-[var(--q-attention-border)] bg-[var(--q-attention-bg)] px-4 py-2.5 mb-3 text-sm text-[var(--q-attention-text)]">
@@ -638,61 +637,77 @@ export default function BridgePage() {
             </div>
           )}
 
-          <div className="rounded-lg border bg-[var(--q-bg-surface)] overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] overflow-hidden">
+            <div className="px-5 py-4 border-b border-[var(--q-border-default)]">
+              <h3 className="text-sm font-semibold text-[var(--q-text-primary)]">
+                Eligible invoices
+              </h3>
+            </div>
+            <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-sm">
               <thead>
-                <tr className="border-b bg-[var(--q-bg-surface-alt)] text-left text-xs text-[var(--q-text-tertiary)]">
-                  <th className="px-3 py-2.5 w-10" />
-                  <th className="px-3 py-2.5 font-medium">Invoice</th>
-                  <th className="px-3 py-2.5 font-medium">Debtor</th>
-                  <th className="px-3 py-2.5 font-medium text-right">Amount</th>
-                  <th className="px-3 py-2.5 font-medium text-right">Expected days to pay</th>
-                  <th className="px-3 py-2.5 font-medium text-right">Risk</th>
-                  <th className="px-3 py-2.5 font-medium text-right">Interest</th>
-                  <th className="px-3 py-2.5 font-medium" />
+                <tr>
+                  <th className="w-[48px] text-center px-3 py-2 text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)] border-b border-[var(--q-border-default)] sticky top-0 bg-[var(--q-bg-surface)] z-10" />
+                  <th className="text-left px-3 py-2 text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)] border-b border-[var(--q-border-default)] sticky top-0 bg-[var(--q-bg-surface)] z-10">Invoice</th>
+                  <th className="text-left px-3 py-2 text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)] border-b border-[var(--q-border-default)] sticky top-0 bg-[var(--q-bg-surface)] z-10">Debtor</th>
+                  <th className="text-right px-3 py-2 text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)] border-b border-[var(--q-border-default)] sticky top-0 bg-[var(--q-bg-surface)] z-10">Amount</th>
+                  <th className="text-center px-3 py-2 text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)] border-b border-[var(--q-border-default)] sticky top-0 bg-[var(--q-bg-surface)] z-10 w-[130px]">Days to pay</th>
+                  <th className="text-center px-3 py-2 text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)] border-b border-[var(--q-border-default)] sticky top-0 bg-[var(--q-bg-surface)] z-10 w-[80px]">Risk</th>
+                  <th className="text-right px-3 py-2 text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)] border-b border-[var(--q-border-default)] sticky top-0 bg-[var(--q-bg-surface)] z-10">Interest</th>
+                  <th className="px-3 py-2 text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)] border-b border-[var(--q-border-default)] sticky top-0 bg-[var(--q-bg-surface)] z-10 w-[80px]" />
                 </tr>
               </thead>
-              <tbody className="divide-y">
+              <tbody>
                 {bridgeInvoices.map((inv) => {
                   const isExcluded = !!inv.exclusionReason;
+                  const isSelected = selectedIds.has(inv.invoiceId);
                   return (
                     <tr
                       key={inv.invoiceId}
                       className={cn(
-                        "hover:bg-[var(--q-bg-surface-hover)] transition-colors",
-                        selectedIds.has(inv.invoiceId) && "bg-[var(--q-info-bg)]",
+                        "h-12 border-b border-[var(--q-border-default)] hover:bg-[var(--q-bg-surface-hover)] transition-colors duration-100",
+                        isSelected && "bg-[var(--q-accent-bg)]",
                         isExcluded && "opacity-50",
                       )}
                     >
                       <td className="px-3 py-3 text-center">
                         <Checkbox
-                          checked={selectedIds.has(inv.invoiceId)}
+                          checked={isSelected}
                           onCheckedChange={() => toggleInvoice(inv.invoiceId)}
                           disabled={isExcluded}
                         />
                       </td>
                       <td className="px-3 py-3 font-mono text-xs">{inv.invoiceNumber}</td>
-                      <td className="px-3 py-3">{inv.contactName}</td>
-                      <td className="px-3 py-3 text-right tabular-nums">{fmt(inv.amountDue)}</td>
-                      <td className="px-3 py-3 text-right tabular-nums">{inv.expectedDuration} days</td>
+                      <td className="px-3 py-3 text-[14px] text-[var(--q-text-primary)]">{inv.contactName}</td>
                       <td className="px-3 py-3 text-right">
-                        <RiskBadge score={inv.riskScore} />
+                        <QAmount value={inv.amountDue} decimals={0} className="text-[14px] font-semibold" />
                       </td>
-                      <td className="px-3 py-3 text-right tabular-nums text-[var(--q-text-tertiary)]">{fmt(inv.totalCost)}</td>
+                      <td className="px-3 py-3 text-center">
+                        <span className="text-[14px] font-medium font-[var(--q-font-mono)] tabular-nums">{inv.expectedDuration}</span>
+                        <span className="text-[var(--q-text-tertiary)] text-xs ml-1">days</span>
+                      </td>
+                      <td className="px-3 py-3 text-center">
+                        <QBadge variant={inv.riskScore >= 60 ? "risk" : inv.riskScore >= 35 ? "attention" : "ready"}>
+                          {riskLabel(inv.riskScore)}
+                        </QBadge>
+                      </td>
+                      <td className="px-3 py-3 text-right">
+                        <QAmount value={inv.totalCost} decimals={0} className="text-[14px] text-[var(--q-text-tertiary)]" />
+                      </td>
                       <td className="px-3 py-3">
                         <div className="flex gap-1.5">
                           {isExcluded && (
-                            <QBadge variant="neutral" className="text-[10px] px-1.5 py-0 bg-[var(--q-bg-surface-alt)] text-[var(--q-text-tertiary)]">
+                            <QBadge variant="neutral">
                               {inv.exclusionReason}
                             </QBadge>
                           )}
                           {!isExcluded && inv.isRileyRecommended && (
-                            <QBadge variant="neutral" className="text-[10px] px-1.5 py-0 bg-[var(--q-info-bg)] text-[var(--q-info-text)] border-[var(--q-border-default)]">
+                            <QBadge variant="info">
                               <Sparkles className="h-2.5 w-2.5 mr-0.5" />Riley
                             </QBadge>
                           )}
                           {!isExcluded && inv.isBlindPick && !inv.isRileyRecommended && (
-                            <QBadge variant="neutral" className="text-[10px] px-1.5 py-0 text-[var(--q-text-tertiary)]">
+                            <QBadge variant="neutral">
                               Largest
                             </QBadge>
                           )}
@@ -710,6 +725,7 @@ export default function BridgePage() {
                 )}
               </tbody>
             </table>
+            </div>
           </div>
 
           {/* Action bar below table */}
@@ -849,20 +865,6 @@ function CostRow({ label, value, bold, highlight, warn }: { label: string; value
         warn && "text-[var(--q-risk-text)] font-medium",
       )}>{value}</span>
     </div>
-  );
-}
-
-function RiskBadge({ score }: { score: number }) {
-  const label = riskLabel(score);
-  const cls = score < 35
-    ? "text-[var(--q-money-in-text)] bg-[var(--q-money-in-bg)]"
-    : score < 60
-      ? "text-[var(--q-attention-text)] bg-[var(--q-attention-bg)]"
-      : "text-[var(--q-risk-text)] bg-[var(--q-risk-bg)]";
-  return (
-    <span className={cn("inline-block px-1.5 py-0.5 rounded text-[10px] font-medium", cls)}>
-      {label}
-    </span>
   );
 }
 
