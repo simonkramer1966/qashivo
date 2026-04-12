@@ -39,7 +39,7 @@ const DebtorRecord = lazy(() => import("@/pages/qollections/debtor-record"));
 const QollectionsAgentActivity = lazy(() => import("@/pages/qollections/agent-activity"));
 const QollectionsDisputes = lazy(() => import("@/pages/qollections/disputes"));
 const QollectionsReports = lazy(() => import("@/pages/qollections/reports"));
-const QollectionsImpact = lazy(() => import("@/pages/qollections/impact"));
+// Impact page hidden from nav — lazy import removed, redirect in place
 // Pillar pages — Qashflow, Qapital, Agent Team
 const QashflowForecast = lazy(() => import("@/pages/cashflow/forecast"));
 const QashflowPage = lazy(() => import("@/pages/qashflow/index"));
@@ -276,7 +276,7 @@ function Router() {
           <Route path="/qollections/invoices">{() => <Redirect to="/qollections/debtors" />}</Route>
           <Route path="/qollections/agent-activity" component={QollectionsAgentActivity} />
           <Route path="/qollections/disputes" component={QollectionsDisputes} />
-          <Route path="/qollections/impact" component={QollectionsImpact} />
+          <Route path="/qollections/impact">{() => <Redirect to="/qollections/agent-activity" />}</Route>
           <Route path="/qollections/reports" component={QollectionsReports} />
           <Route path="/qollections" component={QollectionsDashboard} />
 
