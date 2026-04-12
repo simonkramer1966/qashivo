@@ -8,7 +8,7 @@ import SyncProgressBar from "@/components/sync/SyncProgressBar";
 
 interface AppShellProps {
   title: string;
-  subtitle?: string;
+  subtitle?: React.ReactNode;
   action?: React.ReactNode;
   children: React.ReactNode;
 }

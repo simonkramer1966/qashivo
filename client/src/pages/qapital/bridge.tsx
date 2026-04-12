@@ -13,7 +13,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { AlertTriangle, CheckCircle2, Loader2, Sparkles, ArrowRight } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Loader2, Sparkles, ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ── Types ──────────────────────────────────────────────────────
@@ -64,10 +64,10 @@ interface InflowForecast {
 // ── Financing constants ────────────────────────────────────────
 
 const ADVANCE_RATE = 0.80;
-const MONTHLY_INTEREST_RATE = 0.035; // 3.5% per month
+const MONTHLY_INTEREST_RATE = 0.035;
 const DAILY_INTEREST_RATE = MONTHLY_INTEREST_RATE / 30;
 const FEE_PER_INVOICE = 50;
-const MIN_INVOICE_AMOUNT = 500; // Exclude invoices below £500 — £50 fee on a £100 invoice is never efficient
+const MIN_INVOICE_AMOUNT = 500;
 
 // ── Derived invoice type for bridge selection ──────────────────
 
@@ -77,8 +77,8 @@ interface BridgeInvoice {
   contactId: string;
   contactName: string;
   amountDue: number;
-  expectedDuration: number; // days until payment (from P(Pay) distribution)
-  riskScore: number; // 0–100 (lower = better)
+  expectedDuration: number;
+  riskScore: number;
   confidence: "high" | "medium" | "low";
   advance: number;
   interestCost: number;
@@ -86,7 +86,7 @@ interface BridgeInvoice {
   totalCost: number;
   isRileyRecommended: boolean;
   isBlindPick: boolean;
-  exclusionReason?: string; // null = eligible
+  exclusionReason?: string;
 }
 
 // ── Cost calculation helpers ───────────────────────────────────
@@ -97,10 +97,6 @@ function computeAdvance(amountDue: number): number {
 
 function computeInterest(amountDue: number, durationDays: number): number {
   return computeAdvance(amountDue) * DAILY_INTEREST_RATE * durationDays;
-}
-
-function computeInvoiceCost(amountDue: number, durationDays: number): number {
-  return computeInterest(amountDue, durationDays) + FEE_PER_INVOICE;
 }
 
 function computeSelectionCost(invoices: BridgeInvoice[]) {
@@ -127,7 +123,6 @@ function deriveExpectedDuration(
   for (const wf of weeklyForecasts) {
     for (const ic of wf.invoiceBreakdown) {
       if (ic.invoiceId === invoiceId && ic.probability > 0) {
-        // midpoint of week in days from now
         const midDays = (wf.weekNumber - 0.5) * 7;
         totalWeight += ic.probability;
         weightedWeek += ic.probability * midDays;
@@ -136,22 +131,21 @@ function deriveExpectedDuration(
   }
 
   if (totalWeight > 0) return Math.round(weightedWeek / totalWeight);
-  return 45; // fallback for no-history debtors
+  return 45;
 }
 
 // ── Derive risk score from confidence tier ─────────────────────
 
 function deriveRiskScore(confidence: "high" | "medium" | "low", invoiceId: string): number {
-  // Deterministic hash so risk scores are stable across re-renders
   let hash = 0;
   for (let i = 0; i < invoiceId.length; i++) {
     hash = ((hash << 5) - hash + invoiceId.charCodeAt(i)) | 0;
   }
   const frac = Math.abs(hash % 100) / 100;
   switch (confidence) {
-    case "high": return 20 + Math.floor(frac * 15); // 20–34
-    case "medium": return 40 + Math.floor(frac * 20); // 40–59
-    case "low": return 65 + Math.floor(frac * 20); // 65–84
+    case "high": return 20 + Math.floor(frac * 15);
+    case "medium": return 40 + Math.floor(frac * 20);
+    case "low": return 65 + Math.floor(frac * 20);
   }
 }
 
@@ -162,7 +156,6 @@ function buildBridgeInvoices(
   gapAmount: number,
   gapWeek: number,
 ): BridgeInvoice[] {
-  // Collect unique invoices from all weekly breakdowns (include all, filter later)
   const invoiceMap = new Map<string, InvoiceContribution>();
   for (const wf of forecast.weeklyForecasts) {
     for (const ic of wf.invoiceBreakdown) {
@@ -172,7 +165,6 @@ function buildBridgeInvoices(
     }
   }
 
-  // Build bridge invoices with computed costs
   const all: BridgeInvoice[] = [];
   for (const ic of invoiceMap.values()) {
     const duration = deriveExpectedDuration(ic.invoiceId, forecast.weeklyForecasts);
@@ -198,7 +190,7 @@ function buildBridgeInvoices(
     });
   }
 
-  // ── Business rule filtering: split into eligible + excluded ───
+  // ── Business rule filtering ───
   const eligible: BridgeInvoice[] = [];
   const excluded: BridgeInvoice[] = [];
 
@@ -237,7 +229,6 @@ function buildBridgeInvoices(
   const costEfficiency = (inv: BridgeInvoice) => inv.totalCost / inv.advance;
   const rileySorted = [...eligible].sort((a, b) => costEfficiency(a) - costEfficiency(b));
 
-  // Phase 1: greedy walk
   const greedySet: BridgeInvoice[] = [];
   let rileySum = 0;
   for (const inv of rileySorted) {
@@ -246,7 +237,7 @@ function buildBridgeInvoices(
     rileySum += inv.advance;
   }
 
-  // Phase 2: improvement pass — try swapping the last invoice for cheaper alternatives
+  // Phase 2: improvement pass
   if (greedySet.length >= 2 && rileySum > gapAmount) {
     const lastInv = greedySet[greedySet.length - 1];
     const advanceWithoutLast = rileySum - lastInv.advance;
@@ -254,17 +245,14 @@ function buildBridgeInvoices(
 
     if (deficit > 0) {
       const usedIds = new Set(greedySet.slice(0, -1).map((i) => i.invoiceId));
-      // Find unused invoices that could fill the deficit at lower cost
       const candidates = eligible
         .filter((i) => !usedIds.has(i.invoiceId) && i.invoiceId !== lastInv.invoiceId && i.advance >= deficit)
         .sort((a, b) => a.totalCost - b.totalCost);
 
       if (candidates.length > 0 && candidates[0].totalCost < lastInv.totalCost) {
-        // Swap: replace last with cheaper candidate
         greedySet[greedySet.length - 1] = candidates[0];
         rileySum = advanceWithoutLast + candidates[0].advance;
       } else {
-        // Try two smaller invoices to fill deficit
         const smallCandidates = eligible
           .filter((i) => !usedIds.has(i.invoiceId) && i.invoiceId !== lastInv.invoiceId && i.advance < deficit)
           .sort((a, b) => costEfficiency(a) - costEfficiency(b));
@@ -308,7 +296,6 @@ function buildBridgeInvoices(
     return costEfficiency(a) - costEfficiency(b);
   });
 
-  // Sort excluded by amount descending
   excluded.sort((a, b) => b.amountDue - a.amountDue);
 
   return [...eligible, ...excluded];
@@ -329,6 +316,10 @@ function fmtPct(n: number): string {
   return n.toFixed(1) + "%";
 }
 
+function riskLabel(score: number): string {
+  return score < 35 ? "Low" : score < 60 ? "Medium" : "High";
+}
+
 // ── Component ─────────────────────────────────────────────────
 
 export default function BridgePage() {
@@ -337,6 +328,7 @@ export default function BridgePage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [requestState, setRequestState] = useState<"idle" | "requesting" | "approved">("idle");
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Fetch forecast data
   const { data: forecast, isLoading } = useQuery<InflowForecast>({
@@ -345,13 +337,12 @@ export default function BridgePage() {
   });
 
   // Derive cash gap and invoice data
-  const { gapInfo, bridgeInvoices, blindSelection, rileySelection } = useMemo(() => {
-    if (!forecast) return { gapInfo: null, bridgeInvoices: [], blindSelection: [], rileySelection: [] };
+  const { gapInfo, bridgeInvoices, blindSelection, rileySelection, hasRealGap } = useMemo(() => {
+    if (!forecast) return { gapInfo: null, bridgeInvoices: [], blindSelection: [], rileySelection: [], hasRealGap: false };
 
     const safetyThreshold = forecast.safetyThreshold ?? 20_000;
     const runningBalance = forecast.runningBalance;
 
-    // Find the worst cash gap
     let worstGapWeek = -1;
     let pessimisticBalance = 0;
     let expectedBalance = 0;
@@ -369,10 +360,11 @@ export default function BridgePage() {
       }
     }
 
-    // If no natural gap, create a demo scenario
+    const hasRealGap = gapAmount > 0;
+
     if (gapAmount <= 0) {
       gapAmount = 25_173;
-      worstGapWeek = 2; // Week 3
+      worstGapWeek = 2;
       pessimisticBalance = safetyThreshold - gapAmount;
       expectedBalance = 3_098;
     }
@@ -392,14 +384,12 @@ export default function BridgePage() {
 
     const bridgeInvoices = buildBridgeInvoices(forecast, gapAmount, gapInfo.weekNumber);
 
-    // Pre-select Riley recommendations
-    const rileyIds = new Set(bridgeInvoices.filter((i) => i.isRileyRecommended).map((i) => i.invoiceId));
-
     return {
       gapInfo,
       bridgeInvoices,
       blindSelection: bridgeInvoices.filter((i) => i.isBlindPick),
       rileySelection: bridgeInvoices.filter((i) => i.isRileyRecommended),
+      hasRealGap,
     };
   }, [forecast]);
 
@@ -424,10 +414,16 @@ export default function BridgePage() {
   const manualSaving = blindCost.totalCost - manualCost.totalCost;
   const manualSavingPct = blindCost.totalCost > 0 ? (manualSaving / blindCost.totalCost) * 100 : 0;
 
-  // Gap coverage analysis
   const manualAdvance = manualCost.totalAdvance;
   const coverageShortfall = gapInfo ? gapInfo.gapAmount - manualAdvance : 0;
   const coverageExcess = gapInfo ? manualAdvance - gapInfo.gapAmount : 0;
+
+  // Determine which selection is active for Layer 1 display
+  const isManualOverridden = showAdvanced && !manualSelection.every(
+    (inv) => rileySelection.some((r) => r.invoiceId === inv.invoiceId),
+  );
+  const activeSelection = isManualOverridden ? manualSelection : rileySelection;
+  const activeCost = isManualOverridden ? manualCost : rileyCost;
 
   const toggleInvoice = useCallback((invoiceId: string) => {
     setSelectedIds((prev) => {
@@ -461,172 +457,283 @@ export default function BridgePage() {
     );
   }
 
-  const actionLabel = useOwnFacility ? "Draw down" : "Request finance";
+  const approveLabel = useOwnFacility ? "Draw down on your facility" : "Approve financing";
 
   return (
     <AppShell title="Capital" subtitle="Bridge">
       <div className="space-y-6">
 
-        {/* Section 1: Cash gap banner + financing toggle */}
-        {gapInfo && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50/50 px-4 py-3 flex items-center justify-between gap-4 text-sm text-amber-900">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
-              <span>
-                Cash gap of <span className="font-semibold">{fmt(gapInfo.gapAmount)}</span> detected in Week {gapInfo.weekNumber} (w/c {gapInfo.weekLabel})
-                {" · "}Pessimistic: <span className="font-medium">{fmtSigned(gapInfo.pessimisticBalance)}</span>
-                {" · "}Expected: <span className="font-medium">{fmt(gapInfo.expectedBalance)}</span>
-              </span>
+        {/* Facility toggle — top right */}
+        <div className="flex justify-end">
+          <div className="flex items-center gap-3">
+            <span className={cn("text-sm", !useOwnFacility && "font-medium text-foreground", useOwnFacility && "text-muted-foreground")}>Qashivo financing</span>
+            <Switch checked={useOwnFacility} onCheckedChange={setUseOwnFacility} />
+            <span className={cn("text-sm", useOwnFacility && "font-medium text-foreground", !useOwnFacility && "text-muted-foreground")}>Your facility</span>
+          </div>
+        </div>
+
+        {/* ═══════════════════════════════════════════════════════════════
+            LAYER 1 — SIMPLE VIEW
+            ═══════════════════════════════════════════════════════════════ */}
+
+        {hasRealGap && gapInfo ? (
+          <div className="rounded-xl border bg-card p-6 md:p-8 space-y-5">
+            {/* Cash gap headline */}
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
+              <h2 className="text-lg font-semibold">
+                Cash gap: {fmt(gapInfo.gapAmount)} in Week {gapInfo.weekNumber} (w/c {gapInfo.weekLabel})
+              </h2>
             </div>
-            <div className="flex items-center gap-3 shrink-0">
-              <span className={cn("text-sm", !useOwnFacility && "font-medium")}>Qashivo financing</span>
-              <Switch checked={useOwnFacility} onCheckedChange={setUseOwnFacility} />
-              <span className={cn("text-sm", useOwnFacility && "font-medium")}>Your facility</span>
+
+            {/* Plain English summary */}
+            <div className="space-y-2 text-sm text-muted-foreground leading-relaxed">
+              <p>
+                Riley recommends financing {activeSelection.length} invoice{activeSelection.length !== 1 ? "s" : ""}.{" "}
+                You'll receive <span className="font-medium text-foreground">{fmt(activeCost.totalAdvance)}</span> within 24 hours.{" "}
+                This will cost <span className="font-medium text-foreground">{fmt(activeCost.totalCost)}</span> in interest and fees.
+              </p>
+              <p>
+                {activeCost.totalAdvance >= gapInfo.gapAmount
+                  ? "Your cash gap will be fully covered and your forecast balance stays above your safety threshold for the full 13-week period."
+                  : `This covers ${fmt(activeCost.totalAdvance)} of the ${fmt(gapInfo.gapAmount)} gap. You may want to select additional invoices in the advanced options.`}
+              </p>
+              {useOwnFacility && (
+                <p>Present this selection to your finance provider.</p>
+              )}
             </div>
+
+            {/* Invoice list — simple */}
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Invoices selected:</p>
+              <ul className="space-y-0.5">
+                {activeSelection.map((inv) => (
+                  <li key={inv.invoiceId} className="text-sm text-muted-foreground flex items-center gap-2">
+                    <span className="text-foreground">·</span>
+                    <span>{inv.contactName}</span>
+                    <span className="text-foreground font-medium tabular-nums">{fmt(inv.amountDue)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Primary action */}
+            <div className="pt-2">
+              {requestState === "approved" ? (
+                <Button variant="outline" className="border-emerald-300 text-emerald-700 bg-emerald-50 pointer-events-none">
+                  <CheckCircle2 className="h-4 w-4 mr-1.5" />
+                  Approved
+                </Button>
+              ) : (
+                <Button
+                  size="lg"
+                  onClick={() => setConfirmOpen(true)}
+                  disabled={activeSelection.length === 0 || requestState === "requesting"}
+                >
+                  {requestState === "requesting" && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
+                  {requestState === "requesting" ? "Requesting..." : approveLabel}
+                  {requestState === "idle" && <ArrowRight className="h-4 w-4 ml-1.5" />}
+                </Button>
+              )}
+            </div>
+
+            {/* Toggle to advanced */}
+            {!showAdvanced && (
+              <button
+                onClick={() => setShowAdvanced(true)}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+              >
+                Want to customise? <span className="underline">Advanced options</span>
+                <ChevronDown className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+        ) : (
+          /* ── No cash gap state ── */
+          <div className="rounded-xl border bg-card p-6 md:p-8 space-y-4">
+            <div className="flex items-start gap-3">
+              <CheckCircle2 className="h-5 w-5 text-emerald-500 mt-0.5 shrink-0" />
+              <div className="space-y-2">
+                <h2 className="text-lg font-semibold">No cash gap detected</h2>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Your forecast stays above your safety threshold for the full 13-week period.
+                </p>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  If you'd like to finance invoices anyway to accelerate cash, use the advanced options below.
+                </p>
+              </div>
+            </div>
+
+            {!showAdvanced && (
+              <button
+                onClick={() => setShowAdvanced(true)}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+              >
+                <span className="underline">Advanced options</span>
+                <ChevronDown className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
         )}
 
-        {/* Section 2: Three-column cost comparison */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <CostColumn
-            title="Blind selection"
-            subtitle="Largest invoices"
-            data={blindCost}
-            muted
-            gapAmount={gapInfo?.gapAmount}
-          />
-          <CostColumn
-            title="Qashivo optimised"
-            subtitle="P(Pay) + risk optimised"
-            data={rileyCost}
-            saving={blindSaving > 0 ? { amount: blindSaving, percent: blindSavingPct } : undefined}
-            recommended
-            gapAmount={gapInfo?.gapAmount}
-          />
-          <CostColumn
-            title="Manual selection"
-            subtitle="Your selection"
-            data={manualCost}
-            saving={manualSaving > 0 ? { amount: manualSaving, percent: manualSavingPct } : undefined}
-            live
-            gapAmount={gapInfo?.gapAmount}
-          />
-        </div>
+        {/* ═══════════════════════════════════════════════════════════════
+            LAYER 2 — ADVANCED VIEW
+            ═══════════════════════════════════════════════════════════════ */}
 
-        {/* Section 3: Invoice selection list */}
-        <section>
-          <h3 className="text-sm font-semibold mb-3">Eligible invoices</h3>
-
-          {/* Coverage warning */}
-          {coverageShortfall > 0 && manualSelection.length > 0 && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50/40 px-4 py-2.5 mb-3 text-sm text-amber-800">
-              Selection covers {fmt(manualAdvance)} of {fmt(gapInfo!.gapAmount)} gap — shortfall of {fmt(coverageShortfall)}
-            </div>
-          )}
-          {coverageExcess > 5_000 && (
-            <div className="rounded-lg border border-blue-200 bg-blue-50/40 px-4 py-2.5 mb-3 text-sm text-blue-800">
-              Selection exceeds gap by {fmt(coverageExcess)} — you'll pay interest on capital you may not need
-            </div>
-          )}
-
-          <div className="rounded-lg border bg-card overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-muted/40 text-left text-xs text-muted-foreground">
-                  <th className="px-3 py-2.5 w-10" />
-                  <th className="px-3 py-2.5 font-medium">Invoice</th>
-                  <th className="px-3 py-2.5 font-medium">Debtor</th>
-                  <th className="px-3 py-2.5 font-medium text-right">Amount</th>
-                  <th className="px-3 py-2.5 font-medium text-right">P(Pay) duration</th>
-                  <th className="px-3 py-2.5 font-medium text-right">Risk</th>
-                  <th className="px-3 py-2.5 font-medium text-right">Est. cost</th>
-                  <th className="px-3 py-2.5 font-medium" />
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {bridgeInvoices.map((inv) => {
-                  const isExcluded = !!inv.exclusionReason;
-                  return (
-                    <tr
-                      key={inv.invoiceId}
-                      className={cn(
-                        "hover:bg-muted/20 transition-colors",
-                        selectedIds.has(inv.invoiceId) && "bg-blue-50/30",
-                        isExcluded && "opacity-50",
-                      )}
-                    >
-                      <td className="px-3 py-3 text-center">
-                        <Checkbox
-                          checked={selectedIds.has(inv.invoiceId)}
-                          onCheckedChange={() => toggleInvoice(inv.invoiceId)}
-                          disabled={isExcluded}
-                        />
-                      </td>
-                      <td className="px-3 py-3 font-mono text-xs">{inv.invoiceNumber}</td>
-                      <td className="px-3 py-3">{inv.contactName}</td>
-                      <td className="px-3 py-3 text-right tabular-nums">{fmt(inv.amountDue)}</td>
-                      <td className="px-3 py-3 text-right tabular-nums">{inv.expectedDuration} days</td>
-                      <td className="px-3 py-3 text-right">
-                        <RiskBadge score={inv.riskScore} />
-                      </td>
-                      <td className="px-3 py-3 text-right tabular-nums text-muted-foreground">{fmt(inv.totalCost)}</td>
-                      <td className="px-3 py-3">
-                        <div className="flex gap-1.5">
-                          {isExcluded && (
-                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-zinc-100 text-zinc-500">
-                              {inv.exclusionReason}
-                            </Badge>
-                          )}
-                          {!isExcluded && inv.isRileyRecommended && (
-                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-violet-100 text-violet-700 border-violet-200">
-                              <Sparkles className="h-2.5 w-2.5 mr-0.5" />Riley
-                            </Badge>
-                          )}
-                          {!isExcluded && inv.isBlindPick && !inv.isRileyRecommended && (
-                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 text-muted-foreground">
-                              Blind pick
-                            </Badge>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {bridgeInvoices.length === 0 && (
-                  <tr>
-                    <td colSpan={8} className="px-3 py-8 text-center text-muted-foreground">
-                      No eligible invoices found in the forecast.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        {/* Section 4: Action */}
-        <div className="flex items-center justify-between rounded-lg border bg-card p-5">
-          <div className="text-sm text-muted-foreground">
-            {useOwnFacility
-              ? "Present this selection to your finance provider for optimal cost."
-              : `${manualSelection.length} invoice${manualSelection.length !== 1 ? "s" : ""} selected · ${fmt(manualCost.totalAdvance)} advance · ${fmt(manualCost.totalCost)} estimated cost`}
-          </div>
-          {requestState === "approved" ? (
-            <Button variant="outline" className="border-emerald-300 text-emerald-700 bg-emerald-50 pointer-events-none">
-              <CheckCircle2 className="h-4 w-4 mr-1.5" />
-              Approved
-            </Button>
-          ) : (
-            <Button
-              onClick={() => setConfirmOpen(true)}
-              disabled={manualSelection.length === 0 || requestState === "requesting"}
+        {showAdvanced && (
+          <div className="space-y-6">
+            {/* Collapse toggle */}
+            <button
+              onClick={() => setShowAdvanced(false)}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
             >
-              {requestState === "requesting" && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
-              {requestState === "requesting" ? "Requesting..." : actionLabel}
-              {requestState === "idle" && <ArrowRight className="h-4 w-4 ml-1.5" />}
-            </Button>
-          )}
-        </div>
+              <span className="underline">Simple view</span>
+              <ChevronUp className="h-3.5 w-3.5" />
+            </button>
+
+            {/* Three-column cost comparison */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <CostColumn
+                title="Largest invoices"
+                subtitle="Sorted by size only"
+                data={blindCost}
+                muted
+                gapAmount={gapInfo?.gapAmount}
+              />
+              <CostColumn
+                title="Riley's recommendation"
+                subtitle="Optimised for cost and risk"
+                data={rileyCost}
+                saving={blindSaving > 0 ? { amount: blindSaving, percent: blindSavingPct } : undefined}
+                recommended
+                gapAmount={gapInfo?.gapAmount}
+              />
+              <CostColumn
+                title="Your selection"
+                subtitle="Customise below"
+                data={manualCost}
+                saving={manualSaving > 0 ? { amount: manualSaving, percent: manualSavingPct } : undefined}
+                live
+                gapAmount={gapInfo?.gapAmount}
+              />
+            </div>
+
+            {/* Invoice selection list */}
+            <section>
+              <h3 className="text-sm font-semibold mb-3">Eligible invoices</h3>
+
+              {/* Coverage warning */}
+              {coverageShortfall > 0 && manualSelection.length > 0 && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50/40 px-4 py-2.5 mb-3 text-sm text-amber-800">
+                  Selection covers {fmt(manualAdvance)} of {fmt(gapInfo!.gapAmount)} gap — shortfall of {fmt(coverageShortfall)}
+                </div>
+              )}
+              {coverageExcess > 5_000 && (
+                <div className="rounded-lg border border-blue-200 bg-blue-50/40 px-4 py-2.5 mb-3 text-sm text-blue-800">
+                  Selection exceeds gap by {fmt(coverageExcess)} — you'll pay interest on capital you may not need
+                </div>
+              )}
+
+              <div className="rounded-lg border bg-card overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/40 text-left text-xs text-muted-foreground">
+                      <th className="px-3 py-2.5 w-10" />
+                      <th className="px-3 py-2.5 font-medium">Invoice</th>
+                      <th className="px-3 py-2.5 font-medium">Debtor</th>
+                      <th className="px-3 py-2.5 font-medium text-right">Amount</th>
+                      <th className="px-3 py-2.5 font-medium text-right">Expected days to pay</th>
+                      <th className="px-3 py-2.5 font-medium text-right">Risk</th>
+                      <th className="px-3 py-2.5 font-medium text-right">Finance cost</th>
+                      <th className="px-3 py-2.5 font-medium" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {bridgeInvoices.map((inv) => {
+                      const isExcluded = !!inv.exclusionReason;
+                      return (
+                        <tr
+                          key={inv.invoiceId}
+                          className={cn(
+                            "hover:bg-muted/20 transition-colors",
+                            selectedIds.has(inv.invoiceId) && "bg-blue-50/30",
+                            isExcluded && "opacity-50",
+                          )}
+                        >
+                          <td className="px-3 py-3 text-center">
+                            <Checkbox
+                              checked={selectedIds.has(inv.invoiceId)}
+                              onCheckedChange={() => toggleInvoice(inv.invoiceId)}
+                              disabled={isExcluded}
+                            />
+                          </td>
+                          <td className="px-3 py-3 font-mono text-xs">{inv.invoiceNumber}</td>
+                          <td className="px-3 py-3">{inv.contactName}</td>
+                          <td className="px-3 py-3 text-right tabular-nums">{fmt(inv.amountDue)}</td>
+                          <td className="px-3 py-3 text-right tabular-nums">{inv.expectedDuration} days</td>
+                          <td className="px-3 py-3 text-right">
+                            <RiskBadge score={inv.riskScore} />
+                          </td>
+                          <td className="px-3 py-3 text-right tabular-nums text-muted-foreground">{fmt(inv.totalCost)}</td>
+                          <td className="px-3 py-3">
+                            <div className="flex gap-1.5">
+                              {isExcluded && (
+                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-zinc-100 text-zinc-500">
+                                  {inv.exclusionReason}
+                                </Badge>
+                              )}
+                              {!isExcluded && inv.isRileyRecommended && (
+                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-violet-100 text-violet-700 border-violet-200">
+                                  <Sparkles className="h-2.5 w-2.5 mr-0.5" />Riley
+                                </Badge>
+                              )}
+                              {!isExcluded && inv.isBlindPick && !inv.isRileyRecommended && (
+                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 text-muted-foreground">
+                                  Largest
+                                </Badge>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {bridgeInvoices.length === 0 && (
+                      <tr>
+                        <td colSpan={8} className="px-3 py-8 text-center text-muted-foreground">
+                          No eligible invoices found in the forecast.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            {/* Action bar (advanced view) */}
+            <div className="flex items-center justify-between rounded-lg border bg-card p-5">
+              <div className="text-sm text-muted-foreground">
+                {useOwnFacility
+                  ? "Present this selection to your finance provider for optimal cost."
+                  : `${manualSelection.length} invoice${manualSelection.length !== 1 ? "s" : ""} selected · ${fmt(manualCost.totalAdvance)} advance · ${fmt(manualCost.totalCost)} estimated cost`}
+              </div>
+              {requestState === "approved" ? (
+                <Button variant="outline" className="border-emerald-300 text-emerald-700 bg-emerald-50 pointer-events-none">
+                  <CheckCircle2 className="h-4 w-4 mr-1.5" />
+                  Approved
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => setConfirmOpen(true)}
+                  disabled={manualSelection.length === 0 || requestState === "requesting"}
+                >
+                  {requestState === "requesting" && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
+                  {requestState === "requesting" ? "Requesting..." : approveLabel}
+                  {requestState === "idle" && <ArrowRight className="h-4 w-4 ml-1.5" />}
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Confirmation modal */}
         <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
@@ -710,22 +817,22 @@ function CostColumn({ title, subtitle, data, saving, recommended, muted, live, g
       </div>
 
       <div className="space-y-1.5 text-sm">
-        <Row label="Invoices" value={String(data.count)} />
-        <Row label="Total financed" value={fmt(data.totalFinanced)} />
-        <Row
+        <CostRow label="Invoices" value={String(data.count)} />
+        <CostRow label="Total financed" value={fmt(data.totalFinanced)} />
+        <CostRow
           label="Total advance"
           value={`${fmt(data.totalAdvance)}  (80%)`}
           warn={advanceShortfall}
         />
-        <Row label="Avg duration" value={`${data.avgDuration} days`} />
-        <Row label="Est. interest" value={fmt(data.totalInterest)} />
-        <Row label="Facility fee" value={fmt(data.totalFees)} />
+        <CostRow label="Avg days to pay" value={`${data.avgDuration} days`} />
+        <CostRow label="Interest" value={fmt(data.totalInterest)} />
+        <CostRow label="Facility fee" value={fmt(data.totalFees)} />
         <div className="border-t pt-1.5">
-          <Row label="Total cost" value={fmt(data.totalCost)} bold />
+          <CostRow label="Total cost" value={fmt(data.totalCost)} bold />
         </div>
         {saving && saving.amount > 0 && (
           <div className="pt-0.5">
-            <Row label="You save" value={`${fmt(saving.amount)} (${fmtPct(saving.percent)})`} highlight />
+            <CostRow label="You save" value={`${fmt(saving.amount)} (${fmtPct(saving.percent)})`} highlight />
           </div>
         )}
       </div>
@@ -733,7 +840,7 @@ function CostColumn({ title, subtitle, data, saving, recommended, muted, live, g
   );
 }
 
-function Row({ label, value, bold, highlight, warn }: { label: string; value: string; bold?: boolean; highlight?: boolean; warn?: boolean }) {
+function CostRow({ label, value, bold, highlight, warn }: { label: string; value: string; bold?: boolean; highlight?: boolean; warn?: boolean }) {
   return (
     <div className="flex justify-between">
       <span className={cn("text-muted-foreground", bold && "text-foreground font-medium")}>{label}</span>
@@ -748,7 +855,7 @@ function Row({ label, value, bold, highlight, warn }: { label: string; value: st
 }
 
 function RiskBadge({ score }: { score: number }) {
-  const label = score < 35 ? "Low" : score < 60 ? "Med" : "High";
+  const label = riskLabel(score);
   const cls = score < 35
     ? "text-emerald-700 bg-emerald-50"
     : score < 60
@@ -756,7 +863,7 @@ function RiskBadge({ score }: { score: number }) {
       : "text-red-700 bg-red-50";
   return (
     <span className={cn("inline-block px-1.5 py-0.5 rounded text-[10px] font-medium", cls)}>
-      {label} {score}
+      {label}
     </span>
   );
 }

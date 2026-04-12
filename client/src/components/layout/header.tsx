@@ -13,7 +13,7 @@ const MODE_STYLES: Record<string, { label: string; cls: string }> = {
 
 interface HeaderProps {
   title: string;
-  subtitle?: string;
+  subtitle?: React.ReactNode;
   action?: React.ReactNode;
   mobileMenuButton?: React.ReactNode;
 }

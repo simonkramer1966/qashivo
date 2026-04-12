@@ -388,14 +388,14 @@ export default function HomeDashboard() {
         {/* ── ROW 3: Three Actionable Panels ── */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Panel 1: Qollections */}
-          <Card className="border-l-2 border-l-blue-600 flex flex-col">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+          <div className="border-l-2 border-l-blue-600 pl-3 flex flex-col">
+            <div className="pb-3">
+              <div className="text-sm font-semibold flex items-center gap-2">
                 <ShieldCheck className="h-4 w-4 text-blue-600" />
                 Qollections
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col flex-1 space-y-2">
+              </div>
+            </div>
+            <div className="flex flex-col flex-1 space-y-2">
               {actionSummaryLoading ? (
                 <div className="space-y-2">
                   <Skeleton className="h-4 w-full" />
@@ -414,18 +414,18 @@ export default function HomeDashboard() {
                   View Qollections <ArrowRight className="h-3 w-3 ml-1" />
                 </Button>
               </Link>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* Panel 2: Qashflow */}
-          <Card className="border-l-2 border-l-amber-500 flex flex-col">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+          <div className="border-l-2 border-l-amber-500 pl-3 flex flex-col">
+            <div className="pb-3">
+              <div className="text-sm font-semibold flex items-center gap-2">
                 <Activity className="h-4 w-4 text-amber-500" />
                 Qashflow
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col flex-1 space-y-2">
+              </div>
+            </div>
+            <div className="flex flex-col flex-1 space-y-2">
               {forecastLoading ? (
                 <div className="space-y-2">
                   <Skeleton className="h-4 w-full" />
@@ -449,18 +449,18 @@ export default function HomeDashboard() {
                   View Qashflow <ArrowRight className="h-3 w-3 ml-1" />
                 </Button>
               </Link>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* Panel 3: Qapital */}
-          <Card className="border-l-2 border-l-emerald-500 flex flex-col">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+          <div className="border-l-2 border-l-emerald-500 pl-3 flex flex-col">
+            <div className="pb-3">
+              <div className="text-sm font-semibold flex items-center gap-2">
                 <Landmark className="h-4 w-4 text-emerald-500" />
                 Qapital
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col flex-1 space-y-2">
+              </div>
+            </div>
+            <div className="flex flex-col flex-1 space-y-2">
               {forecastLoading ? (
                 <div className="space-y-2">
                   <Skeleton className="h-4 w-full" />
@@ -482,8 +482,8 @@ export default function HomeDashboard() {
                   {firstGap ? "View Bridge" : "View Qapital"} <ArrowRight className="h-3 w-3 ml-1" />
                 </Button>
               </Link>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
 
         {/* ── ROW 4: Debtor Treemap ── */}
@@ -517,19 +517,19 @@ function PillarCard({ pillar, title, value, subtitle, loading, subtitleAccent, v
   subtitleAccent?: "red";
   valueAccent?: "red" | "green";
 }) {
-  const pillarLabel = pillar === "credit" ? "Credit Control" : pillar === "cashflow" ? "Cashflow" : "Capital";
+  const pillarLabel = pillar === "credit" ? "Qollections" : pillar === "cashflow" ? "Qashflow" : "Qapital";
   const valueCls = valueAccent === "red" ? "text-rose-600"
     : valueAccent === "green" ? "text-emerald-600"
     : "text-foreground";
   const subtitleCls = subtitleAccent === "red" ? "text-rose-500" : "text-muted-foreground";
 
   return (
-    <Card className={`border-l-2 ${PILLAR_COLORS[pillar]}`}>
-      <CardContent className="pt-4 pb-3">
-        <span className={`text-[10px] font-medium uppercase tracking-widest ${PILLAR_LABEL_COLORS[pillar]}`}>
+    <div className={`border-l-2 ${PILLAR_COLORS[pillar]} pl-3`}>
+      <div className="pt-4 pb-3">
+        <span className={`text-[10px] font-semibold uppercase tracking-widest ${PILLAR_LABEL_COLORS[pillar]}`}>
           {pillarLabel}
         </span>
-        <div className="text-xs font-medium text-muted-foreground mt-1 mb-1">{title}</div>
+        <div className="text-xs font-semibold text-muted-foreground mt-1 mb-1">{title}</div>
         {loading ? (
           <div className="space-y-1.5">
             <Skeleton className="h-5 w-20" />
@@ -541,8 +541,8 @@ function PillarCard({ pillar, title, value, subtitle, loading, subtitleAccent, v
             <div className={`text-xs mt-0.5 ${subtitleCls}`}>{subtitle}</div>
           </>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 

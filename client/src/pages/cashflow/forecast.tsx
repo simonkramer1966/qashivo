@@ -23,6 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   ChevronDown,
   ChevronRight,
+  Info,
   TrendingUp,
   TrendingDown,
   AlertTriangle,
@@ -366,6 +367,19 @@ export default function ForecastPage() {
   const [expandedGap, setExpandedGap] = useState<number | null>(null);
   const [showMethodology, setShowMethodology] = useState(false);
 
+  const forecastSubtitle = (
+    <span className="inline-flex items-center gap-1">
+      Built from your debtors' actual payment history
+      <button
+        onClick={() => setShowMethodology(true)}
+        className="inline-flex items-center text-muted-foreground hover:text-foreground transition-colors"
+        title="How this forecast works"
+      >
+        <Info className="h-3 w-3" />
+      </button>
+    </span>
+  );
+
   const { data: patterns } = useQuery<RecurringPattern[]>({
     queryKey: ["/api/cashflow/recurring-patterns"],
     staleTime: 60 * 60 * 1000,
@@ -495,7 +509,7 @@ export default function ForecastPage() {
 
   if (isLoading) {
     return (
-      <AppShell title="Qashflow" subtitle="Cash flow forecast">
+      <AppShell title="Qashflow" subtitle={forecastSubtitle}>
         <div className="flex items-center justify-center py-20">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </div>
@@ -505,7 +519,7 @@ export default function ForecastPage() {
 
   if (!forecast) {
     return (
-      <AppShell title="Qashflow" subtitle="Cash flow forecast">
+      <AppShell title="Qashflow" subtitle={forecastSubtitle}>
         <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
           <p className="text-lg font-medium">No forecast data</p>
           <p className="text-sm mt-1">Connect Xero and sync your invoices to generate a forecast.</p>
@@ -570,7 +584,7 @@ export default function ForecastPage() {
   const effectiveSafetyThreshold = safetyThreshold - overdraftFacility;
 
   return (
-    <AppShell title="Qashflow" subtitle="Cash flow forecast">
+    <AppShell title="Qashflow" subtitle={forecastSubtitle}>
     <div className="space-y-6">
       {/* Cash Gap Alert Banner */}
       {cashGapAlerts.length > 0 && (() => {
@@ -1305,94 +1319,82 @@ export default function ForecastPage() {
         </Card>
       )}
 
-      {/* I. Methodology Card */}
-      <Collapsible open={showMethodology} onOpenChange={setShowMethodology}>
-        <Card>
-          <CollapsibleTrigger asChild>
-            <CardHeader className="cursor-pointer hover:bg-muted/30 pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                {showMethodology ? (
-                  <ChevronDown className="h-4 w-4" />
-                ) : (
-                  <ChevronRight className="h-4 w-4" />
-                )}
-                How this forecast works
-              </CardTitle>
-            </CardHeader>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <CardContent className="text-sm text-muted-foreground space-y-2">
-              <p>
-                <strong>Data source:</strong> Every forecast number traces back to
-                a specific outstanding invoice and your debtor's historical payment
-                behaviour from Xero (up to 24 months).
-              </p>
-              <p>
-                <strong>Per-debtor model:</strong> For each debtor, we fit a
-                log-normal distribution to their past payment timing. This
-                captures both their typical speed and their variability.
-              </p>
-              <p>
-                <strong>Three scenarios:</strong> Optimistic (25th percentile —
-                debtors pay at the fast end), Expected (median), and Pessimistic
-                (75th percentile — debtors pay slow). All three are
-                mathematically derived from the same distribution, not separate
-                guesses.
-              </p>
-              <p>
-                <strong>Confidence levels:</strong> High (10+ historical
-                payments — tight distribution), Medium (3-9 payments), Low (0-2
-                payments — using conservative system defaults of 40 days).
-              </p>
-              <p>
-                <strong>Promise overrides:</strong> When a debtor has an active
-                payment promise, their forecast shifts toward the promised date,
-                weighted by their historical reliability score.
-              </p>
-              <p>
-                <strong>Improvement:</strong> The model improves automatically
-                with every payment observed. More data = tighter distributions =
-                more accurate forecasts.
-              </p>
-              {/* Recurring revenue methodology section — hidden while Layer 2 is disabled */}
-              <hr className="border-border" />
-              <p className="font-medium text-foreground">Pipeline revenue</p>
-              <p>
-                You can add expected future revenue in three confidence levels:
-              </p>
-              <p>
-                <strong>Committed</strong> — revenue where the client has
-                agreed. Included in all three scenarios.
-              </p>
-              <p>
-                <strong>Uncommitted</strong> — revenue you're confident about
-                but the client hasn't confirmed. Included in the optimistic and
-                expected scenarios only.
-              </p>
-              <p>
-                <strong>Stretch</strong> — revenue that's possible but
-                uncertain. Included in the optimistic scenario only.
-              </p>
-              <p>
-                Enter amounts in the week you expect to raise the invoice. The
-                forecast automatically shifts the cash arrival based on how
-                quickly your clients typically pay:
-              </p>
-              <ul className="list-disc list-inside space-y-1 ml-1">
-                <li>Committed revenue uses your actual portfolio payment speed</li>
-                <li>Uncommitted adds a 25% timing buffer</li>
-                <li>Stretch adds a 50% timing buffer</li>
-              </ul>
-              <p>
-                This means the cash appears later than the invoice week — just
-                as it does with your real invoices. The more conservative the
-                confidence level, the later the cash lands and the fewer
-                scenarios it appears in.
-              </p>
-            </CardContent>
-          </CollapsibleContent>
-        </Card>
-      </Collapsible>
+      {/* Methodology Dialog */}
+      <Dialog open={showMethodology} onOpenChange={setShowMethodology}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>How this forecast works</DialogTitle>
+          </DialogHeader>
+          <div className="text-sm text-muted-foreground space-y-2">
+            <p>
+              <strong>Data source:</strong> Every forecast number traces back to
+              a specific outstanding invoice and your debtor's historical payment
+              behaviour from Xero (up to 24 months).
+            </p>
+            <p>
+              <strong>Per-debtor model:</strong> For each debtor, we fit a
+              log-normal distribution to their past payment timing. This
+              captures both their typical speed and their variability.
+            </p>
+            <p>
+              <strong>Three scenarios:</strong> Optimistic (25th percentile —
+              debtors pay at the fast end), Expected (median), and Pessimistic
+              (75th percentile — debtors pay slow). All three are
+              mathematically derived from the same distribution, not separate
+              guesses.
+            </p>
+            <p>
+              <strong>Confidence levels:</strong> High (10+ historical
+              payments — tight distribution), Medium (3-9 payments), Low (0-2
+              payments — using conservative system defaults of 40 days).
+            </p>
+            <p>
+              <strong>Promise overrides:</strong> When a debtor has an active
+              payment promise, their forecast shifts toward the promised date,
+              weighted by their historical reliability score.
+            </p>
+            <p>
+              <strong>Improvement:</strong> The model improves automatically
+              with every payment observed. More data = tighter distributions =
+              more accurate forecasts.
+            </p>
+            <hr className="border-border" />
+            <p className="font-medium text-foreground">Pipeline revenue</p>
+            <p>
+              You can add expected future revenue in three confidence levels:
+            </p>
+            <p>
+              <strong>Committed</strong> — revenue where the client has
+              agreed. Included in all three scenarios.
+            </p>
+            <p>
+              <strong>Uncommitted</strong> — revenue you're confident about
+              but the client hasn't confirmed. Included in the optimistic and
+              expected scenarios only.
+            </p>
+            <p>
+              <strong>Stretch</strong> — revenue that's possible but
+              uncertain. Included in the optimistic scenario only.
+            </p>
+            <p>
+              Enter amounts in the week you expect to raise the invoice. The
+              forecast automatically shifts the cash arrival based on how
+              quickly your clients typically pay:
+            </p>
+            <ul className="list-disc list-inside space-y-1 ml-1">
+              <li>Committed revenue uses your actual portfolio payment speed</li>
+              <li>Uncommitted adds a 25% timing buffer</li>
+              <li>Stretch adds a 50% timing buffer</li>
+            </ul>
+            <p>
+              This means the cash appears later than the invoice week — just
+              as it does with your real invoices. The more conservative the
+              confidence level, the later the cash lands and the fewer
+              scenarios it appears in.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
     </AppShell>
   );
