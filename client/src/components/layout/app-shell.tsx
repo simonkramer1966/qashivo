@@ -17,7 +17,7 @@ export default function AppShell({ title, subtitle = "", action, children }: App
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="flex h-screen overflow-hidden bg-[var(--q-bg-page)]">
       <SyncProgressBar />
       {/* Desktop sidebar */}
       <NewSidebar />
