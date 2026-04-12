@@ -6383,6 +6383,7 @@ export const weeklyReviews = pgTable("weekly_reviews", {
   debtorFocus: jsonb("debtor_focus"), // array of debtors relevant to cash this week
   forecastAdjustmentsUsed: jsonb("forecast_adjustments_used"), // snapshot of inputs used
   previousReviewId: varchar("previous_review_id"), // FK to self for history chain
+  isArchived: boolean("is_archived").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

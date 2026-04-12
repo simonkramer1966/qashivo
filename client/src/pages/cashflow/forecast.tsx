@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -7,6 +7,7 @@ import AppShell from "@/components/layout/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Dialog,
   DialogContent,
@@ -22,8 +23,10 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import {
   ChevronDown,
+  ChevronUp,
   ChevronRight,
   Info,
+  ClipboardList,
   TrendingUp,
   TrendingDown,
   AlertTriangle,
@@ -36,6 +39,7 @@ import {
   Lock,
   Target,
 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 import {
   ComposedChart,
   Bar,
@@ -339,6 +343,34 @@ function BalanceTooltip({ active, payload }: any) {
   );
 }
 
+// ── Weekly Review types ────────────────────────────────────────
+
+interface WeeklyReviewData {
+  id: string;
+  weekStartDate: string;
+  weekEndDate: string;
+  generatedAt: string;
+  summaryText: string;
+  keyNumbers: {
+    optimistic: { expectedIn: number; pressurePoints: string[] };
+    expected: { expectedIn: number; pressurePoints: string[] };
+    pessimistic: { expectedIn: number; pressurePoints: string[] };
+  } | null;
+  isArchived: boolean;
+}
+
+function formatReviewDate(dateStr: string): string {
+  const d = new Date(dateStr);
+  return `${d.getDate()} ${d.toLocaleString("en-GB", { month: "long" })}`;
+}
+
+function extractSummary(text: string): string {
+  // Strip leading markdown headings and take first 2-3 sentences
+  const cleaned = text.replace(/^#+ .*\n*/i, "").trim();
+  const sentences = cleaned.split(/(?<=[.!?])\s+/);
+  return sentences.slice(0, 3).join(" ");
+}
+
 // ── Main component ─────────────────────────────────────────────
 
 export default function ForecastPage() {
@@ -388,6 +420,40 @@ export default function ForecastPage() {
 
   const [showRejected, setShowRejected] = useState(false);
 
+  // ── Weekly Review ──
+  const { data: latestReview } = useQuery<WeeklyReviewData>({
+    queryKey: ["/api/weekly-review/latest"],
+    retry: false,
+  });
+
+  const { data: reviewHistory } = useQuery<WeeklyReviewData[]>({
+    queryKey: ["/api/weekly-review/history"],
+    enabled: false, // fetched on demand
+  });
+
+  const [reviewExpanded, setReviewExpanded] = useState(false);
+  const [showPreviousReviews, setShowPreviousReviews] = useState(false);
+
+  const archiveReviewMutation = useMutation({
+    mutationFn: (reviewId: string) =>
+      apiRequest("PATCH", `/api/weekly-review/${reviewId}/archive`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/weekly-review/latest"] });
+      toast({ title: "Review archived" });
+    },
+  });
+
+  const generateReviewMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/weekly-review/generate"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/weekly-review/latest"] });
+      toast({ title: "Weekly review generated" });
+    },
+    onError: (err: any) => {
+      const msg = err?.message || "Failed to generate review";
+      toast({ title: "Error", description: msg, variant: "destructive" });
+    },
+  });
 
   // Cash gap alerts
   const [, setLocation] = useLocation();
@@ -586,6 +652,121 @@ export default function ForecastPage() {
   return (
     <AppShell title="Qashflow" subtitle={forecastSubtitle}>
     <div className="space-y-6">
+      {/* Weekly Review Card */}
+      {latestReview ? (
+        <div className="rounded-lg border bg-card">
+          <button
+            onClick={() => setReviewExpanded(!reviewExpanded)}
+            className="w-full flex items-center justify-between px-5 py-3.5 text-left"
+          >
+            <div className="flex items-center gap-2">
+              <ClipboardList className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-semibold">Weekly Review</span>
+              <span className="text-xs text-muted-foreground">
+                {formatReviewDate(latestReview.weekStartDate)} – {formatReviewDate(latestReview.weekEndDate)}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              {!reviewExpanded && (
+                <span className="text-xs text-muted-foreground max-w-[400px] truncate hidden md:inline">
+                  {extractSummary(latestReview.summaryText)}
+                </span>
+              )}
+              {reviewExpanded ? (
+                <ChevronUp className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              )}
+            </div>
+          </button>
+          {reviewExpanded && (
+            <div className="border-t px-5 py-4 space-y-4">
+              <div className="prose prose-sm max-w-none text-sm text-foreground [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-sm [&_h1]:font-semibold [&_h2]:font-semibold [&_h3]:font-medium [&_p]:text-muted-foreground [&_li]:text-muted-foreground [&_ul]:my-1 [&_ol]:my-1 [&_p]:my-1.5">
+                <ReactMarkdown>{latestReview.summaryText}</ReactMarkdown>
+              </div>
+              <div className="flex items-center gap-3 pt-1 border-t">
+                <button
+                  onClick={() => {
+                    setShowPreviousReviews(true);
+                    queryClient.refetchQueries({ queryKey: ["/api/weekly-review/history"] });
+                  }}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Previous reviews
+                </button>
+                <span className="text-muted-foreground/30">·</span>
+                <button
+                  onClick={() => archiveReviewMutation.mutate(latestReview.id)}
+                  disabled={archiveReviewMutation.isPending}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {archiveReviewMutation.isPending ? "Archiving…" : "Archive"}
+                </button>
+                <span className="text-muted-foreground/30">·</span>
+                <button
+                  onClick={() => generateReviewMutation.mutate()}
+                  disabled={generateReviewMutation.isPending}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {generateReviewMutation.isPending ? "Generating…" : "Regenerate"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="rounded-lg border border-dashed bg-card px-5 py-3.5 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <ClipboardList className="h-4 w-4" />
+            <span className="text-sm">No weekly review yet</span>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => generateReviewMutation.mutate()}
+            disabled={generateReviewMutation.isPending}
+          >
+            {generateReviewMutation.isPending ? (
+              <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> Generating…</>
+            ) : (
+              "Generate review"
+            )}
+          </Button>
+        </div>
+      )}
+
+      {/* Previous Reviews Dialog */}
+      <Dialog open={showPreviousReviews} onOpenChange={setShowPreviousReviews}>
+        <DialogContent className="max-w-lg max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Previous Reviews</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="max-h-[60vh]">
+            <div className="space-y-3 pr-4">
+              {reviewHistory && reviewHistory.length > 0 ? (
+                reviewHistory.map((r) => (
+                  <div key={r.id} className="rounded-lg border p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium">
+                        {formatReviewDate(r.weekStartDate)} – {formatReviewDate(r.weekEndDate)}
+                      </span>
+                      {r.isArchived && (
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Archived</Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground line-clamp-3">
+                      {extractSummary(r.summaryText)}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground py-4 text-center">No previous reviews</p>
+              )}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
       {/* Cash Gap Alert Banner */}
       {cashGapAlerts.length > 0 && (() => {
         const alert = cashGapAlerts[0];

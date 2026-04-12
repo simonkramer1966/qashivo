@@ -2,6 +2,9 @@ import type { Express } from "express";
 import { isAuthenticated } from "../auth";
 import { storage } from "../storage";
 import { generateWeeklyReview } from "../services/weeklyReviewService";
+import { db } from "../db";
+import { weeklyReviews } from "@shared/schema";
+import { eq, and } from "drizzle-orm";
 
 // Track last generation time per tenant to enforce rate limit
 const lastGeneratedAt = new Map<string, number>();
@@ -74,6 +77,33 @@ export function registerWeeklyReviewRoutes(app: Express): void {
     } catch (error) {
       console.error("[WeeklyReview] Error fetching review history:", error);
       res.status(500).json({ message: "Failed to fetch review history" });
+    }
+  });
+
+  // ── PATCH /api/weekly-review/:id/archive ─────────────────────
+  app.patch("/api/weekly-review/:id/archive", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const [updated] = await db.update(weeklyReviews)
+        .set({ isArchived: true, updatedAt: new Date() })
+        .where(and(
+          eq(weeklyReviews.id, req.params.id),
+          eq(weeklyReviews.tenantId, user.tenantId),
+        ))
+        .returning();
+
+      if (!updated) {
+        return res.status(404).json({ message: "Review not found" });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("[WeeklyReview] Error archiving review:", error);
+      res.status(500).json({ message: "Failed to archive review" });
     }
   });
 }

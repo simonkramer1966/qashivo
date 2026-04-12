@@ -41,7 +41,6 @@ const QollectionsDisputes = lazy(() => import("@/pages/qollections/disputes"));
 const QollectionsReports = lazy(() => import("@/pages/qollections/reports"));
 const QollectionsImpact = lazy(() => import("@/pages/qollections/impact"));
 // Pillar pages — Qashflow, Qapital, Agent Team
-const QashflowWeeklyReview = lazy(() => import("@/pages/qashflow/WeeklyReview"));
 const QashflowForecast = lazy(() => import("@/pages/cashflow/forecast"));
 const QashflowPage = lazy(() => import("@/pages/qashflow/index"));
 const QapitalPage = lazy(() => import("@/pages/qapital/index"));
@@ -282,11 +281,11 @@ function Router() {
           <Route path="/qollections" component={QollectionsDashboard} />
 
           {/* Pillar routes — Qashflow, Qapital, Agent Team */}
-          <Route path="/qashflow/weekly-review" component={QashflowWeeklyReview} />
+          <Route path="/qashflow/weekly-review">{() => <Redirect to="/qashflow/forecast" />}</Route>
           <Route path="/qashflow/forecast" component={QashflowForecast} />
           <Route path="/qashflow/scenarios" component={QashflowPage} />
           <Route path="/qashflow/cashflow" component={QashflowPage} />
-          <Route path="/qashflow" component={QashflowWeeklyReview} />
+          <Route path="/qashflow" component={QashflowForecast} />
           <Route path="/qapital/bridge">{() => <RoleGuard check={p => p.canViewCapital}><QapitalBridge /></RoleGuard>}</Route>
           <Route path="/qapital/facility">{() => <RoleGuard check={p => p.canViewCapital}><QapitalFacility /></RoleGuard>}</Route>
           <Route path="/qapital/pre-authorisation">{() => <RoleGuard check={p => p.canViewCapital}><QapitalPreAuth /></RoleGuard>}</Route>

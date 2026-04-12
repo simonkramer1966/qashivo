@@ -79,10 +79,9 @@ const navigationPillars: NavPillar[] = [
   {
     label: "Qashflow",
     icon: TrendingUp,
-    defaultHref: "/qashflow/weekly-review",
+    defaultHref: "/qashflow/forecast",
     children: [
-      { name: "Weekly Review", href: "/qashflow/weekly-review", icon: Gauge, exact: true },
-      { name: "Forecast", href: "/qashflow/forecast", icon: BarChart3 },
+      { name: "Forecast", href: "/qashflow/forecast", icon: BarChart3, exact: true },
       { name: "Scenarios", href: "/qashflow/scenarios", icon: Sliders },
     ],
   },

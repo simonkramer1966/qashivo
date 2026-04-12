@@ -5775,7 +5775,10 @@ export class DatabaseStorage implements IStorage {
 
   async getLatestWeeklyReview(tenantId: string): Promise<WeeklyReview | undefined> {
     const [review] = await db.select().from(weeklyReviews)
-      .where(eq(weeklyReviews.tenantId, tenantId))
+      .where(and(
+        eq(weeklyReviews.tenantId, tenantId),
+        eq(weeklyReviews.isArchived, false),
+      ))
       .orderBy(desc(weeklyReviews.generatedAt))
       .limit(1);
     return review;
