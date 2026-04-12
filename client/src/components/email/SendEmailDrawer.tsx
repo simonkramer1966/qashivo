@@ -454,7 +454,7 @@ export default function SendEmailDrawer({
                       )}
                       {!metrics.lpiEnabled && (
                         <p className="text-xs text-muted-foreground">
-                          LPI not enabled — turn on in Settings &gt; Playbook
+                          LPI not enabled — turn on in Agent Settings &gt; Charlie
                         </p>
                       )}
                     </div>
