@@ -278,7 +278,7 @@ function Router() {
           <Route path="/qollections/disputes" component={QollectionsDisputes} />
           <Route path="/qollections/impact">{() => <Redirect to="/qollections/agent-activity" />}</Route>
           <Route path="/qollections/reports" component={QollectionsReports} />
-          <Route path="/qollections" component={QollectionsDashboard} />
+          <Route path="/qollections">{() => <Redirect to="/qollections/agent-activity" />}</Route>
 
           {/* Pillar routes — Qashflow, Qapital, Agent Team */}
           <Route path="/qashflow/weekly-review">{() => <Redirect to="/qashflow/forecast" />}</Route>
