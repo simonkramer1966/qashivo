@@ -204,7 +204,7 @@ function MetricRow({
       </div>
       <div className="flex items-center gap-1.5 flex-shrink-0">
         {BadgeIndicator}
-        <span className={`text-sm font-semibold tabular-nums ${style.text}`}>
+        <span className={`text-sm font-semibold tabular-nums q-mono ${style.text}`}>
           {count}
           {suffix}
         </span>
@@ -268,6 +268,9 @@ export default function OverviewTab() {
   if (period === "custom" && dateFrom) queryParams.dateFrom = dateFrom;
   if (period === "custom" && dateTo) queryParams.dateTo = dateTo;
 
+  // Don't fire the query when custom period is selected but dates are incomplete
+  const customDatesReady = period !== "custom" || (!!dateFrom && !!dateTo);
+
   // ---------- Queries ----------
 
   const {
@@ -278,6 +281,7 @@ export default function OverviewTab() {
     isFetching,
   } = useQuery<SummaryData>({
     queryKey: ["/api/action-centre/summary", queryParams],
+    enabled: customDatesReady,
     refetchInterval: 60_000,
     staleTime: 0,
     refetchOnMount: true,
@@ -417,7 +421,17 @@ export default function OverviewTab() {
               className={`rounded-none first:rounded-l-md last:rounded-r-md ${
                 period === p.value ? "" : "text-[var(--q-text-tertiary)]"
               }`}
-              onClick={() => setPeriod(p.value)}
+              onClick={() => {
+                if (p.value === "custom" && !dateFrom && !dateTo) {
+                  // Default custom range to last 7 days
+                  const to = new Date();
+                  const from = new Date();
+                  from.setDate(from.getDate() - 7);
+                  setDateFrom(from.toISOString().slice(0, 10));
+                  setDateTo(to.toISOString().slice(0, 10));
+                }
+                setPeriod(p.value);
+              }}
             >
               {p.label}
             </Button>
@@ -472,9 +486,9 @@ export default function OverviewTab() {
                 <span className="h-2 w-2 rounded-full bg-[var(--q-info-text)]" />
                 <h3 className="text-base font-semibold text-[var(--q-text-primary)]">Queued</h3>
               </div>
-              <QBadge variant="neutral">
+              <span className="text-2xl font-bold tabular-nums q-mono text-[var(--q-info-text)]">
                 {queued.total}
-              </QBadge>
+              </span>
             </div>
           </div>
           <div className="flex-1 px-5 pb-3">
@@ -567,9 +581,9 @@ export default function OverviewTab() {
                 <span className="h-2 w-2 rounded-full bg-[var(--q-money-in-text)]" />
                 <h3 className="text-base font-semibold text-[var(--q-text-primary)]">Actioned</h3>
               </div>
-              <QBadge variant="neutral">
+              <span className="text-2xl font-bold tabular-nums q-mono text-[var(--q-money-in-text)]">
                 {actioned.total}
-              </QBadge>
+              </span>
             </div>
           </div>
           <div className="flex-1 px-5 pb-3">
@@ -644,9 +658,9 @@ export default function OverviewTab() {
                 <span className="h-2 w-2 rounded-full bg-[var(--q-risk-text)]" />
                 <h3 className="text-base font-semibold text-[var(--q-text-primary)]">Exceptions</h3>
               </div>
-              <QBadge variant="neutral">
+              <span className="text-2xl font-bold tabular-nums q-mono text-[var(--q-risk-text)]">
                 {exceptions.total}
-              </QBadge>
+              </span>
             </div>
           </div>
           <div className="flex-1 px-5 pb-3">

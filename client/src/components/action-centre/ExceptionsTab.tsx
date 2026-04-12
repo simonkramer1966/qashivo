@@ -15,7 +15,7 @@ import { FilterPill } from "@/components/ui/filter-pill";
 import { cn } from "@/lib/utils";
 import {
   AlertTriangle, TrendingDown, CheckCircle2, ChevronRight,
-  ShieldAlert, Users, HelpCircle, Clock, ExternalLink, ChevronDown,
+  ShieldAlert, Users, HelpCircle, ExternalLink, ChevronDown,
   Mail, MessageSquare, Phone, Circle, CircleDot, Check, RefreshCw,
   Handshake,
 } from "lucide-react";
@@ -426,6 +426,9 @@ export default function ExceptionsTab({ subTab, onNavigateSubTab }: ExceptionsTa
     return <PromisesSubTab />;
   }
 
+  // Build flat list for table
+  const tableItems = filter === "all" ? exceptions : filtered;
+
   return (
     <div className="space-y-3">
       {/* Filter pills */}
@@ -437,7 +440,7 @@ export default function ExceptionsTab({ subTab, onNavigateSubTab }: ExceptionsTa
       </div>
 
       {/* Empty state */}
-      {filtered.length === 0 && (
+      {tableItems.length === 0 ? (
         <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)]">
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <CheckCircle2 className="mb-3 h-10 w-10 text-[var(--q-money-in-text)]" />
@@ -449,29 +452,57 @@ export default function ExceptionsTab({ subTab, onNavigateSubTab }: ExceptionsTa
             </p>
           </div>
         </div>
-      )}
+      ) : (
+        <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full" style={{ minWidth: '800px', tableLayout: 'fixed' }}>
+              <colgroup>
+                <col style={{ width: '5%' }} />
+                <col style={{ width: '5%' }} />
+                <col style={{ width: '20%' }} />
+                <col style={{ width: '35%' }} />
+                <col style={{ width: '12%' }} />
+                <col style={{ width: '23%' }} />
+              </colgroup>
+              <thead>
+                <tr className="border-b border-[var(--q-border-default)] bg-[var(--q-bg-surface-alt)] h-12">
+                  <th className="px-3 text-center text-[11px] font-medium text-[var(--q-text-tertiary)] uppercase tracking-[0.3px] align-middle">
+                    State
+                  </th>
+                  <th className="px-2 text-center text-[11px] font-medium text-[var(--q-text-tertiary)] uppercase tracking-[0.3px] align-middle">
+                    Type
+                  </th>
+                  <th className="px-2 text-left text-[11px] font-medium text-[var(--q-text-tertiary)] uppercase tracking-[0.3px] align-middle">
+                    Customer
+                  </th>
+                  <th className="px-2 text-left text-[11px] font-medium text-[var(--q-text-tertiary)] uppercase tracking-[0.3px] align-middle">
+                    Reason
+                  </th>
+                  <th className="px-2 text-left text-[11px] font-medium text-[var(--q-text-tertiary)] uppercase tracking-[0.3px] align-middle">
+                    Time
+                  </th>
+                  <th className="px-2 text-right text-[11px] font-medium text-[var(--q-text-tertiary)] uppercase tracking-[0.3px] align-middle">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {tableItems.map((action, index) => {
+                  const state = normaliseState(action);
+                  const isExpanded = expandedIds.has(action.id);
+                  const isLast = index === tableItems.length - 1;
+                  const title = formatExceptionTitle(action);
+                  const debtorName = action.companyName || action.contactName;
 
-      {/* Grouped view (when "All" filter is active) */}
-      {filter === "all" && grouped && (
-        <>
-          {(["new", "in_progress", "resolved"] as ExceptionState[]).map(state => {
-            const items = grouped[state];
-            if (items.length === 0) return null;
-            return (
-              <div key={state}>
-                <div className="flex items-center gap-2 mb-2 mt-1">
-                  <StateIndicator state={state} />
-                  <span className="text-xs font-semibold uppercase tracking-wider text-[var(--q-text-tertiary)]">
-                    {state === "in_progress" ? "In Progress" : state.charAt(0).toUpperCase() + state.slice(1)} ({items.length})
-                  </span>
-                </div>
-                <div className="space-y-2">
-                  {items.map(action => (
-                    <ExceptionRow
+                  return (
+                    <ExceptionTableRow
                       key={action.id}
                       action={action}
                       state={state}
-                      isExpanded={expandedIds.has(action.id)}
+                      title={title}
+                      debtorName={debtorName}
+                      isExpanded={isExpanded}
+                      isLast={isLast}
                       onToggle={() => toggleExpand(action.id)}
                       isResolving={resolvingIds.has(action.id)}
                       resolveNotes={resolveNotesMap[action.id] ?? ""}
@@ -482,49 +513,24 @@ export default function ExceptionsTab({ subTab, onNavigateSubTab }: ExceptionsTa
                       onResolve={(notes) => resolveMutation.mutate({ actionId: action.id, notes })}
                       onDismiss={() => dismissMutation.mutate(action.id)}
                       onReopen={() => reopenMutation.mutate(action.id)}
-                      isPending={startWorkingMutation.isPending || resolveMutation.isPending || dismissMutation.isPending || reopenMutation.isPending}
+                      onRetrySend={() => retrySendMutation.mutate(action.id)}
+                      isPending={startWorkingMutation.isPending || resolveMutation.isPending || dismissMutation.isPending || reopenMutation.isPending || retrySendMutation.isPending}
                     />
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </>
-      )}
-
-      {/* Single-filter view (no section headers) */}
-      {filter !== "all" && filtered.length > 0 && (
-        <div className="space-y-2">
-          {filtered.map(action => (
-            <ExceptionRow
-              key={action.id}
-              action={action}
-              state={normaliseState(action)}
-              isExpanded={expandedIds.has(action.id)}
-              onToggle={() => toggleExpand(action.id)}
-              isResolving={resolvingIds.has(action.id)}
-              resolveNotes={resolveNotesMap[action.id] ?? ""}
-              onResolveNotesChange={(notes) => setResolveNotesMap(prev => ({ ...prev, [action.id]: notes }))}
-              onStartResolving={() => setResolvingIds(prev => new Set(prev).add(action.id))}
-              onCancelResolving={() => setResolvingIds(prev => { const next = new Set(prev); next.delete(action.id); return next; })}
-              onStartWorking={() => startWorkingMutation.mutate(action.id)}
-              onResolve={(notes) => resolveMutation.mutate({ actionId: action.id, notes })}
-              onDismiss={() => dismissMutation.mutate(action.id)}
-              onReopen={() => reopenMutation.mutate(action.id)}
-              onRetrySend={() => retrySendMutation.mutate(action.id)}
-              isPending={startWorkingMutation.isPending || resolveMutation.isPending || dismissMutation.isPending || reopenMutation.isPending || retrySendMutation.isPending}
-            />
-          ))}
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-// ── Exception row ─────────────────────────────────────────────
+// ── Exception table row ───────────────────────────────────────
 
-function ExceptionRow({
-  action, state, isExpanded, onToggle,
+function ExceptionTableRow({
+  action, state, title, debtorName, isExpanded, isLast, onToggle,
   isResolving, resolveNotes, onResolveNotesChange,
   onStartResolving, onCancelResolving,
   onStartWorking, onResolve, onDismiss, onReopen,
@@ -533,7 +539,10 @@ function ExceptionRow({
 }: {
   action: ExceptionAction;
   state: ExceptionState;
+  title: string;
+  debtorName: string | null;
   isExpanded: boolean;
+  isLast: boolean;
   onToggle: () => void;
   isResolving: boolean;
   resolveNotes: string;
@@ -549,200 +558,164 @@ function ExceptionRow({
 }) {
   const executionError = getExecutionError(action);
   const isFailedSend = action.status === "failed";
-  const debtorName = action.companyName || action.contactName;
-  const title = formatExceptionTitle(action);
-  const preview = action.content
-    ? action.content.length > 120
-      ? action.content.slice(0, 120) + "..."
-      : action.content
-    : null;
+  const reasonLabel = action.status === "failed"
+    ? "send failed"
+    : action.exceptionReason?.replace(/_/g, " ") || "flagged";
 
   return (
-    <div className={cn("bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] overflow-hidden", state === "resolved" && "opacity-70")}>
-      <div
+    <>
+      <tr
         className={cn(
-          "flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-[var(--q-bg-surface-alt)]/30 transition-colors",
-          state === "resolved" && "bg-[var(--q-bg-surface-alt)]/5",
+          "h-12 transition-colors cursor-pointer hover:bg-[var(--q-bg-surface-hover)]",
+          !isLast && !isExpanded && "border-b border-[var(--q-border-default)]",
+          state === "resolved" && "opacity-60",
         )}
         onClick={onToggle}
       >
-        {/* State indicator */}
-        <div className="pt-0.5">
+        <td className="px-3 align-middle text-center">
           <StateIndicator state={state} />
-        </div>
-
-        {/* Channel icon */}
-        <div className="pt-0.5 shrink-0">
+        </td>
+        <td className="px-2 align-middle text-center">
           <ChannelIcon type={action.type} />
-        </div>
-
-        {/* Main content */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
+        </td>
+        <td className="px-2 align-middle">
+          <div className="text-[13px] font-medium text-[var(--q-text-primary)] truncate max-w-[180px]">
+            {debtorName || "Unknown"}
+          </div>
+        </td>
+        <td className="px-2 align-middle">
+          <div className="flex items-center gap-2">
             <span className={cn(
-              "text-sm",
-              state === "new" && "font-semibold",
-              state === "in_progress" && "font-medium",
-              state === "resolved" && "text-[var(--q-text-tertiary)]",
+              "text-[13px] truncate",
+              state === "new" ? "text-[var(--q-text-primary)]" : "text-[var(--q-text-tertiary)]",
             )}>
               {title}
             </span>
-            <QBadge variant="risk">
-              {action.status === "failed"
-                ? "send failed"
-                : action.exceptionReason?.replace(/_/g, " ") || "flagged"}
-            </QBadge>
+            <QBadge variant="risk" className="shrink-0">{reasonLabel}</QBadge>
           </div>
-
-          {debtorName && (
-            <Link
-              href={`/qollections/debtors/${action.contactId}`}
-              className="text-xs text-[var(--q-accent)] hover:underline"
-              onClick={(e: React.MouseEvent) => e.stopPropagation()}
-            >
-              {debtorName}
-            </Link>
-          )}
-
-          {preview && !isExpanded && (
-            <p className="text-xs text-[var(--q-text-tertiary)] mt-1 line-clamp-1">{preview}</p>
-          )}
-        </div>
-
-        {/* Right side */}
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="flex items-center gap-1 text-xs text-[var(--q-text-tertiary)]">
-            <Clock className="h-3 w-3" />
+        </td>
+        <td className="px-2 align-middle">
+          <span className="text-[12px] text-[var(--q-text-tertiary)]">
             {formatRelativeTime(action.createdAt)}
+          </span>
+        </td>
+        <td className="px-2 align-middle text-right">
+          <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+            {isFailedSend && (
+              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={onRetrySend} disabled={isPending}>
+                <RefreshCw className="h-3 w-3 mr-1" />
+                Retry
+              </Button>
+            )}
+            {state === "new" && (
+              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={onStartWorking} disabled={isPending}>
+                Ack
+              </Button>
+            )}
+            {(state === "new" || state === "in_progress") && (
+              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={onStartResolving}>
+                <CheckCircle2 className="h-3 w-3 mr-1" />
+                Resolve
+              </Button>
+            )}
+            {state === "resolved" && (
+              <button className="text-xs text-[var(--q-text-tertiary)] hover:text-[var(--q-text-primary)] underline" onClick={onReopen} disabled={isPending}>
+                Reopen
+              </button>
+            )}
+            <ChevronDown className={cn("h-4 w-4 text-[var(--q-text-tertiary)] transition-transform ml-1", isExpanded && "rotate-180")} />
           </div>
-          <ChevronDown className={cn(
-            "h-4 w-4 text-[var(--q-text-tertiary)] transition-transform",
-            isExpanded && "rotate-180",
-          )} />
-        </div>
-      </div>
+        </td>
+      </tr>
 
-      {/* Expanded detail */}
+      {/* Expanded detail row */}
       {isExpanded && (
-        <div className="border-t px-4 py-3 bg-[var(--q-bg-surface-alt)]/10 space-y-3">
-          {action.content && (
-            <div>
-              <p className="text-xs font-medium text-[var(--q-text-tertiary)] mb-1">Content</p>
-              <div className="rounded border bg-background p-3 text-xs whitespace-pre-wrap max-h-48 overflow-y-auto">
-                {action.content}
-              </div>
-            </div>
-          )}
+        <tr className={cn(!isLast && "border-b border-[var(--q-border-default)]")}>
+          <td colSpan={6} className="px-4 py-3 bg-[var(--q-bg-surface-alt)]/10">
+            <div className="space-y-3">
+              {action.content && (
+                <div>
+                  <p className="text-xs font-medium text-[var(--q-text-tertiary)] mb-1">Content</p>
+                  <div className="rounded border border-[var(--q-border-default)] bg-[var(--q-bg-surface)] p-3 text-xs whitespace-pre-wrap max-h-48 overflow-y-auto">
+                    {action.content}
+                  </div>
+                </div>
+              )}
 
-          {executionError && (
-            <div>
-              <p className="text-xs font-medium text-[var(--q-text-tertiary)] mb-1">Error</p>
-              <p className="text-xs text-destructive">{executionError}</p>
-            </div>
-          )}
+              {executionError && (
+                <div>
+                  <p className="text-xs font-medium text-[var(--q-text-tertiary)] mb-1">Error</p>
+                  <p className="text-xs text-destructive">{executionError}</p>
+                </div>
+              )}
 
-          {action.agentReasoning && (
-            <div>
-              <p className="text-xs font-medium text-[var(--q-text-tertiary)] mb-1">Why flagged</p>
-              <p className="text-xs text-[var(--q-text-tertiary)]">{action.agentReasoning}</p>
-            </div>
-          )}
+              {action.agentReasoning && (
+                <div>
+                  <p className="text-xs font-medium text-[var(--q-text-tertiary)] mb-1">Why flagged</p>
+                  <p className="text-xs text-[var(--q-text-tertiary)]">{action.agentReasoning}</p>
+                </div>
+              )}
 
-          {/* Resolution notes (if resolved) */}
-          {state === "resolved" && action.exceptionResolutionNotes && (
-            <div>
-              <p className="text-xs font-medium text-[var(--q-text-tertiary)] mb-1">Resolution</p>
-              <p className="text-xs text-[var(--q-text-tertiary)]">{action.exceptionResolutionNotes}</p>
-              {action.exceptionResolvedAt && (
-                <p className="text-[11px] text-[var(--q-text-tertiary)]/60 mt-0.5">
-                  Resolved {formatRelativeTime(action.exceptionResolvedAt)}
-                </p>
+              {state === "resolved" && action.exceptionResolutionNotes && (
+                <div>
+                  <p className="text-xs font-medium text-[var(--q-text-tertiary)] mb-1">Resolution</p>
+                  <p className="text-xs text-[var(--q-text-tertiary)]">{action.exceptionResolutionNotes}</p>
+                  {action.exceptionResolvedAt && (
+                    <p className="text-[11px] text-[var(--q-text-tertiary)]/60 mt-0.5">
+                      Resolved {formatRelativeTime(action.exceptionResolvedAt)}
+                    </p>
+                  )}
+                </div>
               )}
-            </div>
-          )}
 
-          {/* Resolve inline form */}
-          {isResolving && (
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-[var(--q-text-tertiary)]">Resolution notes</p>
-              <Textarea
-                value={resolveNotes}
-                onChange={(e) => onResolveNotesChange(e.target.value)}
-                placeholder="What was done to resolve this?"
-                className="min-h-[60px] text-xs"
-              />
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  onClick={() => onResolve(resolveNotes || undefined)}
-                  disabled={isPending}
-                >
-                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                  Submit
-                </Button>
-                <Button size="sm" variant="ghost" onClick={onCancelResolving}>
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          )}
+              {isResolving && (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-[var(--q-text-tertiary)]">Resolution notes</p>
+                  <Textarea
+                    value={resolveNotes}
+                    onChange={(e) => onResolveNotesChange(e.target.value)}
+                    placeholder="What was done to resolve this?"
+                    className="min-h-[60px] text-xs"
+                  />
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={() => onResolve(resolveNotes || undefined)} disabled={isPending}>
+                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                      Submit
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={onCancelResolving}>
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
 
-          {/* Action buttons based on state */}
-          {!isResolving && (
-            <div className="flex items-center gap-2 pt-1">
-              {isFailedSend && (
-                <Button size="sm" variant="outline" onClick={onRetrySend} disabled={isPending}>
-                  <RefreshCw className="h-3 w-3 mr-1" />
-                  Retry send
-                </Button>
-              )}
-              {state === "new" && (
-                <>
-                  <Button size="sm" variant="outline" onClick={onStartWorking} disabled={isPending}>
-                    Acknowledge
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={onStartResolving}>
-                    <CheckCircle2 className="h-3 w-3 mr-1" />
-                    Mark resolved
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={onDismiss} disabled={isPending}>
-                    Dismiss
-                  </Button>
-                </>
-              )}
-              {state === "in_progress" && (
-                <>
-                  <Button size="sm" variant="outline" onClick={onStartResolving}>
-                    <CheckCircle2 className="h-3 w-3 mr-1" />
-                    Mark resolved
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={onDismiss} disabled={isPending}>
-                    Dismiss
-                  </Button>
-                </>
-              )}
-              {state === "resolved" && (
-                <button
-                  className="text-xs text-[var(--q-text-tertiary)] hover:text-foreground underline"
-                  onClick={onReopen}
-                  disabled={isPending}
-                >
-                  Reopen
-                </button>
-              )}
-              {action.contactId && (
-                <Link href={`/qollections/debtors/${action.contactId}`}>
-                  <Button size="sm" variant="ghost">
-                    <ExternalLink className="h-3 w-3 mr-1" />
-                    View Debtor
-                  </Button>
-                </Link>
+              {!isResolving && (
+                <div className="flex items-center gap-2 pt-1">
+                  {state === "new" && (
+                    <Button size="sm" variant="ghost" onClick={onDismiss} disabled={isPending}>
+                      Dismiss
+                    </Button>
+                  )}
+                  {state === "in_progress" && (
+                    <Button size="sm" variant="ghost" onClick={onDismiss} disabled={isPending}>
+                      Dismiss
+                    </Button>
+                  )}
+                  {action.contactId && (
+                    <Link href={`/qollections/debtors/${action.contactId}`}>
+                      <Button size="sm" variant="ghost">
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        View Debtor
+                      </Button>
+                    </Link>
+                  )}
+                </div>
               )}
             </div>
-          )}
-        </div>
+          </td>
+        </tr>
       )}
-    </div>
+    </>
   );
 }
 

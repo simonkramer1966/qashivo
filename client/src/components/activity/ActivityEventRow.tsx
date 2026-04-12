@@ -37,12 +37,12 @@ export interface ActivityEventData {
 
 export function DirectionArrow({ direction }: { direction: string | null | undefined }) {
   if (direction === "inbound") {
-    return <ArrowLeft className="w-4 h-4 shrink-0 mt-0.5" style={{ stroke: "#1D9E75", strokeWidth: 2.5 }} />;
+    return <ArrowLeft className="w-4 h-4 shrink-0 mt-0.5" className="text-[var(--q-money-in-text)]" style={{ strokeWidth: 2.5 }} />;
   }
   if (direction === "outbound") {
-    return <ArrowRight className="w-4 h-4 shrink-0 mt-0.5" style={{ stroke: "#185FA5", strokeWidth: 2.5 }} />;
+    return <ArrowRight className="w-4 h-4 shrink-0 mt-0.5" className="text-[var(--q-info-text)]" style={{ strokeWidth: 2.5 }} />;
   }
-  return <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" style={{ stroke: "#BA7517", strokeWidth: 2.5 }} />;
+  return <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" className="text-[var(--q-attention-text)]" style={{ strokeWidth: 2.5 }} />;
 }
 
 // ── Format helpers ────────────────────────────────────────────
@@ -302,23 +302,23 @@ export function ActivityEventRow({
     <div
       className={cn(
         "flex items-start text-[13px]",
-        isEven && "bg-muted/20",
+        isEven && "bg-[var(--q-bg-surface-alt)]/20",
       )}
     >
       {/* Timestamp column — date primary, time secondary for comms only */}
       <div className="w-[60px] md:w-[72px] shrink-0 py-2 pl-4 pr-2 whitespace-nowrap text-right">
-        <div className="text-xs font-medium text-foreground leading-tight">
+        <div className="text-xs font-medium text-[var(--q-text-primary)] leading-tight">
           {formatShortDate(evt.occurredAt)}
         </div>
         {isCommunicationEvent(evt) && (
-          <div className="text-[11px] text-muted-foreground leading-tight">
+          <div className="text-[11px] text-[var(--q-text-tertiary)] leading-tight">
             {formatTime(evt.occurredAt)}
           </div>
         )}
       </div>
 
       {/* Separator */}
-      <div className="w-px bg-border/50 self-stretch shrink-0" />
+      <div className="w-px bg-[var(--q-border-default)]/50 self-stretch shrink-0" />
 
       {/* Content column */}
       <div className="flex-1 min-w-0 flex items-start gap-2 py-2 px-3">
@@ -329,11 +329,11 @@ export function ActivityEventRow({
         <div className="flex-1 min-w-0">
           <div className={cn(
             "leading-snug",
-            dir === "inbound" && "text-[#1D9E75]",
+            dir === "inbound" && "text-[var(--q-money-in-text)]",
           )}>
             {narrative}
           </div>
-          <div className="text-xs text-muted-foreground mt-0.5 leading-tight">
+          <div className="text-xs text-[var(--q-text-tertiary)] mt-0.5 leading-tight">
             {attribution}
           </div>
         </div>
