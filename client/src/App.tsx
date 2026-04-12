@@ -2,7 +2,7 @@ import { Switch, Route, useLocation, Redirect } from "wouter";
 import { Suspense, lazy, useEffect } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
-import { SignIn } from "@clerk/clerk-react";
+import { SignIn, useClerk } from "@clerk/clerk-react";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
@@ -28,6 +28,7 @@ const SmeOnboarding = lazy(() => import("@/pages/sme-onboarding"));
 const QashivoAdminDashboard = lazy(() => import("@/pages/qashivo-admin"));
 
 // Partner portal pages
+const PartnerLoginPage = lazy(() => import("@/pages/partner/login"));
 const PartnerDashboard = lazy(() => import("@/pages/partner/dashboard"));
 const PartnerClients = lazy(() => import("@/pages/partner/clients"));
 const PartnerReports = lazy(() => import("@/pages/partner/reports"));
@@ -120,17 +121,37 @@ function RoleGuard({ check, children }: { check: (p: ReturnType<typeof usePermis
 
 function PartnerGuard({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const [, setLocation] = useLocation();
+  const clerk = useClerk();
   const isPartner = !!(user as any)?.partnerId;
 
-  useEffect(() => {
-    if (user && !isPartner) {
-      setLocation("/home");
-    }
-  }, [user, isPartner, setLocation]);
-
   if (!user) return <PageLoader />;
-  if (!isPartner) return <PageLoader />;
+  if (!isPartner) {
+    return (
+      <div className="min-h-screen bg-[var(--q-bg-page)] flex items-center justify-center">
+        <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border)] rounded-[var(--q-radius-md)] p-8 max-w-sm text-center space-y-4">
+          <h2 className="text-lg font-semibold text-[var(--q-text-primary)]">
+            Not a partner account
+          </h2>
+          <p className="text-sm text-[var(--q-text-secondary)]">
+            This account is not associated with a partner organisation.
+          </p>
+          <div className="flex flex-col gap-2 pt-2">
+            <a href="/home" className="text-sm text-[var(--q-accent)] underline">
+              Sign in to Qashivo instead &rarr;
+            </a>
+            <button
+              onClick={() => {
+                clerk.signOut({ redirectUrl: "/partner/login" });
+              }}
+              className="text-sm text-[var(--q-text-tertiary)] underline"
+            >
+              Try a different account &rarr;
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
   return <>{children}</>;
 }
 
@@ -180,8 +201,14 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
 
 function ClerkSignInPage() {
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
       <SignIn routing="path" path="/login" signUpUrl="/signup" forceRedirectUrl="/qollections" />
+      <p className="text-[13px] text-[var(--q-text-tertiary)]">
+        Partner?{" "}
+        <a href="/partner/login" className="underline hover:text-[var(--q-text-secondary)]">
+          Sign in to Partner Portal &rarr;
+        </a>
+      </p>
     </div>
   );
 }
@@ -228,8 +255,11 @@ function Router() {
         <Switch>
           {/* Auth */}
           <Route path="/login" component={ClerkSignInPage} />
+          <Route path="/login/:rest*" component={ClerkSignInPage} />
           <Route path="/signup" component={ClerkSignUpPage} />
           <Route path="/signin" component={ClerkSignInPage} />
+          <Route path="/partner/login" component={PartnerLoginPage} />
+          <Route path="/partner/login/:rest*" component={PartnerLoginPage} />
 
           {/* Public pages that must work without auth */}
           <Route path="/debtor-portal" component={DebtorPortal} />
@@ -279,6 +309,7 @@ function Router() {
           <Route path="/login">{() => <Redirect to="/home" />}</Route>
           <Route path="/signup">{() => <Redirect to="/home" />}</Route>
           <Route path="/signin">{() => <Redirect to="/home" />}</Route>
+          <Route path="/partner/login">{() => <Redirect to="/partner/dashboard" />}</Route>
           {/* Three-pillar home dashboard */}
           <Route path="/home" component={HomeDashboard} />
           {/* Old marketing paths → redirect to home */}
