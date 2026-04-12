@@ -26,29 +26,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Mail,
-  MessageSquare,
-  Phone,
-  Clock,
-  AlertTriangle,
   ChevronRight,
   RefreshCw,
   Trash2,
-  CheckCircle2,
   Loader2,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  Shield,
-  Gavel,
-  UserX,
-  Hand,
-  ShieldAlert,
-  Heart,
-  Wrench,
-  FileQuestion,
-  Skull,
-  HelpCircle,
   Send,
   ArrowRight,
   ExternalLink,
@@ -103,78 +84,50 @@ interface DrilldownItem {
 }
 
 type Period = "today" | "week" | "month" | "custom";
-type MetricColor = "info" | "positive" | "attention" | "risk" | "muted";
 
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
 
-function SectionDivider({ label }: { label: string }) {
+function SectionLabel({ label }: { label: string }) {
   return (
-    <div className="flex items-center gap-2 !mt-4 !mb-1.5">
-      <span className="text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)]/70">
-        {label}
-      </span>
-      <div className="flex-1 border-t border-[var(--q-border-default)]" />
-    </div>
+    <p className="text-[11px] font-medium tracking-[0.3px] text-[var(--q-text-tertiary)] mt-4 mb-2">
+      {label}
+    </p>
   );
 }
 
-function MetricRow({
-  icon,
+function SummaryRow({
   label,
-  count,
-  color,
+  value,
+  valueColor,
+  trend,
   onClick,
-  suffix,
-  badge,
-  barWidth,
+  bold,
 }: {
-  icon: React.ReactNode;
   label: string;
-  count: number | string;
-  color?: MetricColor;
+  value: string | number;
+  valueColor?: "risk" | "positive" | "attention" | "muted";
+  trend?: { value: number };
   onClick?: () => void;
-  suffix?: string;
-  badge?: { value: number; type: "up" | "down" | "neutral" };
-  barWidth?: number;
+  bold?: boolean;
 }) {
-  const colorStyles: Record<MetricColor, { text: string; bg: string; bar: string }> = {
-    risk: { text: "text-[var(--q-risk-text)]", bg: "bg-[var(--q-risk-bg)]", bar: "bg-[var(--q-risk-text)]" },
-    attention: { text: "text-[var(--q-attention-text)]", bg: "bg-[var(--q-attention-bg)]", bar: "bg-[var(--q-attention-text)]" },
-    info: { text: "text-[var(--q-info-text)]", bg: "", bar: "bg-[var(--q-info-text)]" },
-    positive: { text: "text-[var(--q-money-in-text)]", bg: "", bar: "bg-[var(--q-money-in-text)]" },
-    muted: { text: "text-[var(--q-text-tertiary)]", bg: "", bar: "bg-[var(--q-text-tertiary)]" },
-  };
-
-  const style = color ? colorStyles[color] : colorStyles.muted;
-
-  const BadgeIndicator = badge ? (
-    <span
-      className={`inline-flex items-center gap-0.5 text-[10px] font-medium ${
-        badge.type === "up"
-          ? "text-[var(--q-money-in-text)]"
-          : badge.type === "down"
-            ? "text-[var(--q-risk-text)]"
-            : "text-[var(--q-text-tertiary)]"
-      }`}
-    >
-      {badge.type === "up" ? (
-        <TrendingUp className="h-3 w-3" />
-      ) : badge.type === "down" ? (
-        <TrendingDown className="h-3 w-3" />
-      ) : (
-        <Minus className="h-3 w-3" />
-      )}
-      {badge.value > 0 ? "+" : ""}
-      {badge.value}%
-    </span>
-  ) : null;
+  const isZero = value === 0 || value === "0";
+  let valueClass = "text-[var(--q-text-primary)]";
+  if (isZero) {
+    valueClass = "text-[var(--q-text-tertiary)]";
+  } else if (valueColor === "risk") {
+    valueClass = "text-[var(--q-risk-text)]";
+  } else if (valueColor === "positive") {
+    valueClass = "text-[var(--q-money-in-text)]";
+  } else if (valueColor === "attention") {
+    valueClass = "text-[var(--q-attention-text)]";
+  }
 
   return (
     <div
-      className={`flex items-center gap-2.5 px-2 py-1.5 rounded-md transition-colors ${
-        onClick ? "cursor-pointer hover:bg-[var(--q-bg-surface-alt)]" : ""
+      className={`flex items-center justify-between py-2 border-b border-[var(--q-border-default)] last:border-0 transition-colors duration-100 ${
+        onClick ? "cursor-pointer hover:bg-[var(--q-bg-surface-hover)] -mx-2 px-2 rounded" : ""
       }`}
       onClick={onClick}
       role={onClick ? "button" : undefined}
@@ -190,23 +143,17 @@ function MetricRow({
           : undefined
       }
     >
-      <span className={`flex-shrink-0 ${style.text}`}>{icon}</span>
-      <div className="flex-1 min-w-0">
-        <span className="text-sm text-[var(--q-text-primary)]">{label}</span>
-        {barWidth !== undefined && barWidth > 0 && (
-          <div className="mt-0.5 h-1 w-full rounded-full bg-[var(--q-bg-surface-alt)]">
-            <div
-              className={`h-1 rounded-full ${style.bar}`}
-              style={{ width: `${Math.min(barWidth, 100)}%` }}
-            />
-          </div>
+      <span className={`text-[14px] ${bold ? "font-medium text-[var(--q-text-primary)]" : "text-[var(--q-text-secondary)]"}`}>
+        {label}
+      </span>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        {trend && trend.value !== 0 && (
+          <span className={`text-[12px] ${trend.value > 0 ? "text-[var(--q-money-in-text)]" : "text-[var(--q-risk-text)]"}`}>
+            {trend.value > 0 ? "↗" : "↘"} {trend.value > 0 ? "+" : ""}{trend.value}%
+          </span>
         )}
-      </div>
-      <div className="flex items-center gap-1.5 flex-shrink-0">
-        {BadgeIndicator}
-        <span className={`text-sm font-semibold tabular-nums q-mono ${style.text}`}>
-          {count}
-          {suffix}
+        <span className={`text-[14px] q-mono tabular-nums ${valueClass} ${bold ? "font-medium" : ""}`}>
+          {value}
         </span>
         {onClick && <ChevronRight className="h-3.5 w-3.5 text-[var(--q-text-tertiary)]" />}
       </div>
@@ -229,12 +176,6 @@ function formatTime(iso: string): string {
     minute: "2-digit",
     second: "2-digit",
   });
-}
-
-function badgeType(value: number): "up" | "down" | "neutral" {
-  if (value > 0) return "up";
-  if (value < 0) return "down";
-  return "neutral";
 }
 
 // ---------------------------------------------------------------------------
@@ -378,10 +319,6 @@ export default function OverviewTab() {
     { value: "custom", label: "Custom" },
   ];
 
-  function barWidthFor(count: number, total: number): number {
-    return Math.max(count > 0 ? 4 : 0, (count / Math.max(total, 1)) * 100);
-  }
-
   // ---------- Loading state ----------
 
   if (isLoading || !summary) {
@@ -479,68 +416,25 @@ export default function OverviewTab() {
       {/* Three columns */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* ---- QUEUED ---- */}
-        <div className="flex flex-col bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] border-l-4 border-l-[var(--q-info-text)]">
-          <div className="px-5 pt-5 pb-2">
+        <div className="flex flex-col bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)]">
+          <div className="px-5 pt-5 pb-1">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-[var(--q-info-text)]" />
-                <h3 className="text-base font-semibold text-[var(--q-text-primary)]">Queued</h3>
-              </div>
-              <span className="text-2xl font-bold tabular-nums q-mono text-[var(--q-info-text)]">
+              <h3 className="text-sm font-semibold text-[var(--q-text-primary)]">Queued</h3>
+              <span className="text-[28px] font-semibold leading-none q-mono tabular-nums text-[var(--q-text-primary)]">
                 {queued.total}
               </span>
             </div>
           </div>
           <div className="flex-1 px-5 pb-3">
-            <div className="min-h-[12.5rem] space-y-0.5">
-              <SectionDivider label="Communications queued" />
-              <MetricRow
-                icon={<Mail className="h-3.5 w-3.5" />}
-                label="Emails awaiting approval"
-                count={queued.emails}
-                color="info"
-                onClick={() => openDrilldown("queued_emails", "Emails awaiting approval")}
-              />
-              <MetricRow
-                icon={<MessageSquare className="h-3.5 w-3.5" />}
-                label="SMS awaiting approval"
-                count={queued.sms}
-                color="info"
-                onClick={() => openDrilldown("queued_sms", "SMS awaiting approval")}
-              />
-              <MetricRow
-                icon={<Phone className="h-3.5 w-3.5" />}
-                label="Calls awaiting approval"
-                count={queued.calls}
-                color="info"
-                onClick={() => openDrilldown("queued_calls", "Calls awaiting approval")}
-              />
-            </div>
-            <div className="space-y-0.5">
-              <SectionDivider label="By urgency" />
-              <MetricRow
-                icon={<Clock className="h-3.5 w-3.5" />}
-                label="Waiting > 24 hours"
-                count={queued.waitingOver24h}
-                color="attention"
-                onClick={() => openDrilldown("queued_waiting_24h", "Waiting > 24 hours")}
-              />
-              <MetricRow
-                icon={<AlertTriangle className="h-3.5 w-3.5" />}
-                label="Debtors > 60 days overdue"
-                count={queued.debtorsOver60DaysOverdue}
-                color="attention"
-                onClick={() =>
-                  openDrilldown("queued_over_60_days", "Debtors > 60 days overdue")
-                }
-              />
-              <MetricRow
-                icon={<span className="h-3.5 w-3.5" />}
-                label="Total value queued"
-                count={formatGBP(queued.totalValueQueued)}
-                color="muted"
-              />
-            </div>
+            <SectionLabel label="Communications queued" />
+            <SummaryRow label="Emails awaiting approval" value={queued.emails} onClick={() => openDrilldown("queued_emails", "Emails awaiting approval")} />
+            <SummaryRow label="SMS awaiting approval" value={queued.sms} onClick={() => openDrilldown("queued_sms", "SMS awaiting approval")} />
+            <SummaryRow label="Calls awaiting approval" value={queued.calls} onClick={() => openDrilldown("queued_calls", "Calls awaiting approval")} />
+
+            <SectionLabel label="By urgency" />
+            <SummaryRow label="Waiting > 24 hours" value={queued.waitingOver24h} valueColor={queued.waitingOver24h > 0 ? "attention" : undefined} onClick={() => openDrilldown("queued_waiting_24h", "Waiting > 24 hours")} />
+            <SummaryRow label="Debtors > 60 days overdue" value={queued.debtorsOver60DaysOverdue} valueColor={queued.debtorsOver60DaysOverdue > 0 ? "attention" : undefined} onClick={() => openDrilldown("queued_over_60_days", "Debtors > 60 days overdue")} />
+            <SummaryRow label="Total value queued" value={formatGBP(queued.totalValueQueued)} bold />
           </div>
           <div className="border-t border-[var(--q-border-default)] px-5 py-3 flex items-center gap-2">
             <Button
@@ -574,68 +468,25 @@ export default function OverviewTab() {
         </div>
 
         {/* ---- ACTIONED ---- */}
-        <div className="flex flex-col bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] border-l-4 border-l-[var(--q-money-in-text)]">
-          <div className="px-5 pt-5 pb-2">
+        <div className="flex flex-col bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)]">
+          <div className="px-5 pt-5 pb-1">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-[var(--q-money-in-text)]" />
-                <h3 className="text-base font-semibold text-[var(--q-text-primary)]">Actioned</h3>
-              </div>
-              <span className="text-2xl font-bold tabular-nums q-mono text-[var(--q-money-in-text)]">
+              <h3 className="text-sm font-semibold text-[var(--q-text-primary)]">Actioned</h3>
+              <span className="text-[28px] font-semibold leading-none q-mono tabular-nums text-[var(--q-text-primary)]">
                 {actioned.total}
               </span>
             </div>
           </div>
           <div className="flex-1 px-5 pb-3">
-            <div className="min-h-[12.5rem] space-y-0.5">
-              <SectionDivider label="Communications sent" />
-              <MetricRow
-                icon={<Mail className="h-3.5 w-3.5" />}
-                label="Emails sent"
-                count={actioned.emailsSent}
-                color="positive"
-                badge={{
-                  value: actioned.emailsSentVsPrevious,
-                  type: badgeType(actioned.emailsSentVsPrevious),
-                }}
-                onClick={() => openDrilldown("actioned_emails", "Emails sent")}
-              />
-              <MetricRow
-                icon={<MessageSquare className="h-3.5 w-3.5" />}
-                label="SMS sent"
-                count={actioned.smsSent}
-                color="positive"
-                onClick={() => openDrilldown("actioned_sms", "SMS sent")}
-              />
-              <MetricRow
-                icon={<Phone className="h-3.5 w-3.5" />}
-                label="Voice calls made"
-                count={actioned.callsMade}
-                color="positive"
-                onClick={() => openDrilldown("actioned_calls", "Voice calls made")}
-              />
-            </div>
-            <div className="space-y-0.5">
-              <SectionDivider label="Outcomes" />
-              <MetricRow
-                icon={<CheckCircle2 className="h-3.5 w-3.5" />}
-                label="Promises to pay"
-                count={actioned.promisesToPay}
-                color="positive"
-              />
-              <MetricRow
-                icon={<Shield className="h-3.5 w-3.5" />}
-                label="Payment plans agreed"
-                count={actioned.paymentPlansAgreed}
-                color="positive"
-              />
-              <MetricRow
-                icon={<TrendingUp className="h-3.5 w-3.5" />}
-                label="Response rate"
-                count={`${actioned.responseRate}%`}
-                color="positive"
-              />
-            </div>
+            <SectionLabel label="Communications sent" />
+            <SummaryRow label="Emails sent" value={actioned.emailsSent} valueColor={actioned.emailsSent > 0 ? "positive" : undefined} trend={actioned.emailsSentVsPrevious !== 0 ? { value: actioned.emailsSentVsPrevious } : undefined} onClick={() => openDrilldown("actioned_emails", "Emails sent")} />
+            <SummaryRow label="SMS sent" value={actioned.smsSent} valueColor={actioned.smsSent > 0 ? "positive" : undefined} onClick={() => openDrilldown("actioned_sms", "SMS sent")} />
+            <SummaryRow label="Voice calls made" value={actioned.callsMade} valueColor={actioned.callsMade > 0 ? "positive" : undefined} onClick={() => openDrilldown("actioned_calls", "Voice calls made")} />
+
+            <SectionLabel label="Outcomes" />
+            <SummaryRow label="Promises to pay" value={actioned.promisesToPay} valueColor={actioned.promisesToPay > 0 ? "positive" : undefined} />
+            <SummaryRow label="Payment plans agreed" value={actioned.paymentPlansAgreed} valueColor={actioned.paymentPlansAgreed > 0 ? "positive" : undefined} />
+            <SummaryRow label="Response rate" value={`${actioned.responseRate}%`} valueColor={actioned.responseRate > 0 ? "positive" : undefined} />
           </div>
           <div className="border-t border-[var(--q-border-default)] px-5 py-3">
             <Button
@@ -651,105 +502,30 @@ export default function OverviewTab() {
         </div>
 
         {/* ---- EXCEPTIONS ---- */}
-        <div className="flex flex-col bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] border-l-4 border-l-[var(--q-risk-text)]">
-          <div className="px-5 pt-5 pb-2">
+        <div className="flex flex-col bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)]">
+          <div className="px-5 pt-5 pb-1">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-[var(--q-risk-text)]" />
-                <h3 className="text-base font-semibold text-[var(--q-text-primary)]">Exceptions</h3>
-              </div>
-              <span className="text-2xl font-bold tabular-nums q-mono text-[var(--q-risk-text)]">
+              <h3 className="text-sm font-semibold text-[var(--q-text-primary)]">Exceptions</h3>
+              <span className={`text-[28px] font-semibold leading-none q-mono tabular-nums ${exceptions.total > 0 ? "text-[var(--q-risk-text)]" : "text-[var(--q-text-primary)]"}`}>
                 {exceptions.total}
               </span>
             </div>
           </div>
           <div className="flex-1 px-5 pb-3">
-            <div className="min-h-[12.5rem] space-y-0.5">
-              <SectionDivider label="Collections" />
-              <MetricRow
-                icon={<Gavel className="h-3.5 w-3.5" />}
-                label="Disputed invoices"
-                count={exceptions.disputedInvoices}
-                color="risk"
-                barWidth={barWidthFor(exceptions.disputedInvoices, exceptions.total)}
-                onClick={() => openDrilldown("exceptions_disputed", "Disputed invoices")}
-              />
-              <MetricRow
-                icon={<UserX className="h-3.5 w-3.5" />}
-                label="Unresponsive — end of flow"
-                count={exceptions.unresponsiveEndOfFlow}
-                color="risk"
-                barWidth={barWidthFor(exceptions.unresponsiveEndOfFlow, exceptions.total)}
-                onClick={() =>
-                  openDrilldown("exceptions_unresponsive", "Unresponsive — end of flow")
-                }
-              />
-              <MetricRow
-                icon={<Hand className="h-3.5 w-3.5" />}
-                label="Wants human contact"
-                count={exceptions.wantsHumanContact}
-                color="attention"
-                barWidth={barWidthFor(exceptions.wantsHumanContact, exceptions.total)}
-                onClick={() =>
-                  openDrilldown("exceptions_human_contact", "Wants human contact")
-                }
-              />
-              <MetricRow
-                icon={<ShieldAlert className="h-3.5 w-3.5" />}
-                label="Compliance failures"
-                count={exceptions.complianceFailures}
-                color="attention"
-                barWidth={barWidthFor(exceptions.complianceFailures, exceptions.total)}
-                onClick={() =>
-                  openDrilldown("exceptions_compliance", "Compliance failures")
-                }
-              />
-            </div>
-            <div className="space-y-0.5">
-              <SectionDivider label="Debtor situations" />
-              <MetricRow
-                icon={<Heart className="h-3.5 w-3.5" />}
-                label="Distress — cashflow issues"
-                count={exceptions.distress}
-                color="risk"
-                barWidth={barWidthFor(exceptions.distress, exceptions.total)}
-                onClick={() => openDrilldown("exceptions_distress", "Distress — cashflow issues")}
-              />
-              <MetricRow
-                icon={<Wrench className="h-3.5 w-3.5" />}
-                label="Service issue"
-                count={exceptions.serviceIssue}
-                color="attention"
-                barWidth={barWidthFor(exceptions.serviceIssue, exceptions.total)}
-                onClick={() => openDrilldown("exceptions_service", "Service issue")}
-              />
-              <MetricRow
-                icon={<FileQuestion className="h-3.5 w-3.5" />}
-                label="Missing PO / info"
-                count={exceptions.missingPO}
-                color="attention"
-                barWidth={barWidthFor(exceptions.missingPO, exceptions.total)}
-                onClick={() => openDrilldown("exceptions_missing_po", "Missing PO / info")}
-              />
-              <MetricRow
-                icon={<Skull className="h-3.5 w-3.5" />}
-                label="Insolvency risk"
-                count={exceptions.insolvencyRisk}
-                color="risk"
-                barWidth={barWidthFor(exceptions.insolvencyRisk, exceptions.total)}
-                onClick={() => openDrilldown("exceptions_insolvency", "Insolvency risk")}
-              />
-            </div>
-            <div className="space-y-0.5">
-              <SectionDivider label="Other" />
-              <MetricRow
-                icon={<HelpCircle className="h-3.5 w-3.5" />}
-                label="Other exceptions"
-                count={exceptions.other}
-                color="muted"
-                onClick={() => openDrilldown("exceptions_other", "Other exceptions")}
-              />
-            </div>
+            <SectionLabel label="Collections" />
+            <SummaryRow label="Disputed invoices" value={exceptions.disputedInvoices} valueColor={exceptions.disputedInvoices > 0 ? "risk" : undefined} onClick={() => openDrilldown("exceptions_disputed", "Disputed invoices")} />
+            <SummaryRow label="Unresponsive — end of flow" value={exceptions.unresponsiveEndOfFlow} valueColor={exceptions.unresponsiveEndOfFlow > 0 ? "risk" : undefined} onClick={() => openDrilldown("exceptions_unresponsive", "Unresponsive — end of flow")} />
+            <SummaryRow label="Wants human contact" value={exceptions.wantsHumanContact} valueColor={exceptions.wantsHumanContact > 0 ? "attention" : undefined} onClick={() => openDrilldown("exceptions_human_contact", "Wants human contact")} />
+            <SummaryRow label="Compliance failures" value={exceptions.complianceFailures} valueColor={exceptions.complianceFailures > 0 ? "attention" : undefined} onClick={() => openDrilldown("exceptions_compliance", "Compliance failures")} />
+
+            <SectionLabel label="Debtor situations" />
+            <SummaryRow label="Distress — cashflow issues" value={exceptions.distress} valueColor={exceptions.distress > 0 ? "risk" : undefined} onClick={() => openDrilldown("exceptions_distress", "Distress — cashflow issues")} />
+            <SummaryRow label="Service issue" value={exceptions.serviceIssue} valueColor={exceptions.serviceIssue > 0 ? "attention" : undefined} onClick={() => openDrilldown("exceptions_service", "Service issue")} />
+            <SummaryRow label="Missing PO / info" value={exceptions.missingPO} valueColor={exceptions.missingPO > 0 ? "attention" : undefined} onClick={() => openDrilldown("exceptions_missing_po", "Missing PO / info")} />
+            <SummaryRow label="Insolvency risk" value={exceptions.insolvencyRisk} valueColor={exceptions.insolvencyRisk > 0 ? "risk" : undefined} onClick={() => openDrilldown("exceptions_insolvency", "Insolvency risk")} />
+
+            <SectionLabel label="Other" />
+            <SummaryRow label="Other exceptions" value={exceptions.other} onClick={() => openDrilldown("exceptions_other", "Other exceptions")} />
           </div>
           <div className="border-t border-[var(--q-border-default)] px-5 py-3">
             <Button
