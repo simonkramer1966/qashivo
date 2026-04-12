@@ -1,7 +1,6 @@
 import { useState, useRef, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
 import { Treemap, ResponsiveContainer } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import DebtorPopup from "./DebtorPopup";
@@ -161,39 +160,30 @@ export default function DebtorTreemap({ debtors, isLoading }: DebtorTreemapProps
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-semibold">Debtor Treemap</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Skeleton className="w-full" style={{ height: TREEMAP_HEIGHT }} />
-        </CardContent>
-      </Card>
+      <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] p-5">
+        <h3 className="text-sm font-semibold text-[var(--q-text-primary)]">Outstanding by Debtor</h3>
+        <Skeleton className="w-full mt-4" style={{ height: TREEMAP_HEIGHT }} />
+      </div>
     );
   }
 
   if (debtors.length === 0) {
     return (
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-semibold">Debtor Treemap</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
-            No debtors with outstanding balances
-          </div>
-        </CardContent>
-      </Card>
+      <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] p-5">
+        <h3 className="text-sm font-semibold text-[var(--q-text-primary)]">Outstanding by Debtor</h3>
+        <div className="flex items-center justify-center py-8 text-sm text-[var(--q-text-tertiary)]">
+          No debtors with outstanding balances
+        </div>
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <div>
-            <CardTitle className="text-sm font-semibold">Debtor Treemap</CardTitle>
-            <p className="text-xs text-muted-foreground mt-0.5">
+    <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] p-5">
+      <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
+        <div>
+          <h3 className="text-sm font-semibold text-[var(--q-text-primary)]">Outstanding by Debtor</h3>
+          <p className="text-[11px] text-[var(--q-text-tertiary)] mt-0.5">
               {overdueOnly
                 ? `${debtors.filter((d) => d.oldestOverdueDays > 0).length} debtors overdue of ${debtors.length}`
                 : `${debtors.length} debtor${debtors.length !== 1 ? "s" : ""}`}
@@ -203,11 +193,11 @@ export default function DebtorTreemap({ debtors, isLoading }: DebtorTreemapProps
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <Switch id="overdue-toggle" checked={overdueOnly} onCheckedChange={setOverdueOnly} />
-              <label htmlFor="overdue-toggle" className="text-xs text-muted-foreground cursor-pointer">
+              <label htmlFor="overdue-toggle" className="text-xs text-[var(--q-text-tertiary)] cursor-pointer">
                 Show only overdue
               </label>
             </div>
-            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+            <div className="flex items-center gap-1 text-[10px] text-[var(--q-text-tertiary)]">
             <span>Current</span>
             {OVERDUE_COLORS.map((c) => (
               <span
@@ -220,36 +210,33 @@ export default function DebtorTreemap({ debtors, isLoading }: DebtorTreemapProps
             </div>
           </div>
         </div>
-      </CardHeader>
-      <CardContent>
-        <div ref={wrapperRef} className="relative">
-          <ResponsiveContainer width="100%" height={TREEMAP_HEIGHT}>
-            <Treemap
-              data={treemapData}
-              dataKey="size"
-              aspectRatio={1}
-              content={
-                <TreemapCell
-                  x={0} y={0} width={0} height={0}
-                  name="" oldestOverdueDays={0} totalOutstanding={0} id=""
-                  arTotal={arTotal}
-                  onCellClick={handleCellClick}
-                  onCellEnter={handleCellEnter}
-                  onCellLeave={handleCellLeave}
-                  overdueOnly={overdueOnly}
-                />
-              }
-            />
-          </ResponsiveContainer>
-
-          <DebtorPopup
-            debtor={hoveredDebtor!}
-            position={popupPos}
-            visible={!!hoveredDebtor}
-            arTotal={hoveredArTotal}
+      <div ref={wrapperRef} className="relative">
+        <ResponsiveContainer width="100%" height={TREEMAP_HEIGHT}>
+          <Treemap
+            data={treemapData}
+            dataKey="size"
+            aspectRatio={1}
+            content={
+              <TreemapCell
+                x={0} y={0} width={0} height={0}
+                name="" oldestOverdueDays={0} totalOutstanding={0} id=""
+                arTotal={arTotal}
+                onCellClick={handleCellClick}
+                onCellEnter={handleCellEnter}
+                onCellLeave={handleCellLeave}
+                overdueOnly={overdueOnly}
+              />
+            }
           />
-        </div>
-      </CardContent>
-    </Card>
+        </ResponsiveContainer>
+
+        <DebtorPopup
+          debtor={hoveredDebtor!}
+          position={popupPos}
+          visible={!!hoveredDebtor}
+          arTotal={hoveredArTotal}
+        />
+      </div>
+    </div>
   );
 }

@@ -2,19 +2,13 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import SyncStatusBanner from "@/components/sync/SyncStatusBanner";
 import AppShell from "@/components/layout/app-shell";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import { QBadge } from "@/components/ui/q-badge";
+import { QAmount } from "@/components/ui/q-amount";
+import { QMetricCard } from "@/components/ui/q-metric-card";
+import { QMetricCardSkeleton } from "@/components/ui/q-skeleton";
+import { QEmptyState } from "@/components/ui/q-empty-state";
 import {
   Select,
   SelectContent,
@@ -35,14 +29,12 @@ import {
   Users,
   ChevronLeft,
   ChevronRight,
-  PoundSterling,
   MoreVertical,
   Eye,
   UserPlus,
   StickyNote,
   PauseCircle,
   Star,
-  AlertCircle,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
@@ -112,25 +104,18 @@ function formatDate(dateStr: string | null): string {
   });
 }
 
-function daysOverdueColor(days: number): string {
-  if (days <= 0) return "text-muted-foreground";
-  if (days < 30) return "text-green-600";
-  if (days <= 60) return "text-amber-600";
-  return "text-red-600";
-}
-
-function stateLabel(state: string | null | undefined): { label: string; className: string } | null {
+function getStateBadge(state: string | null | undefined): { label: string; variant: "info" | "attention" | "risk" | "ready" | "neutral" } | null {
   if (!state || state === 'idle') return null;
   switch (state) {
-    case 'chase_sent': return { label: 'Awaiting reply', className: 'bg-blue-100 text-blue-700 border-blue-200' };
-    case 'debtor_responded': return { label: 'Processing', className: 'bg-blue-100 text-blue-700 border-blue-200 animate-pulse' };
-    case 'conversing': return { label: 'In conversation', className: 'bg-teal-100 text-teal-700 border-teal-200' };
-    case 'promise_monitor': return { label: 'Promise active', className: 'bg-blue-100 text-blue-700 border-blue-200' };
-    case 'dispute_hold': return { label: 'Dispute', className: 'bg-amber-100 text-amber-700 border-amber-200' };
-    case 'escalated': return { label: 'Escalated', className: 'bg-red-100 text-red-700 border-red-200' };
-    case 'resolved': return { label: 'Resolved', className: 'bg-green-100 text-green-700 border-green-200' };
-    case 'hold': return { label: 'On hold', className: 'bg-zinc-100 text-zinc-600 border-zinc-200' };
-    default: return { label: state, className: 'bg-zinc-100 text-zinc-600 border-zinc-200' };
+    case 'chase_sent': return { label: 'Awaiting reply', variant: 'info' };
+    case 'debtor_responded': return { label: 'Processing', variant: 'info' };
+    case 'conversing': return { label: 'In conversation', variant: 'ready' };
+    case 'promise_monitor': return { label: 'Promise active', variant: 'info' };
+    case 'dispute_hold': return { label: 'Dispute', variant: 'attention' };
+    case 'escalated': return { label: 'Escalated', variant: 'risk' };
+    case 'resolved': return { label: 'Resolved', variant: 'ready' };
+    case 'hold': return { label: 'On hold', variant: 'neutral' };
+    default: return { label: state, variant: 'neutral' };
   }
 }
 
@@ -167,6 +152,16 @@ function compareDebtors(a: Debtor, b: Debtor, sort: SortState): number {
   }
 }
 
+// Table header cell — consistent q-token styling
+const TH = ({ children, className }: { children?: React.ReactNode; className?: string }) => (
+  <th className={cn(
+    "text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)] text-left px-3 py-2 border-b border-[var(--q-border-default)] sticky top-0 bg-[var(--q-bg-surface)] z-10",
+    className
+  )}>
+    {children}
+  </th>
+);
+
 type PageTab = "debtors" | "data-health";
 
 export default function QollectionsDebtors() {
@@ -182,7 +177,6 @@ export default function QollectionsDebtors() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [sort, setSort] = useState<SortState>(DEFAULT_SORT);
   const [page, setPage] = useState(0);
-  // VipPromotionDialog kept for debtor-detail use; menu uses direct addVipMutation
 
   const { data: debtorsResponse, isLoading } = useQuery<{ debtors: Debtor[]; unmatchedCredits: number }>({
     queryKey: ["/api/qollections/debtors"],
@@ -330,23 +324,24 @@ export default function QollectionsDebtors() {
     };
   }, [debtors, debtorsResponse]);
 
+  const subtitle = isLoading
+    ? "Loading..."
+    : `${kpis.totalDebtors} debtors · ${formatGBP(kpis.totalOutstanding)} outstanding`;
+
   return (
-    <AppShell
-      title="Debtors"
-      subtitle="Manage customer accounts and outstanding balances"
-    >
-      <div className="space-y-6">
+    <AppShell title="Debtors" subtitle={subtitle}>
+      <div className="space-y-[var(--q-space-2xl)]">
         <SyncStatusBanner />
 
         {/* Tab bar */}
-        <div className="flex gap-1 border-b">
+        <div className="flex gap-1 border-b border-[var(--q-border-default)]">
           <button
             onClick={() => setActiveTab("debtors")}
             className={cn(
               "px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
               activeTab === "debtors"
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                ? "border-[var(--q-accent)] text-[var(--q-text-primary)]"
+                : "border-transparent text-[var(--q-text-tertiary)] hover:text-[var(--q-text-primary)] hover:border-[var(--q-border-hover)]"
             )}
           >
             All Debtors
@@ -356,8 +351,8 @@ export default function QollectionsDebtors() {
             className={cn(
               "px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
               activeTab === "data-health"
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                ? "border-[var(--q-accent)] text-[var(--q-text-primary)]"
+                : "border-transparent text-[var(--q-text-tertiary)] hover:text-[var(--q-text-primary)] hover:border-[var(--q-border-hover)]"
             )}
           >
             Data Health
@@ -370,105 +365,37 @@ export default function QollectionsDebtors() {
         <>
 
         {/* KPI Summary Row */}
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                  <Users className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">
-                    Total Debtors
-                  </p>
-                  <p className="text-2xl font-bold">
-                    {isLoading ? (
-                      <Skeleton className="h-8 w-16" />
-                    ) : (
-                      kpis.totalDebtors
-                    )}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                  <PoundSterling className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">
-                    Total Outstanding
-                  </p>
-                  <p className="text-2xl font-bold">
-                    {isLoading ? (
-                      <Skeleton className="h-8 w-24" />
-                    ) : (
-                      formatGBP(kpis.totalOutstanding)
-                    )}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-100">
-                  <PoundSterling className="h-5 w-5 text-red-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Overdue</p>
-                  <p className="text-2xl font-bold text-red-600">
-                    {isLoading ? (
-                      <Skeleton className="h-8 w-24" />
-                    ) : (
-                      formatGBP(kpis.totalOverdue)
-                    )}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className={cn(
-                  "flex h-10 w-10 items-center justify-center rounded-lg",
-                  kpis.overduePercent > 50 ? "bg-red-100" : kpis.overduePercent >= 25 ? "bg-amber-100" : "bg-green-100",
-                )}>
-                  <AlertCircle className={cn(
-                    "h-5 w-5",
-                    kpis.overduePercent > 50 ? "text-red-600" : kpis.overduePercent >= 25 ? "text-amber-600" : "text-green-600",
-                  )} />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">
-                    Overdue %
-                  </p>
-                  <p className={cn(
-                    "text-2xl font-bold",
-                    kpis.overduePercent > 50 ? "text-red-600" : kpis.overduePercent >= 25 ? "text-amber-600" : "text-green-600",
-                  )}>
-                    {isLoading ? (
-                      <Skeleton className="h-8 w-16" />
-                    ) : (
-                      `${kpis.overduePercent.toFixed(1)}%`
-                    )}
-                  </p>
-                  <p className="text-xs text-muted-foreground">of outstanding balance</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        {isLoading ? (
+          <div className="grid grid-cols-2 gap-[var(--q-space-md)] lg:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => <QMetricCardSkeleton key={i} />)}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-[var(--q-space-md)] lg:grid-cols-4">
+            <QMetricCard label="Total debtors" value={kpis.totalDebtors} format="number" />
+            <QMetricCard label="Total outstanding" value={kpis.totalOutstanding} format="currency" />
+            <QMetricCard
+              label="Total overdue"
+              value={kpis.totalOverdue}
+              format="currency"
+              valueClassName={kpis.totalOverdue > 0 ? "text-[var(--q-risk-text)]" : undefined}
+            />
+            <QMetricCard
+              label="Overdue %"
+              value={kpis.overduePercent}
+              format="percentage"
+              valueClassName={
+                kpis.overduePercent > 50 ? "text-[var(--q-risk-text)]"
+                : kpis.overduePercent >= 25 ? "text-[var(--q-attention-text)]"
+                : "text-[var(--q-money-in-text)]"
+              }
+            />
+          </div>
+        )}
 
         {/* Search + Filter toolbar */}
         <div className="flex items-center justify-between gap-4">
           <div className="relative w-full max-w-[280px]">
-            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--q-text-tertiary)]" />
             <Input
               placeholder="Search debtors..."
               value={searchQuery}
@@ -492,7 +419,7 @@ export default function QollectionsDebtors() {
               </SelectContent>
             </Select>
             {!isLoading && (
-              <span className="text-sm text-muted-foreground whitespace-nowrap">
+              <span className="text-[13px] text-[var(--q-text-secondary)] whitespace-nowrap">
                 {filtered.length} debtor{filtered.length !== 1 ? "s" : ""}
               </span>
             )}
@@ -500,69 +427,55 @@ export default function QollectionsDebtors() {
         </div>
 
         {/* Data Table */}
-        <Card>
-          <CardContent className="p-0">
-            {isLoading ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Outstanding</TableHead>
-                    <TableHead className="text-center">Invoices</TableHead>
-                    <TableHead className="text-center">Days Overdue</TableHead>
-                    <TableHead className="text-center">Promise</TableHead>
-                    <TableHead>Last Contact</TableHead>
-                    <TableHead>Next Action</TableHead>
-                    <TableHead className="text-center">State</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {Array.from({ length: 8 }).map((_, i) => (
-                    <TableRow key={i}>
-                      <TableCell className="py-3 px-3">
-                        <Skeleton className="mb-1 h-3.5 w-32" />
-                        <Skeleton className="h-3 w-44" />
-                      </TableCell>
-                      <TableCell className="py-3 px-3">
-                        <Skeleton className="h-3.5 w-20" />
-                      </TableCell>
-                      <TableCell className="py-3 px-3 text-center">
-                        <Skeleton className="h-5 w-8 mx-auto" />
-                      </TableCell>
-                      <TableCell className="py-3 px-3 text-center">
-                        <Skeleton className="h-3.5 w-10 mx-auto" />
-                      </TableCell>
-                      <TableCell className="py-3 px-3 text-center">
-                        <Skeleton className="h-3.5 w-20 mx-auto" />
-                      </TableCell>
-                      <TableCell className="py-3 px-3">
-                        <Skeleton className="h-3.5 w-16" />
-                      </TableCell>
-                      <TableCell className="py-3 px-3">
-                        <Skeleton className="h-3.5 w-16" />
-                      </TableCell>
-                      <TableCell className="py-3 px-3 text-center">
-                        <Skeleton className="h-5 w-16 mx-auto" />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : filtered.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-                <Users className="mb-3 h-12 w-12" />
-                <p className="text-lg font-medium">No debtors found</p>
-                <p className="mt-1 text-sm">
-                  {searchQuery || statusFilter !== "all"
-                    ? "Try adjusting your search or filters."
-                    : "Debtors will appear here once invoices are synced."}
-                </p>
-              </div>
-            ) : (
-              <>
-                <Table className="table-fixed">
-                  <TableHeader>
-                    <TableRow>
+        <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] overflow-hidden">
+          {isLoading ? (
+            <table className="w-full border-collapse">
+              <thead>
+                <tr>
+                  <TH>Customer</TH>
+                  <TH>Outstanding</TH>
+                  <TH className="text-center">Invoices</TH>
+                  <TH className="text-center">Days Overdue</TH>
+                  <TH className="text-center">Promise</TH>
+                  <TH>Last Contact</TH>
+                  <TH>Next Action</TH>
+                  <TH className="text-center">State</TH>
+                </tr>
+              </thead>
+              <tbody>
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <tr key={i} className="h-12 border-b border-[var(--q-border-default)]">
+                    <td className="px-3 py-3">
+                      <div className="h-3.5 w-32 rounded bg-[var(--q-bg-surface-alt)] animate-pulse mb-1" />
+                      <div className="h-3 w-44 rounded bg-[var(--q-bg-surface-alt)] animate-pulse" />
+                    </td>
+                    <td className="px-3 py-3"><div className="h-3.5 w-20 rounded bg-[var(--q-bg-surface-alt)] animate-pulse" /></td>
+                    <td className="px-3 py-3 text-center"><div className="h-5 w-8 mx-auto rounded bg-[var(--q-bg-surface-alt)] animate-pulse" /></td>
+                    <td className="px-3 py-3 text-center"><div className="h-3.5 w-10 mx-auto rounded bg-[var(--q-bg-surface-alt)] animate-pulse" /></td>
+                    <td className="px-3 py-3 text-center"><div className="h-3.5 w-20 mx-auto rounded bg-[var(--q-bg-surface-alt)] animate-pulse" /></td>
+                    <td className="px-3 py-3"><div className="h-3.5 w-16 rounded bg-[var(--q-bg-surface-alt)] animate-pulse" /></td>
+                    <td className="px-3 py-3"><div className="h-3.5 w-16 rounded bg-[var(--q-bg-surface-alt)] animate-pulse" /></td>
+                    <td className="px-3 py-3 text-center"><div className="h-5 w-16 mx-auto rounded bg-[var(--q-bg-surface-alt)] animate-pulse" /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : filtered.length === 0 ? (
+            <QEmptyState
+              icon={<Users className="h-12 w-12" />}
+              title="No debtors found"
+              description={
+                searchQuery || statusFilter !== "all"
+                  ? "Try adjusting your search or filters."
+                  : "Debtors will appear here once invoices are synced."
+              }
+            />
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse table-fixed">
+                  <thead>
+                    <tr>
                       <SortableHeader column="name" label="Customer" currentSort={sort} onSort={setSort} />
                       <DualSortHeader
                         leftColumn="totalOutstanding"
@@ -575,97 +488,103 @@ export default function QollectionsDebtors() {
                       />
                       <SortableHeader column="invoiceCount" label="Invoices" currentSort={sort} onSort={setSort} className="w-[72px] text-center" />
                       <SortableHeader column="oldestOverdueDays" label="Days Overdue" currentSort={sort} onSort={setSort} className="w-[110px] text-center" />
-                      <TableHead className="w-[120px] text-center text-xs font-medium text-muted-foreground">Promise</TableHead>
+                      <TH className="w-[120px] text-center">Promise</TH>
                       <SortableHeader column="lastContactDate" label="Last Contact" currentSort={sort} onSort={setSort} className="w-[110px]" />
                       <SortableHeader column="nextActionDate" label="Next Action" currentSort={sort} onSort={setSort} className="w-[110px]" />
-                      <TableHead className="w-[100px] text-center text-xs font-medium text-muted-foreground">State</TableHead>
-                      <TableHead className="w-[48px]" />
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                      <TH className="w-[100px] text-center">State</TH>
+                      <TH className="w-[48px]" />
+                    </tr>
+                  </thead>
+                  <tbody>
                     {paged.map((debtor) => (
-                      <TableRow
+                      <tr
                         key={debtor.id}
-                        className="cursor-pointer hover:bg-muted/50"
+                        className="h-12 border-b border-[var(--q-border-default)] hover:bg-[var(--q-bg-surface-hover)] cursor-pointer transition-colors duration-100"
                         onClick={() => navigate(`/qollections/debtors/${debtor.id}`)}
                       >
-                        <TableCell className="py-3 px-3">
+                        {/* Customer name + email */}
+                        <td className="px-3 py-3">
                           <div className="min-w-0">
-                            <p className="text-sm font-medium leading-tight truncate flex items-center gap-1">
-                              {debtor.isVip && <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500 flex-shrink-0" />}
+                            <p className="text-[14px] font-medium leading-tight truncate flex items-center gap-1 text-[var(--q-text-primary)]">
+                              {debtor.isVip && <Star className="h-3.5 w-3.5 text-[var(--q-attention-text)] fill-[var(--q-attention-text)] flex-shrink-0" />}
                               {debtor.name}
                             </p>
-                            <p className="text-xs text-muted-foreground truncate">
+                            <p className="text-xs text-[var(--q-text-tertiary)] truncate">
                               {debtor.email}
                             </p>
                           </div>
-                        </TableCell>
-                        <TableCell className={cn("py-3 px-3 text-sm font-bold", debtor.hasCredit && "text-green-600")}>
-                          {formatGBP(debtor.totalOutstanding)}
-                          {debtor.hasCredit && (
-                            <Badge variant="outline" className="ml-2 text-xs bg-green-500/10 text-green-700 border-green-300">
-                              Credit
-                            </Badge>
-                          )}
+                        </td>
+                        {/* Outstanding + Overdue */}
+                        <td className="px-3 py-3">
+                          <div className="flex items-center gap-2">
+                            <QAmount value={debtor.totalOutstanding} decimals={2} className="text-[14px] font-semibold" />
+                            {debtor.hasCredit && (
+                              <QBadge variant="ready">Credit</QBadge>
+                            )}
+                          </div>
                           {debtor.overdueAmount > 0 && (
-                            <div className="text-xs font-normal text-rose-600">
-                              {formatGBP(debtor.overdueAmount)} overdue
+                            <div className="text-xs">
+                              <QAmount value={debtor.overdueAmount} decimals={2} variant="overdue" className="text-xs" />
+                              <span className="text-[var(--q-text-tertiary)] ml-1">overdue</span>
                             </div>
                           )}
-                        </TableCell>
-                        <TableCell className="py-3 px-3 text-center">
-                          <Badge variant="secondary">
-                            {debtor.invoiceCount}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="py-3 px-3 text-center">
-                          <span
-                            className={cn(
-                              "text-sm font-medium",
-                              daysOverdueColor(debtor.oldestOverdueDays),
-                            )}
-                          >
+                        </td>
+                        {/* Invoice count */}
+                        <td className="px-3 py-3 text-center">
+                          <QBadge variant="neutral">{debtor.invoiceCount}</QBadge>
+                        </td>
+                        {/* Days overdue */}
+                        <td className="px-3 py-3 text-center">
+                          <span className={cn(
+                            "text-[14px] font-medium font-[var(--q-font-mono)] tabular-nums",
+                            debtor.oldestOverdueDays <= 0 ? "text-[var(--q-text-tertiary)]"
+                            : debtor.oldestOverdueDays < 30 ? "text-[var(--q-text-secondary)]"
+                            : debtor.oldestOverdueDays <= 60 ? "text-[var(--q-attention-text)]"
+                            : "text-[var(--q-risk-text)]"
+                          )}>
                             {debtor.oldestOverdueDays}
                           </span>
-                        </TableCell>
-                        <TableCell className="py-3 px-3 text-center text-sm">
+                        </td>
+                        {/* Promise */}
+                        <td className="px-3 py-3 text-center text-[14px]">
                           {debtor.latestPromise ? (
-                            <span
-                              className={cn(
-                                "font-medium",
-                                debtor.latestPromise.status === "broken"
-                                  ? "text-red-600"
-                                  : "text-blue-600",
-                              )}
-                            >
-                              {formatGBP(debtor.latestPromise.amount)} ·{" "}
-                              {formatDate(debtor.latestPromise.date)}
+                            <span className={cn(
+                              "font-medium",
+                              debtor.latestPromise.status === "broken"
+                                ? "text-[var(--q-risk-text)]"
+                                : "text-[var(--q-info-text)]",
+                            )}>
+                              {formatGBP(debtor.latestPromise.amount)} · {formatDate(debtor.latestPromise.date)}
                             </span>
                           ) : (
-                            <span className="text-muted-foreground">—</span>
+                            <span className="text-[var(--q-text-tertiary)]">—</span>
                           )}
-                        </TableCell>
-                        <TableCell className="py-3 px-3 text-sm text-muted-foreground">
+                        </td>
+                        {/* Last contact */}
+                        <td className="px-3 py-3 text-[14px] text-[var(--q-text-secondary)]">
                           {relativeDate(debtor.lastContactDate)}
-                        </TableCell>
-                        <TableCell className="py-3 px-3 text-sm text-muted-foreground">
+                        </td>
+                        {/* Next action */}
+                        <td className="px-3 py-3 text-[14px] text-[var(--q-text-secondary)]">
                           {formatDate(debtor.nextActionDate)}
-                        </TableCell>
-                        <TableCell className="py-3 px-3 text-center">
+                        </td>
+                        {/* Conversation state */}
+                        <td className="px-3 py-3 text-center">
                           {(() => {
-                            const s = stateLabel(debtor.conversationState);
-                            if (!s) return <span className="text-sm text-muted-foreground">—</span>;
+                            const s = getStateBadge(debtor.conversationState);
+                            if (!s) return <span className="text-[14px] text-[var(--q-text-tertiary)]">—</span>;
                             return (
-                              <Badge variant="outline" className={cn("text-xs font-medium", s.className)}>
+                              <QBadge variant={s.variant} dot>
                                 {s.label}
-                              </Badge>
+                              </QBadge>
                             );
                           })()}
-                        </TableCell>
-                        <TableCell className="py-3 px-3">
+                        </td>
+                        {/* Three-dot menu */}
+                        <td className="px-3 py-3 text-center" onClick={(e) => e.stopPropagation()}>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
                                 <MoreVertical className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
@@ -702,46 +621,46 @@ export default function QollectionsDebtors() {
                               )}
                             </DropdownMenuContent>
                           </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
+                        </td>
+                      </tr>
                     ))}
-                  </TableBody>
-                </Table>
+                  </tbody>
+                </table>
+              </div>
 
-                {/* Pagination */}
-                {filtered.length > PAGE_SIZE && (
-                  <div className="flex items-center justify-between border-t px-6 py-4">
-                    <p className="text-sm text-muted-foreground">
-                      Showing {showFrom}-{showTo} of {filtered.length}
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setPage((p) => Math.max(0, p - 1))}
-                        disabled={page === 0}
-                      >
-                        <ChevronLeft className="mr-1 h-4 w-4" />
-                        Previous
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          setPage((p) => Math.min(totalPages - 1, p + 1))
-                        }
-                        disabled={page >= totalPages - 1}
-                      >
-                        Next
-                        <ChevronRight className="ml-1 h-4 w-4" />
-                      </Button>
-                    </div>
+              {/* Pagination */}
+              {filtered.length > PAGE_SIZE && (
+                <div className="flex items-center justify-between border-t border-[var(--q-border-default)] px-6 py-4">
+                  <p className="text-[13px] text-[var(--q-text-secondary)]">
+                    Showing {showFrom}-{showTo} of {filtered.length}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage((p) => Math.max(0, p - 1))}
+                      disabled={page === 0}
+                    >
+                      <ChevronLeft className="mr-1 h-4 w-4" />
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setPage((p) => Math.min(totalPages - 1, p + 1))
+                      }
+                      disabled={page >= totalPages - 1}
+                    >
+                      Next
+                      <ChevronRight className="ml-1 h-4 w-4" />
+                    </Button>
                   </div>
-                )}
-              </>
-            )}
-          </CardContent>
-        </Card>
+                </div>
+              )}
+            </>
+          )}
+        </div>
         </>
         )}
       </div>
