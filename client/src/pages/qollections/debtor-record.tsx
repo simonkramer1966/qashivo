@@ -39,6 +39,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
   Sheet,
@@ -71,6 +72,7 @@ import {
   AlertTriangle,
   StickyNote,
   Bot,
+  Headset,
   ChevronDown,
   ChevronRight,
   PoundSterling,
@@ -1636,6 +1638,9 @@ export default function DebtorRecord() {
           </button>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
+              {contact.isVip && (
+                <Star className="h-6 w-6 text-[var(--q-attention-text)] fill-[var(--q-attention-text)] shrink-0" />
+              )}
               <h1 className="text-2xl font-bold truncate text-[var(--q-text-primary)]">{contact.name}</h1>
               {contact.manualBlocked && (
                 <QBadge variant="risk">Blocked</QBadge>
@@ -1680,18 +1685,111 @@ export default function DebtorRecord() {
                   Exception{contact.exceptionType ? `: ${contact.exceptionType}` : ""}
                 </QBadge>
               )}
-
-              {/* VIP indicator — right-aligned */}
-              {contact.isVip && (
-                <span className="ml-auto flex items-center gap-2 text-[14px] text-[var(--q-text-secondary)] shrink-0">
-                  VIP &middot; Exempt from automated contact
-                  <Star className="h-4 w-4 text-[var(--q-attention-text)] fill-[var(--q-attention-text)]" />
-                </span>
-              )}
             </div>
             {contact.companyName && contact.companyName !== contact.name && (
               <p className="text-sm text-[var(--q-text-tertiary)]">{contact.companyName}</p>
             )}
+          </div>
+
+          {/* Primary action buttons — right-aligned */}
+          <div className="hidden md:flex items-center gap-2 shrink-0">
+            <button onClick={openEmailSheet} className="inline-flex items-center gap-1.5 border border-[var(--q-border-default)] rounded-[var(--q-radius-md)] px-3 py-1.5 text-[13px] font-medium text-[var(--q-text-secondary)] hover:bg-[var(--q-bg-surface-hover)] transition-colors">
+              <Mail className="h-3.5 w-3.5" /> Email
+            </button>
+            <button onClick={openSmsSheet} className="inline-flex items-center gap-1.5 border border-[var(--q-border-default)] rounded-[var(--q-radius-md)] px-3 py-1.5 text-[13px] font-medium text-[var(--q-text-secondary)] hover:bg-[var(--q-bg-surface-hover)] transition-colors">
+              <MessageSquare className="h-3.5 w-3.5" /> SMS
+            </button>
+            <button onClick={openCallSheet} className="inline-flex items-center gap-1.5 border border-[var(--q-border-default)] rounded-[var(--q-radius-md)] px-3 py-1.5 text-[13px] font-medium text-[var(--q-text-secondary)] hover:bg-[var(--q-bg-surface-hover)] transition-colors">
+              <Headset className="h-3.5 w-3.5" /> AI Voice
+            </button>
+            <button onClick={openNoteDialog} className="inline-flex items-center gap-1.5 border border-[var(--q-border-default)] rounded-[var(--q-radius-md)] px-3 py-1.5 text-[13px] font-medium text-[var(--q-text-secondary)] hover:bg-[var(--q-bg-surface-hover)] transition-colors">
+              <StickyNote className="h-3.5 w-3.5" /> Note
+            </button>
+
+            {/* More dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="inline-flex items-center gap-1.5 border border-[var(--q-border-default)] rounded-[var(--q-radius-md)] px-3 py-1.5 text-[13px] font-medium text-[var(--q-text-secondary)] hover:bg-[var(--q-bg-surface-hover)] transition-colors">
+                  More <ChevronDown className="h-3.5 w-3.5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] shadow-lg py-1 min-w-[180px]">
+                <DropdownMenuItem onClick={openCallSheet} className="px-3 py-2 text-[14px] text-[var(--q-text-secondary)] flex items-center gap-2">
+                  <Phone className="h-4 w-4" /> Call
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={openStatementDialog} className="px-3 py-2 text-[14px] text-[var(--q-text-secondary)] flex items-center gap-2">
+                  <FileText className="h-4 w-4" /> Statement
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={openPromiseDialog} className="px-3 py-2 text-[14px] text-[var(--q-text-secondary)] flex items-center gap-2">
+                  <Handshake className="h-4 w-4" /> Promise
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={openDisputeDialog} className="px-3 py-2 text-[14px] text-[var(--q-text-secondary)] flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" /> Dispute
+                </DropdownMenuItem>
+                {convStateQuery.data?.state === 'hold' ? (
+                  <DropdownMenuItem onClick={() => releaseMutation.mutate()} className="px-3 py-2 text-[14px] text-[var(--q-text-secondary)] flex items-center gap-2">
+                    <RefreshCw className="h-4 w-4" /> Release Hold
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem onClick={() => holdMutation.mutate()} className="px-3 py-2 text-[14px] text-[var(--q-text-secondary)] flex items-center gap-2">
+                    <Clock className="h-4 w-4" /> Put on Hold
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                {contact.isException ? (
+                  <DropdownMenuItem
+                    onClick={() => flagExceptionMutation.mutate({ flag: false })}
+                    className="px-3 py-2 text-[14px] text-[var(--q-money-in-text)] flex items-center gap-2"
+                  >
+                    <CheckCircle2 className="h-4 w-4" /> Resolve Exception
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem
+                    onClick={() => setExceptionDialogOpen(true)}
+                    className="px-3 py-2 text-[14px] text-[var(--q-risk-text)] flex items-center gap-2"
+                  >
+                    <ShieldAlert className="h-4 w-4" /> Flag Exception
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          {/* Mobile: compact dropdown with all actions */}
+          <div className="md:hidden shrink-0">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="inline-flex items-center gap-1.5 border border-[var(--q-border-default)] rounded-[var(--q-radius-md)] px-3 py-1.5 text-[13px] font-medium text-[var(--q-text-secondary)] hover:bg-[var(--q-bg-surface-hover)] transition-colors">
+                  Actions <ChevronDown className="h-3.5 w-3.5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-[180px]">
+                <DropdownMenuItem onClick={openEmailSheet}><Mail className="h-4 w-4 mr-2" /> Email</DropdownMenuItem>
+                <DropdownMenuItem onClick={openSmsSheet}><MessageSquare className="h-4 w-4 mr-2" /> SMS</DropdownMenuItem>
+                <DropdownMenuItem onClick={openCallSheet}><Headset className="h-4 w-4 mr-2" /> AI Voice</DropdownMenuItem>
+                <DropdownMenuItem onClick={openNoteDialog}><StickyNote className="h-4 w-4 mr-2" /> Note</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={openCallSheet}><Phone className="h-4 w-4 mr-2" /> Call</DropdownMenuItem>
+                <DropdownMenuItem onClick={openStatementDialog}><FileText className="h-4 w-4 mr-2" /> Statement</DropdownMenuItem>
+                <DropdownMenuItem onClick={openPromiseDialog}><Handshake className="h-4 w-4 mr-2" /> Promise</DropdownMenuItem>
+                <DropdownMenuItem onClick={openDisputeDialog}><AlertTriangle className="h-4 w-4 mr-2" /> Dispute</DropdownMenuItem>
+                {convStateQuery.data?.state === 'hold' ? (
+                  <DropdownMenuItem onClick={() => releaseMutation.mutate()}><RefreshCw className="h-4 w-4 mr-2" /> Release Hold</DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem onClick={() => holdMutation.mutate()}><Clock className="h-4 w-4 mr-2" /> Put on Hold</DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                {contact.isException ? (
+                  <DropdownMenuItem className="text-[var(--q-money-in-text)]" onClick={() => flagExceptionMutation.mutate({ flag: false })}>
+                    <CheckCircle2 className="h-4 w-4 mr-2" /> Resolve Exception
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem className="text-[var(--q-risk-text)]" onClick={() => setExceptionDialogOpen(true)}>
+                    <ShieldAlert className="h-4 w-4 mr-2" /> Flag Exception
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
@@ -1916,115 +2014,6 @@ export default function DebtorRecord() {
             ) : (
               <p className="text-lg tabular-nums text-[var(--q-text-tertiary)]">None logged</p>
             )}
-          </div>
-        </div>
-
-        {/* ----------------------------------------------------------------- */}
-        {/* Action Bar                                                        */}
-        {/* ----------------------------------------------------------------- */}
-        <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)]">
-          <div className="flex items-center gap-0 w-full py-3 px-4">
-            {/* Reach Out group */}
-            <div className="flex flex-1 gap-2">
-              <Button variant="outline" size="sm" className="flex-1" onClick={openEmailSheet}>
-                <Mail className="h-4 w-4 mr-1" /> Email
-              </Button>
-              <Button variant="outline" size="sm" className="flex-1" onClick={openSmsSheet}>
-                <MessageSquare className="h-4 w-4 mr-1" /> SMS
-              </Button>
-              <Button variant="outline" size="sm" className="flex-1" onClick={openCallSheet}>
-                <Phone className="h-4 w-4 mr-1" /> Call
-              </Button>
-              <Button variant="outline" size="sm" className="flex-1" onClick={openCallSheet}>
-                <Bot className="h-4 w-4 mr-1" /> AI Call
-              </Button>
-            </div>
-
-            {/* Divider */}
-            <Separator orientation="vertical" className="h-7 mx-3 shrink-0" />
-
-            {/* Record group — visible on md+ */}
-            <div className="hidden md:flex flex-1 gap-2">
-              <Button variant="ghost" size="sm" className="flex-1 text-[var(--q-text-secondary)]" onClick={openStatementDialog}>
-                <FileText className="h-4 w-4 mr-1" /> Statement
-              </Button>
-              <Button variant="ghost" size="sm" className="flex-1 text-[var(--q-text-secondary)]" onClick={openPromiseDialog}>
-                <Handshake className="h-4 w-4 mr-1" /> Promise
-              </Button>
-              <Button variant="ghost" size="sm" className="flex-1 text-[var(--q-text-secondary)]" onClick={openDisputeDialog}>
-                <AlertTriangle className="h-4 w-4 mr-1" /> Dispute
-              </Button>
-              <Button variant="ghost" size="sm" className="flex-1 text-[var(--q-text-secondary)]" onClick={openNoteDialog}>
-                <StickyNote className="h-4 w-4 mr-1" /> Note
-              </Button>
-              {contact.isException ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="flex-1 text-[var(--q-money-in-text)] hover:opacity-80"
-                  onClick={() => flagExceptionMutation.mutate({ flag: false })}
-                  disabled={flagExceptionMutation.isPending}
-                >
-                  <CheckCircle2 className="h-4 w-4 mr-1" /> Resolve Exception
-                </Button>
-              ) : (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="flex-1 text-destructive"
-                  onClick={() => setExceptionDialogOpen(true)}
-                >
-                  <ShieldAlert className="h-4 w-4 mr-1" /> Flag Exception
-                </Button>
-              )}
-            </div>
-
-            {/* Record group — collapsed dropdown on small viewports */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="text-muted-foreground md:hidden">
-                  More <ChevronDown className="h-4 w-4 ml-1" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={openStatementDialog}>
-                  <FileText className="h-4 w-4 mr-2" /> Statement
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={openPromiseDialog}>
-                  <Handshake className="h-4 w-4 mr-2" /> Promise
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={openDisputeDialog}>
-                  <AlertTriangle className="h-4 w-4 mr-2" /> Dispute
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={openNoteDialog}>
-                  <StickyNote className="h-4 w-4 mr-2" /> Note
-                </DropdownMenuItem>
-                {contact.isException ? (
-                  <DropdownMenuItem
-                    className="text-[var(--q-money-in-text)]"
-                    onClick={() => flagExceptionMutation.mutate({ flag: false })}
-                  >
-                    <CheckCircle2 className="h-4 w-4 mr-2" /> Resolve Exception
-                  </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem
-                    className="text-destructive"
-                    onClick={() => setExceptionDialogOpen(true)}
-                  >
-                    <ShieldAlert className="h-4 w-4 mr-2" /> Flag Exception
-                  </DropdownMenuItem>
-                )}
-                {convStateQuery.data?.state === 'hold' ? (
-                  <DropdownMenuItem onClick={() => releaseMutation.mutate()}>
-                    <RefreshCw className="h-4 w-4 mr-2" /> Release Hold
-                  </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem onClick={() => holdMutation.mutate()}>
-                    <Clock className="h-4 w-4 mr-2" /> Put on Hold
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
         </div>
 
