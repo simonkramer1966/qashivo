@@ -1,5 +1,6 @@
 import { useState } from "react";
 import AppShell from "@/components/layout/app-shell";
+import { QMetricCard } from "@/components/ui/q-metric-card";
 import { cn } from "@/lib/utils";
 
 // ── Mock data (wire to real API later) ────────────────────────────
@@ -97,18 +98,18 @@ export default function FacilityPage() {
 
         {/* Summary cards — top row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <SummaryCard label="Facility limit" value={fmt(FACILITY.limit)} />
-          <SummaryCard label="Current drawdown" value={fmt(FACILITY.currentDrawdown)} sub={`${utilisation}% utilised`} />
-          <SummaryCard label="Available" value={fmt(FACILITY.available)} highlight />
-          <SummaryCard label="Interest rate" value={`${FACILITY.interestRate}% per month`} />
+          <QMetricCard label="Facility limit" value={FACILITY.limit} format="currency" />
+          <QMetricCard label="Current drawdown" value={FACILITY.currentDrawdown} format="currency" trend={{ direction: "neutral", value: `${utilisation}% utilised` }} />
+          <QMetricCard label="Available" value={FACILITY.available} format="currency" valueClassName="text-[var(--q-money-in-text)]" />
+          <QMetricCard label="Interest rate" value={`${FACILITY.interestRate}% per month`} format="text" />
         </div>
 
         {/* Cost metrics row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <MetricCard label="Total interest paid (YTD)" value={fmt(FACILITY.totalInterestPaid)} />
-          <MetricCard label="Total fees paid (YTD)" value={fmt(FACILITY.totalFeesPaid)} />
-          <MetricCard label="Invoices financed (YTD)" value={fmt(34_413)} />
-          <MetricCard label="Qapital Saving (YTD)" value={fmt(475)} />
+          <QMetricCard label="Total interest paid (YTD)" value={FACILITY.totalInterestPaid} format="currency" />
+          <QMetricCard label="Total fees paid (YTD)" value={FACILITY.totalFeesPaid} format="currency" />
+          <QMetricCard label="Invoices financed (YTD)" value={34_413} format="currency" />
+          <QMetricCard label="Qapital Saving (YTD)" value={475} format="currency" />
         </div>
 
         {/* Tabs */}
@@ -230,21 +231,3 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
   );
 }
 
-function SummaryCard({ label, value, sub, highlight }: { label: string; value: string; sub?: string; highlight?: boolean }) {
-  return (
-    <div className="rounded-lg border border-[var(--q-border-default)] bg-[var(--q-bg-surface)] p-4">
-      <p className="text-xs text-[var(--q-text-tertiary)]">{label}</p>
-      <p className={cn("text-xl font-semibold mt-1 tabular-nums", highlight && "text-[var(--q-money-in-text)]")}>{value}</p>
-      {sub && <p className="text-xs text-[var(--q-text-tertiary)] mt-0.5">{sub}</p>}
-    </div>
-  );
-}
-
-function MetricCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border border-[var(--q-border-default)] bg-[var(--q-bg-surface-alt)]/30 px-4 py-3">
-      <p className="text-xs text-[var(--q-text-tertiary)]">{label}</p>
-      <p className="text-sm font-semibold mt-0.5 tabular-nums">{value}</p>
-    </div>
-  );
-}
