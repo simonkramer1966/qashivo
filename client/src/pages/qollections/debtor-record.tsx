@@ -2737,7 +2737,7 @@ export default function DebtorRecord() {
             {/* ── Filter bar ── */}
             <div className="flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-3">
-                {["All", "Communications", "Payments", "Disputes", "Promises", "Notes", "System", "Risk"].map(v => (
+                {["All", "Communications", "Payments", "Promises", "Notes", "System", "Risk"].map(v => (
                   <button
                     key={v}
                     className={cn(

@@ -3984,6 +3984,7 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
           if (s.includes('arrangement confirmed') || s.includes('payment confirmed')
               || s.includes('promise') || s.includes('payment arrangement')) return 'Promises';
           if (s.includes('dispute')) return 'Disputes';
+          if (s.includes('payment received') || s.includes('payment detected')) return 'Payments';
         }
 
         // 3. channel fallback
