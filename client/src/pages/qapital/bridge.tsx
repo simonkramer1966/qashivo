@@ -321,7 +321,6 @@ export default function BridgePage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [requestState, setRequestState] = useState<"idle" | "requesting" | "approved">("idle");
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [showRecommendedInvoices, setShowRecommendedInvoices] = useState(false);
 
   // Fetch forecast data
   const { data: forecast, isLoading } = useQuery<InflowForecast>({
@@ -466,8 +465,8 @@ export default function BridgePage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <AlertTriangle className="h-5 w-5 text-[var(--q-attention-text)] shrink-0" />
-                <h2 className="text-lg font-semibold">
-                  Cash gap: {fmt(gapInfo.gapAmount)} in Week {gapInfo.weekNumber} (w/c {gapInfo.weekLabel})
+                <h2 className="text-[16px] font-semibold text-[var(--q-text-primary)]">
+                  Cash gap: <span className="q-mono tabular-nums">{fmt(gapInfo.gapAmount)}</span> in Week {gapInfo.weekNumber} (w/c {gapInfo.weekLabel})
                 </h2>
               </div>
               <div className="flex items-center gap-3">
@@ -480,22 +479,16 @@ export default function BridgePage() {
             {/* Recommendation + action — two-column layout */}
             <div className="flex items-start justify-between gap-6">
               {/* Left: recommendation text */}
-              <div className="flex-1 space-y-2 text-sm text-[var(--q-text-tertiary)] leading-relaxed">
+              <div className="flex-1 space-y-2 text-[14px] text-[var(--q-text-secondary)] leading-relaxed">
                 <p>
-                  Riley recommends financing{" "}
-                  <button
-                    onClick={() => setShowRecommendedInvoices(true)}
-                    className="text-primary underline underline-offset-2 hover:text-primary/80 transition-colors"
-                  >
-                    {activeSelection.length} invoice{activeSelection.length !== 1 ? "s" : ""}
-                  </button>.{" "}
-                  You'll receive <span className="font-medium text-[var(--q-text-primary)]">{fmt(activeCost.totalAdvance)}</span> within 24 hours.{" "}
-                  This will cost <span className="font-medium text-[var(--q-text-primary)]">{fmt(activeCost.totalCost)}</span> in interest.
+                  Riley recommends financing {activeSelection.length} invoice{activeSelection.length !== 1 ? "s" : ""}.{" "}
+                  You'll receive <span className="q-mono tabular-nums font-medium text-[var(--q-text-primary)]">{fmt(activeCost.totalAdvance)}</span> within 24 hours.{" "}
+                  This will cost <span className="q-mono tabular-nums font-medium text-[var(--q-text-primary)]">{fmt(activeCost.totalCost)}</span> in interest.
                 </p>
                 <p>
                   {activeCost.totalAdvance >= gapInfo.gapAmount
                     ? "Your cash gap will be fully covered and your forecast balance stays above your safety threshold for the full 13-week period."
-                    : `This covers ${fmt(activeCost.totalAdvance)} of the ${fmt(gapInfo.gapAmount)} gap. You may want to select additional invoices below.`}
+                    : <>This covers <span className="q-mono tabular-nums">{fmt(activeCost.totalAdvance)}</span> of the <span className="q-mono tabular-nums">{fmt(gapInfo.gapAmount)}</span> gap. You may want to select additional invoices below.</>}
                 </p>
                 {useOwnFacility && (
                   <p>Present this selection to your finance provider.</p>
@@ -538,7 +531,7 @@ export default function BridgePage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <CheckCircle2 className="h-5 w-5 text-[var(--q-money-in-text)] shrink-0" />
-                <h2 className="text-lg font-semibold">No cash gap detected</h2>
+                <h2 className="text-[16px] font-semibold text-[var(--q-text-primary)]">No cash gap detected</h2>
               </div>
               <div className="flex items-center gap-3">
                 <span className={cn("text-sm", !useOwnFacility && "font-medium text-[var(--q-text-primary)]", useOwnFacility && "text-[var(--q-text-tertiary)]")}>Qashivo financing</span>
@@ -546,7 +539,7 @@ export default function BridgePage() {
                 <span className={cn("text-sm", useOwnFacility && "font-medium text-[var(--q-text-primary)]", !useOwnFacility && "text-[var(--q-text-tertiary)]")}>Your facility</span>
               </div>
             </div>
-            <p className="text-sm text-[var(--q-text-tertiary)] leading-relaxed">
+            <p className="text-[14px] text-[var(--q-text-secondary)] leading-relaxed">
               Your forecast stays above your safety threshold for the full 13-week period.
               If you'd like to finance invoices anyway to accelerate cash, select from the list below.
             </p>
@@ -560,30 +553,6 @@ export default function BridgePage() {
             </button>
           </div>
         )}
-
-        {/* Riley's recommended invoices modal */}
-        <Dialog open={showRecommendedInvoices} onOpenChange={setShowRecommendedInvoices}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Riley's recommended invoices</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-1 py-2">
-              {activeSelection.map((inv) => (
-                <div key={inv.invoiceId} className="flex justify-between text-sm py-1">
-                  <span>{inv.contactName}</span>
-                  <span className="font-medium tabular-nums">{fmt(inv.amountDue)}</span>
-                </div>
-              ))}
-              <div className="border-t pt-2 mt-2 flex justify-between text-sm font-semibold">
-                <span>Total</span>
-                <span className="tabular-nums">{fmt(activeSelection.reduce((s, i) => s + i.amountDue, 0))}</span>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowRecommendedInvoices(false)}>Close</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
 
         {/* ═══════════════════════════════════════════════════════════════
             LAYER 2 — ADVANCED VIEW (three-column comparison)
