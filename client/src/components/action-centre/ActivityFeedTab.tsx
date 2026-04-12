@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useSearch } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FilterPill } from "@/components/ui/filter-pill";
+import { QFilterTabs, QFilterDivider } from "@/components/ui/q-filter-tabs";
 import { cn } from "@/lib/utils";
 import { Inbox, ArrowDownLeft, ArrowUpRight, AlertCircle, Mail, MessageSquare, Phone, ChevronLeft, ChevronRight } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -180,19 +180,40 @@ export default function ActivityFeedTab() {
           )}
         </div>
 
-        {/* Pill filters */}
-        <div className="flex flex-wrap gap-1.5">
-          {(["all", "inbound", "outbound"] as Direction[]).map(v => (
-            <FilterPill key={v} label={v === "all" ? "All" : v === "inbound" ? "Inbound" : "Outbound"} active={direction === v} onClick={() => { setDirection(v); setCurrentPage(1); }} />
-          ))}
-          <div className="mx-1.5 h-6 w-px bg-[var(--q-border-default)] self-center" />
-          {(["all", "email", "sms", "voice", "system"] as Channel[]).map(v => (
-            <FilterPill key={v} label={v === "all" ? "All" : v === "sms" ? "SMS" : v.charAt(0).toUpperCase() + v.slice(1)} active={channel === v} onClick={() => { setChannel(v); setCurrentPage(1); }} />
-          ))}
-          <div className="mx-1.5 h-6 w-px bg-[var(--q-border-default)] self-center" />
-          {(["today", "yesterday", "week", "month"] as TimeRange[]).map(v => (
-            <FilterPill key={v} label={v === "today" ? "Today" : v === "yesterday" ? "Yesterday" : v === "week" ? "This week" : "This month"} active={timeRange === v} onClick={() => { setTimeRange(v); setCurrentPage(1); }} />
-          ))}
+        {/* Filters */}
+        <div className="flex items-center gap-0 flex-wrap">
+          <QFilterTabs
+            options={[
+              { key: "all", label: "All" },
+              { key: "inbound", label: "Inbound" },
+              { key: "outbound", label: "Outbound" },
+            ]}
+            activeKey={direction}
+            onChange={(v) => { setDirection(v as Direction); setCurrentPage(1); }}
+          />
+          <QFilterDivider />
+          <QFilterTabs
+            options={[
+              { key: "all", label: "All" },
+              { key: "email", label: "Email" },
+              { key: "sms", label: "SMS" },
+              { key: "voice", label: "Voice" },
+              { key: "system", label: "System" },
+            ]}
+            activeKey={channel}
+            onChange={(v) => { setChannel(v as Channel); setCurrentPage(1); }}
+          />
+          <QFilterDivider />
+          <QFilterTabs
+            options={[
+              { key: "today", label: "Today" },
+              { key: "yesterday", label: "Yesterday" },
+              { key: "week", label: "This week" },
+              { key: "month", label: "This month" },
+            ]}
+            activeKey={timeRange}
+            onChange={(v) => { setTimeRange(v as TimeRange); setCurrentPage(1); }}
+          />
         </div>
 
         {/* Data table */}

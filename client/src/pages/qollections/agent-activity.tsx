@@ -11,6 +11,7 @@ import ExceptionsTab from "@/components/action-centre/ExceptionsTab";
 import SyncStatusBanner from "@/components/sync/SyncStatusBanner";
 // VipTab removed — VIP is a debtor status, managed from Debtors list + debtor detail
 import { cn } from "@/lib/utils";
+import { QFilterTabs, QFilterDivider } from "@/components/ui/q-filter-tabs";
 import {
   type ExceptionSubTab,
   EXCEPTION_SUB_TABS,
@@ -125,9 +126,6 @@ export default function QollectionsAgentActivity() {
     return counts;
   }, [exceptionsData, promisesData]);
 
-  const tabLabel = (label: string, count: number) =>
-    count > 0 ? `${label} (${count})` : label;
-
   const showApprovals = approvalMode !== "full_auto";
   const showCountdown = approvalMode === "auto_after_timeout";
 
@@ -137,54 +135,33 @@ export default function QollectionsAgentActivity() {
         <SyncStatusBanner />
         {showCountdown && <CountdownBanner />}
 
-        {/* Custom tab bar with flowing exception sub-tabs */}
-        <div className="overflow-x-auto scrollbar-hide">
-          <div className="inline-flex h-9 items-center rounded-lg bg-[var(--q-bg-surface-alt)] p-1 text-[var(--q-text-tertiary)] min-w-full">
-            {/* Main tabs — grid ensures all columns match the widest */}
-            <div className={cn(
-              "grid auto-cols-[1fr] grid-flow-col",
-              showApprovals ? "grid-cols-5" : "grid-cols-4",
-            )}>
-              <TabButton active={activeTab === "summary"} onClick={() => setTab("summary")}>
-                Summary
-              </TabButton>
-
-              {showApprovals && (
-                <TabButton active={activeTab === "queue"} onClick={() => setTab("queue")}>
-                  {tabLabel("Approval", approvalCount)}
-                </TabButton>
-              )}
-
-              <TabButton active={activeTab === "scheduled"} onClick={() => setTab("scheduled")}>
-                {tabLabel("Scheduled", scheduledCount)}
-              </TabButton>
-
-              <TabButton active={activeTab === "activity"} onClick={() => setTab("activity")}>
-                {tabLabel("Activity Feed", activityInboundCount)}
-              </TabButton>
-
-              <TabButton active={activeTab === "exceptions"} onClick={() => setTab("exceptions")}>
-                {tabLabel("Exceptions", exceptionCount)}
-              </TabButton>
-            </div>
-
-            {/* Sub-tabs flow to the right when exceptions is active */}
-            {activeTab === "exceptions" && (
-              <>
-                <div className="mx-1 h-4 w-px bg-[var(--q-border-default)]/50" />
-
-                {EXCEPTION_SUB_TABS.map(sub => (
-                  <SubTabButton
-                    key={sub.value}
-                    active={exceptionSubTab === sub.value}
-                    onClick={() => setSubTab(sub.value)}
-                  >
-                    {tabLabel(sub.label, exceptionSubCounts[sub.value])}
-                  </SubTabButton>
-                ))}
-              </>
-            )}
-          </div>
+        {/* Tab bar */}
+        <div className="flex items-center gap-0 flex-wrap overflow-x-auto scrollbar-hide">
+          <QFilterTabs
+            options={[
+              { key: "summary", label: "Summary" },
+              ...(showApprovals ? [{ key: "queue", label: "Approval", count: approvalCount || undefined }] : []),
+              { key: "scheduled", label: "Scheduled", count: scheduledCount || undefined },
+              { key: "activity", label: "Activity Feed", count: activityInboundCount || undefined },
+              { key: "exceptions", label: "Exceptions", count: exceptionCount || undefined },
+            ]}
+            activeKey={activeTab}
+            onChange={(v) => setTab(v as MainTab)}
+          />
+          {activeTab === "exceptions" && (
+            <>
+              <QFilterDivider />
+              <QFilterTabs
+                options={EXCEPTION_SUB_TABS.map(sub => ({
+                  key: sub.value,
+                  label: sub.label,
+                  count: exceptionSubCounts[sub.value] || undefined,
+                }))}
+                activeKey={exceptionSubTab ?? EXCEPTION_SUB_TABS[0].value}
+                onChange={(v) => setSubTab(v as ExceptionSubTab)}
+              />
+            </>
+          )}
         </div>
 
         {/* Tab content */}
@@ -200,52 +177,3 @@ export default function QollectionsAgentActivity() {
   );
 }
 
-// ── Tab button components ────────────────────────────────────
-
-function TabButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      className={cn(
-        "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-[13px] font-medium transition-all w-full text-center",
-        active
-          ? "bg-[var(--q-bg-surface)] text-[var(--q-text-primary)] shadow-sm"
-          : "hover:bg-[var(--q-bg-surface)]/50 hover:text-[var(--q-text-primary)]",
-      )}
-      onClick={onClick}
-    >
-      {children}
-    </button>
-  );
-}
-
-function SubTabButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      className={cn(
-        "inline-flex items-center justify-center whitespace-nowrap rounded-full px-3 py-1 text-xs transition-all duration-150 ease-in-out",
-        active
-          ? "bg-[var(--q-accent)] border border-[var(--q-accent)] text-white font-medium cursor-default"
-          : "bg-transparent border border-transparent text-[var(--q-text-tertiary)] hover:bg-[var(--q-bg-surface-alt)] hover:text-[var(--q-text-primary)] font-normal cursor-pointer",
-      )}
-      onClick={active ? undefined : onClick}
-    >
-      {children}
-    </button>
-  );
-}

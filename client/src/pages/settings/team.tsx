@@ -6,6 +6,7 @@ import InviteModal from "@/components/team/InviteModal";
 import { Button } from "@/components/ui/button";
 import { UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { QFilterTabs } from "@/components/ui/q-filter-tabs";
 import { usePermissions } from "@/hooks/usePermissions";
 import { AuditLogContent } from "@/pages/settings/audit-log";
 
@@ -44,32 +45,14 @@ export default function SettingsTeam() {
     >
       <div className="space-y-6">
         {/* Tab bar */}
-        <div className="flex gap-6 border-b border-[var(--q-border-default)]">
-          <button
-            onClick={() => setActiveTab("members")}
-            className={cn(
-              "pb-2.5 text-[14px] font-medium border-b-2 -mb-px transition-colors",
-              activeTab === "members"
-                ? "border-[var(--q-accent)] text-[var(--q-text-primary)]"
-                : "border-transparent text-[var(--q-text-tertiary)] hover:text-[var(--q-text-primary)]"
-            )}
-          >
-            Members
-          </button>
-          {canViewAuditLog && (
-            <button
-              onClick={() => setActiveTab("audit-log")}
-              className={cn(
-                "pb-2.5 text-[14px] font-medium border-b-2 -mb-px transition-colors",
-                activeTab === "audit-log"
-                  ? "border-[var(--q-accent)] text-[var(--q-text-primary)]"
-                  : "border-transparent text-[var(--q-text-tertiary)] hover:text-[var(--q-text-primary)]"
-              )}
-            >
-              Audit Log
-            </button>
-          )}
-        </div>
+        <QFilterTabs
+          options={[
+            { key: "members", label: "Members" },
+            ...(canViewAuditLog ? [{ key: "audit-log", label: "Audit Log" }] : []),
+          ]}
+          activeKey={activeTab}
+          onChange={(v) => setActiveTab(v as Tab)}
+        />
 
         {/* Tab content */}
         {activeTab === "members" && <TeamPageContent />}

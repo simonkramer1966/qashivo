@@ -9,6 +9,7 @@ import { QAmount } from "@/components/ui/q-amount";
 import { QMetricCard } from "@/components/ui/q-metric-card";
 import { QMetricCardSkeleton } from "@/components/ui/q-skeleton";
 import { QEmptyState } from "@/components/ui/q-empty-state";
+import { QFilterTabs } from "@/components/ui/q-filter-tabs";
 import {
   Select,
   SelectContent,
@@ -334,30 +335,14 @@ export default function QollectionsDebtors() {
         <SyncStatusBanner />
 
         {/* Tab bar */}
-        <div className="flex gap-1 border-b border-[var(--q-border-default)]">
-          <button
-            onClick={() => setActiveTab("debtors")}
-            className={cn(
-              "px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
-              activeTab === "debtors"
-                ? "border-[var(--q-accent)] text-[var(--q-text-primary)]"
-                : "border-transparent text-[var(--q-text-tertiary)] hover:text-[var(--q-text-primary)] hover:border-[var(--q-border-hover)]"
-            )}
-          >
-            All Debtors
-          </button>
-          <button
-            onClick={() => setActiveTab("data-health")}
-            className={cn(
-              "px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
-              activeTab === "data-health"
-                ? "border-[var(--q-accent)] text-[var(--q-text-primary)]"
-                : "border-transparent text-[var(--q-text-tertiary)] hover:text-[var(--q-text-primary)] hover:border-[var(--q-border-hover)]"
-            )}
-          >
-            Data Health
-          </button>
-        </div>
+        <QFilterTabs
+          options={[
+            { key: "debtors", label: "All Debtors" },
+            { key: "data-health", label: "Data Health" },
+          ]}
+          activeKey={activeTab}
+          onChange={(v) => setActiveTab(v as "debtors" | "data-health")}
+        />
 
         {activeTab === "data-health" ? (
           <DataHealthContent />

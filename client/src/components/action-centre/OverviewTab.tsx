@@ -8,6 +8,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
+import { QFilterTabs } from "@/components/ui/q-filter-tabs";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -319,30 +320,20 @@ export default function OverviewTab() {
     <div className="space-y-4">
       {/* Period selector + refresh */}
       <div className="flex flex-wrap items-center gap-4">
-        <div className="flex items-center gap-4">
-          {periodButtons.map((p) => (
-            <button
-              key={p.value}
-              className={`pb-1 text-[14px] font-medium border-b-2 transition-colors ${
-                period === p.value
-                  ? "border-[var(--q-accent)] text-[var(--q-text-primary)]"
-                  : "border-transparent text-[var(--q-text-tertiary)] hover:text-[var(--q-text-primary)]"
-              }`}
-              onClick={() => {
-                if (p.value === "custom" && !dateFrom && !dateTo) {
-                  const to = new Date();
-                  const from = new Date();
-                  from.setDate(from.getDate() - 7);
-                  setDateFrom(from.toISOString().slice(0, 10));
-                  setDateTo(to.toISOString().slice(0, 10));
-                }
-                setPeriod(p.value);
-              }}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
+        <QFilterTabs
+          options={periodButtons.map(p => ({ key: p.value, label: p.label }))}
+          activeKey={period}
+          onChange={(v) => {
+            if (v === "custom" && !dateFrom && !dateTo) {
+              const to = new Date();
+              const from = new Date();
+              from.setDate(from.getDate() - 7);
+              setDateFrom(from.toISOString().slice(0, 10));
+              setDateTo(to.toISOString().slice(0, 10));
+            }
+            setPeriod(v as Period);
+          }}
+        />
 
         {period === "custom" && (
           <div className="flex items-center gap-2">

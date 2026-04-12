@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { ExecutedAction } from '../types';
 import { formatCurrencyCompact, getChannelLabel, formatRelativeTime } from '../utils';
-import { FilterPill } from '@/components/ui/filter-pill';
+import { QFilterTabs, QFilterDivider } from '@/components/ui/q-filter-tabs';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface ExecutedTabProps {
@@ -117,24 +117,18 @@ export function ExecutedTab({ actions, onSelectDebtor, isLoading }: ExecutedTabP
         <span className="text-[13px] text-[var(--q-text-tertiary)]">
           {filteredActions.length} actions
         </span>
-        <div className="flex items-center gap-1.5 ml-3">
-          {DATE_OPTIONS.map(opt => (
-            <FilterPill
-              key={opt.value}
-              label={opt.label}
-              active={dateFilter === opt.value}
-              onClick={() => setDateFilter(opt.value)}
-            />
-          ))}
-          <div className="mx-1.5 h-5 w-px bg-border self-center" />
-          {CHANNEL_OPTIONS.map(opt => (
-            <FilterPill
-              key={opt.value}
-              label={opt.label}
-              active={channelFilter === opt.value}
-              onClick={() => setChannelFilter(opt.value)}
-            />
-          ))}
+        <div className="flex items-center gap-0 ml-3">
+          <QFilterTabs
+            options={DATE_OPTIONS.map(opt => ({ key: opt.value, label: opt.label }))}
+            activeKey={dateFilter}
+            onChange={(v) => setDateFilter(v as DateFilter)}
+          />
+          <QFilterDivider />
+          <QFilterTabs
+            options={CHANNEL_OPTIONS.map(opt => ({ key: opt.value, label: opt.label }))}
+            activeKey={channelFilter}
+            onChange={(v) => setChannelFilter(v as ChannelFilter)}
+          />
         </div>
       </div>
 

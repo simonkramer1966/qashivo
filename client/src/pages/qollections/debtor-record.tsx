@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { QBadge } from "@/components/ui/q-badge";
+import { QFilterTabs, QFilterDivider } from "@/components/ui/q-filter-tabs";
 import { QAmount } from "@/components/ui/q-amount";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -2021,14 +2022,18 @@ export default function DebtorRecord() {
         {/* Tabs                                                              */}
         {/* ----------------------------------------------------------------- */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="flex w-full h-auto gap-1">
-            <TabsTrigger value="activity" className="flex-1 whitespace-nowrap text-[13px] font-medium px-3 py-2">Activity</TabsTrigger>
-            <TabsTrigger value="outstanding" className="flex-1 whitespace-nowrap text-[13px] font-medium px-3 py-2">Outstanding</TabsTrigger>
-            <TabsTrigger value="disputes" className="flex-1 whitespace-nowrap text-[13px] font-medium px-3 py-2">Disputes</TabsTrigger>
-            <TabsTrigger value="details" className="flex-1 whitespace-nowrap text-[13px] font-medium px-3 py-2">Details &amp; Contacts</TabsTrigger>
-            <TabsTrigger value="risk" className="flex-1 whitespace-nowrap text-[13px] font-medium px-3 py-2">Risk &amp; Credit</TabsTrigger>
-            <TabsTrigger value="paid" className="flex-1 whitespace-nowrap text-[13px] font-medium px-3 py-2">Paid</TabsTrigger>
-          </TabsList>
+          <QFilterTabs
+            options={[
+              { key: "activity", label: "Activity" },
+              { key: "outstanding", label: "Outstanding" },
+              { key: "disputes", label: "Disputes" },
+              { key: "details", label: "Details & Contacts" },
+              { key: "risk", label: "Risk & Credit" },
+              { key: "paid", label: "Paid" },
+            ]}
+            activeKey={activeTab}
+            onChange={setActiveTab}
+          />
 
           {/* ============================================================== */}
           {/* TAB 1: Details & Contacts                                       */}
@@ -2725,60 +2730,43 @@ export default function DebtorRecord() {
             <DebtorStatusBanner contactId={contactId} />
 
             {/* ── Filter bar ── */}
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="flex items-center gap-3">
-                {["All", "Communications", "Payments", "Promises", "Notes", "System", "Risk"].map(v => (
-                  <button
-                    key={v}
-                    className={cn(
-                      "text-[14px] font-medium pb-1 transition-colors border-b-2",
-                      activityCategory === v
-                        ? "text-[var(--q-text-primary)] border-[var(--q-accent)]"
-                        : "text-[var(--q-text-tertiary)] hover:text-[var(--q-text-primary)] border-transparent",
-                    )}
-                    onClick={() => { setActivityCategory(v); setActivityPage(1); }}
-                  >
-                    {v}
-                  </button>
-                ))}
-              </div>
-              <div className="h-5 w-px bg-[var(--q-border-default)]" />
-              <div className="flex items-center gap-3">
-                {([["All", "All"], ["30d", "30 days"], ["90d", "90 days"], ["12m", "12 months"]] as const).map(([v, label]) => (
-                  <button
-                    key={v}
-                    className={cn(
-                      "text-[14px] font-medium pb-1 transition-colors border-b-2",
-                      activityRange === v
-                        ? "text-[var(--q-text-primary)] border-[var(--q-accent)]"
-                        : "text-[var(--q-text-tertiary)] hover:text-[var(--q-text-primary)] border-transparent",
-                    )}
-                    onClick={() => { setActivityRange(v); setActivityPage(1); }}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-              <div className="h-5 w-px bg-[var(--q-border-default)]" />
-              <div className="flex items-center gap-3">
-                {([["All", "All"], ["outbound", "Outbound"], ["inbound", "Inbound"]] as const).map(([v, label]) => (
-                  <button
-                    key={v}
-                    className={cn(
-                      "text-[14px] font-medium pb-1 transition-colors border-b-2",
-                      activityDirection === v
-                        ? "text-[var(--q-text-primary)] border-[var(--q-accent)]"
-                        : "text-[var(--q-text-tertiary)] hover:text-[var(--q-text-primary)] border-transparent",
-                    )}
-                    onClick={() => { setActivityDirection(v); setActivityPage(1); }}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-
+            <div className="flex items-center gap-0 flex-wrap">
+              <QFilterTabs
+                options={[
+                  { key: "All", label: "All" },
+                  { key: "Communications", label: "Communications" },
+                  { key: "Payments", label: "Payments" },
+                  { key: "Promises", label: "Promises" },
+                  { key: "Notes", label: "Notes" },
+                  { key: "System", label: "System" },
+                  { key: "Risk", label: "Risk" },
+                ]}
+                activeKey={activityCategory}
+                onChange={(v) => { setActivityCategory(v); setActivityPage(1); }}
+              />
+              <QFilterDivider />
+              <QFilterTabs
+                options={[
+                  { key: "All", label: "All" },
+                  { key: "30d", label: "30 days" },
+                  { key: "90d", label: "90 days" },
+                  { key: "12m", label: "12 months" },
+                ]}
+                activeKey={activityRange}
+                onChange={(v) => { setActivityRange(v); setActivityPage(1); }}
+              />
+              <QFilterDivider />
+              <QFilterTabs
+                options={[
+                  { key: "All", label: "All" },
+                  { key: "outbound", label: "Outbound" },
+                  { key: "inbound", label: "Inbound" },
+                ]}
+                activeKey={activityDirection}
+                onChange={(v) => { setActivityDirection(v); setActivityPage(1); }}
+              />
               {activityQuery.data && (
-                <span className="text-[13px] text-[var(--q-text-tertiary)] ml-auto">
+                <span className="ml-auto text-[13px] text-[var(--q-text-tertiary)]">
                   {activityQuery.data.total} event{activityQuery.data.total !== 1 ? "s" : ""}
                 </span>
               )}

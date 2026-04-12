@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { FilterPill } from "@/components/ui/filter-pill";
+import { QFilterTabs } from "@/components/ui/q-filter-tabs";
 import { cn } from "@/lib/utils";
 import {
   AlertTriangle, TrendingDown, CheckCircle2, ChevronRight,
@@ -102,8 +102,6 @@ function StateIndicator({ state }: { state: ExceptionState }) {
       return <Check className="h-4 w-4 text-[var(--q-text-tertiary)]/60 shrink-0" />;
   }
 }
-
-// FilterPill imported from @/components/ui/filter-pill
 
 // ── Main component ────────────────────────────────────────────
 
@@ -409,13 +407,17 @@ export default function ExceptionsTab({ subTab, onNavigateSubTab }: ExceptionsTa
 
   return (
     <div className="space-y-3">
-      {/* Filter pills */}
-      <div className="flex flex-wrap gap-1.5">
-        <FilterPill label="All" count={exceptions.length} active={filter === "all"} onClick={() => setFilter("all")} />
-        <FilterPill label="New" count={stateCounts.new} active={filter === "new"} onClick={() => setFilter("new")} />
-        <FilterPill label="In progress" count={stateCounts.in_progress} active={filter === "in_progress"} onClick={() => setFilter("in_progress")} />
-        <FilterPill label="Resolved" count={stateCounts.resolved} active={filter === "resolved"} onClick={() => setFilter("resolved")} />
-      </div>
+      {/* Status filter */}
+      <QFilterTabs
+        options={[
+          { key: "all", label: "All", count: exceptions.length },
+          { key: "new", label: "New", count: stateCounts.new },
+          { key: "in_progress", label: "In progress", count: stateCounts.in_progress },
+          { key: "resolved", label: "Resolved", count: stateCounts.resolved },
+        ]}
+        activeKey={filter}
+        onChange={(v) => setFilter(v as FilterState)}
+      />
 
       {/* Empty state */}
       {tableItems.length === 0 ? (

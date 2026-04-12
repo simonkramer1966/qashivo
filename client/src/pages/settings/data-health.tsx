@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { QFilterTabs } from "@/components/ui/q-filter-tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useMemo } from "react";
 import {
@@ -212,16 +213,30 @@ export default function SettingsDataHealth({ embedded }: { embedded?: boolean })
           ))}
         </div>
 
-        {/* Search */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--q-text-tertiary)]" />
-          <Input
-            placeholder="Search by name, company, or email..."
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
+        {/* Search + filter tabs */}
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="relative max-w-md flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--q-text-tertiary)]" />
+            <Input
+              placeholder="Search by name, company, or email..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
         </div>
+
+        <QFilterTabs
+          options={[
+            { key: "all", label: "All debtors", count: summary.total },
+            { key: "ready", label: "Ready", count: summary.ready },
+            { key: "needs_email", label: "Needs email", count: summary.needsEmail },
+            { key: "generic_email", label: "Generic email", count: summary.genericEmail },
+            { key: "needs_phone", label: "Needs phone", count: summary.needsPhone },
+          ]}
+          activeKey={activeFilter}
+          onChange={(v) => setActiveFilter(v as FilterTab)}
+        />
 
         {/* Table */}
         <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] overflow-hidden">
