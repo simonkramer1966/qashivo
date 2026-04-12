@@ -1161,14 +1161,14 @@ export default function DebtorRecord() {
           vb = b.paidDate ? new Date(b.paidDate).getTime() : 0;
           break;
         case "daysToPay":
-          va = a.paidDate && a.dueDate
+          va = a.paidDate && a.issueDate
             ? Math.floor(
-                (new Date(a.paidDate).getTime() - new Date(a.dueDate).getTime()) / 86400000
+                (new Date(a.paidDate).getTime() - new Date(a.issueDate).getTime()) / 86400000
               )
             : 0;
-          vb = b.paidDate && b.dueDate
+          vb = b.paidDate && b.issueDate
             ? Math.floor(
-                (new Date(b.paidDate).getTime() - new Date(b.dueDate).getTime()) / 86400000
+                (new Date(b.paidDate).getTime() - new Date(b.issueDate).getTime()) / 86400000
               )
             : 0;
           break;
@@ -3239,9 +3239,6 @@ export default function DebtorRecord() {
           {/* TAB 4: Paid                                                     */}
           {/* ============================================================== */}
           <TabsContent value="paid" className="space-y-4 mt-4">
-            <p className="text-xs text-muted-foreground">
-              Terms: {contact.paymentTerms || "30 days"} · Days to Pay is relative to due date
-            </p>
             {paidQuery.isLoading ? (
               <div className="space-y-2">
                 <Skeleton className="h-12 w-full" />
@@ -3249,124 +3246,111 @@ export default function DebtorRecord() {
                 <Skeleton className="h-12 w-full" />
               </div>
             ) : paidInvoices.length === 0 ? (
-              <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  No paid invoices found.
-                </CardContent>
-              </Card>
+              <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] py-8 text-center text-[var(--q-text-tertiary)]">
+                No paid invoices found.
+              </div>
             ) : (
-              <Card>
-                <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead
-                          className="cursor-pointer select-none"
+              <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr>
+                        <th
+                          className="h-12 text-[11px] font-medium tracking-[0.3px] text-[var(--q-text-tertiary)] text-left px-3 py-2 border-b border-[var(--q-border-default)] whitespace-nowrap cursor-pointer select-none"
                           onClick={() => togglePaidSort("invoiceNumber")}
                         >
-                          Invoice #
-                          <SortIcon
-                            sortKey="invoiceNumber"
-                            currentKey={paidSortKey}
-                            dir={paidSortDir}
-                          />
-                        </TableHead>
-                        <TableHead>Invoice Date</TableHead>
-                        <TableHead>Due Date</TableHead>
-                        <TableHead>Description</TableHead>
-                        <TableHead
-                          className="text-right cursor-pointer select-none"
+                          <span className="inline-flex items-center gap-1">
+                            Invoice #
+                            <SortIcon sortKey="invoiceNumber" currentKey={paidSortKey} dir={paidSortDir} />
+                          </span>
+                        </th>
+                        <th className="h-12 text-[11px] font-medium tracking-[0.3px] text-[var(--q-text-tertiary)] text-left px-3 py-2 border-b border-[var(--q-border-default)] whitespace-nowrap">
+                          Invoice date
+                        </th>
+                        <th className="h-12 text-[11px] font-medium tracking-[0.3px] text-[var(--q-text-tertiary)] text-left px-3 py-2 border-b border-[var(--q-border-default)] whitespace-nowrap">
+                          Due date
+                        </th>
+                        <th className="h-12 text-[11px] font-medium tracking-[0.3px] text-[var(--q-text-tertiary)] text-left px-3 py-2 border-b border-[var(--q-border-default)] whitespace-nowrap">
+                          Description
+                        </th>
+                        <th
+                          className="h-12 text-[11px] font-medium tracking-[0.3px] text-[var(--q-text-tertiary)] text-right px-3 py-2 border-b border-[var(--q-border-default)] whitespace-nowrap cursor-pointer select-none"
                           onClick={() => togglePaidSort("amount")}
                         >
-                          Paid Amount
-                          <SortIcon
-                            sortKey="amount"
-                            currentKey={paidSortKey}
-                            dir={paidSortDir}
-                          />
-                        </TableHead>
-                        <TableHead
-                          className="cursor-pointer select-none"
+                          <span className="inline-flex items-center gap-1 justify-end">
+                            Paid amount
+                            <SortIcon sortKey="amount" currentKey={paidSortKey} dir={paidSortDir} />
+                          </span>
+                        </th>
+                        <th
+                          className="h-12 text-[11px] font-medium tracking-[0.3px] text-[var(--q-text-tertiary)] text-left px-3 py-2 border-b border-[var(--q-border-default)] whitespace-nowrap cursor-pointer select-none"
                           onClick={() => togglePaidSort("paidDate")}
                         >
-                          Paid Date
-                          <SortIcon
-                            sortKey="paidDate"
-                            currentKey={paidSortKey}
-                            dir={paidSortDir}
-                          />
-                        </TableHead>
-                        <TableHead
-                          className="text-right cursor-pointer select-none"
+                          <span className="inline-flex items-center gap-1">
+                            Paid date
+                            <SortIcon sortKey="paidDate" currentKey={paidSortKey} dir={paidSortDir} />
+                          </span>
+                        </th>
+                        <th
+                          className="h-12 text-[11px] font-medium tracking-[0.3px] text-[var(--q-text-tertiary)] text-right px-3 py-2 border-b border-[var(--q-border-default)] whitespace-nowrap cursor-pointer select-none"
                           onClick={() => togglePaidSort("daysToPay")}
                         >
-                          Days to Pay
-                          <SortIcon
-                            sortKey="daysToPay"
-                            currentKey={paidSortKey}
-                            dir={paidSortDir}
-                          />
-                        </TableHead>
-                        <TableHead>Notes</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
+                          <span className="inline-flex items-center gap-1 justify-end">
+                            Days to pay
+                            <SortIcon sortKey="daysToPay" currentKey={paidSortKey} dir={paidSortDir} />
+                          </span>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
                       {sortedPaid
                         .slice((paidPage - 1) * paidPerPage, paidPage * paidPerPage)
                         .map((inv) => {
                           const daysToPay =
-                            inv.paidDate && inv.dueDate
+                            inv.paidDate && inv.issueDate
                               ? Math.floor(
                                   (new Date(inv.paidDate).getTime() -
-                                    new Date(inv.dueDate).getTime()) /
+                                    new Date(inv.issueDate).getTime()) /
                                     86400000
                                 )
                               : null;
-                          const hasCredit = num(inv.amountCredited) > 0;
                           return (
-                            <TableRow key={inv.id}>
-                              <TableCell className="font-medium">
+                            <tr key={inv.id} className="h-12 border-b border-[var(--q-border-default)] hover:bg-[var(--q-bg-surface-hover)] transition-colors duration-100">
+                              <td className="px-3 py-3 text-[14px] font-medium text-[var(--q-text-primary)]">
                                 {inv.invoiceNumber}
-                              </TableCell>
-                              <TableCell className="text-sm text-muted-foreground">
+                              </td>
+                              <td className="px-3 py-3 text-[14px] text-[var(--q-text-secondary)]">
                                 {formatDate(inv.issueDate)}
-                              </TableCell>
-                              <TableCell className="text-sm text-muted-foreground">
+                              </td>
+                              <td className="px-3 py-3 text-[14px] text-[var(--q-text-secondary)]">
                                 {formatDate(inv.dueDate)}
-                              </TableCell>
-                              <TableCell className="max-w-[200px] truncate text-muted-foreground text-sm">
+                              </td>
+                              <td className="px-3 py-3 text-[14px] text-[var(--q-text-tertiary)] max-w-[200px] truncate">
                                 {inv.description || "—"}
-                              </TableCell>
-                              <TableCell className="text-right tabular-nums">
+                              </td>
+                              <td className="px-3 py-3 text-[14px] text-[var(--q-text-primary)] text-right q-mono tabular-nums font-medium">
                                 {gbp.format(num(inv.amountPaid))}
-                              </TableCell>
-                              <TableCell>{formatDate(inv.paidDate)}</TableCell>
-                              <TableCell
-                                className={cn(
-                                  "text-right tabular-nums",
-                                  daysToPay == null
-                                    ? "text-muted-foreground"
-                                    : daysToPay <= 0
-                                    ? "text-[hsl(var(--success))]"
-                                    : daysToPay <= 30
-                                    ? "text-[hsl(var(--warning))]"
-                                    : "text-destructive"
+                              </td>
+                              <td className="px-3 py-3 text-[14px] text-[var(--q-text-secondary)]">
+                                {formatDate(inv.paidDate)}
+                              </td>
+                              <td className="px-3 py-3 text-right whitespace-nowrap">
+                                {daysToPay != null ? (
+                                  <>
+                                    <span className="text-[14px] q-mono tabular-nums text-[var(--q-text-secondary)]">{daysToPay}</span>
+                                    <span className="text-[12px] text-[var(--q-text-tertiary)] ml-0.5">days</span>
+                                  </>
+                                ) : (
+                                  <span className="text-[14px] text-[var(--q-text-tertiary)]">—</span>
                                 )}
-                              >
-                                {daysToPay != null ? `${daysToPay}d` : "—"}
-                              </TableCell>
-                              <TableCell className="text-sm text-muted-foreground">
-                                {hasCredit
-                                  ? `Part credit: ${gbp.format(num(inv.amountCredited))}`
-                                  : "—"}
-                              </TableCell>
-                            </TableRow>
+                              </td>
+                            </tr>
                           );
                         })}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             )}
 
             {/* Pagination */}
