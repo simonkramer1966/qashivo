@@ -181,6 +181,7 @@ export const tenants = pgTable("tenants", {
   forecastOpeningBalanceDate: timestamp("forecast_opening_balance_date"),
   forecastOpeningBalanceSource: varchar("forecast_opening_balance_source", { length: 20 }).default("manual"),
   forecastSafetyThreshold: decimal("forecast_safety_threshold", { precision: 12, scale: 2 }).default("20000"),
+  forecastOverdraftFacility: decimal("forecast_overdraft_facility", { precision: 12, scale: 2 }).default("0"),
   lastForecastSnapshot: jsonb("last_forecast_snapshot"),
 
   createdAt: timestamp("created_at").defaultNow(),

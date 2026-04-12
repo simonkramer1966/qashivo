@@ -21,7 +21,7 @@ MVP v1 delivered the core Collections Agent pipeline (LLM email generation, comp
 
 ## SPRINT 5: XERO PRODUCTION + DATA HEALTH + COLLECTIONS HARDENING (Near Complete)
 
-*Updated: 10 April 2026 — Sprint 5 effectively complete. 19 sub-sections delivered (5.1–5.19). Only remaining item: Xero redirect URI fix (trivial) and onboarding integration with Data Health. Sprint 8 cashflow forecast pulled forward and delivered (5.19). Conversation state machine, security hardening, promise tracking all added.*
+*Updated: 11 April 2026 — Sprint 5 scope massively expanded. 23 sub-sections delivered (5.1–5.23). Remaining items: Xero redirect URI fix (trivial) and onboarding integration with Data Health. Sprint 8 cashflow forecast pulled forward (5.19). RBAC 4-phase system added (5.20). Qapital pillar launched with Capital Bridge + Facility (5.21). Cash gap alerts (5.22). Three-pillar dashboard + branding unification (5.23).*
 
 ### 5.1 Xero Foundations Fix
 
@@ -247,6 +247,46 @@ MVP v1 delivered the core Collections Agent pipeline (LLM email generation, comp
 | User pipeline layer (Layer 4) | Confidence-tiered payment timing (Committed/Expected/Stretch), inline grid editing, scenario weighting | ✅ Done (10 Apr) |
 | Rolling window + manual close (Layer 5) | Weeks auto-roll, manual close locks actuals, accuracy tracking vs forecasted | ✅ Done (10 Apr) |
 | Forecast methodology card | Recurring revenue and pipeline sections explaining the model | ✅ Done (10 Apr) |
+
+### 5.20 RBAC — Role-Based Access Control (added 11 Apr)
+
+| Task | Detail | Status |
+|------|--------|--------|
+| Phase 1: Schema + middleware | `userDelegations` table, delegation middleware in `server/middleware/rbac.ts`, `/api/permissions` endpoint, `usePermissions` hook | ✅ Done (11 Apr) |
+| Phase 2: Team management | Team page, invitation table migration, `InviteModal`, `TeamMemberRow`, `DelegationToggles`, `FailsafeSection`, team invitation emails | ✅ Done (11 Apr) |
+| Phase 3: Permission gating | Route-level permission gating in App.tsx, sidebar, Action Centre, Forecast, Collections. Riley RBAC context. | ✅ Done (11 Apr) |
+| Phase 4: Audit log + owner transfer | `auditLog` table, Settings > Audit Log page, owner transfer, 90-day retention job | ✅ Done (11 Apr) |
+| Migration scripts | `migrate-rbac-roles.ts`, `migrate-invitations-to-table.ts` | ✅ Done (11 Apr) |
+
+### 5.21 Qapital — Capital Bridge + Facility (added 11 Apr)
+
+| Task | Detail | Status |
+|------|--------|--------|
+| Capital sidebar section | Qapital navigation: Pre-Authorisation, Bridge, Facility | ✅ Done (11 Apr) |
+| Pre-Authorisation page | Eligibility checklist for invoice financing | ✅ Done (11 Apr) |
+| Capital Bridge page | Invoice financing UI with provider comparison, cash gap analysis, greedy knapsack algorithm | ✅ Done (11 Apr) |
+| Bridge business rule filtering | Min advance, max concentration, deterministic risk scores | ✅ Done (11 Apr) |
+| Capital Facility page | Active facility dashboard with draw-down tracking | ✅ Done (11 Apr) |
+| Bridge optimal selection fix | Greedy-with-improvement knapsack picks optimal subset to bridge gap | ✅ Done (11 Apr) |
+
+### 5.22 Cash Gap Alert System (added 11 Apr)
+
+| Task | Detail | Status |
+|------|--------|--------|
+| cashGapAlertHistory table | Schema for tracking alert history per tenant | ✅ Done (11 Apr) |
+| Alert service | cashGapAlertService.ts — detects shortfalls, fires in-app banner + SMS notification | ✅ Done (11 Apr) |
+| SSE integration | cashflow_alert event type for real-time banner updates | ✅ Done (11 Apr) |
+| Forecast chart fixes | Negative y-axis, null guards (×2), red zone extends to chart bottom | ✅ Done (11 Apr) |
+
+### 5.23 Three-Pillar Dashboard + Branding (added 11 Apr)
+
+| Task | Detail | Status |
+|------|--------|--------|
+| Three-pillar Home page | Credit Control · Cashflow · Capital summary cards with navigation to each pillar | ✅ Done (11 Apr) |
+| Dashboard separation | Home.tsx (three-pillar overview) vs Qollections dashboard (credit control only) | ✅ Done (11 Apr) |
+| Pillar branding | Qollections / Qashflow / Qapital naming across sidebar and all UI | ✅ Done (11 Apr) |
+| Email tagline | Updated to "Working Capital Intelligence" | ✅ Done (11 Apr) |
+| Page renames | "Running Balance" → "13w Qashflow Forecast", "Cashflow Grid" → "Cashflow Detail" | ✅ Done (11 Apr) |
 
 ---
 

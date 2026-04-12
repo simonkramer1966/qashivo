@@ -252,6 +252,69 @@ export function registerCashflowRoutes(app: Express): void {
     },
   );
 
+  // ── GET /api/cashflow/overdraft-facility ──
+  app.get(
+    "/api/cashflow/overdraft-facility",
+    isAuthenticated,
+    async (req: any, res) => {
+      try {
+        const tenantId = req.user?.tenantId || req.rbac?.tenantId;
+        if (!tenantId) {
+          return res.status(401).json({ error: "No tenant context" });
+        }
+
+        const [tenant] = await db
+          .select({ amount: tenants.forecastOverdraftFacility })
+          .from(tenants)
+          .where(eq(tenants.id, tenantId));
+
+        res.json({ amount: tenant?.amount ? Number(tenant.amount) : 0 });
+      } catch (error) {
+        console.error("[CashflowRoutes] overdraft-facility GET error:", error);
+        res.status(500).json({ error: "Failed to get overdraft facility" });
+      }
+    },
+  );
+
+  // ── PATCH /api/cashflow/overdraft-facility ──
+  // Set overdraft facility (manager+ only)
+  app.patch(
+    "/api/cashflow/overdraft-facility",
+    isAuthenticated,
+    withMinimumRole("manager"),
+    async (req: any, res: any) => {
+      try {
+        const tenantId = req.user?.tenantId || req.rbac?.tenantId;
+        if (!tenantId) {
+          return res.status(401).json({ error: "No tenant context" });
+        }
+
+        const { amount } = req.body;
+        if (typeof amount !== "number" || isNaN(amount) || amount < 0) {
+          return res
+            .status(400)
+            .json({ error: "amount must be a non-negative number" });
+        }
+
+        await db
+          .update(tenants)
+          .set({
+            forecastOverdraftFacility: String(amount),
+            updatedAt: new Date(),
+          })
+          .where(eq(tenants.id, tenantId));
+
+        // Invalidate forecast cache since overdraft affects effective safety threshold
+        invalidateForecastCache(tenantId);
+
+        res.json({ amount });
+      } catch (error) {
+        console.error("[CashflowRoutes] set overdraft-facility error:", error);
+        res.status(500).json({ error: "Failed to set overdraft facility" });
+      }
+    },
+  );
+
   // ── GET /api/cashflow/recurring-patterns ──
   // All detected/confirmed/lapsed recurring revenue patterns
   app.get(
