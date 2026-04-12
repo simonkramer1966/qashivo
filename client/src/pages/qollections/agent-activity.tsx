@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useSearch, useLocation, Link } from "wouter";
+import { useSearch, useLocation } from "wouter";
 import AppShell from "@/components/layout/app-shell";
 import CountdownBanner from "@/components/action-centre/CountdownBanner";
 import OverviewTab from "@/components/action-centre/OverviewTab";
@@ -17,12 +17,6 @@ import {
   VALID_EXCEPTION_SUBS,
   classifyException,
 } from "@/lib/exceptionConfig";
-
-const MODE_LABELS: Record<string, string> = {
-  manual: "Manual",
-  auto_after_timeout: "Semi-Auto",
-  full_auto: "Full Auto",
-};
 
 interface TenantSettings {
   approvalMode: string;
@@ -141,16 +135,6 @@ export default function QollectionsAgentActivity() {
     <AppShell title="Action Centre" subtitle="Review, approve and track agent actions">
       <div className="space-y-4">
         <SyncStatusBanner />
-        {/* Read-only mode indicator + countdown banner */}
-        <div className="flex items-center justify-between">
-          <div />
-          <span className="text-xs text-[var(--q-text-tertiary)]">
-            Mode: {MODE_LABELS[approvalMode] ?? approvalMode}{" "}
-            <Link href="/settings/autonomy-rules" className="text-[var(--q-accent)] hover:underline">
-              Change in Settings &rarr;
-            </Link>
-          </span>
-        </div>
         {showCountdown && <CountdownBanner />}
 
         {/* Custom tab bar with flowing exception sub-tabs */}
