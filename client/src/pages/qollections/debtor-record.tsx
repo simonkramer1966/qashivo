@@ -55,7 +55,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FilterPill } from "@/components/ui/filter-pill";
 import {
   ArrowLeft,
   ArrowRight,
@@ -103,7 +102,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import SendEmailDrawer from "@/components/email/SendEmailDrawer";
-import { ActivityEventRow, getDateKey, type ActivityEventData } from "@/components/activity/ActivityEventRow";
+import { buildNarrative, type ActivityEventData } from "@/components/activity/ActivityEventRow";
 import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -136,6 +135,7 @@ interface Contact {
   creditLimit?: string | null;
   paymentTerms?: string | null;
   address?: string | null;
+  isVip?: boolean;
   isException?: boolean;
   exceptionType?: string | null;
   exceptionNote?: string | null;
@@ -1681,6 +1681,14 @@ export default function DebtorRecord() {
                   Exception{contact.exceptionType ? `: ${contact.exceptionType}` : ""}
                 </QBadge>
               )}
+
+              {/* VIP indicator — right-aligned */}
+              {contact.isVip && (
+                <span className="ml-auto flex items-center gap-2 text-[14px] text-[var(--q-text-secondary)] shrink-0">
+                  VIP &middot; Exempt from automated contact
+                  <Star className="h-4 w-4 text-[var(--q-attention-text)] fill-[var(--q-attention-text)]" />
+                </span>
+              )}
             </div>
             {contact.companyName && contact.companyName !== contact.name && (
               <p className="text-sm text-[var(--q-text-tertiary)]">{contact.companyName}</p>
@@ -2729,41 +2737,76 @@ export default function DebtorRecord() {
             <DebtorStatusBanner contactId={contactId} />
 
             {/* ── Filter bar ── */}
-            <div className="flex flex-wrap gap-1.5 items-center">
-              {["All", "Communications", "Payments", "Disputes", "Promises", "Notes", "System", "Risk"].map(v => (
-                <FilterPill key={v} label={v === "All" ? "All" : v} active={activityCategory === v} onClick={() => { setActivityCategory(v); setActivityPage(1); }} />
-              ))}
-              <div className="mx-1.5 h-5 w-px bg-border self-center" />
-              {([["All", "All"], ["30d", "30 days"], ["90d", "90 days"], ["12m", "12 months"]] as const).map(([v, label]) => (
-                <FilterPill key={v} label={label} active={activityRange === v} onClick={() => { setActivityRange(v); setActivityPage(1); }} />
-              ))}
-              <div className="mx-1.5 h-5 w-px bg-border self-center" />
-              {([["All", "All"], ["outbound", "Outbound"], ["inbound", "Inbound"]] as const).map(([v, label]) => (
-                <FilterPill key={v} label={label} active={activityDirection === v} onClick={() => { setActivityDirection(v); setActivityPage(1); }} />
-              ))}
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-3">
+                {["All", "Communications", "Payments", "Disputes", "Promises", "Notes", "System", "Risk"].map(v => (
+                  <button
+                    key={v}
+                    className={cn(
+                      "text-[14px] font-medium pb-1 transition-colors border-b-2",
+                      activityCategory === v
+                        ? "text-[var(--q-text-primary)] border-[var(--q-accent)]"
+                        : "text-[var(--q-text-tertiary)] hover:text-[var(--q-text-primary)] border-transparent",
+                    )}
+                    onClick={() => { setActivityCategory(v); setActivityPage(1); }}
+                  >
+                    {v}
+                  </button>
+                ))}
+              </div>
+              <div className="h-5 w-px bg-[var(--q-border-default)]" />
+              <div className="flex items-center gap-3">
+                {([["All", "All"], ["30d", "30 days"], ["90d", "90 days"], ["12m", "12 months"]] as const).map(([v, label]) => (
+                  <button
+                    key={v}
+                    className={cn(
+                      "text-[14px] font-medium pb-1 transition-colors border-b-2",
+                      activityRange === v
+                        ? "text-[var(--q-text-primary)] border-[var(--q-accent)]"
+                        : "text-[var(--q-text-tertiary)] hover:text-[var(--q-text-primary)] border-transparent",
+                    )}
+                    onClick={() => { setActivityRange(v); setActivityPage(1); }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div className="h-5 w-px bg-[var(--q-border-default)]" />
+              <div className="flex items-center gap-3">
+                {([["All", "All"], ["outbound", "Outbound"], ["inbound", "Inbound"]] as const).map(([v, label]) => (
+                  <button
+                    key={v}
+                    className={cn(
+                      "text-[14px] font-medium pb-1 transition-colors border-b-2",
+                      activityDirection === v
+                        ? "text-[var(--q-text-primary)] border-[var(--q-accent)]"
+                        : "text-[var(--q-text-tertiary)] hover:text-[var(--q-text-primary)] border-transparent",
+                    )}
+                    onClick={() => { setActivityDirection(v); setActivityPage(1); }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
 
               {activityQuery.data && (
-                <span className="text-xs text-muted-foreground ml-auto">
+                <span className="text-[13px] text-[var(--q-text-tertiary)] ml-auto">
                   {activityQuery.data.total} event{activityQuery.data.total !== 1 ? "s" : ""}
                 </span>
               )}
             </div>
 
-            {/* ── Timeline feed ── */}
+            {/* ── Activity table ── */}
             {activityQuery.isLoading ? (
               <div className="space-y-3">
                 {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="flex gap-3">
-                    <Skeleton className="h-8 w-full" />
-                  </div>
+                  <Skeleton key={i} className="h-12 w-full" />
                 ))}
               </div>
             ) : activityQuery.isError ? (
-              <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  Failed to load activity. {activityQuery.error?.message}
-                </CardContent>
-              </Card>
+              <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] py-8 text-center text-[var(--q-text-tertiary)]">
+                Failed to load activity. {activityQuery.error?.message}
+              </div>
             ) : (activityQuery.data?.events ?? []).length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <div className="rounded-full bg-[var(--q-bg-surface-alt)] p-4 mb-4">
@@ -2775,48 +2818,80 @@ export default function DebtorRecord() {
                 </p>
               </div>
             ) : (
-              <Card className="overflow-hidden">
-                <div>
-                  {(() => {
-                    let lastDateKey = "";
-                    return (activityQuery.data?.events ?? []).map((evt, idx) => {
-                      // Map ActivityEvent to ActivityEventData for the shared row component
-                      const mapped: ActivityEventData = {
-                        id: evt.id,
-                        direction: evt.direction,
-                        channel: undefined,
-                        summary: evt.title,
-                        description: evt.description,
-                        subject: undefined,
-                        body: evt.description,
-                        status: evt.metadata?.outcomeType || null,
-                        occurredAt: evt.createdAt,
-                        outcomeType: evt.metadata?.outcomeType || null,
-                        createdByName: evt.triggeredBy || null,
-                        contactName: contact?.name || null,
-                        eventType: evt.eventType,
-                        triggeredBy: evt.triggeredBy,
-                        title: evt.title,
-                        metadata: evt.metadata,
-                      };
-                      const dateKey = getDateKey(evt.createdAt);
-                      const showDate = dateKey !== lastDateKey;
-                      if (showDate) lastDateKey = dateKey;
+              <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr>
+                        <th className="h-12 text-[11px] font-medium tracking-[0.3px] text-[var(--q-text-tertiary)] text-left px-3 py-2 border-b border-[var(--q-border-default)] w-[120px]">Date</th>
+                        <th className="h-12 text-[11px] font-medium tracking-[0.3px] text-[var(--q-text-tertiary)] text-left px-3 py-2 border-b border-[var(--q-border-default)] w-[120px]">Type</th>
+                        <th className="h-12 text-[11px] font-medium tracking-[0.3px] text-[var(--q-text-tertiary)] text-left px-3 py-2 border-b border-[var(--q-border-default)]">Description</th>
+                        <th className="h-12 text-[11px] font-medium tracking-[0.3px] text-[var(--q-text-tertiary)] text-left px-3 py-2 border-b border-[var(--q-border-default)] w-[160px]">User</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(activityQuery.data?.events ?? []).map((evt) => {
+                        const mapped: ActivityEventData = {
+                          id: evt.id,
+                          direction: evt.direction,
+                          channel: undefined,
+                          summary: evt.title,
+                          description: evt.description,
+                          subject: undefined,
+                          body: evt.description,
+                          status: evt.metadata?.outcomeType || null,
+                          occurredAt: evt.createdAt,
+                          outcomeType: evt.metadata?.outcomeType || null,
+                          createdByName: evt.triggeredBy || null,
+                          contactName: contact?.name || null,
+                          eventType: evt.eventType,
+                          triggeredBy: evt.triggeredBy,
+                          title: evt.title,
+                          metadata: evt.metadata,
+                        };
+                        const narrative = buildNarrative(mapped);
+                        const cat = evt.category || "System";
+                        const catBadge: Record<string, "info" | "ready" | "attention" | "neutral" | "risk"> = {
+                          Communications: "info",
+                          Payments: "ready",
+                          Disputes: "attention",
+                          Promises: "info",
+                          Notes: "neutral",
+                          System: "neutral",
+                          Risk: "risk",
+                        };
+                        const user = evt.triggeredBy || "Charlie";
+                        const d = new Date(evt.createdAt);
+                        const dateStr = d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+                        const timeStr = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 
-                      return (
-                        <ActivityEventRow
-                          key={evt.id}
-                          evt={mapped}
-                          index={idx}
-                          showDate={showDate}
-                        />
-                      );
-                    });
-                  })()}
+                        return (
+                          <tr
+                            key={evt.id}
+                            className="h-12 border-b border-[var(--q-border-default)] hover:bg-[var(--q-bg-surface-hover)] transition-colors"
+                          >
+                            <td className="px-3 py-2">
+                              <div className="text-[14px] text-[var(--q-text-secondary)]">{dateStr}</div>
+                              <div className="text-[12px] text-[var(--q-text-tertiary)]">{timeStr}</div>
+                            </td>
+                            <td className="px-3 py-2">
+                              <QBadge variant={catBadge[cat] || "neutral"}>{cat}</QBadge>
+                            </td>
+                            <td className="px-3 py-2 text-[14px] text-[var(--q-text-primary)] truncate max-w-[400px]">
+                              {narrative}
+                            </td>
+                            <td className="px-3 py-2 text-[14px] text-[var(--q-text-tertiary)]">
+                              {user}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
 
                 {activityQuery.data?.hasMore && (
-                  <div className="text-center py-3 border-t">
+                  <div className="text-center py-3 border-t border-[var(--q-border-default)]">
                     <Button
                       variant="outline"
                       size="sm"
@@ -2827,7 +2902,7 @@ export default function DebtorRecord() {
                     </Button>
                   </div>
                 )}
-              </Card>
+              </div>
             )}
 
             {/* ── Recent Actions table ── */}
