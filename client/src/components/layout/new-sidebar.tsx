@@ -1,9 +1,11 @@
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
+import { usePartnerContext } from "@/hooks/usePartnerContext";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useState, useEffect, useMemo } from "react";
+import OrgSwitcher from "@/components/layout/OrgSwitcher";
 import {
   LogOut,
   User,
@@ -26,6 +28,8 @@ import {
   ArrowRightLeft,
   Building2,
   ShieldCheck,
+  Briefcase,
+  FileBarChart,
 } from "lucide-react";
 import {
   Tooltip,
@@ -104,6 +108,21 @@ const navigationPillars: NavPillar[] = [
   },
 ];
 
+// Partner-specific navigation (shown when URL starts with /partner/)
+const partnerNavigationPillars: NavPillar[] = [
+  { label: "Portfolio", icon: Briefcase, href: "/partner/dashboard" },
+  { label: "Clients", icon: Users, href: "/partner/clients" },
+  { label: "Reports", icon: FileBarChart, href: "/partner/reports" },
+  {
+    label: "Settings",
+    icon: Settings,
+    defaultHref: "/settings/team",
+    children: [
+      { name: "Team", href: "/settings/team", icon: Users },
+    ],
+  },
+];
+
 const STORAGE_KEY = "sidebar_collapsed";
 
 // ── Sidebar component ─────────────────────────────────────
@@ -116,6 +135,7 @@ interface SidebarProps {
 export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
   const { user } = useAuth();
   const { hasPermission, canViewCapital, canManageUsers, canAccessAutonomy, canAccessBilling, canConfigureCharlie } = usePermissions();
+  const { isPartner, partnerInfo } = usePartnerContext();
 
   function isPillarVisible(pillar: NavPillar): boolean {
     if (pillar.label === "Qapital") return canViewCapital;
@@ -162,7 +182,7 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
   // Dashboard (/qollections) so it doesn't highlight on /qollections/*.
   const activeHref = useMemo(() => {
     const candidates: Array<{ href: string; exact: boolean }> = [];
-    for (const pillar of navigationPillars) {
+    for (const pillar of activePillars) {
       if (pillar.href) candidates.push({ href: pillar.href, exact: false });
       if (pillar.children) {
         for (const c of pillar.children) {
@@ -182,7 +202,7 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
       }
     }
     return best;
-  }, [location]);
+  }, [location, activePillars]);
 
   const isActivePath = (href: string) => href === activeHref;
 
@@ -219,7 +239,7 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
 
   const [expandedPillars, setExpandedPillars] = useState<Set<string>>(() => {
     const initial = new Set<string>();
-    for (const pillar of navigationPillars) {
+    for (const pillar of activePillars) {
       if (pillar.children?.some((c) => isActivePath(c.href))) {
         initial.add(pillar.label);
       }
@@ -258,6 +278,17 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
 
   const companyName = tenant?.xeroOrganisationName || tenant?.settings?.companyName || tenant?.name || "";
 
+  // Determine which nav pillars to show: partner portal vs standard tenant
+  const isPartnerPortalContext = location.startsWith("/partner");
+  const activePillars = isPartnerPortalContext ? partnerNavigationPillars : navigationPillars;
+
+  // Partner type suffix for branding
+  const partnerTypeSuffix = isPartner && partnerInfo
+    ? partnerInfo.partnerType === "funder"
+      ? { text: "Finance", className: "text-[var(--q-attention-text)]" }
+      : { text: "Partner", className: "text-[var(--q-money-in-text)]" }
+    : null;
+
   return (
     <aside
       className={cn(
@@ -273,7 +304,14 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
           </div>
           {!isCollapsed && (
             <>
-              <span className="text-lg font-bold tracking-tight text-q-text-primary flex-1">Qashivo</span>
+              <span className="text-lg font-bold tracking-tight text-q-text-primary flex-1">
+                Qashivo
+                {partnerTypeSuffix && (
+                  <span className={`ml-1.5 text-sm font-semibold ${partnerTypeSuffix.className}`}>
+                    {partnerTypeSuffix.text}
+                  </span>
+                )}
+              </span>
               <button
                 onClick={toggleCollapsed}
                 className="w-6 h-6 flex items-center justify-center rounded text-q-text-tertiary hover:text-q-text-primary transition-colors"
@@ -295,17 +333,24 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
             </button>
           </div>
         )}
-        {!isCollapsed && companyName && (
+        {!isCollapsed && companyName && !isPartnerPortalContext && (
           <p className="text-xs text-q-text-tertiary truncate px-0.5">
             {companyName}
           </p>
         )}
       </div>
 
+      {/* Org Switcher — partner users only */}
+      {isPartner && (
+        <div className={cn("pb-2", isCollapsed ? "px-2" : "px-3")}>
+          <OrgSwitcher collapsed={isCollapsed} />
+        </div>
+      )}
+
       {/* Navigation */}
       <nav className={cn("flex-1 overflow-y-auto py-3 space-y-0.5", isCollapsed ? "px-2" : "px-3")}>
         <TooltipProvider delayDuration={0}>
-          {navigationPillars.map((pillar) => {
+          {activePillars.map((pillar) => {
             if (!isPillarVisible(pillar)) return null;
             const PillarIcon = pillar.icon;
             const isPillarActive = pillar.href

@@ -26,6 +26,11 @@ const AcceptInvite = lazy(() => import("@/pages/accept-invite"));
 const AcceptUserInvite = lazy(() => import("@/pages/accept-user-invite"));
 const SmeOnboarding = lazy(() => import("@/pages/sme-onboarding"));
 const QashivoAdminDashboard = lazy(() => import("@/pages/qashivo-admin"));
+
+// Partner portal pages
+const PartnerDashboard = lazy(() => import("@/pages/partner/dashboard"));
+const PartnerClients = lazy(() => import("@/pages/partner/clients"));
+const PartnerReports = lazy(() => import("@/pages/partner/reports"));
 const InvestorInterest = lazy(() => import("@/pages/investor-interest"));
 
 const HomeDashboard = lazy(() => import("@/pages/Home"));
@@ -113,6 +118,22 @@ function RoleGuard({ check, children }: { check: (p: ReturnType<typeof usePermis
   return <>{children}</>;
 }
 
+function PartnerGuard({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  const [, setLocation] = useLocation();
+  const isPartner = !!(user as any)?.partnerId;
+
+  useEffect(() => {
+    if (user && !isPartner) {
+      setLocation("/home");
+    }
+  }, [user, isPartner, setLocation]);
+
+  if (!user) return <PageLoader />;
+  if (!isPartner) return <PageLoader />;
+  return <>{children}</>;
+}
+
 function isOnboardingComplete(status: OnboardingStatus | undefined): boolean {
   if (!status) return false;
   // Primary: data presence — immune to flag resets from schema migrations
@@ -133,10 +154,17 @@ function useOnboardingStatus() {
 
 function OnboardingGuard({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
+  const { user } = useAuth();
   const { data: status, isLoading, isError } = useOnboardingStatus();
+
+  // Partner users viewing partner portal don't need tenant onboarding
+  const isPartnerRoute = location.startsWith("/partner");
+  const isPartnerUser = !!(user as any)?.partnerId;
 
   useEffect(() => {
     if (isLoading) return;
+    // Skip onboarding check for partner portal routes
+    if (isPartnerRoute && isPartnerUser) return;
     // If onboarding status errored (no tenant) or onboarding not complete, redirect
     const needsOnboarding = isError || (status && !isOnboardingComplete(status));
     if (needsOnboarding) {
@@ -144,9 +172,9 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
         setLocation("/onboarding");
       }
     }
-  }, [isLoading, isError, status, location, setLocation]);
+  }, [isLoading, isError, status, location, setLocation, isPartnerRoute, isPartnerUser]);
 
-  if (isLoading) return <PageLoader />;
+  if (isLoading && !(isPartnerRoute && isPartnerUser)) return <PageLoader />;
   return <>{children}</>;
 }
 
@@ -311,6 +339,12 @@ function Router() {
           <Route path="/debtor-portal" component={DebtorPortal} />
           <Route path="/accept-invite" component={AcceptInvite} />
           <Route path="/connection-error" component={ConnectionError} />
+
+          {/* Partner Portal */}
+          <Route path="/partner/dashboard">{() => <PartnerGuard><PartnerDashboard /></PartnerGuard>}</Route>
+          <Route path="/partner/clients">{() => <PartnerGuard><PartnerClients /></PartnerGuard>}</Route>
+          <Route path="/partner/reports">{() => <PartnerGuard><PartnerReports /></PartnerGuard>}</Route>
+          <Route path="/partner">{() => <Redirect to="/partner/dashboard" />}</Route>
 
           {/* Admin */}
           <Route path="/qashivo-admin" component={QashivoAdminDashboard} />

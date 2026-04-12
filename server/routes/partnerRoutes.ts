@@ -1,9 +1,10 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { isAuthenticated } from "../auth";
 import { db } from "../db";
-import { 
-  partners, 
-  smeClients, 
+import {
+  partners,
+  partnerTenantLinks,
+  smeClients,
   smeContacts,
   smeInviteTokens,
   users,
@@ -14,7 +15,7 @@ import {
   type Partner,
   type SmeClient,
 } from "@shared/schema";
-import { eq, and, sql, count, sum, desc, gte, inArray } from "drizzle-orm";
+import { eq, and, sql, count, sum, desc, gte, lte, inArray, ne } from "drizzle-orm";
 import { z } from "zod";
 import crypto from "crypto";
 import { sendEmail } from "../services/sendgrid";
@@ -857,6 +858,268 @@ export function registerPartnerRoutes(app: Express) {
     } catch (error) {
       console.error("Complete SME onboarding error:", error);
       res.status(500).json({ message: "Failed to complete onboarding" });
+    }
+  });
+
+  // ─── Partner Portal Phase 1 endpoints ──────────────────────────────────────
+
+  // GET /api/partner/me — current user's partner org info (branding, type, tier)
+  app.get("/api/partner/me", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      if (!user?.partnerId) {
+        return res.status(403).json({ message: "Not a partner user" });
+      }
+
+      const [partner] = await db
+        .select()
+        .from(partners)
+        .where(eq(partners.id, user.partnerId))
+        .limit(1);
+
+      if (!partner) {
+        return res.status(404).json({ message: "Partner not found" });
+      }
+
+      res.json({
+        id: partner.id,
+        name: partner.name,
+        slug: partner.slug,
+        brandName: partner.brandName,
+        logoUrl: partner.logoUrl,
+        brandColor: partner.brandColor,
+        accentColor: partner.accentColor,
+        partnerType: partner.partnerType || "accounting_firm",
+        partnerTier: partner.partnerTier || "standard",
+        status: partner.status,
+      });
+    } catch (error) {
+      console.error("GET /api/partner/me error:", error);
+      res.status(500).json({ message: "Failed to load partner info" });
+    }
+  });
+
+  // GET /api/partner/portfolio-summary — aggregated KPIs across all linked tenants
+  app.get("/api/partner/portfolio-summary", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      if (!user?.partnerId) {
+        return res.status(403).json({ message: "Not a partner user" });
+      }
+
+      // Get all linked tenants for this partner org
+      const links = await db
+        .select({ tenantId: partnerTenantLinks.tenantId })
+        .from(partnerTenantLinks)
+        .where(and(
+          eq(partnerTenantLinks.partnerId, user.partnerId),
+          eq(partnerTenantLinks.status, "active")
+        ));
+
+      const tenantIds = links.map(l => l.tenantId);
+
+      if (tenantIds.length === 0) {
+        return res.json({
+          activeClients: 0,
+          totalAR: 0,
+          totalOverdue: 0,
+          portfolioDSO: 0,
+          collectionRate: 0,
+          cashGaps: 0,
+        });
+      }
+
+      // Aggregate across all linked tenants
+      const now = new Date();
+
+      const arResult = await db
+        .select({
+          totalAR: sql<string>`COALESCE(SUM(CAST(${invoices.amount} AS DECIMAL) - CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL)), 0)`,
+          totalOverdue: sql<string>`COALESCE(SUM(CASE WHEN ${invoices.dueDate} < ${now} THEN CAST(${invoices.amount} AS DECIMAL) - CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL) ELSE 0 END), 0)`,
+          totalPaid: sql<string>`COALESCE(SUM(CASE WHEN ${invoices.status} = 'paid' THEN CAST(${invoices.amount} AS DECIMAL) ELSE 0 END), 0)`,
+          totalIssued: sql<string>`COALESCE(SUM(CAST(${invoices.amount} AS DECIMAL)), 0)`,
+          invoiceCount: sql<string>`COUNT(*)`,
+        })
+        .from(invoices)
+        .where(and(
+          inArray(invoices.tenantId, tenantIds),
+          sql`${invoices.status} NOT IN ('paid', 'void', 'voided', 'deleted', 'draft')`
+        ));
+
+      const totalAR = Number(arResult[0]?.totalAR || 0);
+      const totalOverdue = Number(arResult[0]?.totalOverdue || 0);
+
+      // Collection rate: paid invoices / all issued invoices across portfolio
+      const collectionResult = await db
+        .select({
+          paidTotal: sql<string>`COALESCE(SUM(CASE WHEN ${invoices.status} = 'paid' THEN CAST(${invoices.amount} AS DECIMAL) ELSE 0 END), 0)`,
+          issuedTotal: sql<string>`COALESCE(SUM(CAST(${invoices.amount} AS DECIMAL)), 0)`,
+        })
+        .from(invoices)
+        .where(and(
+          inArray(invoices.tenantId, tenantIds),
+          sql`${invoices.status} NOT IN ('void', 'voided', 'deleted', 'draft')`
+        ));
+
+      const paidTotal = Number(collectionResult[0]?.paidTotal || 0);
+      const issuedTotal = Number(collectionResult[0]?.issuedTotal || 0);
+      const collectionRate = issuedTotal > 0 ? Math.round((paidTotal / issuedTotal) * 100) : 0;
+
+      // Weighted DSO: sum(outstanding × days_overdue) / sum(outstanding), capped to active invoices
+      const dsoResult = await db
+        .select({
+          weightedDays: sql<string>`COALESCE(SUM(
+            (CAST(${invoices.amount} AS DECIMAL) - CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL))
+            * GREATEST(EXTRACT(EPOCH FROM (NOW() - ${invoices.issueDate})) / 86400, 0)
+          ), 0)`,
+          weightedBalance: sql<string>`COALESCE(SUM(CAST(${invoices.amount} AS DECIMAL) - CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL)), 0)`,
+        })
+        .from(invoices)
+        .where(and(
+          inArray(invoices.tenantId, tenantIds),
+          sql`${invoices.status} NOT IN ('paid', 'void', 'voided', 'deleted', 'draft')`
+        ));
+
+      const weightedDays = Number(dsoResult[0]?.weightedDays || 0);
+      const weightedBalance = Number(dsoResult[0]?.weightedBalance || 0);
+      const portfolioDSO = weightedBalance > 0 ? Math.round(weightedDays / weightedBalance) : 0;
+
+      res.json({
+        activeClients: tenantIds.length,
+        totalAR,
+        totalOverdue,
+        portfolioDSO,
+        collectionRate,
+        cashGaps: 0, // placeholder — requires forecast data
+      });
+    } catch (error) {
+      console.error("GET /api/partner/portfolio-summary error:", error);
+      res.status(500).json({ message: "Failed to load portfolio summary" });
+    }
+  });
+
+  // GET /api/partner/client-list — per-tenant rows with KPIs
+  app.get("/api/partner/client-list", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      if (!user?.partnerId) {
+        return res.status(403).json({ message: "Not a partner user" });
+      }
+
+      // Get all linked tenants with display info
+      const links = await db
+        .select({
+          link: partnerTenantLinks,
+          tenant: tenants,
+        })
+        .from(partnerTenantLinks)
+        .innerJoin(tenants, eq(partnerTenantLinks.tenantId, tenants.id))
+        .where(and(
+          eq(partnerTenantLinks.partnerId, user.partnerId),
+          eq(partnerTenantLinks.status, "active")
+        ));
+
+      if (links.length === 0) {
+        return res.json({ clients: [] });
+      }
+
+      const now = new Date();
+      const tenantIds = links.map(l => l.link.tenantId);
+
+      // Per-tenant invoice stats
+      const perTenantStats = await db
+        .select({
+          tenantId: invoices.tenantId,
+          outstanding: sql<string>`COALESCE(SUM(CAST(${invoices.amount} AS DECIMAL) - CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL)), 0)`,
+          overdue: sql<string>`COALESCE(SUM(CASE WHEN ${invoices.dueDate} < ${now} THEN CAST(${invoices.amount} AS DECIMAL) - CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL) ELSE 0 END), 0)`,
+          weightedDays: sql<string>`COALESCE(SUM(
+            (CAST(${invoices.amount} AS DECIMAL) - CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL))
+            * GREATEST(EXTRACT(EPOCH FROM (NOW() - ${invoices.issueDate})) / 86400, 0)
+          ), 0)`,
+          weightedBalance: sql<string>`COALESCE(SUM(CAST(${invoices.amount} AS DECIMAL) - CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL)), 0)`,
+        })
+        .from(invoices)
+        .where(and(
+          inArray(invoices.tenantId, tenantIds),
+          sql`${invoices.status} NOT IN ('paid', 'void', 'voided', 'deleted', 'draft')`
+        ))
+        .groupBy(invoices.tenantId);
+
+      // Per-tenant collection rates
+      const perTenantCollection = await db
+        .select({
+          tenantId: invoices.tenantId,
+          paidTotal: sql<string>`COALESCE(SUM(CASE WHEN ${invoices.status} = 'paid' THEN CAST(${invoices.amount} AS DECIMAL) ELSE 0 END), 0)`,
+          issuedTotal: sql<string>`COALESCE(SUM(CAST(${invoices.amount} AS DECIMAL)), 0)`,
+        })
+        .from(invoices)
+        .where(and(
+          inArray(invoices.tenantId, tenantIds),
+          sql`${invoices.status} NOT IN ('void', 'voided', 'deleted', 'draft')`
+        ))
+        .groupBy(invoices.tenantId);
+
+      const statsMap = new Map(perTenantStats.map(s => [s.tenantId, s]));
+      const collectionMap = new Map(perTenantCollection.map(c => [c.tenantId, c]));
+
+      // Look up controller assignments via smeClients
+      const smeClientRows = await db
+        .select({
+          tenantId: smeClients.tenantId,
+          controllerId: smeClients.primaryCreditControllerId,
+        })
+        .from(smeClients)
+        .where(and(
+          eq(smeClients.partnerId, user.partnerId),
+          inArray(smeClients.tenantId!, tenantIds)
+        ));
+
+      const controllerMap = new Map(smeClientRows.filter(s => s.tenantId).map(s => [s.tenantId!, s.controllerId]));
+
+      // Fetch controller names
+      const controllerIds = [...new Set(smeClientRows.filter(s => s.controllerId).map(s => s.controllerId!))];
+      let controllerNames = new Map<string, string>();
+      if (controllerIds.length > 0) {
+        const controllerUsers = await db
+          .select({ id: users.id, firstName: users.firstName, lastName: users.lastName })
+          .from(users)
+          .where(inArray(users.id, controllerIds));
+        controllerNames = new Map(controllerUsers.map(u => [
+          u.id,
+          `${u.firstName || ""} ${u.lastName || ""}`.trim() || "Unknown"
+        ]));
+      }
+
+      const clients = links.map(({ link, tenant }) => {
+        const stats = statsMap.get(link.tenantId);
+        const collection = collectionMap.get(link.tenantId);
+        const outstanding = Number(stats?.outstanding || 0);
+        const overdue = Number(stats?.overdue || 0);
+        const weightedDays = Number(stats?.weightedDays || 0);
+        const weightedBalance = Number(stats?.weightedBalance || 0);
+        const dso = weightedBalance > 0 ? Math.round(weightedDays / weightedBalance) : 0;
+        const paidTotal = Number(collection?.paidTotal || 0);
+        const issuedTotal = Number(collection?.issuedTotal || 0);
+        const collectionRate = issuedTotal > 0 ? Math.round((paidTotal / issuedTotal) * 100) : 0;
+        const controllerId = controllerMap.get(link.tenantId);
+
+        return {
+          tenantId: link.tenantId,
+          name: link.clientDisplayName || tenant.xeroOrganisationName || tenant.name,
+          clientNumber: link.clientNumber,
+          outstanding,
+          overdue,
+          dso,
+          collectionRate,
+          charlieStatus: tenant.collectionsAutomationEnabled ? "active" : "paused",
+          controller: controllerId ? controllerNames.get(controllerId) || "Unknown" : "Unassigned",
+        };
+      });
+
+      res.json({ clients });
+    } catch (error) {
+      console.error("GET /api/partner/client-list error:", error);
+      res.status(500).json({ message: "Failed to load client list" });
     }
   });
 }

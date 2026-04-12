@@ -4282,7 +4282,12 @@ export const partners = pgTable("partners", {
   channelsEnabled: jsonb("channels_enabled").default({ email: true, sms: false, voice: false }),
   whitelabelEnabled: boolean("whitelabel_enabled").default(false),
   notes: text("notes"),
-  
+
+  // Partner type & tier (Phase 1)
+  partnerType: varchar("partner_type").default("accounting_firm"), // accounting_firm | funder | reseller
+  partnerTier: varchar("partner_tier").default("standard"),       // standard | silver | gold | platinum
+  funderConfig: jsonb("funder_config"),                            // for funder-type: { defaultInterestRate, advanceRate, ... }
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
@@ -4290,6 +4295,50 @@ export const partners = pgTable("partners", {
   index("idx_partners_status").on(table.isActive),
   index("idx_partners_slug").on(table.slug),
 ]);
+
+// Partner Tenant Links — org-level access from partner to tenant (distinct from user-level partnerClientRelationships)
+export const partnerTenantLinks = pgTable("partner_tenant_links", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  partnerId: varchar("partner_id").notNull().references(() => partners.id),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  status: varchar("status").notNull().default("active"),      // active | pending | revoked
+  accessLevel: varchar("access_level").notNull().default("full"), // full | view_only
+  clientDisplayName: text("client_display_name"),              // partner's internal name for this client
+  clientNumber: varchar("client_number"),                      // partner's reference number
+  notes: text("notes"),
+  linkedAt: timestamp("linked_at").defaultNow(),
+  linkedBy: varchar("linked_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  unique("unique_partner_tenant").on(table.partnerId, table.tenantId),
+  index("idx_partner_tenant_links_partner").on(table.partnerId),
+  index("idx_partner_tenant_links_tenant").on(table.tenantId),
+]);
+
+export const partnerTenantLinksRelations = relations(partnerTenantLinks, ({ one }) => ({
+  partner: one(partners, {
+    fields: [partnerTenantLinks.partnerId],
+    references: [partners.id],
+  }),
+  tenant: one(tenants, {
+    fields: [partnerTenantLinks.tenantId],
+    references: [tenants.id],
+  }),
+  linkedByUser: one(users, {
+    fields: [partnerTenantLinks.linkedBy],
+    references: [users.id],
+  }),
+}));
+
+export const insertPartnerTenantLinkSchema = createInsertSchema(partnerTenantLinks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type PartnerTenantLink = typeof partnerTenantLinks.$inferSelect;
+export type InsertPartnerTenantLink = z.infer<typeof insertPartnerTenantLinkSchema>;
 
 // SME Clients - Businesses managed by partners
 export const smeClients = pgTable("sme_clients", {

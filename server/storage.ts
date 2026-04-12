@@ -131,8 +131,11 @@ import {
   type FinanceAdvance,
   type InsertFinanceAdvance,
   partners,
+  partnerTenantLinks,
   type Partner,
   type InsertPartner,
+  type PartnerTenantLink,
+  type InsertPartnerTenantLink,
   userContactAssignments,
   type UserContactAssignment,
   type InsertUserContactAssignment,
@@ -539,9 +542,14 @@ export interface IStorage {
   createPartner(partner: InsertPartner): Promise<Partner>;
   updatePartner(id: string, updates: Partial<InsertPartner>): Promise<Partner>;
   
-  // Get tenants accessible by a partner user
+  // Get tenants accessible by a partner user (user-level + org-level links)
   getPartnerTenants(partnerUserId: string): Promise<(Tenant & { relationship: PartnerClientRelationship })[]>;
-  
+
+  // Partner tenant link operations (org-level)
+  getPartnerTenantLinks(partnerId: string): Promise<(PartnerTenantLink & { tenant: Tenant })[]>;
+  createPartnerTenantLink(data: InsertPartnerTenantLink): Promise<PartnerTenantLink>;
+  getPartnerForTenant(tenantId: string): Promise<Partner | undefined>;
+
   // Get users by tenant with their roles
   getTenantUsers(tenantId: string): Promise<(User & { contactAssignments?: UserContactAssignment[] })[]>;
   
@@ -4893,9 +4901,10 @@ export class DatabaseStorage implements IStorage {
     return partner;
   }
 
-  // Get tenants accessible by a partner user
+  // Get tenants accessible by a partner user (user-level relationships + org-level links)
   async getPartnerTenants(partnerUserId: string): Promise<(Tenant & { relationship: PartnerClientRelationship })[]> {
-    const results = await db
+    // 1. User-level relationships (existing)
+    const userResults = await db
       .select({
         tenant: tenants,
         relationship: partnerClientRelationships,
@@ -4907,8 +4916,83 @@ export class DatabaseStorage implements IStorage {
         eq(partnerClientRelationships.status, 'active')
       ))
       .orderBy(desc(partnerClientRelationships.lastAccessedAt));
-    
-    return results.map(r => ({ ...r.tenant, relationship: r.relationship }));
+
+    const tenantMap = new Map<string, Tenant & { relationship: PartnerClientRelationship }>();
+    for (const r of userResults) {
+      tenantMap.set(r.tenant.id, { ...r.tenant, relationship: r.relationship });
+    }
+
+    // 2. Org-level links — partner admins see all org-linked tenants
+    const user = await this.getUser(partnerUserId);
+    if (user?.partnerId) {
+      const orgResults = await db
+        .select({ tenant: tenants, link: partnerTenantLinks })
+        .from(partnerTenantLinks)
+        .innerJoin(tenants, eq(partnerTenantLinks.tenantId, tenants.id))
+        .where(and(
+          eq(partnerTenantLinks.partnerId, user.partnerId),
+          eq(partnerTenantLinks.status, 'active')
+        ));
+
+      for (const r of orgResults) {
+        if (!tenantMap.has(r.tenant.id)) {
+          // Synthesize a relationship object for org-level links
+          tenantMap.set(r.tenant.id, {
+            ...r.tenant,
+            relationship: {
+              id: r.link.id,
+              partnerUserId,
+              partnerTenantId: r.link.partnerId,
+              clientTenantId: r.link.tenantId,
+              status: r.link.status,
+              accessLevel: r.link.accessLevel,
+              permissions: null,
+              establishedAt: r.link.linkedAt,
+              establishedBy: 'org_link',
+              lastAccessedAt: null,
+              terminatedAt: null,
+              terminatedBy: null,
+              terminationReason: null,
+              createdAt: r.link.createdAt,
+              updatedAt: r.link.updatedAt,
+            } as PartnerClientRelationship,
+          });
+        }
+      }
+    }
+
+    return Array.from(tenantMap.values());
+  }
+
+  // Partner tenant link operations (org-level)
+  async getPartnerTenantLinks(partnerId: string): Promise<(PartnerTenantLink & { tenant: Tenant })[]> {
+    const results = await db
+      .select({ link: partnerTenantLinks, tenant: tenants })
+      .from(partnerTenantLinks)
+      .innerJoin(tenants, eq(partnerTenantLinks.tenantId, tenants.id))
+      .where(and(
+        eq(partnerTenantLinks.partnerId, partnerId),
+        eq(partnerTenantLinks.status, 'active')
+      ));
+    return results.map(r => ({ ...r.link, tenant: r.tenant }));
+  }
+
+  async createPartnerTenantLink(data: InsertPartnerTenantLink): Promise<PartnerTenantLink> {
+    const [link] = await db.insert(partnerTenantLinks).values(data).returning();
+    return link;
+  }
+
+  async getPartnerForTenant(tenantId: string): Promise<Partner | undefined> {
+    const [result] = await db
+      .select({ partner: partners })
+      .from(partnerTenantLinks)
+      .innerJoin(partners, eq(partnerTenantLinks.partnerId, partners.id))
+      .where(and(
+        eq(partnerTenantLinks.tenantId, tenantId),
+        eq(partnerTenantLinks.status, 'active')
+      ))
+      .limit(1);
+    return result?.partner;
   }
 
   // Get users by tenant with their roles

@@ -71,12 +71,20 @@ export const withRBACContext: RequestHandler = async (req, res, next) => {
       activeTenantId = queryTenantId || sessionTenantId || '';
       
       if (!activeTenantId) {
-        // Partner must select a tenant first
-        return res.status(400).json({ 
-          message: 'Partner must select active tenant',
-          isPartner: true,
-          requiresTenantSelection: true
-        });
+        // Auto-select if partner has exactly one accessible tenant
+        const accessibleTenants = await storage.getPartnerTenants(userId);
+        if (accessibleTenants.length === 1) {
+          activeTenantId = accessibleTenants[0].id;
+          // @ts-ignore - session typing
+          req.session.activeTenantId = activeTenantId;
+        } else {
+          // Partner must select a tenant first
+          return res.status(400).json({
+            message: 'Partner must select active tenant',
+            isPartner: true,
+            requiresTenantSelection: true
+          });
+        }
       }
       
       // Verify partner has access to this tenant
