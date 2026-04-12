@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FilterPill } from "@/components/ui/filter-pill";
 import { cn } from "@/lib/utils";
@@ -84,8 +84,11 @@ interface FlatRow {
 
 export default function ActivityFeedTab() {
   const [, navigate] = useLocation();
+  const search = useSearch();
+  const urlParams = useMemo(() => new URLSearchParams(search.startsWith("?") ? search : `?${search}`), [search]);
+  const initialChannel = (urlParams.get("channel") ?? "all") as Channel;
   const [direction, setDirection] = useState<Direction>("all");
-  const [channel, setChannel] = useState<Channel>("all");
+  const [channel, setChannel] = useState<Channel>(initialChannel);
   const [timeRange, setTimeRange] = useState<TimeRange>("today");
 
   const queryParams = new URLSearchParams();

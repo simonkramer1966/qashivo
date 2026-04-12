@@ -1,20 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useInvalidateActionCentre } from "@/hooks/useInvalidateActionCentre";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Button } from "@/components/ui/button";
-import { QBadge } from "@/components/ui/q-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,7 +25,6 @@ import {
   Loader2,
   Send,
   ArrowRight,
-  ExternalLink,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -73,14 +65,6 @@ interface SummaryData {
     insolvencyRisk: number;
     other: number;
   };
-}
-
-interface DrilldownItem {
-  id: string;
-  debtorName: string;
-  amount: number;
-  date: string;
-  status: string;
 }
 
 type Period = "today" | "week" | "month" | "custom";
@@ -184,6 +168,7 @@ function formatTime(iso: string): string {
 
 export default function OverviewTab() {
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const invalidateActionCentre = useInvalidateActionCentre();
   const queryClient = useQueryClient();
   const { hasMinimumRole } = usePermissions();
@@ -193,10 +178,6 @@ export default function OverviewTab() {
   const [period, setPeriod] = useState<Period>("week");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-
-  // Drilldown state
-  const [drilldownMetric, setDrilldownMetric] = useState<string | null>(null);
-  const [drilldownLabel, setDrilldownLabel] = useState("");
 
   // Confirm dialog state
   const [confirmAction, setConfirmAction] = useState<"approve" | "clear" | null>(null);
@@ -227,18 +208,6 @@ export default function OverviewTab() {
     staleTime: 0,
     refetchOnMount: true,
     refetchOnWindowFocus: true,
-  });
-
-  const { data: drilldownData, isLoading: drilldownLoading } = useQuery<DrilldownItem[]>({
-    queryKey: ["/api/action-centre/drilldown", drilldownMetric, period, dateFrom, dateTo],
-    queryFn: async () => {
-      const params = new URLSearchParams({ metric: drilldownMetric!, period });
-      if (dateFrom) params.set("dateFrom", dateFrom);
-      if (dateTo) params.set("dateTo", dateTo);
-      const res = await apiRequest("GET", `/api/action-centre/drilldown?${params}`);
-      return res.json();
-    },
-    enabled: !!drilldownMetric,
   });
 
   // ---------- Mutations ----------
@@ -303,12 +272,13 @@ export default function OverviewTab() {
     return () => clearInterval(interval);
   }, [dataUpdatedAt]);
 
-  // ---------- Drilldown helpers ----------
+  // ---------- Navigation helpers ----------
 
-  const openDrilldown = useCallback((metric: string, label: string) => {
-    setDrilldownMetric(metric);
-    setDrilldownLabel(label);
-  }, []);
+  const goTo = useCallback((tab: string, params?: Record<string, string>) => {
+    const p = new URLSearchParams({ tab });
+    if (params) for (const [k, v] of Object.entries(params)) p.set(k, v);
+    navigate(`/qollections/agent-activity?${p.toString()}`);
+  }, [navigate]);
 
   // ---------- Render helpers ----------
 
@@ -348,19 +318,18 @@ export default function OverviewTab() {
   return (
     <div className="space-y-4">
       {/* Period selector + refresh */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="inline-flex rounded-md border border-[var(--q-border-default)] bg-[var(--q-bg-surface)]">
+      <div className="flex flex-wrap items-center gap-4">
+        <div className="flex items-center gap-4">
           {periodButtons.map((p) => (
-            <Button
+            <button
               key={p.value}
-              variant={period === p.value ? "default" : "ghost"}
-              size="sm"
-              className={`rounded-none first:rounded-l-md last:rounded-r-md ${
-                period === p.value ? "" : "text-[var(--q-text-tertiary)]"
+              className={`pb-1 text-[14px] font-medium border-b-2 transition-colors ${
+                period === p.value
+                  ? "border-[var(--q-accent)] text-[var(--q-text-primary)]"
+                  : "border-transparent text-[var(--q-text-tertiary)] hover:text-[var(--q-text-primary)]"
               }`}
               onClick={() => {
                 if (p.value === "custom" && !dateFrom && !dateTo) {
-                  // Default custom range to last 7 days
                   const to = new Date();
                   const from = new Date();
                   from.setDate(from.getDate() - 7);
@@ -371,7 +340,7 @@ export default function OverviewTab() {
               }}
             >
               {p.label}
-            </Button>
+            </button>
           ))}
         </div>
 
@@ -426,14 +395,16 @@ export default function OverviewTab() {
             </div>
           </div>
           <div className="flex-1 px-5 pb-3">
-            <SectionLabel label="Communications queued" />
-            <SummaryRow label="Emails awaiting approval" value={queued.emails} onClick={() => openDrilldown("queued_emails", "Emails awaiting approval")} />
-            <SummaryRow label="SMS awaiting approval" value={queued.sms} onClick={() => openDrilldown("queued_sms", "SMS awaiting approval")} />
-            <SummaryRow label="Calls awaiting approval" value={queued.calls} onClick={() => openDrilldown("queued_calls", "Calls awaiting approval")} />
+            <div className="min-h-[180px]">
+              <SectionLabel label="Communications queued" />
+              <SummaryRow label="Emails awaiting approval" value={queued.emails} onClick={() => goTo("queue", { channel: "email" })} />
+              <SummaryRow label="SMS awaiting approval" value={queued.sms} onClick={() => goTo("queue", { channel: "sms" })} />
+              <SummaryRow label="Calls awaiting approval" value={queued.calls} onClick={() => goTo("queue", { channel: "voice" })} />
+            </div>
 
             <SectionLabel label="By urgency" />
-            <SummaryRow label="Waiting > 24 hours" value={queued.waitingOver24h} valueColor={queued.waitingOver24h > 0 ? "attention" : undefined} onClick={() => openDrilldown("queued_waiting_24h", "Waiting > 24 hours")} />
-            <SummaryRow label="Debtors > 60 days overdue" value={queued.debtorsOver60DaysOverdue} valueColor={queued.debtorsOver60DaysOverdue > 0 ? "attention" : undefined} onClick={() => openDrilldown("queued_over_60_days", "Debtors > 60 days overdue")} />
+            <SummaryRow label="Waiting > 24 hours" value={queued.waitingOver24h} valueColor={queued.waitingOver24h > 0 ? "attention" : undefined} onClick={() => goTo("queue")} />
+            <SummaryRow label="Debtors > 60 days overdue" value={queued.debtorsOver60DaysOverdue} valueColor={queued.debtorsOver60DaysOverdue > 0 ? "attention" : undefined} onClick={() => goTo("queue")} />
             <SummaryRow label="Total value queued" value={formatGBP(queued.totalValueQueued)} bold />
           </div>
           <div className="border-t border-[var(--q-border-default)] px-5 py-3 flex items-center gap-2">
@@ -478,13 +449,15 @@ export default function OverviewTab() {
             </div>
           </div>
           <div className="flex-1 px-5 pb-3">
-            <SectionLabel label="Communications sent" />
-            <SummaryRow label="Emails sent" value={actioned.emailsSent} valueColor={actioned.emailsSent > 0 ? "positive" : undefined} trend={actioned.emailsSentVsPrevious !== 0 ? { value: actioned.emailsSentVsPrevious } : undefined} onClick={() => openDrilldown("actioned_emails", "Emails sent")} />
-            <SummaryRow label="SMS sent" value={actioned.smsSent} valueColor={actioned.smsSent > 0 ? "positive" : undefined} onClick={() => openDrilldown("actioned_sms", "SMS sent")} />
-            <SummaryRow label="Voice calls made" value={actioned.callsMade} valueColor={actioned.callsMade > 0 ? "positive" : undefined} onClick={() => openDrilldown("actioned_calls", "Voice calls made")} />
+            <div className="min-h-[180px]">
+              <SectionLabel label="Communications sent" />
+              <SummaryRow label="Emails sent" value={actioned.emailsSent} valueColor={actioned.emailsSent > 0 ? "positive" : undefined} trend={actioned.emailsSentVsPrevious !== 0 ? { value: actioned.emailsSentVsPrevious } : undefined} onClick={() => goTo("activity", { channel: "email" })} />
+              <SummaryRow label="SMS sent" value={actioned.smsSent} valueColor={actioned.smsSent > 0 ? "positive" : undefined} onClick={() => goTo("activity", { channel: "sms" })} />
+              <SummaryRow label="Voice calls made" value={actioned.callsMade} valueColor={actioned.callsMade > 0 ? "positive" : undefined} onClick={() => goTo("activity", { channel: "voice" })} />
+            </div>
 
             <SectionLabel label="Outcomes" />
-            <SummaryRow label="Promises to pay" value={actioned.promisesToPay} valueColor={actioned.promisesToPay > 0 ? "positive" : undefined} />
+            <SummaryRow label="Promises to pay" value={actioned.promisesToPay} valueColor={actioned.promisesToPay > 0 ? "positive" : undefined} onClick={() => goTo("exceptions", { sub: "promises" })} />
             <SummaryRow label="Payment plans agreed" value={actioned.paymentPlansAgreed} valueColor={actioned.paymentPlansAgreed > 0 ? "positive" : undefined} />
             <SummaryRow label="Response rate" value={`${actioned.responseRate}%`} valueColor={actioned.responseRate > 0 ? "positive" : undefined} />
           </div>
@@ -493,10 +466,10 @@ export default function OverviewTab() {
               size="sm"
               variant="outline"
               className="w-full"
-              onClick={() => openDrilldown("actioned_all", "Activity report")}
+              onClick={() => goTo("activity")}
             >
-              <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
-              View full report
+              <ArrowRight className="mr-1.5 h-3.5 w-3.5" />
+              View activity feed
             </Button>
           </div>
         </div>
@@ -512,20 +485,22 @@ export default function OverviewTab() {
             </div>
           </div>
           <div className="flex-1 px-5 pb-3">
-            <SectionLabel label="Collections" />
-            <SummaryRow label="Disputed invoices" value={exceptions.disputedInvoices} valueColor={exceptions.disputedInvoices > 0 ? "risk" : undefined} onClick={() => openDrilldown("exceptions_disputed", "Disputed invoices")} />
-            <SummaryRow label="Unresponsive — end of flow" value={exceptions.unresponsiveEndOfFlow} valueColor={exceptions.unresponsiveEndOfFlow > 0 ? "risk" : undefined} onClick={() => openDrilldown("exceptions_unresponsive", "Unresponsive — end of flow")} />
-            <SummaryRow label="Wants human contact" value={exceptions.wantsHumanContact} valueColor={exceptions.wantsHumanContact > 0 ? "attention" : undefined} onClick={() => openDrilldown("exceptions_human_contact", "Wants human contact")} />
-            <SummaryRow label="Compliance failures" value={exceptions.complianceFailures} valueColor={exceptions.complianceFailures > 0 ? "attention" : undefined} onClick={() => openDrilldown("exceptions_compliance", "Compliance failures")} />
+            <div className="min-h-[180px]">
+              <SectionLabel label="Collections" />
+              <SummaryRow label="Disputed invoices" value={exceptions.disputedInvoices} valueColor={exceptions.disputedInvoices > 0 ? "risk" : undefined} onClick={() => goTo("exceptions", { sub: "collections" })} />
+              <SummaryRow label="Unresponsive — end of flow" value={exceptions.unresponsiveEndOfFlow} valueColor={exceptions.unresponsiveEndOfFlow > 0 ? "risk" : undefined} onClick={() => goTo("exceptions", { sub: "collections" })} />
+              <SummaryRow label="Wants human contact" value={exceptions.wantsHumanContact} valueColor={exceptions.wantsHumanContact > 0 ? "attention" : undefined} onClick={() => goTo("exceptions", { sub: "collections" })} />
+              <SummaryRow label="Compliance failures" value={exceptions.complianceFailures} valueColor={exceptions.complianceFailures > 0 ? "attention" : undefined} onClick={() => goTo("exceptions", { sub: "collections" })} />
+            </div>
 
             <SectionLabel label="Debtor situations" />
-            <SummaryRow label="Distress — cashflow issues" value={exceptions.distress} valueColor={exceptions.distress > 0 ? "risk" : undefined} onClick={() => openDrilldown("exceptions_distress", "Distress — cashflow issues")} />
-            <SummaryRow label="Service issue" value={exceptions.serviceIssue} valueColor={exceptions.serviceIssue > 0 ? "attention" : undefined} onClick={() => openDrilldown("exceptions_service", "Service issue")} />
-            <SummaryRow label="Missing PO / info" value={exceptions.missingPO} valueColor={exceptions.missingPO > 0 ? "attention" : undefined} onClick={() => openDrilldown("exceptions_missing_po", "Missing PO / info")} />
-            <SummaryRow label="Insolvency risk" value={exceptions.insolvencyRisk} valueColor={exceptions.insolvencyRisk > 0 ? "risk" : undefined} onClick={() => openDrilldown("exceptions_insolvency", "Insolvency risk")} />
+            <SummaryRow label="Distress — cashflow issues" value={exceptions.distress} valueColor={exceptions.distress > 0 ? "risk" : undefined} onClick={() => goTo("exceptions", { sub: "debtor_situations" })} />
+            <SummaryRow label="Service issue" value={exceptions.serviceIssue} valueColor={exceptions.serviceIssue > 0 ? "attention" : undefined} onClick={() => goTo("exceptions", { sub: "debtor_situations" })} />
+            <SummaryRow label="Missing PO / info" value={exceptions.missingPO} valueColor={exceptions.missingPO > 0 ? "attention" : undefined} onClick={() => goTo("exceptions", { sub: "debtor_situations" })} />
+            <SummaryRow label="Insolvency risk" value={exceptions.insolvencyRisk} valueColor={exceptions.insolvencyRisk > 0 ? "risk" : undefined} onClick={() => goTo("exceptions", { sub: "debtor_situations" })} />
 
             <SectionLabel label="Other" />
-            <SummaryRow label="Other exceptions" value={exceptions.other} onClick={() => openDrilldown("exceptions_other", "Other exceptions")} />
+            <SummaryRow label="Other exceptions" value={exceptions.other} onClick={() => goTo("exceptions", { sub: "other" })} />
           </div>
           <div className="border-t border-[var(--q-border-default)] px-5 py-3">
             <Button
@@ -533,13 +508,7 @@ export default function OverviewTab() {
               variant="outline"
               className="w-full"
               disabled={exceptions.total === 0}
-              onClick={() =>
-                toast({
-                  title: "Triage view coming soon",
-                  description:
-                    "Riley-powered triage will be available in a future release.",
-                })
-              }
+              onClick={() => goTo("exceptions")}
             >
               <ArrowRight className="mr-1.5 h-3.5 w-3.5" />
               Triage all
@@ -547,57 +516,6 @@ export default function OverviewTab() {
           </div>
         </div>
       </div>
-
-      {/* ---- DRILLDOWN SHEET ---- */}
-      <Sheet open={!!drilldownMetric} onOpenChange={(open) => !open && setDrilldownMetric(null)}>
-        <SheetContent className="sm:max-w-lg">
-          <SheetHeader>
-            <SheetTitle>{drilldownLabel}</SheetTitle>
-            <SheetDescription>
-              Showing items for the selected period.
-            </SheetDescription>
-          </SheetHeader>
-          <div className="mt-4 space-y-2">
-            {drilldownLoading ? (
-              <div className="space-y-3">
-                {[0, 1, 2, 3, 4].map((i) => (
-                  <Skeleton key={i} className="h-14 w-full" />
-                ))}
-              </div>
-            ) : drilldownData && drilldownData.length > 0 ? (
-              drilldownData.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between rounded-md border border-[var(--q-border-default)] px-3 py-2.5"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium truncate">{item.debtorName}</p>
-                    <p className="text-xs text-[var(--q-text-tertiary)]">
-                      {new Date(item.date).toLocaleDateString("en-GB", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      })}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-                    <QBadge variant="neutral">
-                      {item.status}
-                    </QBadge>
-                    <span className="text-sm font-semibold tabular-nums">
-                      {formatGBP(item.amount)}
-                    </span>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-[var(--q-text-tertiary)] py-8 text-center">
-                No items found for this period.
-              </p>
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
 
       {/* ---- CONFIRM DIALOGS ---- */}
       <AlertDialog
