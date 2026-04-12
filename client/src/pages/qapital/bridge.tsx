@@ -3,9 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import AppShell from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Switch } from "@/components/ui/switch";
 import { QBadge } from "@/components/ui/q-badge";
 import { QAmount } from "@/components/ui/q-amount";
+import { QFilterTabs } from "@/components/ui/q-filter-tabs";
 import {
   Dialog,
   DialogContent,
@@ -14,7 +14,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { AlertTriangle, CheckCircle2, Loader2, Sparkles, ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Loader2, ArrowRight, ChevronDown, ChevronUp, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ── Types ──────────────────────────────────────────────────────
@@ -321,6 +321,8 @@ export default function BridgePage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [requestState, setRequestState] = useState<"idle" | "requesting" | "approved">("idle");
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [sortField, setSortField] = useState<string>("");
+  const [sortDir, setSortDir] = useState<"asc" | "desc" | null>(null);
 
   // Fetch forecast data
   const { data: forecast, isLoading } = useQuery<InflowForecast>({
@@ -406,6 +408,25 @@ export default function BridgePage() {
   const manualSaving = blindCost.totalCost - manualCost.totalCost;
   const manualSavingPct = blindCost.totalCost > 0 ? (manualSaving / blindCost.totalCost) * 100 : 0;
 
+  // Sort bridge invoices for display
+  const sortedBridgeInvoices = useMemo(() => {
+    if (!sortField || !sortDir) return bridgeInvoices;
+    const sorted = [...bridgeInvoices];
+    const dir = sortDir === "asc" ? 1 : -1;
+    sorted.sort((a, b) => {
+      switch (sortField) {
+        case "invoice": return dir * a.invoiceNumber.localeCompare(b.invoiceNumber, undefined, { numeric: true });
+        case "debtor": return dir * a.contactName.localeCompare(b.contactName);
+        case "amount": return dir * (a.amountDue - b.amountDue);
+        case "days": return dir * (a.expectedDuration - b.expectedDuration);
+        case "risk": return dir * (a.riskScore - b.riskScore);
+        case "interest": return dir * (a.interestCost - b.interestCost);
+        default: return 0;
+      }
+    });
+    return sorted;
+  }, [bridgeInvoices, sortField, sortDir]);
+
   const manualAdvance = manualCost.totalAdvance;
   const coverageShortfall = gapInfo ? gapInfo.gapAmount - manualAdvance : 0;
   const coverageExcess = gapInfo ? manualAdvance - gapInfo.gapAmount : 0;
@@ -453,7 +474,7 @@ export default function BridgePage() {
 
   return (
     <AppShell title="Capital" subtitle="Bridge">
-      <div className="space-y-6">
+      <div className="space-y-[var(--q-space-xl)]">
 
         {/* ═══════════════════════════════════════════════════════════════
             LAYER 1 — SIMPLE VIEW
@@ -469,11 +490,14 @@ export default function BridgePage() {
                   Cash gap: <span className="q-mono tabular-nums">{fmt(gapInfo.gapAmount)}</span> in Week {gapInfo.weekNumber} (w/c {gapInfo.weekLabel})
                 </h2>
               </div>
-              <div className="flex items-center gap-3">
-                <span className={cn("text-sm", !useOwnFacility && "font-medium text-[var(--q-text-primary)]", useOwnFacility && "text-[var(--q-text-tertiary)]")}>Qashivo financing</span>
-                <Switch checked={useOwnFacility} onCheckedChange={setUseOwnFacility} />
-                <span className={cn("text-sm", useOwnFacility && "font-medium text-[var(--q-text-primary)]", !useOwnFacility && "text-[var(--q-text-tertiary)]")}>Your facility</span>
-              </div>
+              <QFilterTabs
+                options={[
+                  { key: "qashivo", label: "Qashivo financing" },
+                  { key: "own", label: "Your facility" },
+                ]}
+                activeKey={useOwnFacility ? "own" : "qashivo"}
+                onChange={(v) => setUseOwnFacility(v === "own")}
+              />
             </div>
 
             {/* Recommendation + action — two-column layout */}
@@ -517,10 +541,10 @@ export default function BridgePage() {
                 )}
                 <button
                   onClick={() => setShowAdvanced(!showAdvanced)}
-                  className="text-xs text-[var(--q-text-tertiary)] hover:text-[var(--q-text-primary)] transition-colors flex items-center gap-1"
+                  className="text-[14px] text-[var(--q-text-secondary)] hover:text-[var(--q-text-primary)] transition-colors flex items-center gap-1"
                 >
-                  <span className="underline">{showAdvanced ? "Hide advanced" : "Advanced options"}</span>
-                  {showAdvanced ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                  {showAdvanced ? "Hide advanced" : "Advanced options"}
+                  {showAdvanced ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
                 </button>
               </div>
             </div>
@@ -533,11 +557,14 @@ export default function BridgePage() {
                 <CheckCircle2 className="h-5 w-5 text-[var(--q-money-in-text)] shrink-0" />
                 <h2 className="text-[16px] font-semibold text-[var(--q-text-primary)]">No cash gap detected</h2>
               </div>
-              <div className="flex items-center gap-3">
-                <span className={cn("text-sm", !useOwnFacility && "font-medium text-[var(--q-text-primary)]", useOwnFacility && "text-[var(--q-text-tertiary)]")}>Qashivo financing</span>
-                <Switch checked={useOwnFacility} onCheckedChange={setUseOwnFacility} />
-                <span className={cn("text-sm", useOwnFacility && "font-medium text-[var(--q-text-primary)]", !useOwnFacility && "text-[var(--q-text-tertiary)]")}>Your facility</span>
-              </div>
+              <QFilterTabs
+                options={[
+                  { key: "qashivo", label: "Qashivo financing" },
+                  { key: "own", label: "Your facility" },
+                ]}
+                activeKey={useOwnFacility ? "own" : "qashivo"}
+                onChange={(v) => setUseOwnFacility(v === "own")}
+              />
             </div>
             <p className="text-[14px] text-[var(--q-text-secondary)] leading-relaxed">
               Your forecast stays above your safety threshold for the full 13-week period.
@@ -546,9 +573,9 @@ export default function BridgePage() {
 
             <button
               onClick={() => setShowAdvanced(!showAdvanced)}
-              className="text-sm text-[var(--q-text-tertiary)] hover:text-[var(--q-text-primary)] transition-colors flex items-center gap-1"
+              className="text-[14px] text-[var(--q-text-secondary)] hover:text-[var(--q-text-primary)] transition-colors flex items-center gap-1"
             >
-              <span className="underline">{showAdvanced ? "Hide advanced" : "Advanced options"}</span>
+              {showAdvanced ? "Hide advanced" : "Advanced options"}
               {showAdvanced ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
             </button>
           </div>
@@ -559,7 +586,7 @@ export default function BridgePage() {
             ═══════════════════════════════════════════════════════════════ */}
 
         {showAdvanced && (
-          <div className="space-y-6">
+          <div className="space-y-[var(--q-space-xl)]">
             {/* Three-column cost comparison */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <CostColumn
@@ -584,6 +611,7 @@ export default function BridgePage() {
                 saving={manualSaving > 0 ? { amount: manualSaving, percent: manualSavingPct } : undefined}
                 live
                 gapAmount={gapInfo?.gapAmount}
+                matchesRecommendation={!isManualOverridden}
               />
             </div>
           </div>
@@ -607,27 +635,32 @@ export default function BridgePage() {
           )}
 
           <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] overflow-hidden">
-            <div className="px-5 py-4 border-b border-[var(--q-border-default)]">
-              <h3 className="text-sm font-semibold text-[var(--q-text-primary)]">
+            <div className="px-5 py-4 border-b border-[var(--q-border-default)] flex items-center justify-between">
+              <h3 className="text-[15px] font-semibold text-[var(--q-text-primary)]">
                 Eligible invoices
               </h3>
+              <p className="text-[13px] text-[var(--q-text-secondary)]">
+                <span className="font-mono font-medium">{manualSelection.length}</span> selected{" · "}
+                <span className="font-mono font-medium">{fmt(manualCost.totalFinanced)}</span> total{" · "}
+                <span className="font-mono font-medium">{fmt(manualCost.totalInterest)}</span> interest
+              </p>
             </div>
             <div className="overflow-x-auto">
             <table className="w-full border-collapse table-fixed">
               <thead>
                 <tr>
                   <BridgeTH className="w-[48px] text-center" />
-                  <BridgeTH className="w-[120px]">Invoice</BridgeTH>
-                  <BridgeTH>Debtor</BridgeTH>
-                  <BridgeTH className="w-[120px] text-right">Amount</BridgeTH>
-                  <BridgeTH className="w-[110px] text-center">Days to pay</BridgeTH>
-                  <BridgeTH className="w-[80px] text-center">Risk</BridgeTH>
-                  <BridgeTH className="w-[100px] text-right">Interest</BridgeTH>
+                  <SortableBridgeTH field="invoice" label="Invoice" sortField={sortField} sortDir={sortDir} onSort={(f, d) => { setSortField(f); setSortDir(d); }} className="w-[120px]" />
+                  <SortableBridgeTH field="debtor" label="Debtor" sortField={sortField} sortDir={sortDir} onSort={(f, d) => { setSortField(f); setSortDir(d); }} />
+                  <SortableBridgeTH field="amount" label="Amount" sortField={sortField} sortDir={sortDir} onSort={(f, d) => { setSortField(f); setSortDir(d); }} className="w-[120px] text-right" />
+                  <SortableBridgeTH field="days" label="Days to pay" sortField={sortField} sortDir={sortDir} onSort={(f, d) => { setSortField(f); setSortDir(d); }} className="w-[110px] text-center" />
+                  <SortableBridgeTH field="risk" label="Risk" sortField={sortField} sortDir={sortDir} onSort={(f, d) => { setSortField(f); setSortDir(d); }} className="w-[80px] text-center" />
+                  <SortableBridgeTH field="interest" label="Interest" sortField={sortField} sortDir={sortDir} onSort={(f, d) => { setSortField(f); setSortDir(d); }} className="w-[100px] text-right" />
                   <BridgeTH className="w-[80px]" />
                 </tr>
               </thead>
               <tbody>
-                {bridgeInvoices.map((inv) => {
+                {sortedBridgeInvoices.map((inv) => {
                   const isExcluded = !!inv.exclusionReason;
                   const isSelected = selectedIds.has(inv.invoiceId);
                   return (
@@ -671,9 +704,7 @@ export default function BridgePage() {
                             </QBadge>
                           )}
                           {!isExcluded && inv.isRileyRecommended && (
-                            <QBadge variant="info">
-                              <Sparkles className="h-2.5 w-2.5 mr-0.5" />Riley
-                            </QBadge>
+                            <QBadge variant="info">AI</QBadge>
                           )}
                           {!isExcluded && inv.isBlindPick && !inv.isRileyRecommended && (
                             <QBadge variant="neutral">
@@ -685,7 +716,7 @@ export default function BridgePage() {
                     </tr>
                   );
                 })}
-                {bridgeInvoices.length === 0 && (
+                {sortedBridgeInvoices.length === 0 && (
                   <tr>
                     <td colSpan={8} className="px-3 py-8 text-center text-[14px] text-[var(--q-text-tertiary)]">
                       No eligible invoices found in the forecast.
@@ -776,32 +807,29 @@ interface CostColumnProps {
   muted?: boolean;
   live?: boolean;
   gapAmount?: number;
+  matchesRecommendation?: boolean;
 }
 
-function CostColumn({ title, subtitle, data, saving, recommended, muted, live, gapAmount }: CostColumnProps) {
+function CostColumn({ title, subtitle, data, saving, recommended, muted, live, gapAmount, matchesRecommendation }: CostColumnProps) {
   const advanceShortfall = gapAmount != null && data.totalAdvance < gapAmount;
   return (
     <div
       className={cn(
-        "rounded-lg border p-5 space-y-3",
-        recommended && "border-[var(--q-info-border)] bg-[var(--q-info-bg)] ring-1 ring-[var(--q-info-border)]",
-        muted && "bg-[var(--q-bg-surface-alt)]",
-        live && "bg-[var(--q-bg-surface)]",
+        "bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] p-5 space-y-3",
+        recommended && "border-2 border-[var(--q-accent)]",
       )}
     >
       <div>
         <div className="flex items-center gap-2">
-          <h4 className="text-sm font-semibold">{title}</h4>
+          <h4 className="text-[15px] font-semibold text-[var(--q-text-primary)]">{title}</h4>
           {recommended && (
-            <QBadge variant="neutral" className="text-[10px] px-1.5 py-0 bg-[var(--q-info-bg)] text-[var(--q-info-text)]">
-              Recommended
-            </QBadge>
+            <QBadge variant="ready">Recommended</QBadge>
           )}
         </div>
-        <p className="text-xs text-[var(--q-text-tertiary)]">{subtitle}</p>
+        <p className="text-[13px] text-[var(--q-text-tertiary)] mt-0.5">{subtitle}</p>
       </div>
 
-      <div className="space-y-1.5 text-sm">
+      <div className="space-y-0">
         <CostRow label="Invoices" value={String(data.count)} />
         <CostRow label="Total financed" value={fmt(data.totalFinanced)} />
         <CostRow
@@ -810,13 +838,16 @@ function CostColumn({ title, subtitle, data, saving, recommended, muted, live, g
           warn={advanceShortfall}
         />
         <CostRow label="Avg days to pay" value={`${data.avgDuration} days`} />
-        <div className="border-t pt-1.5">
+        <div className="border-t border-[var(--q-border-default)] pt-1.5 mt-1.5">
           <CostRow label="Interest cost" value={fmt(data.totalInterest)} bold />
         </div>
         {saving && saving.amount > 0 && (
           <div className="pt-0.5">
             <CostRow label="You save" value={`${fmt(saving.amount)} (${fmtPct(saving.percent)})`} highlight />
           </div>
+        )}
+        {matchesRecommendation && (
+          <p className="text-[13px] text-[var(--q-money-in-text)] pt-1">Matches recommendation</p>
         )}
       </div>
     </div>
@@ -825,12 +856,12 @@ function CostColumn({ title, subtitle, data, saving, recommended, muted, live, g
 
 function CostRow({ label, value, bold, highlight, warn }: { label: string; value: string; bold?: boolean; highlight?: boolean; warn?: boolean }) {
   return (
-    <div className="flex justify-between">
-      <span className={cn("text-[var(--q-text-tertiary)]", bold && "text-[var(--q-text-primary)] font-medium")}>{label}</span>
+    <div className="flex justify-between py-1.5">
+      <span className={cn("text-[14px] text-[var(--q-text-secondary)]", bold && "text-[var(--q-text-primary)] font-medium")}>{label}</span>
       <span className={cn(
-        "tabular-nums",
+        "text-[14px] font-mono tabular-nums text-[var(--q-text-primary)]",
         bold && "font-semibold",
-        highlight && "text-[var(--q-money-in-text)] font-semibold",
+        highlight && "text-[var(--q-money-in-text)] font-medium",
         warn && "text-[var(--q-risk-text)] font-medium",
       )}>{value}</span>
     </div>
@@ -841,12 +872,40 @@ function CostRow({ label, value, bold, highlight, warn }: { label: string; value
 
 const BridgeTH = ({ children, className }: { children?: React.ReactNode; className?: string }) => (
   <th className={cn(
-    "h-12 text-[11px] font-medium tracking-[0.3px] text-[var(--q-text-tertiary)] text-left px-3 py-2 border-b border-[var(--q-border-default)] sticky top-0 bg-[var(--q-bg-surface)] z-10",
+    "h-12 text-[11px] font-medium tracking-[0.3px] text-[var(--q-text-tertiary)] text-left px-3 py-2 border-b border-[var(--q-border-default)] sticky top-0 bg-[var(--q-bg-surface)] z-10 whitespace-nowrap",
     className
   )}>
     {children}
   </th>
 );
+
+function SortableBridgeTH({ field, label, sortField, sortDir, onSort, className }: {
+  field: string; label: string; sortField: string; sortDir: "asc" | "desc" | null;
+  onSort: (field: string, dir: "asc" | "desc" | null) => void; className?: string;
+}) {
+  const active = sortField === field && sortDir !== null;
+  const toggle = () => {
+    if (sortField !== field) return onSort(field, "desc");
+    if (sortDir === "desc") return onSort(field, "asc");
+    if (sortDir === "asc") return onSort("", null);
+    return onSort(field, "desc");
+  };
+  return (
+    <th className={cn(
+      "h-12 text-left px-3 py-2 border-b border-[var(--q-border-default)] sticky top-0 bg-[var(--q-bg-surface)] z-10 whitespace-nowrap",
+      className
+    )}>
+      <button type="button" onClick={toggle}
+        className={cn(
+          "inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-[0.3px] transition-colors cursor-pointer",
+          active ? "text-[var(--q-text-primary)]" : "text-[var(--q-text-tertiary)] hover:text-[var(--q-text-primary)]"
+        )}>
+        {label}
+        {active && sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : active && sortDir === "desc" ? <ArrowDown className="h-3 w-3" /> : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+      </button>
+    </th>
+  );
+}
 
 // ── Date formatting ────────────────────────────────────────────
 
