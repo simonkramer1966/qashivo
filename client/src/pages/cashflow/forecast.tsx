@@ -922,7 +922,7 @@ export default function ForecastPage() {
                 tickFormatter={(v) => `£${(v / 1000).toFixed(0)}k`}
                 width={55}
               />
-              <Tooltip content={<CollectionsTooltip />} />
+              <Tooltip cursor={false} content={<CollectionsTooltip />} />
               <Bar dataKey="expected" radius={[4, 4, 0, 0]} maxBarSize={40}>
                 {chartData.map((entry, i) => (
                   <Cell
@@ -980,7 +980,7 @@ export default function ForecastPage() {
                   'auto',
                 ]}
               />
-              <Tooltip content={<BalanceTooltip />} />
+              <Tooltip cursor={false} content={<BalanceTooltip />} />
               {/* Negative territory — faint red fill below zero, extends to chart bottom */}
               <ReferenceArea
                 y1={0}

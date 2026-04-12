@@ -280,6 +280,8 @@ The wrappers enforce Off / Testing / Soft Live / Live modes and **fail closed on
 
 ### Design system
 - **shadcn/ui**: zinc neutral palette, semantic tokens, minimal borders, near-black primary actions.
+- **q- design tokens**: `client/src/styles/tokens.css` — warm gray surfaces, semantic colour only. All three layout regions (sidebar, header, content) use `--q-bg-page` (#F8F7F5). Only cards/tables/modals are white (`--q-bg-surface`).
+- **Recharts**: Always set `cursor={false}` on `<Tooltip>` components — no gray hover overlay on charts. Also enforced globally via CSS in `tokens.css`.
 - This is a financial product — no rainbow dashboards, no playful UI.
 - Wouter for routing, TanStack Query v5 for data fetching.
 

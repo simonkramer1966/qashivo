@@ -129,6 +129,11 @@
   --q-chart-grid: rgba(255, 255, 255, 0.05);
 }
 
+/* ── Recharts: hide hover cursor overlay globally ── */
+.recharts-tooltip-cursor {
+  display: none !important;
+}
+
 /* ── Dark mode (media query) ── DISABLED ──
    Removed so the app always renders light mode regardless of OS preference.
    Re-enable when a manual dark mode toggle is added in Settings.

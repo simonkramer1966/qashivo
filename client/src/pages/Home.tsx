@@ -253,7 +253,7 @@ export default function HomeDashboard() {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--q-border-default)" />
                     <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                     <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => v >= 1000 ? `£${(v / 1000).toFixed(0)}k` : `£${v}`} />
-                    <Tooltip formatter={(value: number) => [fmt(value), "Amount"]} labelStyle={{ fontWeight: 600 }} />
+                    <Tooltip cursor={false} formatter={(value: number) => [fmt(value), "Amount"]} labelStyle={{ fontWeight: 600 }} />
                     <Bar dataKey="amount" radius={[4, 4, 0, 0]}>
                       {chartData.map((entry, idx) => <Cell key={idx} fill={entry.fill} />)}
                     </Bar>
@@ -299,7 +299,7 @@ export default function HomeDashboard() {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--q-border-default)" />
                     <XAxis dataKey="label" tick={{ fontSize: 11 }} tickLine={false} />
                     <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `£${(v / 1000).toFixed(0)}k`} width={55} />
-                    <Tooltip content={<CashflowMiniTooltip />} />
+                    <Tooltip cursor={false} content={<CashflowMiniTooltip />} />
                     {/* Confidence band */}
                     <Area
                       dataKey="balanceBand"

@@ -188,7 +188,7 @@ export default function QollectionsDashboard() {
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                       <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                       <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => v >= 1000 ? `£${(v / 1000).toFixed(0)}k` : `£${v}`} />
-                      <Tooltip formatter={(value: number) => [fmt(value), "Amount"]} labelStyle={{ fontWeight: 600 }} />
+                      <Tooltip cursor={false} formatter={(value: number) => [fmt(value), "Amount"]} labelStyle={{ fontWeight: 600 }} />
                       <Bar dataKey="amount" radius={[4, 4, 0, 0]}>
                         {chartData.map((entry, idx) => <Cell key={idx} fill={entry.fill} />)}
                       </Bar>
