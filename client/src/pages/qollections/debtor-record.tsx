@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, Fragment } from "react";
 import { useRoute, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import AppShell from "@/components/layout/app-shell";
@@ -609,10 +609,11 @@ export default function DebtorRecord() {
   const [personNotes, setPersonNotes] = useState("");
 
   // --- Activity filter state ---
-  const [activityCategory, setActivityCategory] = useState("All");
+  const [activityCategory, setActivityCategory] = useState("Notes");
   const [activityRange, setActivityRange] = useState("90d");
   const [activityDirection, setActivityDirection] = useState("All");
   const [activityPage, setActivityPage] = useState(1);
+  const [expandedActivityIds, setExpandedActivityIds] = useState<Set<string>>(new Set());
   // --- Sort state for outstanding / paid tables ---
   const [outstandingSortKey, setOutstandingSortKey] = useState<string>("dueDate");
   const [outstandingSortDir, setOutstandingSortDir] = useState<SortDir>("asc");
@@ -2863,25 +2864,47 @@ export default function DebtorRecord() {
                         const dateStr = d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
                         const timeStr = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 
+                        const isNote = cat === "Notes";
+                        const noteText = isNote ? (evt.description || evt.title || narrative) : narrative;
+                        const displayText = isNote ? noteText : narrative;
+                        const isExpanded = expandedActivityIds.has(evt.id);
+                        const toggleExpand = isNote ? () => {
+                          setExpandedActivityIds((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(evt.id)) next.delete(evt.id);
+                            else next.add(evt.id);
+                            return next;
+                          });
+                        } : undefined;
+
                         return (
-                          <tr
-                            key={evt.id}
-                            className="h-12 border-b border-[var(--q-border-default)] hover:bg-[var(--q-bg-surface-hover)] transition-colors"
-                          >
-                            <td className="px-3 py-2">
-                              <div className="text-[14px] text-[var(--q-text-secondary)]">{dateStr}</div>
-                              <div className="text-[12px] text-[var(--q-text-tertiary)]">{timeStr}</div>
-                            </td>
-                            <td className="px-3 py-2">
-                              <QBadge variant={catBadge[cat] || "neutral"}>{cat}</QBadge>
-                            </td>
-                            <td className="px-3 py-2 text-[14px] text-[var(--q-text-primary)] truncate max-w-[400px]">
-                              {narrative}
-                            </td>
-                            <td className="px-3 py-2 text-[14px] text-[var(--q-text-tertiary)]">
-                              {user}
-                            </td>
-                          </tr>
+                          <Fragment key={evt.id}>
+                            <tr
+                              onClick={toggleExpand}
+                              className={`h-12 border-b border-[var(--q-border-default)] hover:bg-[var(--q-bg-surface-hover)] transition-colors ${isNote ? "cursor-pointer" : ""}`}
+                            >
+                              <td className="px-3 py-2">
+                                <div className="text-[14px] text-[var(--q-text-secondary)]">{dateStr}</div>
+                                <div className="text-[12px] text-[var(--q-text-tertiary)]">{timeStr}</div>
+                              </td>
+                              <td className="px-3 py-2">
+                                <QBadge variant={catBadge[cat] || "neutral"}>{cat}</QBadge>
+                              </td>
+                              <td className="px-3 py-2 text-[14px] text-[var(--q-text-primary)] truncate max-w-[400px]">
+                                {displayText}
+                              </td>
+                              <td className="px-3 py-2 text-[14px] text-[var(--q-text-tertiary)]">
+                                {user}
+                              </td>
+                            </tr>
+                            {isNote && isExpanded && (
+                              <tr className="border-b border-[var(--q-border-default)]">
+                                <td colSpan={4} className="bg-[var(--q-bg-surface-alt)] px-5 py-3">
+                                  <p className="text-[14px] text-[var(--q-text-secondary)] leading-relaxed whitespace-pre-wrap">{noteText}</p>
+                                </td>
+                              </tr>
+                            )}
+                          </Fragment>
                         );
                       })}
                     </tbody>
