@@ -5,9 +5,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useAgentNotifications } from "@/hooks/useAgentNotifications";
 import { useInvalidateActionCentre } from "@/hooks/useInvalidateActionCentre";
 import { usePermissions } from "@/hooks/usePermissions";
-import { Badge } from "@/components/ui/badge";
+import { QBadge } from "@/components/ui/q-badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -107,11 +106,11 @@ const TONE_LEVELS = ["friendly", "professional", "firm", "formal", "legal"] as c
 type ToneLevel = typeof TONE_LEVELS[number];
 
 const TONE_COLORS: Record<string, string> = {
-  friendly: "bg-green-100 text-green-700 hover:bg-green-200",
-  professional: "bg-blue-100 text-blue-700 hover:bg-blue-200",
-  firm: "bg-amber-100 text-amber-700 hover:bg-amber-200",
-  formal: "bg-orange-100 text-orange-700 hover:bg-orange-200",
-  legal: "bg-red-100 text-red-700 hover:bg-red-200",
+  friendly: "bg-[var(--q-money-in-bg)] text-[var(--q-money-in-text)] hover:bg-[var(--q-money-in-bg)]",
+  professional: "bg-[var(--q-info-bg)] text-[var(--q-info-text)] hover:bg-[var(--q-info-bg)]",
+  firm: "bg-[var(--q-attention-bg)] text-[var(--q-attention-text)] hover:bg-[var(--q-attention-bg)]",
+  formal: "bg-[var(--q-attention-bg)] text-[var(--q-attention-text)] hover:bg-[var(--q-attention-bg)]",
+  legal: "bg-[var(--q-risk-bg)] text-[var(--q-risk-text)] hover:bg-[var(--q-risk-bg)]",
 };
 
 const DEFER_REASONS = [
@@ -153,9 +152,9 @@ function ChannelIcon({ type }: { type: string }) {
 
 function urgencyColor(priority: number | null, daysOverdue: number): string {
   const p = priority ?? 50;
-  if (p >= 75 || daysOverdue > 60) return "bg-red-500";
-  if (p >= 50 || daysOverdue >= 30) return "bg-amber-500";
-  return "bg-green-500";
+  if (p >= 75 || daysOverdue > 60) return "bg-[var(--q-risk-text)]";
+  if (p >= 50 || daysOverdue >= 30) return "bg-[var(--q-attention-text)]";
+  return "bg-[var(--q-money-in-text)]";
 }
 
 function prsLabel(score: number | null): string {
@@ -199,16 +198,16 @@ function ConfidenceWithTooltip({ score }: { score: string | null }) {
   if (!score) return null;
   const n = parseFloat(score);
   const [showTip, setShowTip] = useState(false);
-  const variant = n >= 0.8 ? "default" : n >= 0.6 ? "secondary" : "destructive";
+  const variant = n >= 0.8 ? "ready" as const : n >= 0.6 ? "info" as const : "risk" as const;
   return (
     <span className="relative inline-flex items-center gap-1">
-      <Badge variant={variant}>{Math.round(n * 100)}%</Badge>
+      <QBadge variant={variant}>{Math.round(n * 100)}%</QBadge>
       <span
         className="cursor-help"
         onMouseEnter={() => setShowTip(true)}
         onMouseLeave={() => setShowTip(false)}
       >
-        <Info className="h-3 w-3 text-muted-foreground" />
+        <Info className="h-3 w-3 text-[var(--q-text-tertiary)]" />
       </span>
       {showTip && (
         <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 rounded-md bg-slate-900 text-white text-[11px] p-2 leading-relaxed z-50 shadow-lg pointer-events-none">
@@ -947,7 +946,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
     <div className="space-y-3" ref={containerRef}>
       {/* Part 9 — Yesterday's outcomes strip */}
       {yesterday && (yesterday.sent > 0 || yesterday.responses > 0 || yesterday.promises > 0 || yesterday.paid.count > 0) && (
-        <div className="rounded-md bg-slate-50 border px-4 py-2 text-xs text-muted-foreground">
+        <div className="rounded-md bg-[var(--q-bg-surface-alt)] border border-[var(--q-border-default)] px-4 py-2 text-xs text-[var(--q-text-tertiary)]">
           Yesterday: {yesterday.sent > 0 && <><strong>{yesterday.sent}</strong> emails sent</>}
           {yesterday.responses > 0 && <> · <strong>{yesterday.responses}</strong> responses</>}
           {yesterday.promises > 0 && <> · <strong>{yesterday.promises}</strong> promises to pay</>}
@@ -957,7 +956,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
 
       {/* Part 10 — Value summary header */}
       {actions.length > 0 && (
-        <div className="text-sm text-muted-foreground">
+        <div className="text-sm text-[var(--q-text-tertiary)]">
           <strong>{actions.length}</strong> actions pending · <strong>{formatAmount(totalQueuedAmount)}</strong> queued for sending · <strong>{uniqueDebtors}</strong> debtors
         </div>
       )}
@@ -974,7 +973,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
               />
               {selectedIds.size > 0 && (
                 <>
-                  <span className="text-xs text-muted-foreground">{selectedIds.size} selected</span>
+                  <span className="text-xs text-[var(--q-text-tertiary)]">{selectedIds.size} selected</span>
                   <Button
                     variant="outline"
                     size="sm"
@@ -987,8 +986,8 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
                   </Button>
                 </>
               )}
-              <div className="h-4 w-px bg-border mx-1" />
-              <span className="text-[11px] text-muted-foreground">Sort:</span>
+              <div className="h-4 w-px bg-[var(--q-border-default)] mx-1" />
+              <span className="text-[11px] text-[var(--q-text-tertiary)]">Sort:</span>
               {(["priority", "daysOverdue", "totalAmount", "companyName"] as SortField[]).map(f => (
                 <Button
                   key={f}
@@ -1024,7 +1023,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-7 text-xs gap-1 text-green-600 hover:text-green-700 hover:bg-green-50"
+                    className="h-7 text-xs gap-1 text-[var(--q-money-in-text)] hover:text-[var(--q-money-in-text)] hover:bg-[var(--q-money-in-bg)]"
                     disabled={bulkApproveMutation.isPending}
                   >
                     <Check className="h-3 w-3" /> Approve all
@@ -1100,11 +1099,11 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
 
       {/* Queue items */}
       {actions.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <Check className="mb-3 h-10 w-10 text-green-500" />
-            <h3 className="text-lg font-semibold">Queue is clear</h3>
-            <p className="text-sm text-muted-foreground mb-4">All actions have been reviewed.</p>
+        <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)]">
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <Check className="mb-3 h-10 w-10 text-[var(--q-money-in-text)]" />
+            <h3 className="text-lg font-semibold text-[var(--q-text-primary)]">Queue is clear</h3>
+            <p className="text-sm text-[var(--q-text-tertiary)] mb-4">All actions have been reviewed.</p>
             {isManagerOrAbove && (
               <Button
                 variant="outline"
@@ -1117,8 +1116,8 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
                 {runAgentMutation.isPending ? "Generating..." : "Run agent now"}
               </Button>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       ) : (
         <div className="space-y-1">
           {actions.map((action, idx) => {
@@ -1134,9 +1133,9 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
               <div
                 key={action.id}
                 className={cn(
-                  "rounded-lg border bg-white transition-all",
-                  isFocused && "ring-2 ring-primary/30",
-                  "hover:bg-muted/30",
+                  "rounded-[var(--q-radius-lg)] border border-[var(--q-border-default)] bg-[var(--q-bg-surface)] transition-all",
+                  isFocused && "ring-2 ring-[var(--q-accent)]/30",
+                  "hover:bg-[var(--q-bg-surface-hover)]",
                 )}
               >
                 {/* Row — Part 1 */}
@@ -1178,7 +1177,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
                     </div>
 
                     {/* Line 2 — Why */}
-                    <div className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                    <div className="text-[11px] text-[var(--q-text-tertiary)] mt-0.5 truncate">
                       <ChannelIcon type={action.type} />
                       <span className="ml-1 capitalize">{normalizeChannel(action.type)}</span>
                       {" · "}{action.daysOverdue}d overdue
@@ -1188,7 +1187,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
                     </div>
 
                     {/* Line 3 — What */}
-                    <div className="text-xs text-muted-foreground/80 mt-0.5 truncate">
+                    <div className="text-xs text-[var(--q-text-tertiary)]/80 mt-0.5 truncate">
                       {replyDescription || action.actionSummary || action.subject || `${action.type} action`}
                     </div>
                   </div>
@@ -1206,8 +1205,8 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
                           <button
                             key={t}
                             className={cn(
-                              "w-full text-left px-2 py-1.5 text-xs rounded hover:bg-muted capitalize",
-                              currentTone === t && "bg-muted font-medium",
+                              "w-full text-left px-2 py-1.5 text-xs rounded hover:bg-[var(--q-bg-surface-alt)] capitalize",
+                              currentTone === t && "bg-[var(--q-bg-surface-alt)] font-medium",
                             )}
                             onClick={() => handleToneChange(action.id, t)}
                           >
@@ -1217,7 +1216,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
                       </PopoverContent>
                     </Popover>
                     {toneOverrides.has(action.id) && (
-                      <span className="text-[10px] text-amber-600">changed</span>
+                      <span className="text-[10px] text-[var(--q-attention-text)]">changed</span>
                     )}
                     <ConfidenceWithTooltip score={action.confidenceScore} />
                   </div>
@@ -1227,7 +1226,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-7 w-7 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                      className="h-7 w-7 p-0 text-[var(--q-money-in-text)] hover:text-[var(--q-money-in-text)] hover:bg-[var(--q-money-in-bg)]"
                       onClick={() => handleApprove(action.id)}
                       disabled={approveMutation.isPending}
                     >
@@ -1236,7 +1235,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-7 w-7 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                      className="h-7 w-7 p-0 text-[var(--q-attention-text)] hover:text-[var(--q-attention-text)] hover:bg-[var(--q-attention-bg)]"
                       onClick={() => setDrawerActionId(action.id)}
                     >
                       <Clock className="h-3.5 w-3.5" />
@@ -1244,7 +1243,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      className="h-7 w-7 p-0 text-[var(--q-risk-text)] hover:text-[var(--q-risk-text)] hover:bg-[var(--q-risk-bg)]"
                       onClick={() => setDrawerActionId(action.id)}
                     >
                       <X className="h-3.5 w-3.5" />
@@ -1252,7 +1251,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-7 w-7 p-0 text-muted-foreground hover:text-purple-600 hover:bg-purple-50"
+                      className="h-7 w-7 p-0 text-[var(--q-text-tertiary)] hover:text-[var(--q-accent)] hover:bg-[var(--q-bg-surface-alt)]"
                       title="Mark as VIP"
                       onClick={() => handleMenuAction(action, "vip")}
                     >
@@ -1293,9 +1292,9 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
 
       {/* Part 12 — Keyboard shortcut hints */}
       {actions.length > 0 && showShortcutHints && (
-        <div className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-1.5 text-[11px] text-muted-foreground">
+        <div className="flex items-center justify-between rounded-md bg-[var(--q-bg-surface-alt)] px-3 py-1.5 text-[11px] text-[var(--q-text-tertiary)]">
           <span>Shortcuts: ↑↓ navigate · Space preview · A approve · D defer · R reject · Shift+A approve all</span>
-          <button className="ml-2 hover:text-foreground" onClick={() => setShowShortcutHints(false)}>
+          <button className="ml-2 hover:text-[var(--q-text-primary)]" onClick={() => setShowShortcutHints(false)}>
             <X className="h-3 w-3" />
           </button>
         </div>
@@ -1463,7 +1462,7 @@ function EditBeforeSendDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 p-5 space-y-3">
+      <div className="bg-[var(--q-bg-surface)] rounded-[var(--q-radius-lg)] shadow-xl max-w-lg w-full mx-4 p-5 space-y-3">
         <h3 className="text-sm font-semibold">Edit before sending</h3>
         <Input
           value={subject}
@@ -1482,7 +1481,7 @@ function EditBeforeSendDialog({
           <Button variant="ghost" size="sm" onClick={onCancel}>Cancel</Button>
           <Button
             size="sm"
-            className="bg-green-600 hover:bg-green-700 text-white gap-1"
+            className="bg-[var(--q-money-in-text)] hover:bg-[var(--q-money-in-text)]/90 text-white gap-1"
             disabled={isPending}
             onClick={() => onApprove(subject, body)}
           >

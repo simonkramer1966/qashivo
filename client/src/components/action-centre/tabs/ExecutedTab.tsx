@@ -76,15 +76,15 @@ export function ExecutedTab({ actions, onSelectDebtor, isLoading }: ExecutedTabP
 
   const getOutcomeStyle = (status: string) => {
     const styles: Record<string, string> = {
-      sent: 'text-slate-500',
-      delivered: 'text-slate-700',
-      failed: 'text-red-600',
-      no_answer: 'text-slate-500',
-      ptp: 'text-slate-700',
-      dispute: 'text-red-600',
-      query: 'text-slate-600',
+      sent: 'text-[var(--q-text-tertiary)]',
+      delivered: 'text-[var(--q-text-primary)]',
+      failed: 'text-[var(--q-risk-text)]',
+      no_answer: 'text-[var(--q-text-tertiary)]',
+      ptp: 'text-[var(--q-text-primary)]',
+      dispute: 'text-[var(--q-risk-text)]',
+      query: 'text-[var(--q-text-tertiary)]',
     };
-    return styles[status] || 'text-slate-500';
+    return styles[status] || 'text-[var(--q-text-tertiary)]';
   };
 
   const getOutcomeLabel = (status: string) => {
@@ -103,9 +103,9 @@ export function ExecutedTab({ actions, onSelectDebtor, isLoading }: ExecutedTabP
   if (isLoading) {
     return (
       <div className="space-y-1">
-        <div className="h-10 bg-slate-50 animate-pulse" />
+        <div className="h-10 bg-[var(--q-bg-surface-alt)] animate-pulse" />
         {[...Array(6)].map((_, i) => (
-          <div key={i} className="h-12 bg-slate-50/50 animate-pulse" />
+          <div key={i} className="h-12 bg-[var(--q-bg-surface-alt)]/50 animate-pulse" />
         ))}
       </div>
     );
@@ -114,7 +114,7 @@ export function ExecutedTab({ actions, onSelectDebtor, isLoading }: ExecutedTabP
   return (
     <div className="flex flex-col h-[calc(100vh-220px)]">
       <div className="flex items-center justify-between pb-2 flex-shrink-0">
-        <span className="text-[13px] text-muted-foreground">
+        <span className="text-[13px] text-[var(--q-text-tertiary)]">
           {filteredActions.length} actions
         </span>
         <div className="flex items-center gap-1.5 ml-3">
@@ -140,7 +140,7 @@ export function ExecutedTab({ actions, onSelectDebtor, isLoading }: ExecutedTabP
 
       {filteredActions.length === 0 ? (
         <div className="py-16 text-center flex-1">
-          <p className="text-slate-400 text-[13px]">No executed actions found</p>
+          <p className="text-[var(--q-text-tertiary)] text-[13px]">No executed actions found</p>
         </div>
       ) : (
         <>
@@ -154,12 +154,12 @@ export function ExecutedTab({ actions, onSelectDebtor, isLoading }: ExecutedTabP
                 <col style={{ width: '18%' }} />
               </colgroup>
               <thead className="sticky top-0 z-20">
-                <tr className="border-b border-slate-200 bg-slate-50 h-16">
-                  <th className="px-3 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">Customer</th>
-                  <th className="px-3 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">Channel</th>
-                  <th className="px-3 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">Action</th>
-                  <th className="px-3 text-right text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">Amount</th>
-                  <th className="px-3 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">Outcome</th>
+                <tr className="border-b border-[var(--q-border-default)] bg-[var(--q-bg-surface-alt)] h-16">
+                  <th className="px-3 text-left text-[11px] font-medium text-[var(--q-text-tertiary)] uppercase tracking-wider bg-[var(--q-bg-surface-alt)] align-middle">Customer</th>
+                  <th className="px-3 text-left text-[11px] font-medium text-[var(--q-text-tertiary)] uppercase tracking-wider bg-[var(--q-bg-surface-alt)] align-middle">Channel</th>
+                  <th className="px-3 text-left text-[11px] font-medium text-[var(--q-text-tertiary)] uppercase tracking-wider bg-[var(--q-bg-surface-alt)] align-middle">Action</th>
+                  <th className="px-3 text-right text-[11px] font-medium text-[var(--q-text-tertiary)] uppercase tracking-wider bg-[var(--q-bg-surface-alt)] align-middle">Amount</th>
+                  <th className="px-3 text-left text-[11px] font-medium text-[var(--q-text-tertiary)] uppercase tracking-wider bg-[var(--q-bg-surface-alt)] align-middle">Outcome</th>
                 </tr>
               </thead>
               <tbody>
@@ -167,21 +167,21 @@ export function ExecutedTab({ actions, onSelectDebtor, isLoading }: ExecutedTabP
                   <tr 
                     key={action.id}
                     onClick={() => onSelectDebtor(action.debtorId, action.id)}
-                    className="border-b border-slate-200 hover:bg-slate-100 cursor-pointer transition-colors"
+                    className="border-b border-[var(--q-border-default)] hover:bg-[var(--q-bg-surface-hover)] cursor-pointer transition-colors"
                   >
                       <td className="py-[5px] px-3">
-                      <div className="text-[13px] font-medium text-slate-900 truncate">{action.debtorName}</div>
-                      <div className="text-[12px] text-slate-400 tabular-nums">{formatRelativeTime(action.executedAt)}</div>
+                      <div className="text-[13px] font-medium text-[var(--q-text-primary)] truncate">{action.debtorName}</div>
+                      <div className="text-[12px] text-[var(--q-text-tertiary)] tabular-nums">{formatRelativeTime(action.executedAt)}</div>
                     </td>
-                    <td className="py-[5px] px-3 text-[13px] text-slate-500">
+                    <td className="py-[5px] px-3 text-[13px] text-[var(--q-text-tertiary)]">
                       {getChannelLabel(action.channel)}
                     </td>
-                    <td className="py-[5px] px-3 text-[13px] text-slate-600 truncate">
+                    <td className="py-[5px] px-3 text-[13px] text-[var(--q-text-tertiary)] truncate">
                       {action.actionType}
                     </td>
                     <td className="py-[5px] px-3 text-right">
-                      <span className="text-[13px] font-medium tabular-nums text-slate-900">{formatCurrencyCompact(action.totalAmount)}</span>
-                      <span className="text-[12px] text-slate-400 ml-1">· {action.invoiceCount} inv</span>
+                      <span className="text-[13px] font-medium tabular-nums text-[var(--q-text-primary)]">{formatCurrencyCompact(action.totalAmount)}</span>
+                      <span className="text-[12px] text-[var(--q-text-tertiary)] ml-1">· {action.invoiceCount} inv</span>
                     </td>
                     <td className="py-[5px] px-3">
                       <span className={`text-[13px] font-medium ${getOutcomeStyle(action.status)}`}>
@@ -197,14 +197,14 @@ export function ExecutedTab({ actions, onSelectDebtor, isLoading }: ExecutedTabP
           {/* Footer with pagination */}
           <div className="flex items-center justify-end py-3 flex-shrink-0">
             {filteredActions.length > 0 && (
-              <div className="flex items-center gap-4 text-[12px] text-slate-500">
+              <div className="flex items-center gap-4 text-[12px] text-[var(--q-text-tertiary)]">
                 {/* Rows per page selector */}
                 <div className="flex items-center gap-2">
-                  <span className="text-slate-400">Rows:</span>
+                  <span className="text-[var(--q-text-tertiary)]">Rows:</span>
                   <select
                     value={itemsPerPage}
                     onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                    className="bg-white border border-slate-200 rounded px-2 py-1 text-[12px] text-slate-600 cursor-pointer hover:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-300"
+                    className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded px-2 py-1 text-[12px] text-[var(--q-text-tertiary)] cursor-pointer hover:border-[var(--q-border-default)] focus:outline-none focus:ring-1 focus:ring-[var(--q-border-default)]"
                   >
                     {PAGE_SIZE_OPTIONS.map(size => (
                       <option key={size} value={size}>{size}</option>
@@ -218,7 +218,7 @@ export function ExecutedTab({ actions, onSelectDebtor, isLoading }: ExecutedTabP
                     <button
                       onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                       disabled={currentPage === 1}
-                      className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      className="p-1 rounded hover:bg-[var(--q-bg-surface-hover)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                     >
                       <ChevronLeft className="w-4 h-4" />
                     </button>
@@ -228,7 +228,7 @@ export function ExecutedTab({ actions, onSelectDebtor, isLoading }: ExecutedTabP
                     <button
                       onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                       disabled={currentPage === totalPages}
-                      className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      className="p-1 rounded hover:bg-[var(--q-bg-surface-hover)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                     >
                       <ChevronRight className="w-4 h-4" />
                     </button>

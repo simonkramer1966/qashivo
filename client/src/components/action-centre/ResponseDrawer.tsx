@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
+import { QBadge } from "@/components/ui/q-badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -136,9 +136,9 @@ export function ResponseDrawer({ open, onOpenChange, query }: ResponseDrawerProp
   const getSentimentColor = (sentiment?: string) => {
     switch (sentiment) {
       case "positive":
-        return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
+        return "bg-[var(--q-money-in-bg)] text-[var(--q-money-in-text)]";
       case "negative":
-        return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
+        return "bg-[var(--q-risk-bg)] text-[var(--q-risk-text)]";
       case "neutral":
         return "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300";
       default:
@@ -161,7 +161,7 @@ export function ResponseDrawer({ open, onOpenChange, query }: ResponseDrawerProp
 
         <ScrollArea className="flex-1 -mx-6 px-6 mt-6">
           {/* Contact Info */}
-          <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md border border-gray-200/30 dark:border-gray-700/30 rounded-lg p-4 mb-4">
+          <div className="bg-[var(--q-bg-surface)]/70 backdrop-blur-md border border-gray-200/30 dark:border-gray-700/30 rounded-lg p-4 mb-4">
             <h3 className="text-sm font-semibold mb-2">Contact Details</h3>
             <div className="space-y-1 text-sm">
               <p className="flex items-center gap-2">
@@ -184,26 +184,26 @@ export function ResponseDrawer({ open, onOpenChange, query }: ResponseDrawerProp
           </div>
 
           {/* Original Message */}
-          <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md border border-gray-200/30 dark:border-gray-700/30 rounded-lg p-4 mb-4">
+          <div className="bg-[var(--q-bg-surface)]/70 backdrop-blur-md border border-gray-200/30 dark:border-gray-700/30 rounded-lg p-4 mb-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold">Original Message</h3>
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className="flex items-center gap-1">
+                <QBadge variant="outline" className="flex items-center gap-1">
                   {getChannelIcon(query.channel)}
                   <span className="capitalize">{query.channel}</span>
-                </Badge>
+                </QBadge>
                 {query.intent && (
-                  <Badge variant="outline" className="capitalize">
+                  <QBadge variant="outline" className="capitalize">
                     {query.intent}
-                  </Badge>
+                  </QBadge>
                 )}
                 {query.sentiment && (
-                  <Badge className={getSentimentColor(query.sentiment)}>
+                  <QBadge className={getSentimentColor(query.sentiment)}>
                     {query.sentiment === "positive" && <ThumbsUp className="h-3 w-3 mr-1" />}
                     {query.sentiment === "negative" && <ThumbsDown className="h-3 w-3 mr-1" />}
                     {query.sentiment === "neutral" && <AlertCircle className="h-3 w-3 mr-1" />}
                     <span className="capitalize">{query.sentiment}</span>
-                  </Badge>
+                  </QBadge>
                 )}
               </div>
             </div>
@@ -256,7 +256,7 @@ export function ResponseDrawer({ open, onOpenChange, query }: ResponseDrawerProp
               placeholder="Click 'Generate Draft' to create an AI-powered response, or write your own..."
               value={draftResponse}
               onChange={(e) => setDraftResponse(e.target.value)}
-              className="min-h-[200px] bg-white/80 dark:bg-gray-900/80"
+              className="min-h-[200px] bg-[var(--q-bg-surface)]/80"
               data-testid="input-response-draft"
             />
           </div>

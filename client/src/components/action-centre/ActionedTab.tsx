@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { QBadge } from "@/components/ui/q-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -35,21 +34,21 @@ function ChannelIcon({ type }: { type: string }) {
 function StatusBadge({ status }: { status: string }) {
   if (status === "sent" || status === "completed") {
     return (
-      <Badge variant="default" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+      <QBadge variant="default" className="bg-[var(--q-money-in-bg)] text-[var(--q-money-in-text)]">
         <Check className="mr-1 h-3 w-3" />
         {status === "sent" ? "Sent" : "Completed"}
-      </Badge>
+      </QBadge>
     );
   }
   if (status === "cancelled") {
     return (
-      <Badge variant="secondary" className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+      <QBadge variant="secondary" className="bg-[var(--q-risk-bg)] text-[var(--q-risk-text)]">
         <X className="mr-1 h-3 w-3" />
         Rejected
-      </Badge>
+      </QBadge>
     );
   }
-  return <Badge variant="outline">{status}</Badge>;
+  return <QBadge variant="outline">{status}</QBadge>;
 }
 
 export default function ActionedTab() {
@@ -75,13 +74,13 @@ export default function ActionedTab() {
 
   if (actions.length === 0) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <Send className="mb-3 h-10 w-10 text-muted-foreground" />
+      <div className="rounded-lg border border-[var(--q-border-default)] bg-[var(--q-bg-surface)]">
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <Send className="mb-3 h-10 w-10 text-[var(--q-text-tertiary)]" />
           <h3 className="text-lg font-semibold">No actioned items yet</h3>
-          <p className="text-sm text-muted-foreground">Actions will appear here once approved or rejected.</p>
-        </CardContent>
-      </Card>
+          <p className="text-sm text-[var(--q-text-tertiary)]">Actions will appear here once approved or rejected.</p>
+        </div>
+      </div>
     );
   }
 
@@ -107,7 +106,7 @@ export default function ActionedTab() {
                 {action.actionSummary || action.subject || `${action.type} action`}
               </div>
               {action.rejectionReason && (
-                <div className="text-xs text-muted-foreground mt-0.5">
+                <div className="text-xs text-[var(--q-text-tertiary)] mt-0.5">
                   Reason: {action.rejectionReason}
                 </div>
               )}
@@ -116,12 +115,12 @@ export default function ActionedTab() {
               <StatusBadge status={action.status} />
             </TableCell>
             <TableCell>
-              <span className="text-xs text-muted-foreground capitalize">
+              <span className="text-xs text-[var(--q-text-tertiary)] capitalize">
                 {action.agentType || "collections"}
               </span>
             </TableCell>
             <TableCell>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-xs text-[var(--q-text-tertiary)]">
                 {formatRelativeTime(action.completedAt || action.updatedAt)}
               </span>
             </TableCell>

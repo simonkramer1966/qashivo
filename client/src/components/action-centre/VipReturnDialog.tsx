@@ -101,13 +101,13 @@ export function VipReturnDialog({
               <div className="flex items-start gap-2">
                 <RadioGroupItem value="scratch" id="scratch" className="mt-0.5" />
                 <Label htmlFor="scratch" className="text-sm font-normal leading-snug">
-                  Resume from scratch <span className="text-muted-foreground">(friendly tone, treat as new relationship)</span>
+                  Resume from scratch <span className="text-[var(--q-text-tertiary)]">(friendly tone, treat as new relationship)</span>
                 </Label>
               </div>
               <div className="flex items-start gap-2">
                 <RadioGroupItem value="continue" id="continue" className="mt-0.5" />
                 <Label htmlFor="continue" className="text-sm font-normal leading-snug">
-                  Resume where Charlie left off <span className="text-muted-foreground">(continue from last tone level)</span>
+                  Resume where Charlie left off <span className="text-[var(--q-text-tertiary)]">(continue from last tone level)</span>
                 </Label>
               </div>
             </RadioGroup>

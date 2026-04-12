@@ -4,9 +4,8 @@ import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useInvalidateActionCentre } from "@/hooks/useInvalidateActionCentre";
-import { Badge } from "@/components/ui/badge";
+import { QBadge } from "@/components/ui/q-badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -75,26 +74,26 @@ const CATEGORY_META: Record<ExceptionSubTab, {
   collections: {
     icon: ShieldAlert,
     description: "Low confidence intents, delivery failures, compliance blocks",
-    colour: "text-red-600",
-    bgColour: "bg-red-50 border-red-100 hover:bg-red-100/60",
+    colour: "text-[var(--q-risk-text)]",
+    bgColour: "bg-[var(--q-risk-bg)] border-[var(--q-risk-border)] hover:bg-[var(--q-risk-bg)]",
   },
   debtor_situations: {
     icon: Users,
     description: "Payment plan requests, disputes, wrong person, promise modifications",
-    colour: "text-amber-600",
-    bgColour: "bg-amber-50 border-amber-100 hover:bg-amber-100/60",
+    colour: "text-[var(--q-attention-text)]",
+    bgColour: "bg-[var(--q-attention-bg)] border-[var(--q-attention-border)] hover:bg-[var(--q-attention-bg)]",
   },
   promises: {
     icon: Handshake,
     description: "Broken promises and unallocated payment timeouts",
-    colour: "text-purple-600",
-    bgColour: "bg-purple-50 border-purple-100 hover:bg-purple-100/60",
+    colour: "text-[var(--q-info-text)]",
+    bgColour: "bg-[var(--q-info-bg)] border-[var(--q-info-border)] hover:bg-[var(--q-info-bg)]",
   },
   other: {
     icon: HelpCircle,
     description: "Unclear intents, unmatched inbound, system errors",
-    colour: "text-blue-600",
-    bgColour: "bg-blue-50 border-blue-100 hover:bg-blue-100/60",
+    colour: "text-[var(--q-text-tertiary)]",
+    bgColour: "bg-[var(--q-bg-surface-alt)] border-[var(--q-border-default)] hover:bg-[var(--q-bg-surface-alt)]",
   },
 };
 
@@ -102,21 +101,21 @@ const CATEGORY_META: Record<ExceptionSubTab, {
 
 function ChannelIcon({ type }: { type: string }) {
   switch (type) {
-    case "sms": return <MessageSquare className="h-4 w-4 text-muted-foreground" />;
+    case "sms": return <MessageSquare className="h-4 w-4 text-[var(--q-text-tertiary)]" />;
     case "call":
-    case "voice": return <Phone className="h-4 w-4 text-muted-foreground" />;
-    default: return <Mail className="h-4 w-4 text-muted-foreground" />;
+    case "voice": return <Phone className="h-4 w-4 text-[var(--q-text-tertiary)]" />;
+    default: return <Mail className="h-4 w-4 text-[var(--q-text-tertiary)]" />;
   }
 }
 
 function StateIndicator({ state }: { state: ExceptionState }) {
   switch (state) {
     case "new":
-      return <CircleDot className="h-4 w-4 text-red-500 shrink-0" />;
+      return <CircleDot className="h-4 w-4 text-[var(--q-risk-text)] shrink-0" />;
     case "in_progress":
-      return <Circle className="h-4 w-4 text-muted-foreground shrink-0" />;
+      return <Circle className="h-4 w-4 text-[var(--q-text-tertiary)] shrink-0" />;
     case "resolved":
-      return <Check className="h-4 w-4 text-muted-foreground/60 shrink-0" />;
+      return <Check className="h-4 w-4 text-[var(--q-text-tertiary)]/60 shrink-0" />;
   }
 }
 
@@ -271,31 +270,31 @@ export default function ExceptionsTab({ subTab, onNavigateSubTab }: ExceptionsTa
 
     if (totalAll === 0) {
       return (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <CheckCircle2 className="mb-3 h-10 w-10 text-green-500" />
+        <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)]">
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <CheckCircle2 className="mb-3 h-10 w-10 text-[var(--q-money-in-text)]" />
             <h3 className="text-lg font-semibold">No exceptions</h3>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-[var(--q-text-tertiary)]">
               Everything is running smoothly.
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       );
     }
 
     return (
       <div className="space-y-4">
         {mostUrgent && (
-          <div className="rounded-lg bg-muted/50 border px-4 py-2.5 text-sm flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
-            <span className="text-muted-foreground">Most urgent:</span>
+          <div className="rounded-lg bg-[var(--q-bg-surface-alt)] border px-4 py-2.5 text-sm flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-[var(--q-attention-text)] shrink-0" />
+            <span className="text-[var(--q-text-tertiary)]">Most urgent:</span>
             <span className="font-medium truncate">
               {formatExceptionTitle(mostUrgent)}
               {(mostUrgent.companyName || mostUrgent.contactName) && (
-                <span className="text-muted-foreground font-normal"> from {mostUrgent.companyName || mostUrgent.contactName}</span>
+                <span className="text-[var(--q-text-tertiary)] font-normal"> from {mostUrgent.companyName || mostUrgent.contactName}</span>
               )}
             </span>
-            <span className="text-xs text-muted-foreground shrink-0 ml-auto">
+            <span className="text-xs text-[var(--q-text-tertiary)] shrink-0 ml-auto">
               {formatRelativeTime(mostUrgent.createdAt)}
             </span>
           </div>
@@ -308,40 +307,38 @@ export default function ExceptionsTab({ subTab, onNavigateSubTab }: ExceptionsTa
             const count = categoryCounts[value];
 
             return (
-              <Card
+              <div
                 key={value}
-                className={cn("cursor-pointer transition-colors border", meta.bgColour)}
+                className={cn("cursor-pointer transition-colors border rounded-[var(--q-radius-lg)] p-4", meta.bgColour)}
                 onClick={() => onNavigateSubTab?.(value)}
               >
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <Icon className={cn("h-5 w-5", meta.colour)} />
-                      <span className="font-semibold text-sm">{label}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className={cn("text-2xl font-bold", count > 0 ? meta.colour : "text-muted-foreground")}>
-                        {count}
-                      </span>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    </div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Icon className={cn("h-5 w-5", meta.colour)} />
+                    <span className="font-semibold text-sm">{label}</span>
                   </div>
-                  <p className="text-xs text-muted-foreground">{meta.description}</p>
-                </CardContent>
-              </Card>
+                  <div className="flex items-center gap-1">
+                    <span className={cn("text-2xl font-bold", count > 0 ? meta.colour : "text-[var(--q-text-tertiary)]")}>
+                      {count}
+                    </span>
+                    <ChevronRight className="h-4 w-4 text-[var(--q-text-tertiary)]" />
+                  </div>
+                </div>
+                <p className="text-xs text-[var(--q-text-tertiary)]">{meta.description}</p>
+              </div>
             );
           })}
         </div>
 
         {patterns.length > 0 && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <TrendingDown className="h-4 w-4 text-amber-600" />
+          <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)]">
+            <div className="px-5 pt-5 pb-3">
+              <h3 className="flex items-center gap-2 text-base font-semibold text-[var(--q-text-primary)]">
+                <TrendingDown className="h-4 w-4 text-[var(--q-attention-text)]" />
                 Rejection Patterns ({patterns.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
+              </h3>
+            </div>
+            <div className="p-0">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -356,20 +353,20 @@ export default function ExceptionsTab({ subTab, onNavigateSubTab }: ExceptionsTa
                   {patterns.map((pattern) => (
                     <TableRow key={pattern.id}>
                       <TableCell>
-                        <Badge variant="outline" className="capitalize">
+                        <QBadge variant="neutral" className="capitalize">
                           {pattern.category.replace(/_/g, " ")}
-                        </Badge>
+                        </QBadge>
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground capitalize">
+                      <TableCell className="text-sm text-[var(--q-text-tertiary)] capitalize">
                         {pattern.actionType || "all"}
                       </TableCell>
                       <TableCell>
-                        <span className="font-mono text-sm font-bold text-amber-600">
+                        <span className="font-mono text-sm font-bold text-[var(--q-attention-text)]">
                           {pattern.occurrences}x
                         </span>
                       </TableCell>
                       <TableCell className="max-w-[300px]">
-                        <p className="text-xs text-muted-foreground line-clamp-2">
+                        <p className="text-xs text-[var(--q-text-tertiary)] line-clamp-2">
                           {pattern.suggestedAdjustment}
                         </p>
                       </TableCell>
@@ -387,8 +384,8 @@ export default function ExceptionsTab({ subTab, onNavigateSubTab }: ExceptionsTa
                   ))}
                 </TableBody>
               </Table>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
       </div>
     );
@@ -441,17 +438,17 @@ export default function ExceptionsTab({ subTab, onNavigateSubTab }: ExceptionsTa
 
       {/* Empty state */}
       {filtered.length === 0 && (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <CheckCircle2 className="mb-3 h-10 w-10 text-green-500" />
+        <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)]">
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <CheckCircle2 className="mb-3 h-10 w-10 text-[var(--q-money-in-text)]" />
             <h3 className="text-lg font-semibold">No exceptions</h3>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-[var(--q-text-tertiary)]">
               {filter === "all"
                 ? `No ${subLabel} exceptions right now.`
                 : `No ${filter.replace("_", " ")} ${subLabel} exceptions.`}
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* Grouped view (when "All" filter is active) */}
@@ -464,7 +461,7 @@ export default function ExceptionsTab({ subTab, onNavigateSubTab }: ExceptionsTa
               <div key={state}>
                 <div className="flex items-center gap-2 mb-2 mt-1">
                   <StateIndicator state={state} />
-                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-[var(--q-text-tertiary)]">
                     {state === "in_progress" ? "In Progress" : state.charAt(0).toUpperCase() + state.slice(1)} ({items.length})
                   </span>
                 </div>
@@ -561,11 +558,11 @@ function ExceptionRow({
     : null;
 
   return (
-    <Card className={cn("overflow-hidden", state === "resolved" && "opacity-70")}>
+    <div className={cn("bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] overflow-hidden", state === "resolved" && "opacity-70")}>
       <div
         className={cn(
-          "flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-muted/30 transition-colors",
-          state === "resolved" && "bg-muted/5",
+          "flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-[var(--q-bg-surface-alt)]/30 transition-colors",
+          state === "resolved" && "bg-[var(--q-bg-surface-alt)]/5",
         )}
         onClick={onToggle}
       >
@@ -586,21 +583,21 @@ function ExceptionRow({
               "text-sm",
               state === "new" && "font-semibold",
               state === "in_progress" && "font-medium",
-              state === "resolved" && "text-muted-foreground",
+              state === "resolved" && "text-[var(--q-text-tertiary)]",
             )}>
               {title}
             </span>
-            <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+            <QBadge variant="risk">
               {action.status === "failed"
                 ? "send failed"
                 : action.exceptionReason?.replace(/_/g, " ") || "flagged"}
-            </Badge>
+            </QBadge>
           </div>
 
           {debtorName && (
             <Link
               href={`/qollections/debtors/${action.contactId}`}
-              className="text-xs text-primary hover:underline"
+              className="text-xs text-[var(--q-accent)] hover:underline"
               onClick={(e: React.MouseEvent) => e.stopPropagation()}
             >
               {debtorName}
@@ -608,18 +605,18 @@ function ExceptionRow({
           )}
 
           {preview && !isExpanded && (
-            <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{preview}</p>
+            <p className="text-xs text-[var(--q-text-tertiary)] mt-1 line-clamp-1">{preview}</p>
           )}
         </div>
 
         {/* Right side */}
         <div className="flex items-center gap-2 shrink-0">
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1 text-xs text-[var(--q-text-tertiary)]">
             <Clock className="h-3 w-3" />
             {formatRelativeTime(action.createdAt)}
           </div>
           <ChevronDown className={cn(
-            "h-4 w-4 text-muted-foreground transition-transform",
+            "h-4 w-4 text-[var(--q-text-tertiary)] transition-transform",
             isExpanded && "rotate-180",
           )} />
         </div>
@@ -627,10 +624,10 @@ function ExceptionRow({
 
       {/* Expanded detail */}
       {isExpanded && (
-        <div className="border-t px-4 py-3 bg-muted/10 space-y-3">
+        <div className="border-t px-4 py-3 bg-[var(--q-bg-surface-alt)]/10 space-y-3">
           {action.content && (
             <div>
-              <p className="text-xs font-medium text-muted-foreground mb-1">Content</p>
+              <p className="text-xs font-medium text-[var(--q-text-tertiary)] mb-1">Content</p>
               <div className="rounded border bg-background p-3 text-xs whitespace-pre-wrap max-h-48 overflow-y-auto">
                 {action.content}
               </div>
@@ -639,25 +636,25 @@ function ExceptionRow({
 
           {executionError && (
             <div>
-              <p className="text-xs font-medium text-muted-foreground mb-1">Error</p>
+              <p className="text-xs font-medium text-[var(--q-text-tertiary)] mb-1">Error</p>
               <p className="text-xs text-destructive">{executionError}</p>
             </div>
           )}
 
           {action.agentReasoning && (
             <div>
-              <p className="text-xs font-medium text-muted-foreground mb-1">Why flagged</p>
-              <p className="text-xs text-muted-foreground">{action.agentReasoning}</p>
+              <p className="text-xs font-medium text-[var(--q-text-tertiary)] mb-1">Why flagged</p>
+              <p className="text-xs text-[var(--q-text-tertiary)]">{action.agentReasoning}</p>
             </div>
           )}
 
           {/* Resolution notes (if resolved) */}
           {state === "resolved" && action.exceptionResolutionNotes && (
             <div>
-              <p className="text-xs font-medium text-muted-foreground mb-1">Resolution</p>
-              <p className="text-xs text-muted-foreground">{action.exceptionResolutionNotes}</p>
+              <p className="text-xs font-medium text-[var(--q-text-tertiary)] mb-1">Resolution</p>
+              <p className="text-xs text-[var(--q-text-tertiary)]">{action.exceptionResolutionNotes}</p>
               {action.exceptionResolvedAt && (
-                <p className="text-[11px] text-muted-foreground/60 mt-0.5">
+                <p className="text-[11px] text-[var(--q-text-tertiary)]/60 mt-0.5">
                   Resolved {formatRelativeTime(action.exceptionResolvedAt)}
                 </p>
               )}
@@ -667,7 +664,7 @@ function ExceptionRow({
           {/* Resolve inline form */}
           {isResolving && (
             <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground">Resolution notes</p>
+              <p className="text-xs font-medium text-[var(--q-text-tertiary)]">Resolution notes</p>
               <Textarea
                 value={resolveNotes}
                 onChange={(e) => onResolveNotesChange(e.target.value)}
@@ -726,7 +723,7 @@ function ExceptionRow({
               )}
               {state === "resolved" && (
                 <button
-                  className="text-xs text-muted-foreground hover:text-foreground underline"
+                  className="text-xs text-[var(--q-text-tertiary)] hover:text-foreground underline"
                   onClick={onReopen}
                   disabled={isPending}
                 >
@@ -745,7 +742,7 @@ function ExceptionRow({
           )}
         </div>
       )}
-    </Card>
+    </div>
   );
 }
 

@@ -30,7 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
+import { QBadge } from "@/components/ui/q-badge";
 import { 
   Mail, 
   MessageSquare, 
@@ -71,11 +71,11 @@ interface Action {
 }
 
 const CHANNEL_ICONS = {
-  email: { icon: Mail, label: "Email", color: "text-blue-500" },
-  sms: { icon: MessageSquare, label: "SMS", color: "text-green-500" },
-  whatsapp: { icon: MessageSquare, label: "WhatsApp", color: "text-green-600" },
-  voice: { icon: Phone, label: "Call", color: "text-purple-500" },
-  manual_call: { icon: Phone, label: "Manual Call", color: "text-purple-500" },
+  email: { icon: Mail, label: "Email", color: "text-[var(--q-info-text)]" },
+  sms: { icon: MessageSquare, label: "SMS", color: "text-[var(--q-money-in-text)]" },
+  whatsapp: { icon: MessageSquare, label: "WhatsApp", color: "text-[var(--q-money-in-text)]" },
+  voice: { icon: Phone, label: "Call", color: "text-[var(--q-info-text)]" },
+  manual_call: { icon: Phone, label: "Manual Call", color: "text-[var(--q-info-text)]" },
 };
 
 const REASON_ICONS = {
@@ -173,13 +173,13 @@ export function NextActionCell({ action }: { action: Action }) {
               {channelConfig.label} {formatTime(action.scheduledFor)}
             </span>
             {isBundled && (
-              <Badge variant="secondary" className="ml-1 bg-white/20 text-white border-0 backdrop-blur-sm">
+              <QBadge variant="secondary" className="ml-1 bg-[var(--q-bg-surface)]/20 text-white border-0 backdrop-blur-sm">
                 {invoiceCount}
               </Badge>
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-80 p-0 bg-white/90 backdrop-blur-md border border-gray-200/50 shadow-2xl" align="start">
+        <PopoverContent className="w-80 p-0 bg-[var(--q-bg-surface)]/90 backdrop-blur-md border border-[var(--q-border-default)]/50 shadow-2xl" align="start">
           <div className="p-4 space-y-3">
             <div className="flex items-start justify-between">
               <div className="flex-1">
@@ -191,18 +191,18 @@ export function NextActionCell({ action }: { action: Action }) {
                   <div className="text-xs text-gray-500">
                     AI confidence:
                   </div>
-                  <Badge 
-                    variant="outline" 
+                  <QBadge
+                    variant="outline"
                     className={`text-xs ${
-                      recommendedPriority > 70 
-                        ? 'bg-green-50 text-green-700 border-green-200' 
+                      recommendedPriority > 70
+                        ? 'bg-[var(--q-money-in-bg)] text-[var(--q-money-in-text)] border-[var(--q-money-in-border)]'
                         : recommendedPriority > 40
-                        ? 'bg-blue-50 text-blue-700 border-blue-200'
+                        ? 'bg-[var(--q-info-bg)] text-[var(--q-info-text)] border-[var(--q-info-border)]'
                         : 'bg-gray-50 text-gray-700 border-gray-200'
                     }`}
                   >
                     {recommendedPriority.toFixed(0)}%
-                  </Badge>
+                  </QBadge>
                 </div>
               </div>
             </div>
@@ -211,13 +211,13 @@ export function NextActionCell({ action }: { action: Action }) {
             {exceptions.length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {exceptions.map((tag, idx) => (
-                  <Badge 
-                    key={idx} 
-                    variant="outline" 
-                    className="text-xs bg-amber-50 text-amber-700 border-amber-200"
+                  <QBadge
+                    key={idx}
+                    variant="outline"
+                    className="text-xs bg-[var(--q-attention-bg)] text-[var(--q-attention-text)] border-[var(--q-attention-border)]"
                   >
                     {tag}
-                  </Badge>
+                  </QBadge>
                 ))}
               </div>
             )}
@@ -252,7 +252,7 @@ export function NextActionCell({ action }: { action: Action }) {
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 gap-1 text-green-600 hover:text-green-700 hover:bg-green-50"
+            className="h-8 gap-1 text-[var(--q-money-in-text)] hover:text-[var(--q-money-in-text)] hover:bg-[var(--q-money-in-bg)]"
             onClick={handleApprove}
             disabled={approveMutation.isPending}
             data-testid={`button-approve-${action.id}`}
@@ -264,7 +264,7 @@ export function NextActionCell({ action }: { action: Action }) {
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 gap-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+            className="h-8 gap-1 text-[var(--q-info-text)] hover:text-[var(--q-info-text)] hover:bg-[var(--q-info-bg)]"
             onClick={() => setIsComposerOpen(true)}
             data-testid={`button-edit-${action.id}`}
           >

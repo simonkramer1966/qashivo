@@ -144,9 +144,9 @@ export default function QollectionsAgentActivity() {
         {/* Read-only mode indicator + countdown banner */}
         <div className="flex items-center justify-between">
           <div />
-          <span className="text-xs text-muted-foreground">
+          <span className="text-xs text-[var(--q-text-tertiary)]">
             Mode: {MODE_LABELS[approvalMode] ?? approvalMode}{" "}
-            <Link href="/settings/autonomy-rules" className="text-primary hover:underline">
+            <Link href="/settings/autonomy-rules" className="text-[var(--q-accent)] hover:underline">
               Change in Settings &rarr;
             </Link>
           </span>
@@ -155,7 +155,7 @@ export default function QollectionsAgentActivity() {
 
         {/* Custom tab bar with flowing exception sub-tabs */}
         <div className="overflow-x-auto scrollbar-hide">
-          <div className="inline-flex h-9 items-center rounded-lg bg-muted p-1 text-muted-foreground min-w-full">
+          <div className="inline-flex h-9 items-center rounded-lg bg-[var(--q-bg-surface-alt)] p-1 text-[var(--q-text-tertiary)] min-w-full">
             {/* Main tabs — grid ensures all columns match the widest */}
             <div className={cn(
               "grid auto-cols-[1fr] grid-flow-col",
@@ -187,7 +187,7 @@ export default function QollectionsAgentActivity() {
             {/* Sub-tabs flow to the right when exceptions is active */}
             {activeTab === "exceptions" && (
               <>
-                <div className="mx-1 h-4 w-px bg-border/50" />
+                <div className="mx-1 h-4 w-px bg-[var(--q-border-default)]/50" />
 
                 {EXCEPTION_SUB_TABS.map(sub => (
                   <SubTabButton
@@ -232,8 +232,8 @@ function TabButton({
       className={cn(
         "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-[13px] font-medium transition-all w-full text-center",
         active
-          ? "bg-background text-foreground shadow-sm"
-          : "hover:bg-background/50 hover:text-foreground",
+          ? "bg-[var(--q-bg-surface)] text-[var(--q-text-primary)] shadow-sm"
+          : "hover:bg-[var(--q-bg-surface)]/50 hover:text-[var(--q-text-primary)]",
       )}
       onClick={onClick}
     >
@@ -256,8 +256,8 @@ function SubTabButton({
       className={cn(
         "inline-flex items-center justify-center whitespace-nowrap rounded-full px-3 py-1 text-xs transition-all duration-150 ease-in-out",
         active
-          ? "bg-teal-600 border border-teal-600 text-white font-medium cursor-default"
-          : "bg-transparent border border-transparent text-muted-foreground hover:bg-secondary hover:text-foreground font-normal cursor-pointer",
+          ? "bg-[var(--q-accent)] border border-[var(--q-accent)] text-white font-medium cursor-default"
+          : "bg-transparent border border-transparent text-[var(--q-text-tertiary)] hover:bg-[var(--q-bg-surface-alt)] hover:text-[var(--q-text-primary)] font-normal cursor-pointer",
       )}
       onClick={active ? undefined : onClick}
     >

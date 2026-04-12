@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { QBadge } from "@/components/ui/q-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -148,18 +147,14 @@ function formatScheduledTime(scheduledFor: string): string {
 
 function ToneBadge({ tone }: { tone: string | null }) {
   if (!tone) return null;
-  const colors: Record<string, string> = {
-    friendly: "bg-green-100 text-green-800",
-    professional: "bg-blue-100 text-blue-800",
-    firm: "bg-amber-100 text-amber-800",
-    formal: "bg-orange-100 text-orange-800",
-    legal: "bg-red-100 text-red-800",
+  const variants: Record<string, "ready" | "info" | "attention" | "risk"> = {
+    friendly: "ready",
+    professional: "info",
+    firm: "attention",
+    formal: "attention",
+    legal: "risk",
   };
-  return (
-    <Badge variant="outline" className={colors[tone] || ""}>
-      {tone}
-    </Badge>
-  );
+  return <QBadge variant={variants[tone] || "neutral"}>{tone}</QBadge>;
 }
 
 // ── Helper: default datetime-local value (tomorrow 9am) ──
@@ -298,15 +293,15 @@ export default function ScheduledTab() {
 
   if (items.length === 0) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <Clock className="mb-3 h-10 w-10 text-muted-foreground" />
+      <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)]">
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <Clock className="mb-3 h-10 w-10 text-[var(--q-text-tertiary)]" />
           <h3 className="text-lg font-semibold">No scheduled actions</h3>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-[var(--q-text-tertiary)]">
             Approve items from the Approval tab to see them here.
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 
@@ -349,7 +344,7 @@ export default function ScheduledTab() {
                   )}
                 </div>
                 {action.contactName && action.companyName && (
-                  <div className="text-xs text-muted-foreground">{action.contactName}</div>
+                  <div className="text-xs text-[var(--q-text-tertiary)]">{action.contactName}</div>
                 )}
               </TableCell>
               <TableCell>
@@ -370,22 +365,22 @@ export default function ScheduledTab() {
                     return (
                       <div>
                         <div className={`text-sm font-medium flex items-center gap-1.5 ${
-                          countdown.variant === "delayed" ? "text-amber-600" :
-                          countdown.variant === "sending" ? "text-blue-600" : ""
+                          countdown.variant === "delayed" ? "text-[var(--q-attention-text)]" :
+                          countdown.variant === "sending" ? "text-[var(--q-info-text)]" : ""
                         }`}>
                           {countdown.variant === "sending" && (
                             <Loader2 className="h-3 w-3 animate-spin" />
                           )}
                           {countdown.text}
                         </div>
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-xs text-[var(--q-text-tertiary)]">
                           {formatScheduledTime(action.scheduledFor)}
                         </div>
                       </div>
                     );
                   })()
                 ) : (
-                  <span className="text-xs text-muted-foreground">Pending</span>
+                  <span className="text-xs text-[var(--q-text-tertiary)]">Pending</span>
                 )}
               </TableCell>
               <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>

@@ -1,8 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { 
-  Brain, 
-  TrendingUp, 
+import { QBadge } from "@/components/ui/q-badge";
+import {
+  Brain,
+  TrendingUp,
   AlertTriangle,
   Clock,
   Shield,
@@ -22,7 +22,7 @@ interface WhyNowPanelProps {
 
 /**
  * WhyNowPanel - Displays AI decision explainability for action scheduling
- * 
+ *
  * Shows:
  * - Decision score
  * - Top 3 factors that influenced the scheduling decision
@@ -33,7 +33,7 @@ interface WhyNowPanelProps {
 export function WhyNowPanel({ actionMetadata, compact = false }: WhyNowPanelProps) {
   // Extract explainability data from action metadata
   const explainability = actionMetadata?.explainability || actionMetadata?.policyDecision;
-  
+
   if (!explainability) {
     return null; // No explainability data available
   }
@@ -56,21 +56,21 @@ export function WhyNowPanel({ actionMetadata, compact = false }: WhyNowPanelProp
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Badge 
-              className="bg-purple-100 text-purple-800 border-purple-200 flex items-center gap-1 cursor-help"
+            <QBadge
+              className="bg-[var(--q-info-bg)] text-[var(--q-info-text)] border-[var(--q-info-border)] flex items-center gap-1 cursor-help"
               data-testid="badge-why-now"
             >
               <Brain className="h-3 w-3" />
               Why Now?
-            </Badge>
+            </QBadge>
           </TooltipTrigger>
           <TooltipContent side="left" className="max-w-sm p-3">
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-semibold">Decision Score:</span>
-                <Badge className="bg-green-100 text-green-800 border-0">
+                <QBadge className="bg-[var(--q-money-in-bg)] text-[var(--q-money-in-text)] border-0">
                   {score ? (score * 100).toFixed(0) : 'N/A'}%
-                </Badge>
+                </QBadge>
               </div>
               <div className="space-y-1">
                 <p className="text-xs font-semibold">Top Factors:</p>
@@ -93,10 +93,10 @@ export function WhyNowPanel({ actionMetadata, compact = false }: WhyNowPanelProp
 
   // Full panel view
   return (
-    <Card className="bg-purple-50/50 border-purple-200" data-testid="panel-why-now">
+    <Card className="bg-[var(--q-info-bg)] border-[var(--q-info-border)]" data-testid="panel-why-now">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm flex items-center gap-2">
-          <Brain className="h-4 w-4 text-purple-600" />
+          <Brain className="h-4 w-4 text-[var(--q-info-text)]" />
           Why Now? Decision Explainability
         </CardTitle>
       </CardHeader>
@@ -104,36 +104,36 @@ export function WhyNowPanel({ actionMetadata, compact = false }: WhyNowPanelProp
         {/* Decision Score */}
         {score !== undefined && (
           <div className="flex items-center justify-between">
-            <span className="text-sm text-slate-700">Decision Score:</span>
-            <Badge className="bg-green-100 text-green-800 border-0">
+            <span className="text-sm text-[var(--q-text-primary)]">Decision Score:</span>
+            <QBadge className="bg-[var(--q-money-in-bg)] text-[var(--q-money-in-text)] border-0">
               {(score * 100).toFixed(0)}%
-            </Badge>
+            </QBadge>
           </div>
         )}
 
         {/* Top 3 Factors */}
         <div className="space-y-2">
-          <p className="text-sm font-semibold text-slate-700 flex items-center gap-1">
+          <p className="text-sm font-semibold text-[var(--q-text-primary)] flex items-center gap-1">
             <TrendingUp className="h-4 w-4" />
             Top Influencing Factors:
           </p>
           <div className="space-y-1.5 ml-5">
             {factor1 && (
               <div className="flex items-start gap-2">
-                <span className="text-xs font-bold text-purple-600 mt-0.5">1.</span>
-                <p className="text-xs text-slate-700">{factor1}</p>
+                <span className="text-xs font-bold text-[var(--q-info-text)] mt-0.5">1.</span>
+                <p className="text-xs text-[var(--q-text-primary)]">{factor1}</p>
               </div>
             )}
             {factor2 && (
               <div className="flex items-start gap-2">
-                <span className="text-xs font-bold text-purple-600 mt-0.5">2.</span>
-                <p className="text-xs text-slate-700">{factor2}</p>
+                <span className="text-xs font-bold text-[var(--q-info-text)] mt-0.5">2.</span>
+                <p className="text-xs text-[var(--q-text-primary)]">{factor2}</p>
               </div>
             )}
             {factor3 && (
               <div className="flex items-start gap-2">
-                <span className="text-xs font-bold text-purple-600 mt-0.5">3.</span>
-                <p className="text-xs text-slate-700">{factor3}</p>
+                <span className="text-xs font-bold text-[var(--q-info-text)] mt-0.5">3.</span>
+                <p className="text-xs text-[var(--q-text-primary)]">{factor3}</p>
               </div>
             )}
           </div>
@@ -141,33 +141,33 @@ export function WhyNowPanel({ actionMetadata, compact = false }: WhyNowPanelProp
 
         {/* Guard Status */}
         {guardStatus && (
-          <div className="flex items-center justify-between pt-2 border-t border-purple-200">
-            <span className="text-xs text-slate-600 flex items-center gap-1">
+          <div className="flex items-center justify-between pt-2 border-t border-[var(--q-info-border)]">
+            <span className="text-xs text-[var(--q-text-tertiary)] flex items-center gap-1">
               <Shield className="h-3 w-3" />
               Compliance:
             </span>
-            <Badge 
+            <QBadge
               className={
-                guardStatus === 'allowed' 
-                  ? 'bg-green-100 text-green-800 border-0 text-xs'
-                  : 'bg-red-100 text-red-800 border-0 text-xs'
+                guardStatus === 'allowed'
+                  ? 'bg-[var(--q-money-in-bg)] text-[var(--q-money-in-text)] border-0 text-xs'
+                  : 'bg-[var(--q-risk-bg)] text-[var(--q-risk-text)] border-0 text-xs'
               }
             >
               {guardStatus === 'allowed' ? '✓ Passed' : `⚠ ${guardReason || 'Blocked'}`}
-            </Badge>
+            </QBadge>
           </div>
         )}
 
         {/* Policy Version & Experiment */}
-        <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-purple-200">
+        <div className="flex items-center justify-between text-xs text-[var(--q-text-tertiary)] pt-2 border-t border-[var(--q-info-border)]">
           <div className="flex items-center gap-1">
             <Clock className="h-3 w-3" />
             <span>Policy {policyVersion || 'v1.0'}</span>
           </div>
           {experimentVariant && (
-            <Badge className="bg-blue-100 text-blue-800 border-0 text-xs">
+            <QBadge className="bg-[var(--q-info-bg)] text-[var(--q-info-text)] border-0 text-xs">
               {experimentVariant}
-            </Badge>
+            </QBadge>
           )}
         </div>
       </CardContent>

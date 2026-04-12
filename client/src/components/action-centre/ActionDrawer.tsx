@@ -177,38 +177,38 @@ export function ActionDrawer({
     <Sheet open={open} onOpenChange={onOpenChange} modal={false}>
       <SheetContent 
         side="right" 
-        className="w-full sm:max-w-md p-0 flex flex-col bg-white border-l border-slate-100"
+        className="w-full sm:max-w-md p-0 flex flex-col bg-[var(--q-bg-surface)] border-l border-[var(--q-border-default)]"
       >
         <ScrollArea className="flex-1">
           <div className="p-5 space-y-3">
             
             {/* 1. Header - Identity */}
             <div className="pb-2">
-              <h2 className="text-[18px] font-semibold text-slate-900 leading-tight">
+              <h2 className="text-[18px] font-semibold text-[var(--q-text-primary)] leading-tight">
                 {customer.companyName || customer.contactName}
               </h2>
               {customer.companyName && customer.contactName && (
-                <p className="text-[13px] text-slate-500 mt-0.5">
+                <p className="text-[13px] text-[var(--q-text-tertiary)] mt-0.5">
                   {customer.contactName}
                 </p>
               )}
             </div>
 
             {/* 2. Reason for action */}
-            <div className="border-t border-slate-100 pt-2">
-              <p className="text-[12px] text-slate-400 mb-1">Reason for action</p>
-              <p className="text-[13px] text-slate-700 leading-relaxed">
+            <div className="border-t border-[var(--q-border-default)] pt-2">
+              <p className="text-[12px] text-[var(--q-text-tertiary)] mb-1">Reason for action</p>
+              <p className="text-[13px] text-[var(--q-text-primary)] leading-relaxed">
                 {getReasonForAction(customer)}
               </p>
             </div>
 
             {/* 3. Amounts block */}
-            <div className="border-t border-slate-100 pt-2">
-              <p className="text-[12px] text-slate-400 mb-1">Amount being chased</p>
-              <p className="text-[17px] font-semibold text-slate-900 tabular-nums">
+            <div className="border-t border-[var(--q-border-default)] pt-2">
+              <p className="text-[12px] text-[var(--q-text-tertiary)] mb-1">Amount being chased</p>
+              <p className="text-[17px] font-semibold text-[var(--q-text-primary)] tabular-nums">
                 {formatCurrency(amountBeingChased)}
                 {showTotalDue && (
-                  <span className="text-[13px] font-normal text-slate-400 ml-2">
+                  <span className="text-[13px] font-normal text-[var(--q-text-tertiary)] ml-2">
                     of {formatCurrency(totalDue)} total due
                   </span>
                 )}
@@ -216,17 +216,17 @@ export function ActionDrawer({
             </div>
 
             {/* 4. Channel and Days */}
-            <div className="border-t border-slate-100 pt-2 space-y-1">
+            <div className="border-t border-[var(--q-border-default)] pt-2 space-y-1">
               <div className="flex justify-between items-baseline">
-                <span className="text-[12px] text-slate-400">Channel</span>
-                <span className="text-[13px] text-slate-600">
+                <span className="text-[12px] text-[var(--q-text-tertiary)]">Channel</span>
+                <span className="text-[13px] text-[var(--q-text-tertiary)]">
                   {formatChannelLabel(customer.channel)}
                 </span>
               </div>
               {customer.daysOverdue > 0 && (
                 <div className="flex justify-between items-baseline">
-                  <span className="text-[12px] text-slate-400">Days overdue</span>
-                  <span className="text-[13px] text-slate-600 tabular-nums">
+                  <span className="text-[12px] text-[var(--q-text-tertiary)]">Days overdue</span>
+                  <span className="text-[13px] text-[var(--q-text-tertiary)] tabular-nums">
                     {customer.daysOverdue}
                   </span>
                 </div>
@@ -234,23 +234,23 @@ export function ActionDrawer({
             </div>
 
             {/* 5. Recent contact history - disclosure row */}
-            <div className="border-t border-slate-100 pt-2">
+            <div className="border-t border-[var(--q-border-default)] pt-2">
               <Collapsible open={historyOpen} onOpenChange={setHistoryOpen}>
-                <CollapsibleTrigger className="flex items-center justify-between w-full py-1 -mx-1 px-1 rounded hover:bg-slate-50 transition-colors">
-                  <span className="text-[12px] text-slate-400">Recent contact history</span>
+                <CollapsibleTrigger className="flex items-center justify-between w-full py-1 -mx-1 px-1 rounded hover:bg-[var(--q-bg-surface-hover)] transition-colors">
+                  <span className="text-[12px] text-[var(--q-text-tertiary)]">Recent contact history</span>
                   <ChevronDown 
-                    className={`h-3.5 w-3.5 text-slate-300 transition-transform ${historyOpen ? 'rotate-180' : ''}`} 
+                    className={`h-3.5 w-3.5 text-[var(--q-text-tertiary)] transition-transform ${historyOpen ? 'rotate-180' : ''}`} 
                   />
                 </CollapsibleTrigger>
                 <CollapsibleContent className="pt-2">
                   {historyQuery.isLoading ? (
-                    <p className="text-[12px] text-slate-400">Loading...</p>
+                    <p className="text-[12px] text-[var(--q-text-tertiary)]">Loading...</p>
                   ) : recentHistory.length === 0 ? (
-                    <p className="text-[12px] text-slate-400">No recent contact recorded.</p>
+                    <p className="text-[12px] text-[var(--q-text-tertiary)]">No recent contact recorded.</p>
                   ) : (
                     <div className="space-y-1">
                       {recentHistory.map((entry) => (
-                        <p key={entry.id} className="text-[12px] text-slate-600">
+                        <p key={entry.id} className="text-[12px] text-[var(--q-text-tertiary)]">
                           {formatChannelLabel(entry.channel)} · {entry.outcome || entry.status} · {formatSmartTime(entry.occurredAt)}
                         </p>
                       ))}
@@ -262,12 +262,12 @@ export function ActionDrawer({
 
             {/* 6. Invoices being chased - disclosure row */}
             {canShowInvoiceList && (
-              <div className="border-t border-slate-100 pt-2">
+              <div className="border-t border-[var(--q-border-default)] pt-2">
                 <Collapsible open={invoicesOpen} onOpenChange={setInvoicesOpen}>
-                  <CollapsibleTrigger className="flex items-center justify-between w-full py-1 -mx-1 px-1 rounded hover:bg-slate-50 transition-colors">
-                    <span className="text-[12px] text-slate-400">Invoices being chased</span>
+                  <CollapsibleTrigger className="flex items-center justify-between w-full py-1 -mx-1 px-1 rounded hover:bg-[var(--q-bg-surface-hover)] transition-colors">
+                    <span className="text-[12px] text-[var(--q-text-tertiary)]">Invoices being chased</span>
                     <ChevronDown 
-                      className={`h-3.5 w-3.5 text-slate-300 transition-transform ${invoicesOpen ? 'rotate-180' : ''}`} 
+                      className={`h-3.5 w-3.5 text-[var(--q-text-tertiary)] transition-transform ${invoicesOpen ? 'rotate-180' : ''}`} 
                     />
                   </CollapsibleTrigger>
                   <CollapsibleContent className="pt-2">
@@ -276,12 +276,12 @@ export function ActionDrawer({
                         const daysOverdue = invoice.daysOverdue || 0;
                         const invoiceDate = invoice.invoiceDate || invoice.dueDate;
                         return (
-                          <div key={invoice.id} className="grid grid-cols-[72px_1fr_45px_85px] gap-2 text-[12px] text-slate-600">
+                          <div key={invoice.id} className="grid grid-cols-[72px_1fr_45px_85px] gap-2 text-[12px] text-[var(--q-text-tertiary)]">
                             <span className="tabular-nums">
                               {invoiceDate ? new Date(invoiceDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }) : '—'}
                             </span>
                             <span className="truncate">{invoice.invoiceNumber}</span>
-                            <span className="tabular-nums text-slate-400 text-right">{daysOverdue}D</span>
+                            <span className="tabular-nums text-[var(--q-text-tertiary)] text-right">{daysOverdue}D</span>
                             <span className="tabular-nums text-right">{formatCurrency(parseAmount(invoice.amount))}</span>
                           </div>
                         );
@@ -296,9 +296,9 @@ export function ActionDrawer({
         </ScrollArea>
 
         {/* 6. Footer - Skip / Attention */}
-        <div className="px-6 py-4 border-t border-slate-100 flex items-center gap-3">
+        <div className="px-6 py-4 border-t border-[var(--q-border-default)] flex items-center gap-3">
           <button
-            className="flex-1 py-2 text-[13px] font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded transition-colors"
+            className="flex-1 py-2 text-[13px] font-medium text-[var(--q-text-tertiary)] hover:text-[var(--q-text-primary)] hover:bg-[var(--q-bg-surface-hover)] rounded transition-colors"
             onClick={() => {
               if (onSkip && customer.contactId) {
                 onSkip(customer.contactId);
@@ -309,7 +309,7 @@ export function ActionDrawer({
             Skip
           </button>
           <button
-            className="flex-1 py-2 text-[13px] font-medium text-amber-600 hover:text-amber-700 hover:bg-amber-50 rounded transition-colors"
+            className="flex-1 py-2 text-[13px] font-medium text-[var(--q-attention-text)] hover:text-[var(--q-attention-text)] hover:bg-[var(--q-attention-bg)] rounded transition-colors"
             onClick={() => {
               if (onAttention && customer.contactId) {
                 onAttention(customer.contactId);

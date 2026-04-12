@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { QBadge } from "@/components/ui/q-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
@@ -46,13 +45,13 @@ export default function VipTab() {
 
   if (error) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+      <div className="rounded-lg border border-[var(--q-border-default)] bg-[var(--q-bg-surface)]">
+        <div className="flex flex-col items-center justify-center py-12 text-center">
           <AlertTriangle className="mb-3 h-10 w-10 text-destructive" />
           <h3 className="text-lg font-semibold">Failed to load VIP debtors</h3>
-          <p className="text-sm text-muted-foreground">{(error as Error).message}</p>
-        </CardContent>
-      </Card>
+          <p className="text-sm text-[var(--q-text-tertiary)]">{(error as Error).message}</p>
+        </div>
+      </div>
     );
   }
 
@@ -60,21 +59,21 @@ export default function VipTab() {
 
   if (contacts.length === 0) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <Star className="mb-3 h-10 w-10 text-amber-400" />
+      <div className="rounded-lg border border-[var(--q-border-default)] bg-[var(--q-bg-surface)]">
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <Star className="mb-3 h-10 w-10 text-[var(--q-attention-text)]" />
           <h3 className="text-lg font-semibold">No VIP debtors</h3>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-[var(--q-text-tertiary)]">
             VIP debtors are managed personally. Mark a debtor as VIP from the debtors list or queue.
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 
   return (
     <div className="space-y-2">
-      <div className="text-sm text-muted-foreground mb-2">
+      <div className="text-sm text-[var(--q-text-tertiary)] mb-2">
         <strong>{contacts.length}</strong> VIP debtor{contacts.length !== 1 ? "s" : ""} under personal management
       </div>
 
@@ -83,9 +82,9 @@ export default function VipTab() {
         return (
           <div
             key={contact.id}
-            className="rounded-lg border bg-white px-4 py-3 flex items-center gap-4 hover:bg-muted/30 transition-colors"
+            className="rounded-lg border border-[var(--q-border-default)] bg-[var(--q-bg-surface)] px-4 py-3 flex items-center gap-4 hover:bg-[var(--q-bg-surface-hover)] transition-colors"
           >
-            <Star className="h-4 w-4 text-amber-500 flex-shrink-0" />
+            <Star className="h-4 w-4 text-[var(--q-attention-text)] flex-shrink-0" />
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
@@ -93,12 +92,12 @@ export default function VipTab() {
                   {contact.companyName || contact.name}
                 </span>
                 {contact.vipReason && (
-                  <Badge variant="outline" className="text-[10px]">
+                  <QBadge variant="outline" className="text-[10px]">
                     {contact.vipReason}
-                  </Badge>
+                  </QBadge>
                 )}
               </div>
-              <div className="text-[11px] text-muted-foreground mt-0.5">
+              <div className="text-[11px] text-[var(--q-text-tertiary)] mt-0.5">
                 {contact.vipNote && <span className="italic">{contact.vipNote}</span>}
                 {contact.vipFlaggedAt && (
                   <span>{contact.vipNote ? " · " : ""}VIP since {formatRelativeTime(contact.vipFlaggedAt)}</span>
@@ -106,7 +105,7 @@ export default function VipTab() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3 text-xs text-muted-foreground flex-shrink-0">
+            <div className="flex items-center gap-3 text-xs text-[var(--q-text-tertiary)] flex-shrink-0">
               {outstanding > 0 && (
                 <span className="flex items-center gap-1">
                   <PoundSterling className="h-3 w-3" />
@@ -114,7 +113,7 @@ export default function VipTab() {
                 </span>
               )}
               {contact.overdueCount > 0 && (
-                <span className="flex items-center gap-1 text-amber-600">
+                <span className="flex items-center gap-1 text-[var(--q-attention-text)]">
                   <AlertTriangle className="h-3 w-3" />
                   {contact.overdueCount} overdue
                 </span>

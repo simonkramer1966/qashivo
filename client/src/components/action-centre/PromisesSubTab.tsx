@@ -4,9 +4,8 @@ import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useInvalidateActionCentre } from "@/hooks/useInvalidateActionCentre";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { QBadge } from "@/components/ui/q-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
@@ -202,15 +201,15 @@ export default function PromisesSubTab() {
 
   if (totalCount === 0) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <CheckCircle2 className="mb-3 h-10 w-10 text-green-500" />
+      <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)]">
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <CheckCircle2 className="mb-3 h-10 w-10 text-[var(--q-money-in-text)]" />
           <h3 className="text-lg font-semibold">No promise issues</h3>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-[var(--q-text-tertiary)]">
             All active promises are on track.
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 
@@ -235,8 +234,8 @@ export default function PromisesSubTab() {
       {brokenPromises.length > 0 && (
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <Handshake className="h-4 w-4 text-purple-600" />
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <Handshake className="h-4 w-4 text-[var(--q-info-text)]" />
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--q-text-tertiary)]">
               Broken Promises ({brokenPromises.length})
             </h3>
           </div>
@@ -253,8 +252,8 @@ export default function PromisesSubTab() {
                   )
                 : 0;
               return (
-                <Card key={p.id}>
-                  <CardContent className="p-4">
+                <div key={p.id} className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)]">
+                  <div className="p-4">
                     <div className="flex items-start justify-between gap-3 flex-wrap">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -265,28 +264,25 @@ export default function PromisesSubTab() {
                             {p.contactName}
                           </Link>
                           {p.sourceType && (
-                            <Badge variant="outline" className="text-[10px]">
+                            <QBadge variant="neutral">
                               {p.sourceType}
-                            </Badge>
+                            </QBadge>
                           )}
                           {p.channel && (
-                            <Badge variant="outline" className="text-[10px]">
+                            <QBadge variant="neutral">
                               {p.channel}
-                            </Badge>
+                            </QBadge>
                           )}
                           {p.brokenPromiseCount && p.brokenPromiseCount > 1 && (
-                            <Badge
-                              variant="destructive"
-                              className="text-[10px]"
-                            >
+                            <QBadge variant="risk">
                               {p.brokenPromiseCount}× broken
-                            </Badge>
+                            </QBadge>
                           )}
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p className="text-xs text-[var(--q-text-tertiary)] mt-1">
                           Promised {formatGBP(p.promisedAmount)} by{" "}
                           {formatDate(p.promisedDate)} ·{" "}
-                          <span className="text-red-600">
+                          <span className="text-[var(--q-risk-text)]">
                             {daysOverdue} day{daysOverdue === 1 ? "" : "s"}{" "}
                             overdue
                           </span>
@@ -309,8 +305,8 @@ export default function PromisesSubTab() {
                         </Button>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               );
             })}
           </div>
@@ -321,15 +317,15 @@ export default function PromisesSubTab() {
       {unallocatedTimeouts.length > 0 && (
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <Clock className="h-4 w-4 text-amber-600" />
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <Clock className="h-4 w-4 text-[var(--q-attention-text)]" />
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--q-text-tertiary)]">
               Unallocated Payment Timeouts ({unallocatedTimeouts.length})
             </h3>
           </div>
           <div className="space-y-2">
             {unallocatedTimeouts.map((u) => (
-              <Card key={u.id}>
-                <CardContent className="p-4">
+              <div key={u.id} className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)]">
+                <div className="p-4">
                   <div className="flex items-start justify-between gap-3 flex-wrap">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -339,11 +335,11 @@ export default function PromisesSubTab() {
                         >
                           {u.contactName}
                         </Link>
-                        <Badge variant="outline" className="text-[10px]">
+                        <QBadge variant="attention">
                           expired
-                        </Badge>
+                        </QBadge>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="text-xs text-[var(--q-text-tertiary)] mt-1">
                         {formatGBP(u.amount)} confirmed on{" "}
                         {formatDate(u.dateReceived)} ·{" "}
                         {formatRelativeTime(u.dateReceived)}
@@ -373,8 +369,8 @@ export default function PromisesSubTab() {
                       </Link>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             ))}
           </div>
         </div>
@@ -391,8 +387,8 @@ export default function PromisesSubTab() {
           </DialogHeader>
           {paymentModalPromise && (
             <div className="space-y-4">
-              <div className="rounded-md bg-muted/40 px-3 py-2 text-xs">
-                <AlertTriangle className="h-3 w-3 inline mr-1 text-amber-500" />
+              <div className="rounded-md bg-[var(--q-bg-surface-alt)] px-3 py-2 text-xs">
+                <AlertTriangle className="h-3 w-3 inline mr-1 text-[var(--q-attention-text)]" />
                 This creates an unallocated payment row. Xero sync will
                 auto-reconcile once the payment appears on the account.
               </div>
@@ -523,7 +519,7 @@ export default function PromisesSubTab() {
           </DialogHeader>
           {extendModalPromise && (
             <div className="space-y-4">
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-[var(--q-text-tertiary)]">
                 Reset the promise to open with a new due date. The modification
                 count increments and the original promised date is preserved.
               </p>

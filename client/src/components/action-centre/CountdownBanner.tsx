@@ -58,10 +58,10 @@ export default function CountdownBanner() {
   if (!batch || batch.pendingCount === 0) return null;
 
   return (
-    <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-950/30">
+    <div className="flex items-center justify-between rounded-lg border border-[var(--q-attention-border)] bg-[var(--q-attention-bg)] px-4 py-3">
       <div className="flex items-center gap-3">
-        <Clock className="h-5 w-5 text-amber-600" />
-        <span className="text-sm font-medium text-amber-800 dark:text-amber-200">
+        <Clock className="h-5 w-5 text-[var(--q-attention-text)]" />
+        <span className="text-sm font-medium text-[var(--q-attention-text)]">
           {batch.pendingCount} queued action{batch.pendingCount !== 1 ? "s" : ""} will auto-process in{" "}
           <span className="font-mono font-bold">{timeLeft}</span>
         </span>
@@ -69,7 +69,7 @@ export default function CountdownBanner() {
       <Button
         size="sm"
         variant="outline"
-        className="border-amber-300 text-amber-700 hover:bg-amber-100"
+        className="border-[var(--q-attention-border)] text-[var(--q-attention-text)] hover:bg-[var(--q-attention-bg)]"
         onClick={() => processNow.mutate()}
         disabled={processNow.isPending}
       >

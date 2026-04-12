@@ -15,12 +15,12 @@ interface AttentionTabProps {
 type ExceptionType = 'dispute' | 'query' | 'contact_issue' | 'no_response' | 'high_value_ageing' | 'reminder';
 
 const EXCEPTION_CONFIG: Record<ExceptionType, { label: string; icon: any; color: string }> = {
-  dispute: { label: 'Dispute', icon: AlertTriangle, color: 'text-rose-500' },
-  query: { label: 'Query', icon: HelpCircle, color: 'text-purple-500' },
-  contact_issue: { label: 'Contact', icon: Phone, color: 'text-orange-500' },
-  no_response: { label: 'No Response', icon: MessageCircle, color: 'text-amber-500' },
-  high_value_ageing: { label: 'High Value', icon: TrendingUp, color: 'text-red-500' },
-  reminder: { label: 'Reminder', icon: Clock, color: 'text-blue-500' },
+  dispute: { label: 'Dispute', icon: AlertTriangle, color: 'text-[var(--q-risk-text)]' },
+  query: { label: 'Query', icon: HelpCircle, color: 'text-[var(--q-info-text)]' },
+  contact_issue: { label: 'Contact', icon: Phone, color: 'text-[var(--q-attention-text)]' },
+  no_response: { label: 'No Response', icon: MessageCircle, color: 'text-[var(--q-attention-text)]' },
+  high_value_ageing: { label: 'High Value', icon: TrendingUp, color: 'text-[var(--q-risk-text)]' },
+  reminder: { label: 'Reminder', icon: Clock, color: 'text-[var(--q-info-text)]' },
 };
 
 export function AttentionTab({ items, onSelectDebtor, isLoading, search = '' }: AttentionTabProps) {
@@ -80,9 +80,9 @@ export function AttentionTab({ items, onSelectDebtor, isLoading, search = '' }: 
   if (isLoading) {
     return (
       <div className="space-y-1">
-        <div className="h-10 bg-slate-50 animate-pulse" />
+        <div className="h-10 bg-[var(--q-bg-surface-alt)] animate-pulse" />
         {[...Array(6)].map((_, i) => (
-          <div key={i} className="h-12 bg-slate-50/50 animate-pulse" />
+          <div key={i} className="h-12 bg-[var(--q-bg-surface-alt)]/50 animate-pulse" />
         ))}
       </div>
     );
@@ -91,13 +91,13 @@ export function AttentionTab({ items, onSelectDebtor, isLoading, search = '' }: 
   if (items.length === 0) {
     return (
       <div className="py-16 text-center">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-50 mb-4">
-          <svg className="w-6 h-6 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[var(--q-money-in-bg)] mb-4">
+          <svg className="w-6 h-6 text-[var(--q-money-in-text)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <p className="text-slate-600 font-medium">No exceptions — you're all caught up.</p>
-        <p className="text-slate-400 text-sm mt-1">All items are flowing through normally</p>
+        <p className="text-[var(--q-text-tertiary)] font-medium">No exceptions — you're all caught up.</p>
+        <p className="text-[var(--q-text-tertiary)] text-sm mt-1">All items are flowing through normally</p>
       </div>
     );
   }
@@ -116,26 +116,26 @@ export function AttentionTab({ items, onSelectDebtor, isLoading, search = '' }: 
               <col style={{ width: '18%' }} />
             </colgroup>
             <thead className="sticky top-0 z-20">
-              <tr className="border-b border-slate-200 bg-slate-50 h-16">
-                <th className="px-3 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider sticky left-0 bg-slate-50 z-30 align-middle">
+              <tr className="border-b border-[var(--q-border-default)] bg-[var(--q-bg-surface-alt)] h-16">
+                <th className="px-3 text-left text-[11px] font-medium text-[var(--q-text-tertiary)] uppercase tracking-wider sticky left-0 bg-[var(--q-bg-surface-alt)] z-30 align-middle">
                   Customer
                 </th>
-                <th className="px-2 text-center text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">
+                <th className="px-2 text-center text-[11px] font-medium text-[var(--q-text-tertiary)] uppercase tracking-wider bg-[var(--q-bg-surface-alt)] align-middle">
                   Type
                 </th>
-                <th className="px-2 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">
+                <th className="px-2 text-left text-[11px] font-medium text-[var(--q-text-tertiary)] uppercase tracking-wider bg-[var(--q-bg-surface-alt)] align-middle">
                   Reason
                 </th>
-                <th className="px-2 text-center bg-slate-50 align-middle">
-                  <div className="text-[11px] font-medium text-slate-600 uppercase tracking-wider">Amount</div>
-                  <div className="font-semibold text-slate-800 text-[13px] mt-1 tabular-nums">
+                <th className="px-2 text-center bg-[var(--q-bg-surface-alt)] align-middle">
+                  <div className="text-[11px] font-medium text-[var(--q-text-tertiary)] uppercase tracking-wider">Amount</div>
+                  <div className="font-semibold text-[var(--q-text-primary)] text-[13px] mt-1 tabular-nums">
                     {formatCurrencyCompact(totalAmount)}
                   </div>
                 </th>
-                <th className="px-2 text-center text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">
+                <th className="px-2 text-center text-[11px] font-medium text-[var(--q-text-tertiary)] uppercase tracking-wider bg-[var(--q-bg-surface-alt)] align-middle">
                   Days
                 </th>
-                <th className="px-2 text-center text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">
+                <th className="px-2 text-center text-[11px] font-medium text-[var(--q-text-tertiary)] uppercase tracking-wider bg-[var(--q-bg-surface-alt)] align-middle">
                   Last Activity
                 </th>
               </tr>
@@ -149,14 +149,14 @@ export function AttentionTab({ items, onSelectDebtor, isLoading, search = '' }: 
                 return (
                   <tr 
                     key={item.id} 
-                    className={`group hover:bg-slate-100 transition-colors cursor-pointer ${!isLast ? 'border-b border-slate-200' : ''}`}
+                    className={`group hover:bg-[var(--q-bg-surface-hover)] transition-colors cursor-pointer ${!isLast ? 'border-b border-[var(--q-border-default)]' : ''}`}
                     onClick={() => onSelectDebtor(item.debtorId)}
                   >
-                    <td className="py-[5px] px-3 sticky left-0 bg-white group-hover:bg-slate-100 z-10 transition-colors">
-                      <div className="text-[13px] font-medium text-slate-900 truncate max-w-[170px]">
+                    <td className="py-[5px] px-3 sticky left-0 bg-[var(--q-bg-surface)] group-hover:bg-[var(--q-bg-surface-hover)] z-10 transition-colors">
+                      <div className="text-[13px] font-medium text-[var(--q-text-primary)] truncate max-w-[170px]">
                         {item.debtorName}
                       </div>
-                      <div className="text-[12px] text-slate-400 truncate tabular-nums">
+                      <div className="text-[12px] text-[var(--q-text-tertiary)] truncate tabular-nums">
                         {item.invoiceCount || 1} inv
                       </div>
                     </td>
@@ -173,29 +173,29 @@ export function AttentionTab({ items, onSelectDebtor, isLoading, search = '' }: 
                       </Tooltip>
                     </td>
                     <td className="py-[5px] px-2">
-                      <div className="text-[13px] text-slate-600 truncate">
+                      <div className="text-[13px] text-[var(--q-text-tertiary)] truncate">
                         {item.reason}
                       </div>
                     </td>
                     <td className="py-[5px] px-2 text-center">
-                      <div className="text-[13px] font-medium text-slate-900 tabular-nums">
+                      <div className="text-[13px] font-medium text-[var(--q-text-primary)] tabular-nums">
                         {formatCurrencyCompact(item.amountImpacted)}
                       </div>
                     </td>
                     <td className="py-[5px] px-2 text-center">
-                      <div className="text-[13px] text-slate-600 tabular-nums">
+                      <div className="text-[13px] text-[var(--q-text-tertiary)] tabular-nums">
                         {item.oldestDaysOverdue}d
                       </div>
                     </td>
                     <td className="py-[5px] px-2 text-center">
                       {item.lastActionAt ? (
-                        <div className="text-[12px] text-slate-400">
+                        <div className="text-[12px] text-[var(--q-text-tertiary)]">
                           {item.lastActionChannel && getChannelLabel(item.lastActionChannel)}
                           {' · '}
                           {formatRelativeTime(item.lastActionAt)}
                         </div>
                       ) : (
-                        <div className="text-[12px] text-slate-300">—</div>
+                        <div className="text-[12px] text-[var(--q-text-tertiary)]">—</div>
                       )}
                     </td>
                   </tr>
@@ -206,13 +206,13 @@ export function AttentionTab({ items, onSelectDebtor, isLoading, search = '' }: 
         </div>
         
         {/* Pagination */}
-        <div className="flex items-center justify-end gap-4 py-3 px-4 border-t border-slate-200 bg-white shrink-0">
+        <div className="flex items-center justify-end gap-4 py-3 px-4 border-t border-[var(--q-border-default)] bg-[var(--q-bg-surface)] shrink-0">
           <div className="flex items-center gap-2">
-            <span className="text-[12px] text-slate-500">Rows:</span>
+            <span className="text-[12px] text-[var(--q-text-tertiary)]">Rows:</span>
             <select
               value={itemsPerPage}
               onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-              className="text-[12px] border-0 bg-transparent text-slate-700 cursor-pointer focus:ring-0"
+              className="text-[12px] border-0 bg-transparent text-[var(--q-text-primary)] cursor-pointer focus:ring-0"
             >
               {PAGE_SIZE_OPTIONS.map(size => (
                 <option key={size} value={size}>{size}</option>
@@ -221,22 +221,22 @@ export function AttentionTab({ items, onSelectDebtor, isLoading, search = '' }: 
           </div>
           
           <div className="flex items-center gap-2">
-            <span className="text-[12px] text-slate-500">
+            <span className="text-[12px] text-[var(--q-text-tertiary)]">
               {Math.min(currentPage, totalPages)} of {totalPages}
             </span>
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage <= 1}
-              className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed"
+              className="p-1 rounded hover:bg-[var(--q-bg-surface-hover)] disabled:opacity-30 disabled:cursor-not-allowed"
             >
-              <ChevronLeft className="h-4 w-4 text-slate-600" />
+              <ChevronLeft className="h-4 w-4 text-[var(--q-text-tertiary)]" />
             </button>
             <button
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage >= totalPages}
-              className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed"
+              className="p-1 rounded hover:bg-[var(--q-bg-surface-hover)] disabled:opacity-30 disabled:cursor-not-allowed"
             >
-              <ChevronRight className="h-4 w-4 text-slate-600" />
+              <ChevronRight className="h-4 w-4 text-[var(--q-text-tertiary)]" />
             </button>
           </div>
         </div>

@@ -4,11 +4,9 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useInvalidateActionCentre } from "@/hooks/useInvalidateActionCentre";
 import { usePermissions } from "@/hooks/usePermissions";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { QBadge } from "@/components/ui/q-badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import {
   Sheet,
@@ -105,7 +103,7 @@ interface DrilldownItem {
 }
 
 type Period = "today" | "week" | "month" | "custom";
-type MetricColor = "blue" | "green" | "amber" | "red" | "muted";
+type MetricColor = "info" | "positive" | "attention" | "risk" | "muted";
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -114,10 +112,10 @@ type MetricColor = "blue" | "green" | "amber" | "red" | "muted";
 function SectionDivider({ label }: { label: string }) {
   return (
     <div className="flex items-center gap-2 !mt-4 !mb-1.5">
-      <span className="text-[11px] font-medium uppercase tracking-[0.05em] text-muted-foreground/70">
+      <span className="text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)]/70">
         {label}
       </span>
-      <div className="flex-1 border-t border-border" />
+      <div className="flex-1 border-t border-[var(--q-border-default)]" />
     </div>
   );
 }
@@ -142,11 +140,11 @@ function MetricRow({
   barWidth?: number;
 }) {
   const colorStyles: Record<MetricColor, { text: string; bg: string; bar: string }> = {
-    red: { text: "text-red-600", bg: "bg-red-50", bar: "bg-red-500" },
-    amber: { text: "text-amber-600", bg: "bg-amber-50", bar: "bg-amber-500" },
-    blue: { text: "text-blue-600", bg: "", bar: "bg-blue-500" },
-    green: { text: "text-emerald-600", bg: "", bar: "bg-emerald-500" },
-    muted: { text: "text-muted-foreground", bg: "", bar: "bg-muted-foreground" },
+    risk: { text: "text-[var(--q-risk-text)]", bg: "bg-[var(--q-risk-bg)]", bar: "bg-[var(--q-risk-text)]" },
+    attention: { text: "text-[var(--q-attention-text)]", bg: "bg-[var(--q-attention-bg)]", bar: "bg-[var(--q-attention-text)]" },
+    info: { text: "text-[var(--q-info-text)]", bg: "", bar: "bg-[var(--q-info-text)]" },
+    positive: { text: "text-[var(--q-money-in-text)]", bg: "", bar: "bg-[var(--q-money-in-text)]" },
+    muted: { text: "text-[var(--q-text-tertiary)]", bg: "", bar: "bg-[var(--q-text-tertiary)]" },
   };
 
   const style = color ? colorStyles[color] : colorStyles.muted;
@@ -155,10 +153,10 @@ function MetricRow({
     <span
       className={`inline-flex items-center gap-0.5 text-[10px] font-medium ${
         badge.type === "up"
-          ? "text-emerald-600"
+          ? "text-[var(--q-money-in-text)]"
           : badge.type === "down"
-            ? "text-red-600"
-            : "text-muted-foreground"
+            ? "text-[var(--q-risk-text)]"
+            : "text-[var(--q-text-tertiary)]"
       }`}
     >
       {badge.type === "up" ? (
@@ -176,7 +174,7 @@ function MetricRow({
   return (
     <div
       className={`flex items-center gap-2.5 px-2 py-1.5 rounded-md transition-colors ${
-        onClick ? "cursor-pointer hover:bg-muted/50" : ""
+        onClick ? "cursor-pointer hover:bg-[var(--q-bg-surface-alt)]" : ""
       }`}
       onClick={onClick}
       role={onClick ? "button" : undefined}
@@ -194,9 +192,9 @@ function MetricRow({
     >
       <span className={`flex-shrink-0 ${style.text}`}>{icon}</span>
       <div className="flex-1 min-w-0">
-        <span className="text-sm text-foreground">{label}</span>
+        <span className="text-sm text-[var(--q-text-primary)]">{label}</span>
         {barWidth !== undefined && barWidth > 0 && (
-          <div className="mt-0.5 h-1 w-full rounded-full bg-muted">
+          <div className="mt-0.5 h-1 w-full rounded-full bg-[var(--q-bg-surface-alt)]">
             <div
               className={`h-1 rounded-full ${style.bar}`}
               style={{ width: `${Math.min(barWidth, 100)}%` }}
@@ -210,7 +208,7 @@ function MetricRow({
           {count}
           {suffix}
         </span>
-        {onClick && <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
+        {onClick && <ChevronRight className="h-3.5 w-3.5 text-[var(--q-text-tertiary)]" />}
       </div>
     </div>
   );
@@ -392,16 +390,12 @@ export default function OverviewTab() {
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {[0, 1, 2].map((i) => (
-            <Card key={i}>
-              <CardHeader>
-                <Skeleton className="h-5 w-24" />
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {[0, 1, 2, 3, 4].map((j) => (
-                  <Skeleton key={j} className="h-7 w-full" />
-                ))}
-              </CardContent>
-            </Card>
+            <div key={i} className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] p-5 space-y-3">
+              <Skeleton className="h-5 w-24" />
+              {[0, 1, 2, 3, 4].map((j) => (
+                <Skeleton key={j} className="h-7 w-full" />
+              ))}
+            </div>
           ))}
         </div>
       </div>
@@ -414,14 +408,14 @@ export default function OverviewTab() {
     <div className="space-y-4">
       {/* Period selector + refresh */}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="inline-flex rounded-md border border-border bg-background">
+        <div className="inline-flex rounded-md border border-[var(--q-border-default)] bg-[var(--q-bg-surface)]">
           {periodButtons.map((p) => (
             <Button
               key={p.value}
               variant={period === p.value ? "default" : "ghost"}
               size="sm"
               className={`rounded-none first:rounded-l-md last:rounded-r-md ${
-                period === p.value ? "" : "text-muted-foreground"
+                period === p.value ? "" : "text-[var(--q-text-tertiary)]"
               }`}
               onClick={() => setPeriod(p.value)}
             >
@@ -439,7 +433,7 @@ export default function OverviewTab() {
               className="h-8 w-36 text-sm"
               placeholder="From"
             />
-            <span className="text-xs text-muted-foreground">to</span>
+            <span className="text-xs text-[var(--q-text-tertiary)]">to</span>
             <Input
               type="date"
               value={dateTo}
@@ -452,7 +446,7 @@ export default function OverviewTab() {
 
         <div className="ml-auto flex items-center gap-2">
           {lastUpdatedDisplay && (
-            <span className="text-xs text-muted-foreground">
+            <span className="text-xs text-[var(--q-text-tertiary)]">
               Last updated {lastUpdatedDisplay}
             </span>
           )}
@@ -471,40 +465,40 @@ export default function OverviewTab() {
       {/* Three columns */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* ---- QUEUED ---- */}
-        <Card className="flex flex-col border-l-4 border-l-blue-500">
-          <CardHeader className="pb-2">
+        <div className="flex flex-col bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] border-l-4 border-l-[var(--q-info-text)]">
+          <div className="px-5 pt-5 pb-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-blue-500" />
-                <CardTitle className="text-base font-semibold">Queued</CardTitle>
+                <span className="h-2 w-2 rounded-full bg-[var(--q-info-text)]" />
+                <h3 className="text-base font-semibold text-[var(--q-text-primary)]">Queued</h3>
               </div>
-              <Badge variant="secondary" className="tabular-nums">
+              <QBadge variant="neutral">
                 {queued.total}
-              </Badge>
+              </QBadge>
             </div>
-          </CardHeader>
-          <CardContent className="flex-1 pb-3">
+          </div>
+          <div className="flex-1 px-5 pb-3">
             <div className="min-h-[12.5rem] space-y-0.5">
               <SectionDivider label="Communications queued" />
               <MetricRow
                 icon={<Mail className="h-3.5 w-3.5" />}
                 label="Emails awaiting approval"
                 count={queued.emails}
-                color="blue"
+                color="info"
                 onClick={() => openDrilldown("queued_emails", "Emails awaiting approval")}
               />
               <MetricRow
                 icon={<MessageSquare className="h-3.5 w-3.5" />}
                 label="SMS awaiting approval"
                 count={queued.sms}
-                color="blue"
+                color="info"
                 onClick={() => openDrilldown("queued_sms", "SMS awaiting approval")}
               />
               <MetricRow
                 icon={<Phone className="h-3.5 w-3.5" />}
                 label="Calls awaiting approval"
                 count={queued.calls}
-                color="blue"
+                color="info"
                 onClick={() => openDrilldown("queued_calls", "Calls awaiting approval")}
               />
             </div>
@@ -514,14 +508,14 @@ export default function OverviewTab() {
                 icon={<Clock className="h-3.5 w-3.5" />}
                 label="Waiting > 24 hours"
                 count={queued.waitingOver24h}
-                color="amber"
+                color="attention"
                 onClick={() => openDrilldown("queued_waiting_24h", "Waiting > 24 hours")}
               />
               <MetricRow
                 icon={<AlertTriangle className="h-3.5 w-3.5" />}
                 label="Debtors > 60 days overdue"
                 count={queued.debtorsOver60DaysOverdue}
-                color="amber"
+                color="attention"
                 onClick={() =>
                   openDrilldown("queued_over_60_days", "Debtors > 60 days overdue")
                 }
@@ -533,8 +527,8 @@ export default function OverviewTab() {
                 color="muted"
               />
             </div>
-          </CardContent>
-          <div className="border-t px-4 py-3 flex items-center gap-2">
+          </div>
+          <div className="border-t border-[var(--q-border-default)] px-5 py-3 flex items-center gap-2">
             <Button
               size="sm"
               className="flex-1"
@@ -563,29 +557,29 @@ export default function OverviewTab() {
               Clear queue
             </Button>
           </div>
-        </Card>
+        </div>
 
         {/* ---- ACTIONED ---- */}
-        <Card className="flex flex-col border-l-4 border-l-emerald-500">
-          <CardHeader className="pb-2">
+        <div className="flex flex-col bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] border-l-4 border-l-[var(--q-money-in-text)]">
+          <div className="px-5 pt-5 pb-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                <CardTitle className="text-base font-semibold">Actioned</CardTitle>
+                <span className="h-2 w-2 rounded-full bg-[var(--q-money-in-text)]" />
+                <h3 className="text-base font-semibold text-[var(--q-text-primary)]">Actioned</h3>
               </div>
-              <Badge variant="secondary" className="tabular-nums">
+              <QBadge variant="neutral">
                 {actioned.total}
-              </Badge>
+              </QBadge>
             </div>
-          </CardHeader>
-          <CardContent className="flex-1 pb-3">
+          </div>
+          <div className="flex-1 px-5 pb-3">
             <div className="min-h-[12.5rem] space-y-0.5">
               <SectionDivider label="Communications sent" />
               <MetricRow
                 icon={<Mail className="h-3.5 w-3.5" />}
                 label="Emails sent"
                 count={actioned.emailsSent}
-                color="green"
+                color="positive"
                 badge={{
                   value: actioned.emailsSentVsPrevious,
                   type: badgeType(actioned.emailsSentVsPrevious),
@@ -596,14 +590,14 @@ export default function OverviewTab() {
                 icon={<MessageSquare className="h-3.5 w-3.5" />}
                 label="SMS sent"
                 count={actioned.smsSent}
-                color="green"
+                color="positive"
                 onClick={() => openDrilldown("actioned_sms", "SMS sent")}
               />
               <MetricRow
                 icon={<Phone className="h-3.5 w-3.5" />}
                 label="Voice calls made"
                 count={actioned.callsMade}
-                color="green"
+                color="positive"
                 onClick={() => openDrilldown("actioned_calls", "Voice calls made")}
               />
             </div>
@@ -613,23 +607,23 @@ export default function OverviewTab() {
                 icon={<CheckCircle2 className="h-3.5 w-3.5" />}
                 label="Promises to pay"
                 count={actioned.promisesToPay}
-                color="green"
+                color="positive"
               />
               <MetricRow
                 icon={<Shield className="h-3.5 w-3.5" />}
                 label="Payment plans agreed"
                 count={actioned.paymentPlansAgreed}
-                color="green"
+                color="positive"
               />
               <MetricRow
                 icon={<TrendingUp className="h-3.5 w-3.5" />}
                 label="Response rate"
                 count={`${actioned.responseRate}%`}
-                color="green"
+                color="positive"
               />
             </div>
-          </CardContent>
-          <div className="border-t px-4 py-3">
+          </div>
+          <div className="border-t border-[var(--q-border-default)] px-5 py-3">
             <Button
               size="sm"
               variant="outline"
@@ -640,29 +634,29 @@ export default function OverviewTab() {
               View full report
             </Button>
           </div>
-        </Card>
+        </div>
 
         {/* ---- EXCEPTIONS ---- */}
-        <Card className="flex flex-col border-l-4 border-l-red-500">
-          <CardHeader className="pb-2">
+        <div className="flex flex-col bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] border-l-4 border-l-[var(--q-risk-text)]">
+          <div className="px-5 pt-5 pb-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-red-500" />
-                <CardTitle className="text-base font-semibold">Exceptions</CardTitle>
+                <span className="h-2 w-2 rounded-full bg-[var(--q-risk-text)]" />
+                <h3 className="text-base font-semibold text-[var(--q-text-primary)]">Exceptions</h3>
               </div>
-              <Badge variant="secondary" className="tabular-nums">
+              <QBadge variant="neutral">
                 {exceptions.total}
-              </Badge>
+              </QBadge>
             </div>
-          </CardHeader>
-          <CardContent className="flex-1 pb-3">
+          </div>
+          <div className="flex-1 px-5 pb-3">
             <div className="min-h-[12.5rem] space-y-0.5">
               <SectionDivider label="Collections" />
               <MetricRow
                 icon={<Gavel className="h-3.5 w-3.5" />}
                 label="Disputed invoices"
                 count={exceptions.disputedInvoices}
-                color="red"
+                color="risk"
                 barWidth={barWidthFor(exceptions.disputedInvoices, exceptions.total)}
                 onClick={() => openDrilldown("exceptions_disputed", "Disputed invoices")}
               />
@@ -670,7 +664,7 @@ export default function OverviewTab() {
                 icon={<UserX className="h-3.5 w-3.5" />}
                 label="Unresponsive — end of flow"
                 count={exceptions.unresponsiveEndOfFlow}
-                color="red"
+                color="risk"
                 barWidth={barWidthFor(exceptions.unresponsiveEndOfFlow, exceptions.total)}
                 onClick={() =>
                   openDrilldown("exceptions_unresponsive", "Unresponsive — end of flow")
@@ -680,7 +674,7 @@ export default function OverviewTab() {
                 icon={<Hand className="h-3.5 w-3.5" />}
                 label="Wants human contact"
                 count={exceptions.wantsHumanContact}
-                color="amber"
+                color="attention"
                 barWidth={barWidthFor(exceptions.wantsHumanContact, exceptions.total)}
                 onClick={() =>
                   openDrilldown("exceptions_human_contact", "Wants human contact")
@@ -690,7 +684,7 @@ export default function OverviewTab() {
                 icon={<ShieldAlert className="h-3.5 w-3.5" />}
                 label="Compliance failures"
                 count={exceptions.complianceFailures}
-                color="amber"
+                color="attention"
                 barWidth={barWidthFor(exceptions.complianceFailures, exceptions.total)}
                 onClick={() =>
                   openDrilldown("exceptions_compliance", "Compliance failures")
@@ -703,7 +697,7 @@ export default function OverviewTab() {
                 icon={<Heart className="h-3.5 w-3.5" />}
                 label="Distress — cashflow issues"
                 count={exceptions.distress}
-                color="red"
+                color="risk"
                 barWidth={barWidthFor(exceptions.distress, exceptions.total)}
                 onClick={() => openDrilldown("exceptions_distress", "Distress — cashflow issues")}
               />
@@ -711,7 +705,7 @@ export default function OverviewTab() {
                 icon={<Wrench className="h-3.5 w-3.5" />}
                 label="Service issue"
                 count={exceptions.serviceIssue}
-                color="amber"
+                color="attention"
                 barWidth={barWidthFor(exceptions.serviceIssue, exceptions.total)}
                 onClick={() => openDrilldown("exceptions_service", "Service issue")}
               />
@@ -719,7 +713,7 @@ export default function OverviewTab() {
                 icon={<FileQuestion className="h-3.5 w-3.5" />}
                 label="Missing PO / info"
                 count={exceptions.missingPO}
-                color="amber"
+                color="attention"
                 barWidth={barWidthFor(exceptions.missingPO, exceptions.total)}
                 onClick={() => openDrilldown("exceptions_missing_po", "Missing PO / info")}
               />
@@ -727,7 +721,7 @@ export default function OverviewTab() {
                 icon={<Skull className="h-3.5 w-3.5" />}
                 label="Insolvency risk"
                 count={exceptions.insolvencyRisk}
-                color="red"
+                color="risk"
                 barWidth={barWidthFor(exceptions.insolvencyRisk, exceptions.total)}
                 onClick={() => openDrilldown("exceptions_insolvency", "Insolvency risk")}
               />
@@ -742,8 +736,8 @@ export default function OverviewTab() {
                 onClick={() => openDrilldown("exceptions_other", "Other exceptions")}
               />
             </div>
-          </CardContent>
-          <div className="border-t px-4 py-3">
+          </div>
+          <div className="border-t border-[var(--q-border-default)] px-5 py-3">
             <Button
               size="sm"
               variant="outline"
@@ -761,7 +755,7 @@ export default function OverviewTab() {
               Triage all
             </Button>
           </div>
-        </Card>
+        </div>
       </div>
 
       {/* ---- DRILLDOWN SHEET ---- */}
@@ -784,11 +778,11 @@ export default function OverviewTab() {
               drilldownData.map((item) => (
                 <div
                   key={item.id}
-                  className="flex items-center justify-between rounded-md border border-border px-3 py-2.5"
+                  className="flex items-center justify-between rounded-md border border-[var(--q-border-default)] px-3 py-2.5"
                 >
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium truncate">{item.debtorName}</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-[var(--q-text-tertiary)]">
                       {new Date(item.date).toLocaleDateString("en-GB", {
                         day: "numeric",
                         month: "short",
@@ -797,9 +791,9 @@ export default function OverviewTab() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-                    <Badge variant="outline" className="text-xs">
+                    <QBadge variant="neutral">
                       {item.status}
-                    </Badge>
+                    </QBadge>
                     <span className="text-sm font-semibold tabular-nums">
                       {formatGBP(item.amount)}
                     </span>
@@ -807,7 +801,7 @@ export default function OverviewTab() {
                 </div>
               ))
             ) : (
-              <p className="text-sm text-muted-foreground py-8 text-center">
+              <p className="text-sm text-[var(--q-text-tertiary)] py-8 text-center">
                 No items found for this period.
               </p>
             )}

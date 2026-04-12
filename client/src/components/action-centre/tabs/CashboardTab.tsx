@@ -54,9 +54,9 @@ export function CashboardTab({ debtors, onSelectDebtor, isLoading }: CashboardTa
   if (isLoading) {
     return (
       <div className="space-y-1">
-        <div className="h-10 bg-slate-50 animate-pulse" />
+        <div className="h-10 bg-[var(--q-bg-surface-alt)] animate-pulse" />
         {[...Array(6)].map((_, i) => (
-          <div key={i} className="h-12 bg-slate-50/50 animate-pulse" />
+          <div key={i} className="h-12 bg-[var(--q-bg-surface-alt)]/50 animate-pulse" />
         ))}
       </div>
     );
@@ -65,7 +65,7 @@ export function CashboardTab({ debtors, onSelectDebtor, isLoading }: CashboardTa
   if (debtors.length === 0) {
     return (
       <div className="py-16 text-center">
-        <p className="text-slate-500 text-[13px]">No debtors to display</p>
+        <p className="text-[var(--q-text-tertiary)] text-[13px]">No debtors to display</p>
       </div>
     );
   }
@@ -82,17 +82,17 @@ export function CashboardTab({ debtors, onSelectDebtor, isLoading }: CashboardTa
               ))}
             </colgroup>
             <thead className="sticky top-0 z-20">
-              <tr className="border-b border-slate-200 bg-slate-50 h-16">
-                <th className="px-3 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider sticky left-0 bg-slate-50 z-30 align-middle">
+              <tr className="border-b border-[var(--q-border-default)] bg-[var(--q-bg-surface-alt)] h-16">
+                <th className="px-3 text-left text-[11px] font-medium text-[var(--q-text-tertiary)] uppercase tracking-wider sticky left-0 bg-[var(--q-bg-surface-alt)] z-30 align-middle">
                   Customer
                 </th>
                 {STATUS_ORDER.map((status, idx) => (
                   <th 
                     key={status} 
-                    className={`px-2 text-right bg-slate-50 align-middle ${idx > 0 ? 'border-l border-slate-100' : ''}`}
+                    className={`px-2 text-right bg-[var(--q-bg-surface-alt)] align-middle ${idx > 0 ? 'border-l border-[var(--q-border-default)]' : ''}`}
                   >
-                    <div className="text-[11px] font-medium text-slate-600 uppercase tracking-wider">{getStatusLabel(status)}</div>
-                    <div className="font-semibold text-slate-800 text-[13px] mt-1 tabular-nums">
+                    <div className="text-[11px] font-medium text-[var(--q-text-tertiary)] uppercase tracking-wider">{getStatusLabel(status)}</div>
+                    <div className="font-semibold text-[var(--q-text-primary)] text-[13px] mt-1 tabular-nums">
                       {formatCurrencyCompact(columnTotals[status])}
                     </div>
                   </th>
@@ -103,24 +103,24 @@ export function CashboardTab({ debtors, onSelectDebtor, isLoading }: CashboardTa
               {paginatedMatrix.map(row => (
                 <tr 
                   key={row.debtor.id} 
-                  className="group border-b border-slate-200 hover:bg-slate-100 transition-colors cursor-pointer"
+                  className="group border-b border-[var(--q-border-default)] hover:bg-[var(--q-bg-surface-hover)] transition-colors cursor-pointer"
                   onClick={() => onSelectDebtor(row.debtor.id)}
                 >
-                  <td className="py-[5px] px-3 sticky left-0 bg-white group-hover:bg-slate-100 z-10 transition-colors">
-                    <div className="text-[13px] font-medium text-slate-900 truncate max-w-[170px]">
+                  <td className="py-[5px] px-3 sticky left-0 bg-[var(--q-bg-surface)] group-hover:bg-[var(--q-bg-surface-hover)] z-10 transition-colors">
+                    <div className="text-[13px] font-medium text-[var(--q-text-primary)] truncate max-w-[170px]">
                       {row.debtor.name}
                     </div>
-                    <div className="text-[12px] text-slate-400 truncate tabular-nums">
+                    <div className="text-[12px] text-[var(--q-text-tertiary)] truncate tabular-nums">
                       {formatCurrencyCompact(row.debtor.totalOutstanding)} outstanding
                     </div>
                   </td>
                   {STATUS_ORDER.map((status, idx) => {
                     const cell = row.cells[status];
-                    const borderClass = idx > 0 ? 'border-l border-slate-100' : '';
+                    const borderClass = idx > 0 ? 'border-l border-[var(--q-border-default)]' : '';
                     if (!cell) {
                       return (
                         <td key={status} className={`py-[5px] px-2 text-right ${borderClass}`}>
-                          <span className="text-slate-200 text-[13px]">—</span>
+                          <span className="text-[var(--q-text-tertiary)] text-[13px]">—</span>
                         </td>
                       );
                     }
@@ -129,21 +129,21 @@ export function CashboardTab({ debtors, onSelectDebtor, isLoading }: CashboardTa
                       <td key={status} className={`py-[5px] px-2 text-right ${borderClass}`}>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <span className="text-[13px] font-medium tabular-nums text-slate-900 cursor-pointer">
+                            <span className="text-[13px] font-medium tabular-nums text-[var(--q-text-primary)] cursor-pointer">
                               {formatCurrencyCompact(cell.amount)}
                             </span>
                           </TooltipTrigger>
                           <TooltipContent side="top" className="max-w-xs">
                             <div className="text-xs space-y-1">
                               <div className="font-medium">{formatCurrencyCompact(cell.amount)} · {cell.invoiceCount} invoices</div>
-                              <div className="text-slate-400">Oldest: {cell.oldestDaysOverdue}d</div>
+                              <div className="text-[var(--q-text-tertiary)]">Oldest: {cell.oldestDaysOverdue}d</div>
                               {cell.lastActionAt && cell.lastActionChannel && (
-                                <div className="text-slate-400">
+                                <div className="text-[var(--q-text-tertiary)]">
                                   Last: {getChannelLabel(cell.lastActionChannel)} {formatRelativeTime(cell.lastActionAt)}
                                 </div>
                               )}
                               {cell.ptpDate && (
-                                <div className="text-slate-500">PTP: {new Date(cell.ptpDate).toLocaleDateString('en-GB')}</div>
+                                <div className="text-[var(--q-text-tertiary)]">PTP: {new Date(cell.ptpDate).toLocaleDateString('en-GB')}</div>
                               )}
                             </div>
                           </TooltipContent>
@@ -160,14 +160,14 @@ export function CashboardTab({ debtors, onSelectDebtor, isLoading }: CashboardTa
         {/* Footer with pagination */}
         <div className="flex items-center justify-end py-3 flex-shrink-0">
           {matrix.length > 0 && (
-            <div className="flex items-center gap-4 text-[12px] text-slate-500">
+            <div className="flex items-center gap-4 text-[12px] text-[var(--q-text-tertiary)]">
               {/* Rows per page selector */}
               <div className="flex items-center gap-2">
-                <span className="text-slate-400">Rows:</span>
+                <span className="text-[var(--q-text-tertiary)]">Rows:</span>
                 <select
                   value={itemsPerPage}
                   onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                  className="bg-white border border-slate-200 rounded px-2 py-1 text-[12px] text-slate-600 cursor-pointer hover:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-300"
+                  className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded px-2 py-1 text-[12px] text-[var(--q-text-tertiary)] cursor-pointer hover:border-[var(--q-border-default)] focus:outline-none focus:ring-1 focus:ring-[var(--q-border-default)]"
                 >
                   {PAGE_SIZE_OPTIONS.map(size => (
                     <option key={size} value={size}>{size}</option>
@@ -181,7 +181,7 @@ export function CashboardTab({ debtors, onSelectDebtor, isLoading }: CashboardTa
                   <button
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="p-1 rounded hover:bg-[var(--q-bg-surface-hover)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
@@ -191,7 +191,7 @@ export function CashboardTab({ debtors, onSelectDebtor, isLoading }: CashboardTa
                   <button
                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                     disabled={currentPage === totalPages}
-                    className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="p-1 rounded hover:bg-[var(--q-bg-surface-hover)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>

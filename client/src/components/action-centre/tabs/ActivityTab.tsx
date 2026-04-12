@@ -11,17 +11,17 @@ interface ActivityTabProps {
 }
 
 const CHANNEL_CONFIG: Record<ActivityChannel, { label: string; icon: any; color: string; isOutcome?: boolean }> = {
-  email: { label: 'Email', icon: Mail, color: 'text-blue-500' },
-  sms: { label: 'SMS', icon: MessageSquare, color: 'text-green-500' },
-  voice: { label: 'Voice', icon: Phone, color: 'text-purple-500' },
-  whatsapp: { label: 'WhatsApp', icon: MessageCircle, color: 'text-emerald-500' },
+  email: { label: 'Email', icon: Mail, color: 'text-[var(--q-info-text)]' },
+  sms: { label: 'SMS', icon: MessageSquare, color: 'text-[var(--q-money-in-text)]' },
+  voice: { label: 'Voice', icon: Phone, color: 'text-[var(--q-info-text)]' },
+  whatsapp: { label: 'WhatsApp', icon: MessageCircle, color: 'text-[var(--q-money-in-text)]' },
   portal: { label: 'Portal', icon: Globe, color: 'text-cyan-500' },
-  note: { label: 'Note', icon: StickyNote, color: 'text-amber-500' },
-  promise_to_pay: { label: 'Promise to Pay', icon: HandCoins, color: 'text-teal-600', isOutcome: true },
-  payment_plan: { label: 'Payment Plan', icon: Calendar, color: 'text-indigo-600', isOutcome: true },
-  dispute: { label: 'Dispute', icon: AlertTriangle, color: 'text-orange-600', isOutcome: true },
-  payment_received: { label: 'Payment Received', icon: CheckCircle2, color: 'text-green-600', isOutcome: true },
-  ptp_breach: { label: 'PTP Breach', icon: XCircle, color: 'text-red-600', isOutcome: true },
+  note: { label: 'Note', icon: StickyNote, color: 'text-[var(--q-attention-text)]' },
+  promise_to_pay: { label: 'Promise to Pay', icon: HandCoins, color: 'text-[var(--q-info-text)]', isOutcome: true },
+  payment_plan: { label: 'Payment Plan', icon: Calendar, color: 'text-[var(--q-info-text)]', isOutcome: true },
+  dispute: { label: 'Dispute', icon: AlertTriangle, color: 'text-[var(--q-risk-text)]', isOutcome: true },
+  payment_received: { label: 'Payment Received', icon: CheckCircle2, color: 'text-[var(--q-money-in-text)]', isOutcome: true },
+  ptp_breach: { label: 'PTP Breach', icon: XCircle, color: 'text-[var(--q-risk-text)]', isOutcome: true },
 };
 
 export function ActivityTab({ items, onSelectCustomer, isLoading, search = '' }: ActivityTabProps) {
@@ -79,9 +79,9 @@ export function ActivityTab({ items, onSelectCustomer, isLoading, search = '' }:
   if (isLoading) {
     return (
       <div className="space-y-1">
-        <div className="h-10 bg-slate-50 animate-pulse" />
+        <div className="h-10 bg-[var(--q-bg-surface-alt)] animate-pulse" />
         {[...Array(6)].map((_, i) => (
-          <div key={i} className="h-12 bg-slate-50/50 animate-pulse" />
+          <div key={i} className="h-12 bg-[var(--q-bg-surface-alt)]/50 animate-pulse" />
         ))}
       </div>
     );
@@ -90,11 +90,11 @@ export function ActivityTab({ items, onSelectCustomer, isLoading, search = '' }:
   if (items.length === 0) {
     return (
       <div className="py-16 text-center">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-slate-50 mb-4">
-          <MessageSquare className="w-6 h-6 text-slate-400" />
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[var(--q-bg-surface-alt)] mb-4">
+          <MessageSquare className="w-6 h-6 text-[var(--q-text-tertiary)]" />
         </div>
-        <p className="text-slate-600 font-medium">No activity yet</p>
-        <p className="text-slate-400 text-sm mt-1">Communications and notes will appear here</p>
+        <p className="text-[var(--q-text-tertiary)] font-medium">No activity yet</p>
+        <p className="text-[var(--q-text-tertiary)] text-sm mt-1">Communications and notes will appear here</p>
       </div>
     );
   }
@@ -114,26 +114,26 @@ export function ActivityTab({ items, onSelectCustomer, isLoading, search = '' }:
               <col style={{ width: '34%' }} />
             </colgroup>
             <thead className="sticky top-0 z-20">
-              <tr className="border-b border-slate-200 bg-slate-50 h-16">
-                <th className="px-3 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">
+              <tr className="border-b border-[var(--q-border-default)] bg-[var(--q-bg-surface-alt)] h-16">
+                <th className="px-3 text-left text-[11px] font-medium text-[var(--q-text-tertiary)] uppercase tracking-wider bg-[var(--q-bg-surface-alt)] align-middle">
                   Date
                 </th>
-                <th className="px-2 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">
+                <th className="px-2 text-left text-[11px] font-medium text-[var(--q-text-tertiary)] uppercase tracking-wider bg-[var(--q-bg-surface-alt)] align-middle">
                   Time
                 </th>
-                <th className="px-2 text-center text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">
+                <th className="px-2 text-center text-[11px] font-medium text-[var(--q-text-tertiary)] uppercase tracking-wider bg-[var(--q-bg-surface-alt)] align-middle">
                   In/Out
                 </th>
-                <th className="px-2 text-center text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">
+                <th className="px-2 text-center text-[11px] font-medium text-[var(--q-text-tertiary)] uppercase tracking-wider bg-[var(--q-bg-surface-alt)] align-middle">
                   Channel
                 </th>
-                <th className="px-2 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">
+                <th className="px-2 text-left text-[11px] font-medium text-[var(--q-text-tertiary)] uppercase tracking-wider bg-[var(--q-bg-surface-alt)] align-middle">
                   Customer
                 </th>
-                <th className="px-2 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">
+                <th className="px-2 text-left text-[11px] font-medium text-[var(--q-text-tertiary)] uppercase tracking-wider bg-[var(--q-bg-surface-alt)] align-middle">
                   Contact
                 </th>
-                <th className="px-2 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">
+                <th className="px-2 text-left text-[11px] font-medium text-[var(--q-text-tertiary)] uppercase tracking-wider bg-[var(--q-bg-surface-alt)] align-middle">
                   Purpose
                 </th>
               </tr>
@@ -151,16 +151,16 @@ export function ActivityTab({ items, onSelectCustomer, isLoading, search = '' }:
                 return (
                   <tr 
                     key={item.id} 
-                    className={`transition-colors ${hasCustomerId ? 'cursor-pointer' : ''} ${!isLast ? 'border-b border-slate-200' : ''} ${isOutcome ? 'bg-slate-50/50 hover:bg-slate-100' : 'hover:bg-slate-100'}`}
+                    className={`transition-colors ${hasCustomerId ? 'cursor-pointer' : ''} ${!isLast ? 'border-b border-[var(--q-border-default)]' : ''} ${isOutcome ? 'bg-[var(--q-bg-surface-alt)]/50 hover:bg-[var(--q-bg-surface-hover)]' : 'hover:bg-[var(--q-bg-surface-hover)]'}`}
                     onClick={() => hasCustomerId && onSelectCustomer(item.customerId)}
                   >
                     <td className="py-[5px] px-3">
-                      <div className="text-[13px] text-slate-900 tabular-nums">
+                      <div className="text-[13px] text-[var(--q-text-primary)] tabular-nums">
                         {item.date}
                       </div>
                     </td>
                     <td className="py-[5px] px-2">
-                      <div className="text-[13px] text-slate-600 tabular-nums">
+                      <div className="text-[13px] text-[var(--q-text-tertiary)] tabular-nums">
                         {item.time}
                       </div>
                     </td>
@@ -169,11 +169,11 @@ export function ActivityTab({ items, onSelectCustomer, isLoading, search = '' }:
                         <TooltipTrigger asChild>
                           <div className="inline-flex items-center justify-center">
                             {item.direction === 'in' ? (
-                              <ArrowDownLeft className="h-4 w-4 text-emerald-500" />
+                              <ArrowDownLeft className="h-4 w-4 text-[var(--q-money-in-text)]" />
                             ) : item.direction === 'outcome' ? (
-                              <Target className="h-4 w-4 text-slate-500" />
+                              <Target className="h-4 w-4 text-[var(--q-text-tertiary)]" />
                             ) : (
-                              <ArrowUpRight className="h-4 w-4 text-blue-500" />
+                              <ArrowUpRight className="h-4 w-4 text-[var(--q-info-text)]" />
                             )}
                           </div>
                         </TooltipTrigger>
@@ -195,17 +195,17 @@ export function ActivityTab({ items, onSelectCustomer, isLoading, search = '' }:
                       </Tooltip>
                     </td>
                     <td className="py-[5px] px-2">
-                      <div className="text-[13px] font-medium text-slate-900 truncate max-w-[150px]">
+                      <div className="text-[13px] font-medium text-[var(--q-text-primary)] truncate max-w-[150px]">
                         {item.customerName}
                       </div>
                     </td>
                     <td className="py-[5px] px-2">
-                      <div className="text-[13px] text-slate-600 truncate max-w-[150px]">
+                      <div className="text-[13px] text-[var(--q-text-tertiary)] truncate max-w-[150px]">
                         {item.contactName}
                       </div>
                     </td>
                     <td className="py-[5px] px-2">
-                      <div className="text-[13px] text-slate-600 truncate">
+                      <div className="text-[13px] text-[var(--q-text-tertiary)] truncate">
                         {item.purpose}
                       </div>
                     </td>
@@ -216,13 +216,13 @@ export function ActivityTab({ items, onSelectCustomer, isLoading, search = '' }:
           </table>
         </div>
         
-        <div className="flex items-center justify-end gap-4 py-3 px-4 border-t border-slate-200 bg-white shrink-0">
+        <div className="flex items-center justify-end gap-4 py-3 px-4 border-t border-[var(--q-border-default)] bg-[var(--q-bg-surface)] shrink-0">
           <div className="flex items-center gap-2">
-            <span className="text-[12px] text-slate-500">Rows:</span>
+            <span className="text-[12px] text-[var(--q-text-tertiary)]">Rows:</span>
             <select
               value={itemsPerPage}
               onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-              className="text-[12px] border-0 bg-transparent text-slate-700 cursor-pointer focus:ring-0"
+              className="text-[12px] border-0 bg-transparent text-[var(--q-text-primary)] cursor-pointer focus:ring-0"
             >
               {PAGE_SIZE_OPTIONS.map(size => (
                 <option key={size} value={size}>{size}</option>
@@ -231,22 +231,22 @@ export function ActivityTab({ items, onSelectCustomer, isLoading, search = '' }:
           </div>
           
           <div className="flex items-center gap-2">
-            <span className="text-[12px] text-slate-500">
+            <span className="text-[12px] text-[var(--q-text-tertiary)]">
               {Math.min(currentPage, totalPages)} of {totalPages}
             </span>
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage <= 1}
-              className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed"
+              className="p-1 rounded hover:bg-[var(--q-bg-surface-hover)] disabled:opacity-30 disabled:cursor-not-allowed"
             >
-              <ChevronLeft className="h-4 w-4 text-slate-600" />
+              <ChevronLeft className="h-4 w-4 text-[var(--q-text-tertiary)]" />
             </button>
             <button
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage >= totalPages}
-              className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed"
+              className="p-1 rounded hover:bg-[var(--q-bg-surface-hover)] disabled:opacity-30 disabled:cursor-not-allowed"
             >
-              <ChevronRight className="h-4 w-4 text-slate-600" />
+              <ChevronRight className="h-4 w-4 text-[var(--q-text-tertiary)]" />
             </button>
           </div>
         </div>

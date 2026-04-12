@@ -101,19 +101,19 @@ export default function RejectionChatDrawer({
             <div
               className={`text-sm rounded-lg px-3 py-1.5 max-w-[80%] ${
                 msg.role === "riley"
-                  ? "bg-muted"
+                  ? "bg-[var(--q-bg-surface-alt)]"
                   : "bg-primary text-primary-foreground"
               }`}
             >
               {msg.message}
             </div>
-            {msg.role === "user" && <User className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />}
+            {msg.role === "user" && <User className="h-4 w-4 mt-0.5 text-[var(--q-text-tertiary)] shrink-0" />}
           </div>
         ))}
         {chatMutation.isPending && (
           <div className="flex gap-2">
             <Bot className="h-4 w-4 mt-0.5 text-primary shrink-0" />
-            <div className="text-sm text-muted-foreground italic">Thinking...</div>
+            <div className="text-sm text-[var(--q-text-tertiary)] italic">Thinking...</div>
           </div>
         )}
       </div>
@@ -142,7 +142,7 @@ export default function RejectionChatDrawer({
 
       {isDone && (
         <div className="border-t px-3 py-2 text-center">
-          <p className="text-xs text-muted-foreground">Rejection classified. Chat complete.</p>
+          <p className="text-xs text-[var(--q-text-tertiary)]">Rejection classified. Chat complete.</p>
         </div>
       )}
     </div>

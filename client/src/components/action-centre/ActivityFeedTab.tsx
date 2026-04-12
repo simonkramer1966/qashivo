@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { QBadge } from "@/components/ui/q-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FilterPill } from "@/components/ui/filter-pill";
 import { cn } from "@/lib/utils";
@@ -55,10 +54,10 @@ interface FeedResponse {
 // ── Status border colour ──────────────────────────────────────
 
 const STATUS_BORDER: Record<string, string> = {
-  amber: "border-l-[#BA7517]",
-  green: "border-l-[#1D9E75]",
-  blue: "border-l-[#185FA5]",
-  red: "border-l-[#E24B4A]",
+  amber: "border-l-[var(--q-attention-text)]",
+  green: "border-l-[var(--q-money-in-text)]",
+  blue: "border-l-[var(--q-info-text)]",
+  red: "border-l-[var(--q-risk-text)]",
 };
 
 // ── Outcome badge for group header ────────────────────────────
@@ -75,30 +74,22 @@ function GroupBadge({ group }: { group: DebtorGroup }) {
 
   if (hasPaid) {
     badges.push(
-      <Badge key="paid" variant="outline" className="bg-green-50 text-green-700 text-[10px] px-1.5 py-0 shrink-0">
-        Paid
-      </Badge>
+      <QBadge key="paid" variant="ready">Paid</QBadge>
     );
   }
   if (hasArrangement) {
     badges.push(
-      <Badge key="arr" variant="outline" className="bg-blue-50 text-blue-700 text-[10px] px-1.5 py-0 shrink-0">
-        Arrangement
-      </Badge>
+      <QBadge key="arr" variant="info">Arrangement</QBadge>
     );
   }
   if (hasDispute) {
     badges.push(
-      <Badge key="disp" variant="outline" className="bg-amber-50 text-amber-700 text-[10px] px-1.5 py-0 shrink-0">
-        Dispute
-      </Badge>
+      <QBadge key="disp" variant="attention">Dispute</QBadge>
     );
   }
   if (hasReply && !hasPaid && !hasArrangement && !hasDispute) {
     badges.push(
-      <Badge key="reply" variant="outline" className="bg-emerald-50 text-emerald-700 text-[10px] px-1.5 py-0 shrink-0">
-        Reply
-      </Badge>
+      <QBadge key="reply" variant="ready">Reply</QBadge>
     );
   }
 
@@ -144,17 +135,17 @@ export default function ActivityFeedTab() {
   return (
     <div className="space-y-4">
       {/* Smart summary strip */}
-      <div className="rounded-lg bg-muted/50 border px-4 py-2.5 text-sm flex items-center gap-1 flex-wrap">
-        <span className="text-muted-foreground">{timeLabels[timeRange]}:</span>
-        <span><strong>{summary.emailsSent}</strong> <span className="text-muted-foreground">sent</span></span>
-        <span className="text-muted-foreground">&middot;</span>
-        <span className="text-[#1D9E75]"><strong>{summary.repliesReceived}</strong> <span>replies</span></span>
-        <span className="text-muted-foreground">&middot;</span>
-        <span><strong>{summary.arrangementsConfirmed}</strong> <span className="text-muted-foreground">arrangements</span></span>
+      <div className="rounded-lg bg-[var(--q-bg-surface-alt)] border px-4 py-2.5 text-sm flex items-center gap-1 flex-wrap">
+        <span className="text-[var(--q-text-tertiary)]">{timeLabels[timeRange]}:</span>
+        <span><strong>{summary.emailsSent}</strong> <span className="text-[var(--q-text-tertiary)]">sent</span></span>
+        <span className="text-[var(--q-text-tertiary)]">&middot;</span>
+        <span className="text-[var(--q-money-in-text)]"><strong>{summary.repliesReceived}</strong> <span>replies</span></span>
+        <span className="text-[var(--q-text-tertiary)]">&middot;</span>
+        <span><strong>{summary.arrangementsConfirmed}</strong> <span className="text-[var(--q-text-tertiary)]">arrangements</span></span>
         {summary.disputesRaised > 0 && (
           <>
-            <span className="text-muted-foreground">&middot;</span>
-            <span className="text-[#BA7517]"><strong>{summary.disputesRaised}</strong> <span>disputes</span></span>
+            <span className="text-[var(--q-text-tertiary)]">&middot;</span>
+            <span className="text-[var(--q-attention-text)]"><strong>{summary.disputesRaised}</strong> <span>disputes</span></span>
           </>
         )}
       </div>
@@ -165,11 +156,11 @@ export default function ActivityFeedTab() {
           {(["all", "inbound", "outbound"] as Direction[]).map(v => (
             <FilterPill key={v} label={v === "all" ? "All" : v === "inbound" ? "Inbound" : "Outbound"} active={direction === v} onClick={() => setDirection(v)} />
           ))}
-          <div className="mx-1.5 h-6 w-px bg-border self-center" />
+          <div className="mx-1.5 h-6 w-px bg-[var(--q-border-default)] self-center" />
           {(["all", "email", "sms", "voice", "system"] as Channel[]).map(v => (
             <FilterPill key={v} label={v === "all" ? "All" : v === "sms" ? "SMS" : v.charAt(0).toUpperCase() + v.slice(1)} active={channel === v} onClick={() => setChannel(v)} />
           ))}
-          <div className="mx-1.5 h-6 w-px bg-border self-center" />
+          <div className="mx-1.5 h-6 w-px bg-[var(--q-border-default)] self-center" />
           {(["today", "yesterday", "week", "month"] as TimeRange[]).map(v => (
             <FilterPill key={v} label={v === "today" ? "Today" : v === "yesterday" ? "Yesterday" : v === "week" ? "This week" : "This month"} active={timeRange === v} onClick={() => setTimeRange(v)} />
           ))}
@@ -178,15 +169,15 @@ export default function ActivityFeedTab() {
 
       {/* Threaded feed */}
       {groups.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <Inbox className="mb-3 h-10 w-10 text-muted-foreground" />
+        <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)]">
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <Inbox className="mb-3 h-10 w-10 text-[var(--q-text-tertiary)]" />
             <h3 className="text-lg font-semibold">No activity yet</h3>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-[var(--q-text-tertiary)]">
               Approve items from the Approval tab to get started.
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       ) : (
         <div className="space-y-3">
           {groups.map(group => (
@@ -204,14 +195,14 @@ function DebtorGroupCard({ group }: { group: DebtorGroup }) {
   let lastDateKey = "";
 
   return (
-    <Card
+    <div
       className={cn(
-        "border-l-[3px] overflow-hidden",
+        "bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] border-l-[3px] overflow-hidden",
         STATUS_BORDER[group.statusColor] || STATUS_BORDER.blue,
       )}
     >
       {/* Group header */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b bg-muted/30">
+      <div className="flex items-center justify-between px-4 py-2.5 border-b bg-[var(--q-bg-surface-alt)]/30">
         <div className="flex items-center gap-2 min-w-0">
           <Link
             href={`/qollections/debtors/${group.contactId}`}
@@ -221,7 +212,7 @@ function DebtorGroupCard({ group }: { group: DebtorGroup }) {
           </Link>
           <GroupBadge group={group} />
         </div>
-        <span className="text-xs text-muted-foreground shrink-0 ml-2">
+        <span className="text-xs text-[var(--q-text-tertiary)] shrink-0 ml-2">
           {group.events.length} event{group.events.length !== 1 ? "s" : ""}
         </span>
       </div>
@@ -243,6 +234,6 @@ function DebtorGroupCard({ group }: { group: DebtorGroup }) {
           );
         })}
       </div>
-    </Card>
+    </div>
   );
 }
