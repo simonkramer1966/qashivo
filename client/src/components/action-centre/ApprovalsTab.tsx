@@ -6,6 +6,8 @@ import { useAgentNotifications } from "@/hooks/useAgentNotifications";
 import { useInvalidateActionCentre } from "@/hooks/useInvalidateActionCentre";
 import { usePermissions } from "@/hooks/usePermissions";
 import { QBadge } from "@/components/ui/q-badge";
+import { QAmount } from "@/components/ui/q-amount";
+import { ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -90,6 +92,7 @@ interface EnrichedAction {
   priorContactCount: number;
   prsScore: number | null;
   totalAmount: number;
+  accountBalance: number;
   invoiceCount: number;
 }
 
@@ -100,7 +103,8 @@ interface YesterdaySummary {
   paid: { count: number; total: number };
 }
 
-type SortField = "priority" | "daysOverdue" | "totalAmount" | "companyName";
+type SortDir = "asc" | "desc" | null;
+interface SortState { field: string; dir: SortDir; }
 
 const TONE_LEVELS = ["friendly", "professional", "firm", "formal", "legal"] as const;
 type ToneLevel = typeof TONE_LEVELS[number];
@@ -200,6 +204,39 @@ function ApprovalTH({ children, className }: { children?: React.ReactNode; class
   );
 }
 
+function SortableTH({ field, label, sort, onSort, className }: {
+  field: string; label: string; sort: SortState; onSort: (s: SortState) => void; className?: string;
+}) {
+  const active = sort.field === field && sort.dir !== null;
+  const toggle = () => {
+    if (sort.field !== field) return onSort({ field, dir: "desc" });
+    if (sort.dir === "desc") return onSort({ field, dir: "asc" });
+    if (sort.dir === "asc") return onSort({ field: "", dir: null });
+    return onSort({ field, dir: "desc" });
+  };
+  return (
+    <th className={`h-12 text-left px-3 py-2 border-b border-[var(--q-border-default)] ${className || ""}`}>
+      <button
+        type="button"
+        onClick={toggle}
+        className={cn(
+          "inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-[0.3px] transition-colors cursor-pointer",
+          active ? "text-[var(--q-text-primary)]" : "text-[var(--q-text-tertiary)] hover:text-[var(--q-text-primary)]",
+        )}
+      >
+        {label}
+        {active && sort.dir === "asc" ? (
+          <ArrowUp className="h-3 w-3" />
+        ) : active && sort.dir === "desc" ? (
+          <ArrowDown className="h-3 w-3" />
+        ) : (
+          <ArrowUpDown className="h-3 w-3 opacity-40" />
+        )}
+      </button>
+    </th>
+  );
+}
+
 // ── Sub-components ──────────────────────────────────────────
 
 function TonePill({ tone, onClick }: { tone: string; onClick?: () => void }) {
@@ -262,7 +299,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
 
   const [editAction, setEditAction] = useState<{ id: string; subject: string; body: string } | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [sortField, setSortField] = useState<SortField>("priority");
+  const [sort, setSort] = useState<SortState>({ field: "priority", dir: "desc" });
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const [toneOverrides, setToneOverrides] = useState<Map<string, ToneLevel>>(new Map());
   const [regeneratedIds, setRegeneratedIds] = useState<Set<string>>(new Set());
@@ -744,21 +781,33 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
 
   const rawActions = data?.actions ?? [];
   const actions = useMemo(() => {
+    if (!sort.dir || !sort.field) return rawActions;
+    const mul = sort.dir === "asc" ? 1 : -1;
     return [...rawActions].sort((a, b) => {
-      switch (sortField) {
+      switch (sort.field) {
         case "priority":
-          return (b.priority ?? 50) - (a.priority ?? 50) || b.daysOverdue - a.daysOverdue;
-        case "daysOverdue":
-          return b.daysOverdue - a.daysOverdue;
+          return mul * ((a.priority ?? 50) - (b.priority ?? 50)) || b.daysOverdue - a.daysOverdue;
+        case "debtor":
+          return mul * (a.companyName || a.contactName || "").localeCompare(b.companyName || b.contactName || "");
+        case "invoiceCount":
+          return mul * (a.invoiceCount - b.invoiceCount);
+        case "accountBalance":
+          return mul * (a.accountBalance - b.accountBalance);
         case "totalAmount":
-          return b.totalAmount - a.totalAmount;
-        case "companyName":
-          return (a.companyName || a.contactName || "").localeCompare(b.companyName || b.contactName || "");
+          return mul * (a.totalAmount - b.totalAmount);
+        case "daysOverdue":
+          return mul * (a.daysOverdue - b.daysOverdue);
+        case "chase":
+          return mul * (a.priorContactCount - b.priorContactCount);
+        case "tone":
+          return mul * (a.agentToneLevel || "").localeCompare(b.agentToneLevel || "");
+        case "confidence":
+          return mul * ((parseFloat(a.confidenceScore || "0")) - (parseFloat(b.confidenceScore || "0")));
         default:
           return 0;
       }
     });
-  }, [rawActions, sortField]);
+  }, [rawActions, sort]);
 
   const totalQueuedAmount = useMemo(() => actions.reduce((s, a) => s + a.totalAmount, 0), [actions]);
   const uniqueDebtors = useMemo(() => new Set(actions.map(a => a.contactId).filter(Boolean)).size, [actions]);
@@ -976,13 +1025,6 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
 
   // ── Render ─────────────────────────────────────────────────
 
-  const sortLabels: Record<SortField, string> = {
-    priority: "Priority",
-    daysOverdue: "Days overdue",
-    totalAmount: "Amount",
-    companyName: "Company A–Z",
-  };
-
   return (
     <div className="space-y-3" ref={containerRef}>
       {/* Yesterday's outcomes strip */}
@@ -995,54 +1037,36 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
         </div>
       )}
 
-      {/* Sort tabs + bulk selection + run agent */}
-      {actions.length > 0 && (
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex items-center gap-4">
-            <span className="text-[11px] font-medium tracking-[0.3px] text-[var(--q-text-tertiary)]">Sort</span>
-            {(["priority", "daysOverdue", "totalAmount", "companyName"] as SortField[]).map(f => (
-              <button
-                key={f}
-                className={`text-[13px] font-medium transition-colors ${
-                  sortField === f
-                    ? "text-[var(--q-text-primary)]"
-                    : "text-[var(--q-text-tertiary)] hover:text-[var(--q-text-primary)]"
-                }`}
-                onClick={() => setSortField(f)}
-              >
-                {sortLabels[f]}
-              </button>
-            ))}
-          </div>
-          <div className="ml-auto flex items-center gap-2">
-            {selectedIds.size > 0 && (
-              <>
-                <span className="text-xs text-[var(--q-text-tertiary)]">{selectedIds.size} selected</span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-7 text-xs gap-1"
-                  disabled={bulkApproveMutation.isPending}
-                  onClick={() => bulkApproveMutation.mutate(Array.from(selectedIds))}
-                >
-                  {bulkApproveMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
-                  Approve selected
-                </Button>
-              </>
-            )}
-            {showRunAgent && (
+      {/* Bulk selection + run agent */}
+      {actions.length > 0 && (selectedIds.size > 0 || showRunAgent) && (
+        <div className="flex items-center justify-end gap-2">
+          {selectedIds.size > 0 && (
+            <>
+              <span className="text-xs text-[var(--q-text-tertiary)]">{selectedIds.size} selected</span>
               <Button
                 variant="outline"
                 size="sm"
-                className="gap-1.5 h-7 text-xs"
-                onClick={handleRunAgent}
-                disabled={runAgentMutation.isPending}
+                className="h-7 text-xs gap-1"
+                disabled={bulkApproveMutation.isPending}
+                onClick={() => bulkApproveMutation.mutate(Array.from(selectedIds))}
               >
-                {runAgentMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
-                {runAgentMutation.isPending ? "Generating..." : "Run agent now"}
+                {bulkApproveMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                Approve selected
               </Button>
-            )}
-          </div>
+            </>
+          )}
+          {showRunAgent && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 h-7 text-xs"
+              onClick={handleRunAgent}
+              disabled={runAgentMutation.isPending}
+            >
+              {runAgentMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+              {runAgentMutation.isPending ? "Generating..." : "Run agent now"}
+            </Button>
+          )}
         </div>
       )}
 
@@ -1165,13 +1189,14 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
                       className="h-4 w-4"
                     />
                   </ApprovalTH>
-                  <ApprovalTH>Debtor</ApprovalTH>
-                  <ApprovalTH className="w-[80px] text-right">Invoices</ApprovalTH>
-                  <ApprovalTH className="w-[100px] text-right">Amount</ApprovalTH>
-                  <ApprovalTH className="w-[80px] text-right">Overdue</ApprovalTH>
-                  <ApprovalTH className="w-[90px]">Chase</ApprovalTH>
-                  <ApprovalTH className="w-[100px]">Tone</ApprovalTH>
-                  <ApprovalTH className="w-[80px] text-right">Confidence</ApprovalTH>
+                  <SortableTH field="debtor" label="Debtor" sort={sort} onSort={setSort} />
+                  <SortableTH field="invoiceCount" label="Invoices" sort={sort} onSort={setSort} className="w-[80px] text-right" />
+                  <SortableTH field="accountBalance" label="Amount" sort={sort} onSort={setSort} className="w-[110px] text-right" />
+                  <SortableTH field="totalAmount" label="Overdue" sort={sort} onSort={setSort} className="w-[110px] text-right" />
+                  <SortableTH field="daysOverdue" label="Days late" sort={sort} onSort={setSort} className="w-[90px] text-right" />
+                  <SortableTH field="chase" label="Chase" sort={sort} onSort={setSort} className="w-[90px]" />
+                  <SortableTH field="tone" label="Tone" sort={sort} onSort={setSort} className="w-[100px]" />
+                  <SortableTH field="confidence" label="Confidence" sort={sort} onSort={setSort} className="w-[90px] text-right" />
                   <ApprovalTH className="w-[120px] text-center">Actions</ApprovalTH>
                 </tr>
               </thead>
@@ -1220,12 +1245,17 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
                           {action.invoiceCount}
                         </td>
 
-                        {/* Amount */}
+                        {/* Amount (total outstanding) */}
                         <td className="px-3 py-3 text-[14px] text-[var(--q-text-primary)] q-mono tabular-nums text-right font-medium">
-                          {formatAmount(action.totalAmount)}
+                          {formatAmount(action.accountBalance)}
                         </td>
 
-                        {/* Days overdue */}
+                        {/* Overdue (chase amount) */}
+                        <td className="px-3 py-3 text-right">
+                          <QAmount value={action.totalAmount} variant="overdue" className="text-[14px]" />
+                        </td>
+
+                        {/* Days late */}
                         <td className="px-3 py-3 text-right whitespace-nowrap">
                           <span className="text-[14px] q-mono tabular-nums text-[var(--q-text-secondary)]">{action.daysOverdue}</span>
                           <span className="text-[12px] text-[var(--q-text-tertiary)] ml-0.5">days</span>
