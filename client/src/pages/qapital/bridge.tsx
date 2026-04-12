@@ -66,8 +66,6 @@ interface InflowForecast {
 const ADVANCE_RATE = 0.80;
 const MONTHLY_INTEREST_RATE = 0.035;
 const DAILY_INTEREST_RATE = MONTHLY_INTEREST_RATE / 30;
-const MIN_INVOICE_AMOUNT = 500;
-
 // ── Derived invoice type for bridge selection ──────────────────
 
 interface BridgeInvoice {
@@ -192,10 +190,7 @@ function buildBridgeInvoices(
 
   for (const inv of all) {
     const ic = invoiceMap.get(inv.invoiceId)!;
-    if (inv.amountDue < MIN_INVOICE_AMOUNT) {
-      inv.exclusionReason = "Below £500 threshold";
-      excluded.push(inv);
-    } else if (ic.daysOverdue > 120) {
+    if (ic.daysOverdue > 120) {
       inv.exclusionReason = ">120 days overdue";
       excluded.push(inv);
     } else if (ic.isDisputed) {
