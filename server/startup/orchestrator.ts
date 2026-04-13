@@ -21,6 +21,7 @@ import { startEnrichmentJob } from "../jobs/enrichmentJob";
 import { startImpactScheduler } from "../jobs/impactScheduler";
 import { startStateTimeoutChecker } from "../jobs/stateTimeoutChecker";
 import { startAuditLogRetentionJob } from "../jobs/auditLogRetention";
+import { startPartnerReportScheduler } from "../services/partnerReportScheduler";
 import { batchProcessor } from "../services/batchProcessor";
 import { db } from "../db";
 import { tenants, providerConnections } from "@shared/schema";
@@ -256,6 +257,13 @@ export async function startAll(): Promise<void> {
     console.log("[startup] audit log retention job scheduled");
   } catch (error) {
     console.error("[startup] audit log retention job failed:", error);
+  }
+
+  try {
+    startPartnerReportScheduler();
+    console.log("[startup] partner report scheduler started");
+  } catch (error) {
+    console.error("[startup] partner report scheduler failed:", error);
   }
 
   // One-time migration: create conversation_states for VIP/blocked contacts

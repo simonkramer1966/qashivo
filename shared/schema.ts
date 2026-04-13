@@ -6979,3 +6979,87 @@ export const insertPartnerRileyConversationSchema = createInsertSchema(partnerRi
 
 export type PartnerRileyConversation = typeof partnerRileyConversations.$inferSelect;
 export type InsertPartnerRileyConversation = z.infer<typeof insertPartnerRileyConversationSchema>;
+
+// ── Partner Portal Phase 7: Portfolio Reports ──
+
+export const partnerReportSubscriptions = pgTable("partner_report_subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  partnerId: varchar("partner_id").notNull().references(() => partners.id),
+  reportType: text("report_type").notNull(), // 'portfolio_health' | 'collections_performance' | 'controller_productivity'
+  frequency: text("frequency").notNull(), // 'weekly' | 'fortnightly' | 'monthly'
+  dayOfWeek: integer("day_of_week"), // 0-6 (0=Sunday), for weekly/fortnightly
+  dayOfMonth: integer("day_of_month"), // 1-28, for monthly
+  timeOfDay: text("time_of_day").notNull().default("08:00"), // HH:MM
+  timezone: text("timezone").notNull().default("Europe/London"),
+  recipientEmails: jsonb("recipient_emails").notNull().default([]), // email addresses for distribution
+  filters: jsonb("filters").default({}), // optional: specific tenantIds, date range preferences
+  isActive: boolean("is_active").notNull().default(true),
+  lastGeneratedAt: timestamp("last_generated_at"),
+  nextRunAt: timestamp("next_run_at"),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_partner_report_subs_partner").on(table.partnerId),
+  index("idx_partner_report_subs_next_run").on(table.nextRunAt),
+]);
+
+export const partnerReportSubscriptionsRelations = relations(partnerReportSubscriptions, ({ one }) => ({
+  partner: one(partners, {
+    fields: [partnerReportSubscriptions.partnerId],
+    references: [partners.id],
+  }),
+  creator: one(users, {
+    fields: [partnerReportSubscriptions.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export const insertPartnerReportSubscriptionSchema = createInsertSchema(partnerReportSubscriptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type PartnerReportSubscription = typeof partnerReportSubscriptions.$inferSelect;
+export type InsertPartnerReportSubscription = z.infer<typeof insertPartnerReportSubscriptionSchema>;
+
+export const partnerGeneratedReports = pgTable("partner_generated_reports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  partnerId: varchar("partner_id").notNull().references(() => partners.id),
+  subscriptionId: varchar("subscription_id").references(() => partnerReportSubscriptions.id), // null for manual one-off
+  reportType: text("report_type").notNull(),
+  title: text("title").notNull(),
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  pdfData: text("pdf_data"), // base64-encoded PDF buffer (bytea not available in drizzle-pg without custom type)
+  metadata: jsonb("metadata").default({}), // generation stats, row counts, errors
+  status: text("status").notNull().default("generating"), // 'generating' | 'completed' | 'failed'
+  generatedBy: varchar("generated_by").notNull().references(() => users.id),
+  distributedAt: timestamp("distributed_at"),
+  distributionRecipients: jsonb("distribution_recipients"), // who received it
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_partner_generated_reports_partner").on(table.partnerId, table.createdAt),
+]);
+
+export const partnerGeneratedReportsRelations = relations(partnerGeneratedReports, ({ one }) => ({
+  partner: one(partners, {
+    fields: [partnerGeneratedReports.partnerId],
+    references: [partners.id],
+  }),
+  subscription: one(partnerReportSubscriptions, {
+    fields: [partnerGeneratedReports.subscriptionId],
+    references: [partnerReportSubscriptions.id],
+  }),
+  generator: one(users, {
+    fields: [partnerGeneratedReports.generatedBy],
+    references: [users.id],
+  }),
+}));
+
+export const insertPartnerGeneratedReportSchema = createInsertSchema(partnerGeneratedReports).omit({
+  id: true,
+  createdAt: true,
+});
+export type PartnerGeneratedReport = typeof partnerGeneratedReports.$inferSelect;
+export type InsertPartnerGeneratedReport = z.infer<typeof insertPartnerGeneratedReportSchema>;

@@ -5,6 +5,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import debtorRoutes from "./debtor-routes";
 import { registerPartnerRoutes } from "./routes/partnerRoutes";
+import { registerPartnerReportRoutes } from "./routes/partnerReportRoutes";
 import { startAll } from "./startup/orchestrator";
 
 const app = express();
@@ -270,6 +271,7 @@ process.on('unhandledRejection', (reason) => {
   
   // Register partner operating layer routes
   registerPartnerRoutes(app);
+  registerPartnerReportRoutes(app);
 
   // ─── Graceful shutdown ──────────────────────────────────────────────────────
   function shutdown(signal: string) {
