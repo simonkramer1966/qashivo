@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Pricing | Qashivo - The Digital Curator for UK SME Cashflow</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "background": "#f7f9fb",
+              "on-primary-fixed": "#131b2e",
+              "on-secondary-container": "#006172",
+              "outline": "#76777d",
+              "on-background": "#191c1e",
+              "on-error-container": "#93000a",
+              "error-container": "#ffdad6",
+              "surface-container": "#eceef0",
+              "surface": "#f7f9fb",
+              "on-tertiary-container": "#b87500",
+              "secondary-container": "#57dffe",
+              "on-tertiary-fixed": "#2a1700",
+              "primary-fixed-dim": "#bec6e0",
+              "on-tertiary": "#ffffff",
+              "on-secondary-fixed-variant": "#004e5c",
+              "surface-container-low": "#f2f4f6",
+              "surface-bright": "#f7f9fb",
+              "tertiary-fixed-dim": "#ffb95f",
+              "surface-dim": "#d8dadc",
+              "surface-variant": "#e0e3e5",
+              "secondary-fixed": "#acedff",
+              "tertiary-container": "#2a1700",
+              "inverse-primary": "#bec6e0",
+              "surface-tint": "#565e74",
+              "on-error": "#ffffff",
+              "on-primary-container": "#7c839b",
+              "primary-container": "#131b2e",
+              "surface-container-high": "#e6e8ea",
+              "surface-container-highest": "#e0e3e5",
+              "secondary": "#00687a",
+              "on-secondary": "#ffffff",
+              "inverse-on-surface": "#eff1f3",
+              "error": "#ba1a1a",
+              "primary": "#0f172a",
+              "on-surface-variant": "#45464d",
+              "inverse-surface": "#2d3133",
+              "tertiary-fixed": "#ffddb8",
+              "on-tertiary-fixed-variant": "#653e00",
+              "on-primary": "#ffffff",
+              "surface-container-lowest": "#ffffff",
+              "on-primary-fixed-variant": "#3f465c",
+              "on-secondary-fixed": "#001f26",
+              "on-surface": "#191c1e",
+              "tertiary": "#000000",
+              "secondary-fixed-dim": "#4cd7f6",
+              "primary-fixed": "#dae2fd",
+              "outline-variant": "#c6c6cd",
+              "brand-navy": "#0F172A",
+              "brand-teal": "#06B6D4",
+              "brand-amber": "#F59E0B"
+            },
+            fontFamily: {
+              "headline": ["Manrope", "sans-serif"],
+              "body": ["Inter", "sans-serif"],
+              "label": ["Inter", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.5rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      body { font-family: 'Inter', sans-serif; background-color: #f7f9fb; color: #191c1e; }
+      .font-headline { font-family: 'Manrope', sans-serif; }
+      .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+      .toggle-checkbox:checked { right: 0; border-color: #00687a; }
+      .toggle-checkbox:checked + .toggle-label { background-color: #00687a; }
+      details > summary::-webkit-details-marker { display: none; }
+      .annual-price { display: none; }
+      .is-annual .annual-price { display: inline; }
+      .is-annual .monthly-price { display: none; }
+
+      .nav-link {
+        position: relative;
+        padding-bottom: 2px;
+      }
+      .nav-link::after {
+        content: '';
+        position: absolute;
+        width: 0;
+        height: 2px;
+        bottom: -2px;
+        left: 0;
+        background-color: #00687a;
+        transition: width 0.3s ease;
+      }
+      .nav-link:hover::after {
+        width: 100%;
+      }
+      
+      .feature-card-hover {
+        transition: border-left 0.2s ease, background-color 0.2s ease;
+        border-left: 0px solid transparent;
+      }
+      .feature-card-hover:hover {
+        border-left: 4px solid #00687a;
+      }
+
+      .dot-grid {
+        background-image: radial-gradient(circle, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+        background-size: 24px 24px;
+      }
+
+      .node-container {
+        position: relative;
+        overflow: hidden;
+      }
+      .node-svg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 0;
+        pointer-events: none;
+      }
+      
+      .premium-card {
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        border: 1px solid rgba(15, 23, 42, 0.1);
+      }
+      .premium-card-active {
+        box-shadow: 0 20px 25px -5px rgba(0, 104, 122, 0.1), 0 10px 10px -5px rgba(0, 104, 122, 0.04);
+        border: 2px solid #00687a;
+      }
+    </style>
+</head>
+<body class="bg-surface text-on-background">
+<!-- TopNavBar -->
+<header class="fixed top-0 w-full z-50 bg-slate-50/80 backdrop-blur-md border-b border-outline-variant/30">
+<nav class="flex justify-between items-center max-w-7xl mx-auto px-6 py-4">
+<div class="text-2xl font-black text-slate-900 tracking-tighter font-headline">Qashivo</div>
+<!-- Desktop Navigation -->
+<div class="hidden md:flex items-center space-x-8">
+<a class="nav-link font-['Manrope'] font-bold tracking-tight text-sm text-slate-600 hover:text-slate-900 transition-colors duration-300" href="#">Home</a>
+<a class="nav-link font-['Manrope'] font-bold tracking-tight text-sm text-slate-600 hover:text-slate-900 transition-colors duration-300" href="#">Features</a>
+<a class="nav-link font-['Manrope'] font-bold tracking-tight text-sm text-slate-600 hover:text-slate-900 transition-colors duration-300" href="#">Why Qashivo</a>
+<a class="nav-link font-['Manrope'] font-bold tracking-tight text-sm text-cyan-600 font-extrabold transition-colors duration-300" href="#">Pricing</a>
+<a class="nav-link font-['Manrope'] font-bold tracking-tight text-sm text-slate-600 hover:text-slate-900 transition-colors duration-300" href="#">Contact</a>
+</div>
+<div class="flex items-center gap-4">
+<button class="px-5 py-2.5 bg-primary-container text-on-primary text-sm font-bold rounded-lg shadow-sm hover:shadow-lg hover:bg-slate-800 transition-all active:scale-95 duration-150">Book a Demo</button>
+</div>
+</nav>
+</header>
+<main class="pt-32 pb-20 px-6 max-w-7xl mx-auto">
+<!-- Hero Section -->
+<section class="text-center mb-16">
+<h1 class="font-headline text-5xl md:text-7xl font-extrabold tracking-tight mb-6 text-on-background">
+                Pricing that scales with <br/><span class="text-secondary">your ambition</span>
+</h1>
+<p class="text-on-surface-variant max-w-2xl mx-auto mb-10 leading-relaxed text-xl font-medium">
+                Simple, transparent, and direct. Unlock your working capital for less than the cost of a junior clerk.
+            </p>
+<!-- Pricing Toggle -->
+<div class="flex items-center justify-center gap-4 mb-12">
+<span class="text-sm font-bold text-on-surface-variant">Monthly billing</span>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" id="billing-toggle" onchange="document.getElementById('pricing-grid').classList.toggle('is-annual')" type="checkbox"/>
+<div class="w-14 h-7 bg-surface-container-highest rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-6 after:transition-all peer-checked:bg-secondary"></div>
+</label>
+<span class="text-sm font-bold text-on-surface">Annual billing</span>
+<span class="bg-brand-teal/10 text-brand-teal text-[11px] font-black px-3 py-1 rounded-full border border-brand-teal/20">SAVE 20%</span>
+</div>
+</section>
+<!-- Pricing Cards -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20" id="pricing-grid">
+<!-- Tier 1: Starter -->
+<div class="premium-card p-10 rounded-xl flex flex-col justify-between transition-all duration-300 hover:-translate-y-1 bg-surface-container-lowest">
+<div>
+<h3 class="font-headline text-xl font-bold mb-1 text-slate-500 uppercase tracking-widest">Starter</h3>
+<p class="text-on-surface-variant text-sm mb-8 font-medium">Automate the basics of credit control.</p>
+<div class="mb-10 flex items-baseline gap-1">
+<span class="text-6xl font-headline font-black text-on-background tracking-tighter monthly-price">£99</span>
+<span class="text-6xl font-headline font-black text-on-background tracking-tighter annual-price">£79</span>
+<span class="text-slate-400 font-bold text-lg">/mo</span>
+</div>
+<ul class="space-y-4 mb-10 border-t border-slate-100 pt-8">
+<li class="flex items-start gap-3 text-sm font-semibold text-slate-700">
+<span class="material-symbols-outlined text-brand-teal text-xl">check_circle</span>
+<span>AI email generation &amp; smart escalation</span>
+</li>
+<li class="flex items-start gap-3 text-sm font-semibold text-slate-700">
+<span class="material-symbols-outlined text-brand-teal text-xl">check_circle</span>
+<span>Live Debtor Dashboard</span>
+</li>
+<li class="flex items-start gap-3 text-sm font-semibold text-slate-700">
+<span class="material-symbols-outlined text-brand-teal text-xl">check_circle</span>
+<span>3 collection sequences per debtor</span>
+</li>
+<li class="flex items-start gap-3 text-sm font-semibold text-slate-700">
+<span class="material-symbols-outlined text-brand-teal text-xl">check_circle</span>
+<span>Full Xero &amp; Quickbooks sync</span>
+</li>
+</ul>
+</div>
+<button class="w-full py-4 border-2 border-slate-900 text-slate-900 font-black rounded-lg hover:bg-slate-900 hover:text-white transition-all">Start 14-Day Trial</button>
+</div>
+<!-- Tier 2: Growth (Featured) -->
+<div class="premium-card-active p-10 rounded-xl flex flex-col justify-between relative bg-white transition-all duration-300 hover:-translate-y-2">
+<div class="absolute -top-4 left-1/2 -translate-x-1/2 bg-secondary text-on-secondary px-6 py-1.5 rounded-full text-[11px] font-black uppercase tracking-[0.2em] shadow-lg">Most Effective</div>
+<div>
+<h3 class="font-headline text-xl font-bold mb-1 text-secondary uppercase tracking-widest">Growth</h3>
+<p class="text-on-surface-variant text-sm mb-8 font-medium">The complete autonomous credit team.</p>
+<div class="mb-10 flex items-baseline gap-1">
+<span class="text-6xl font-headline font-black text-on-background tracking-tighter monthly-price">£199</span>
+<span class="text-6xl font-headline font-black text-on-background tracking-tighter annual-price">£159</span>
+<span class="text-slate-400 font-bold text-lg">/mo</span>
+</div>
+<ul class="space-y-4 mb-10 border-t border-slate-100 pt-8">
+<li class="flex items-start gap-3 text-sm font-bold text-slate-900">
+<span class="material-symbols-outlined text-secondary text-xl">bolt</span>
+<span>All Starter features, plus:</span>
+</li>
+<li class="flex items-start gap-3 text-sm font-semibold text-slate-700">
+<span class="material-symbols-outlined text-brand-teal text-xl">check_circle</span>
+<span>Riley AI advisor: Active cash insights</span>
+</li>
+<li class="flex items-start gap-3 text-sm font-semibold text-slate-700">
+<span class="material-symbols-outlined text-brand-teal text-xl">check_circle</span>
+<span>Autonomous collection modes</span>
+</li>
+<li class="flex items-start gap-3 text-sm font-semibold text-slate-700">
+<span class="material-symbols-outlined text-brand-teal text-xl">check_circle</span>
+<span>Unlimited escalation sequences</span>
+</li>
+<li class="flex items-start gap-3 text-sm font-semibold text-slate-700">
+<span class="material-symbols-outlined text-brand-teal text-xl">check_circle</span>
+<span>Weekly risk &amp; priority reporting</span>
+</li>
+</ul>
+</div>
+<button class="w-full py-4 bg-secondary text-white font-black rounded-lg hover:brightness-90 transition-all shadow-lg shadow-secondary/20">Start 14-Day Trial</button>
+</div>
+<!-- Tier 3: Scale -->
+<div class="premium-card p-10 rounded-xl flex flex-col justify-between transition-all duration-300 hover:-translate-y-1 bg-surface-container-lowest">
+<div>
+<h3 class="font-headline text-xl font-bold mb-1 text-slate-500 uppercase tracking-widest">Scale</h3>
+<p class="text-on-surface-variant text-sm mb-8 font-medium">Complex books &amp; working capital treasury.</p>
+<div class="mb-10 flex items-baseline gap-1">
+<span class="text-6xl font-headline font-black text-on-background tracking-tighter monthly-price">£399</span>
+<span class="text-6xl font-headline font-black text-on-background tracking-tighter annual-price">£319</span>
+<span class="text-slate-400 font-bold text-lg">/mo</span>
+</div>
+<ul class="space-y-4 mb-10 border-t border-slate-100 pt-8">
+<li class="flex items-start gap-3 text-sm font-bold text-slate-900">
+<span class="material-symbols-outlined text-slate-400 text-xl">star_half</span>
+<span>All Growth features, plus:</span>
+</li>
+<li class="flex items-start gap-3 text-sm font-semibold text-slate-700">
+<span class="material-symbols-outlined text-brand-teal text-xl">check_circle</span>
+<span>Qapital working capital module</span>
+</li>
+<li class="flex items-start gap-3 text-sm font-semibold text-slate-700">
+<span class="material-symbols-outlined text-brand-teal text-xl">check_circle</span>
+<span>Advanced scenario &amp; forecast tools</span>
+</li>
+<li class="flex items-start gap-3 text-sm font-semibold text-slate-700">
+<span class="material-symbols-outlined text-brand-teal text-xl">check_circle</span>
+<span>Dedicated Account Strategist</span>
+</li>
+</ul>
+</div>
+<button class="w-full py-4 border-2 border-slate-900 text-slate-900 font-black rounded-lg hover:bg-slate-900 hover:text-white transition-all">Contact Sales</button>
+</div>
+</div>
+<!-- Trust Bar -->
+<div class="text-center mb-32">
+<div class="inline-flex flex-wrap justify-center gap-x-8 gap-y-4 px-8 py-3 bg-slate-100/50 rounded-full border border-slate-200">
+<span class="text-[10px] font-black text-slate-500 tracking-widest uppercase flex items-center gap-2">
+<span class="material-symbols-outlined text-xs">verified_user</span> 14-day free trial
+</span>
+<span class="text-[10px] font-black text-slate-500 tracking-widest uppercase flex items-center gap-2">
+<span class="material-symbols-outlined text-xs">no_accounts</span> No credit card required
+</span>
+<span class="text-[10px] font-black text-slate-500 tracking-widest uppercase flex items-center gap-2">
+<span class="material-symbols-outlined text-xs">lock</span> SOC 2 &amp; GDPR compliant
+</span>
+<span class="text-[10px] font-black text-slate-500 tracking-widest uppercase flex items-center gap-2">
+<span class="material-symbols-outlined text-xs">home_pin</span> UK Data Residency
+</span>
+</div>
+</div>
+<!-- ROI Calculator Section -->
+<section class="bg-slate-900 rounded-3xl p-0 overflow-hidden mb-32 border border-slate-800 shadow-2xl relative node-container">
+<div class="absolute inset-0 dot-grid opacity-10"></div>
+<div class="relative z-10 p-12 md:p-20 max-w-6xl mx-auto">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+<div class="space-y-12">
+<div>
+<h2 class="font-headline text-4xl font-extrabold text-white mb-4">Quantify your efficiency</h2>
+<p class="text-slate-400 text-lg">Input your current ledger data to calculate the immediate liquidity impact of autonomous credit control.</p>
+</div>
+<div class="space-y-10">
+<div class="bg-white/5 backdrop-blur-md p-8 rounded-xl border border-white/10">
+<div class="flex justify-between mb-6">
+<label class="font-bold text-xs uppercase tracking-widest text-slate-300" for="owed-range">Total Outstanding Balance</label>
+<span class="text-brand-teal font-black text-xl" id="owed-val">£500,000</span>
+</div>
+<input class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-brand-teal" id="owed-range" max="2000000" min="50000" oninput="calculateROI()" step="10000" type="range" value="500000"/>
+</div>
+<div class="bg-white/5 backdrop-blur-md p-8 rounded-xl border border-white/10">
+<div class="flex justify-between mb-6">
+<label class="font-bold text-xs uppercase tracking-widest text-slate-300" for="days-range">Average Debtor Days (DSO)</label>
+<span class="text-brand-teal font-black text-xl" id="days-val">45 days</span>
+</div>
+<input class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-brand-teal" id="days-range" max="90" min="30" oninput="calculateROI()" step="1" type="range" value="45"/>
+</div>
+</div>
+</div>
+<div class="bg-white p-10 md:p-14 rounded-2xl text-slate-900 shadow-2xl relative overflow-hidden">
+<div class="absolute top-0 right-0 p-4">
+<span class="material-symbols-outlined text-slate-100 text-8xl absolute -top-4 -right-4">analytics</span>
+</div>
+<div class="relative z-10">
+<h4 class="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-8">Liquidity Projection</h4>
+<div class="flex items-baseline gap-2 mb-6">
+<span class="text-6xl md:text-7xl font-headline font-black text-slate-900 tracking-tighter" id="roi-output">£166,667</span>
+</div>
+<p class="text-lg leading-relaxed text-slate-600 font-medium" id="roi-description">
+                    By reducing your DSO by 15 days, Qashivo will unlock <span class="text-slate-900 font-bold">£166.7k</span> in immediately available working capital.
+                </p>
+<div class="mt-10 pt-10 border-t border-slate-100">
+<button class="w-full py-5 bg-brand-teal text-white text-lg font-black rounded-xl hover:bg-slate-900 transition-all shadow-lg shadow-brand-teal/20">Claim This Capital</button>
+<p class="text-center text-xs text-slate-400 mt-6 font-bold uppercase tracking-widest">Based on current market benchmarks</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- FAQ Section -->
+<section class="max-w-4xl mx-auto mb-32">
+<div class="text-center mb-16">
+<h2 class="font-headline text-4xl font-extrabold text-slate-900">Direct Answers</h2>
+<p class="text-slate-500 mt-4 font-medium">Everything you need to know about the platform.</p>
+</div>
+<div class="grid grid-cols-1 gap-4">
+<details class="group bg-white border border-slate-200 rounded-xl overflow-hidden transition-all" open="">
+<summary class="flex justify-between items-center p-8 cursor-pointer list-none font-bold text-slate-900 hover:bg-slate-50 transition-colors">
+<span class="text-lg">How quickly will I see results?</span>
+<span class="material-symbols-outlined group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<div class="p-8 pt-0 text-slate-600 leading-relaxed font-medium">
+                        Most customers see a measurable reduction in debtor days within the first 30 days. Riley AI begins optimizing your collection strategy from day one, often recovering overdue funds that manual processes missed.
+                    </div>
+</details>
+<details class="group bg-white border border-slate-200 rounded-xl overflow-hidden transition-all">
+<summary class="flex justify-between items-center p-8 cursor-pointer list-none font-bold text-slate-900 hover:bg-slate-50 transition-colors">
+<span class="text-lg">Will Qashivo damage my customer relationships?</span>
+<span class="material-symbols-outlined group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<div class="p-8 pt-0 text-slate-600 leading-relaxed font-medium">
+                        Quite the opposite. Qashivo's AI uses high-fidelity, professional language tailored to your brand. By removing the awkwardness of manual chasing, it professionalizes the relationship. You also have full control over the "Approval Queue" to review any sensitive communication before it's sent.
+                    </div>
+</details>
+<details class="group bg-white border border-slate-200 rounded-xl overflow-hidden transition-all">
+<summary class="flex justify-between items-center p-8 cursor-pointer list-none font-bold text-slate-900 hover:bg-slate-50 transition-colors">
+<span class="text-lg">How safe is my financial data?</span>
+<span class="material-symbols-outlined group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<div class="p-8 pt-0 text-slate-600 leading-relaxed font-medium">
+                        We are SOC 2 compliant and use bank-grade encryption. All data is hosted on UK-based servers, ensuring full GDPR compliance and data residency requirements for UK SMEs.
+                    </div>
+</details>
+</div>
+</section>
+<!-- Final CTA Section -->
+<div class="relative rounded-3xl p-20 text-center overflow-hidden bg-secondary">
+<div class="absolute inset-0 dot-grid opacity-20 pointer-events-none"></div>
+<h3 class="font-headline text-4xl md:text-5xl font-black text-white relative z-10 mb-8">Ready to reclaim your cash?</h3>
+<div class="relative z-10 space-y-8">
+<div class="flex flex-col md:flex-row justify-center gap-4">
+<button class="px-12 py-5 bg-white text-secondary font-black rounded-xl text-lg shadow-xl hover:scale-105 transition-all">Book a Technical Demo</button>
+<button class="px-12 py-5 bg-slate-900 text-white font-black rounded-xl text-lg shadow-xl hover:scale-105 transition-all">Start Free Trial</button>
+</div>
+<p class="text-white/80 font-bold tracking-wide">
+                    Or email us directly: <a class="text-white underline decoration-2 underline-offset-4" href="/cdn-cgi/l/email-protection#bcd4d9d0d0d3fccdddcfd4d5cad392dfd3d1"><span class="__cf_email__" data-cfemail="83ebe6efefecc3f2e2f0ebeaf5ecade0ecee">[email&#160;protected]</span></a>
+</p>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="w-full rounded-t-[3rem] mt-20 bg-slate-950 text-white">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-12 max-w-7xl mx-auto px-10 py-20">
+<div class="col-span-1 md:col-span-1">
+<div class="text-2xl font-black text-white mb-6 font-headline tracking-tighter">Qashivo</div>
+<p class="text-slate-500 font-['Inter'] text-sm leading-relaxed font-medium">
+                    The intelligence layer for the modern UK treasury. Built for SMEs, powered by AI.
+                </p>
+</div>
+<div>
+<h5 class="font-headline font-bold text-xs uppercase tracking-[0.2em] text-slate-400 mb-8">Product</h5>
+<ul class="space-y-4">
+<li><a class="text-sm text-slate-500 hover:text-white transition-colors font-semibold" href="#">Features</a></li>
+<li><a class="text-sm text-slate-500 hover:text-white transition-colors font-semibold" href="#">Integrations</a></li>
+<li><a class="text-sm text-slate-500 hover:text-white transition-colors font-semibold" href="#">Security</a></li>
+</ul>
+</div>
+<div>
+<h5 class="font-headline font-bold text-xs uppercase tracking-[0.2em] text-slate-400 mb-8">Company</h5>
+<ul class="space-y-4">
+<li><a class="text-sm text-slate-500 hover:text-white transition-colors font-semibold" href="#">LinkedIn</a></li>
+<li><a class="text-sm text-slate-500 hover:text-white transition-colors font-semibold" href="#">Support</a></li>
+<li><a class="text-sm text-slate-500 hover:text-white transition-colors font-semibold" href="#">Privacy</a></li>
+</ul>
+</div>
+<div>
+<h5 class="font-headline font-bold text-xs uppercase tracking-[0.2em] text-slate-400 mb-8">Legal</h5>
+<ul class="space-y-4">
+<li><a class="text-sm text-slate-500 hover:text-white transition-colors font-semibold" href="#">GDPR Policy</a></li>
+<li><a class="text-sm text-slate-500 hover:text-white transition-colors font-semibold" href="#">Terms of Service</a></li>
+</ul>
+</div>
+</div>
+<div class="max-w-7xl mx-auto px-10 pb-12">
+<div class="border-t border-slate-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-6">
+<p class="font-['Inter'] text-xs text-slate-600 font-bold uppercase tracking-widest">
+                    © Nexus KPI Limited. Registered in England &amp; Wales.
+                </p>
+<div class="flex gap-6">
+<span class="material-symbols-outlined text-slate-700">shield</span>
+<span class="material-symbols-outlined text-slate-700">lock</span>
+</div>
+</div>
+</div>
+</footer>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+        function calculateROI() {
+            const owed = parseInt(document.getElementById('owed-range').value);
+            const days = parseInt(document.getElementById('days-range').value);
+            
+            document.getElementById('owed-val').innerText = '£' + owed.toLocaleString();
+            document.getElementById('days-val').innerText = days + ' days';
+
+            const dailyCash = owed / days;
+            const reduction = 15;
+            const unlocked = Math.round(dailyCash * reduction);
+            const unlockedK = (unlocked / 1000).toFixed(1);
+
+            document.getElementById('roi-output').innerText = '£' + unlocked.toLocaleString();
+            document.getElementById('roi-descripti

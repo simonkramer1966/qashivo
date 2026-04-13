@@ -394,6 +394,7 @@ export async function registerSettingsRoutes(app: Express): Promise<void> {
         preDueDateDays: tenant.preDueDateDays ?? 7,
         preDueDateMinAmount: tenant.preDueDateMinAmount || '1000.00',
         sendDelayMinutes: tenant.sendDelayMinutes ?? 15,
+        emailFooterText: tenant.emailFooterText || null,
         conversationReplyDelayMin: tenant.conversationReplyDelayMin ?? 2,
         conversationReplyDelayMax: tenant.conversationReplyDelayMax ?? 5,
       });
@@ -423,7 +424,7 @@ export async function registerSettingsRoutes(app: Express): Promise<void> {
         'smallAmountThreshold', 'smallAmountChaseEnabled',
         'noResponseEscalationThreshold', 'significantPaymentThreshold',
         'paymentAttributionFullCreditHours', 'paymentAttributionPartialCreditDays', 'paymentAttributionSameDayExcluded',
-        'sendDelayMinutes',
+        'sendDelayMinutes', 'emailFooterText',
         'chaseDelayDays', 'preDueDateDays', 'preDueDateMinAmount',
         'conversationReplyDelayMin', 'conversationReplyDelayMax',
       ];

@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Features - Qashivo | Professional Cashflow Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "background": "#f7f9fb",
+              "on-primary-fixed": "#0F172A",
+              "on-secondary-container": "#006172",
+              "outline": "#76777d",
+              "on-background": "#0F172A",
+              "on-error-container": "#93000a",
+              "error-container": "#ffdad6",
+              "surface-container": "#eceef0",
+              "surface": "#f7f9fb",
+              "on-tertiary-container": "#b87500",
+              "secondary-container": "#06B6D4",
+              "on-tertiary-fixed": "#2a1700",
+              "primary-fixed-dim": "#bec6e0",
+              "on-tertiary": "#ffffff",
+              "on-secondary-fixed-variant": "#004e5c",
+              "surface-container-low": "#ffffff",
+              "surface-bright": "#f7f9fb",
+              "tertiary-fixed-dim": "#ffb95f",
+              "surface-dim": "#d8dadc",
+              "surface-variant": "#e0e3e5",
+              "secondary-fixed": "#acedff",
+              "tertiary-container": "#2a1700",
+              "inverse-primary": "#bec6e0",
+              "surface-tint": "#565e74",
+              "on-error": "#ffffff",
+              "on-primary-container": "#475569",
+              "primary-container": "#0F172A",
+              "surface-container-high": "#f1f5f9",
+              "surface-container-highest": "#e0e3e5",
+              "secondary": "#06B6D4",
+              "on-secondary": "#ffffff",
+              "inverse-on-surface": "#eff1f3",
+              "error": "#ba1a1a",
+              "primary": "#0F172A",
+              "on-surface-variant": "#475569",
+              "inverse-surface": "#2d3133",
+              "tertiary-fixed": "#ffddb8",
+              "on-tertiary-fixed-variant": "#653e00",
+              "on-primary": "#ffffff",
+              "surface-container-lowest": "#ffffff",
+              "on-primary-fixed-variant": "#3f465c",
+              "on-secondary-fixed": "#001f26",
+              "on-surface": "#0F172A",
+              "tertiary": "#000000",
+              "secondary-fixed-dim": "#4cd7f6",
+              "primary-fixed": "#dae2fd",
+              "outline-variant": "#c6c6cd",
+              "brand-navy": "#0F172A",
+              "brand-teal": "#06B6D4",
+              "brand-amber": "#F59E0B"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.375rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .data-grid-bg {
+            background-image: 
+                linear-gradient(to right, rgba(15, 23, 42, 0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(15, 23, 42, 0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+        .nav-link-hover {
+            position: relative;
+        }
+        .nav-link-hover::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -4px;
+            left: 0;
+            background-color: #0F172A;
+            transition: width 0.2s ease;
+        }
+        .nav-link-hover:hover::after {
+            width: 100%;
+        }
+        h1, h2, h3, h4 {
+            letter-spacing: -0.02em;
+        }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface antialiased">
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full z-50 bg-white/90 backdrop-blur-md border-b border-slate-200">
+<div class="flex justify-between items-center max-w-7xl mx-auto px-6 py-4">
+<div class="text-2xl font-black text-slate-900 tracking-tighter">Qashivo</div>
+<div class="hidden md:flex items-center space-x-8">
+<a class="nav-link-hover font-headline font-bold text-sm text-slate-600 hover:text-slate-900 transition-colors" href="#">Home</a>
+<a class="nav-link-hover font-headline font-extrabold text-sm text-brand-navy" href="#">Features</a>
+<a class="nav-link-hover font-headline font-bold text-sm text-slate-600 hover:text-slate-900 transition-colors" href="#">Why Qashivo</a>
+<a class="nav-link-hover font-headline font-bold text-sm text-slate-600 hover:text-slate-900 transition-colors" href="#">Pricing</a>
+<a class="nav-link-hover font-headline font-bold text-sm text-slate-600 hover:text-slate-900 transition-colors" href="#">Contact</a>
+</div>
+<button class="bg-brand-navy text-white px-6 py-2.5 rounded font-headline font-bold text-sm hover:bg-slate-800 transition-all active:scale-95">Book a Demo</button>
+</div>
+</nav>
+<main class="pt-24">
+<!-- Page Header -->
+<header class="max-w-7xl mx-auto px-6 lg:px-24 py-24 lg:py-32 text-center">
+<div class="max-w-4xl mx-auto">
+<h1 class="font-headline text-5xl lg:text-7xl font-extrabold text-on-background mb-8 leading-tight">Elite Infrastructure for <span class="text-secondary">Cashflow Performance</span>.</h1>
+<p class="font-body text-xl text-on-surface-variant leading-relaxed max-w-3xl mx-auto font-medium">
+                Integrated AI credit control, forecasting, and liquidity management. Built for precision.
+            </p>
+</div>
+</header>
+<!-- Feature Section 1 — QOLLECTIONS (Credit Control) -->
+<section class="bg-surface-container-low py-32 border-y border-slate-100 relative overflow-hidden">
+<div class="absolute inset-0 data-grid-bg opacity-30 pointer-events-none"></div>
+<div class="max-w-7xl mx-auto px-6 lg:px-24 grid lg:grid-cols-2 gap-20 items-center relative z-10">
+<div class="relative flex justify-center items-center">
+<!-- Data-driven Illustration -->
+<div class="w-full aspect-[4/3] max-w-[500px] bg-slate-50 border border-slate-200 rounded p-8 relative shadow-sm">
+<div class="flex justify-between items-center mb-6 border-b border-slate-200 pb-4">
+<span class="text-[10px] font-bold text-slate-400 tracking-widest uppercase">System: Qollections</span>
+<div class="flex gap-1">
+<div class="w-1.5 h-1.5 rounded-full bg-slate-200"></div>
+<div class="w-1.5 h-1.5 rounded-full bg-slate-200"></div>
+<div class="w-1.5 h-1.5 rounded-full bg-brand-teal"></div>
+</div>
+</div>
+<svg class="w-full h-48" viewbox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+<line stroke="#e2e8f0" stroke-width="1" x1="0" x2="400" y1="180" y2="180"></line>
+<line stroke="#e2e8f0" stroke-dasharray="4 4" stroke-width="1" x1="50" x2="50" y1="0" y2="200"></line>
+<path d="M50 150 L150 120 L250 80 L350 40" fill="none" stroke="#06B6D4" stroke-linecap="round" stroke-width="3"></path>
+<circle cx="50" cy="150" fill="#0F172A" r="4"></circle>
+<circle cx="150" cy="120" fill="#0F172A" r="4"></circle>
+<circle cx="250" cy="80" fill="#0F172A" r="4"></circle>
+<circle cx="350" cy="40" fill="#06B6D4" r="4"></circle>
+</svg>
+<div class="absolute top-20 right-12 bg-white border border-brand-navy p-3 rounded shadow-xl flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-brand-teal/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-brand-teal text-lg">check_circle</span>
+</div>
+<div>
+<p class="text-[10px] font-black text-brand-navy">Draft: Invoice #2841</p>
+<p class="text-[9px] text-slate-500 font-medium">Ready for dispatch</p>
+</div>
+</div>
+</div>
+</div>
+<div>
+<span class="inline-block text-[12px] font-extrabold tracking-[0.2em] text-secondary uppercase mb-6">QOLLECTIONS</span>
+<h2 class="font-headline text-4xl font-extrabold mb-8 text-brand-navy">Autonomous Accounts Receivable</h2>
+<div class="grid gap-8">
+<div class="group">
+<h4 class="font-bold text-lg text-brand-navy mb-2 flex items-center gap-2">
+<span class="w-1 h-4 bg-brand-teal"></span> Systematic Communication
+                        </h4>
+<p class="text-on-surface-variant leading-relaxed font-medium">AI generates and sends professional collections emails mapped to specific debtor behaviors and invoice history.</p>
+</div>
+<div class="group">
+<h4 class="font-bold text-lg text-brand-navy mb-2 flex items-center gap-2">
+<span class="w-1 h-4 bg-brand-teal"></span> Precision Escalation
+                        </h4>
+<p class="text-on-surface-variant leading-relaxed font-medium">Automated five-stage escalation protocol ensures consistent pressure without compromising client relationships.</p>
+</div>
+<div class="group">
+<h4 class="font-bold text-lg text-brand-navy mb-2 flex items-center gap-2">
+<span class="w-1 h-4 bg-brand-teal"></span> Regulatory Assurance
+                        </h4>
+<p class="text-on-surface-variant leading-relaxed font-medium">Strict adherence to UK financial regulations. Every automated action is logged and compliant by design.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Feature Section 2 — QASHFLOW (Cashflow Forecasting) -->
+<section class="bg-surface py-32">
+<div class="max-w-7xl mx-auto px-6 lg:px-24 grid lg:grid-cols-2 gap-24 items-center">
+<div class="order-2 lg:order-1">
+<span class="inline-block text-[12px] font-extrabold tracking-[0.2em] text-secondary uppercase mb-6">QASHFLOW</span>
+<h2 class="font-headline text-4xl font-extrabold mb-8 text-brand-navy">Real-Time Liquidity Monitoring</h2>
+<ul class="space-y-4">
+<li class="p-6 rounded border border-slate-200 hover:border-brand-navy transition-all duration-200">
+<h4 class="font-extrabold text-brand-navy mb-2">Weekly Briefing Report</h4>
+<p class="text-sm text-on-surface-variant font-medium leading-relaxed">Direct, actionable intelligence on cash positions, imminent risks, and recommended treasury movements.</p>
+</li>
+<li class="p-6 rounded border border-slate-200 hover:border-brand-navy transition-all duration-200">
+<h4 class="font-extrabold text-brand-navy mb-2">13-Week Dynamic Forecast</h4>
+<p class="text-sm text-on-surface-variant font-medium leading-relaxed">Rolling forecasts based on historical payment performance and seasonal volatility trends.</p>
+</li>
+<li class="p-6 rounded border border-slate-200 hover:border-brand-navy transition-all duration-200">
+<h4 class="font-extrabold text-brand-navy mb-2">Advanced Scenario Modeling</h4>
+<p class="text-sm text-on-surface-variant font-medium leading-relaxed">Stress-test your runway against multiple market scenarios to ensure operational continuity.</p>
+</li>
+</ul>
+</div>
+<div class="order-1 lg:order-2 relative flex justify-center">
+<div class="w-full aspect-square max-w-[450px] bg-slate-900 rounded p-8 flex flex-col justify-between shadow-2xl">
+<div class="flex justify-between items-start">
+<div class="space-y-1">
+<h3 class="text-white text-lg font-extrabold">Forecast Model V.04</h3>
+<p class="text-brand-teal text-[10px] font-bold tracking-widest uppercase">Live Data Stream</p>
+</div>
+<div class="bg-white/10 px-3 py-1 rounded text-white text-[10px] font-bold">Q4 TARGETS</div>
+</div>
+<div class="flex-1 flex items-end gap-2 py-8">
+<div class="flex-1 bg-slate-800 h-[40%] rounded-t"></div>
+<div class="flex-1 bg-slate-800 h-[60%] rounded-t"></div>
+<div class="flex-1 bg-brand-teal h-[90%] rounded-t"></div>
+<div class="flex-1 bg-slate-800 h-[50%] rounded-t"></div>
+<div class="flex-1 bg-slate-800 h-[75%] rounded-t"></div>
+</div>
+<div class="border-t border-white/10 pt-4 flex gap-3 items-center">
+<span class="material-symbols-outlined text-brand-amber text-lg">warning</span>
+<p class="text-[11px] text-white/70 italic font-medium">"Identified £12.5k liquidity gap in Week 4. Recommendation: Accelerate Qollections for Tier-1 debtors."</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Feature Section 3 — QAPITAL (Working Capital) -->
+<section class="bg-surface-container-high py-32 border-t border-slate-200">
+<div class="max-w-7xl mx-auto px-6 lg:px-24 grid lg:grid-cols-2 gap-20 items-center">
+<div class="relative flex justify-center">
+<div class="grid grid-cols-2 gap-4 w-full max-w-[400px]">
+<div class="aspect-square bg-white border border-slate-200 rounded p-6 flex flex-col justify-center items-center text-center shadow-sm">
+<span class="material-symbols-outlined text-3xl text-brand-navy mb-4">account_balance</span>
+<span class="text-xs font-bold uppercase tracking-widest text-slate-500">Tier 1 Banking</span>
+</div>
+<div class="aspect-square bg-white border border-slate-200 rounded p-6 flex flex-col justify-center items-center text-center shadow-sm">
+<span class="material-symbols-outlined text-3xl text-brand-teal mb-4">speed</span>
+<span class="text-xs font-bold uppercase tracking-widest text-slate-500">Fast-Track</span>
+</div>
+<div class="aspect-square bg-white border border-slate-200 rounded p-6 flex flex-col justify-center items-center text-center shadow-sm">
+<span class="material-symbols-outlined text-3xl text-brand-amber mb-4">monitoring</span>
+<span class="text-xs font-bold uppercase tracking-widest text-slate-500">Yield Opt</span>
+</div>
+<div class="aspect-square bg-brand-navy rounded p-6 flex flex-col justify-center items-center text-center shadow-lg">
+<span class="material-symbols-outlined text-3xl text-white mb-4">hub</span>
+<span class="text-xs font-bold uppercase tracking-widest text-white/60">Qapital Hub</span>
+</div>
+</div>
+</div>
+<div>
+<span class="inline-block text-[12px] font-extrabold tracking-[0.2em] text-secondary uppercase mb-6">QAPITAL</span>
+<h2 class="font-headline text-4xl font-extrabold mb-8 text-brand-navy">Intelligent Liquidity Sourcing</h2>
+<div class="space-y-8">
+<div>
+<h4 class="font-extrabold text-xl text-brand-navy mb-2">Automated Matching Engine</h4>
+<p class="text-on-surface-variant font-medium leading-relaxed">Direct alignment of your specific cash requirements with optimal finance products — including factoring, revolving lines, and term loans.</p>
+</div>
+<div>
+<h4 class="font-extrabold text-xl text-brand-navy mb-2">Verified Pre-Qualification</h4>
+<p class="text-on-surface-variant font-medium leading-relaxed">Instantly identify available credit limits based on real-time ledger data. No speculative applications.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Riley AI Section -->
+<section class="bg-brand-navy py-32 text-white relative overflow-hidden">
+<div class="absolute inset-0 data-grid-bg opacity-5 pointer-events-none"></div>
+<div class="max-w-7xl mx-auto px-6 lg:px-24 text-center relative z-10">
+<h2 class="font-headline text-4xl lg:text-5xl font-extrabold mb-6">Riley: Tactical AI Intelligence</h2>
+<p class="text-white/70 text-lg max-w-2xl mx-auto mb-20 font-medium">
+                The centralized logic engine powering the Qashivo ecosystem. Direct data processing for immediate financial outcomes.
+            </p>
+<div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 text-left">
+<div class="bg-white/5 border border-white/10 p-8 rounded hover:bg-white/10 transition-colors">
+<div class="w-2 h-8 bg-brand-teal mb-6"></div>
+<h4 class="font-extrabold text-lg mb-4 text-white">Pattern Recognition</h4>
+<p class="text-sm text-white/50 leading-relaxed">Continuous analysis of debtor behavior and settlement patterns.</p>
+</div>
+<div class="bg-white/5 border border-white/10 p-8 rounded hover:bg-white/10 transition-colors">
+<div class="w-2 h-8 bg-brand-amber mb-6"></div>
+<h4 class="font-extrabold text-lg mb-4 text-white">Actionable Reporting</h4>
+<p class="text-sm text-white/50 leading-relaxed">Weekly executive summaries focused on risk mitigation and cash optimization.</p>
+</div>
+<div class="bg-white/5 border border-white/10 p-8 rounded hover:bg-white/10 transition-colors">
+<div class="w-2 h-8 bg-white mb-6"></div>
+<h4 class="font-extrabold text-lg mb-4 text-white">Autonomous Control</h4>
+<p class="text-sm text-white/50 leading-relaxed">Execution of collection workflows and data updates without manual intervention.</p>
+</div>
+<div class="bg-white/5 border border-white/10 p-8 rounded hover:bg-white/10 transition-colors">
+<div class="w-2 h-8 bg-brand-teal mb-6"></div>
+<h4 class="font-extrabold text-lg mb-4 text-white">Machine Learning</h4>
+<p class="text-sm text-white/50 leading-relaxed">Predictive accuracy increases with every ledger transaction processed.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Integration Bar -->
+<section class="py-24 bg-surface border-b border-slate-200">
+<div class="max-w-7xl mx-auto px-6">
+<h3 class="font-headline font-extrabold text-slate-400 uppercase tracking-widest text-[10px] text-center mb-12">Certified Infrastructure Integrations</h3>
+<div class="flex flex-wrap justify-center items-center gap-16 lg:gap-32 grayscale opacity-60">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 bg-brand-navy rounded flex items-center justify-center text-white font-black">X</div>
+<span class="font-bold text-slate-900">XERO</span>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-3xl text-slate-900" data-icon="account_balance">account_balance</span>
+<span class="font-bold text-slate-900 uppercase">Open Banking</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 bg-[#635BFF] rounded flex items-center justify-center text-white font-black text-xl italic">S</div>
+<span class="font-bold text-slate-900">STRIPE</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Final CTA Section -->
+<section class="py-32 lg:py-48 bg-brand-navy text-white relative">
+<div class="max-w-7xl mx-auto px-6 text-center relative z-10">
+<h2 class="font-headline text-5xl lg:text-7xl font-extrabold mb-10 tracking-tight">Deploy Qashivo Today.</h2>
+<p class="text-white/60 text-xl max-w-2xl mx-auto mb-16 font-medium">Join leading UK finance teams utilizing the intelligence layer for professional cashflow management.</p>
+<div class="flex flex-col sm:row items-center justify-center gap-4">
+<button class="bg-brand-teal text-white px-12 py-5 rounded font-headline font-extrabold text-lg hover:bg-cyan-500 transition-all min-w-[240px]">Book Technical Demo</button>
+<button class="bg-transparent border border-white/20 text-white px-12 py-5 rounded font-headline font-extrabold text-lg hover:bg-white/5 transition-all min-w-[240px]">View Implementation Costs</button>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="w-full bg-slate-50 border-t border-slate-200">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-12 max-w-7xl mx-auto px-8 py-20">
+<div class="col-span-1">
+<div class="text-2xl font-black text-brand-navy mb-8">Qashivo</div>
+<p class="text-slate-500 text-sm font-medium leading-relaxed">
+                The intelligence layer for professional SME finance teams. Precise data, direct decisions.
+            </p>
+</div>
+<div>
+<h4 class="font-bold text-xs uppercase tracking-[0.2em] text-slate-900 mb-8">Infrastructure</h4>
+<ul class="space-y-4">
+<li><a class="text-slate-500 hover:text-brand-navy font-medium text-sm transition-colors" href="#">Features</a></li>
+<li><a class="text-slate-500 hover:text-brand-navy font-medium text-sm transition-colors" href="#">Dynamic Forecasting</a></li>
+<li><a class="text-slate-500 hover:text-brand-navy font-medium text-sm transition-colors" href="#">API Access</a></li>
+</ul>
+</div>
+<div>
+<h4 class="font-bold text-xs uppercase tracking-[0.2em] text-slate-900 mb-8">Governance</h4>
+<ul class="space-y-4">
+<li><a class="text-slate-500 hover:text-brand-navy font-medium text-sm transition-colors" href="#">Privacy Protocol</a></li>
+<li><a class="text-slate-500 hover:text-brand-navy font-medium text-sm transition-colors" href="#">Compliance</a></li>
+<li><a class="text-slate-500 hover:text-brand-navy font-medium text-sm transition-colors" href="#">Legal Terms</a></li>
+</ul>
+</div>
+<div>
+<h4 class="font-bold text-xs uppercase tracking-[0.2em] text-slate-900 mb-8">Direct Contact</h4>
+<ul class="space-y-4">
+<li><a class="text-slate-500 hover:text-brand-navy font-medium text-sm transition-colors" href="#">LinkedIn</a></li>
+<li><a class="text-slate-500 hover:text-brand-navy font-medium text-sm transition-colors" href="#">Technical Support</a></li>
+</ul>
+</div>
+</div>
+<div class="max-w-7xl mx-auto px-8 py-8 border-t border-slate-200">
+<p class="text-slate-400 text-[10px] font-bold tracking-widest uppercase">© Nexus KPI Limited. Registered in England &amp; Wales. FCA Regulated Activities.</p>
+</div>
+</footer>
+</body></html>

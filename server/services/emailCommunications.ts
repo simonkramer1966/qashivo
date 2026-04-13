@@ -242,9 +242,10 @@ export async function sendActionEmail(actionId: string): Promise<SendActionEmail
       htmlBody = buildDefaultEmailBody(templateData, daysOverdue);
     }
 
-    // Convert LLM plain text to proper HTML email
-    const { formatEmailHtml } = await import("./emailFormatter");
-    htmlBody = formatEmailHtml(htmlBody);
+    // Convert LLM plain text to proper HTML email with tenant footer
+    const { formatEmailHtml, buildEmailFooter } = await import("./emailFormatter");
+    const footerHtml = buildEmailFooter(tenant.name || 'Our company', tenant.emailFooterText);
+    htmlBody = formatEmailHtml(htmlBody, footerHtml);
     const textBody = htmlBody.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
 
     const customHeaders: Record<string, string> = {

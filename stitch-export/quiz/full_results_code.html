@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Cashflow Health Check Results | Qashivo</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                "surface-tint": "#565e74",
+                "outline-variant": "#c6c6cd",
+                "error-container": "#ffdad6",
+                "background": "#f7f9fb",
+                "tertiary-fixed": "#ffddb8",
+                "on-secondary-container": "#006172",
+                "on-error": "#ffffff",
+                "tertiary-fixed-dim": "#ffb95f",
+                "on-secondary-fixed": "#001f26",
+                "surface-variant": "#e0e3e5",
+                "on-tertiary-fixed-variant": "#653e00",
+                "on-primary-fixed": "#131b2e",
+                "secondary-fixed": "#acedff",
+                "primary-fixed": "#dae2fd",
+                "primary-fixed-dim": "#bec6e0",
+                "surface-container": "#eceef0",
+                "tertiary": "#000000",
+                "surface-dim": "#d8dadc",
+                "surface-container-high": "#e6e8ea",
+                "on-tertiary": "#ffffff",
+                "secondary-container": "#57dffe",
+                "primary-container": "#131b2e",
+                "on-surface": "#191c1e",
+                "on-tertiary-container": "#b87500",
+                "on-background": "#191c1e",
+                "inverse-on-surface": "#eff1f3",
+                "secondary": "#00687a",
+                "surface-container-lowest": "#ffffff",
+                "on-primary": "#ffffff",
+                "surface-container-highest": "#e0e3e5",
+                "on-surface-variant": "#45464d",
+                "tertiary-container": "#2a1700",
+                "surface-container-low": "#f2f4f6",
+                "primary": "#000000",
+                "on-tertiary-fixed": "#2a1700",
+                "surface": "#f7f9fb",
+                "on-error-container": "#93000a",
+                "on-primary-container": "#7c839b",
+                "error": "#ba1a1a",
+                "inverse-primary": "#bec6e0",
+                "on-secondary": "#ffffff",
+                "on-primary-fixed-variant": "#3f465c",
+                "inverse-surface": "#2d3133",
+                "surface-bright": "#f7f9fb",
+                "outline": "#76777d",
+                "on-secondary-fixed-variant": "#004e5c",
+                "secondary-fixed-dim": "#4cd7f6"
+              },
+              fontFamily: {
+                "headline": ["Manrope"],
+                "body": ["Inter"],
+                "label": ["Inter"]
+              },
+              borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+            },
+          },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .editorial-grid-bg {
+            background-image: radial-gradient(rgba(172, 237, 255, 0.1) 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-secondary-fixed selection:text-on-secondary-fixed">
+<!-- TopNavBar -->
+<nav class="sticky top-0 w-full z-50 bg-[#f7f9fb] dark:bg-[#0f172a]">
+<div class="max-w-7xl mx-auto flex justify-between items-center px-8 py-6">
+<span class="text-2xl font-extrabold tracking-tighter text-[#0f172a] dark:text-white font-headline">Qashivo</span>
+<div class="hidden md:flex items-center gap-8">
+<a class="text-[#191c1e]/60 dark:text-slate-400 font-medium font-headline tracking-[-0.02em] hover:text-[#00687a] transition-colors duration-400" href="#">Insights</a>
+<a class="text-[#191c1e]/60 dark:text-slate-400 font-medium font-headline tracking-[-0.02em] hover:text-[#00687a] transition-colors duration-400" href="#">Cashflow</a>
+<a class="text-[#000000] dark:text-[#acedff] font-bold border-b-2 border-[#00687a] pb-1 font-headline tracking-[-0.02em]" href="#">Health Check</a>
+<a class="text-[#191c1e]/60 dark:text-slate-400 font-medium font-headline tracking-[-0.02em] hover:text-[#00687a] transition-colors duration-400" href="#">Support</a>
+</div>
+<button class="bg-primary-container text-white px-6 py-2.5 rounded-lg font-headline font-bold scale-95 hover:scale-100 transition-transform duration-400">Get Started</button>
+</div>
+</nav>
+<main>
+<!-- SECTION 1: SCORE HEADER -->
+<section class="bg-[#0F172A] text-white py-24 px-8">
+<div class="max-w-4xl mx-auto text-center">
+<div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-tertiary-fixed text-on-tertiary-fixed font-bold text-sm mb-8">
+<span class="material-symbols-outlined text-sm" data-icon="warning">warning</span>
+                    At Risk
+                </div>
+<h1 class="font-headline font-extrabold text-7xl md:text-9xl tracking-tighter mb-6">24 <span class="text-secondary-fixed">/ 40</span></h1>
+<h2 class="font-headline font-bold text-3xl md:text-5xl tracking-tight mb-6 max-w-2xl mx-auto">Your working capital cycle has room to improve</h2>
+<p class="text-slate-400 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">Based on your recent financial data, your cash conversion cycle is currently lagging behind industry benchmarks for UK SMEs in your sector.</p>
+</div>
+</section>
+<!-- SECTION 2: BREAKDOWN -->
+<section class="bg-surface-container-low py-24 px-8">
+<div class="max-w-7xl mx-auto">
+<div class="flex flex-col md:flex-row gap-8">
+<!-- Credit Control Card -->
+<div class="flex-1 bg-surface-container-lowest p-8 rounded-xl shadow-sm border border-outline-variant/10">
+<div class="flex justify-between items-start mb-6">
+<span class="material-symbols-outlined text-secondary text-3xl" data-icon="account_balance_wallet">account_balance_wallet</span>
+<span class="px-3 py-1 bg-error-container text-on-error-container text-xs font-bold rounded-full">Critical</span>
+</div>
+<h3 class="font-headline font-bold text-xl mb-1">Credit Control</h3>
+<div class="text-3xl font-extrabold mb-4">6/10</div>
+<div class="w-full bg-surface-container-high h-2 rounded-full mb-6">
+<div class="bg-error h-2 rounded-full" style="width: 60%;"></div>
+</div>
+<p class="text-on-surface-variant text-sm leading-relaxed">Late payments from key clients are extending your DSO beyond the 45-day safety threshold.</p>
+</div>
+<!-- Cashflow Card -->
+<div class="flex-1 bg-surface-container-lowest p-8 rounded-xl shadow-sm border border-outline-variant/10">
+<div class="flex justify-between items-start mb-6">
+<span class="material-symbols-outlined text-secondary text-3xl" data-icon="trending_up">trending_up</span>
+<span class="px-3 py-1 bg-tertiary-fixed text-on-tertiary-fixed text-xs font-bold rounded-full">Fair</span>
+</div>
+<h3 class="font-headline font-bold text-xl mb-1">Cashflow</h3>
+<div class="text-3xl font-extrabold mb-4">8/10</div>
+<div class="w-full bg-surface-container-high h-2 rounded-full mb-6">
+<div class="bg-tertiary-fixed-dim h-2 rounded-full" style="width: 80%;"></div>
+</div>
+<p class="text-on-surface-variant text-sm leading-relaxed">Operational liquidity remains stable, but seasonal fluctuations require a tighter cash buffer.</p>
+</div>
+<!-- Finance Card -->
+<div class="flex-1 bg-surface-container-lowest p-8 rounded-xl shadow-sm border border-outline-variant/10">
+<div class="flex justify-between items-start mb-6">
+<span class="material-symbols-outlined text-secondary text-3xl" data-icon="payments">payments</span>
+<span class="px-3 py-1 bg-secondary-fixed text-on-secondary-fixed-variant text-xs font-bold rounded-full">Strong</span>
+</div>
+<h3 class="font-headline font-bold text-xl mb-1">Finance</h3>
+<div class="text-3xl font-extrabold mb-4">10/10</div>
+<div class="w-full bg-surface-container-high h-2 rounded-full mb-6">
+<div class="bg-secondary h-2 rounded-full" style="width: 100%;"></div>
+</div>
+<p class="text-on-surface-variant text-sm leading-relaxed">Your leverage ratio is excellent. You are in a prime position to negotiate better terms with lenders.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 3: COMPARE -->
+<section class="bg-surface-container-lowest py-24 px-8 overflow-hidden">
+<div class="max-w-7xl mx-auto flex flex-col md:flex-row gap-16 items-center">
+<div class="flex-1">
+<h2 class="font-headline font-extrabold text-4xl tracking-tight mb-6">Benchmarking Success</h2>
+<p class="text-on-surface-variant text-lg mb-8 leading-relaxed">See how your financial health scores against the wider UK ecosystem. Qashivo users typically see a 15% improvement in score within 90 days.</p>
+<div class="space-y-8">
+<div>
+<div class="flex justify-between text-sm font-bold mb-2 uppercase tracking-wider text-on-surface-variant">Average UK SME</div>
+<div class="w-full bg-surface-container h-12 rounded-lg relative overflow-hidden">
+<div class="bg-outline-variant/40 h-full rounded-lg" style="width: 55%;"></div>
+<span class="absolute inset-y-0 left-4 flex items-center font-bold text-on-surface-variant">22 Points</span>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-sm font-bold mb-2 uppercase tracking-wider text-on-surface">Your Score</div>
+<div class="w-full bg-surface-container h-12 rounded-lg relative overflow-hidden ring-2 ring-tertiary-fixed-dim ring-offset-2">
+<div class="bg-tertiary-fixed-dim h-full rounded-lg" style="width: 60%;"></div>
+<span class="absolute inset-y-0 left-4 flex items-center font-bold text-on-tertiary-fixed">24 Points</span>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-sm font-bold mb-2 uppercase tracking-wider text-secondary">Qashivo Elite Users</div>
+<div class="w-full bg-surface-container h-12 rounded-lg relative overflow-hidden">
+<div class="bg-secondary h-full rounded-lg" style="width: 90%;"></div>
+<span class="absolute inset-y-0 left-4 flex items-center font-bold text-white">36 Points</span>
+</div>
+</div>
+</div>
+</div>
+<div class="flex-1 bg-surface-container p-12 rounded-3xl relative">
+<div class="absolute -top-4 -right-4 w-24 h-24 bg-secondary-fixed rounded-full blur-3xl opacity-50"></div>
+<div class="relative z-10 border-l-4 border-secondary pl-8 py-4">
+<span class="text-5xl font-extrabold font-headline block mb-4">+50%</span>
+<p class="text-on-surface font-medium leading-relaxed italic">"Qashivo helped us bridge the gap between our sales ledger and our actual bank balance. Our score went from 18 to 32 in just one quarter."</p>
+<p class="mt-4 font-bold text-secondary">— CEO, TechSupply Ltd.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 4: RECOMMENDATIONS -->
+<section class="bg-surface-container-low py-24 px-8">
+<div class="max-w-7xl mx-auto">
+<div class="mb-16">
+<h2 class="font-headline font-extrabold text-4xl tracking-tight">Priority Actions</h2>
+<p class="text-on-surface-variant mt-2">Personalized strategies to improve your capital efficiency.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+<!-- Recommendation 1 -->
+<div class="bg-surface-container-lowest p-8 rounded-xl border-l-8 border-error shadow-sm">
+<div class="flex items-center gap-4 mb-6">
+<span class="material-symbols-outlined text-error" data-icon="alarm">alarm</span>
+<span class="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Immediate Action</span>
+</div>
+<h3 class="font-headline font-bold text-xl mb-4 leading-tight">Implement Automated Invoice Reminders</h3>
+<p class="text-on-surface-variant text-sm leading-relaxed">Your DSO is rising. Automating reminders 3 days before and 2 days after the due date can reduce late payments by up to 22%.</p>
+</div>
+<!-- Recommendation 2 -->
+<div class="bg-surface-container-lowest p-8 rounded-xl border-l-8 border-tertiary-fixed-dim shadow-sm">
+<div class="flex items-center gap-4 mb-6">
+<span class="material-symbols-outlined text-tertiary-fixed-dim" data-icon="sync_alt">sync_alt</span>
+<span class="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Strategic Shift</span>
+</div>
+<h3 class="font-headline font-bold text-xl mb-4 leading-tight">Negotiate Early Payment Discounts</h3>
+<p class="text-on-surface-variant text-sm leading-relaxed">Offer a 2/10 net 30 discount to your top 5 clients. This incentivizes faster cash arrival without significant margin loss.</p>
+</div>
+<!-- Recommendation 3 -->
+<div class="bg-surface-container-lowest p-8 rounded-xl border-l-8 border-secondary shadow-sm">
+<div class="flex items-center gap-4 mb-6">
+<span class="material-symbols-outlined text-secondary" data-icon="security">security</span>
+<span class="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Growth Hedge</span>
+</div>
+<h3 class="font-headline font-bold text-xl mb-4 leading-tight">Secure a Flexible Credit Line</h3>
+<p class="text-on-surface-variant text-sm leading-relaxed">Based on your score, you qualify for prime-rate financing. Securing this now protects against seasonal cash gaps.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 5: THE CASH GAP BOOK -->
+<section class="bg-surface-container-lowest py-32 px-8">
+<div class="max-w-5xl mx-auto flex flex-col md:flex-row items-center gap-16">
+<div class="w-full md:w-1/2 flex justify-center">
+<div class="relative group">
+<!-- Book Cover Mockup -->
+<div class="w-72 h-[420px] bg-[#0F172A] rounded-r-2xl shadow-2xl flex flex-col p-8 border-l-8 border-[#1E293B] relative z-10 transition-transform hover:-rotate-2 duration-400">
+<div class="flex-grow flex flex-col justify-center">
+<h4 class="text-secondary-fixed font-headline font-extrabold text-5xl tracking-tighter leading-none mb-4">THE CASH GAP</h4>
+<div class="h-1 w-24 bg-secondary-fixed mb-8"></div>
+<p class="text-white/60 font-body text-sm uppercase tracking-widest">Mastering Liquid Intelligence for UK SMEs</p>
+</div>
+<div class="text-white font-bold text-lg tracking-tight">Qashivo Editorial</div>
+</div>
+<div class="absolute inset-0 bg-secondary-fixed/20 blur-3xl rounded-full scale-110 -z-10 group-hover:scale-125 transition-transform duration-700"></div>
+</div>
+</div>
+<div class="w-full md:w-1/2">
+<h2 class="font-headline font-extrabold text-4xl tracking-tight mb-6">Your Free Copy of The Cash Gap</h2>
+<p class="text-on-surface-variant text-lg mb-8 leading-relaxed">We’ve analyzed thousands of UK businesses to find the patterns of survival and growth. This 40-page guide provides the blueprint to fixing your working capital cycle.</p>
+<div class="flex items-center gap-3 p-4 bg-secondary-container/20 rounded-xl border border-secondary-container/30">
+<span class="material-symbols-outlined text-secondary" data-icon="check_circle">check_circle</span>
+<p class="font-bold text-on-secondary-container">Your copy is being sent to james@example.com now</p>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 6: FINAL CTA -->
+<section class="bg-[#0F172A] editorial-grid-bg py-24 px-8 text-center relative overflow-hidden">
+<div class="absolute inset-0 bg-gradient-to-b from-[#0F172A] via-transparent to-[#0F172A] pointer-events-none"></div>
+<div class="max-w-3xl mx-auto relative z-10">
+<h2 class="font-headline font-extrabold text-5xl tracking-tight text-white mb-8">Want to see your score improve?</h2>
+<p class="text-slate-400 text-xl mb-12">Connect your accounting software for a real-time, AI-powered health dashboard that never sleeps.</p>
+<div class="flex flex-col md:flex-row items-center justify-center gap-6">
+<button class="w-full md:w-auto px-10 py-4 bg-secondary-fixed text-on-secondary-fixed font-headline font-extrabold rounded-lg hover:bg-white transition-colors duration-400">Book a Demo</button>
+<button class="w-full md:w-auto px-10 py-4 border-2 border-slate-700 text-white font-headline font-bold rounded-lg hover:bg-slate-800 transition-colors duration-400 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-xl" data-icon="share">share</span>
+                        Share on LinkedIn
+                    </button>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="w-full py-12 px-8 bg-[#eceef0] dark:bg-[#0f172a]">
+<div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+<div class="flex flex-col items-center md:items-start gap-2">
+<span class="font-['Manrope'] font-bold text-lg text-[#0f172a] dark:text-white">Qashivo</span>
+<p class="font-['Inter'] text-sm leading-relaxed tracking-wide text-[#191c1e]/70 dark:text-slate-400 text-center md:text-left">© 2024 Qashivo. Editorial Financial Intelligence for UK SMEs.</p>
+</div>
+<div class="flex gap-8">
+<a class="font-['Inter'] text-sm leading-relaxed tracking-wide text-[#191c1e]/70 dark:text-slate-400 hover:text-[#000000] dark:hover:text-white transition-opacity opacity-80 hover:opacity-100 duration-400" href="#">Privacy</a>
+<a class="font-['Inter'] text-sm leading-relaxed tracking-wide text-[#191c1e]/70 dark:text-slate-400 hover:text-[#000000] dark:hover:text-white transition-opacity opacity-80 hover:opacity-100 duration-400" href="#">Terms</a>
+<a class="font-['Inter'] text-sm leading-relaxed tracking-wide text-[#191c1e]/70 dark:text-slate-400 hover:text-[#000000] dark:hover:text-white transition-opacity opacity-80 hover:opacity-100 duration-400" href="#">Advisory Board</a>
+<a class="font-['Inter'] text-sm leading-relaxed tracking-wide text-[#191c1e]/70 dark:text-slate-400 hover:text-[#000000] dark:hover:text-white transition-opacity opacity-80 hover:opacity-100 duration-400" href="#">Security</a>
+</div>
+</div>
+</footer>
+</body></html>

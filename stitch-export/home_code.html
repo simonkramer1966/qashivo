@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Qashivo | Autonomous Credit Control for UK Enterprises</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "background": "#f8fafc",
+              "on-primary-fixed": "#0f172a",
+              "on-secondary-container": "#0891b2",
+              "outline": "#64748b",
+              "on-background": "#0f172a",
+              "on-error-container": "#991b1b",
+              "error-container": "#fee2e2",
+              "surface-container": "#f1f5f9",
+              "surface": "#ffffff",
+              "on-tertiary-container": "#92400e",
+              "secondary-container": "#06b6d4",
+              "on-tertiary-fixed": "#451a03",
+              "primary-fixed-dim": "#94a3b8",
+              "on-tertiary": "#ffffff",
+              "on-secondary-fixed-variant": "#164e63",
+              "surface-container-low": "#f8fafc",
+              "surface-bright": "#ffffff",
+              "tertiary-fixed-dim": "#f59e0b",
+              "surface-dim": "#e2e8f0",
+              "surface-variant": "#f1f5f9",
+              "secondary-fixed": "#22d3ee",
+              "tertiary-container": "#78350f",
+              "inverse-primary": "#cbd5e1",
+              "surface-tint": "#0f172a",
+              "on-error": "#ffffff",
+              "on-primary-container": "#334155",
+              "primary-container": "#0f172a",
+              "surface-container-high": "#e2e8f0",
+              "surface-container-highest": "#cbd5e1",
+              "secondary": "#06b6d4",
+              "on-secondary": "#ffffff",
+              "inverse-on-surface": "#f8fafc",
+              "error": "#ef4444",
+              "primary": "#0f172a",
+              "on-surface-variant": "#475569",
+              "inverse-surface": "#1e293b",
+              "tertiary-fixed": "#fbbf24",
+              "on-tertiary-fixed-variant": "#92400e",
+              "on-primary": "#ffffff",
+              "surface-container-lowest": "#ffffff",
+              "on-primary-fixed-variant": "#334155",
+              "on-secondary-fixed": "#083344",
+              "on-surface": "#0f172a",
+              "tertiary": "#d97706",
+              "secondary-fixed-dim": "#22d3ee",
+              "primary-fixed": "#e2e8f0",
+              "outline-variant": "#cbd5e1"
+            },
+            fontFamily: {
+              "headline": ["Inter", "sans-serif"],
+              "body": ["Inter", "sans-serif"],
+              "label": ["Inter", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.375rem", "xl": "0.5rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .gradient-hero {
+        background: #0f172a;
+      }
+      .blueprint-grid {
+        background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                          linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        background-size: 32px 32px;
+      }
+      .nav-link {
+        position: relative;
+        padding-bottom: 2px;
+      }
+      .nav-link::after {
+        content: '';
+        position: absolute;
+        width: 0;
+        height: 2px;
+        bottom: 0;
+        left: 0;
+        background-color: #06b6d4;
+        transition: width 0.2s ease-in-out;
+      }
+      .nav-link:hover::after {
+        width: 100%;
+      }
+      .node-connection {
+        stroke-dasharray: 4;
+        animation: flow 15s linear infinite;
+      }
+      @keyframes flow {
+        to { stroke-dashoffset: -100; }
+      }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface antialiased">
+<nav class="fixed top-0 w-full z-50 bg-white border-b border-slate-200">
+<div class="flex justify-between items-center max-w-7xl mx-auto px-6 py-4">
+<div class="text-2xl font-black text-slate-900 tracking-tighter uppercase">
+            Qashivo
+        </div>
+<div class="hidden md:flex items-center gap-8">
+<a class="nav-link text-slate-900 font-bold tracking-tight text-sm" href="#">Home</a>
+<a class="nav-link text-slate-500 hover:text-slate-900 font-bold tracking-tight text-sm transition-colors" href="#">Features</a>
+<a class="nav-link text-slate-500 hover:text-slate-900 font-bold tracking-tight text-sm transition-colors" href="#">Enterprise</a>
+<a class="nav-link text-slate-500 hover:text-slate-900 font-bold tracking-tight text-sm transition-colors" href="#">Pricing</a>
+<a class="nav-link text-slate-500 hover:text-slate-900 font-bold tracking-tight text-sm transition-colors" href="#">Contact</a>
+</div>
+<div>
+<button class="bg-slate-900 text-white px-6 py-2 rounded font-bold text-sm hover:bg-slate-800 transition-all">
+                Request Demo
+            </button>
+</div>
+</div>
+</nav>
+<main>
+<!-- HERO SECTION -->
+<section class="relative min-h-[90vh] flex flex-col justify-center pt-20 gradient-hero overflow-hidden border-b border-white/5">
+<div class="absolute inset-0 blueprint-grid"></div>
+<div class="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center z-10 py-20">
+<div>
+<h1 class="text-5xl md:text-7xl font-black text-white leading-[1.1] tracking-tight mb-8">
+                    Get Paid Faster. <br/>
+<span class="text-secondary">Automatically.</span>
+</h1>
+<p class="text-xl text-slate-400 leading-relaxed mb-10 max-w-xl">
+                    Qashivo is an autonomous credit control agent for UK enterprises. It manages the entire accounts receivable lifecycle—from automated follow-ups to cashflow forecasting.
+                </p>
+<div class="flex flex-wrap gap-4">
+<button class="bg-secondary text-white px-8 py-4 rounded font-black text-lg hover:bg-cyan-500 transition-colors">
+                        Request Demo
+                    </button>
+<button class="bg-transparent text-white border border-slate-700 px-8 py-4 rounded font-black text-lg hover:bg-white/5 transition-colors">
+                        Technical Overview
+                    </button>
+</div>
+</div>
+<div class="relative">
+<div class="bg-slate-950/50 border border-white/10 rounded p-8 aspect-[4/3] flex items-center justify-center relative">
+<div class="absolute top-4 left-4 font-mono text-[10px] text-slate-500 uppercase tracking-widest">System Architecture v3.1</div>
+<svg class="w-full h-full" viewbox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+<path class="node-connection" d="M 40,150 L 160,80" fill="none" stroke="#334155" stroke-width="1"></path>
+<path class="node-connection" d="M 40,150 L 160,220" fill="none" stroke="#334155" stroke-width="1"></path>
+<path class="node-connection" d="M 160,80 L 320,150" fill="none" stroke="#06b6d4" stroke-width="1.5"></path>
+<path class="node-connection" d="M 160,220 L 320,150" fill="none" stroke="#f59e0b" stroke-width="1.5"></path>
+<rect fill="#0f172a" height="20" stroke="#334155" stroke-width="2" width="20" x="30" y="140"></rect>
+<rect fill="#0f172a" height="20" stroke="#06b6d4" stroke-width="2" width="20" x="150" y="70"></rect>
+<rect fill="#0f172a" height="20" stroke="#f59e0b" stroke-width="2" width="20" x="150" y="210"></rect>
+<rect fill="#06b6d4" height="20" width="20" x="310" y="140"></rect>
+<text class="tracking-widest" fill="white" font-family="Inter" font-size="14" font-weight="900" text-anchor="middle" x="200" y="155">QASHIVO CORE</text>
+</svg>
+</div>
+</div>
+</div>
+</section>
+<!-- THREE PILLARS SECTION -->
+<section class="py-24 bg-white border-b border-slate-200">
+<div class="max-w-7xl mx-auto px-6">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-0 border border-slate-200">
+<!-- Pillar 1 -->
+<div class="p-12 border-b md:border-b-0 md:border-r border-slate-200 group hover:bg-slate-50 transition-colors">
+<div class="mb-8 text-secondary">
+<span class="material-symbols-outlined text-4xl">automation</span>
+</div>
+<h3 class="text-xl font-black mb-4 uppercase tracking-tight">Qollections</h3>
+<p class="text-slate-600 leading-relaxed mb-6">Autonomous credit control. Our agent manages debtor communications with professional precision, reducing DSO without human intervention.</p>
+<a class="text-sm font-black text-slate-900 border-b-2 border-secondary pb-1" href="#">Documentation →</a>
+</div>
+<!-- Pillar 2 -->
+<div class="p-12 border-b md:border-b-0 md:border-r border-slate-200 group hover:bg-slate-50 transition-colors">
+<div class="mb-8 text-secondary">
+<span class="material-symbols-outlined text-4xl">query_stats</span>
+</div>
+<h3 class="text-xl font-black mb-4 uppercase tracking-tight">Qashflow</h3>
+<p class="text-slate-600 leading-relaxed mb-6">Real-time liquidity forecasting. Connect your ERP to visualize cash position and identify capital bottlenecks before they occur.</p>
+<a class="text-sm font-black text-slate-900 border-b-2 border-secondary pb-1" href="#">Documentation →</a>
+</div>
+<!-- Pillar 3 -->
+<div class="p-12 group hover:bg-slate-50 transition-colors">
+<div class="mb-8 text-secondary">
+<span class="material-symbols-outlined text-4xl">account_balance_wallet</span>
+</div>
+<h3 class="text-xl font-black mb-4 uppercase tracking-tight">Qapital</h3>
+<p class="text-slate-600 leading-relaxed mb-6">Working capital management. Deploy financing solutions tailored to your real-time ledger data when gaps are identified.</p>
+<a class="text-sm font-black text-slate-900 border-b-2 border-secondary pb-1" href="#">Documentation →</a>
+</div>
+</div>
+</div>
+</section>
+<!-- HOW IT WORKS SECTION -->
+<section class="py-24 bg-slate-50">
+<div class="max-w-7xl mx-auto px-6">
+<h2 class="text-3xl font-black text-center mb-20 uppercase tracking-widest">Process Integration</h2>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+<div class="p-8 bg-white border border-slate-200">
+<div class="text-xs font-black text-slate-400 mb-4 uppercase">Step 01</div>
+<h4 class="font-black text-lg mb-2">ERP Integration</h4>
+<p class="text-slate-500 text-sm">Secure connection to Xero or Sage. Real-time ledger synchronization.</p>
+</div>
+<div class="p-8 bg-white border border-slate-200">
+<div class="text-xs font-black text-slate-400 mb-4 uppercase">Step 02</div>
+<h4 class="font-black text-lg mb-2">Agent Training</h4>
+<p class="text-slate-500 text-sm">We configure the AI to your tone of voice and account tiering requirements.</p>
+</div>
+<div class="p-8 bg-white border border-slate-200">
+<div class="text-xs font-black text-slate-400 mb-4 uppercase">Step 03</div>
+<h4 class="font-black text-lg mb-2">Autonomous Action</h4>
+<p class="text-slate-500 text-sm">The agent executes follow-ups. You maintain full oversight and approval.</p>
+</div>
+<div class="p-8 bg-slate-900 text-white">
+<div class="text-xs font-black text-slate-500 mb-4 uppercase">Step 04</div>
+<h4 class="font-black text-lg mb-2 text-secondary">Liquidity Optimized</h4>
+<p class="text-slate-400 text-sm">Immediate reduction in debtor days and manual finance overhead.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- SOCIAL PROOF / STATS SECTION -->
+<section class="py-24 bg-white border-y border-slate-200">
+<div class="max-w-5xl mx-auto px-6">
+<div class="text-center mb-20">
+<blockquote class="text-3xl md:text-4xl font-black leading-tight mb-8">
+                    "Qashivo eliminated 70% of our manual credit control workload. Our DSO dropped from 47 to 31 days within the first billing cycle."
+                </blockquote>
+<cite class="text-slate-500 font-bold not-italic">— Finance Director, Tier 1 Logistics Provider</cite>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-0 border border-slate-200">
+<div class="p-10 text-center border-b md:border-b-0 md:border-r border-slate-200">
+<div class="text-5xl font-black text-slate-900 mb-2">15 Days</div>
+<div class="text-xs font-black uppercase tracking-widest text-slate-400">Average DSO Reduction</div>
+</div>
+<div class="p-10 text-center border-b md:border-b-0 md:border-r border-slate-200">
+<div class="text-5xl font-black text-slate-900 mb-2">3.2x</div>
+<div class="text-xs font-black uppercase tracking-widest text-slate-400">Payment Velocity Increase</div>
+</div>
+<div class="p-10 text-center">
+<div class="text-5xl font-black text-slate-900 mb-2">0</div>
+<div class="text-xs font-black uppercase tracking-widest text-slate-400">Manual Emails Required</div>
+</div>
+</div>
+</div>
+</section>
+<!-- PROBLEM AGITATION SECTION -->
+<section class="py-24 bg-slate-900 text-white relative">
+<div class="absolute inset-0 blueprint-grid opacity-20"></div>
+<div class="max-w-7xl mx-auto px-6 relative z-10">
+<h2 class="text-3xl font-black mb-16 text-center uppercase tracking-widest">Financial Bottlenecks We Solve</h2>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-12">
+<div class="p-8 border border-white/10 bg-white/5">
+<span class="material-symbols-outlined text-amber-500 mb-4">warning</span>
+<h4 class="text-lg font-black mb-4 uppercase">Capital Locked in AR</h4>
+<p class="text-slate-400 text-sm leading-relaxed">High revenue but low cash on hand due to extended payment terms and slow collection cycles.</p>
+</div>
+<div class="p-8 border border-white/10 bg-white/5">
+<span class="material-symbols-outlined text-amber-500 mb-4">history</span>
+<h4 class="text-lg font-black mb-4 uppercase">Manual Follow-ups</h4>
+<p class="text-slate-400 text-sm leading-relaxed">Finance teams wasting hours on repetitive emails rather than high-value strategic analysis.</p>
+</div>
+<div class="p-8 border border-white/10 bg-white/5">
+<span class="material-symbols-outlined text-amber-500 mb-4">visibility_off</span>
+<h4 class="text-lg font-black mb-4 uppercase">Forecasting Gaps</h4>
+<p class="text-slate-400 text-sm leading-relaxed">Uncertainty about future cash position leading to reactive rather than proactive financial decisions.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- FINAL CTA SECTION -->
+<section class="py-32 bg-white text-center px-6">
+<div class="max-w-3xl mx-auto">
+<h2 class="text-4xl md:text-5xl font-black tracking-tight mb-8">Deploy Autonomous Credit Control.</h2>
+<p class="text-slate-500 text-xl mb-12">Join the UK's most efficient finance departments. Start with a 15-minute system walkthrough.</p>
+<div class="flex flex-col md:flex-row justify-center gap-4">
+<button class="bg-slate-900 text-white px-12 py-5 rounded font-black text-xl hover:bg-slate-800 transition-all">
+                    Book Demo
+                </button>
+<button class="bg-white text-slate-900 border border-slate-200 px-12 py-5 rounded font-black text-xl hover:bg-slate-50 transition-all">
+                    View Case Studies
+                </button>
+</div>
+</div>
+</section>
+</main>
+<footer class="bg-slate-50 border-t border-slate-200">
+<div class="max-w-7xl mx-auto px-6 py-16 grid grid-cols-1 md:grid-cols-4 gap-12">
+<div class="col-span-1">
+<div class="text-xl font-black text-slate-900 mb-6 uppercase tracking-tighter">Qashivo</div>
+<p class="text-slate-500 text-sm leading-relaxed">
+                Enterprise-grade autonomous finance. Built for UK business infrastructure.
+            </p>
+</div>
+<div>
+<h4 class="font-black text-xs uppercase tracking-widest text-slate-900 mb-6">Product</h4>
+<ul class="space-y-3">
+<li><a class="text-slate-500 text-sm hover:text-secondary" href="#">Qollections</a></li>
+<li><a class="text-slate-500 text-sm hover:text-secondary" href="#">Qashflow</a></li>
+<li><a class="text-slate-500 text-sm hover:text-secondary" href="#">Integrations</a></li>
+</ul>
+</div>
+<div>
+<h4 class="font-black text-xs uppercase tracking-widest text-slate-900 mb-6">Governance</h4>
+<ul class="space-y-3">
+<li><a class="text-slate-500 text-sm hover:text-secondary" href="#">Privacy Policy</a></li>
+<li><a class="text-slate-500 text-sm hover:text-secondary" href="#">GDPR Compliance</a></li>
+<li><a class="text-slate-500 text-sm hover:text-secondary" href="#">Security</a></li>
+</ul>
+</div>
+<div>
+<h4 class="font-black text-xs uppercase tracking-widest text-slate-900 mb-6">Connect</h4>
+<ul class="space-y-3">
+<li><a class="text-slate-500 text-sm hover:text-secondary" href="#">LinkedIn</a></li>
+<li><a class="text-slate-500 text-sm hover:text-secondary" href="#">Support</a></li>
+</ul>
+</div>
+</div>
+<div class="max-w-7xl mx-auto px-6 pb-12 border-t border-slate-200 pt-8">
+<div class="flex flex-col md:flex-row justify-between items-center gap-4">
+<p class="text-slate-400 text-xs font-medium">
+                © Nexus KPI Limited. Registered in England &amp; Wales.
+            </p>
+<div class="flex gap-6">
+<span class="text-slate-300 text-[10px] font-black uppercase tracking-widest">v3.1.0-ENT</span>
+</div>
+</div>
+</div>
+</footer>
+</body></html>

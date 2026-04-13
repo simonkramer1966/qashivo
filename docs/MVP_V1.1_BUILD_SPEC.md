@@ -21,7 +21,7 @@ MVP v1 delivered the core Collections Agent pipeline (LLM email generation, comp
 
 ## SPRINT 5: XERO PRODUCTION + DATA HEALTH + COLLECTIONS HARDENING (Near Complete)
 
-*Updated: 11 April 2026 — Sprint 5 scope massively expanded. 23 sub-sections delivered (5.1–5.23). Remaining items: Xero redirect URI fix (trivial) and onboarding integration with Data Health. Sprint 8 cashflow forecast pulled forward (5.19). RBAC 4-phase system added (5.20). Qapital pillar launched with Capital Bridge + Facility (5.21). Cash gap alerts (5.22). Three-pillar dashboard + branding unification (5.23).*
+*Updated: 12 April 2026 — Sprint 5 scope massively expanded. 25 sub-sections delivered (5.1–5.25). Remaining items: Xero redirect URI fix (trivial) and onboarding integration with Data Health. Sprint 8 cashflow forecast pulled forward (5.19). RBAC 4-phase system added (5.20). Qapital pillar launched with Capital Bridge + Facility (5.21). Cash gap alerts (5.22). Three-pillar dashboard + branding unification (5.23). q- design token system + full UI refresh (5.24). Navigation consolidation + data table overhaul (5.25).*
 
 ### 5.1 Xero Foundations Fix
 
@@ -287,6 +287,43 @@ MVP v1 delivered the core Collections Agent pipeline (LLM email generation, comp
 | Pillar branding | Qollections / Qashflow / Qapital naming across sidebar and all UI | ✅ Done (11 Apr) |
 | Email tagline | Updated to "Working Capital Intelligence" | ✅ Done (11 Apr) |
 | Page renames | "Running Balance" → "13w Qashflow Forecast", "Cashflow Grid" → "Cashflow Detail" | ✅ Done (11 Apr) |
+
+### 5.24 q- Design Token System + UI Refresh (added 12 Apr)
+
+| Task | Detail | Status |
+|------|--------|--------|
+| Design token system | `tokens.css` with warm gray palette, semantic tokens (`--q-bg-page`, `--q-bg-surface`, `--q-text-*`). Shared `QMetricCard` component. | ✅ Done (12 Apr) |
+| Dashboard refresh | Dashboard restyled with q- design tokens. Borderless cards. | ✅ Done (12 Apr) |
+| Debtors list refresh | Debtors list + DebtorTreemap restyled with q- tokens | ✅ Done (12 Apr) |
+| Debtor Detail refresh | Debtor Detail page restyled with q- tokens | ✅ Done (12 Apr) |
+| Action Centre refresh | Action Centre restyled with q- tokens | ✅ Done (12 Apr) |
+| Qashflow Forecast refresh | Qashflow Forecast restyled with q- tokens | ✅ Done (12 Apr) |
+| Qapital pages refresh | Qapital pages restyled with q- tokens | ✅ Done (12 Apr) |
+| Force light mode | Removed `prefers-color-scheme` dark mode — force light mode | ✅ Done (12 Apr) |
+| Content area background | Warm gray (`--q-bg-page` / #F8F7F5) globally | ✅ Done (12 Apr) |
+| Recharts hover cursor | Removed gray overlay globally (CSS + `cursor={false}`) | ✅ Done (12 Apr) |
+| Consistency pass | Data Health, Qashflow, Scenario pages aligned with token system | ✅ Done (12 Apr) |
+
+### 5.25 Navigation Consolidation + Data Table Overhaul (added 12 Apr)
+
+| Task | Detail | Status |
+|------|--------|--------|
+| Nav: default to Action Centre | Qollections now defaults to Action Centre (was Dashboard) | ✅ Done (12 Apr) |
+| Nav: hide Impact | Impact page hidden from sidebar, redirects to Action Centre | ✅ Done (12 Apr) |
+| Nav: Settings merge | 6 settings nav items merged to 3. Data Health and Audit Log relocated. | ✅ Done (12 Apr) |
+| Nav: Playbook → Agent Settings | Playbook settings moved into Agent Settings > Charlie tab | ✅ Done (12 Apr) |
+| Weekly Review merged | Standalone route removed, merged into Forecast page | ✅ Done (12 Apr) |
+| Approval tab: data table | Restructured from card rows to proper sortable data table with drawer panel | ✅ Done (12 Apr) |
+| Approval tab: overdue amount | New column showing overdue amount per action | ✅ Done (12 Apr) |
+| Action Centre Summary | Restyled three columns, navigation links, date pills, vertical alignment | ✅ Done (12 Apr) |
+| Exceptions tab restyle | Category cards restyled to match design system | ✅ Done (12 Apr) |
+| Debtor detail: VIP | VIP star in header (left of name), banner duplicate suppressed, actions in header row | ✅ Done (12 Apr) |
+| Debtor detail: paid tab | Table restyled + days-to-pay calculation fix | ✅ Done (12 Apr) |
+| Activity tab: Notes default | Notes view as default with expand-on-click | ✅ Done (12 Apr) |
+| Bridge: final layout | Header+toggle row, invoice modal, always-visible table, compact recommendation, interest-only cost, no £500 threshold | ✅ Done (12 Apr) |
+| Facility: tabbed layout | QMetricCard components, tabbed layout, updated metrics | ✅ Done (12 Apr) |
+| Scenarios: overdraft facility | Cashflow grid + editable cards moved, overdraft facility added | ✅ Done (12 Apr) |
+| Settings/Audit styling | Team page + Audit Log proper tables in card containers with q-token styling | ✅ Done (12 Apr) |
 
 ---
 

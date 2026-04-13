@@ -16,18 +16,52 @@
  * Convert plain text email body to clean HTML wrapped in an email template.
  * If the body already contains HTML block elements, it is returned as-is
  * (wrapped in the outer template only).
+ *
+ * @param footerHtml — optional pre-built footer HTML (from buildEmailFooter).
+ *   When provided, appended after the body inside the template card.
  */
-export function formatEmailHtml(body: string): string {
+export function formatEmailHtml(body: string, footerHtml?: string): string {
   // If the body already has block-level HTML, skip conversion but still wrap.
   // We must still inject margin styles into bare <p> tags — the LLM often
   // forgets inline styles and email clients (Gmail, Outlook, Apple Mail) strip
   // <style> blocks, leaving paragraphs flush against each other.
   if (/<(?:p|div|table|ul|ol|h[1-6])\b/i.test(body)) {
-    return wrapInTemplate(injectParagraphSpacing(body));
+    return wrapInTemplate(injectParagraphSpacing(body), footerHtml);
   }
 
   const html = textToHtml(body);
-  return wrapInTemplate(html);
+  return wrapInTemplate(html, footerHtml);
+}
+
+/**
+ * Build the standard Qashivo email footer HTML.
+ *
+ * @param tenantName — the tenant's company name, substituted into {companyName}
+ * @param customFooterText — tenant-customised footer text. If null/undefined,
+ *   uses the default. Supports {companyName} token.
+ */
+export function buildEmailFooter(tenantName: string, customFooterText?: string | null): string {
+  const DEFAULT_FOOTER = 'This email was sent on behalf of {companyName} via Qashivo Intelligent Working Capital';
+  const raw = customFooterText?.trim() || DEFAULT_FOOTER;
+  const resolved = raw.replace(/\{companyName\}/g, tenantName);
+  return `<div style="margin-top:24px;border-top:1px solid #e5e7eb;padding-top:16px;font-size:12px;color:#999;line-height:1.4;">${escapeHtmlForFooter(resolved)}</div>`;
+}
+
+/**
+ * Build a plain-text footer for the text/plain part of emails.
+ */
+export function buildEmailFooterText(tenantName: string, customFooterText?: string | null): string {
+  const DEFAULT_FOOTER = 'This email was sent on behalf of {companyName} via Qashivo Intelligent Working Capital';
+  const raw = customFooterText?.trim() || DEFAULT_FOOTER;
+  return '\n\n---\n' + raw.replace(/\{companyName\}/g, tenantName);
+}
+
+function escapeHtmlForFooter(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 /**
@@ -95,9 +129,10 @@ function textToHtml(text: string): string {
 
 /**
  * Wrap converted HTML in a clean, professional email template.
- * No branding — the debtor must believe the email is from a human agent.
+ * No branding in the body — the debtor must believe the email is from a human agent.
+ * The footer (when provided) sits below the body inside the card.
  */
-function wrapInTemplate(innerHtml: string): string {
+function wrapInTemplate(innerHtml: string, footerHtml?: string): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -111,6 +146,7 @@ function wrapInTemplate(innerHtml: string): string {
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:8px;border:1px solid #e5e7eb;">
 <tr><td style="padding:32px 36px;">
 ${innerHtml}
+${footerHtml || ''}
 </td></tr>
 </table>
 </td></tr>

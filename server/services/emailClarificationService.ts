@@ -16,6 +16,7 @@ import { sendEmail } from "./sendgrid";
 import { generateReplyToEmail, findOrCreateConversation, updateConversationStats } from "./emailCommunications";
 import { v4 as uuidv4 } from "uuid";
 import { generateJSON } from "./llm/claude";
+import { buildEmailFooter, buildEmailFooterText } from "./emailFormatter";
 import { CONVERSATION_TYPE } from "@shared/types/actionMetadata";
 
 const EMAIL_REPLY_DOMAIN = process.env.EMAIL_REPLY_DOMAIN || "in.qashivo.com";
@@ -118,7 +119,25 @@ interface VoiceFollowUpContext {
 }
 
 class EmailClarificationService {
-  
+
+  /**
+   * Load the tenant's custom email footer text from the database.
+   * Returns null if not set (the shared footer builder uses the default).
+   */
+  private async getTenantFooterText(tenantId: string): Promise<string | null> {
+    try {
+      const [tenant] = await db
+        .select({ emailFooterText: tenants.emailFooterText })
+        .from(tenants)
+        .where(eq(tenants.id, tenantId))
+        .limit(1);
+      return tenant?.emailFooterText || null;
+    } catch (err) {
+      console.warn('[EmailClarification] Failed to load tenant footer text:', err);
+      return null;
+    }
+  }
+
   /**
    * Send a clarification email when ambiguity is detected
    */
@@ -192,22 +211,23 @@ class EmailClarificationService {
         : (generated.subject || 'RE: Payment Arrangement - Quick Clarification Needed');
 
       // Preserve the outer scaffold the debtor used to see (DOCTYPE + body
-      // font stack + Qashivo footer); the persona-signed LLM body owns
+      // font stack + footer); the persona-signed LLM body owns
       // everything between.
+      const tenantFooterText = await this.getTenantFooterText(context.tenantId);
+      const footerBlock = buildEmailFooter(context.tenantName, tenantFooterText);
+
       const htmlContent = `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
 ${generated.body}
-<div style="margin-top: 30px; font-size: 12px; color: #666; border-top: 1px solid #eee; padding-top: 10px;">
-  <p>This email was sent on behalf of ${context.tenantName} via Qashivo credit control.</p>
-</div>
+${footerBlock}
 </body>
 </html>`;
 
       const textContent =
         generated.body.replace(/<[^>]+>/g, '').replace(/\n{3,}/g, '\n\n').trim() +
-        `\n\n---\nThis email was sent on behalf of ${context.tenantName} via Qashivo credit control.`;
+        buildEmailFooterText(context.tenantName, tenantFooterText);
       
       // Send the email
       const result = await sendEmail({
@@ -303,8 +323,9 @@ ${generated.body}
       const emailId = uuidv4();
       const replyTo = generateReplyToEmail(context.tenantId, conversationId, emailId);
       
-      // Build the confirmation email content
-      const { subject, htmlContent, textContent } = this.buildConfirmationEmail(context);
+      // Build the confirmation email content with tenant footer
+      const tenantFooterText = await this.getTenantFooterText(context.tenantId);
+      const { subject, htmlContent, textContent } = this.buildConfirmationEmail(context, tenantFooterText);
       
       // Send the email
       const result = await sendEmail({
@@ -463,7 +484,7 @@ ${generated.body}
   /**
    * Build confirmation email content
    */
-  private buildConfirmationEmail(context: ConfirmationContext): {
+  private buildConfirmationEmail(context: ConfirmationContext, customFooterText?: string | null): {
     subject: string;
     htmlContent: string;
     textContent: string;
@@ -611,6 +632,9 @@ ${installments.length > 0 ? `Payment Schedule:\n${installments.map(inst => `  - 
 `;
     }
     
+    // Use shared footer builder
+    const footerBlock = buildEmailFooter(tenantName, customFooterText);
+
     const htmlContent = `
 <!DOCTYPE html>
 <html>
@@ -619,7 +643,6 @@ ${installments.length > 0 ? `Payment Schedule:\n${installments.map(inst => `  - 
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
     .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .footer { margin-top: 30px; font-size: 12px; color: #666; }
   </style>
 </head>
 <body>
@@ -634,13 +657,11 @@ ${installments.length > 0 ? `Payment Schedule:\n${installments.map(inst => `  - 
     ${confirmationDetails}
 
     <p>We appreciate you working with us to bring your account up to date. If you have any questions or need to make changes to this arrangement, please reply to this email.</p>
-    
+
     <p>Kind regards,<br>
     ${tenantName} Accounts Team</p>
-    
-    <div class="footer">
-      <p>This email was sent on behalf of ${tenantName} via Qashivo credit control.</p>
-    </div>
+
+    ${footerBlock}
   </div>
 </body>
 </html>`;
@@ -657,10 +678,7 @@ ${confirmationDetailsText}
 We appreciate you working with us to bring your account up to date. If you have any questions or need to make changes to this arrangement, please reply to this email.
 
 Kind regards,
-${tenantName} Accounts Team
-
----
-This email was sent on behalf of ${tenantName} via Qashivo credit control.`;
+${tenantName} Accounts Team` + buildEmailFooterText(tenantName, customFooterText);
 
     return { subject, htmlContent, textContent };
   }
@@ -1459,21 +1477,22 @@ Return a JSON object with exactly these fields:
     const textContent = result.body_text || '';
     const htmlBody = result.body_html || `<p>${textContent.replace(/\n/g, '<br>')}</p>`;
 
+    const tenantFooterText = await this.getTenantFooterText(context.tenantId);
+    const footerBlock = buildEmailFooter(context.tenantName, tenantFooterText);
+
     const htmlContent = `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
 ${htmlBody}
-<div style="margin-top: 30px; font-size: 12px; color: #666; border-top: 1px solid #eee; padding-top: 10px;">
-  <p>This email was sent on behalf of ${context.tenantName} via Qashivo credit control.</p>
-</div>
+${footerBlock}
 </body>
 </html>`;
 
     return {
       subject,
       htmlContent,
-      textContent: textContent + `\n\n---\nThis email was sent on behalf of ${context.tenantName} via Qashivo credit control.`,
+      textContent: textContent + buildEmailFooterText(context.tenantName, tenantFooterText),
     };
   }
 

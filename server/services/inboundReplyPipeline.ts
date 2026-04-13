@@ -372,9 +372,10 @@ async function deliverThreadedReply(
     const fromName = tenant.name
       ? `${tenant.name} via Qashivo`
       : "Qashivo Credit Control";
-    const { formatEmailHtml } = await import("./emailFormatter");
-    const htmlBody = formatEmailHtml(finalBody);
-    const textBody = email.body; // LLM output is already clean plain text
+    const { formatEmailHtml, buildEmailFooter, buildEmailFooterText } = await import("./emailFormatter");
+    const footerHtml = buildEmailFooter(tenant.name || 'Our company', tenant.emailFooterText);
+    const htmlBody = formatEmailHtml(finalBody, footerHtml);
+    const textBody = email.body + buildEmailFooterText(tenant.name || 'Our company', tenant.emailFooterText);
 
     // Send via SendGrid with threading headers
     console.log(`[InboundReply] Sending threaded reply to ${recipientEmail}`);

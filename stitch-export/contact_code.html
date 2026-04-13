@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Contact Qashivo | The Digital Curator for UK Cashflow</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-tint": "#565e74",
+              "secondary-container": "#57dffe",
+              "on-primary-container": "#7c839b",
+              "on-tertiary-container": "#b87500",
+              "on-background": "#191c1e",
+              "primary-fixed-dim": "#bec6e0",
+              "on-error-container": "#93000a",
+              "primary-container": "#131b2e",
+              "outline-variant": "#c6c6cd",
+              "primary-fixed": "#dae2fd",
+              "on-surface-variant": "#45464d",
+              "secondary": "#00687a",
+              "inverse-primary": "#bec6e0",
+              "error": "#ba1a1a",
+              "on-tertiary": "#ffffff",
+              "on-primary-fixed": "#131b2e",
+              "surface-container-high": "#e6e8ea",
+              "on-error": "#ffffff",
+              "background": "#f7f9fb",
+              "on-secondary": "#ffffff",
+              "error-container": "#ffdad6",
+              "primary": "#000000",
+              "surface-variant": "#e0e3e5",
+              "tertiary-fixed": "#ffddb8",
+              "on-tertiary-fixed-variant": "#653e00",
+              "on-primary": "#ffffff",
+              "on-secondary-fixed": "#001f26",
+              "on-tertiary-fixed": "#2a1700",
+              "on-secondary-fixed-variant": "#004e5c",
+              "surface-dim": "#d8dadc",
+              "surface-container-low": "#f2f4f6",
+              "on-primary-fixed-variant": "#3f465c",
+              "inverse-surface": "#2d3133",
+              "tertiary-fixed-dim": "#ffb95f",
+              "surface-container": "#eceef0",
+              "surface-container-highest": "#e0e3e5",
+              "secondary-fixed": "#acedff",
+              "inverse-on-surface": "#eff1f3",
+              "surface-bright": "#f7f9fb",
+              "tertiary-container": "#2a1700",
+              "on-secondary-container": "#006172",
+              "surface-container-lowest": "#ffffff",
+              "surface": "#f7f9fb",
+              "secondary-fixed-dim": "#4cd7f6",
+              "outline": "#76777d",
+              "tertiary": "#000000",
+              "on-surface": "#191c1e"
+            },
+            fontFamily: {
+              "headline": ["Manrope", "sans-serif"],
+              "body": ["Inter", "sans-serif"],
+              "label": ["Inter", "sans-serif"]
+            },
+            borderRadius: {
+              "DEFAULT": "0.25rem",
+              "lg": "0.375rem",
+              "xl": "0.5rem",
+              "full": "9999px"
+            },
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .nav-link {
+            position: relative;
+        }
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -4px;
+            left: 0;
+            background-color: #000;
+            transition: width 0.2s ease;
+        }
+        .nav-link:hover::after {
+            width: 100%;
+        }
+        .dot-grid {
+            background-image: radial-gradient(rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        .input-focus-effect:focus-within {
+            border-color: #000;
+        }
+    </style>
+</head>
+<body class="bg-white font-body text-on-background antialiased selection:bg-secondary-fixed selection:text-on-secondary-fixed">
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full z-50 bg-white/95 border-b border-surface-container-high backdrop-blur-sm">
+<div class="flex justify-between items-center max-w-7xl mx-auto px-6 py-4">
+<div class="text-2xl font-black text-primary tracking-tighter">
+                Qashivo
+            </div>
+<div class="hidden md:flex items-center space-x-10">
+<a class="nav-link font-headline font-bold text-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Home</a>
+<a class="nav-link font-headline font-bold text-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Features</a>
+<a class="nav-link font-headline font-bold text-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Why Qashivo</a>
+<a class="nav-link font-headline font-bold text-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Pricing</a>
+<a class="nav-link font-headline font-bold text-sm text-primary underline underline-offset-8" href="#">Contact</a>
+</div>
+<button class="bg-primary text-white px-7 py-2.5 rounded font-headline font-bold text-sm hover:bg-zinc-800 transition-all">
+                Book a Demo
+            </button>
+</div>
+</nav>
+<main class="pt-32 pb-20">
+<!-- Page Header -->
+<header class="max-w-7xl mx-auto px-6 mb-20 lg:pl-24">
+<h1 class="font-headline text-5xl md:text-7xl font-extrabold tracking-tight text-primary max-w-4xl leading-none mb-8">
+                Direct Access to <br/><span class="text-secondary">Market-Leading Cashflow.</span>
+</h1>
+<p class="font-body text-xl text-on-surface-variant max-w-2xl leading-relaxed">
+                Expert support for UK-based finance teams. Schedule a technical briefing or connect with our implementation specialists.
+            </p>
+</header>
+<!-- Two-Column Layout -->
+<section class="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-16 lg:pl-24">
+<!-- LEFT COLUMN: Contact Form -->
+<div class="lg:col-span-7">
+<div class="bg-white border-2 border-primary p-8 md:p-12">
+<form class="space-y-10">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+<div class="flex flex-col gap-3 group">
+<label class="font-label text-xs font-bold uppercase tracking-widest text-primary">Full Name</label>
+<input class="border-0 border-b-2 border-surface-container-highest bg-transparent px-0 py-2 focus:ring-0 focus:border-primary transition-colors placeholder:text-surface-variant text-primary font-medium" placeholder="Jane Smith" required="" type="text"/>
+</div>
+<div class="flex flex-col gap-3">
+<label class="font-label text-xs font-bold uppercase tracking-widest text-primary">Work Email</label>
+<input class="border-0 border-b-2 border-surface-container-highest bg-transparent px-0 py-2 focus:ring-0 focus:border-primary transition-colors placeholder:text-surface-variant text-primary font-medium" placeholder="jane@company.co.uk" required="" type="email"/>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+<div class="flex flex-col gap-3">
+<label class="font-label text-xs font-bold uppercase tracking-widest text-primary">Company</label>
+<input class="border-0 border-b-2 border-surface-container-highest bg-transparent px-0 py-2 focus:ring-0 focus:border-primary transition-colors placeholder:text-surface-variant text-primary font-medium" placeholder="Enterprise Name" type="text"/>
+</div>
+<div class="flex flex-col gap-3">
+<label class="font-label text-xs font-bold uppercase tracking-widest text-primary">Role</label>
+<select class="border-0 border-b-2 border-surface-container-highest bg-transparent px-0 py-2 focus:ring-0 focus:border-primary transition-colors text-primary font-medium appearance-none">
+<option>Finance Director</option>
+<option>CFO / MD</option>
+<option>Financial Controller</option>
+<option>Operations Head</option>
+<option>Other</option>
+</select>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+<div class="flex flex-col gap-3">
+<label class="font-label text-xs font-bold uppercase tracking-widest text-primary">Annual Revenue</label>
+<select class="border-0 border-b-2 border-surface-container-highest bg-transparent px-0 py-2 focus:ring-0 focus:border-primary transition-colors text-primary font-medium appearance-none">
+<option>£1M - £5M</option>
+<option>£5M - £20M</option>
+<option>£20M - £50M</option>
+<option>£50M+</option>
+</select>
+</div>
+<div class="flex flex-col gap-3">
+<label class="font-label text-xs font-bold uppercase tracking-widest text-primary">Primary Objective</label>
+<select class="border-0 border-b-2 border-surface-container-highest bg-transparent px-0 py-2 focus:ring-0 focus:border-primary transition-colors text-primary font-medium appearance-none">
+<option>Automate Debt Collection</option>
+<option>Real-time Cash Visibility</option>
+<option>Working Capital Optimization</option>
+<option>ERP Integration (Xero/Sage)</option>
+</select>
+</div>
+</div>
+<div class="flex flex-col gap-3">
+<label class="font-label text-xs font-bold uppercase tracking-widest text-primary">Strategic Requirements</label>
+<textarea class="border-0 border-b-2 border-surface-container-highest bg-transparent px-0 py-2 focus:ring-0 focus:border-primary transition-colors resize-none placeholder:text-surface-variant text-primary font-medium" placeholder="Briefly describe your current infrastructure..." rows="3"></textarea>
+</div>
+<button class="w-full bg-primary text-white font-headline font-extrabold py-5 rounded-none hover:bg-zinc-800 transition-all text-sm tracking-widest uppercase" type="submit">
+                            Request Professional Consultation
+                        </button>
+</form>
+</div>
+</div>
+<!-- RIGHT COLUMN: Contact Info & Trust -->
+<div class="lg:col-span-5 flex flex-col justify-between">
+<div class="space-y-10">
+<div class="space-y-6">
+<div class="inline-block px-3 py-1 bg-secondary/10 text-secondary text-[10px] font-bold tracking-widest uppercase">UK Headquarters</div>
+<h2 class="font-headline text-3xl font-extrabold text-primary leading-tight">Built for the UK’s Enterprise Infrastructure.</h2>
+<p class="font-body text-on-surface-variant leading-relaxed text-lg">
+                            Qashivo is engineered by Nexus KPI Limited. We provide the autonomous financial infrastructure required to eliminate late payments and stabilize working capital for high-growth UK firms.
+                        </p>
+</div>
+<div class="space-y-8">
+<div class="flex items-start gap-5">
+<div class="w-12 h-12 shrink-0 border border-surface-container-highest flex items-center justify-center">
+<span class="material-symbols-outlined text-primary" data-icon="mail">mail</span>
+</div>
+<div>
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold mb-1">Direct Correspondence</p>
+<p class="text-lg font-bold"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="fe8d91928b8a9791908dbe8f9f8d96978891d09d9193">[email&#160;protected]</a></p>
+</div>
+</div>
+<div class="flex items-start gap-5">
+<div class="w-12 h-12 shrink-0 border border-surface-container-highest flex items-center justify-center">
+<span class="material-symbols-outlined text-primary" data-icon="verified_user">verified_user</span>
+</div>
+<div>
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold mb-1">Compliance &amp; Registry</p>
+<p class="text-lg font-bold">Nexus KPI Limited (UK Registered)</p>
+</div>
+</div>
+</div>
+<div class="p-6 bg-slate-50 border-l-4 border-primary space-y-2">
+<p class="font-bold text-primary">Service Level Agreement</p>
+<p class="text-sm text-on-surface-variant">Technical specialists provide initial response within 4 business hours for all UK-based inquiries.</p>
+</div>
+</div>
+<div class="pt-16 lg:pt-0">
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold mb-6">Accreditations &amp; Security</p>
+<div class="grid grid-cols-2 gap-px bg-surface-container-highest border border-surface-container-highest">
+<div class="bg-white p-4 flex flex-col gap-2">
+<span class="material-symbols-outlined text-secondary" data-icon="cloud_done">cloud_done</span>
+<span class="text-[10px] font-bold text-primary uppercase">Xero Verified Partner</span>
+</div>
+<div class="bg-white p-4 flex flex-col gap-2">
+<span class="material-symbols-outlined text-secondary" data-icon="lock">lock</span>
+<span class="text-[10px] font-bold text-primary uppercase">ISO 27001 Ready</span>
+</div>
+<div class="bg-white p-4 flex flex-col gap-2">
+<span class="material-symbols-outlined text-secondary" data-icon="admin_panel_settings">admin_panel_settings</span>
+<span class="text-[10px] font-bold text-primary uppercase">ICO Regulated</span>
+</div>
+<div class="bg-white p-4 flex flex-col gap-2">
+<span class="material-symbols-outlined text-secondary" data-icon="hub">hub</span>
+<span class="text-[10px] font-bold text-primary uppercase">UK Data Residency</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Illustration Section: Precise Map -->
+<section class="mt-40 max-w-7xl mx-auto px-6 overflow-hidden">
+<div class="relative h-[500px] w-full bg-[#050505] overflow-hidden">
+<div class="absolute inset-0 dot-grid opacity-30"></div>
+<div class="relative z-10 w-full h-full flex flex-col items-center justify-center">
+<div class="text-center mb-16 px-6">
+<h3 class="font-headline text-white text-3xl font-extrabold mb-4 tracking-tighter">Unified Financial Grid</h3>
+<p class="text-zinc-500 max-w-lg mx-auto font-body text-sm uppercase tracking-widest font-bold">Mapping the UK Corporate Capital Flow</p>
+</div>
+<div class="relative w-full max-w-4xl h-[300px]">
+<svg class="w-full h-full" viewbox="0 0 800 300" xmlns="http://www.w3.org/2000/svg">
+<!-- Technical Grid Lines -->
+<line opacity="0.1" stroke="white" stroke-dasharray="4" stroke-width="0.5" x1="0" x2="800" y1="150" y2="150"></line>
+<line opacity="0.1" stroke="white" stroke-dasharray="4" stroke-width="0.5" x1="400" x2="400" y1="0" y2="300"></line>
+<!-- Precise Connection Paths -->
+<g stroke-linecap="square">
+<!-- Hub Connections -->
+<path d="M550 250 L 480 180" fill="none" opacity="0.8" stroke="#00BCD4" stroke-width="1"></path>
+<path d="M480 180 L 490 80" fill="none" opacity="0.4" stroke="#00BCD4" stroke-width="1"></path>
+<path d="M550 250 L 410 260" fill="none" opacity="0.2" stroke="white" stroke-width="1"></path>
+<path d="M490 80 L 500 20" fill="none" opacity="0.6" stroke="#00BCD4" stroke-width="1"></path>
+</g>
+<!-- Nodes as Precision Points -->
+<!-- London -->
+<g transform="translate(550, 250)">
+<rect class="animate-pulse" fill="#00BCD4" height="8" width="8" x="-4" y="-4"></rect>
+<text fill="white" font-family="Inter" font-size="10" font-weight="700" tracking="2" x="15" y="4">LDN.HUB</text>
+<circle fill="none" opacity="0.3" r="12" stroke="#00BCD4" stroke-width="0.5"></circle>
+</g>
+<!-- Birmingham -->
+<g transform="translate(480, 180)">
+<rect fill="white" height="6" width="6" x="-3" y="-3"></rect>
+<text fill="#999" font-family="Inter" font-size="9" font-weight="600" tracking="1" x="-65" y="4">BHX.NODE</text>
+</g>
+<!-- Manchester -->
+<g transform="translate(490, 80)">
+<rect fill="#00BCD4" height="6" width="6" x="-3" y="-3"></rect>
+<text fill="white" font-family="Inter" font-size="9" font-weight="700" tracking="1" x="15" y="4">MAN.CORE</text>
+</g>
+<!-- Bristol -->
+<g transform="translate(410, 260)">
+<rect fill="zinc-600" height="4" width="4" x="-2" y="-2"></rect>
+<text fill="#666" font-family="Inter" font-size="8" font-weight="500" tracking="1" x="-45" y="4">BRS.P</text>
+</g>
+<!-- Data Packets (Sharp Squares) -->
+<rect fill="white" height="3" width="3">
+<animatemotion dur="2s" path="M550 250 L 480 180" repeatcount="indefinite"></animatemotion>
+</rect>
+<rect fill="#00BCD4" height="3" width="3">
+<animatemotion begin="0.5s" dur="2.5s" path="M480 180 L 490 80" repeatcount="indefinite"></animatemotion>
+</rect>
+</svg>
+</div>
+</div>
+</div>
+</section>
+<!-- Final CTA Bar -->
+<section class="mt-20 py-16 bg-white border-y border-surface-container-high flex flex-col md:flex-row items-center justify-center gap-12 lg:gap-24">
+<h4 class="font-headline text-2xl font-extrabold text-primary">Platform Exploration</h4>
+<div class="flex gap-12">
+<a class="font-headline font-bold text-sm text-primary hover:opacity-70 flex items-center gap-3 group transition-all" href="#">
+                    TECHNICAL FEATURES <span class="material-symbols-outlined text-lg group-hover:translate-x-1 transition-transform" data-icon="north_east">north_east</span>
+</a>
+<a class="font-headline font-bold text-sm text-primary hover:opacity-70 flex items-center gap-3 group transition-all" href="#">
+                    PRICING MODELS <span class="material-symbols-outlined text-lg group-hover:translate-x-1 transition-transform" data-icon="north_east">north_east</span>
+</a>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="w-full bg-zinc-950 text-white">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-16 max-w-7xl mx-auto px-8 py-20">
+<div class="md:col-span-1 space-y-8">
+<div class="text-2xl font-black tracking-tighter">Qashivo</div>
+<p class="font-body text-[11px] leading-relaxed tracking-wider text-zinc-500 uppercase">
+                    © Nexus KPI Limited. All Rights Reserved. <br/>Strategic Cashflow Infrastructure.
+                </p>
+</div>
+<div class="space-y-6">
+<p class="text-[10px] font-extrabold uppercase tracking-[0.2em] text-zinc-400">Governance</p>
+<ul class="space-y-3">
+<li><a class="text-xs text-zinc-500 hover:text-white transition-colors" href="#">Privacy Policy</a></li>
+<li><a class="text-xs text-zinc-500 hover:text-white transition-colors" href="#">Data Processing (GDPR)</a></li>
+<li><a class="text-xs text-zinc-500 hover:text-white transition-colors" href="#">Merchant Terms</a></li>
+</ul>
+</div>
+<div class="space-y-6">
+<p class="text-[10px] font-extrabold uppercase tracking-[0.2em] text-zinc-400">Intelligence</p>
+<ul class="space-y-3">
+<li><a class="text-xs text-zinc-500 hover:text-white transition-colors" href="#">LinkedIn Corporate</a></li>
+<li><a class="text-xs text-zinc-500 hover:text-white transition-colors" href="#">Support Engineering</a></li>
+</ul>
+</div>
+<div class="space-y-6">
+<p class="text-[10px] font-extrabold uppercase tracking-[0.2em] text-zinc-400">Headquarters</p>
+<p class="text-xs text-zinc-500 leading-loose">
+                 

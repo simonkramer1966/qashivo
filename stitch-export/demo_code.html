@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Qashivo | Interactive Intelligence Report</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-variant": "#e0e3e5",
+              "surface-container-low": "#f2f4f6",
+              "on-tertiary-fixed-variant": "#653e00",
+              "tertiary-fixed": "#ffddb8",
+              "surface-container-high": "#e6e8ea",
+              "inverse-on-surface": "#eff1f3",
+              "on-secondary": "#ffffff",
+              "primary": "#000000",
+              "on-surface-variant": "#45464d",
+              "surface-container": "#eceef0",
+              "primary-fixed-dim": "#bec6e0",
+              "surface": "#f7f9fb",
+              "on-error": "#ffffff",
+              "on-primary-fixed": "#131b2e",
+              "secondary-container": "#006172",
+              "secondary": "#06b6d4",
+              "tertiary-fixed-dim": "#ffb95f",
+              "surface-container-highest": "#e0e3e5",
+              "on-tertiary-fixed": "#2a1700",
+              "on-surface": "#191c1e",
+              "on-secondary-fixed": "#001f26",
+              "primary-fixed": "#dae2fd",
+              "tertiary": "#000000",
+              "outline": "#76777d",
+              "on-primary-fixed-variant": "#3f465c",
+              "on-secondary-container": "#ffffff",
+              "primary-container": "#0F172A",
+              "secondary-fixed": "#acedff",
+              "inverse-surface": "#2d3133",
+              "surface-container-lowest": "#ffffff",
+              "secondary-fixed-dim": "#4cd7f6",
+              "on-secondary-fixed-variant": "#004e5c",
+              "on-primary": "#ffffff",
+              "surface-bright": "#f7f9fb",
+              "on-tertiary": "#ffffff",
+              "surface-dim": "#d8dadc",
+              "outline-variant": "#c6c6cd",
+              "on-background": "#191c1e",
+              "error-container": "#ffdad6",
+              "tertiary-container": "#2a1700",
+              "surface-tint": "#565e74",
+              "on-primary-container": "#7c839b",
+              "inverse-primary": "#bec6e0",
+              "on-tertiary-container": "#b87500",
+              "on-error-container": "#93000a",
+              "background": "#f7f9fb",
+              "error": "#ba1a1a"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.5rem", "lg": "0.75rem", "xl": "1rem", "full": "9999px"},
+            keyframes: {
+              'glow-pulse': {
+                '0%, 100%': { boxShadow: '0 0 5px rgba(6, 182, 212, 0.2)' },
+                '50%': { boxShadow: '0 0 20px rgba(6, 182, 212, 0.4)' },
+              },
+              'breath-glow-teal': {
+                '0%, 100%': { boxShadow: '0 0 0px rgba(6, 182, 212, 0)', borderColor: 'rgba(6, 182, 212, 0.2)' },
+                '50%': { boxShadow: '0 0 15px rgba(6, 182, 212, 0.3)', borderColor: 'rgba(6, 182, 212, 0.6)' },
+              },
+              'fluid-wave': {
+                '0%, 100%': { transform: 'scaleY(1)', opacity: '0.4' },
+                '50%': { transform: 'scaleY(2.2)', opacity: '1' },
+              },
+              'bounce-in': {
+                '0%': { transform: 'scale(0)', opacity: '0' },
+                '70%': { transform: 'scale(1.1)' },
+                '100%': { transform: 'scale(1)', opacity: '1' },
+              }
+            },
+            animation: {
+              'glow-pulse': 'glow-pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+              'breath-glow-teal': 'breath-glow-teal 4s ease-in-out infinite',
+              'fluid-wave': 'fluid-wave 2s ease-in-out infinite',
+              'bounce-in': 'bounce-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
+            }
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .dot-grid {
+        background-image: radial-gradient(rgba(255,255,255,0.08) 1px, transparent 1px);
+        background-size: 24px 24px;
+      }
+      
+      /* Fluid Waveform */
+      .wave-container {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        height: 120px;
+      }
+      .wave-bar {
+        width: 4px;
+        height: 20px;
+        background: linear-gradient(to top, #06b6d4, #22d3ee);
+        border-radius: 99px;
+        transition: all 0.3s ease;
+      }
+
+      /* Transitions */
+      .fade-in-entry {
+        opacity: 0;
+        animation: fadeIn 0.4s ease-out forwards;
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .scroll-custom::-webkit-scrollbar { width: 5px; }
+      .scroll-custom::-webkit-scrollbar-track { background: transparent; }
+      .scroll-custom::-webkit-scrollbar-thumb { background: #e0e3e5; border-radius: 10px; }
+      
+      .stagger-load > * { opacity: 0; }
+      .stagger-load > *:nth-child(1) { animation: fadeIn 0.6s ease-out 0.1s forwards; }
+      .stagger-load > *:nth-child(2) { animation: fadeIn 0.6s ease-out 0.2s forwards; }
+      .stagger-load > *:nth-child(3) { animation: fadeIn 0.6s ease-out 0.3s forwards; }
+      .stagger-load > *:nth-child(4) { animation: fadeIn 0.6s ease-out 0.4s forwards; }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface antialiased">
+<!-- Component: TopAppBar -->
+<header class="bg-slate-50/70 backdrop-blur-xl text-slate-950 fixed top-0 w-full z-50 flex justify-between items-center px-8 py-4 max-w-7xl mx-auto left-1/2 -translate-x-1/2">
+<div class="text-2xl font-bold tracking-tighter text-slate-900">Qashivo</div>
+<nav class="hidden md:flex items-center space-x-8 font-['Manrope'] tracking-tight font-semibold text-sm">
+<a class="text-slate-500 font-medium hover:text-slate-900 transition-colors" href="#">Home</a>
+<a class="text-slate-500 font-medium hover:text-slate-900 transition-colors" href="#">Features</a>
+<a class="text-slate-500 font-medium hover:text-slate-900 transition-colors" href="#">Why Qashivo</a>
+<a class="text-slate-500 font-medium hover:text-slate-900 transition-colors" href="#">Pricing</a>
+<a class="text-slate-500 font-medium hover:text-slate-900 transition-colors" href="#">Contact</a>
+</nav>
+<button class="bg-primary-container text-white px-5 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition-all">Book a Demo</button>
+</header>
+<main class="pt-24 pb-20 max-w-7xl mx-auto px-6 md:px-12">
+<!-- 1. Hero Section (from SCREEN_41) -->
+<section class="mb-16 grid grid-cols-1 lg:grid-cols-5 gap-8">
+<!-- Left: Call Metadata -->
+<div class="lg:col-span-2 flex flex-col gap-4">
+<div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 flex flex-col h-full">
+<div class="flex justify-between items-start mb-8">
+<div>
+<h3 class="font-headline font-bold text-xs text-slate-400 uppercase tracking-[0.2em]">Live Intelligence</h3>
+<p class="text-lg font-bold text-slate-900 mt-1">AX-902 Connection</p>
+</div>
+<div class="flex items-center gap-1.5 px-2.5 py-1 bg-red-50 text-red-600 rounded-full">
+<div class="w-1.5 h-1.5 bg-red-600 rounded-full animate-pulse"></div>
+<span class="text-[10px] font-extrabold uppercase">Live</span>
+</div>
+</div>
+<div class="space-y-5">
+<div class="fade-in-entry flex items-center gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100" style="animation-delay: 0.1s">
+<span class="material-symbols-outlined text-secondary">insights</span>
+<div class="flex flex-col">
+<span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Intent Score</span>
+<span class="text-sm font-bold text-slate-900">78% Probability</span>
+</div>
+</div>
+<div class="fade-in-entry flex items-center gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100" style="animation-delay: 0.2s">
+<span class="material-symbols-outlined text-secondary">settings_voice</span>
+<div class="flex flex-col">
+<span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Speaker Emotion</span>
+<span class="text-sm font-bold text-slate-900">Constructive / Cooperative</span>
+</div>
+</div>
+</div>
+<div class="mt-auto pt-8">
+<div class="space-y-4">
+<label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Quick Respond Link</label>
+<div class="flex gap-2">
+<input class="flex-grow bg-slate-50 border-slate-200 rounded-xl text-sm focus:ring-secondary focus:border-secondary h-[48px] px-4" placeholder="Enter recipient mobile..." type="text"/>
+<button class="bg-secondary text-white px-6 rounded-xl font-bold text-sm h-[48px] hover:brightness-105 transition-all">Send</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right: Premium Visualizer -->
+<div class="lg:col-span-3 bg-[#0F172A] rounded-[2rem] p-10 relative overflow-hidden flex flex-col justify-center items-center h-[400px] border border-slate-800 shadow-2xl dot-grid">
+<div class="wave-container" id="waveform">
+<!-- Bars injected by JS -->
+</div>
+<div class="absolute inset-0 flex items-center justify-center bg-[#0F172A]/90 backdrop-blur-md hidden z-20" id="status-success">
+<div class="text-center">
+<div class="w-24 h-24 bg-secondary rounded-full flex items-center justify-center animate-bounce-in mx-auto shadow-[0_0_60px_rgba(6,182,212,0.4)]">
+<span class="material-symbols-outlined text-white text-5xl">check_circle</span>
+</div>
+<p class="text-white font-headline font-bold mt-8 text-2xl tracking-tight">Intelligence Report Generated</p>
+<p class="text-slate-400 text-sm mt-2">All signals verified and recorded.</p>
+</div>
+</div>
+<div class="absolute bottom-8 left-0 w-full text-center">
+<span class="text-[10px] font-bold text-slate-500 uppercase tracking-[0.3em] opacity-50">High Fidelity Audio Neural Stream</span>
+</div>
+</div>
+</section>
+<!-- 2. Interactive Section (from SCREEN_32) -->
+<section class="mb-24">
+<div class="mb-12 max-w-3xl">
+<span class="text-[11px] text-secondary font-bold tracking-[0.2em] uppercase mb-4 block font-headline">Interactive Demo</span>
+<h2 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-6 leading-tight font-headline">The future of <span class="text-secondary">automated recovery</span>.</h2>
+<p class="text-lg text-slate-500 leading-relaxed font-medium">Experience our AI-powered credit controller first-hand. No setup, no commitment—just a real-time conversation.</p>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-10 items-stretch">
+<!-- Left: Call Form -->
+<div class="bg-white p-10 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col justify-between">
+<div>
+<div class="flex items-center gap-4 mb-8">
+<div class="w-14 h-14 rounded-2xl bg-secondary/10 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-3xl">phone_in_talk</span>
+</div>
+<div>
+<h3 class="text-xl font-bold font-headline tracking-tight">Experience Qashivo</h3>
+<p class="text-slate-500 text-sm font-medium">Live credit control call simulation</p>
+</div>
+</div>
+<p class="text-slate-600 text-[15px] mb-8 leading-relaxed">
+                        You're about to receive a credit control call from Qashivo. Play the part of the debtor and respond however you like. 
+                        <span class="block mt-4 text-xs font-bold italic text-slate-400 uppercase tracking-wide">The conversation handles objections and payment plans autonomously.</span>
+</p>
+<form class="space-y-6">
+<div class="space-y-2">
+<label class="block text-[10px] font-bold uppercase tracking-widest text-slate-400">Your Name</label>
+<input class="w-full px-6 py-4 bg-slate-50 rounded-xl border-slate-200 focus:ring-secondary focus:border-secondary transition-all text-sm" placeholder="John Smith" type="text"/>
+</div>
+<div class="space-y-2">
+<label class="block text-[10px] font-bold uppercase tracking-widest text-slate-400">Your Phone Number</label>
+<div class="flex">
+<div class="flex items-center gap-2 px-5 py-4 bg-slate-50 rounded-l-xl border border-r-0 border-slate-200">
+<div class="w-6 h-4 bg-slate-200 relative overflow-hidden">
+<div class="absolute inset-0 bg-[url('https://upload.wikimedia.org/wikipedia/en/a/ae/Flag_of_the_United_Kingdom.svg')] bg-cover"></div>
+</div>
+<span class="text-sm font-bold text-slate-700">+44</span>
+</div>
+<input class="flex-1 px-6 py-4 bg-slate-50 rounded-r-xl border border-slate-200 focus:ring-secondary focus:border-secondary transition-all text-sm" placeholder="7700 900000" type="tel"/>
+</div>
+</div>
+<button class="w-full bg-secondary hover:brightness-105 text-white py-5 rounded-xl font-bold text-lg flex items-center justify-center gap-3 transition-all shadow-lg shadow-secondary/20" type="button">
+<span class="material-symbols-outlined">call</span>
+                            Call Me Now
+                        </button>
+</form>
+</div>
+<div class="mt-10 pt-8 border-t border-slate-100 flex flex-col gap-2">
+<p class="text-[10px] text-slate-400 flex items-center gap-2 font-medium">
+<span class="material-symbols-outlined text-[14px]">lock</span>
+                        Compliant data handling. Your number is never stored for marketing.
+                    </p>
+</div>
+</div>
+<!-- Right: Secondary Visualizer/Insights -->
+<div class="bg-white p-10 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col">
+<div class="flex items-center gap-4 mb-8">
+<div class="w-14 h-14 rounded-2xl bg-secondary/10 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-3xl">auto_awesome</span>
+</div>
+<div>
+<h3 class="text-xl font-bold font-headline tracking-tight">Credit Control Insights</h3>
+<p class="text-slate-500 text-sm font-medium">Voice Call Intelligence Monitoring</p>
+</div>
+</div>
+<!-- Visualiser Window -->
+<div class="w-full aspect-[16/10] bg-[#0F172A] rounded-2xl mb-8 relative overflow-hidden flex flex-col items-center justify-center p-8 dot-grid border border-slate-800">
+<div class="relative z-10 flex flex-col items-center text-center">
+<div class="w-20 h-20 rounded-full border-2 border-secondary/30 flex items-center justify-center mb-6 text-secondary/40">
+<span class="material-symbols-outlined text-4xl">phone_callback</span>
+</div>
+<h3 class="text-white text-lg font-bold mb-2 font-headline">Ready to Analyze</h3>
+<p class="text-slate-400 text-[13px] max-w-[240px]">Start a call to see live linguistic extraction and sentiment mapping.</p>
+</div>
+</div>
+<!-- Mini indicators grid -->
+<div class="grid grid-cols-2 gap-4 flex-1">
+<div class="p-5 bg-slate-50 rounded-xl border-l-4 border-slate-200 flex flex-col justify-between">
+<span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Intent Detection</span>
+<div class="text-slate-900 font-bold text-sm mt-1">Pending Connection</div>
+</div>
+<div class="p-5 bg-slate-50 rounded-xl border-l-4 border-slate-200 flex flex-col justify-between">
+<span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Sentiment Analysis</span>
+<div class="text-slate-900 font-bold text-sm mt-1">Waiting...</div>
+</div>
+<div class="p-5 bg-slate-50 rounded-xl border-l-4 border-slate-200 flex flex-col justify-between">
+<span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Commitment Level</span>
+<div class="text-slate-900 font-bold text-sm mt-1">—</div>
+</div>
+<div class="p-5 bg-slate-50 rounded-xl border-l-4 border-slate-200 flex flex-col justify-between">
+<span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Call Duration</span>
+<div class="text-slate-900 font-bold text-sm mt-1">00:00</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- 3. Complete 'Call Intelligence Report' Suite (from SCREEN_41) -->
+<section class="bg-[#F8FAFC] border border-slate-200/60 rounded-3xl p-10 mb-10 flex flex-col md:flex-row justify-between items-start md:items-center shadow-sm">
+<div>
+<h1 class="font-headline text-3xl font-extrabold tracking-tight text-slate-900 mb-2">Call Intelligence Report</h1>
+<div class="flex items-center gap-3 text-slate-500 font-medium text-sm">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-base">calendar_today</span> Oct 24, 2024</span>
+<span class="w-1 h-1 bg-slate-300 rounded-full"></span>
+<span class="font-bold text-secondary">ID: CALL-8829-QX</span>
+</div>
+</div>
+<div class="mt-6 md:mt-0 flex gap-4">
+<button class="flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 text-slate-700 text-sm font-bold rounded-xl shadow-sm hover:bg-slate-50 transition-all">
+<span class="material-symbols-outlined text-lg">download</span> Export
+            </button>
+<button class="flex items-center gap-2 px-6 py-3 bg-primary-container text-white text-sm font-bold rounded-xl shadow-sm hover:opacity-90 transition-all">
+<span class="material-symbols-outlined text-lg">share</span> Share Report
+            </button>
+</div>
+</section>
+<!-- Metric Cards Grid -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-16 stagger-load">
+<!-- Card 1: Payment Intent -->
+<div class="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between min-h-[240px]">
+<span class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Payment Intent</span>
+<div class="flex items-center gap-6 mt-4">
+<div class="relative w-24 h-24 flex-shrink-0">
+<svg class="w-full h-full transform -rotate-90">
+<circle class="text-slate-100" cx="48" cy="48" fill="transparent" r="42" stroke="currentColor" stroke-width="8"></circle>
+<circle class="text-secondary transition-all duration-[1.5s] ease-out" cx="48" cy="48" fill="transparent" id="gauge-1" r="42" stroke="currentColor" stroke-dasharray="263.8" stroke-dashoffset="263.8" stroke-linecap="round" stroke-width="8"></circle>
+</svg>
+<div class="absolute inset-0 flex items-center justify-center font-headline font-extrabold text-2xl text-slate-900"><span id="count-1">0</span>%</div>
+</div>
+<div>
+<span class="text-secondary font-bold text-sm block">High Conf.</span>
+<p class="text-[11px] text-slate-500 leading-normal mt-1">Confirmed liquidity for Friday settlement.</p>
+</div>
+</div>
+</div>
+<!-- Card 2: Sentiment Analysis -->
+<div class="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between min-h-[240px]">
+<span class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Speaker Sentiment</span>
+<div class="mt-6 space-y-6">
+<div class="flex justify-between text-[11px] font-bold text-slate-400 uppercase tracking-tighter">
+<span>Resistant</span>
+<span class="text-secondary">Cooperative</span>
+</div>
+<div class="w-full h-2.5 bg-slate-100 rounded-full relative">
+<div class="absolute top-1/2 left-0 -translate-y-1/2 w-5 h-5 bg-secondary rounded-full ring-4 ring-secondary/20 transition-all duration-[1.5s] ease-out shadow-lg shadow-secondary/30" id="marker-1" style="left: 82%"></div>
+</div>
+<p class="text-xs text-slate-500 italic leading-relaxed">"Switching to backup portal for faster auth."</p>
+</div>
+</div>
+<!-- Card 3: Commitment Level -->
+<div class="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between min-h-[240px]">
+<span class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Commitment Level</span>
+<div class="mt-6 space-y-4">
+<div class="flex items-end gap-1.5 h-16">
+<div class="w-full bg-slate-100 rounded-t-lg h-1/3"></div>
+<div class="w-full bg-secondary rounded-t-lg h-2/3 shadow-lg shadow-secondary/20"></div>
+<div class="w-full bg-slate-100 rounded-t-lg h-full"></div>
+</div>
+<div class="flex justify-between items-center pt-2">
+<span class="text-slate-900 font-extrabold text-sm uppercase">Medium High</span>
+<span class="text-[10px] font-bold text-slate-400">Verbal Promise</span>
+</div>
+</div>
+</div>
+<!-- Card 4: Cashflow Impact -->
+<div class="bg-white p-8 rounded-3xl border-2 border-transparent shadow-md flex flex-col justify-between min-h-[240px] animate-breath-glow-teal scale-105 z-10">
+<span class="text-[10px] uppercase tracking-widest text-secondary font-extrabold">Treasury Forecast</span>
+<div class="mt-6">
+<div class="text-3xl font-headline font-black text-slate-900 tracking-tight">£12,450.00</div>
+<div class="mt-4 inline-flex items-center px-3 py-1 rounded-lg text-[10px] font-bold bg-secondary/10 text-secondary border border-secondary/20">
+<span class="material-symbols-outlined text-[14px] mr-1">trending_up</span>
+                    RECOVERY SIGNAL
+                </div>
+<p class="text-[11px] text-slate-500 mt-4 leading-relaxed font-medium">Expected realization within 14 days based on historical behavior.</p>
+</div>
+</div>
+</div>
+<!-- Two Column Layout: Transcript & Actions -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-16">
+<!-- Full Transcript Section -->
+<div class="lg:col-span-2">
+<div class="flex items-center justify-between mb-8 pb-4 border-b border-slate-200/60">
+<h2 class="font-headline text-2xl font-bold tracking-tight text-slate-900">Intelligence Transcript</h2>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 bg-secondary rounded-full animate-pulse"></span>
+<span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Analyzed Real-time</span>
+</div>
+</div>
+<div class="space-y-10 max-h-[700px] overflow-y-auto scroll-custom pr-4" id="transcript-container">
+<!-- Agent Message -->
+<div class="transcript-msg opacity-0 space-y-3">
+<div class="flex items-center justify-between">
+<span class="text-[11px] font-black text-secondary uppercase tracking-[0.15em]">Qashivo AI Agent</span>
+<span class="text-[10px] text-slate-400 font-mono">14:32:04 UTC</span>
+</div>
+<div class="bg-slate-50 border border-slate-100 p-6 rounded-2xl rounded-tl-none text-slate-700 text-[14px] leading-relaxed shadow-sm">
+                        Good afternoon, this is Qashivo calling on behalf of Apex Logistics regarding invoice #AX-902 for £12,450. I'm calling to see if you have a scheduled payment date for this?
+                    </div>
+</div>
+<!-- Debtor Message -->
+<div class="transcript-msg opacity-0 space-y-3">
+<div class="flex items-center justify-between">
+<span class="text-[11px] font-black text-slate-900 uppercase tracking-[0.15em]">Counterparty (Debtor)</span>
+<span class="text-[10px] text-slate-400 font-mono">14:32:15 UTC</span>
+</div>
+<div class="bg-white border border-slate-200 p-6 rounded-2xl rounded-tr-none text-slate-900 text-[14px] leading-relaxed shadow-sm relative">
+                        Yes, hello. We've had some internal delays with the new ERP system. I was looking at the ledger this morning and we were planning to process this by the end of next week.
+                        <div class="mt-6 flex flex-wrap gap-3">
+<span class="inline-flex items-center px-2 py-1 border border-secondary/30 bg-secondary/5 text-[9px] font-bold text-secondary rounded uppercase tracking-wider badge-slide opacity-0">
+<span class="material-symbols-outlined text-[12px] mr-1">check_circle</span> Intent Detected
+                            </span>
+<span class="inline-flex items-center px-2 py-1 border border-amber-200 bg-amber-50 text-[9px] font-bold text-amber-700 rounded uppercase tracking-wider badge-slide opacity-0">
+<span class="material-symbols-outlined text-[12px] mr-1">warning</span> System Delay Noted
+                            </span>
+</div>
+</div>
+</div>
+<!-- Agent Message -->
+<div class="transcript-msg opacity-0 space-y-3">
+<div class="flex items-center justify-between">
+<span class="text-[11px] font-black text-secondary uppercase tracking-[0.15em]">Qashivo AI Agent</span>
+<span class="text-[10px] text-slate-400 font-mono">14:32:45 UTC</span>
+</div>
+<div class="bg-slate-50 border border-slate-100 p-6 rounded-2xl rounded-tl-none text-slate-700 text-[14px] leading-relaxed shadow-sm">
+                        I understand system migrations can be challenging. To ensure this doesn't slip, could we lock in Friday the 1st for the transfer? I can send over a direct payment link to bypass the ERP manual entry if that helps.
+                    </div>
+</div>
+<!-- Debtor Message -->
+<div class="transcript-msg opacity-0 space-y-3">
+<div class="flex items-center justify-between">
+<span class="text-[11px] font-black text-slate-900 uppercase tracking-[0.15em]">Counterparty (Debtor)</span>
+<span class="text-[10px] text-slate-400 font-mono">14:33:10 UTC</span>
+</div>
+<div class="bg-white border border-slate-200 p-6 rounded-2xl rounded-tr-none text-slate-900 text-[14px] leading-relaxed shadow-sm">
+                        That would actually be helpful. If you send the link, I can authorize it through the backup portal on Friday morning.
+                        <div class="mt-6 flex flex-wrap gap-3">
+<span class="inline-flex items-center px-2 py-1 border border-green-200 bg-green-50 text-[9px] font-bold text-green-700 rounded uppercase tracking-wider badge-slide opacity-0">
+<span class="material-symbols-outlined text-[12px] mr-1">trending_up</span> Positive Shift
+                            </span>
+<span class="inline-flex items-center px-2 py-1 border border-secondary/30 bg-secondary/5 text-[9px] font-bold text-secondary rounded uppercase tracking-wider badge-slide opacity-0">
+<span class="material-symbols-outlined text-[12px] mr-1">payments</span> Settlement Commitment
+                            </span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Side Bar: Intelligence Actions -->
+<div class="space-y-8">
+<h2 class="font-headline text-2xl font-bold tracking-tight text-slate-900 mb-8 pb-4 border-b border-slate-200/60">Intelligence Actions</h2>
+<div class="space-y-4">
+<div class="bg-white p-6 rounded-2xl border-l-4 border-secondary shadow-sm">
+<div class="flex justify-between items-start mb-4">
+<span class="bg-secondary/10 text-secondary text-[9px] font-extrabold px-2 py-0.5 rounded tracking-widest uppercase">Automated</span>
+<span class="material-symbols-outlined text-slate-400 text-lg">mail</span>
+</div>
+<h4 class="font-bold text-slate-900 text-sm">Confirmation Dispatched</h4>
+<p class="text-xs text-slate-500 mt-2 leading-relaxed">Summary of commitment and secure payment link sent to registered email.</p>
+</div>
+<div class="bg-white p-6 rounded-2xl border-l-4 border-amber-400 shadow-sm">
+<div class="flex justify-between items-start mb-4">
+<span class="bg-amber-50 text-amber-600 text-[9px] font-extrabold px-2 py-0.5 rounded tracking-widest uppercase">Scheduled</span>
+<span class="material-symbols-outlined text-slate-400 text-lg">calendar_month</span>
+</div>
+<h4 class="font-bold text-slate-900 text-sm">Escalation Trigger</h4>
+<p class="text-xs text-slate-500 mt-2 leading-relaxed">Automated re-check scheduled for Nov 1st, 10:00 AM if funds are not settled.</p>
+</div>
+<div class="bg-primary-container p-8 rounded-[2rem] text-white mt-12 relative overflow-hidden shadow-2xl">
+<div class="relative z-10">
+<div class="w-10 h-10 bg-secondary rounded-xl flex items-center justify-center mb-6 shadow-lg shadow-secondary/20">
+<span class="material-symbols-outlined text-white">lightbulb</span>
+</div>
+<h4 class="font-headline font-bold text-lg mb-3">AI Risk Insight</h4>
+<p class="text-sm leading-relaxed text-slate-300">"ERP Migration" has been cited 3 times in 12 months. Recurring friction point. Transition to Direct Debit suggested.</p>
+</div>
+<div class="absolute -bottom-12 -right-12 w-40 h-40 bg-secondary/10 rounded-full blur-[80px]"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- 4. CTA Section (from SCREEN_41) -->
+<section class="mt-28 rounded-[4rem] bg-primary-container text-white p-12 md:p-24 text-center dot-grid relative overflow-hidden border border-slate-800 shadow-3xl">
+<div class="relative z-10 max-w-3xl mx-auto">
+<h2 class="font-headline text-4xl md:text-6xl font-black tracking-tighter mb-8 leading-[1.1]">
+                Stop chasing, start forecasting.
+            </h2>
+<p class="text-slate-400 text-xl mb-12 font-medium leading-relaxed">
+                Join hundreds of CFOs using Qashivo to recover 40% more cash with autonomous, empathetic intelligence.
+            </p>
+<div class="flex flex-col sm:flex-row gap-6 justify-center">
+<button class="bg-secondary text-white px-10 py-5 rounded-2xl font-bold text-lg hover:brightness-110 transition-all shadow-xl shadow-secondary/20">Book Professional Demo</button>
+<button class="border border-slate-700 bg-slate-900/50 backdrop-blur-sm text-white px-10 py-5 rounded-2xl font-bold text-lg hover:bg-slate-800 transition-all">Financial Health Check</button>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-slate-50 border-t border-slate-200 pt-20 pb-10">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-12 px-8 max-w-7xl mx-auto">
+<div class="col-span-1 md:col-span-1">
+<div class="text-2xl font-bold text-slate-900 mb-4 tracking-tighter">Qashivo</div>
+<p class="text-slate-500 text-[11px] font-bold uppercase tracking-widest leading-relaxed">
+                © 2024 Qashivo Ltd. Registered in England &amp; Wales. Company No. 12345678.
+            </p>
+</div>
+<div>
+<h5 class="text-slate-900 font-bold text-xs uppercase tracking-widest mb-6">Product</h5>
+<ul class="space-y-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+<li><a class="hover:text-secondary transition-colors" href="#">Features</a></li>
+<li><a class="hover:text-secondary transition-colors" href="#">Pricing</a></li>
+<li><a class="hover:text-secondary transition-colors" href="#">Integrations</a></li>
+</ul>
+</div>
+<div>
+<h5 class="text-slate-900 font-bold text-xs uppercase tracking-widest mb-6">Company</h5>
+<ul class="space-y-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+<li><a class="hover:text-secondary transition-colors" href="#">About Us</a></li>
+<li><a class="hover:text-secondary transition-colors" href="#">Trust Center</a></li>
+<li><a class="hover:text-secondary transition-colors" href="#">Security</a></li>
+</ul>
+</div>
+<div>
+<h5 class="text-slate-900 font-bold text-xs uppercase tracking-widest mb-6">Legal</h5>
+<ul class="space-y-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+<li><a class="hover:text-secondary transition-colors" href="#">Privacy Policy</a></li>
+<li><a class="hover:text-secondary transition-colors" href="#">Terms of Service</a></li>
+<li><a class="hover:text-secondary transition-colors" href="#">Cookie Policy</a></li>
+</ul>
+</div>
+</div>
+</footer>
+<script>
+    const BAR_COUNT = 64;
+    const WAVEFORM_EL = document.getElementById('waveform');
+    let bars = [];
+    let isCallActive = true;
+
+    function initWaveform() {
+        for (let i = 0; i < BAR_COUNT; i++) {
+            const bar = document.createElement('div');
+            bar.className = 'wave-bar';
+            WAVEFORM_EL.appendChild(bar);
+            bars.push(bar);
+        }
+    }
+
+    function updateWaveform() {
+        if (!isCallActive) return;
+
+        bars.forEach((bar, i) => {
+            const time = Date.now() / 1000;
+            const wave1 = Math.sin(time * 2 + i * 0.1) * 30;
+            const wave2 = Math.sin(time * 1.5 + i * 0.15) * 20;
+            const wave3 = Math.cos(time * 3 + i * 0.05) * 15;
+            const randomJitter = Math.random() * 15;
+            const height = 40 + wave1 + wave2 + wave3 + randomJitter;
+            
+            bar.style.height = `${Math.max(8, height)}px`;
+            bar.style.opacity = (height / 100) + 0.2;
+        });
+
+        requestAnimationFrame(updateWaveform);
+    }
+
+    function endCall() {
+        isCallActive = false;
+        bars.forEach(bar => {
+            bar.style.height = '4px';
+            bar.style.opacity = '0.1';
+            bar.style.transition = 'all 1.2s cubic-bezier(0.4, 0, 0.2, 1)';
+        });
+
+        setTimeout(() => {
+            const statusSuccess = document.getElementById('status-success');
+            if(statusSuccess) statusSuccess.classList.remove('hidden');
+            startReportAnimations();
+        }, 1000);
+    }
+
+    function startReportAnimations() {
+        const gaugeCircle = document.getElementById('gauge-1');
+        const countText = document.getElementById('count-1');
+        if(gaugeCircle) {
+            const dashOffset = 263.8 - (263.8 * 0.78);
+            gaugeCircle.style.strokeDashoffset = dashOffset;
+        }
+        if(countText) animateNumber(countText, 0, 78, 1500);
+
+        const msgs = document.querySelectorAll('.transcript-msg');
+        msgs.forEach((msg, i) => {
+            setTimeout(() => {
+                msg.classList.remove('opacity-0');
+                msg.classList.add('fade-in-entry');
+                
+                const badges = msg.querySelectorAll('.badge-slide');
+                badges.forEach((b, j) => {
+                    setTimeout(() => {
+                        b.classList.remove('opacity-0');
+                        b.classList.add('fade-in-entry');
+                    }, (j + 1) * 300);
+                });
+            }, i * 600);
+        });
+    }
+
+    function animateNumber(element, start, end, duration) {
+        let startTime = null;
+        function step(timestamp) {
+            if (!startTime) startTime = timestamp;
+            const progress = Math.min((timestamp - startTime) / duration, 1);
+            element.innerText = Math.floor(progress * (end - start) + start);
+            if (progress < 1) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+    }
+
+    initWaveform();
+    updateWaveform();
+    
+    // Auto-end call simulation after 5 seconds for visual flow
+    setTimeout(endCall, 5000);
+</script>
+</body></html>

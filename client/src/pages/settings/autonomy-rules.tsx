@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +29,7 @@ import {
   Rocket,
   Send,
   MessageSquare,
+  Mail,
 } from "lucide-react";
 
 interface TenantSettings {
@@ -40,6 +42,7 @@ interface TenantSettings {
     flagVipCustomers: boolean;
   };
   sendDelayMinutes: number;
+  emailFooterText: string | null;
   chaseDelayDays: number;
   preDueDateDays: number;
   preDueDateMinAmount: string;
@@ -152,6 +155,7 @@ export default function SettingsAutonomyRules({ embedded }: { embedded?: boolean
   const [timeoutHours, setTimeoutHours] = useState<number | null>(null);
   const [exceptionRules, setExceptionRules] = useState<TenantSettings["exceptionRules"] | null>(null);
   const [sendDelayMinutes, setSendDelayMinutes] = useState<number | null>(null);
+  const [emailFooterText, setEmailFooterText] = useState<string | null>(null);
   const [chaseDelayDays, setChaseDelayDays] = useState<number | null>(null);
   const [preDueDateDays, setPreDueDateDays] = useState<number | null>(null);
   const [preDueDateMinAmount, setPreDueDateMinAmount] = useState<string | null>(null);
@@ -222,7 +226,7 @@ export default function SettingsAutonomyRules({ embedded }: { embedded?: boolean
 
   const hasChanges =
     approvalMode !== null || timeoutHours !== null || exceptionRules !== null ||
-    sendDelayMinutes !== null || chaseDelayDays !== null || preDueDateDays !== null || preDueDateMinAmount !== null ||
+    sendDelayMinutes !== null || emailFooterText !== null || chaseDelayDays !== null || preDueDateDays !== null || preDueDateMinAmount !== null ||
     smallAmountThreshold !== null || smallAmountChaseEnabled !== null ||
     conversationReplyDelayMin !== null || conversationReplyDelayMax !== null;
 
@@ -233,6 +237,7 @@ export default function SettingsAutonomyRules({ embedded }: { embedded?: boolean
       if (timeoutHours !== null) body.approvalTimeoutHours = timeoutHours;
       if (exceptionRules !== null) body.exceptionRules = exceptionRules;
       if (sendDelayMinutes !== null) body.sendDelayMinutes = sendDelayMinutes;
+      if (emailFooterText !== null) body.emailFooterText = emailFooterText;
       if (chaseDelayDays !== null) body.chaseDelayDays = chaseDelayDays;
       if (preDueDateDays !== null) body.preDueDateDays = preDueDateDays;
       if (preDueDateMinAmount !== null) body.preDueDateMinAmount = preDueDateMinAmount;
@@ -250,6 +255,7 @@ export default function SettingsAutonomyRules({ embedded }: { embedded?: boolean
       setTimeoutHours(null);
       setExceptionRules(null);
       setSendDelayMinutes(null);
+      setEmailFooterText(null);
       setChaseDelayDays(null);
       setPreDueDateDays(null);
       setPreDueDateMinAmount(null);
@@ -460,6 +466,31 @@ export default function SettingsAutonomyRules({ embedded }: { embedded?: boolean
                 <span>30 min</span>
                 <span>60 min</span>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Email Footer */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Mail className="h-5 w-5 text-primary" />
+                Email Footer
+              </CardTitle>
+              <CardDescription>
+                Appears at the bottom of every outbound email to debtors. Use {"{companyName}"} for your company name.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Textarea
+                rows={2}
+                placeholder="This email was sent on behalf of {companyName} via Qashivo Intelligent Working Capital"
+                value={emailFooterText ?? settings?.emailFooterText ?? ''}
+                onChange={(e) => setEmailFooterText(e.target.value)}
+                className="text-sm"
+              />
+              <p className="text-xs text-muted-foreground">
+                Leave blank to use the default footer.
+              </p>
             </CardContent>
           </Card>
 

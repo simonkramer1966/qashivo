@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Qashivo | The Cashflow Health Check</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-tint": "#565e74",
+              "outline-variant": "#c6c6cd",
+              "error-container": "#ffdad6",
+              "background": "#f7f9fb",
+              "tertiary-fixed": "#ffddb8",
+              "on-secondary-container": "#006172",
+              "on-error": "#ffffff",
+              "tertiary-fixed-dim": "#ffb95f",
+              "on-secondary-fixed": "#001f26",
+              "surface-variant": "#e0e3e5",
+              "on-tertiary-fixed-variant": "#653e00",
+              "on-primary-fixed": "#131b2e",
+              "secondary-fixed": "#acedff",
+              "primary-fixed": "#dae2fd",
+              "primary-fixed-dim": "#bec6e0",
+              "surface-container": "#eceef0",
+              "tertiary": "#000000",
+              "surface-dim": "#d8dadc",
+              "surface-container-high": "#e6e8ea",
+              "on-tertiary": "#ffffff",
+              "secondary-container": "#57dffe",
+              "primary-container": "#131b2e",
+              "on-surface": "#191c1e",
+              "on-tertiary-container": "#b87500",
+              "on-background": "#191c1e",
+              "inverse-on-surface": "#eff1f3",
+              "secondary": "#00687a",
+              "surface-container-lowest": "#ffffff",
+              "on-primary": "#ffffff",
+              "surface-container-highest": "#e0e3e5",
+              "on-surface-variant": "#45464d",
+              "tertiary-container": "#2a1700",
+              "surface-container-low": "#f2f4f6",
+              "primary": "#000000",
+              "on-tertiary-fixed": "#2a1700",
+              "surface": "#f7f9fb",
+              "on-error-container": "#93000a",
+              "on-primary-container": "#7c839b",
+              "error": "#ba1a1a",
+              "inverse-primary": "#bec6e0",
+              "on-secondary": "#ffffff",
+              "on-primary-fixed-variant": "#3f465c",
+              "inverse-surface": "#2d3133",
+              "surface-bright": "#f7f9fb",
+              "outline": "#76777d",
+              "on-secondary-fixed-variant": "#004e5c",
+              "secondary-fixed-dim": "#4cd7f6"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .editorial-gradient {
+            background: linear-gradient(135deg, #000000 0%, #131b2e 100%);
+        }
+        .ghost-border {
+            outline: 1px solid rgba(198, 198, 205, 0.15);
+        }
+        .glass-insight {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(24px);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body">
+<!-- Top Navigation -->
+<nav class="sticky top-0 w-full z-50 bg-[#f7f9fb] dark:bg-[#0f172a]">
+<div class="max-w-7xl mx-auto flex justify-between items-center px-8 py-6">
+<div class="text-2xl font-extrabold tracking-tighter text-[#0f172a] dark:text-white font-headline">
+                Qashivo
+            </div>
+<div class="hidden md:flex gap-8 items-center">
+<a class="text-[#191c1e]/60 dark:text-slate-400 font-medium hover:text-[#00687a] transition-colors duration-400 font-headline tracking-[-0.02em]" href="#">Insights</a>
+<a class="text-[#191c1e]/60 dark:text-slate-400 font-medium hover:text-[#00687a] transition-colors duration-400 font-headline tracking-[-0.02em]" href="#">Cashflow</a>
+<a class="text-[#000000] dark:text-[#acedff] font-bold border-b-2 border-[#00687a] pb-1 font-headline tracking-[-0.02em]" href="#">Health Check</a>
+<a class="text-[#191c1e]/60 dark:text-slate-400 font-medium hover:text-[#00687a] transition-colors duration-400 font-headline tracking-[-0.02em]" href="#">Support</a>
+</div>
+<button class="bg-primary-container text-white px-6 py-2.5 rounded-lg font-bold hover:scale-95 transition-all duration-400 ease-out font-headline tracking-[-0.02em]">
+                Get Started
+            </button>
+</div>
+</nav>
+<main class="min-h-screen">
+<!-- Hero Section -->
+<section class="max-w-7xl mx-auto px-8 pt-20 pb-16">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+<div class="lg:col-span-7 pr-0 lg:pr-12">
+<h1 class="font-headline font-extrabold text-5xl md:text-7xl tracking-[-0.02em] leading-[1.1] text-primary mb-8">
+                        The Cashflow <br/><span class="text-secondary">Health Check</span>
+</h1>
+<p class="text-body-lg text-on-surface-variant text-xl leading-relaxed mb-10 max-w-2xl">
+                        Score your working capital cycle in 2 minutes. Find out where cash is leaking from your business — and get a free copy of <span class="font-semibold italic">The Cash Gap</span> to fix it.
+                    </p>
+<div class="flex flex-wrap gap-6 items-center text-sm font-label tracking-wide uppercase text-on-surface-variant/80">
+<span class="flex items-center gap-2"><span class="material-symbols-outlined text-sm">schedule</span> Takes 2 minutes</span>
+<span class="flex items-center gap-2"><span class="material-symbols-outlined text-sm">list_alt</span> 10 questions</span>
+<span class="flex items-center gap-2"><span class="material-symbols-outlined text-sm">bolt</span> Instant results</span>
+<span class="flex items-center gap-2"><span class="material-symbols-outlined text-sm">redeem</span> Free</span>
+</div>
+</div>
+<!-- Preview Grid / Form Container -->
+<div class="lg:col-span-5">
+<div class="bg-surface-container-lowest rounded-xl p-8 shadow-sm ghost-border">
+<h2 class="font-headline font-bold text-2xl mb-6">Start Your Health Check</h2>
+<form class="space-y-5">
+<div>
+<label class="block text-xs font-label font-bold uppercase tracking-wider text-on-surface-variant mb-2">Full Name</label>
+<input class="w-full bg-surface-container-low border-none rounded-lg focus:ring-1 focus:ring-secondary py-3 px-4 transition-all" placeholder="Jane Doe" type="text"/>
+</div>
+<div>
+<label class="block text-xs font-label font-bold uppercase tracking-wider text-on-surface-variant mb-2">Work Email</label>
+<input class="w-full bg-surface-container-low border-none rounded-lg focus:ring-1 focus:ring-secondary py-3 px-4 transition-all" placeholder="jane@company.com" type="email"/>
+</div>
+<div>
+<label class="block text-xs font-label font-bold uppercase tracking-wider text-on-surface-variant mb-2">Company Name</label>
+<input class="w-full bg-surface-container-low border-none rounded-lg focus:ring-1 focus:ring-secondary py-3 px-4 transition-all" placeholder="Acme Holdings Ltd" type="text"/>
+</div>
+<div>
+<label class="block text-xs font-label font-bold uppercase tracking-wider text-on-surface-variant mb-2">Role</label>
+<select class="w-full bg-surface-container-low border-none rounded-lg focus:ring-1 focus:ring-secondary py-3 px-4 transition-all appearance-none">
+<option>CEO / Founder</option>
+<option>CFO / Finance Director</option>
+<option>Operations Manager</option>
+<option>Accountant</option>
+</select>
+</div>
+<button class="w-full bg-secondary text-white font-headline font-bold py-4 rounded-lg hover:brightness-110 transition-all flex justify-center items-center gap-2 mt-4" type="submit">
+                                Check My Score <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</form>
+</div>
+</div>
+</div>
+</section>
+<!-- Preview Cards Section -->
+<section class="bg-surface-container-low py-20">
+<div class="max-w-7xl mx-auto px-8">
+<div class="grid md:grid-cols-3 gap-8">
+<!-- Card 1 -->
+<div class="bg-surface-container-lowest p-10 rounded-xl ghost-border transition-all hover:translate-y-[-4px] duration-400">
+<div class="w-12 h-12 bg-secondary/10 rounded-full flex items-center justify-center mb-6">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">chat_bubble</span>
+</div>
+<h3 class="font-headline font-bold text-xl mb-3">Credit Control</h3>
+<p class="text-on-surface-variant leading-relaxed">How you chase and collect what you're owed from customers and debtors.</p>
+</div>
+<!-- Card 2 -->
+<div class="bg-surface-container-lowest p-10 rounded-xl ghost-border transition-all hover:translate-y-[-4px] duration-400">
+<div class="w-12 h-12 bg-secondary/10 rounded-full flex items-center justify-center mb-6">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">bar_chart</span>
+</div>
+<h3 class="font-headline font-bold text-xl mb-3">Cashflow</h3>
+<p class="text-on-surface-variant leading-relaxed">How well you see and forecast your cash position over the next 13 weeks.</p>
+</div>
+<!-- Card 3 -->
+<div class="bg-surface-container-lowest p-10 rounded-xl ghost-border transition-all hover:translate-y-[-4px] duration-400">
+<div class="w-12 h-12 bg-secondary/10 rounded-full flex items-center justify-center mb-6">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">account_balance</span>
+</div>
+<h3 class="font-headline font-bold text-xl mb-3">Finance</h3>
+<p class="text-on-surface-variant leading-relaxed">How you fund gaps and manage working capital to fuel sustainable growth.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- What You'll Get Section -->
+<section class="max-w-7xl mx-auto px-8 py-24">
+<h2 class="font-headline font-extrabold text-3xl mb-16 text-center">What you'll receive upon completion</h2>
+<div class="grid md:grid-cols-3 gap-12 text-center">
+<div class="flex flex-col items-center">
+<div class="mb-6 relative">
+<div class="w-20 h-20 bg-secondary rounded-2xl flex items-center justify-center transform rotate-3 shadow-lg">
+<span class="material-symbols-outlined text-white text-4xl">grade</span>
+</div>
+<div class="absolute -bottom-2 -right-2 w-10 h-10 bg-primary-container rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm">AI</div>
+</div>
+<h4 class="font-headline font-bold text-lg mb-2">Personalised Score</h4>
+<p class="text-on-surface-variant">A deep-dive benchmark against top-performing UK SMEs in your industry.</p>
+</div>
+<div class="flex flex-col items-center">
+<div class="mb-6 relative">
+<div class="w-20 h-20 bg-primary-container rounded-2xl flex items-center justify-center transform -rotate-3 shadow-lg">
+<span class="material-symbols-outlined text-white text-4xl">lightbulb</span>
+</div>
+</div>
+<h4 class="font-headline font-bold text-lg mb-2">Actionable Recommendations</h4>
+<p class="text-on-surface-variant">Immediate steps to reduce your cash conversion cycle and release locked capital.</p>
+</div>
+<div class="flex flex-col items-center">
+<div class="mb-6 relative">
+<img class="w-24 h-32 object-cover rounded-md shadow-2xl transform rotate-6 border-4 border-white" data-alt="Premium hardback business book titled The Cash Gap resting on a modern wooden desk in soft daylight" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDU28BKwU6mvpWh-PMZnQ_w1tM61_Uec6n-ieW0nrMroDWLBcKlMpl942c1nphdQ-SG_6KANf2aXWTe1utQuyLgqXWaAE9KFaUBg9thEPvNKSHIUQAJh5oAJkrXxCiWO7ZhlSKJ9jSOWxRIYHxFrPEe3BMuwFKNTH9jT7bQW0rCgiKUwK-p-ST-vpNfGFjv7lCNRLj5tKqb1ZpYBFFwbOxGRC7EFoSP0rYzFcK52tXGFu9IJu77cJf6urSPXD9h3LZ08ojNARBaufg"/>
+</div>
+<h4 class="font-headline font-bold text-lg mb-2">Free Book</h4>
+<p class="text-on-surface-variant">A digital copy of "The Cash Gap", our definitive guide to editorial financial intelligence.</p>
+</div>
+</div>
+</section>
+<!-- Bottom Trust Bar -->
+<section class="border-t border-outline-variant/10 py-12">
+<div class="max-w-7xl mx-auto px-8 flex flex-col md:flex-row items-center justify-center gap-10">
+<div class="flex items-center gap-4 text-on-surface-variant font-medium">
+<span class="text-secondary font-bold text-2xl">4,200+</span>
+<span>UK businesses have taken the Health Check</span>
+</div>
+<div class="h-8 w-px bg-outline-variant/20 hidden md:block"></div>
+<div class="flex items-center gap-8 opacity-40 grayscale contrast-125">
+<span class="font-headline font-extrabold text-xl tracking-tighter">QASHIVO</span>
+<span class="material-symbols-outlined">shield_with_heart</span>
+<span class="font-label font-bold text-sm tracking-widest uppercase">Certified Intelligence</span>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="w-full py-12 px-8 bg-[#eceef0] dark:bg-[#0f172a] font-body text-sm leading-relaxed tracking-wide">
+<div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+<div class="flex flex-col gap-2 items-center md:items-start">
+<div class="font-['Manrope'] font-bold text-lg text-[#0f172a] dark:text-white">Qashivo</div>
+<p class="text-[#191c1e]/70 dark:text-slate-400">© 2024 Qashivo. Editorial Financial Intelligence for UK SMEs.</p>
+</div>
+<div class="flex gap-8">
+<a class="text-[#191c1e]/70 dark:text-slate-400 hover:text-[#000000] dark:hover:text-white transition-opacity opacity-80 hover:opacity-100 duration-400" href="#">Privacy</a>
+<a class="text-[#191c1e]/70 dark:text-slate-400 hover:text-[#000000] dark:hover:text-white transition-opacity opacity-80 hover:opacity-100 duration-400" href="#">Terms</a>
+<a class="text-[#191c1e]/70 dark:text-slate-400 hover:text-[#000000] dark:hover:text-white transition-opacity opacity-80 hover:opacity-100 duration-400" href="#">Advisory Board</a>
+<a class="text-[#191c1e]/70 dark:text-slate-400 hover:text-[#000000] dark:hover:text-white transition-opacity opacity-80 hover:opacity-100 duration-400" href="#">Security</a>
+</div>
+</div>
+</footer>
+</body></html>

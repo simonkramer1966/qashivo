@@ -711,9 +711,10 @@ async function deliverEmail(
     // Fetch escalation contacts for auto-CC
     const escalationCc = await getEscalationCc(tenantId, contactId);
 
-    const { formatEmailHtml } = await import("./emailFormatter");
-    const htmlBody = formatEmailHtml(email.body);
-    const textBody = email.body; // LLM output is already clean plain text
+    const { formatEmailHtml, buildEmailFooter, buildEmailFooterText } = await import("./emailFormatter");
+    const footerHtml = buildEmailFooter(tenant.name || 'Our company', tenant.emailFooterText);
+    const htmlBody = formatEmailHtml(email.body, footerHtml);
+    const textBody = email.body + buildEmailFooterText(tenant.name || 'Our company', tenant.emailFooterText);
 
     // Find or create conversation for threading
     const conversationId = await findOrCreateConversation(tenantId, contactId, email.subject);

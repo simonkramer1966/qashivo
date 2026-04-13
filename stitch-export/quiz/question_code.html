@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Qashivo | Quiz Experience</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Manrope:wght@700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-tint": "#565e74",
+              "outline-variant": "#c6c6cd",
+              "error-container": "#ffdad6",
+              "background": "#f7f9fb",
+              "tertiary-fixed": "#ffddb8",
+              "on-secondary-container": "#006172",
+              "on-error": "#ffffff",
+              "tertiary-fixed-dim": "#ffb95f",
+              "on-secondary-fixed": "#001f26",
+              "surface-variant": "#e0e3e5",
+              "on-tertiary-fixed-variant": "#653e00",
+              "on-primary-fixed": "#131b2e",
+              "secondary-fixed": "#acedff",
+              "primary-fixed": "#dae2fd",
+              "primary-fixed-dim": "#bec6e0",
+              "surface-container": "#eceef0",
+              "tertiary": "#000000",
+              "surface-dim": "#d8dadc",
+              "surface-container-high": "#e6e8ea",
+              "on-tertiary": "#ffffff",
+              "secondary-container": "#57dffe",
+              "primary-container": "#131b2e",
+              "on-surface": "#191c1e",
+              "on-tertiary-container": "#b87500",
+              "on-background": "#191c1e",
+              "inverse-on-surface": "#eff1f3",
+              "secondary": "#00687a",
+              "surface-container-lowest": "#ffffff",
+              "on-primary": "#ffffff",
+              "surface-container-highest": "#e0e3e5",
+              "on-surface-variant": "#45464d",
+              "tertiary-container": "#2a1700",
+              "surface-container-low": "#f2f4f6",
+              "primary": "#000000",
+              "on-tertiary-fixed": "#2a1700",
+              "surface": "#f7f9fb",
+              "on-error-container": "#93000a",
+              "on-primary-container": "#7c839b",
+              "error": "#ba1a1a",
+              "inverse-primary": "#bec6e0",
+              "on-secondary": "#ffffff",
+              "on-primary-fixed-variant": "#3f465c",
+              "inverse-surface": "#2d3133",
+              "surface-bright": "#f7f9fb",
+              "outline": "#76777d",
+              "on-secondary-fixed-variant": "#004e5c",
+              "secondary-fixed-dim": "#4cd7f6"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .answer-card:hover {
+            border-left: 3px solid #00687a;
+            background-color: #ffffff;
+        }
+        .answer-card-active {
+            border-left: 3px solid #00687a;
+            background-color: #ffffff;
+        }
+        /* Editorial layout asymmetry */
+        .editorial-container {
+            padding-left: 10%;
+            padding-right: 15%;
+        }
+    </style>
+</head>
+<body class="bg-background font-body text-on-background min-h-screen flex flex-col">
+<!-- Top Navigation Bar (Shared Component Strategy) -->
+<nav class="sticky top-0 w-full z-50 bg-[#f7f9fb] flex justify-between items-center px-8 py-6 max-w-7xl mx-auto">
+<div class="text-2xl font-extrabold tracking-tighter text-[#0f172a] font-headline">Qashivo</div>
+<div class="hidden md:flex gap-8 items-center">
+<span class="text-[#191c1e]/60 font-medium font-label">Insights</span>
+<span class="text-[#191c1e]/60 font-medium font-label">Cashflow</span>
+<span class="text-[#191c1e]/60 font-medium font-label">Health Check</span>
+<span class="text-[#000000] font-bold border-b-2 border-[#00687a] pb-1 font-label">Support</span>
+</div>
+<button class="bg-primary-container text-white px-6 py-2.5 rounded-lg font-bold font-label transition-transform hover:scale-95 duration-400 ease-out">
+            Get Started
+        </button>
+</nav>
+<!-- Quiz Header / Progress Section -->
+<header class="w-full bg-surface-container-low">
+<div class="w-full h-1.5 bg-surface-variant relative overflow-hidden">
+<div class="absolute top-0 left-0 h-full bg-secondary w-[30%] transition-all duration-700"></div>
+</div>
+<div class="max-w-4xl mx-auto px-6 py-8 flex justify-between items-end">
+<div class="space-y-1">
+<span class="text-on-surface-variant font-label text-sm uppercase tracking-wider">Assessment Flow</span>
+<p class="text-on-surface font-headline font-bold text-lg">Question 3 of 10</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-secondary font-label text-xs font-bold tracking-[0.05em] uppercase">CREDIT CONTROL</span>
+<span class="material-symbols-outlined text-secondary text-sm">shield_with_heart</span>
+</div>
+</div>
+</header>
+<main class="flex-grow flex flex-col items-center py-16 md:py-24 px-6 overflow-hidden">
+<!-- Question Section -->
+<div class="w-full max-w-2xl text-center space-y-12 transition-transform duration-500 transform translate-x-0">
+<h1 class="font-headline font-extrabold text-3xl md:text-4xl text-on-background leading-tight tracking-[-0.02em]">
+                How do you currently chase overdue invoices?
+            </h1>
+<!-- Answer Grid (Stacked Editorial Pattern) -->
+<div class="space-y-4 w-full text-left">
+<!-- Card A -->
+<button class="answer-card group w-full p-6 flex items-center gap-6 bg-surface-container-lowest border-l-[3px] border-transparent rounded-xl transition-all duration-300 hover:shadow-xl hover:shadow-on-surface/5">
+<div class="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center font-bold text-on-surface-variant group-hover:bg-secondary-fixed group-hover:text-on-secondary-fixed transition-colors">
+                        A
+                    </div>
+<span class="text-lg font-medium text-on-surface">We use automated email reminders via accounting software</span>
+</button>
+<!-- Card B -->
+<button class="answer-card group w-full p-6 flex items-center gap-6 bg-surface-container-lowest border-l-[3px] border-transparent rounded-xl transition-all duration-300 hover:shadow-xl hover:shadow-on-surface/5">
+<div class="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center font-bold text-on-surface-variant group-hover:bg-secondary-fixed group-hover:text-on-secondary-fixed transition-colors">
+                        B
+                    </div>
+<span class="text-lg font-medium text-on-surface">Manually sending emails or making phone calls</span>
+</button>
+<!-- Card C (Active State Simulation) -->
+<button class="answer-card-active w-full p-6 flex items-center gap-6 bg-surface-container-lowest rounded-xl shadow-xl shadow-on-surface/5">
+<div class="w-10 h-10 rounded-full bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center font-bold">
+                        C
+                    </div>
+<span class="text-lg font-bold text-on-surface">We have a dedicated person or outsourced agency</span>
+</button>
+<!-- Card D -->
+<button class="answer-card group w-full p-6 flex items-center gap-6 bg-surface-container-lowest border-l-[3px] border-transparent rounded-xl transition-all duration-300 hover:shadow-xl hover:shadow-on-surface/5">
+<div class="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center font-bold text-on-surface-variant group-hover:bg-secondary-fixed group-hover:text-on-secondary-fixed transition-colors">
+                        D
+                    </div>
+<span class="text-lg font-medium text-on-surface">We don't have a formal process in place</span>
+</button>
+</div>
+<!-- Footer Navigation within Canvas -->
+<div class="flex justify-start pt-8">
+<a class="flex items-center gap-2 text-on-surface-variant hover:text-secondary transition-colors font-medium" href="#">
+<span class="material-symbols-outlined text-lg">arrow_back</span>
+                    Back
+                </a>
+</div>
+</div>
+<!-- Section Intro Variant (Shown as a subtle card below for demonstration) -->
+<section class="mt-32 w-full max-w-4xl bg-surface-container rounded-3xl p-12 md:p-20 relative overflow-hidden">
+<!-- Decorative Background Element -->
+<div class="absolute -top-24 -right-24 w-64 h-64 bg-secondary-fixed/30 rounded-full blur-3xl"></div>
+<div class="relative z-10 flex flex-col items-start gap-6">
+<div class="p-4 bg-surface-container-lowest rounded-2xl shadow-sm">
+<span class="material-symbols-outlined text-secondary text-3xl" data-weight="fill">message</span>
+</div>
+<div class="space-y-1">
+<p class="text-secondary font-label text-sm font-bold tracking-[0.1em] uppercase">SECTION 1 OF 3</p>
+<h2 class="font-headline font-extrabold text-4xl text-on-background">Credit Control</h2>
+</div>
+<p class="text-xl text-on-surface-variant max-w-md leading-relaxed">
+                    How do you chase and collect what you're owed? Our curator needs to understand your current pipeline health.
+                </p>
+<button class="mt-4 bg-secondary text-white px-8 py-4 rounded-xl font-bold flex items-center gap-3 transition-all hover:gap-5 hover:bg-[#005a6a]">
+                    Continue
+                    <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</div>
+</section>
+</main>
+<!-- Footer (Shared Component Strategy) -->
+<footer class="w-full py-12 px-8 bg-[#eceef0] dark:bg-[#0f172a]">
+<div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+<div class="font-['Manrope'] font-bold text-lg text-[#0f172a] dark:text-white">Qashivo</div>
+<p class="font-['Inter'] text-sm leading-relaxed tracking-wide text-[#0f172a]/70 dark:text-slate-300 text-center md:text-left">
+                © 2024 Qashivo. Editorial Financial Intelligence for UK SMEs.
+            </p>
+<div class="flex gap-6">
+<a class="text-[#191c1e]/70 dark:text-slate-400 text-sm hover:text-[#000000] transition-opacity" href="#">Privacy</a>
+<a class="text-[#191c1e]/70 dark:text-slate-400 text-sm hover:text-[#000000] transition-opacity" href="#">Terms</a>
+<a class="text-[#191c1e]/70 dark:text-slate-400 text-sm hover:text-[#000000] transition-opacity" href="#">Advisory Board</a>
+</div>
+</div>
+</footer>
+</body></html>
