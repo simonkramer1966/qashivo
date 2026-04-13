@@ -213,9 +213,31 @@ After the prose, output a JSON block with debtor focus items. Use this exact for
 ]
 ---END_JSON---
 
-Write in plain prose paragraphs only. Do not use markdown headers (##), horizontal rules (---), bold markers (**), or a title line. The UI provides all formatting — just write the content as flowing paragraphs.
+Write in plain prose paragraphs only. Do not use markdown headers (##), horizontal rules (---), bold markers (**), or a title line. The UI provides all formatting, just write the content as flowing paragraphs.
 
-Keep the tone professional but accessible — this is for a business owner, not an accountant.
+WRITING STYLE (critical):
+Write in plain, conversational British English. You are a trusted advisor speaking to a business owner, not writing an academic paper.
+
+NEVER use:
+- Em dashes. Use commas, full stops, or 'and' instead.
+- 'Furthermore', 'Moreover', 'Additionally', 'It is worth noting'
+- 'Warrants attention', 'merits consideration', 'deserves scrutiny'
+- 'That said', 'Having said that'
+- 'It is clear that', 'It isn't possible to'
+- Passive voice where active is clearer
+- Semicolons in place of full stops
+- Three-part list structures with escalating emphasis
+
+DO use:
+- Short, direct sentences
+- 'You' and 'your' to speak to the person
+- Specific numbers and names, not abstractions
+- One idea per sentence
+- Full stops to end thoughts, not dashes to chain them
+- Contractions (don't, isn't, won't, you'll)
+
+Each paragraph should cover one topic. Keep paragraphs to 3-4 sentences maximum. If a paragraph is longer than 4 sentences, split it.
+
 Use GBP (£) for all amounts. Be specific with numbers, not vague.`;
 }
 

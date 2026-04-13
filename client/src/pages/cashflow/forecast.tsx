@@ -695,7 +695,7 @@ export default function ForecastPage() {
           </button>
           {reviewExpanded && (
             <div className="border-t px-5 py-4 space-y-4">
-              <div className="prose prose-sm max-w-none text-sm text-[var(--q-text-primary)] [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-sm [&_h1]:font-semibold [&_h2]:font-semibold [&_h3]:font-medium [&_p]:text-[var(--q-text-tertiary)] [&_li]:text-[var(--q-text-tertiary)] [&_ul]:my-1 [&_ol]:my-1 [&_p]:my-1.5">
+              <div className="prose prose-sm max-w-none text-sm text-[var(--q-text-primary)] [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-sm [&_h1]:font-semibold [&_h2]:font-semibold [&_h3]:font-medium [&_p]:text-[var(--q-text-tertiary)] [&_li]:text-[var(--q-text-tertiary)] [&_ul]:my-2 [&_ol]:my-2 [&_p]:my-5 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0">
                 <ReactMarkdown>{latestReview.summaryText}</ReactMarkdown>
               </div>
               <div className="flex items-center gap-3 pt-1 border-t">
