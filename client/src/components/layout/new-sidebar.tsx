@@ -284,8 +284,8 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
 
   const companyName = tenant?.xeroOrganisationName || tenant?.settings?.companyName || tenant?.name || "";
 
-  // Partner type suffix for branding
-  const partnerTypeSuffix = isPartner && partnerInfo
+  // Partner type suffix for branding — only on /partner/* routes
+  const partnerTypeSuffix = isPartner && isPartnerPortalContext && partnerInfo
     ? partnerInfo.partnerType === "funder"
       ? { text: "Finance", className: "text-[var(--q-attention-text)]" }
       : { text: "Partner", className: "text-[var(--q-money-in-text)]" }
