@@ -100,6 +100,7 @@ import {
   Scale,
   Gavel,
   Copy,
+  Mic,
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -107,6 +108,7 @@ import { cn } from "@/lib/utils";
 import SendEmailDrawer from "@/components/email/SendEmailDrawer";
 import { buildNarrative, type ActivityEventData } from "@/components/activity/ActivityEventRow";
 import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { CURRENCIES, SUPPORTED_LANGUAGES, getLanguageName, getCurrencySymbol } from "@shared/currencies";
@@ -575,10 +577,22 @@ export default function DebtorRecord() {
   const [smsMessage, setSmsMessage] = useState("");
   const [smsRecipientPhone, setSmsRecipientPhone] = useState("");
 
-  // --- Call sheet state ---
+  // --- Call sheet state (manual call logger) ---
   const [callOutcome, setCallOutcome] = useState("Answered");
   const [callDuration, setCallDuration] = useState("");
   const [callNotes, setCallNotes] = useState("");
+
+  // --- AI Voice call state ---
+  const [aiVoiceSheetOpen, setAiVoiceSheetOpen] = useState(false);
+  const [aiVoiceReason, setAiVoiceReason] = useState("");
+  const [aiVoiceTone, setAiVoiceTone] = useState(1);
+  const [aiVoiceGoal, setAiVoiceGoal] = useState<"payment_commitment" | "payment_plan" | "query_resolution" | "general_followup">("payment_commitment");
+  const [aiVoiceMaxDuration, setAiVoiceMaxDuration] = useState(5);
+  const [aiVoiceScheduleMode, setAiVoiceScheduleMode] = useState<"now" | "asap" | "scheduled">("asap");
+  const [aiVoiceScheduleDate, setAiVoiceScheduleDate] = useState("");
+  const [aiVoiceScheduleTime, setAiVoiceScheduleTime] = useState("");
+  const [aiVoiceRecipientPhone, setAiVoiceRecipientPhone] = useState("");
+  const [aiVoiceRecipientName, setAiVoiceRecipientName] = useState("");
 
   // --- Statement state ---
   const [statementEmail, setStatementEmail] = useState("");
@@ -1304,6 +1318,60 @@ export default function DebtorRecord() {
     setCallNotes("");
   }, []);
 
+  const openAiVoiceSheet = useCallback(() => {
+    setAiVoiceSheetOpen(true);
+    setAiVoiceReason("");
+    setAiVoiceTone(1);
+    setAiVoiceGoal("payment_commitment");
+    setAiVoiceMaxDuration(5);
+    setAiVoiceScheduleMode("asap");
+    setAiVoiceScheduleDate("");
+    setAiVoiceScheduleTime("");
+    // Pre-select the best phone contact
+    const best = smsPhoneContacts[0];
+    setAiVoiceRecipientPhone(best?.phone ?? "");
+    setAiVoiceRecipientName(best?.label?.replace(/ \(.*\)$/, "") ?? contact?.name ?? "");
+  }, [smsPhoneContacts, contact]);
+
+  const aiVoiceCallMutation = useMutation({
+    mutationFn: async () => {
+      let scheduledFor: string | null = null;
+      if (aiVoiceScheduleMode === "scheduled" && aiVoiceScheduleDate) {
+        scheduledFor = aiVoiceScheduleTime
+          ? `${aiVoiceScheduleDate}T${aiVoiceScheduleTime}:00.000Z`
+          : `${aiVoiceScheduleDate}T09:00:00.000Z`;
+      }
+      const res = await apiRequest("POST", `/api/contacts/${contactId}/schedule-call`, {
+        reason: aiVoiceReason,
+        tone: aiVoiceTone,
+        goal: aiVoiceGoal,
+        maxDuration: aiVoiceMaxDuration,
+        scheduleMode: aiVoiceScheduleMode,
+        scheduledFor,
+        recipientPhone: aiVoiceRecipientPhone,
+        recipientName: aiVoiceRecipientName,
+      });
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: aiVoiceScheduleMode === "now" ? "Charlie is calling now" : "Call scheduled",
+        description: aiVoiceScheduleMode === "now"
+          ? `Calling ${aiVoiceRecipientName || aiVoiceRecipientPhone}`
+          : "Charlie will make the call shortly",
+      });
+      setAiVoiceSheetOpen(false);
+      queryClient.invalidateQueries({ queryKey: [`/api/contacts/${contactId}`] });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Failed to schedule call",
+        description: error.message || "Please try again",
+      });
+    },
+  });
+
   const openStatementDialog = useCallback(() => {
     setStatementDialogOpen(true);
     setStatementEmail(contact?.arContactEmail ?? contact?.email ?? "");
@@ -1700,7 +1768,7 @@ export default function DebtorRecord() {
             <button onClick={openSmsSheet} className="inline-flex items-center gap-1.5 border border-[var(--q-border-default)] rounded-[var(--q-radius-md)] px-3 py-1.5 text-[13px] font-medium text-[var(--q-text-secondary)] hover:bg-[var(--q-bg-surface-hover)] transition-colors">
               <MessageSquare className="h-3.5 w-3.5" /> SMS
             </button>
-            <button onClick={openCallSheet} className="inline-flex items-center gap-1.5 border border-[var(--q-border-default)] rounded-[var(--q-radius-md)] px-3 py-1.5 text-[13px] font-medium text-[var(--q-text-secondary)] hover:bg-[var(--q-bg-surface-hover)] transition-colors">
+            <button onClick={openAiVoiceSheet} className="inline-flex items-center gap-1.5 border border-[var(--q-border-default)] rounded-[var(--q-radius-md)] px-3 py-1.5 text-[13px] font-medium text-[var(--q-text-secondary)] hover:bg-[var(--q-bg-surface-hover)] transition-colors">
               <Headset className="h-3.5 w-3.5" /> AI Voice
             </button>
             <button onClick={openNoteDialog} className="inline-flex items-center gap-1.5 border border-[var(--q-border-default)] rounded-[var(--q-radius-md)] px-3 py-1.5 text-[13px] font-medium text-[var(--q-text-secondary)] hover:bg-[var(--q-bg-surface-hover)] transition-colors">
@@ -1767,7 +1835,7 @@ export default function DebtorRecord() {
               <DropdownMenuContent align="end" className="min-w-[180px]">
                 <DropdownMenuItem onClick={openEmailSheet}><Mail className="h-4 w-4 mr-2" /> Email</DropdownMenuItem>
                 <DropdownMenuItem onClick={openSmsSheet}><MessageSquare className="h-4 w-4 mr-2" /> SMS</DropdownMenuItem>
-                <DropdownMenuItem onClick={openCallSheet}><Headset className="h-4 w-4 mr-2" /> AI Voice</DropdownMenuItem>
+                <DropdownMenuItem onClick={openAiVoiceSheet}><Headset className="h-4 w-4 mr-2" /> AI Voice</DropdownMenuItem>
                 <DropdownMenuItem onClick={openNoteDialog}><StickyNote className="h-4 w-4 mr-2" /> Note</DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={openCallSheet}><Phone className="h-4 w-4 mr-2" /> Call</DropdownMenuItem>
@@ -3797,6 +3865,185 @@ export default function DebtorRecord() {
                 )}
                 Log Call
               </Button>
+            </div>
+          </SheetContent>
+        </Sheet>
+
+        {/* ---- AI Voice Call Sheet ---- */}
+        <Sheet open={aiVoiceSheetOpen} onOpenChange={setAiVoiceSheetOpen}>
+          <SheetContent className="sm:max-w-lg w-full overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle className="flex items-center gap-2">
+                <Mic className="h-5 w-5 text-[var(--q-text-secondary)]" />
+                Schedule AI Voice Call
+              </SheetTitle>
+              <SheetDescription>
+                Charlie will call {contact?.name || "the debtor"} on your behalf
+              </SheetDescription>
+            </SheetHeader>
+
+            <div className="space-y-4 mt-4">
+              {/* Recipient */}
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1.5 block">To</Label>
+                {smsPhoneContacts.length === 0 ? (
+                  <p className="text-sm text-[var(--q-risk-text)]">No phone number on file</p>
+                ) : (
+                  <Select
+                    value={aiVoiceRecipientPhone}
+                    onValueChange={(phone) => {
+                      setAiVoiceRecipientPhone(phone);
+                      const match = smsPhoneContacts.find((c) => c.phone === phone);
+                      setAiVoiceRecipientName(match?.label?.replace(/ \(.*\)$/, "") ?? "");
+                    }}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Select recipient..." /></SelectTrigger>
+                    <SelectContent>
+                      {smsPhoneContacts.map((c) => (
+                        <SelectItem key={c.phone} value={c.phone}>
+                          {c.label} — {c.phone}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
+              {/* Reason */}
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1.5 block">Reason</Label>
+                <Textarea
+                  placeholder="e.g., Follow up on overdue invoice..."
+                  value={aiVoiceReason}
+                  onChange={(e) => setAiVoiceReason(e.target.value)}
+                  rows={3}
+                />
+              </div>
+
+              {/* Goal + Max Duration */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1.5 block">Goal</Label>
+                  <Select value={aiVoiceGoal} onValueChange={(v: any) => setAiVoiceGoal(v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="payment_commitment">Payment commitment</SelectItem>
+                      <SelectItem value="payment_plan">Payment plan</SelectItem>
+                      <SelectItem value="query_resolution">Query resolution</SelectItem>
+                      <SelectItem value="general_followup">General follow-up</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1.5 block">Max Duration</Label>
+                  <div className="flex items-center gap-3 h-9">
+                    <Slider
+                      value={[aiVoiceMaxDuration]}
+                      onValueChange={(v) => setAiVoiceMaxDuration(v[0])}
+                      min={2}
+                      max={10}
+                      step={1}
+                      className="flex-1"
+                    />
+                    <span className="text-sm text-muted-foreground w-14 text-right">{aiVoiceMaxDuration} min</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tone */}
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1.5 block">Tone</Label>
+                <div className="flex items-center gap-3 h-9">
+                  <Slider
+                    value={[aiVoiceTone]}
+                    onValueChange={(v) => setAiVoiceTone(v[0])}
+                    min={0}
+                    max={2}
+                    step={1}
+                    className="flex-1"
+                  />
+                  <span className="text-sm text-muted-foreground w-24 text-right">
+                    {["Friendly", "Professional", "Firm"][aiVoiceTone]}
+                  </span>
+                </div>
+              </div>
+
+              {/* When */}
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1.5 block">When</Label>
+                <div className="flex gap-2">
+                  {(["now", "asap", "scheduled"] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => setAiVoiceScheduleMode(mode)}
+                      className={`flex-1 py-2 text-sm font-medium rounded-[var(--q-radius-md)] border transition-colors ${
+                        aiVoiceScheduleMode === mode
+                          ? "border-[var(--q-text-primary)] bg-[var(--q-bg-surface-hover)] text-[var(--q-text-primary)]"
+                          : "border-[var(--q-border-default)] text-[var(--q-text-tertiary)] hover:text-[var(--q-text-secondary)]"
+                      }`}
+                    >
+                      {mode === "now" ? "Now" : mode === "asap" ? "ASAP" : "Scheduled"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {aiVoiceScheduleMode === "scheduled" && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1.5 block">Date</Label>
+                    <Input
+                      type="date"
+                      value={aiVoiceScheduleDate}
+                      onChange={(e) => setAiVoiceScheduleDate(e.target.value)}
+                      min={new Date().toISOString().split("T")[0]}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1.5 block">Time</Label>
+                    <Input
+                      type="time"
+                      value={aiVoiceScheduleTime}
+                      onChange={(e) => setAiVoiceScheduleTime(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Features */}
+              <div className="rounded-[var(--q-radius-md)] border border-[var(--q-border-default)] bg-[var(--q-bg-page)] p-3">
+                <p className="text-xs font-medium text-[var(--q-text-secondary)] mb-2">Charlie will:</p>
+                <ul className="text-xs text-[var(--q-text-tertiary)] space-y-1">
+                  <li>- Introduce themselves and disclose recording</li>
+                  <li>- Reference all overdue invoices and total outstanding</li>
+                  <li>- Capture payment commitments and dispute signals</li>
+                  <li>- Log full transcript to the Activity timeline</li>
+                </ul>
+              </div>
+
+              {/* Submit */}
+              <div className="flex gap-3 pt-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setAiVoiceSheetOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1"
+                  onClick={() => aiVoiceCallMutation.mutate()}
+                  disabled={aiVoiceCallMutation.isPending || !aiVoiceRecipientPhone}
+                >
+                  {aiVoiceCallMutation.isPending ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                  ) : (
+                    <Phone className="h-3.5 w-3.5 mr-1.5" />
+                  )}
+                  {aiVoiceScheduleMode === "now" ? "Start Call" : "Schedule Call"}
+                </Button>
+              </div>
             </div>
           </SheetContent>
         </Sheet>
