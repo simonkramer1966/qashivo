@@ -310,19 +310,19 @@ function CollectionsTooltip({ active, payload, label }: any) {
 
   const concentration = d.concentration;
   return (
-    <div className="rounded-lg border bg-background p-3 shadow-md text-sm space-y-1">
-      <p className="font-medium">{d.label}</p>
-      <p>Expected: {fmt(d.expected)} ({d.invoiceCount} invoices)</p>
-      <p className="text-[var(--q-text-tertiary)]">
+    <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border)] rounded-md shadow-lg px-3 py-2 space-y-0.5">
+      <p className="text-[13px] font-medium text-[var(--q-text-primary)]">{d.label}</p>
+      <p className="text-[12px] tabular-nums">Expected: {fmt(d.expected)} <span className="text-[var(--q-text-tertiary)]">({d.invoiceCount} invoices)</span></p>
+      <p className="text-[12px] text-[var(--q-text-tertiary)] tabular-nums">
         Range: {fmt(d.pessimistic)} — {fmt(d.optimistic)}
       </p>
       {d.topDebtor && (
-        <p className="text-[var(--q-text-tertiary)]">
+        <p className="text-[12px] text-[var(--q-text-tertiary)] tabular-nums">
           Top: {d.topDebtor} {fmt(d.topDebtorAmount)} ({fmtPct(d.topDebtorPercent)})
         </p>
       )}
       {concentration?.isFragile && (
-        <p className="text-[var(--q-attention-text)]">
+        <p className="text-[12px] text-[var(--q-attention-text)]">
           {fmtPct(concentration.topDebtorPercent)} from {concentration.topDebtor} (concentration risk)
         </p>
       )}
@@ -336,19 +336,19 @@ function BalanceTooltip({ active, payload }: any) {
   if (!d) return null;
 
   return (
-    <div className="rounded-lg border bg-background p-3 shadow-md text-sm space-y-1">
-      <p className="font-medium">{d.label}</p>
-      <p>Opening balance: {fmt(d.expectedBalance)}</p>
-      <p className="text-[var(--q-text-tertiary)]">
+    <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border)] rounded-md shadow-lg px-3 py-2 space-y-0.5">
+      <p className="text-[13px] font-medium text-[var(--q-text-primary)]">{d.label}</p>
+      <p className="text-[12px] tabular-nums">Opening balance: {fmt(d.expectedBalance)}</p>
+      <p className="text-[12px] text-[var(--q-text-tertiary)] tabular-nums">
         This week: +{fmt(d.expected)} inflows
         {d.outflow > 0 && <>, -{fmt(d.outflow)} outflows</>}
       </p>
       {d.outflow > 0 && (
-        <p className={d.net < 0 ? "text-[var(--q-risk-text)]" : "text-[var(--q-text-tertiary)]"}>
+        <p className={`text-[12px] tabular-nums ${d.net < 0 ? "text-[var(--q-risk-text)]" : "text-[var(--q-text-tertiary)]"}`}>
           Net movement: {d.net >= 0 ? "+" : ""}{fmt(d.net)}
         </p>
       )}
-      <p className="text-[var(--q-text-tertiary)]">
+      <p className="text-[12px] text-[var(--q-text-tertiary)] tabular-nums">
         Closing balance range: {fmt(d.pessimisticBalance)} — {fmt(d.optimisticBalance)}
       </p>
     </div>
@@ -978,27 +978,40 @@ export default function ForecastPage() {
         const isLastPage = invoicePage >= totalPages - 1;
 
         return (
-          <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border)] rounded-lg mt-3 overflow-hidden">
-            {/* Summary section */}
-            <div className="px-5 pt-4 pb-3">
-              {/* Week header */}
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-semibold text-[var(--q-text-primary)]">
-                    Week {wf.weekNumber} ({weekLabel(wf.weekStarting)})
-                  </h3>
-                  {wf.isCompleted && (
-                    <QBadge variant="neutral" className="text-xs bg-[var(--q-info-bg)] text-[var(--q-info-text)]">
-                      Completed
-                    </QBadge>
-                  )}
-                </div>
+          <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-lg mt-3 overflow-hidden">
+            {/* Header: week label + scenario totals + close button */}
+            <div className="px-5 pt-4 pb-2 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <h3 className="text-[15px] font-semibold text-[var(--q-text-primary)]">
+                  Week {wf.weekNumber} ({weekLabel(wf.weekStarting)})
+                </h3>
+                {wf.isCompleted && (
+                  <QBadge variant="neutral" className="text-xs bg-[var(--q-info-bg)] text-[var(--q-info-text)]">
+                    Completed
+                  </QBadge>
+                )}
               </div>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 text-[14px] font-mono tabular-nums">
+                  <span className="text-[var(--q-risk-text)]">{fmt(Math.round(grandPes))}</span>
+                  <span className="text-[var(--q-info-text)] font-medium">{fmt(Math.round(grandExp))}</span>
+                  <span className="text-[var(--q-money-in-text)]">{fmt(Math.round(grandOpt))}</span>
+                </div>
+                <button
+                  onClick={() => setExpandedWeekIndex(null)}
+                  className="text-[var(--q-text-tertiary)] hover:text-[var(--q-text-primary)] transition-colors ml-2"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
 
+            {/* Summary: Total + Pipeline + AR */}
+            <div className="px-5 pb-3">
               {/* Total row — hero position */}
               <div className="bg-[var(--q-bg-surface-alt)] rounded-md px-5 py-3 flex items-center justify-between mb-2">
-                <span className="text-sm font-semibold text-[var(--q-text-primary)]">Total</span>
-                <div className="flex items-center gap-6 text-sm font-medium tabular-nums">
+                <span className="text-[15px] font-semibold text-[var(--q-text-primary)]">Total</span>
+                <div className="flex items-center gap-6 text-[14px] font-mono font-medium tabular-nums">
                   <span className="text-[var(--q-risk-text)]">{fmt(Math.round(grandPes))}</span>
                   <span className="text-[var(--q-info-text)]">{fmt(Math.round(grandExp))}</span>
                   <span className="text-[var(--q-money-in-text)]">{fmt(Math.round(grandOpt))}</span>
@@ -1008,8 +1021,8 @@ export default function ForecastPage() {
               {/* Breakdown rows — indented components of total */}
               {hasPipeline && (
                 <div className="pl-8 flex items-center justify-between py-1">
-                  <span className="text-sm font-medium text-[var(--q-text-secondary)]">Pipeline</span>
-                  <div className="flex items-center gap-6 text-sm tabular-nums">
+                  <span className="text-[14px] font-medium text-[var(--q-text-secondary)]">Pipeline</span>
+                  <div className="flex items-center gap-6 text-[14px] font-mono tabular-nums">
                     <span className="text-[var(--q-risk-text)]">{fmt(Math.round(sb.pipelinePessimistic ?? sb.pipeline))}</span>
                     <span className="text-[var(--q-info-text)]">{fmt(Math.round(sb.pipeline))}</span>
                     <span className="text-[var(--q-money-in-text)]">{fmt(Math.round(sb.pipelineOptimistic ?? sb.pipeline))}</span>
@@ -1018,8 +1031,8 @@ export default function ForecastPage() {
               )}
               {hasRecurring && (
                 <div className="pl-8 flex items-center justify-between py-1">
-                  <span className="text-sm font-medium text-[var(--q-text-secondary)]">Recurring revenue</span>
-                  <div className="flex items-center gap-6 text-sm tabular-nums">
+                  <span className="text-[14px] font-medium text-[var(--q-text-secondary)]">Recurring revenue</span>
+                  <div className="flex items-center gap-6 text-[14px] font-mono tabular-nums">
                     <span className="text-[var(--q-risk-text)]">{fmt(Math.round(sb.recurringRevenuePessimistic ?? sb.recurringRevenue))}</span>
                     <span className="text-[var(--q-info-text)]">{fmt(Math.round(sb.recurringRevenue))}</span>
                     <span className="text-[var(--q-money-in-text)]">{fmt(Math.round(sb.recurringRevenueOptimistic ?? sb.recurringRevenue))}</span>
@@ -1027,8 +1040,8 @@ export default function ForecastPage() {
                 </div>
               )}
               <div className="pl-8 flex items-center justify-between py-1">
-                <span className="text-sm font-medium text-[var(--q-text-secondary)]">AR collections</span>
-                <div className="flex items-center gap-6 text-sm tabular-nums">
+                <span className="text-[14px] font-medium text-[var(--q-text-secondary)]">AR collections</span>
+                <div className="flex items-center gap-6 text-[14px] font-mono tabular-nums">
                   <span className="text-[var(--q-risk-text)]">{fmt(Math.round(sb.arCollectionsPessimistic ?? sb.arCollections))}</span>
                   <span className="text-[var(--q-info-text)]">{fmt(Math.round(sb.arCollections))}</span>
                   <span className="text-[var(--q-money-in-text)]">{fmt(Math.round(sb.arCollectionsOptimistic ?? sb.arCollections))}</span>
@@ -1037,30 +1050,40 @@ export default function ForecastPage() {
             </div>
 
             {/* Separator */}
-            <div className="border-t-2 border-[var(--q-border)]" />
+            <div className="border-t-2 border-[var(--q-border-default)] my-3" />
 
             {/* Invoice section */}
             {totalInvoices === 0 ? (
-              <p className="text-sm text-[var(--q-text-tertiary)] py-6 text-center">
+              <p className="text-[14px] text-[var(--q-text-tertiary)] py-6 text-center">
                 No invoices expected this week
               </p>
             ) : (
               <>
-                <div className="px-5 pt-3 pb-1">
-                  <p className="text-[13px] font-medium text-[var(--q-text-tertiary)] uppercase tracking-wider mb-2">
+                {/* Section label */}
+                <div className="px-5 pb-1">
+                  <p className="text-[11px] font-medium text-[var(--q-text-tertiary)] uppercase tracking-[0.5px]">
                     Invoices
                   </p>
                 </div>
 
-                <table className="w-full text-sm border-collapse">
+                {/* Invoice table — fixed column widths */}
+                <table className="w-full border-collapse table-fixed">
+                  <colgroup>
+                    <col className="w-[100px]" />
+                    <col />
+                    <col className="w-[110px]" />
+                    <col className="w-[140px]" />
+                    <col className="w-[140px]" />
+                    <col className="w-[140px]" />
+                  </colgroup>
                   <thead>
-                    <tr className="border-b border-[var(--q-border)]">
-                      <th className="text-left py-2 pl-5 pr-3 font-medium text-[var(--q-text-tertiary)]">Invoice #</th>
-                      <th className="text-left py-2 pr-3 font-medium text-[var(--q-text-tertiary)]">Debtor</th>
-                      <th className="text-right py-2 pr-3 font-medium text-[var(--q-text-tertiary)]">Amount due</th>
-                      <th className="text-right py-2 pr-3 font-medium text-[var(--q-risk-text)]">Pessimistic</th>
-                      <th className="text-right py-2 pr-3 font-medium text-[var(--q-info-text)]">Expected</th>
-                      <th className="text-right py-2 pr-5 font-medium text-[var(--q-money-in-text)]">Optimistic</th>
+                    <tr className="border-b border-[var(--q-border-default)]">
+                      <th className="text-left text-[11px] font-medium tracking-[0.3px] h-12 pl-5 pr-3 text-[var(--q-text-tertiary)]">Invoice #</th>
+                      <th className="text-left text-[11px] font-medium tracking-[0.3px] h-12 px-3 text-[var(--q-text-tertiary)]">Debtor</th>
+                      <th className="text-right text-[11px] font-medium tracking-[0.3px] h-12 px-3 text-[var(--q-text-tertiary)]">Amount due</th>
+                      <th className="text-right text-[11px] font-medium tracking-[0.3px] h-12 px-3 text-[var(--q-risk-text)]">Pessimistic</th>
+                      <th className="text-right text-[11px] font-medium tracking-[0.3px] h-12 px-3 text-[var(--q-info-text)]">Expected</th>
+                      <th className="text-right text-[11px] font-medium tracking-[0.3px] h-12 px-3 pr-5 text-[var(--q-money-in-text)]">Optimistic</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1076,9 +1099,9 @@ export default function ForecastPage() {
                         : null;
 
                       return (
-                        <tr key={inv.invoiceId} className="border-b border-[var(--q-border)] last:border-0">
-                          <td className="py-2 pl-5 pr-3 tabular-nums text-[var(--q-text-secondary)]">{inv.invoiceNumber}</td>
-                          <td className="py-2 pr-3 font-medium text-[var(--q-text-secondary)]">
+                        <tr key={inv.invoiceId} className="h-12 border-b border-[var(--q-border-default)] last:border-0 hover:bg-[var(--q-bg-surface-hover)] transition-colors">
+                          <td className="px-3 py-3 pl-5 text-[14px] tabular-nums text-[var(--q-text-secondary)]">{inv.invoiceNumber}</td>
+                          <td className="px-3 py-3 text-[14px] text-[var(--q-text-secondary)] overflow-hidden text-ellipsis whitespace-nowrap">
                             {inv.contactName}
                             {inv.promiseOverride && (
                               <span className="ml-1 text-[var(--q-attention-text)]" title={promiseDate ? `Promise: ${promiseDate}` : "Promise override"}>
@@ -1086,14 +1109,14 @@ export default function ForecastPage() {
                               </span>
                             )}
                           </td>
-                          <td className="py-2 pr-3 text-right tabular-nums text-[var(--q-text-secondary)]">{fmt(Math.round(inv.amountDue))}</td>
-                          <td className="py-2 pr-3 text-right tabular-nums text-[var(--q-risk-text)]">
+                          <td className="px-3 py-3 text-right text-[14px] font-mono tabular-nums text-[var(--q-text-secondary)]">{fmt(Math.round(inv.amountDue))}</td>
+                          <td className="px-3 py-3 text-right text-[14px] font-mono tabular-nums text-[var(--q-risk-text)]">
                             {fmt(Math.round(pesAmt))} <span className="text-[var(--q-text-tertiary)]">({fmtPct(pesP)})</span>
                           </td>
-                          <td className="py-2 pr-3 text-right tabular-nums text-[var(--q-info-text)]">
+                          <td className="px-3 py-3 text-right text-[14px] font-mono tabular-nums text-[var(--q-info-text)]">
                             {fmt(Math.round(expAmt))} <span className="text-[var(--q-text-tertiary)]">({fmtPct(expP)})</span>
                           </td>
-                          <td className="py-2 pr-5 text-right tabular-nums text-[var(--q-money-in-text)]">
+                          <td className="px-3 py-3 pr-5 text-right text-[14px] font-mono tabular-nums text-[var(--q-money-in-text)]">
                             {fmt(Math.round(optAmt))} <span className="text-[var(--q-text-tertiary)]">({fmtPct(optP)})</span>
                           </td>
                         </tr>
@@ -1104,7 +1127,7 @@ export default function ForecastPage() {
 
                 {/* Pagination */}
                 {totalInvoices > PAGE_SIZE && (
-                  <div className="px-5 py-3 border-t border-[var(--q-border)] flex items-center justify-between">
+                  <div className="px-5 py-3 border-t border-[var(--q-border-default)] flex items-center justify-between">
                     <span className="text-[13px] text-[var(--q-text-tertiary)]">
                       Showing {showStart}–{showEnd} of {totalInvoices} invoices
                     </span>
@@ -1113,8 +1136,8 @@ export default function ForecastPage() {
                         onClick={() => setInvoicePage(p => p - 1)}
                         disabled={invoicePage === 0}
                         className={invoicePage === 0
-                          ? "text-sm text-[var(--q-text-tertiary)] cursor-not-allowed"
-                          : "text-sm text-[var(--q-info-text)] hover:underline"
+                          ? "text-[14px] text-[var(--q-text-muted)] cursor-not-allowed"
+                          : "text-[14px] text-[var(--q-accent)] hover:underline"
                         }
                       >
                         ← Previous
@@ -1123,8 +1146,8 @@ export default function ForecastPage() {
                         onClick={() => setInvoicePage(p => p + 1)}
                         disabled={isLastPage}
                         className={isLastPage
-                          ? "text-sm text-[var(--q-text-tertiary)] cursor-not-allowed"
-                          : "text-sm text-[var(--q-info-text)] hover:underline"
+                          ? "text-[14px] text-[var(--q-text-muted)] cursor-not-allowed"
+                          : "text-[14px] text-[var(--q-accent)] hover:underline"
                         }
                       >
                         Next →
