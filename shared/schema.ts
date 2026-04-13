@@ -7063,3 +7063,163 @@ export const insertPartnerGeneratedReportSchema = createInsertSchema(partnerGene
 });
 export type PartnerGeneratedReport = typeof partnerGeneratedReports.$inferSelect;
 export type InsertPartnerGeneratedReport = z.infer<typeof insertPartnerGeneratedReportSchema>;
+
+// ── Partner Billing & Revenue ────────────────────────────────────────────────
+
+export const partnerBillingConfig = pgTable("partner_billing_config", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  partnerId: varchar("partner_id").notNull().references(() => partners.id).unique(),
+  defaultTier: varchar("default_tier").notNull().default("qollect"),
+  billingCurrency: varchar("billing_currency").default("GBP"),
+  billingContactName: varchar("billing_contact_name"),
+  billingContactEmail: varchar("billing_contact_email"),
+  billingAddressLine1: varchar("billing_address_line1"),
+  billingAddressLine2: varchar("billing_address_line2"),
+  billingCity: varchar("billing_city"),
+  billingPostalCode: varchar("billing_postal_code"),
+  billingCountry: varchar("billing_country").default("GB"),
+  companyRegistrationNumber: varchar("company_registration_number"),
+  vatNumber: varchar("vat_number"),
+  paymentMethod: varchar("payment_method").default("invoice"),
+  paymentTermsDays: integer("payment_terms_days").default(30),
+  invoicePrefix: varchar("invoice_prefix").default("QP"),
+  nextInvoiceSequence: integer("next_invoice_sequence").default(1),
+  volumeDiscountPercent: numeric("volume_discount_percent", { precision: 5, scale: 2 }).default("0"),
+  volumeDiscountTier: varchar("volume_discount_tier").default("none"),
+  qapitalRevSharePercent: numeric("qapital_rev_share_percent", { precision: 5, scale: 2 }).default("10.00"),
+  qapitalFacilitationFeePercent: numeric("qapital_facilitation_fee_percent", { precision: 5, scale: 2 }).default("0.50"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const partnerBillingConfigRelations = relations(partnerBillingConfig, ({ one }) => ({
+  partner: one(partners, {
+    fields: [partnerBillingConfig.partnerId],
+    references: [partners.id],
+  }),
+}));
+
+export const insertPartnerBillingConfigSchema = createInsertSchema(partnerBillingConfig).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type PartnerBillingConfig = typeof partnerBillingConfig.$inferSelect;
+export type InsertPartnerBillingConfig = z.infer<typeof insertPartnerBillingConfigSchema>;
+
+export const partnerClientBilling = pgTable("partner_client_billing", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  partnerId: varchar("partner_id").notNull().references(() => partners.id),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  tier: varchar("tier").notNull().default("qollect"),
+  wholesalePricePence: integer("wholesale_price_pence").notNull(),
+  retailPricePence: integer("retail_price_pence"),
+  billingStatus: varchar("billing_status").notNull().default("active"),
+  trialEndsAt: timestamp("trial_ends_at"),
+  pausedAt: timestamp("paused_at"),
+  cancelledAt: timestamp("cancelled_at"),
+  effectiveFrom: timestamp("effective_from").notNull().defaultNow(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_partner_client_billing_partner").on(table.partnerId),
+  uniqueIndex("idx_partner_client_billing_unique").on(table.partnerId, table.tenantId),
+]);
+
+export const partnerClientBillingRelations = relations(partnerClientBilling, ({ one }) => ({
+  partner: one(partners, {
+    fields: [partnerClientBilling.partnerId],
+    references: [partners.id],
+  }),
+  tenant: one(tenants, {
+    fields: [partnerClientBilling.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
+export const insertPartnerClientBillingSchema = createInsertSchema(partnerClientBilling).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type PartnerClientBilling = typeof partnerClientBilling.$inferSelect;
+export type InsertPartnerClientBilling = z.infer<typeof insertPartnerClientBillingSchema>;
+
+export const partnerInvoices = pgTable("partner_invoices", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  partnerId: varchar("partner_id").notNull().references(() => partners.id),
+  invoiceNumber: varchar("invoice_number").notNull().unique(),
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  subtotalPence: integer("subtotal_pence").notNull(),
+  discountPence: integer("discount_pence").notNull().default(0),
+  vatPence: integer("vat_pence").notNull().default(0),
+  totalPence: integer("total_pence").notNull(),
+  currency: varchar("currency").default("GBP"),
+  status: varchar("status").notNull().default("draft"),
+  lineItems: jsonb("line_items").notNull().default([]),
+  pdfData: text("pdf_data"),
+  sentAt: timestamp("sent_at"),
+  paidAt: timestamp("paid_at"),
+  dueDate: timestamp("due_date"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_partner_invoices_partner").on(table.partnerId, table.createdAt),
+]);
+
+export const partnerInvoicesRelations = relations(partnerInvoices, ({ one }) => ({
+  partner: one(partners, {
+    fields: [partnerInvoices.partnerId],
+    references: [partners.id],
+  }),
+}));
+
+export const insertPartnerInvoiceSchema = createInsertSchema(partnerInvoices).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type PartnerInvoice = typeof partnerInvoices.$inferSelect;
+export type InsertPartnerInvoice = z.infer<typeof insertPartnerInvoiceSchema>;
+
+export const partnerRevenueEvents = pgTable("partner_revenue_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  partnerId: varchar("partner_id").notNull().references(() => partners.id),
+  tenantId: varchar("tenant_id").references(() => tenants.id),
+  eventType: varchar("event_type").notNull(),
+  amountPence: integer("amount_pence"),
+  previousValue: text("previous_value"),
+  newValue: text("new_value"),
+  description: text("description"),
+  actorId: varchar("actor_id").references(() => users.id),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_partner_revenue_events_partner").on(table.partnerId, table.createdAt),
+]);
+
+export const partnerRevenueEventsRelations = relations(partnerRevenueEvents, ({ one }) => ({
+  partner: one(partners, {
+    fields: [partnerRevenueEvents.partnerId],
+    references: [partners.id],
+  }),
+  tenant: one(tenants, {
+    fields: [partnerRevenueEvents.tenantId],
+    references: [tenants.id],
+  }),
+  actor: one(users, {
+    fields: [partnerRevenueEvents.actorId],
+    references: [users.id],
+  }),
+}));
+
+export const insertPartnerRevenueEventSchema = createInsertSchema(partnerRevenueEvents).omit({
+  id: true,
+  createdAt: true,
+});
+export type PartnerRevenueEvent = typeof partnerRevenueEvents.$inferSelect;
+export type InsertPartnerRevenueEvent = z.infer<typeof insertPartnerRevenueEventSchema>;

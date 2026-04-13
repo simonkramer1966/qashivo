@@ -266,6 +266,14 @@ export async function startAll(): Promise<void> {
     console.error("[startup] partner report scheduler failed:", error);
   }
 
+  try {
+    const { startPartnerBillingJob } = await import("../jobs/partnerBillingJob");
+    startPartnerBillingJob();
+    console.log("[startup] partner billing job started");
+  } catch (error) {
+    console.error("[startup] partner billing job failed:", error);
+  }
+
   // One-time migration: create conversation_states for VIP/blocked contacts
   try {
     const { migrateHeldDebtors } = await import("../services/conversationStateService");

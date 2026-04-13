@@ -36,6 +36,7 @@ const PartnerReports = lazy(() => import("@/pages/partner/reports"));
 const PartnerStaff = lazy(() => import("@/pages/partner/staff"));
 const PartnerStaffDetail = lazy(() => import("@/pages/partner/staff-detail"));
 const PartnerActivity = lazy(() => import("@/pages/partner/activity"));
+const PartnerBilling = lazy(() => import("@/pages/partner/billing"));
 const InvestorInterest = lazy(() => import("@/pages/investor-interest"));
 
 const HomeDashboard = lazy(() => import("@/pages/Home"));
@@ -382,6 +383,7 @@ function Router() {
           <Route path="/partner/reports">{() => <PartnerGuard><PartnerReports /></PartnerGuard>}</Route>
           <Route path="/partner/settings/staff/:userId">{() => <PartnerGuard><PartnerStaffDetail /></PartnerGuard>}</Route>
           <Route path="/partner/settings/staff">{() => <PartnerGuard><PartnerStaff /></PartnerGuard>}</Route>
+          <Route path="/partner/settings/billing">{() => <PartnerGuard><PartnerBilling /></PartnerGuard>}</Route>
           <Route path="/partner">{() => <Redirect to="/partner/dashboard" />}</Route>
 
           {/* Admin */}

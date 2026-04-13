@@ -273,6 +273,10 @@ process.on('unhandledRejection', (reason) => {
   registerPartnerRoutes(app);
   registerPartnerReportRoutes(app);
 
+  // Register partner billing routes
+  const { registerPartnerBillingRoutes } = await import("./routes/partnerBillingRoutes");
+  registerPartnerBillingRoutes(app);
+
   // ─── Graceful shutdown ──────────────────────────────────────────────────────
   function shutdown(signal: string) {
     console.log(`[SHUTDOWN] Received ${signal} — closing server (pid ${process.pid})`);

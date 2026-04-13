@@ -335,6 +335,7 @@ function buildPortfolioPageContext(route: string): string {
   if (route.includes("/partner/activity")) return "The user is on the Activity Feed — cross-client timeline of communications, payments, and events.";
   if (route.includes("/partner/settings/staff")) return "The user is on the Staff Management page — team members, assignments, and workload.";
   if (route.includes("/partner/reports")) return "The user is on the Reports page.";
+  if (route.includes("/partner/settings/billing")) return "The user is on the Billing page — revenue metrics, client billing management, invoices, and billing settings.";
   return "The user is in the Partner Portal.";
 }
 
@@ -351,6 +352,7 @@ function buildPortfolioRileySystemPrompt(
   staff: StaffMember[],
   pageContext: string,
   relevantFacts: Array<{ factKey: string; factValue: string; confidence: number | null; source: string | null }>,
+  billingSnapshot?: { mrr: number; wholesaleCost: number; margin: number; activeClients: number; trialClients: number; pausedClients: number; volumeDiscountPercent: number; volumeDiscountTier: string } | null,
 ): string {
   const partnerType = partner.partnerType || "accounting_firm";
 
@@ -421,6 +423,20 @@ function buildPortfolioRileySystemPrompt(
     lines.push("");
   }
 
+  // Billing (admin only)
+  if (billingSnapshot && billingSnapshot.activeClients > 0) {
+    const formatPence = (p: number) => `£${(p / 100).toFixed(2)}`;
+    lines.push("BILLING:");
+    lines.push(`- Monthly Retail Revenue (MRR): ${formatPence(billingSnapshot.mrr)}`);
+    lines.push(`- Qashivo Cost (after discount): ${formatPence(billingSnapshot.wholesaleCost)}`);
+    lines.push(`- Partner Margin: ${formatPence(billingSnapshot.margin)}`);
+    lines.push(`- Active clients: ${billingSnapshot.activeClients} | Trial: ${billingSnapshot.trialClients} | Paused: ${billingSnapshot.pausedClients}`);
+    if (billingSnapshot.volumeDiscountPercent > 0) {
+      lines.push(`- Volume discount: ${billingSnapshot.volumeDiscountPercent}% (${billingSnapshot.volumeDiscountTier} tier)`);
+    }
+    lines.push("");
+  }
+
   // Instructions
   lines.push("INSTRUCTIONS:");
   lines.push("- Compare and benchmark clients when asked. Use the data above.");
@@ -475,7 +491,8 @@ export async function getPortfolioRileyResponse(params: {
   const isAdmin = (user as any)?.role === "partner";
   const tenantIds = await getAccessibleTenantIds(partnerId, userId, isAdmin);
 
-  const [snapshot, clientSnapshots, activity, staff, relevantFacts] = await Promise.all([
+  const { getBillingSnapshot: fetchBillingSnapshot } = await import("../services/partnerBillingService");
+  const [snapshot, clientSnapshots, activity, staff, relevantFacts, billingSnapshot] = await Promise.all([
     getPortfolioSnapshot(tenantIds),
     getClientSnapshots(tenantIds),
     getRecentActivitySummary(tenantIds),
@@ -484,6 +501,7 @@ export async function getPortfolioRileyResponse(params: {
       .where(and(eq(aiFacts.entityType, "partner"), eq(aiFacts.entityId, partnerId)))
       .limit(15)
       .then(rows => rows.map(r => ({ factKey: r.factKey || r.title || "", factValue: r.factValue || r.content || "", confidence: r.confidence ? Number(r.confidence) : null, source: r.source }))),
+    isAdmin ? fetchBillingSnapshot(partnerId).catch(() => null) : Promise.resolve(null),
   ]);
 
   const userName = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "User";
@@ -492,7 +510,7 @@ export async function getPortfolioRileyResponse(params: {
 
   // 3. Build system prompt
   const systemPrompt = buildPortfolioRileySystemPrompt(
-    partner, userName, userRole, isAdmin, snapshot, clientSnapshots, activity, staff, pageContext, relevantFacts,
+    partner, userName, userRole, isAdmin, snapshot, clientSnapshots, activity, staff, pageContext, relevantFacts, billingSnapshot,
   );
 
   // 4. Build conversation messages (last 20)
@@ -570,7 +588,8 @@ export async function getPortfolioRileyResponseStreaming(params: {
   const isAdmin = (user as any)?.role === "partner";
   const tenantIds = await getAccessibleTenantIds(partnerId, userId, isAdmin);
 
-  const [snapshot, clientSnapshots, activity, staff, relevantFacts] = await Promise.all([
+  const { getBillingSnapshot: fetchBillingSnapshot } = await import("../services/partnerBillingService");
+  const [snapshot, clientSnapshots, activity, staff, relevantFacts, billingSnapshot] = await Promise.all([
     getPortfolioSnapshot(tenantIds),
     getClientSnapshots(tenantIds),
     getRecentActivitySummary(tenantIds),
@@ -579,6 +598,7 @@ export async function getPortfolioRileyResponseStreaming(params: {
       .where(and(eq(aiFacts.entityType, "partner"), eq(aiFacts.entityId, partnerId)))
       .limit(15)
       .then(rows => rows.map(r => ({ factKey: r.factKey || r.title || "", factValue: r.factValue || r.content || "", confidence: r.confidence ? Number(r.confidence) : null, source: r.source }))),
+    isAdmin ? fetchBillingSnapshot(partnerId).catch(() => null) : Promise.resolve(null),
   ]);
 
   const userName = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "User";
@@ -587,7 +607,7 @@ export async function getPortfolioRileyResponseStreaming(params: {
 
   // 3. Build system prompt
   const systemPrompt = buildPortfolioRileySystemPrompt(
-    partner, userName, userRole, isAdmin, snapshot, clientSnapshots, activity, staff, pageContext, relevantFacts,
+    partner, userName, userRole, isAdmin, snapshot, clientSnapshots, activity, staff, pageContext, relevantFacts, billingSnapshot,
   );
 
   // 4. Build conversation messages (last 20)

@@ -120,6 +120,7 @@ const partnerNavigationPillars: NavPillar[] = [
     defaultHref: "/partner/settings/staff",
     children: [
       { name: "Team", href: "/partner/settings/staff", icon: Users },
+      { name: "Billing", href: "/partner/settings/billing", icon: Receipt },
     ],
   },
 ];
