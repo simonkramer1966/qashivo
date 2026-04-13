@@ -6944,3 +6944,38 @@ export const insertOwnerFailsafeSchema = createInsertSchema(ownerFailsafe).omit(
 });
 export type OwnerFailsafe = typeof ownerFailsafe.$inferSelect;
 export type InsertOwnerFailsafe = z.infer<typeof insertOwnerFailsafeSchema>;
+
+// ── Partner Portal Phase 6: Portfolio Riley Conversations ──
+export const partnerRileyConversations = pgTable("partner_riley_conversations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  partnerId: varchar("partner_id").notNull().references(() => partners.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  messages: jsonb("messages").notNull().default([]), // [{role, content, timestamp, userId?}]
+  topic: text("topic"), // 'portfolio_overview' | 'client_comparison' | 'staff_workload' | 'system_help'
+  relatedEntityType: text("related_entity_type"), // 'client' | null
+  relatedEntityId: text("related_entity_id"), // tenantId if discussing specific client
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_partner_riley_conversations_partner").on(table.partnerId),
+]);
+
+export const partnerRileyConversationsRelations = relations(partnerRileyConversations, ({ one }) => ({
+  partner: one(partners, {
+    fields: [partnerRileyConversations.partnerId],
+    references: [partners.id],
+  }),
+  user: one(users, {
+    fields: [partnerRileyConversations.userId],
+    references: [users.id],
+  }),
+}));
+
+export const insertPartnerRileyConversationSchema = createInsertSchema(partnerRileyConversations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type PartnerRileyConversation = typeof partnerRileyConversations.$inferSelect;
+export type InsertPartnerRileyConversation = z.infer<typeof insertPartnerRileyConversationSchema>;

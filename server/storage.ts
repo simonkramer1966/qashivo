@@ -172,6 +172,9 @@ import {
   rileyConversations,
   type RileyConversation,
   type InsertRileyConversation,
+  partnerRileyConversations,
+  type PartnerRileyConversation,
+  type InsertPartnerRileyConversation,
   forecastUserAdjustments,
   type ForecastUserAdjustment,
   type InsertForecastUserAdjustment,
@@ -662,6 +665,12 @@ export interface IStorage {
   getRileyConversation(id: string, tenantId: string): Promise<RileyConversation | undefined>;
   updateRileyConversation(id: string, tenantId: string, updates: Partial<InsertRileyConversation>): Promise<RileyConversation>;
   listRileyConversations(tenantId: string): Promise<RileyConversation[]>;
+
+  // Partner Riley Conversation operations
+  createPartnerRileyConversation(data: InsertPartnerRileyConversation): Promise<PartnerRileyConversation>;
+  getPartnerRileyConversation(id: string, partnerId: string): Promise<PartnerRileyConversation | undefined>;
+  updatePartnerRileyConversation(id: string, partnerId: string, updates: Partial<InsertPartnerRileyConversation>): Promise<PartnerRileyConversation>;
+  listPartnerRileyConversations(partnerId: string): Promise<PartnerRileyConversation[]>;
 
   // Forecast User Adjustment operations
   createForecastAdjustment(data: InsertForecastUserAdjustment): Promise<ForecastUserAdjustment>;
@@ -5799,6 +5808,32 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(rileyConversations)
       .where(eq(rileyConversations.tenantId, tenantId))
       .orderBy(desc(rileyConversations.updatedAt));
+  }
+
+  // Partner Riley Conversation operations
+  async createPartnerRileyConversation(data: InsertPartnerRileyConversation): Promise<PartnerRileyConversation> {
+    const [created] = await db.insert(partnerRileyConversations).values(data).returning();
+    return created;
+  }
+
+  async getPartnerRileyConversation(id: string, partnerId: string): Promise<PartnerRileyConversation | undefined> {
+    const [conv] = await db.select().from(partnerRileyConversations)
+      .where(and(eq(partnerRileyConversations.id, id), eq(partnerRileyConversations.partnerId, partnerId)));
+    return conv;
+  }
+
+  async updatePartnerRileyConversation(id: string, partnerId: string, updates: Partial<InsertPartnerRileyConversation>): Promise<PartnerRileyConversation> {
+    const [updated] = await db.update(partnerRileyConversations)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(partnerRileyConversations.id, id), eq(partnerRileyConversations.partnerId, partnerId)))
+      .returning();
+    return updated;
+  }
+
+  async listPartnerRileyConversations(partnerId: string): Promise<PartnerRileyConversation[]> {
+    return db.select().from(partnerRileyConversations)
+      .where(eq(partnerRileyConversations.partnerId, partnerId))
+      .orderBy(desc(partnerRileyConversations.updatedAt));
   }
 
   // Forecast User Adjustment operations

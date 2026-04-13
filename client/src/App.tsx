@@ -10,6 +10,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import PageLoader from "@/components/PageLoader";
 import AdminShell from "@/components/AdminShell";
 import FloatingRileyChat from "@/components/riley/FloatingRileyChat";
+import PortfolioRileyChat from "@/components/partner/PortfolioRileyChat";
 import { useRealtimeEvents } from "@/hooks/useRealtimeEvents";
 import { SyncStatusProvider } from "@/hooks/useSyncStatus";
 import { AgentNotificationProvider } from "@/hooks/useAgentNotifications";
@@ -413,6 +414,7 @@ function Router() {
           <Route path="/:rest*" component={NotFound} />
         </Switch>
         <FloatingRileyChat />
+        <PortfolioRileyChat />
         <RealtimeEventsProvider />
         <GlobalAgentNotificationListener />
         </AgentNotificationProvider>

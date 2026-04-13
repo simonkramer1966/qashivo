@@ -285,6 +285,7 @@ import { registerSettingsRoutes } from "./routes/settingsRoutes";
 import { registerMiscRoutes } from "./routes/miscRoutes";
 import { registerActionCentreRoutes } from "./routes/actionCentreRoutes";
 import { registerRileyRoutes } from "./routes/rileyRoutes";
+import { registerPartnerRileyRoutes } from "./routes/partnerRileyRoutes";
 import { registerWeeklyReviewRoutes } from "./routes/weeklyReviewRoutes";
 import { registerDebtorGroupRoutes } from "./routes/debtorGroupRoutes";
 import { registerPromiseRoutes } from "./routes/promiseRoutes";
@@ -656,6 +657,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerMiscRoutes(app);
   registerActionCentreRoutes(app);
   registerRileyRoutes(app);
+  registerPartnerRileyRoutes(app);
   registerWeeklyReviewRoutes(app);
   registerDebtorGroupRoutes(app);
   registerPromiseRoutes(app);
