@@ -1262,6 +1262,37 @@ export function registerWebhookRoutes(app: Express) {
           console.error('Failed to send voice follow-up email (non-connected):', followUpErr);
         }
 
+        // Create outcome-based timeline event for Activity Feed
+        try {
+          const durationLabel = durationSeconds > 0
+            ? ` (${Math.floor(durationSeconds / 60)}m ${durationSeconds % 60}s)`
+            : '';
+          const summaryText = voiceStatus === 'voicemail'
+            ? `Voice call — voicemail left${durationLabel}`
+            : voiceStatus === 'busy'
+              ? 'Voice call — busy'
+              : `Voice call — no answer`;
+
+          await db.insert(timelineEvents).values({
+            tenantId,
+            customerId: contactId,
+            invoiceId: linkedInvoiceIds[0] || null,
+            occurredAt: new Date(),
+            direction: 'outbound',
+            channel: 'voice',
+            summary: summaryText,
+            preview: summaryText,
+            status: voiceStatus,
+            createdByType: 'system',
+            createdByName: 'Charlie',
+            actionId: actionId || null,
+            provider: 'retell',
+            providerMessageId: call_id,
+          });
+        } catch (tlErr) {
+          console.warn(`[Webhook] Failed to create voice timeline event for call ${call_id}:`, tlErr);
+        }
+
         await completeWebhook({
           idempotencyKey: voiceIdempotencyKey,
           source: "retell",
@@ -1355,6 +1386,29 @@ export function registerWebhookRoutes(app: Express) {
           }
         } catch (followUpErr) {
           console.error('Failed to send voice follow-up email (failed call):', followUpErr);
+        }
+
+        // Create outcome-based timeline event for Activity Feed
+        try {
+          const failReason = disconnectReason || 'Unknown error';
+          await db.insert(timelineEvents).values({
+            tenantId,
+            customerId: contactId,
+            invoiceId: linkedInvoiceIds[0] || null,
+            occurredAt: new Date(),
+            direction: 'outbound',
+            channel: 'voice',
+            summary: `Voice call — failed: ${failReason}`,
+            preview: `Voice call — failed: ${failReason}`,
+            status: 'failed',
+            createdByType: 'system',
+            createdByName: 'Charlie',
+            actionId: actionId || null,
+            provider: 'retell',
+            providerMessageId: call_id,
+          });
+        } catch (tlErr) {
+          console.warn(`[Webhook] Failed to create voice timeline event for call ${call_id}:`, tlErr);
         }
 
         await completeWebhook({
@@ -1922,34 +1976,40 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
             }
           }
           
-          // Update the timeline event linked to this action
-          // Safe transcript text with fallback
+          // Create outcome-based timeline event (voice events are only logged when outcome is known)
           const safeTranscriptText = transcriptText || '';
-          
-          await db.update(timelineEvents)
-            .set({
-              status: 'transcribed',
-              body: safeTranscriptText || null,
-              summary: callOutcome === 'ptp_captured' ? 'AI call completed - Payment commitment received' :
-                       callOutcome === 'dispute_raised' ? 'AI call completed - Dispute raised' :
-                       callOutcome === 'refused' ? 'AI call completed - Payment refused' :
-                       callOutcome === 'wrong_contact' ? 'AI call completed - Wrong contact' :
-                       'AI call completed',
-              outcomeType: timelineOutcomeType,
-              outcomeConfidence: String(confidenceScore),
-              outcomeExtracted: Object.keys(extractedData).length > 0 ? extractedData : null,
-              outcomeRequiresReview: callOutcome === 'dispute_raised' || callOutcome === 'wrong_contact',
-              provider: 'retell',
-              providerMessageId: call_id,
-            })
-            .where(
-              and(
-                eq(timelineEvents.actionId, callMetadata.action_id),
-                eq(timelineEvents.tenantId, callMetadata.tenant_id)
-              )
-            );
-          
-          console.log(`📝 Timeline event updated for action ${callMetadata.action_id} with call results`);
+          const durationLabel = durationSeconds > 0
+            ? ` (${Math.floor(durationSeconds / 60)}m ${durationSeconds % 60}s)`
+            : '';
+          const completedSummary = callOutcome === 'ptp_captured' ? `Voice call — answered${durationLabel} — Payment commitment received` :
+                       callOutcome === 'dispute_raised' ? `Voice call — answered${durationLabel} — Dispute raised` :
+                       callOutcome === 'refused' ? `Voice call — answered${durationLabel} — Payment refused` :
+                       callOutcome === 'wrong_contact' ? `Voice call — answered${durationLabel} — Wrong contact` :
+                       `Voice call — answered${durationLabel}`;
+
+          await db.insert(timelineEvents).values({
+            tenantId: callMetadata.tenant_id,
+            customerId: contactId,
+            invoiceId: linkedInvoiceIds[0] || null,
+            occurredAt: new Date(),
+            direction: 'outbound',
+            channel: 'voice',
+            summary: completedSummary,
+            preview: summarySnippet || completedSummary,
+            body: safeTranscriptText || null,
+            status: 'transcribed',
+            createdByType: 'system',
+            createdByName: 'Charlie',
+            actionId: callMetadata.action_id || null,
+            provider: 'retell',
+            providerMessageId: call_id,
+            outcomeType: timelineOutcomeType,
+            outcomeConfidence: String(confidenceScore),
+            outcomeExtracted: Object.keys(extractedData).length > 0 ? extractedData : null,
+            outcomeRequiresReview: callOutcome === 'dispute_raised' || callOutcome === 'wrong_contact',
+          });
+
+          console.log(`📝 Timeline event created for action ${callMetadata.action_id} with call outcome: ${callOutcome}`);
         } catch (timelineErr) {
           console.error('Failed to update timeline event with call results:', timelineErr);
         }

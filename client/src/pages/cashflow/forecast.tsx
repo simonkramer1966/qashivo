@@ -71,6 +71,12 @@ interface WeeklyForecast {
     arCollections: number;
     recurringRevenue: number;
     pipeline: number;
+    arCollectionsOptimistic?: number;
+    arCollectionsPessimistic?: number;
+    recurringRevenueOptimistic?: number;
+    recurringRevenuePessimistic?: number;
+    pipelineOptimistic?: number;
+    pipelinePessimistic?: number;
   };
   isCompleted?: boolean;
   actualAmount?: number;
@@ -946,6 +952,12 @@ export default function ForecastPage() {
       {expandedWeekIndex !== null && (() => {
         const wf = forecast.weeklyForecasts[expandedWeekIndex];
         if (!wf) return null;
+        const sb = wf.sourceBreakdown;
+        const hasRecurring = sb.recurringRevenue > 0;
+        const hasPipeline = sb.pipeline > 0;
+        const hasOtherSources = hasRecurring || hasPipeline;
+
+        // AR invoice rows
         const invoices = [...wf.invoiceBreakdown].sort(
           (a, b) => b.amountDue * b.probability - a.amountDue * a.probability,
         );
@@ -954,9 +966,11 @@ export default function ForecastPage() {
         const remainderPes = remainder.reduce((s, inv) => s + inv.amountDue * (inv.pessimisticProbability ?? inv.probability), 0);
         const remainderExp = remainder.reduce((s, inv) => s + inv.amountDue * inv.probability, 0);
         const remainderOpt = remainder.reduce((s, inv) => s + inv.amountDue * (inv.optimisticProbability ?? inv.probability), 0);
-        const totalPes = invoices.reduce((s, inv) => s + inv.amountDue * (inv.pessimisticProbability ?? inv.probability), 0);
-        const totalExp = invoices.reduce((s, inv) => s + inv.amountDue * inv.probability, 0);
-        const totalOpt = invoices.reduce((s, inv) => s + inv.amountDue * (inv.optimisticProbability ?? inv.probability), 0);
+
+        // Grand totals from the bar chart (all layers combined — guaranteed match)
+        const grandPes = wf.pessimistic;
+        const grandExp = wf.isCompleted && wf.actualAmount != null ? wf.actualAmount : wf.expected;
+        const grandOpt = wf.optimistic;
 
         return (
           <Card>
@@ -974,13 +988,13 @@ export default function ForecastPage() {
                   )}
                 </div>
                 <div className="flex items-center gap-4 text-xs font-medium tabular-nums">
-                  <span className="text-[var(--q-risk-text)]">{fmt(Math.round(totalPes))}</span>
-                  <span className="text-[var(--q-info-text)]">{fmt(Math.round(totalExp))}</span>
-                  <span className="text-[var(--q-money-in-text)]">{fmt(Math.round(totalOpt))}</span>
+                  <span className="text-[var(--q-risk-text)]">{fmt(Math.round(grandPes))}</span>
+                  <span className="text-[var(--q-info-text)]">{fmt(Math.round(grandExp))}</span>
+                  <span className="text-[var(--q-money-in-text)]">{fmt(Math.round(grandOpt))}</span>
                 </div>
               </div>
 
-              {invoices.length === 0 ? (
+              {invoices.length === 0 && !hasOtherSources ? (
                 <p className="text-sm text-[var(--q-text-tertiary)] py-4 text-center">
                   No invoices expected this week
                 </p>
@@ -998,6 +1012,7 @@ export default function ForecastPage() {
                       </tr>
                     </thead>
                     <tbody>
+                      {/* AR invoice rows */}
                       {top20.map((inv) => {
                         const pesAmt = inv.amountDue * (inv.pessimisticProbability ?? inv.probability);
                         const expAmt = inv.amountDue * inv.probability;
@@ -1046,13 +1061,43 @@ export default function ForecastPage() {
                           <td className="py-2 text-right tabular-nums text-[var(--q-money-in-text)]">{fmt(Math.round(remainderOpt))}</td>
                         </tr>
                       )}
+
+                      {/* AR subtotal — only shown when other sources exist */}
+                      {hasOtherSources && invoices.length > 0 && (
+                        <tr className="border-t border-[var(--q-border)]">
+                          <td className="py-2 pr-3 font-medium text-[var(--q-text-secondary)]" colSpan={3}>AR collections</td>
+                          <td className="py-2 pr-3 text-right tabular-nums text-[var(--q-risk-text)]">{fmt(Math.round(sb.arCollectionsPessimistic ?? sb.arCollections))}</td>
+                          <td className="py-2 pr-3 text-right tabular-nums text-[var(--q-info-text)]">{fmt(Math.round(sb.arCollections))}</td>
+                          <td className="py-2 text-right tabular-nums text-[var(--q-money-in-text)]">{fmt(Math.round(sb.arCollectionsOptimistic ?? sb.arCollections))}</td>
+                        </tr>
+                      )}
+
+                      {/* Recurring revenue summary row */}
+                      {hasRecurring && (
+                        <tr className="border-t border-dashed border-[var(--q-border)]">
+                          <td className="py-2 pr-3 font-medium text-[var(--q-text-secondary)]" colSpan={3}>Recurring revenue</td>
+                          <td className="py-2 pr-3 text-right tabular-nums text-[var(--q-risk-text)]">{fmt(Math.round(sb.recurringRevenuePessimistic ?? sb.recurringRevenue))}</td>
+                          <td className="py-2 pr-3 text-right tabular-nums text-[var(--q-info-text)]">{fmt(Math.round(sb.recurringRevenue))}</td>
+                          <td className="py-2 text-right tabular-nums text-[var(--q-money-in-text)]">{fmt(Math.round(sb.recurringRevenueOptimistic ?? sb.recurringRevenue))}</td>
+                        </tr>
+                      )}
+
+                      {/* Pipeline summary row */}
+                      {hasPipeline && (
+                        <tr className={hasRecurring ? "" : "border-t border-dashed border-[var(--q-border)]"}>
+                          <td className="py-2 pr-3 font-medium text-[var(--q-text-secondary)]" colSpan={3}>Pipeline</td>
+                          <td className="py-2 pr-3 text-right tabular-nums text-[var(--q-risk-text)]">{fmt(Math.round(sb.pipelinePessimistic ?? sb.pipeline))}</td>
+                          <td className="py-2 pr-3 text-right tabular-nums text-[var(--q-info-text)]">{fmt(Math.round(sb.pipeline))}</td>
+                          <td className="py-2 text-right tabular-nums text-[var(--q-money-in-text)]">{fmt(Math.round(sb.pipelineOptimistic ?? sb.pipeline))}</td>
+                        </tr>
+                      )}
                     </tbody>
                     <tfoot>
                       <tr className="border-t-2 border-[var(--q-border)]">
                         <td className="py-2 pr-3 font-semibold text-[var(--q-text-primary)]" colSpan={3}>Total</td>
-                        <td className="py-2 pr-3 text-right tabular-nums font-semibold text-[var(--q-risk-text)]">{fmt(Math.round(totalPes))}</td>
-                        <td className="py-2 pr-3 text-right tabular-nums font-semibold text-[var(--q-info-text)]">{fmt(Math.round(totalExp))}</td>
-                        <td className="py-2 text-right tabular-nums font-semibold text-[var(--q-money-in-text)]">{fmt(Math.round(totalOpt))}</td>
+                        <td className="py-2 pr-3 text-right tabular-nums font-semibold text-[var(--q-risk-text)]">{fmt(Math.round(grandPes))}</td>
+                        <td className="py-2 pr-3 text-right tabular-nums font-semibold text-[var(--q-info-text)]">{fmt(Math.round(grandExp))}</td>
+                        <td className="py-2 text-right tabular-nums font-semibold text-[var(--q-money-in-text)]">{fmt(Math.round(grandOpt))}</td>
                       </tr>
                     </tfoot>
                   </table>

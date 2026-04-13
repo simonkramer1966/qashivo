@@ -131,7 +131,10 @@ export class ActionExecutor {
             console.log(`✅ Executed ${action.type} action for ${contact.name}`);
 
             // Create timeline event for Activity Feed
-            await this.createOutboundTimelineEvent(action, contact, invoice, result.data);
+            // Voice calls: timeline event created by Retell webhook (outcome-based, not initiation-based)
+            if (action.type !== 'voice' && action.type !== 'call') {
+              await this.createOutboundTimelineEvent(action, contact, invoice, result.data);
+            }
 
             // Conversation state transition (non-fatal)
             if (action.contactId) {
@@ -269,7 +272,10 @@ export class ActionExecutor {
             console.log(`✅ Immediately executed ${action.type} action for ${contact.name}`);
 
             // Create timeline event for Activity Feed
-            await this.createOutboundTimelineEvent(action, contact, invoice, result.data);
+            // Voice calls: timeline event created by Retell webhook (outcome-based, not initiation-based)
+            if (action.type !== 'voice' && action.type !== 'call') {
+              await this.createOutboundTimelineEvent(action, contact, invoice, result.data);
+            }
 
             // Conversation state transition (non-fatal)
             if (action.contactId) {

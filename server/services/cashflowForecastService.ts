@@ -72,6 +72,12 @@ export interface WeeklyForecast {
     arCollections: number;
     recurringRevenue: number;
     pipeline: number;
+    arCollectionsOptimistic?: number;
+    arCollectionsPessimistic?: number;
+    recurringRevenueOptimistic?: number;
+    recurringRevenuePessimistic?: number;
+    pipelineOptimistic?: number;
+    pipelinePessimistic?: number;
   };
   isCompleted?: boolean;
   actualAmount?: number;
@@ -1097,6 +1103,16 @@ export async function generateInflowForecast(
         recurringRevenue:
           Math.round(weeklyRecurringExpected[w] * 100) / 100,
         pipeline: Math.round(weeklyPipelineExpected[w] * 100) / 100,
+        arCollectionsOptimistic: Math.round(
+          (weeklyOptimistic[w] - weeklyRecurringOptimistic[w] - weeklyPipelineOptimistic[w]) * 100,
+        ) / 100,
+        arCollectionsPessimistic: Math.round(
+          (weeklyPessimistic[w] - weeklyRecurringPessimistic[w] - weeklyPipelinePessimistic[w]) * 100,
+        ) / 100,
+        recurringRevenueOptimistic: Math.round(weeklyRecurringOptimistic[w] * 100) / 100,
+        recurringRevenuePessimistic: Math.round(weeklyRecurringPessimistic[w] * 100) / 100,
+        pipelineOptimistic: Math.round(weeklyPipelineOptimistic[w] * 100) / 100,
+        pipelinePessimistic: Math.round(weeklyPipelinePessimistic[w] * 100) / 100,
       },
     });
 
