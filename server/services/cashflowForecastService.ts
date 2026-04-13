@@ -52,6 +52,8 @@ export interface InvoiceContribution {
   promiseOverride: boolean;
   dueDate: string;
   daysOverdue: number;
+  pessimisticProbability: number;
+  optimisticProbability: number;
   promiseWeek?: number;
   isDisputed?: boolean;
   isOnHold?: boolean;
@@ -656,6 +658,8 @@ export async function generateInflowForecast(
             contactName: inv.contactName || "Unknown",
             amountDue,
             probability: prob,
+            pessimisticProbability: prob,
+            optimisticProbability: prob,
             confidence,
             basedOn: `Promise (PRS ${Math.round(prs)}%)`,
             promiseOverride: true,
@@ -713,6 +717,8 @@ export async function generateInflowForecast(
             contactName: inv.contactName || "Unknown",
             amountDue,
             probability: expProb,
+            pessimisticProbability: pesProb,
+            optimisticProbability: optProb,
             confidence,
             basedOn:
               confidence === "low"

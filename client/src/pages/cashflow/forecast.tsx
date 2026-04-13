@@ -83,9 +83,14 @@ interface InvoiceContribution {
   contactName: string;
   amountDue: number;
   probability: number;
+  pessimisticProbability?: number;
+  optimisticProbability?: number;
   confidence: "high" | "medium" | "low";
   basedOn: string;
   promiseOverride: boolean;
+  dueDate?: string;
+  daysOverdue?: number;
+  promiseWeek?: number;
 }
 
 interface InflowForecast {
@@ -398,6 +403,7 @@ export default function ForecastPage() {
 
   const [changesDismissed, setChangesDismissed] = useState(false);
   const [expandedGap, setExpandedGap] = useState<number | null>(null);
+  const [expandedWeekIndex, setExpandedWeekIndex] = useState<number | null>(null);
   const [showMethodology, setShowMethodology] = useState(false);
 
   const forecastSubtitle = (
@@ -897,13 +903,20 @@ export default function ForecastPage() {
                 width={55}
               />
               <Tooltip cursor={false} content={<CollectionsTooltip />} />
-              <Bar dataKey="expected" radius={[4, 4, 0, 0]} maxBarSize={40}>
+              <Bar
+                dataKey="expected"
+                radius={[4, 4, 0, 0]}
+                maxBarSize={40}
+                onClick={(_data: unknown, index: number) => setExpandedWeekIndex(prev => prev === index ? null : index)}
+                className="cursor-pointer"
+              >
                 {chartData.map((entry, i) => (
                   <Cell
                     key={i}
                     fill={entry.isCompleted ? "var(--q-info-text)" : entry.isFragile ? "var(--q-attention-text)" : "var(--q-info-text)"}
-                    stroke={entry.isCompleted ? "var(--q-info-border)" : entry.isFragile ? "var(--q-attention-border)" : "none"}
-                    strokeWidth={entry.isCompleted ? 1 : entry.isFragile ? 1.5 : 0}
+                    stroke={i === expandedWeekIndex ? "var(--q-text-primary)" : entry.isCompleted ? "var(--q-info-border)" : entry.isFragile ? "var(--q-attention-border)" : "none"}
+                    strokeWidth={i === expandedWeekIndex ? 2 : entry.isCompleted ? 1 : entry.isFragile ? 1.5 : 0}
+                    opacity={expandedWeekIndex !== null && i !== expandedWeekIndex ? 0.5 : 1}
                   />
                 ))}
               </Bar>
@@ -928,6 +941,127 @@ export default function ForecastPage() {
           </ResponsiveContainer>
         </CardContent>
       </Card>
+
+      {/* Week Detail Panel */}
+      {expandedWeekIndex !== null && (() => {
+        const wf = forecast.weeklyForecasts[expandedWeekIndex];
+        if (!wf) return null;
+        const invoices = [...wf.invoiceBreakdown].sort(
+          (a, b) => b.amountDue * b.probability - a.amountDue * a.probability,
+        );
+        const top20 = invoices.slice(0, 20);
+        const remainder = invoices.slice(20);
+        const remainderPes = remainder.reduce((s, inv) => s + inv.amountDue * (inv.pessimisticProbability ?? inv.probability), 0);
+        const remainderExp = remainder.reduce((s, inv) => s + inv.amountDue * inv.probability, 0);
+        const remainderOpt = remainder.reduce((s, inv) => s + inv.amountDue * (inv.optimisticProbability ?? inv.probability), 0);
+        const totalPes = invoices.reduce((s, inv) => s + inv.amountDue * (inv.pessimisticProbability ?? inv.probability), 0);
+        const totalExp = invoices.reduce((s, inv) => s + inv.amountDue * inv.probability, 0);
+        const totalOpt = invoices.reduce((s, inv) => s + inv.amountDue * (inv.optimisticProbability ?? inv.probability), 0);
+
+        return (
+          <Card>
+            <CardContent className="py-4 px-4">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-[var(--q-text-primary)]">
+                    Week {wf.weekNumber} ({weekLabel(wf.weekStarting)})
+                  </span>
+                  {wf.isCompleted && (
+                    <QBadge variant="neutral" className="text-xs bg-[var(--q-info-bg)] text-[var(--q-info-text)]">
+                      Completed
+                    </QBadge>
+                  )}
+                </div>
+                <div className="flex items-center gap-4 text-xs font-medium tabular-nums">
+                  <span className="text-[var(--q-risk-text)]">{fmt(Math.round(totalPes))}</span>
+                  <span className="text-[var(--q-info-text)]">{fmt(Math.round(totalExp))}</span>
+                  <span className="text-[var(--q-money-in-text)]">{fmt(Math.round(totalOpt))}</span>
+                </div>
+              </div>
+
+              {invoices.length === 0 ? (
+                <p className="text-sm text-[var(--q-text-tertiary)] py-4 text-center">
+                  No invoices expected this week
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-[var(--q-border)]">
+                        <th className="text-left py-2 pr-3 font-medium text-[var(--q-text-secondary)]">Invoice #</th>
+                        <th className="text-left py-2 pr-3 font-medium text-[var(--q-text-secondary)]">Debtor</th>
+                        <th className="text-right py-2 pr-3 font-medium text-[var(--q-text-secondary)]">Amount due</th>
+                        <th className="text-right py-2 pr-3 font-medium text-[var(--q-risk-text)]">Pessimistic</th>
+                        <th className="text-right py-2 pr-3 font-medium text-[var(--q-info-text)]">Expected</th>
+                        <th className="text-right py-2 font-medium text-[var(--q-money-in-text)]">Optimistic</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {top20.map((inv) => {
+                        const pesAmt = inv.amountDue * (inv.pessimisticProbability ?? inv.probability);
+                        const expAmt = inv.amountDue * inv.probability;
+                        const optAmt = inv.amountDue * (inv.optimisticProbability ?? inv.probability);
+                        const pesP = (inv.pessimisticProbability ?? inv.probability) * 100;
+                        const expP = inv.probability * 100;
+                        const optP = (inv.optimisticProbability ?? inv.probability) * 100;
+                        const promiseDate = inv.dueDate && inv.promiseOverride
+                          ? new Date(inv.dueDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
+                          : null;
+
+                        return (
+                          <tr key={inv.invoiceId} className="border-b border-[var(--q-border)] last:border-0">
+                            <td className="py-2 pr-3 tabular-nums text-[var(--q-text-primary)]">{inv.invoiceNumber}</td>
+                            <td className="py-2 pr-3 text-[var(--q-text-primary)]">
+                              {inv.contactName}
+                              {inv.promiseOverride && (
+                                <span className="ml-1 text-[var(--q-attention-text)]" title={promiseDate ? `Promise: ${promiseDate}` : "Promise override"}>
+                                  ⚡{promiseDate ? ` Promise: ${promiseDate}` : ""}
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-2 pr-3 text-right tabular-nums text-[var(--q-text-primary)]">{fmt(Math.round(inv.amountDue))}</td>
+                            <td className="py-2 pr-3 text-right tabular-nums text-[var(--q-risk-text)]">
+                              {fmt(Math.round(pesAmt))} <span className="text-[var(--q-text-tertiary)]">({fmtPct(pesP)})</span>
+                            </td>
+                            <td className="py-2 pr-3 text-right tabular-nums text-[var(--q-info-text)]">
+                              {fmt(Math.round(expAmt))} <span className="text-[var(--q-text-tertiary)]">({fmtPct(expP)})</span>
+                            </td>
+                            <td className="py-2 text-right tabular-nums text-[var(--q-money-in-text)]">
+                              {fmt(Math.round(optAmt))} <span className="text-[var(--q-text-tertiary)]">({fmtPct(optP)})</span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {remainder.length > 0 && (
+                        <tr className="border-b border-[var(--q-border)]">
+                          <td className="py-2 pr-3 text-[var(--q-text-tertiary)] italic" colSpan={2}>
+                            and {remainder.length} more invoice{remainder.length !== 1 ? "s" : ""}...
+                          </td>
+                          <td className="py-2 pr-3 text-right tabular-nums text-[var(--q-text-tertiary)]">
+                            {fmt(Math.round(remainder.reduce((s, inv) => s + inv.amountDue, 0)))}
+                          </td>
+                          <td className="py-2 pr-3 text-right tabular-nums text-[var(--q-risk-text)]">{fmt(Math.round(remainderPes))}</td>
+                          <td className="py-2 pr-3 text-right tabular-nums text-[var(--q-info-text)]">{fmt(Math.round(remainderExp))}</td>
+                          <td className="py-2 text-right tabular-nums text-[var(--q-money-in-text)]">{fmt(Math.round(remainderOpt))}</td>
+                        </tr>
+                      )}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t-2 border-[var(--q-border)]">
+                        <td className="py-2 pr-3 font-semibold text-[var(--q-text-primary)]" colSpan={3}>Total</td>
+                        <td className="py-2 pr-3 text-right tabular-nums font-semibold text-[var(--q-risk-text)]">{fmt(Math.round(totalPes))}</td>
+                        <td className="py-2 pr-3 text-right tabular-nums font-semibold text-[var(--q-info-text)]">{fmt(Math.round(totalExp))}</td>
+                        <td className="py-2 text-right tabular-nums font-semibold text-[var(--q-money-in-text)]">{fmt(Math.round(totalOpt))}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* D. Chart 2 — Running Balance Line Chart */}
       <Card>
