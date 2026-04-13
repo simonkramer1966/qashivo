@@ -4452,6 +4452,46 @@ export const smeInviteTokens = pgTable("sme_invite_tokens", {
   index("idx_sme_invite_tokens_status").on(table.status),
 ]);
 
+// Partner Staff Invitations — tracking staff invites within a partner org
+export const partnerStaffInvitations = pgTable("partner_staff_invitations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  partnerId: varchar("partner_id").notNull().references(() => partners.id),
+  email: varchar("email").notNull(),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  role: varchar("role").notNull(), // 'partner' (admin) or 'user' (controller)
+  invitedById: varchar("invited_by_id").notNull().references(() => users.id),
+  status: varchar("status").notNull().default("pending"), // pending | accepted | expired | revoked
+  assignedTenantIds: jsonb("assigned_tenant_ids").default([]), // pre-assigned client tenant IDs for controllers
+  createdAt: timestamp("created_at").defaultNow(),
+  expiresAt: timestamp("expires_at"), // 7 days from creation
+  acceptedAt: timestamp("accepted_at"),
+  revokedAt: timestamp("revoked_at"),
+}, (table) => [
+  index("idx_partner_staff_invitations_partner").on(table.partnerId),
+  index("idx_partner_staff_invitations_email").on(table.email),
+  index("idx_partner_staff_invitations_status").on(table.status),
+]);
+
+export const partnerStaffInvitationsRelations = relations(partnerStaffInvitations, ({ one }) => ({
+  partner: one(partners, {
+    fields: [partnerStaffInvitations.partnerId],
+    references: [partners.id],
+  }),
+  invitedBy: one(users, {
+    fields: [partnerStaffInvitations.invitedById],
+    references: [users.id],
+  }),
+}));
+
+export const insertPartnerStaffInvitationSchema = createInsertSchema(partnerStaffInvitations).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type PartnerStaffInvitation = typeof partnerStaffInvitations.$inferSelect;
+export type InsertPartnerStaffInvitation = z.infer<typeof insertPartnerStaffInvitationSchema>;
+
 // Partner Audit Log - DEPRECATED: Now consolidated into activityLogs with category='partner'
 // Kept as type aliases for backward compatibility during migration
 // export const partnerAuditLog = ... (removed)

@@ -116,9 +116,9 @@ const partnerNavigationPillars: NavPillar[] = [
   {
     label: "Settings",
     icon: Settings,
-    defaultHref: "/settings/team",
+    defaultHref: "/partner/settings/staff",
     children: [
-      { name: "Team", href: "/settings/team", icon: Users },
+      { name: "Team", href: "/partner/settings/staff", icon: Users },
     ],
   },
 ];

@@ -4,6 +4,8 @@ import { db } from "../db";
 import {
   partners,
   partnerTenantLinks,
+  partnerClientRelationships,
+  partnerStaffInvitations,
   smeClients,
   smeContacts,
   smeInviteTokens,
@@ -13,15 +15,17 @@ import {
   actions,
   disputes,
   promisesToPay,
+  timelineEvents,
   insertSmeClientSchema,
   insertSmeContactSchema,
   type Partner,
   type SmeClient,
 } from "@shared/schema";
-import { eq, and, sql, count, sum, desc, gte, lte, inArray, ne, lt } from "drizzle-orm";
+import { eq, and, sql, count, sum, desc, gte, lte, inArray, ne, lt, isNull, or } from "drizzle-orm";
 import { z } from "zod";
 import crypto from "crypto";
 import { sendEmail } from "../services/sendgrid";
+import { createClerkClient } from "@clerk/clerk-sdk-node";
 
 declare global {
   namespace Express {
@@ -1349,6 +1353,725 @@ export function registerPartnerRoutes(app: Express) {
     } catch (error) {
       console.error("POST /api/partner/add-client error:", error);
       res.status(500).json({ message: "Failed to add client" });
+    }
+  });
+
+  // ─── Partner Portal Phase 4: Staff Management ────────────────────────────
+
+  const clerk = process.env.CLERK_SECRET_KEY
+    ? createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY })
+    : null;
+
+  // Helper: get linked tenant IDs for this partner org
+  async function getPartnerTenantIds(partnerId: string): Promise<string[]> {
+    const links = await db
+      .select({ tenantId: partnerTenantLinks.tenantId })
+      .from(partnerTenantLinks)
+      .where(and(eq(partnerTenantLinks.partnerId, partnerId), eq(partnerTenantLinks.status, "active")));
+    return links.map(l => l.tenantId);
+  }
+
+  // Helper: get assigned tenant IDs for a user
+  async function getUserAssignedTenantIds(userId: string): Promise<string[]> {
+    const rels = await db
+      .select({ clientTenantId: partnerClientRelationships.clientTenantId })
+      .from(partnerClientRelationships)
+      .where(and(eq(partnerClientRelationships.partnerUserId, userId), eq(partnerClientRelationships.status, "active")));
+    return rels.map(r => r.clientTenantId);
+  }
+
+  // Helper: compute AR metrics across a set of tenant IDs
+  async function computeARMetrics(tenantIds: string[]) {
+    if (tenantIds.length === 0) return { totalAR: 0, totalOverdue: 0, avgDSO: 0 };
+
+    const now = new Date();
+    const [arResult] = await db
+      .select({
+        totalAR: sql<string>`COALESCE(SUM(CAST(${invoices.amount} AS DECIMAL) - CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL)), 0)`,
+        totalOverdue: sql<string>`COALESCE(SUM(CASE WHEN ${invoices.dueDate} < ${now} THEN CAST(${invoices.amount} AS DECIMAL) - CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL) ELSE 0 END), 0)`,
+      })
+      .from(invoices)
+      .where(and(
+        inArray(invoices.tenantId, tenantIds),
+        sql`${invoices.status} NOT IN ('paid', 'void', 'voided', 'deleted', 'draft')`,
+      ));
+
+    const totalAR = parseFloat(arResult?.totalAR || "0");
+    const totalOverdue = parseFloat(arResult?.totalOverdue || "0");
+
+    // DSO: sum of days-outstanding weighted by amount / total amount
+    const [dsoResult] = await db
+      .select({
+        weightedDays: sql<string>`COALESCE(SUM(
+          (CAST(${invoices.amount} AS DECIMAL) - CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL))
+          * GREATEST(EXTRACT(EPOCH FROM (NOW() - ${invoices.issueDate})) / 86400, 0)
+        ), 0)`,
+        totalAmount: sql<string>`COALESCE(SUM(CAST(${invoices.amount} AS DECIMAL) - CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL)), 0)`,
+      })
+      .from(invoices)
+      .where(and(
+        inArray(invoices.tenantId, tenantIds),
+        sql`${invoices.status} NOT IN ('paid', 'void', 'voided', 'deleted', 'draft')`,
+      ));
+
+    const weightedDays = parseFloat(dsoResult?.weightedDays || "0");
+    const totalAmt = parseFloat(dsoResult?.totalAmount || "0");
+    const avgDSO = totalAmt > 0 ? Math.round(weightedDays / totalAmt) : 0;
+
+    return { totalAR, totalOverdue, avgDSO };
+  }
+
+  // GET /api/partner/team — list team members + client counts
+  app.get("/api/partner/team", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      if (!user?.partnerId) {
+        return res.status(403).json({ message: "Not a partner user" });
+      }
+
+      const teamMembers = await db
+        .select()
+        .from(users)
+        .where(and(eq(users.partnerId, user.partnerId), ne(users.status, "removed")));
+
+      // Get client counts per user
+      const allRelationships = await db
+        .select()
+        .from(partnerClientRelationships)
+        .where(eq(partnerClientRelationships.status, "active"));
+
+      const partnerTenantIds = await getPartnerTenantIds(user.partnerId);
+
+      const members = teamMembers.map(m => {
+        const clientCount = m.role === "partner"
+          ? partnerTenantIds.length // admins see all clients
+          : allRelationships.filter(r => r.partnerUserId === m.id).length;
+
+        return {
+          id: m.id,
+          email: m.email,
+          firstName: m.firstName,
+          lastName: m.lastName,
+          role: m.role,
+          status: m.status,
+          clientCount,
+          createdAt: m.createdAt,
+          lastActiveAt: m.lastActiveAt,
+        };
+      });
+
+      res.json({ members });
+    } catch (error) {
+      console.error("GET /api/partner/team error:", error);
+      res.status(500).json({ message: "Failed to load team" });
+    }
+  });
+
+  // GET /api/partner/team/invitations — list pending/recent invitations
+  app.get("/api/partner/team/invitations", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      if (!user?.partnerId) {
+        return res.status(403).json({ message: "Not a partner user" });
+      }
+
+      const invitations = await db
+        .select()
+        .from(partnerStaffInvitations)
+        .where(eq(partnerStaffInvitations.partnerId, user.partnerId))
+        .orderBy(desc(partnerStaffInvitations.createdAt));
+
+      // Auto-expire old pending invitations
+      const now = new Date();
+      const mapped = invitations.map(inv => ({
+        id: inv.id,
+        email: inv.email,
+        firstName: inv.firstName,
+        lastName: inv.lastName,
+        role: inv.role,
+        status: inv.status === "pending" && inv.expiresAt && inv.expiresAt < now ? "expired" : inv.status,
+        createdAt: inv.createdAt,
+        expiresAt: inv.expiresAt,
+        acceptedAt: inv.acceptedAt,
+      }));
+
+      res.json({ invitations: mapped });
+    } catch (error) {
+      console.error("GET /api/partner/team/invitations error:", error);
+      res.status(500).json({ message: "Failed to load invitations" });
+    }
+  });
+
+  // POST /api/partner/team/invite — create Clerk user + DB user + invitation
+  const staffInviteSchema = z.object({
+    email: z.string().email("Valid email required"),
+    firstName: z.string().min(1).optional(),
+    lastName: z.string().min(1).optional(),
+    role: z.enum(["partner", "user"]),
+    assignedTenantIds: z.array(z.string()).optional(),
+  });
+
+  app.post("/api/partner/team/invite", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      if (!user?.partnerId) {
+        return res.status(403).json({ message: "Not a partner user" });
+      }
+      if (user.role !== "partner") {
+        return res.status(403).json({ message: "Only admins can invite team members" });
+      }
+
+      const parsed = staffInviteSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid request", errors: parsed.error.flatten() });
+      }
+
+      const { email, firstName, lastName, role, assignedTenantIds } = parsed.data;
+
+      // Check for duplicate email in users
+      const [existingUser] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+      if (existingUser) {
+        return res.status(409).json({ message: "A user with this email already exists" });
+      }
+
+      // Check for duplicate pending invitation
+      const [existingInvite] = await db
+        .select()
+        .from(partnerStaffInvitations)
+        .where(and(
+          eq(partnerStaffInvitations.partnerId, user.partnerId),
+          eq(partnerStaffInvitations.email, email),
+          eq(partnerStaffInvitations.status, "pending"),
+        ))
+        .limit(1);
+      if (existingInvite) {
+        return res.status(409).json({ message: "A pending invitation already exists for this email" });
+      }
+
+      // Create Clerk user (degrade gracefully if Clerk not configured)
+      let clerkId: string | null = null;
+      if (clerk) {
+        try {
+          const tempPassword = crypto.randomBytes(16).toString("hex");
+          const clerkUser = await clerk.users.createUser({
+            emailAddress: [email],
+            password: tempPassword,
+            firstName: firstName || undefined,
+            lastName: lastName || undefined,
+          });
+          clerkId = clerkUser.id;
+        } catch (clerkErr: any) {
+          // 422 = user already exists in Clerk, get their ID
+          if (clerkErr?.status === 422 || clerkErr?.errors?.[0]?.code === "form_identifier_exists") {
+            try {
+              const existing = await clerk.users.getUserList({ emailAddress: [email] });
+              if (existing.data.length > 0) {
+                clerkId = existing.data[0].id;
+              }
+            } catch { /* proceed without clerkId */ }
+          } else {
+            console.error("Clerk user creation failed (proceeding without):", clerkErr);
+          }
+        }
+      }
+
+      // Create DB user with status='invited'
+      const [newUser] = await db.insert(users).values({
+        email,
+        password: crypto.randomBytes(32).toString("hex"), // placeholder — Clerk handles auth
+        firstName: firstName || null,
+        lastName: lastName || null,
+        role,
+        partnerId: user.partnerId,
+        clerkId,
+        status: "invited",
+        invitedBy: user.id,
+        invitedAt: new Date(),
+      }).returning();
+
+      // Create invitation record
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+
+      await db.insert(partnerStaffInvitations).values({
+        partnerId: user.partnerId,
+        email,
+        firstName: firstName || null,
+        lastName: lastName || null,
+        role,
+        invitedById: user.id,
+        status: "pending",
+        assignedTenantIds: assignedTenantIds || [],
+        expiresAt,
+      });
+
+      // If controller + assigned tenants, create partnerClientRelationships
+      if (role === "user" && assignedTenantIds && assignedTenantIds.length > 0) {
+        // Verify all tenantIds belong to this partner
+        const validTenantIds = await getPartnerTenantIds(user.partnerId);
+        const filtered = assignedTenantIds.filter(id => validTenantIds.includes(id));
+
+        for (const tenantId of filtered) {
+          // Get the partner's own tenantId for the relationship (use first linked tenant as partner tenant)
+          await db.insert(partnerClientRelationships).values({
+            partnerUserId: newUser.id,
+            partnerTenantId: tenantId, // the client tenant acts as context
+            clientTenantId: tenantId,
+            status: "active",
+            accessLevel: "full",
+            establishedBy: "direct_assignment",
+          }).onConflictDoNothing();
+        }
+      }
+
+      // Send invitation email via SendGrid (NOT through comms mode wrapper — internal staff)
+      const [partner] = await db.select().from(partners).where(eq(partners.id, user.partnerId)).limit(1);
+      const partnerDisplayName = partner?.brandName || partner?.name || "Your firm";
+
+      try {
+        await sendEmail({
+          to: email,
+          from: `${partner?.emailFromName || partnerDisplayName} <${partner?.emailReplyTo || process.env.SENDGRID_FROM_EMAIL || "noreply@qashivo.com"}>`,
+          subject: `You've been invited to join ${partnerDisplayName} on Qashivo`,
+          html: `
+            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+              <h2 style="color: #1a1918; font-size: 20px; margin-bottom: 16px;">You're invited to join ${partnerDisplayName}</h2>
+              <p style="color: #57534e; font-size: 15px; line-height: 1.6;">
+                ${firstName ? `Hi ${firstName}, ` : ""}${user.firstName || "A team member"} has invited you to join ${partnerDisplayName} on Qashivo as ${role === "partner" ? "an Admin" : "a Credit Controller"}.
+              </p>
+              <p style="color: #57534e; font-size: 15px; line-height: 1.6; margin-top: 16px;">
+                Sign in at <a href="${process.env.APP_URL || "https://qashivo.com"}/partner/login" style="color: #17B6C3;">${process.env.APP_URL || "https://qashivo.com"}/partner/login</a> to get started.
+              </p>
+              <p style="color: #78716c; font-size: 13px; margin-top: 24px;">
+                This invitation expires in 7 days.
+              </p>
+            </div>`,
+        });
+      } catch (emailErr) {
+        console.error("Failed to send staff invite email:", emailErr);
+      }
+
+      res.status(201).json({
+        userId: newUser.id,
+        email,
+        message: "Invitation sent",
+      });
+    } catch (error) {
+      console.error("POST /api/partner/team/invite error:", error);
+      res.status(500).json({ message: "Failed to invite team member" });
+    }
+  });
+
+  // GET /api/partner/team/:userId — staff detail + assigned client AR stats
+  app.get("/api/partner/team/:userId", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      if (!user?.partnerId) {
+        return res.status(403).json({ message: "Not a partner user" });
+      }
+
+      const [member] = await db
+        .select()
+        .from(users)
+        .where(and(eq(users.id, req.params.userId), eq(users.partnerId, user.partnerId)))
+        .limit(1);
+
+      if (!member) {
+        return res.status(404).json({ message: "Team member not found" });
+      }
+
+      // Get assigned tenants
+      const isAdmin = member.role === "partner";
+      let assignedTenantIds: string[];
+
+      if (isAdmin) {
+        assignedTenantIds = await getPartnerTenantIds(user.partnerId);
+      } else {
+        assignedTenantIds = await getUserAssignedTenantIds(member.id);
+      }
+
+      // AR metrics
+      const metrics = await computeARMetrics(assignedTenantIds);
+
+      // Get tenant details for assigned clients
+      let assignedClients: any[] = [];
+      if (assignedTenantIds.length > 0) {
+        const tenantRows = await db
+          .select()
+          .from(tenants)
+          .where(inArray(tenants.id, assignedTenantIds));
+
+        // Per-tenant outstanding/overdue
+        const now = new Date();
+        for (const t of tenantRows) {
+          const [inv] = await db
+            .select({
+              outstanding: sql<string>`COALESCE(SUM(CAST(${invoices.amount} AS DECIMAL) - CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL)), 0)`,
+              overdue: sql<string>`COALESCE(SUM(CASE WHEN ${invoices.dueDate} < ${now} THEN CAST(${invoices.amount} AS DECIMAL) - CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL) ELSE 0 END), 0)`,
+            })
+            .from(invoices)
+            .where(and(
+              eq(invoices.tenantId, t.id),
+              sql`${invoices.status} NOT IN ('paid', 'void', 'voided', 'deleted', 'draft')`,
+            ));
+
+          assignedClients.push({
+            tenantId: t.id,
+            name: t.xeroOrganisationName || t.name,
+            outstanding: parseFloat(inv?.outstanding || "0"),
+            overdue: parseFloat(inv?.overdue || "0"),
+          });
+        }
+      }
+
+      res.json({
+        member: {
+          id: member.id,
+          email: member.email,
+          firstName: member.firstName,
+          lastName: member.lastName,
+          role: member.role,
+          status: member.status,
+          createdAt: member.createdAt,
+          lastActiveAt: member.lastActiveAt,
+        },
+        metrics: {
+          clientCount: assignedTenantIds.length,
+          totalAR: metrics.totalAR,
+          totalOverdue: metrics.totalOverdue,
+          avgDSO: metrics.avgDSO,
+        },
+        assignedClients,
+      });
+    } catch (error) {
+      console.error("GET /api/partner/team/:userId error:", error);
+      res.status(500).json({ message: "Failed to load team member" });
+    }
+  });
+
+  // PATCH /api/partner/team/:userId — update role or status
+  const staffUpdateSchema = z.object({
+    role: z.enum(["partner", "user"]).optional(),
+    status: z.enum(["active", "invited", "removed"]).optional(),
+  });
+
+  app.patch("/api/partner/team/:userId", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      if (!user?.partnerId) {
+        return res.status(403).json({ message: "Not a partner user" });
+      }
+      if (user.role !== "partner") {
+        return res.status(403).json({ message: "Only admins can update team members" });
+      }
+
+      const parsed = staffUpdateSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid request", errors: parsed.error.flatten() });
+      }
+
+      const [member] = await db
+        .select()
+        .from(users)
+        .where(and(eq(users.id, req.params.userId), eq(users.partnerId, user.partnerId)))
+        .limit(1);
+
+      if (!member) {
+        return res.status(404).json({ message: "Team member not found" });
+      }
+
+      const updates: Record<string, any> = { updatedAt: new Date() };
+      if (parsed.data.role) updates.role = parsed.data.role;
+      if (parsed.data.status) updates.status = parsed.data.status;
+
+      await db.update(users).set(updates).where(eq(users.id, member.id));
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("PATCH /api/partner/team/:userId error:", error);
+      res.status(500).json({ message: "Failed to update team member" });
+    }
+  });
+
+  // PUT /api/partner/team/:userId/assignments — full-replace client assignments
+  const assignmentsSchema = z.object({
+    tenantIds: z.array(z.string()),
+  });
+
+  app.put("/api/partner/team/:userId/assignments", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      if (!user?.partnerId) {
+        return res.status(403).json({ message: "Not a partner user" });
+      }
+      if (user.role !== "partner") {
+        return res.status(403).json({ message: "Only admins can manage assignments" });
+      }
+
+      const parsed = assignmentsSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid request", errors: parsed.error.flatten() });
+      }
+
+      const { tenantIds } = parsed.data;
+      const targetUserId = req.params.userId;
+
+      // Verify member belongs to this partner
+      const [member] = await db
+        .select()
+        .from(users)
+        .where(and(eq(users.id, targetUserId), eq(users.partnerId, user.partnerId)))
+        .limit(1);
+
+      if (!member) {
+        return res.status(404).json({ message: "Team member not found" });
+      }
+
+      // Verify all tenantIds belong to this partner
+      const validTenantIds = await getPartnerTenantIds(user.partnerId);
+      const filteredIds = tenantIds.filter(id => validTenantIds.includes(id));
+
+      // Get current assignments
+      const currentAssignments = await db
+        .select()
+        .from(partnerClientRelationships)
+        .where(and(eq(partnerClientRelationships.partnerUserId, targetUserId), eq(partnerClientRelationships.status, "active")));
+
+      const currentTenantIds = currentAssignments.map(r => r.clientTenantId);
+
+      // Terminate relationships not in new list
+      const toTerminate = currentTenantIds.filter(id => !filteredIds.includes(id));
+      if (toTerminate.length > 0) {
+        await db
+          .update(partnerClientRelationships)
+          .set({ status: "terminated", terminatedAt: new Date(), terminatedBy: user.id, terminationReason: "reassignment" })
+          .where(and(
+            eq(partnerClientRelationships.partnerUserId, targetUserId),
+            inArray(partnerClientRelationships.clientTenantId, toTerminate),
+            eq(partnerClientRelationships.status, "active"),
+          ));
+      }
+
+      // Create new assignments
+      const toCreate = filteredIds.filter(id => !currentTenantIds.includes(id));
+      for (const tenantId of toCreate) {
+        await db.insert(partnerClientRelationships).values({
+          partnerUserId: targetUserId,
+          partnerTenantId: tenantId,
+          clientTenantId: tenantId,
+          status: "active",
+          accessLevel: "full",
+          establishedBy: "direct_assignment",
+        }).onConflictDoNothing();
+      }
+
+      res.json({ success: true, assignedCount: filteredIds.length });
+    } catch (error) {
+      console.error("PUT /api/partner/team/:userId/assignments error:", error);
+      res.status(500).json({ message: "Failed to update assignments" });
+    }
+  });
+
+  // DELETE /api/partner/team/:userId — soft-delete
+  app.delete("/api/partner/team/:userId", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      if (!user?.partnerId) {
+        return res.status(403).json({ message: "Not a partner user" });
+      }
+      if (user.role !== "partner") {
+        return res.status(403).json({ message: "Only admins can remove team members" });
+      }
+
+      if (req.params.userId === user.id) {
+        return res.status(400).json({ message: "You cannot remove yourself" });
+      }
+
+      const [member] = await db
+        .select()
+        .from(users)
+        .where(and(eq(users.id, req.params.userId), eq(users.partnerId, user.partnerId)))
+        .limit(1);
+
+      if (!member) {
+        return res.status(404).json({ message: "Team member not found" });
+      }
+
+      // Soft-delete user
+      await db.update(users).set({
+        status: "removed",
+        removedAt: new Date(),
+        removedBy: user.id,
+        updatedAt: new Date(),
+      }).where(eq(users.id, member.id));
+
+      // Terminate all client relationships
+      await db
+        .update(partnerClientRelationships)
+        .set({ status: "terminated", terminatedAt: new Date(), terminatedBy: user.id, terminationReason: "member_removed" })
+        .where(and(eq(partnerClientRelationships.partnerUserId, member.id), eq(partnerClientRelationships.status, "active")));
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("DELETE /api/partner/team/:userId error:", error);
+      res.status(500).json({ message: "Failed to remove team member" });
+    }
+  });
+
+  // POST /api/partner/team/invitations/:id/resend — reset expiry + re-send email
+  app.post("/api/partner/team/invitations/:id/resend", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      if (!user?.partnerId) {
+        return res.status(403).json({ message: "Not a partner user" });
+      }
+      if (user.role !== "partner") {
+        return res.status(403).json({ message: "Only admins can resend invitations" });
+      }
+
+      const [invitation] = await db
+        .select()
+        .from(partnerStaffInvitations)
+        .where(and(eq(partnerStaffInvitations.id, req.params.id), eq(partnerStaffInvitations.partnerId, user.partnerId)))
+        .limit(1);
+
+      if (!invitation) {
+        return res.status(404).json({ message: "Invitation not found" });
+      }
+
+      if (invitation.status !== "pending" && invitation.status !== "expired") {
+        return res.status(400).json({ message: "Can only resend pending or expired invitations" });
+      }
+
+      const newExpiry = new Date();
+      newExpiry.setDate(newExpiry.getDate() + 7);
+
+      await db.update(partnerStaffInvitations).set({
+        status: "pending",
+        expiresAt: newExpiry,
+      }).where(eq(partnerStaffInvitations.id, invitation.id));
+
+      // Re-send email
+      const [partner] = await db.select().from(partners).where(eq(partners.id, user.partnerId)).limit(1);
+      const partnerDisplayName = partner?.brandName || partner?.name || "Your firm";
+
+      try {
+        await sendEmail({
+          to: invitation.email,
+          from: `${partner?.emailFromName || partnerDisplayName} <${partner?.emailReplyTo || process.env.SENDGRID_FROM_EMAIL || "noreply@qashivo.com"}>`,
+          subject: `Reminder: You've been invited to join ${partnerDisplayName} on Qashivo`,
+          html: `
+            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+              <h2 style="color: #1a1918; font-size: 20px; margin-bottom: 16px;">Invitation reminder</h2>
+              <p style="color: #57534e; font-size: 15px; line-height: 1.6;">
+                ${invitation.firstName ? `Hi ${invitation.firstName}, ` : ""}You were invited to join ${partnerDisplayName} on Qashivo as ${invitation.role === "partner" ? "an Admin" : "a Credit Controller"}.
+              </p>
+              <p style="color: #57534e; font-size: 15px; line-height: 1.6; margin-top: 16px;">
+                Sign in at <a href="${process.env.APP_URL || "https://qashivo.com"}/partner/login" style="color: #17B6C3;">${process.env.APP_URL || "https://qashivo.com"}/partner/login</a> to get started.
+              </p>
+              <p style="color: #78716c; font-size: 13px; margin-top: 24px;">
+                This invitation expires in 7 days.
+              </p>
+            </div>`,
+        });
+      } catch (emailErr) {
+        console.error("Failed to resend staff invite email:", emailErr);
+      }
+
+      res.json({ success: true, message: "Invitation resent" });
+    } catch (error) {
+      console.error("POST /api/partner/team/invitations/:id/resend error:", error);
+      res.status(500).json({ message: "Failed to resend invitation" });
+    }
+  });
+
+  // DELETE /api/partner/team/invitations/:id — revoke invitation
+  app.delete("/api/partner/team/invitations/:id", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      if (!user?.partnerId) {
+        return res.status(403).json({ message: "Not a partner user" });
+      }
+      if (user.role !== "partner") {
+        return res.status(403).json({ message: "Only admins can revoke invitations" });
+      }
+
+      const [invitation] = await db
+        .select()
+        .from(partnerStaffInvitations)
+        .where(and(eq(partnerStaffInvitations.id, req.params.id), eq(partnerStaffInvitations.partnerId, user.partnerId)))
+        .limit(1);
+
+      if (!invitation) {
+        return res.status(404).json({ message: "Invitation not found" });
+      }
+
+      await db.update(partnerStaffInvitations).set({
+        status: "revoked",
+        revokedAt: new Date(),
+      }).where(eq(partnerStaffInvitations.id, invitation.id));
+
+      // Also remove the invited user if they haven't accepted yet
+      await db
+        .update(users)
+        .set({ status: "removed", removedAt: new Date(), removedBy: user.id })
+        .where(and(eq(users.email, invitation.email), eq(users.status, "invited"), eq(users.partnerId, user.partnerId)));
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("DELETE /api/partner/team/invitations/:id error:", error);
+      res.status(500).json({ message: "Failed to revoke invitation" });
+    }
+  });
+
+  // GET /api/partner/team/:userId/activity — timeline events across assigned tenants
+  app.get("/api/partner/team/:userId/activity", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      if (!user?.partnerId) {
+        return res.status(403).json({ message: "Not a partner user" });
+      }
+
+      const [member] = await db
+        .select()
+        .from(users)
+        .where(and(eq(users.id, req.params.userId), eq(users.partnerId, user.partnerId)))
+        .limit(1);
+
+      if (!member) {
+        return res.status(404).json({ message: "Team member not found" });
+      }
+
+      const isAdmin = member.role === "partner";
+      const tenantIds = isAdmin
+        ? await getPartnerTenantIds(user.partnerId)
+        : await getUserAssignedTenantIds(member.id);
+
+      if (tenantIds.length === 0) {
+        return res.json({ events: [] });
+      }
+
+      const events = await db
+        .select()
+        .from(timelineEvents)
+        .where(inArray(timelineEvents.tenantId, tenantIds))
+        .orderBy(desc(timelineEvents.createdAt))
+        .limit(50);
+
+      res.json({
+        events: events.map(e => ({
+          id: e.id,
+          tenantId: e.tenantId,
+          channel: e.channel,
+          direction: e.direction,
+          summary: e.summary,
+          preview: e.preview,
+          createdAt: e.createdAt,
+        })),
+      });
+    } catch (error) {
+      console.error("GET /api/partner/team/:userId/activity error:", error);
+      res.status(500).json({ message: "Failed to load activity" });
     }
   });
 }
