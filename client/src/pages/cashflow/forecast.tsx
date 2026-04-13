@@ -979,7 +979,7 @@ export default function ForecastPage() {
 
         return (
           <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-lg mt-3 overflow-hidden">
-            {/* Header: week label + scenario totals + close button */}
+            {/* Header: week label + close button */}
             <div className="px-5 pt-4 pb-2 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <h3 className="text-[15px] font-semibold text-[var(--q-text-primary)]">
@@ -991,101 +991,91 @@ export default function ForecastPage() {
                   </QBadge>
                 )}
               </div>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-4 text-[14px] font-mono tabular-nums">
-                  <span className="text-[var(--q-risk-text)]">{fmt(Math.round(grandPes))}</span>
-                  <span className="text-[var(--q-info-text)] font-medium">{fmt(Math.round(grandExp))}</span>
-                  <span className="text-[var(--q-money-in-text)]">{fmt(Math.round(grandOpt))}</span>
-                </div>
-                <button
-                  onClick={() => setExpandedWeekIndex(null)}
-                  className="text-[var(--q-text-tertiary)] hover:text-[var(--q-text-primary)] transition-colors ml-2"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
+              <button
+                onClick={() => setExpandedWeekIndex(null)}
+                className="text-[var(--q-text-tertiary)] hover:text-[var(--q-text-primary)] transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
-            {/* Summary: Total + Pipeline + AR */}
-            <div className="px-5 pb-3">
-              {/* Total row — hero position */}
-              <div className="bg-[var(--q-bg-surface-alt)] rounded-md px-5 py-3 flex items-center justify-between mb-2">
-                <span className="text-[15px] font-semibold text-[var(--q-text-primary)]">Total</span>
-                <div className="flex items-center gap-6 text-[14px] font-mono font-medium tabular-nums">
-                  <span className="text-[var(--q-risk-text)]">{fmt(Math.round(grandPes))}</span>
-                  <span className="text-[var(--q-info-text)]">{fmt(Math.round(grandExp))}</span>
-                  <span className="text-[var(--q-money-in-text)]">{fmt(Math.round(grandOpt))}</span>
-                </div>
-              </div>
+            {/* Single table: summary rows + invoice rows share one colgroup */}
+            <table className="w-full border-collapse table-fixed">
+              <colgroup>
+                <col className="w-[100px]" />
+                <col />
+                <col className="w-[110px]" />
+                <col className="w-[140px]" />
+                <col className="w-[140px]" />
+                <col className="w-[140px]" />
+              </colgroup>
 
-              {/* Breakdown rows — indented components of total */}
-              {hasPipeline && (
-                <div className="pl-8 flex items-center justify-between py-1">
-                  <span className="text-[14px] font-medium text-[var(--q-text-secondary)]">Pipeline</span>
-                  <div className="flex items-center gap-6 text-[14px] font-mono tabular-nums">
-                    <span className="text-[var(--q-risk-text)]">{fmt(Math.round(sb.pipelinePessimistic ?? sb.pipeline))}</span>
-                    <span className="text-[var(--q-info-text)]">{fmt(Math.round(sb.pipeline))}</span>
-                    <span className="text-[var(--q-money-in-text)]">{fmt(Math.round(sb.pipelineOptimistic ?? sb.pipeline))}</span>
-                  </div>
-                </div>
-              )}
-              {hasRecurring && (
-                <div className="pl-8 flex items-center justify-between py-1">
-                  <span className="text-[14px] font-medium text-[var(--q-text-secondary)]">Recurring revenue</span>
-                  <div className="flex items-center gap-6 text-[14px] font-mono tabular-nums">
-                    <span className="text-[var(--q-risk-text)]">{fmt(Math.round(sb.recurringRevenuePessimistic ?? sb.recurringRevenue))}</span>
-                    <span className="text-[var(--q-info-text)]">{fmt(Math.round(sb.recurringRevenue))}</span>
-                    <span className="text-[var(--q-money-in-text)]">{fmt(Math.round(sb.recurringRevenueOptimistic ?? sb.recurringRevenue))}</span>
-                  </div>
-                </div>
-              )}
-              <div className="pl-8 flex items-center justify-between py-1">
-                <span className="text-[14px] font-medium text-[var(--q-text-secondary)]">AR collections</span>
-                <div className="flex items-center gap-6 text-[14px] font-mono tabular-nums">
-                  <span className="text-[var(--q-risk-text)]">{fmt(Math.round(sb.arCollectionsPessimistic ?? sb.arCollections))}</span>
-                  <span className="text-[var(--q-info-text)]">{fmt(Math.round(sb.arCollections))}</span>
-                  <span className="text-[var(--q-money-in-text)]">{fmt(Math.round(sb.arCollectionsOptimistic ?? sb.arCollections))}</span>
-                </div>
-              </div>
-            </div>
+              {/* Summary rows */}
+              <tbody>
+                <tr className="bg-[var(--q-bg-surface-alt)]">
+                  <td colSpan={3} className="px-5 py-3 text-[15px] font-semibold text-[var(--q-text-primary)]">Total</td>
+                  <td className="px-3 py-3 text-right font-mono font-medium tabular-nums text-[14px] text-[var(--q-risk-text)]">{fmt(Math.round(grandPes))}</td>
+                  <td className="px-3 py-3 text-right font-mono font-medium tabular-nums text-[14px] text-[var(--q-info-text)]">{fmt(Math.round(grandExp))}</td>
+                  <td className="px-3 py-3 pr-5 text-right font-mono font-medium tabular-nums text-[14px] text-[var(--q-money-in-text)]">{fmt(Math.round(grandOpt))}</td>
+                </tr>
+                {hasPipeline && (
+                  <tr>
+                    <td colSpan={3} className="pl-8 py-2 text-[14px] font-medium text-[var(--q-text-secondary)]">Pipeline</td>
+                    <td className="px-3 py-2 text-right font-mono tabular-nums text-[14px] text-[var(--q-risk-text)]">{fmt(Math.round(sb.pipelinePessimistic ?? sb.pipeline))}</td>
+                    <td className="px-3 py-2 text-right font-mono tabular-nums text-[14px] text-[var(--q-info-text)]">{fmt(Math.round(sb.pipeline))}</td>
+                    <td className="px-3 py-2 pr-5 text-right font-mono tabular-nums text-[14px] text-[var(--q-money-in-text)]">{fmt(Math.round(sb.pipelineOptimistic ?? sb.pipeline))}</td>
+                  </tr>
+                )}
+                {hasRecurring && (
+                  <tr>
+                    <td colSpan={3} className="pl-8 py-2 text-[14px] font-medium text-[var(--q-text-secondary)]">Recurring revenue</td>
+                    <td className="px-3 py-2 text-right font-mono tabular-nums text-[14px] text-[var(--q-risk-text)]">{fmt(Math.round(sb.recurringRevenuePessimistic ?? sb.recurringRevenue))}</td>
+                    <td className="px-3 py-2 text-right font-mono tabular-nums text-[14px] text-[var(--q-info-text)]">{fmt(Math.round(sb.recurringRevenue))}</td>
+                    <td className="px-3 py-2 pr-5 text-right font-mono tabular-nums text-[14px] text-[var(--q-money-in-text)]">{fmt(Math.round(sb.recurringRevenueOptimistic ?? sb.recurringRevenue))}</td>
+                  </tr>
+                )}
+                <tr className="border-b-2 border-[var(--q-border-default)]">
+                  <td colSpan={3} className="pl-8 py-2 text-[14px] font-medium text-[var(--q-text-secondary)]">AR collections</td>
+                  <td className="px-3 py-2 text-right font-mono tabular-nums text-[14px] text-[var(--q-risk-text)]">{fmt(Math.round(sb.arCollectionsPessimistic ?? sb.arCollections))}</td>
+                  <td className="px-3 py-2 text-right font-mono tabular-nums text-[14px] text-[var(--q-info-text)]">{fmt(Math.round(sb.arCollections))}</td>
+                  <td className="px-3 py-2 pr-5 text-right font-mono tabular-nums text-[14px] text-[var(--q-money-in-text)]">{fmt(Math.round(sb.arCollectionsOptimistic ?? sb.arCollections))}</td>
+                </tr>
+              </tbody>
 
-            {/* Separator */}
-            <div className="border-t-2 border-[var(--q-border-default)] my-3" />
+              {totalInvoices === 0 ? (
+                <tbody>
+                  <tr>
+                    <td colSpan={6} className="text-[14px] text-[var(--q-text-tertiary)] py-6 text-center">
+                      No invoices expected this week
+                    </td>
+                  </tr>
+                </tbody>
+              ) : (
+                <>
+                  {/* Invoices section label */}
+                  <tbody>
+                    <tr>
+                      <td colSpan={6} className="px-5 pt-3 pb-1">
+                        <span className="text-[11px] font-medium text-[var(--q-text-tertiary)] uppercase tracking-[0.5px]">
+                          Invoices
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
 
-            {/* Invoice section */}
-            {totalInvoices === 0 ? (
-              <p className="text-[14px] text-[var(--q-text-tertiary)] py-6 text-center">
-                No invoices expected this week
-              </p>
-            ) : (
-              <>
-                {/* Section label */}
-                <div className="px-5 pb-1">
-                  <p className="text-[11px] font-medium text-[var(--q-text-tertiary)] uppercase tracking-[0.5px]">
-                    Invoices
-                  </p>
-                </div>
-
-                {/* Invoice table — fixed column widths */}
-                <table className="w-full border-collapse table-fixed">
-                  <colgroup>
-                    <col className="w-[100px]" />
-                    <col />
-                    <col className="w-[110px]" />
-                    <col className="w-[140px]" />
-                    <col className="w-[140px]" />
-                    <col className="w-[140px]" />
-                  </colgroup>
+                  {/* Column headers */}
                   <thead>
                     <tr className="border-b border-[var(--q-border-default)]">
-                      <th className="text-left text-[11px] font-medium tracking-[0.3px] h-12 pl-5 pr-3 text-[var(--q-text-tertiary)]">Invoice #</th>
-                      <th className="text-left text-[11px] font-medium tracking-[0.3px] h-12 px-3 text-[var(--q-text-tertiary)]">Debtor</th>
-                      <th className="text-right text-[11px] font-medium tracking-[0.3px] h-12 px-3 text-[var(--q-text-tertiary)]">Amount due</th>
-                      <th className="text-right text-[11px] font-medium tracking-[0.3px] h-12 px-3 text-[var(--q-risk-text)]">Pessimistic</th>
-                      <th className="text-right text-[11px] font-medium tracking-[0.3px] h-12 px-3 text-[var(--q-info-text)]">Expected</th>
-                      <th className="text-right text-[11px] font-medium tracking-[0.3px] h-12 px-3 pr-5 text-[var(--q-money-in-text)]">Optimistic</th>
+                      <th className="text-left text-[11px] font-medium tracking-[0.3px] h-10 pl-5 pr-3 text-[var(--q-text-tertiary)]">Invoice #</th>
+                      <th className="text-left text-[11px] font-medium tracking-[0.3px] h-10 px-3 text-[var(--q-text-tertiary)]">Debtor</th>
+                      <th className="text-right text-[11px] font-medium tracking-[0.3px] h-10 px-3 text-[var(--q-text-tertiary)]">Amount due</th>
+                      <th className="text-right text-[11px] font-medium tracking-[0.3px] h-10 px-3 text-[var(--q-risk-text)]">Pessimistic</th>
+                      <th className="text-right text-[11px] font-medium tracking-[0.3px] h-10 px-3 text-[var(--q-info-text)]">Expected</th>
+                      <th className="text-right text-[11px] font-medium tracking-[0.3px] h-10 px-3 pr-5 text-[var(--q-money-in-text)]">Optimistic</th>
                     </tr>
                   </thead>
+
+                  {/* Invoice rows */}
                   <tbody>
                     {pagedInvoices.map((inv) => {
                       const pesAmt = inv.amountDue * (inv.pessimisticProbability ?? inv.probability);
@@ -1099,9 +1089,9 @@ export default function ForecastPage() {
                         : null;
 
                       return (
-                        <tr key={inv.invoiceId} className="h-12 border-b border-[var(--q-border-default)] last:border-0 hover:bg-[var(--q-bg-surface-hover)] transition-colors">
-                          <td className="px-3 py-3 pl-5 text-[14px] tabular-nums text-[var(--q-text-secondary)]">{inv.invoiceNumber}</td>
-                          <td className="px-3 py-3 text-[14px] text-[var(--q-text-secondary)] overflow-hidden text-ellipsis whitespace-nowrap">
+                        <tr key={inv.invoiceId} className="border-b border-[var(--q-border-default)] last:border-0 hover:bg-[var(--q-bg-surface-hover)] transition-colors">
+                          <td className="px-3 py-2 pl-5 text-[14px] tabular-nums text-[var(--q-text-secondary)]">{inv.invoiceNumber}</td>
+                          <td className="px-3 py-2 text-[14px] text-[var(--q-text-secondary)] overflow-hidden text-ellipsis whitespace-nowrap">
                             {inv.contactName}
                             {inv.promiseOverride && (
                               <span className="ml-1 text-[var(--q-attention-text)]" title={promiseDate ? `Promise: ${promiseDate}` : "Promise override"}>
@@ -1109,53 +1099,56 @@ export default function ForecastPage() {
                               </span>
                             )}
                           </td>
-                          <td className="px-3 py-3 text-right text-[14px] font-mono tabular-nums text-[var(--q-text-secondary)]">{fmt(Math.round(inv.amountDue))}</td>
-                          <td className="px-3 py-3 text-right text-[14px] font-mono tabular-nums text-[var(--q-risk-text)]">
-                            {fmt(Math.round(pesAmt))} <span className="text-[var(--q-text-tertiary)]">({fmtPct(pesP)})</span>
+                          <td className="px-3 py-2 text-right text-[14px] font-mono tabular-nums text-[var(--q-text-secondary)]">{fmt(Math.round(inv.amountDue))}</td>
+                          <td className="px-3 py-2 text-right">
+                            <div className="font-mono tabular-nums text-[14px] text-[var(--q-risk-text)]">{fmt(Math.round(pesAmt))}</div>
+                            <div className="font-mono tabular-nums text-[12px] text-[var(--q-text-tertiary)]">({fmtPct(pesP)})</div>
                           </td>
-                          <td className="px-3 py-3 text-right text-[14px] font-mono tabular-nums text-[var(--q-info-text)]">
-                            {fmt(Math.round(expAmt))} <span className="text-[var(--q-text-tertiary)]">({fmtPct(expP)})</span>
+                          <td className="px-3 py-2 text-right">
+                            <div className="font-mono tabular-nums text-[14px] text-[var(--q-info-text)]">{fmt(Math.round(expAmt))}</div>
+                            <div className="font-mono tabular-nums text-[12px] text-[var(--q-text-tertiary)]">({fmtPct(expP)})</div>
                           </td>
-                          <td className="px-3 py-3 pr-5 text-right text-[14px] font-mono tabular-nums text-[var(--q-money-in-text)]">
-                            {fmt(Math.round(optAmt))} <span className="text-[var(--q-text-tertiary)]">({fmtPct(optP)})</span>
+                          <td className="px-3 py-2 pr-5 text-right">
+                            <div className="font-mono tabular-nums text-[14px] text-[var(--q-money-in-text)]">{fmt(Math.round(optAmt))}</div>
+                            <div className="font-mono tabular-nums text-[12px] text-[var(--q-text-tertiary)]">({fmtPct(optP)})</div>
                           </td>
                         </tr>
                       );
                     })}
                   </tbody>
-                </table>
+                </>
+              )}
+            </table>
 
-                {/* Pagination */}
-                {totalInvoices > PAGE_SIZE && (
-                  <div className="px-5 py-3 border-t border-[var(--q-border-default)] flex items-center justify-between">
-                    <span className="text-[13px] text-[var(--q-text-tertiary)]">
-                      Showing {showStart}–{showEnd} of {totalInvoices} invoices
-                    </span>
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => setInvoicePage(p => p - 1)}
-                        disabled={invoicePage === 0}
-                        className={invoicePage === 0
-                          ? "text-[14px] text-[var(--q-text-muted)] cursor-not-allowed"
-                          : "text-[14px] text-[var(--q-accent)] hover:underline"
-                        }
-                      >
-                        ← Previous
-                      </button>
-                      <button
-                        onClick={() => setInvoicePage(p => p + 1)}
-                        disabled={isLastPage}
-                        className={isLastPage
-                          ? "text-[14px] text-[var(--q-text-muted)] cursor-not-allowed"
-                          : "text-[14px] text-[var(--q-accent)] hover:underline"
-                        }
-                      >
-                        Next →
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </>
+            {/* Pagination */}
+            {totalInvoices > PAGE_SIZE && (
+              <div className="px-5 py-3 border-t border-[var(--q-border-default)] flex items-center justify-between">
+                <span className="text-[13px] text-[var(--q-text-tertiary)]">
+                  Showing {showStart}–{showEnd} of {totalInvoices} invoices
+                </span>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setInvoicePage(p => p - 1)}
+                    disabled={invoicePage === 0}
+                    className={invoicePage === 0
+                      ? "text-[14px] text-[var(--q-text-muted)] cursor-not-allowed"
+                      : "text-[14px] text-[var(--q-accent)] hover:underline"
+                    }
+                  >
+                    ← Previous
+                  </button>
+                  <button
+                    onClick={() => setInvoicePage(p => p + 1)}
+                    disabled={isLastPage}
+                    className={isLastPage
+                      ? "text-[14px] text-[var(--q-text-muted)] cursor-not-allowed"
+                      : "text-[14px] text-[var(--q-accent)] hover:underline"
+                    }
+                  >
+                    Next →
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         );
