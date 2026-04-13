@@ -160,10 +160,16 @@ export function clearBriefCache(): void {
  *   this from any caller that has already determined which invoices the
  *   current action will chase (e.g. collectionsAgent with action.invoiceIds).
  */
+export interface GroupBriefContext {
+  groupName: string;
+  memberCompanyNames: string[];
+}
+
 export async function buildConversationBrief(
   tenantId: string,
   contactId: string,
   chaseContext?: ChaseContext,
+  groupContext?: GroupBriefContext,
 ): Promise<ConversationBrief> {
   // Cache key includes chase context so different bundles don't collide
   const cacheKey = chaseContext
@@ -263,7 +269,7 @@ export async function buildConversationBrief(
     }
   } catch { /* non-fatal — forecast section omitted if service fails */ }
 
-  let text = formatBriefText(data, contact, prefs, intel, chaseContext);
+  let text = formatBriefText(data, contact, prefs, intel, chaseContext, groupContext);
 
   // Token guard rail — collapse history to 8 entries if over budget.
   // Rough char/token ratio (~4 chars/token) is good enough for a guard;
@@ -688,12 +694,21 @@ function formatBriefText(
   prefs?: any,
   intel?: any,
   chaseContext?: ChaseContext,
+  groupContext?: GroupBriefContext,
 ): string {
   const lines: string[] = [];
   const name = contact?.companyName || contact?.name || 'Unknown';
 
   lines.push(`CONVERSATION BRIEF FOR ${name.toUpperCase()}`);
   lines.push('');
+
+  // Group context — prepended when this is a consolidated group action
+  if (groupContext) {
+    lines.push(`=== DEBTOR GROUP: ${groupContext.groupName} ===`);
+    lines.push(`This contact manages AP for ${groupContext.memberCompanyNames.length} related companies: ${groupContext.memberCompanyNames.join(', ')}.`);
+    lines.push('You are chasing invoices across all group members in a single communication.');
+    lines.push('');
+  }
 
   // Helper — every section always renders, falling back to "None recorded".
   const section = (heading: string, body: string[]) => {

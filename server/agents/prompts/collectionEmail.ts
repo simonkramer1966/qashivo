@@ -45,6 +45,8 @@ export interface OutstandingInvoice {
   pauseState?: "dispute" | "ptp" | "payment_plan" | null;
   lpiAmount?: number;
   lpiDays?: number;
+  /** contactId — present for group actions where invoices span multiple contacts */
+  contactId?: string;
 }
 
 export interface ConversationEntry {
@@ -171,6 +173,14 @@ export function buildSystemPrompt(
 
 // ── User prompt (per debtor, per action) ─────────────────────
 
+export interface GroupEmailContext {
+  groupId: string;
+  groupName: string;
+  memberContactIds: string[];
+  memberCompanyNames: string[];
+  companies: { companyName: string; invoices: OutstandingInvoice[] }[];
+}
+
 export function buildUserPrompt(
   debtor: DebtorProfile,
   invoices: OutstandingInvoice[],
@@ -179,6 +189,7 @@ export function buildUserPrompt(
   conversationBrief?: string,
   isSmallBalance: boolean = false,
   unallocatedContext?: { hasUnallocatedPayments: boolean; netRemaining: number; unallocatedTotal: number },
+  groupContext?: GroupEmailContext,
 ): string {
   const sections: string[] = [];
 
@@ -255,6 +266,33 @@ export function buildUserPrompt(
     sections.push(`- Ask only about the net remaining balance (${formatCurrencyForPrompt(unallocatedContext.netRemaining, debtor.currency)}). Use a warm, appreciative, relationship-first tone.`);
     sections.push(`- Keep the email short — this is a thank-you and a gentle chase, not a dunning letter.`);
     sections.push("");
+  } else if (groupContext && groupContext.companies.length > 0) {
+  // GROUP ACTION: invoices from multiple companies under one AP contact
+  const chaseAmount = invoices.reduce((sum, inv) => sum + (inv.amount - inv.amountPaid), 0);
+  sections.push(`INVOICES TO CHASE IN THIS EMAIL (GROUP: ${groupContext.groupName}):`);
+  sections.push(`- You are writing to ${debtor.contactName} who manages accounts payable for ${groupContext.companies.length} companies.`);
+  sections.push(`- TOTAL AMOUNT TO DEMAND: ${formatCurrencyForPrompt(chaseAmount, debtor.currency)} (sum of all invoices across all companies below)`);
+  sections.push(`- This is the ONLY amount you should ask the debtor to pay. The subject line must reference ${formatCurrencyForPrompt(chaseAmount, debtor.currency)}.`);
+  sections.push('');
+  sections.push(`Present each company's invoices in a SEPARATE HTML table with the company name as an <h3> heading.`);
+  sections.push(`Each table must have exactly 4 columns: Invoice #, Amount, Due Date, Days Overdue.`);
+  sections.push('');
+  for (const company of groupContext.companies) {
+    sections.push(`COMPANY: ${company.companyName}`);
+    const companyTotal = company.invoices.reduce((s, inv) => s + (inv.amount - inv.amountPaid), 0);
+    sections.push(`  Subtotal: ${formatCurrencyForPrompt(companyTotal, debtor.currency)}`);
+    for (const inv of company.invoices) {
+      const balance = inv.amount - inv.amountPaid;
+      const overdueLabel = inv.daysOverdue > 0
+        ? `${inv.daysOverdue} days overdue`
+        : inv.daysOverdue === 0
+          ? "due today"
+          : `due in ${Math.abs(inv.daysOverdue)} days`;
+      const dueStr = inv.dueDate.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+      sections.push(`  | ${inv.invoiceNumber} | ${formatCurrencyForPrompt(balance, debtor.currency)} | ${dueStr} | ${overdueLabel} |`);
+    }
+    sections.push('');
+  }
   } else {
   sections.push(`INVOICES TO CHASE IN THIS EMAIL:`);
   if (invoices.length === 0) {

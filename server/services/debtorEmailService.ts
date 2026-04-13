@@ -103,6 +103,15 @@ export interface DebtorEmailRequest {
 
   /** Currency override. Falls back to debtor / tenant default. */
   currency?: string;
+
+  /** Group context — present when this action covers invoices from multiple
+   *  group members consolidated under the primary contact. */
+  groupContext?: {
+    groupId: string;
+    groupName: string;
+    memberContactIds: string[];
+    memberCompanyNames: string[];
+  };
 }
 
 export interface DebtorEmailResult {
@@ -246,6 +255,27 @@ export async function generateDebtorEmail(
     currency,
     hasUnallocatedPayments,
   );
+  // Build group invoice breakdown when this is a consolidated group action.
+  // Each company's invoices are grouped separately for the LLM prompt.
+  let groupInvoiceContext: { companyName: string; invoices: OutstandingInvoice[] }[] | undefined;
+  if (request.groupContext && chaseInvoices.length > 0) {
+    const byContactId = new Map<string, OutstandingInvoice[]>();
+    for (const inv of chaseInvoices) {
+      const cid = inv.contactId;
+      if (!byContactId.has(cid)) byContactId.set(cid, []);
+      byContactId.get(cid)!.push(inv);
+    }
+    // Look up company names for each contactId from the group metadata
+    const memberNames = request.groupContext.memberCompanyNames;
+    const memberIds = request.groupContext.memberContactIds;
+    groupInvoiceContext = [];
+    for (const [cid, invs] of byContactId) {
+      const idx = memberIds.indexOf(cid);
+      const companyName = idx >= 0 ? memberNames[idx] : 'Unknown';
+      groupInvoiceContext.push({ companyName, invoices: invs });
+    }
+  }
+
   let userPrompt = buildUserPrompt(
     debtor,
     hasUnallocatedPayments ? [] : chaseInvoices,
@@ -256,6 +286,9 @@ export async function generateDebtorEmail(
     hasUnallocatedPayments
       ? { hasUnallocatedPayments: true, netRemaining, unallocatedTotal }
       : undefined,
+    request.groupContext && groupInvoiceContext
+      ? { ...request.groupContext, companies: groupInvoiceContext }
+      : undefined,
   );
 
   // Append email-type-specific addenda the base prompt doesn't natively carry.
@@ -263,6 +296,8 @@ export async function generateDebtorEmail(
   userPrompt += buildEmailTypeAddendum(request);
 
   // 7. Call Claude (Sonnet — cost-effective, fast).
+  // Increase maxTokens for group actions (multiple invoice tables).
+  const maxTokens = request.groupContext ? 3072 : 2048;
   const result = await generateJSON<{
     subject?: string;
     body?: string;
@@ -272,7 +307,7 @@ export async function generateDebtorEmail(
     prompt: userPrompt,
     model: "standard",
     temperature: 0.4,
-    maxTokens: 2048,
+    maxTokens,
   });
 
   const subject = result.subject || "Payment Reminder";
@@ -626,11 +661,14 @@ async function loadChaseInvoices(
     return [];
   }
 
-  const baseConditions = [
-    eq(invoices.tenantId, tenantId),
-    eq(invoices.contactId, contactId),
-  ];
-
+  // When actionInvoiceIds are explicitly provided, invoice IDs are the source
+  // of truth — skip the contactId filter so group-consolidated actions can load
+  // invoices belonging to other contacts in the same debtor group.
+  // tenantId still enforces multi-tenant isolation.
+  const baseConditions = [eq(invoices.tenantId, tenantId)];
+  if (!actionInvoiceIds || actionInvoiceIds.length === 0) {
+    baseConditions.push(eq(invoices.contactId, contactId));
+  }
   if (actionInvoiceIds && actionInvoiceIds.length > 0) {
     baseConditions.push(inArray(invoices.id, actionInvoiceIds));
   }
@@ -695,6 +733,7 @@ async function loadChaseInvoices(
           "pre_due",
         pauseState:
           (inv.pauseState as OutstandingInvoice["pauseState"]) || null,
+        contactId: inv.contactId ?? undefined,
       };
     });
 }

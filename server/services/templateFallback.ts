@@ -81,6 +81,15 @@ const SMS_TEMPLATES: Record<string, string> = {
   legal: `Hi {{contactName}}, we've sent an email regarding outstanding invoices on your account. We'd appreciate your response. Thanks, {{agentName}}`,
 };
 
+// Group-aware SMS templates — used when the contact manages AP for multiple companies
+const SMS_GROUP_TEMPLATES: Record<string, string> = {
+  friendly: `Hi {{contactName}}, just a quick note — we sent you an email about outstanding invoices across your accounts. Could you take a look? Thanks, {{agentName}}`,
+  professional: `Hi {{contactName}}, we've sent an email regarding outstanding invoices across your group. We'd appreciate your response. Thanks, {{agentName}}`,
+  firm: `Hi {{contactName}}, we've been trying to reach you by email about overdue invoices across your accounts. Please check your inbox. {{agentName}}`,
+  formal: `Hi {{contactName}}, we've sent an email regarding outstanding invoices across your group. We'd appreciate your response. Thanks, {{agentName}}`,
+  legal: `Hi {{contactName}}, we've sent an email regarding outstanding invoices across your group. We'd appreciate your response. Thanks, {{agentName}}`,
+};
+
 // ── Template Substitution ──────────────────────────────────────
 
 function substitute(template: string, ctx: TemplateContext): string {
@@ -117,6 +126,7 @@ export function getTemplateFallback(
   channel: 'email' | 'sms' | 'voice',
   toneLevel: string,
   context: TemplateContext,
+  options?: { isGroupAction?: boolean },
 ): (GeneratedMessage & { generationMethod: 'template_fallback' }) | null {
   const tone = toneLevel.toLowerCase();
 
@@ -134,7 +144,8 @@ export function getTemplateFallback(
   }
 
   if (channel === 'sms') {
-    const template = SMS_TEMPLATES[tone] || SMS_TEMPLATES.professional;
+    const templates = options?.isGroupAction ? SMS_GROUP_TEMPLATES : SMS_TEMPLATES;
+    const template = templates[tone] || templates.professional;
     // Use abbreviated creditor name for SMS length safety
     const smsContext = {
       ...context,

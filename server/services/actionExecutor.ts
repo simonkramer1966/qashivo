@@ -1,6 +1,6 @@
 import { eq, and, lte, sql, isNotNull, inArray } from "drizzle-orm";
 import { db } from "../db";
-import { actions, contacts, invoices, tenants, messageDrafts, emailMessages, timelineEvents, customerBehaviorSignals } from "@shared/schema";
+import { actions, contacts, invoices, tenants, messageDrafts, emailMessages, timelineEvents, customerBehaviorSignals, debtorGroups } from "@shared/schema";
 import { fitDistribution, estimatePaymentProbability } from "./paymentDistribution";
 import { sendEmail } from "./sendgrid";
 import { sendSMS } from "./vonage";
@@ -666,7 +666,7 @@ export class ActionExecutor {
       // Non-fatal — continue without brief
     }
 
-    return {
+    const ctx: MessageContext = {
       customerName: contact.name || 'Customer',
       companyName: contact.companyName || contact.name,
       invoiceNumber: invoice?.invoiceNumber || action.metadata?.invoiceNumber || 'N/A',
@@ -690,6 +690,17 @@ export class ActionExecutor {
       tenantEmail: tenant.email,
       conversationBrief,
     };
+
+    // Enrich with group context for consolidated group actions
+    const actionMeta = (action.metadata ?? {}) as Record<string, any>;
+    if (actionMeta.isGroupAction) {
+      (ctx as any).isGroupAction = true;
+      (ctx as any).groupName = actionMeta.groupName;
+      (ctx as any).groupMemberCount = actionMeta.memberCompanyNames?.length ?? 0;
+      (ctx as any).groupMemberCompanyNames = actionMeta.memberCompanyNames ?? [];
+    }
+
+    return ctx;
   }
 
   /**
@@ -728,7 +739,21 @@ export class ActionExecutor {
         return { success: false, error: replyResult.error || `reply status: ${replyResult.status}` };
       }
 
-      const recipientEmail = await resolvePrimaryEmail(contact.id, action.tenantId, contact.email, contact.arContactEmail);
+      let recipientEmail = await resolvePrimaryEmail(contact.id, action.tenantId, contact.email, contact.arContactEmail);
+
+      // Group action: override recipient email if the group has a primaryEmail set
+      const meta = (action.metadata ?? {}) as Record<string, any>;
+      if (meta.isGroupAction && meta.groupId) {
+        const [group] = await db
+          .select({ primaryEmail: debtorGroups.primaryEmail })
+          .from(debtorGroups)
+          .where(eq(debtorGroups.id, meta.groupId))
+          .limit(1);
+        if (group?.primaryEmail) {
+          recipientEmail = group.primaryEmail;
+        }
+      }
+
       if (!recipientEmail) {
         return { success: false, error: 'Contact has no email address' };
       }
@@ -778,6 +803,13 @@ export class ActionExecutor {
             ) || 'professional',
             sequencePosition: action.touchCount ?? undefined,
             currency: contact.preferredCurrency || undefined,
+            // Pass group context for consolidated group actions
+            groupContext: meta.isGroupAction ? {
+              groupId: meta.groupId,
+              groupName: meta.groupName,
+              memberContactIds: meta.memberContactIds ?? [],
+              memberCompanyNames: meta.memberCompanyNames ?? [],
+            } : undefined,
           });
 
           emailContent = {
@@ -797,10 +829,11 @@ export class ActionExecutor {
       const fromEmail = process.env.SENDGRID_FROM_EMAIL || 'cc@qashivo.com';
       const fromName = tenant.name ? `${tenant.name} via Qashivo` : 'Qashivo Credit Control';
 
-      // Convert LLM plain text to proper HTML email
-      const { formatEmailHtml } = await import('./emailFormatter');
-      const htmlBody = formatEmailHtml(emailContent.body);
-      const textBody = emailContent.body; // LLM output is already clean plain text
+      // Convert LLM plain text to proper HTML email with tenant footer
+      const { formatEmailHtml, buildEmailFooter, buildEmailFooterText } = await import('./emailFormatter');
+      const footerHtml = buildEmailFooter(tenant.name || 'Our company', tenant.emailFooterText);
+      const htmlBody = formatEmailHtml(emailContent.body, footerHtml);
+      const textBody = emailContent.body + buildEmailFooterText(tenant.name || 'Our company', tenant.emailFooterText);
 
       // Testing mode: prefix subject and add original recipient note
       const isTestMode = !!(contact as any)._originalEmail;
@@ -902,7 +935,21 @@ export class ActionExecutor {
     tenant: any
   ): Promise<{ success: boolean; data?: any; error?: string }> {
     try {
-      const recipientPhone = await resolvePrimarySmsNumber(contact.id, action.tenantId, contact.phone, contact.arContactPhone);
+      let recipientPhone = await resolvePrimarySmsNumber(contact.id, action.tenantId, contact.phone, contact.arContactPhone);
+
+      // Group action: override phone if the group has a primaryPhone set
+      const smsMeta = (action.metadata ?? {}) as Record<string, any>;
+      if (smsMeta.isGroupAction && smsMeta.groupId) {
+        const [group] = await db
+          .select({ primaryPhone: debtorGroups.primaryPhone })
+          .from(debtorGroups)
+          .where(eq(debtorGroups.id, smsMeta.groupId))
+          .limit(1);
+        if (group?.primaryPhone) {
+          recipientPhone = group.primaryPhone;
+        }
+      }
+
       if (!recipientPhone) {
         return { success: false, error: 'Contact has no phone number' };
       }
@@ -1073,11 +1120,31 @@ export class ActionExecutor {
       }
 
       // Use recipientPhone/recipientName from metadata if available (set by schedule-call)
-      const phoneToCall = action.metadata?.recipientPhone || contact.phone;
+      let phoneToCall = action.metadata?.recipientPhone || contact.phone;
       const nameToCall = action.metadata?.recipientName || contact.name;
+
+      // Group action: override phone if the group has a primaryPhone set
+      const voiceMeta = (action.metadata ?? {}) as Record<string, any>;
+      if (voiceMeta.isGroupAction && voiceMeta.groupId) {
+        const [group] = await db
+          .select({ primaryPhone: debtorGroups.primaryPhone })
+          .from(debtorGroups)
+          .where(eq(debtorGroups.id, voiceMeta.groupId))
+          .limit(1);
+        if (group?.primaryPhone) {
+          phoneToCall = group.primaryPhone;
+        }
+      }
 
       // Use central voice wrapper (enforces communication mode)
       const { sendVoiceCall } = await import('./communications/sendVoiceCall.js');
+
+      // Build group-aware dynamic variables for Retell
+      const groupCompanyRef = voiceMeta.isGroupAction
+        ? (voiceMeta.memberCompanyNames?.length <= 3
+          ? voiceMeta.memberCompanyNames.join(', ')
+          : `${voiceMeta.groupName} (${voiceMeta.memberCompanyNames.length} accounts)`)
+        : undefined;
 
       const result = await sendVoiceCall({
         tenantId: tenant.id,
@@ -1086,7 +1153,7 @@ export class ActionExecutor {
         agentId: agentId,
         fromNumber: process.env.RETELL_PHONE_NUMBER || '+442045772088',
         dynamicVariables: {
-          companyName: contact.companyName || contact.name,
+          companyName: groupCompanyRef || contact.companyName || contact.name,
           invoiceNumber: invoice?.invoiceNumber || 'N/A',
           amount: invoice?.amount || 'N/A',
           daysOverdue: action.metadata?.daysOverdue || 0,

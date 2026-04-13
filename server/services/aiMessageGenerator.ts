@@ -48,6 +48,11 @@ export interface MessageContext {
   tenantEmail?: string;
   /** Structured conversation brief — full debtor context for LLM */
   conversationBrief?: string;
+  /** Group consolidation fields — present for consolidated group actions */
+  isGroupAction?: boolean;
+  groupName?: string;
+  groupMemberCount?: number;
+  groupMemberCompanyNames?: string[];
 }
 
 export interface ToneSettings {
@@ -466,12 +471,17 @@ Respond with valid JSON:
     if (toneSettings.stage === 'RECOVERY') toneHint = 'firm';
     else if (context.daysOverdue > 30) toneHint = 'professional';
 
+    let groupNote = '';
+    if (context.isGroupAction && context.groupMemberCount && context.groupMemberCount > 1) {
+      groupNote = `\nCONTEXT: This is a group debtor — the contact manages AP for ${context.groupMemberCount} companies under ${context.groupName || 'their group'}. Write the SMS referencing the group — do NOT name individual companies or amounts. Direct them to check their email for the full breakdown.\n`;
+    }
+
     return `Generate a brief SMS nudge (MUST be under 160 characters):
 
 Customer first name: ${firstName}
 Agent name: ${agentName}
 Tone: ${toneHint}
-
+${groupNote}
 The SMS should ONLY tell them to check their email. Do NOT include amounts, invoice numbers, links, or phone numbers.
 
 REMEMBER: Max 160 chars. Sign off with "${agentName}".`;
@@ -519,6 +529,45 @@ Respond with valid JSON containing:
     const voiceBrief = context.conversationBrief
       ? `\nPRE-CALL BRIEFING:\n${context.conversationBrief}\nUse this briefing to inform your conversation. Reference relevant history naturally.\n`
       : '';
+
+    // Group-aware voice prompt
+    if (context.isGroupAction && context.groupMemberCompanyNames && context.groupMemberCompanyNames.length > 1) {
+      const memberNames = context.groupMemberCompanyNames;
+      const isSmallGroup = memberNames.length <= 3;
+      const companyReference = isSmallGroup
+        ? memberNames.join(', ')
+        : `your group, ${context.groupName}, covering ${memberNames.length} accounts`;
+
+      if (isSmallGroup) {
+        return `Generate a voice call script for a GROUP debtor call:
+${voiceBrief}
+Customer: ${context.customerName}
+Companies: ${companyReference}
+Total outstanding across all companies: ${currency}${context.invoiceAmount.toFixed(2)}
+
+Reference each company by name. Get payment dates for all.
+
+${context.promiseToPayMissed ? 'Note: Customer missed a confirmed payment date.' : ''}
+Caller Company: ${context.tenantName}
+Stage: ${toneSettings.stage}
+Tone: ${toneSettings.toneProfile}`;
+      } else {
+        return `Generate a voice call script for a GROUP debtor call:
+${voiceBrief}
+Customer: ${context.customerName}
+Group: ${companyReference}
+Total outstanding: ${currency}${context.invoiceAmount.toFixed(2)}
+
+You have sent a detailed email with the breakdown by company.
+Reference the email and ask when they'll be able to settle.
+If they want to go through individual companies, you have the full list and can discuss each one — but lead with the summary.
+
+${context.promiseToPayMissed ? 'Note: Customer missed a confirmed payment date.' : ''}
+Caller Company: ${context.tenantName}
+Stage: ${toneSettings.stage}
+Tone: ${toneSettings.toneProfile}`;
+      }
+    }
 
     return `Generate a voice call script for:
 ${voiceBrief}

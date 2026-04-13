@@ -160,6 +160,9 @@ export function registerActionCentreRoutes(app: Express): void {
           ? Math.max(0, Math.floor((now.getTime() - oldestDue.getTime()) / (1000 * 60 * 60 * 24)))
           : 0;
 
+        // Extract group metadata from action metadata
+        const actionMetadata = (r.action.metadata ?? {}) as Record<string, any>;
+
         return {
           ...r.action,
           contactName: r.contactName || null,
@@ -169,6 +172,11 @@ export function registerActionCentreRoutes(app: Express): void {
           priorContactCount: priorCount,
           prsScore: profile?.prs ? Number(profile.prs) : null,
           totalAmount: chaseAmount, // What Charlie is chasing in THIS action
+          // Group consolidation fields
+          isGroupAction: actionMetadata.isGroupAction ?? false,
+          groupName: actionMetadata.groupName ?? null,
+          groupMemberCount: actionMetadata.memberCompanyNames?.length ?? 0,
+          groupCompanyNames: actionMetadata.memberCompanyNames ?? [],
           accountBalance: cid ? (outstandingMap.get(cid) ?? 0) : 0, // Total outstanding (context)
           invoiceCount: bundleRows.length,
         };

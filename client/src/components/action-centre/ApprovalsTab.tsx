@@ -1232,6 +1232,11 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
                             <span className="text-[14px] font-medium text-[var(--q-text-primary)] truncate max-w-[200px]">
                               {action.companyName || action.contactName || "Unknown"}
                             </span>
+                            {action.isGroupAction && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200 whitespace-nowrap">
+                                {action.groupName || 'Group'} ({action.groupMemberCount || 0})
+                              </span>
+                            )}
                             {isConversationReply && <ReplyBadge />}
                           </div>
                           <div className="text-[12px] text-[var(--q-text-tertiary)] mt-0.5 flex items-center gap-1 ml-3">

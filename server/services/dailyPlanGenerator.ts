@@ -369,10 +369,20 @@ async function generateDailyPlanWithCharlie(
   
   console.log(`📊 Grouped ${actionableDecisions.length} decisions into ${decisionsByContact.size} contacts`);
 
+  // Group consolidation: merge decisions for debtor groups with consolidateComms=true
+  const { consolidateGroupInvoices } = await import('./groupConsolidation');
+  const { consolidated: consolidatedDecisions, groupMetadata } = await consolidateGroupInvoices(
+    tenantId,
+    decisionsByContact,
+  );
+  if (groupMetadata.size > 0) {
+    console.log(`📊 Consolidated ${groupMetadata.size} debtor group(s) — map reduced from ${decisionsByContact.size} to ${consolidatedDecisions.size} contacts`);
+  }
+
   // Batch-load conversation states for all candidate contacts.
   // States that block chasing: chase_sent, debtor_responded, conversing, promise_monitor, dispute_hold, hold
   // States that allow chasing: idle, escalated, resolved
-  const candidateContactIds = Array.from(decisionsByContact.keys());
+  const candidateContactIds = Array.from(consolidatedDecisions.keys());
   const stateMap = await bulkGetStates(tenantId, candidateContactIds);
   let conversationStateSkips = 0;
 
@@ -387,7 +397,7 @@ async function generateDailyPlanWithCharlie(
   }
 
   // Process each contact ONCE (with all their invoices consolidated)
-  for (const [contactId, contactDecisions] of decisionsByContact) {
+  for (const [contactId, contactDecisions] of consolidatedDecisions) {
     // Gate: Conversation state blocks chasing
     const convState = stateMap.get(contactId);
     if (convState && !['idle', 'escalated', 'resolved'].includes(convState.state)) {
@@ -568,6 +578,14 @@ async function generateDailyPlanWithCharlie(
           daysOverdue: d.invoice.daysOverdue,
           dueDate: d.invoice.dueDate ? new Date(d.invoice.dueDate).toISOString() : '',
         })),
+        // Group consolidation metadata
+        ...(groupMetadata.has(contactId) ? {
+          isGroupAction: true,
+          groupId: groupMetadata.get(contactId)!.groupId,
+          groupName: groupMetadata.get(contactId)!.groupName,
+          memberContactIds: groupMetadata.get(contactId)!.memberContactIds,
+          memberCompanyNames: groupMetadata.get(contactId)!.memberCompanyNames,
+        } : {}),
       },
     });
     const [newAction] = await db.select().from(actions).where(eq(actions.id, newActionId)).limit(1);

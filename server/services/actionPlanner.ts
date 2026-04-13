@@ -1082,6 +1082,16 @@ export async function planAdaptiveActions(
 
     console.log(`[PLAN] Grouped into ${invoicesByContact.size} unique contacts`);
 
+    // Group consolidation: merge invoices for debtor groups with consolidateComms=true
+    const { consolidateGroupInvoices } = await import('./groupConsolidation');
+    const { consolidated: consolidatedMap, groupMetadata } = await consolidateGroupInvoices(
+      tenantId,
+      invoicesByContact,
+    );
+    if (groupMetadata.size > 0) {
+      console.log(`[PLAN] Consolidated ${groupMetadata.size} debtor group(s) — map reduced from ${invoicesByContact.size} to ${consolidatedMap.size} contacts`);
+    }
+
     let invoicesProcessed = 0;
     let actionsCreated = 0;
     const skipped = {
@@ -1113,7 +1123,7 @@ export async function planAdaptiveActions(
     const emailCooldownDays = cooldowns.email ?? 3;
 
     // Process each contact (may have multiple invoices)
-    for (const [contactId, contactInvoices] of Array.from(invoicesByContact.entries())) {
+    for (const [contactId, contactInvoices] of Array.from(consolidatedMap.entries())) {
       const { contact, behavior } = contactInvoices[0]; // Same contact for all
 
       // Gate: Conversation state blocks chasing
@@ -1392,6 +1402,14 @@ export async function planAdaptiveActions(
               grossAmount: totalAmount.toString(),
               hasUnallocatedPayments: effectiveOverdueMap.get(contactId)?.hasUnallocatedPayments ?? false,
               unallocatedTotal: (effectiveOverdueMap.get(contactId)?.unallocatedTotal ?? 0).toString(),
+              // Group consolidation metadata
+              ...(groupMetadata.has(contactId) ? {
+                isGroupAction: true,
+                groupId: groupMetadata.get(contactId)!.groupId,
+                groupName: groupMetadata.get(contactId)!.groupName,
+                memberContactIds: groupMetadata.get(contactId)!.memberContactIds,
+                memberCompanyNames: groupMetadata.get(contactId)!.memberCompanyNames,
+              } : {}),
             },
             recommendedAt: today,
             recommendedBy: "adaptive",
@@ -1457,6 +1475,16 @@ async function enforceDebtorGroupConsistency(tenantId: string): Promise<number> 
     const todayEnd = new Date(todayStart);
     todayEnd.setDate(todayEnd.getDate() + 1);
 
+    // Skip groups with consolidateComms=true — already handled at planning time
+    const consolidatedGroupIds = await db
+      .select({ id: debtorGroups.id })
+      .from(debtorGroups)
+      .where(and(
+        eq(debtorGroups.tenantId, tenantId),
+        eq(debtorGroups.consolidateComms, true),
+      ));
+    const consolidatedIds = new Set(consolidatedGroupIds.map(g => g.id));
+
     const groupedActions = await db
       .select({
         actionId: actions.id,
@@ -1491,6 +1519,9 @@ async function enforceDebtorGroupConsistency(tenantId: string): Promise<number> 
     let totalCancelled = 0;
 
     for (const [groupId, groupActions] of Array.from(byGroup.entries())) {
+      // Skip consolidated groups — already handled at planning time
+      if (consolidatedIds.has(groupId)) continue;
+
       if (groupActions.length <= 1) {
         // Single action in group — no conflict, but still enforce tone consistency
         // (tone should match highest tone from any recent group action)

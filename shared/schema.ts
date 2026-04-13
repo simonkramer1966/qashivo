@@ -194,6 +194,10 @@ export const debtorGroups = pgTable("debtor_groups", {
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
   groupName: varchar("group_name").notNull(),
   notes: text("notes"),
+  primaryContactId: varchar("primary_contact_id").references(() => contacts.id),
+  consolidateComms: boolean("consolidate_comms").default(false),
+  primaryEmail: varchar("primary_email"),
+  primaryPhone: varchar("primary_phone"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -1982,6 +1986,10 @@ export const debtorGroupsRelations = relations(debtorGroups, ({ one, many }) => 
   tenant: one(tenants, {
     fields: [debtorGroups.tenantId],
     references: [tenants.id],
+  }),
+  primaryContact: one(contacts, {
+    fields: [debtorGroups.primaryContactId],
+    references: [contacts.id],
   }),
   contacts: many(contacts),
 }));

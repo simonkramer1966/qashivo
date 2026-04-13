@@ -18,11 +18,19 @@ const createGroupSchema = z.object({
   groupName: z.string().min(1).max(200),
   notes: z.string().optional(),
   contactIds: z.array(z.string()).optional(),
+  primaryContactId: z.string().optional(),
+  consolidateComms: z.boolean().optional(),
+  primaryEmail: z.string().email().optional().nullable(),
+  primaryPhone: z.string().optional().nullable(),
 });
 
 const updateGroupSchema = z.object({
   groupName: z.string().min(1).max(200).optional(),
   notes: z.string().optional(),
+  primaryContactId: z.string().optional().nullable(),
+  consolidateComms: z.boolean().optional(),
+  primaryEmail: z.string().email().optional().nullable(),
+  primaryPhone: z.string().optional().nullable(),
 });
 
 const addMembersSchema = z.object({
@@ -41,9 +49,13 @@ export function registerDebtorGroupRoutes(app: Express): void {
           id: debtorGroups.id,
           groupName: debtorGroups.groupName,
           notes: debtorGroups.notes,
+          primaryContactId: debtorGroups.primaryContactId,
+          consolidateComms: debtorGroups.consolidateComms,
+          primaryEmail: debtorGroups.primaryEmail,
+          primaryPhone: debtorGroups.primaryPhone,
           createdAt: debtorGroups.createdAt,
           updatedAt: debtorGroups.updatedAt,
-          memberCount: sql<number>`count(${contacts.id})`.as('member_count'),
+          memberCount: sql<number>`count(distinct ${contacts.id})`.as('member_count'),
           totalOutstanding: sql<number>`coalesce(sum(
             case when ${invoices.status} NOT IN ('paid', 'void', 'voided', 'deleted', 'draft')
             then cast(${invoices.amount} as numeric) - coalesce(cast(${invoices.amountPaid} as numeric), 0)
@@ -113,11 +125,19 @@ export function registerDebtorGroupRoutes(app: Express): void {
         return res.status(400).json({ message: 'Invalid input', errors: parsed.error.errors });
       }
 
-      const { groupName, notes, contactIds } = parsed.data;
+      const { groupName, notes, contactIds, primaryContactId, consolidateComms, primaryEmail, primaryPhone } = parsed.data;
 
       const [group] = await db
         .insert(debtorGroups)
-        .values({ tenantId, groupName, notes })
+        .values({
+          tenantId,
+          groupName,
+          notes,
+          primaryContactId: primaryContactId ?? null,
+          consolidateComms: consolidateComms ?? false,
+          primaryEmail: primaryEmail ?? null,
+          primaryPhone: primaryPhone ?? null,
+        })
         .returning();
 
       // Optionally link contacts to the new group
@@ -290,6 +310,56 @@ export function registerDebtorGroupRoutes(app: Express): void {
     } catch (error) {
       console.error('[DebtorGroups] Remove member failed:', error);
       res.status(500).json({ message: 'Failed to remove member' });
+    }
+  });
+
+  // PUT /api/debtor-groups/:id/primary-contact — set primary contact for the group
+  app.put('/api/debtor-groups/:id/primary-contact', isAuthenticated, withRBACContext, withMinimumRole('manager'), async (req: Request, res: Response) => {
+    try {
+      const tenantId = req.rbac!.tenantId;
+      const groupId = req.params.id;
+      const { contactId } = req.body;
+
+      if (!contactId || typeof contactId !== 'string') {
+        return res.status(400).json({ message: 'contactId is required' });
+      }
+
+      // Verify group belongs to tenant
+      const [group] = await db
+        .select()
+        .from(debtorGroups)
+        .where(and(eq(debtorGroups.id, groupId), eq(debtorGroups.tenantId, tenantId)))
+        .limit(1);
+
+      if (!group) {
+        return res.status(404).json({ message: 'Group not found' });
+      }
+
+      // Verify contact belongs to this group
+      const [contact] = await db
+        .select({ id: contacts.id })
+        .from(contacts)
+        .where(and(
+          eq(contacts.id, contactId),
+          eq(contacts.tenantId, tenantId),
+          eq(contacts.debtorGroupId, groupId),
+        ))
+        .limit(1);
+
+      if (!contact) {
+        return res.status(400).json({ message: 'Contact does not belong to this group' });
+      }
+
+      const [updated] = await db
+        .update(debtorGroups)
+        .set({ primaryContactId: contactId, updatedAt: new Date() })
+        .where(eq(debtorGroups.id, groupId))
+        .returning();
+
+      res.json(updated);
+    } catch (error) {
+      console.error('[DebtorGroups] Set primary contact failed:', error);
+      res.status(500).json({ message: 'Failed to set primary contact' });
     }
   });
 
