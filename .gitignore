@@ -7,3 +7,7 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+
+# Data exports — may contain tenant/debtor data
+reconciliation_export.*
+xero_aged_receivables*.json
