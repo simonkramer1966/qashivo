@@ -309,7 +309,7 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
               <span className="text-lg font-bold tracking-tight text-q-text-primary flex-1">
                 Qashivo
                 {partnerTypeSuffix && (
-                  <span className={`ml-1.5 text-sm font-semibold ${partnerTypeSuffix.className}`}>
+                  <span className={`ml-1.5 font-bold ${partnerTypeSuffix.className}`}>
                     {partnerTypeSuffix.text}
                   </span>
                 )}
