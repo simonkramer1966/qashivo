@@ -12,6 +12,7 @@ import {
   users,
   invoices,
   tenants,
+  contacts,
   actions,
   disputes,
   promisesToPay,
@@ -2072,6 +2073,252 @@ export function registerPartnerRoutes(app: Express) {
     } catch (error) {
       console.error("GET /api/partner/team/:userId/activity error:", error);
       res.status(500).json({ message: "Failed to load activity" });
+    }
+  });
+
+  // ── Portfolio Activity Feed ──────────────────────────────────
+
+  /** Compute time range boundaries in Europe/London timezone */
+  function getTimeRange(period: string): { start: Date; end: Date } {
+    // Get current time in Europe/London
+    const nowUtc = new Date();
+    const londonFormatter = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/London",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    });
+    const parts = londonFormatter.formatToParts(nowUtc);
+    const p = (type: string) => parts.find(p => p.type === type)?.value || "0";
+    const londonYear = parseInt(p("year"));
+    const londonMonth = parseInt(p("month")) - 1;
+    const londonDay = parseInt(p("day"));
+
+    // Build midnight in London as a Date. We use a known timezone offset trick:
+    // construct the date string in London time and parse it.
+    function londonMidnight(y: number, m: number, d: number): Date {
+      const isoStr = `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}T00:00:00`;
+      // Create a date at midnight in the UTC equivalent of London time
+      const tempDate = new Date(isoStr + "Z");
+      // Get London's offset at that moment
+      const londonParts = new Intl.DateTimeFormat("en-GB", {
+        timeZone: "Europe/London",
+        year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+      }).formatToParts(tempDate);
+      const lh = parseInt(londonParts.find(pp => pp.type === "hour")?.value || "0");
+      const lm = parseInt(londonParts.find(pp => pp.type === "minute")?.value || "0");
+      // Offset = londonTime - utcTime
+      const offsetMs = (lh * 60 + lm) * 60000;
+      return new Date(tempDate.getTime() - offsetMs);
+    }
+
+    const todayStart = londonMidnight(londonYear, londonMonth, londonDay);
+    const tomorrowStart = new Date(todayStart.getTime() + 86400000);
+
+    switch (period) {
+      case "yesterday": {
+        const yesterdayStart = new Date(todayStart.getTime() - 86400000);
+        return { start: yesterdayStart, end: todayStart };
+      }
+      case "week": {
+        const weekAgo = new Date(todayStart.getTime() - 7 * 86400000);
+        return { start: weekAgo, end: tomorrowStart };
+      }
+      case "month": {
+        const monthAgo = new Date(todayStart.getTime() - 30 * 86400000);
+        return { start: monthAgo, end: tomorrowStart };
+      }
+      default: // today
+        return { start: todayStart, end: tomorrowStart };
+    }
+  }
+
+  // GET /api/partner/activity — paginated cross-client activity feed
+  app.get("/api/partner/activity", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      if (!user?.partnerId) {
+        return res.status(403).json({ message: "Not a partner user" });
+      }
+
+      // Resolve visible tenant IDs based on role
+      const isAdmin = user.role === "partner";
+      let tenantIds: string[];
+
+      // If admin specifies a controller filter, scope to that controller's tenants
+      const controllerFilter = req.query.controller as string | undefined;
+      if (controllerFilter && isAdmin) {
+        tenantIds = await getUserAssignedTenantIds(controllerFilter);
+        // Intersect with partner's tenants for safety
+        const partnerTenants = await getPartnerTenantIds(user.partnerId);
+        tenantIds = tenantIds.filter(id => partnerTenants.includes(id));
+      } else if (isAdmin) {
+        tenantIds = await getPartnerTenantIds(user.partnerId);
+      } else {
+        tenantIds = await getUserAssignedTenantIds(user.id);
+      }
+
+      // Client filter
+      const clientFilter = req.query.client as string | undefined;
+      if (clientFilter) {
+        tenantIds = tenantIds.filter(id => id === clientFilter);
+      }
+
+      if (tenantIds.length === 0) {
+        return res.json({ events: [], nextCursor: null, hasMore: false });
+      }
+
+      // Time range
+      const timePeriod = (req.query.time as string) || "today";
+      const { start, end } = getTimeRange(timePeriod);
+
+      // Build conditions
+      const conditions = [
+        inArray(timelineEvents.tenantId, tenantIds),
+        gte(timelineEvents.occurredAt, start),
+        lte(timelineEvents.occurredAt, end),
+      ];
+
+      // Event type filter
+      const eventType = req.query.eventType as string | undefined;
+      if (eventType === "sent") {
+        conditions.push(eq(timelineEvents.direction, "outbound"));
+      } else if (eventType === "reply") {
+        conditions.push(eq(timelineEvents.direction, "inbound"));
+      } else if (eventType === "payment") {
+        conditions.push(eq(timelineEvents.outcomeType, "paid_confirmed"));
+      } else if (eventType === "dispute") {
+        conditions.push(eq(timelineEvents.outcomeType, "dispute"));
+      } else if (eventType === "promise") {
+        conditions.push(eq(timelineEvents.outcomeType, "promise_to_pay"));
+      }
+
+      // Channel filter
+      const channelFilter = req.query.channel as string | undefined;
+      if (channelFilter && ["email", "sms", "voice"].includes(channelFilter)) {
+        conditions.push(eq(timelineEvents.channel, channelFilter));
+      }
+
+      // Cursor-based pagination
+      const cursor = req.query.cursor as string | undefined;
+      if (cursor) {
+        conditions.push(lt(timelineEvents.occurredAt, new Date(cursor)));
+      }
+
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+
+      // Query with JOINs
+      const rows = await db
+        .select({
+          id: timelineEvents.id,
+          tenantId: timelineEvents.tenantId,
+          clientName: tenants.name,
+          customerId: timelineEvents.customerId,
+          debtorName: contacts.name,
+          debtorCompany: contacts.companyName,
+          occurredAt: timelineEvents.occurredAt,
+          direction: timelineEvents.direction,
+          channel: timelineEvents.channel,
+          summary: timelineEvents.summary,
+          preview: timelineEvents.preview,
+          subject: timelineEvents.subject,
+          body: timelineEvents.body,
+          outcomeType: timelineEvents.outcomeType,
+          outcomeExtracted: timelineEvents.outcomeExtracted,
+          status: timelineEvents.status,
+          actionId: timelineEvents.actionId,
+        })
+        .from(timelineEvents)
+        .leftJoin(tenants, eq(timelineEvents.tenantId, tenants.id))
+        .leftJoin(contacts, eq(timelineEvents.customerId, contacts.id))
+        .where(and(...conditions))
+        .orderBy(desc(timelineEvents.occurredAt))
+        .limit(limit + 1);
+
+      const hasMore = rows.length > limit;
+      const events = rows.slice(0, limit);
+      const nextCursor = hasMore && events.length > 0
+        ? (events[events.length - 1].occurredAt as Date).toISOString()
+        : null;
+
+      res.json({
+        events: events.map(e => ({
+          id: e.id,
+          tenantId: e.tenantId,
+          clientName: e.clientName || "Unknown",
+          customerId: e.customerId,
+          debtorName: e.debtorName || "Unknown",
+          debtorCompany: e.debtorCompany || null,
+          occurredAt: e.occurredAt,
+          direction: e.direction,
+          channel: e.channel,
+          summary: e.summary,
+          preview: e.preview,
+          subject: e.subject,
+          body: e.body,
+          outcomeType: e.outcomeType,
+          outcomeExtracted: e.outcomeExtracted,
+          status: e.status,
+          actionId: e.actionId,
+        })),
+        nextCursor,
+        hasMore,
+      });
+    } catch (error) {
+      console.error("GET /api/partner/activity error:", error);
+      res.status(500).json({ message: "Failed to load activity feed" });
+    }
+  });
+
+  // GET /api/partner/activity/summary — today's aggregate counts
+  app.get("/api/partner/activity/summary", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      if (!user?.partnerId) {
+        return res.status(403).json({ message: "Not a partner user" });
+      }
+
+      const isAdmin = user.role === "partner";
+      const tenantIds = isAdmin
+        ? await getPartnerTenantIds(user.partnerId)
+        : await getUserAssignedTenantIds(user.id);
+
+      if (tenantIds.length === 0) {
+        return res.json({ sent: 0, replies: 0, payments: 0, paymentAmount: 0, disputes: 0 });
+      }
+
+      const { start, end } = getTimeRange("today");
+
+      const [result] = await db
+        .select({
+          sent: sql<string>`COUNT(*) FILTER (WHERE ${timelineEvents.direction} = 'outbound')`,
+          replies: sql<string>`COUNT(*) FILTER (WHERE ${timelineEvents.direction} = 'inbound')`,
+          payments: sql<string>`COUNT(*) FILTER (WHERE ${timelineEvents.outcomeType} = 'paid_confirmed')`,
+          paymentAmount: sql<string>`COALESCE(SUM(CAST(${timelineEvents.outcomeExtracted}->>'amount' AS DECIMAL)) FILTER (WHERE ${timelineEvents.outcomeType} = 'paid_confirmed'), 0)`,
+          disputes: sql<string>`COUNT(*) FILTER (WHERE ${timelineEvents.outcomeType} = 'dispute')`,
+        })
+        .from(timelineEvents)
+        .where(and(
+          inArray(timelineEvents.tenantId, tenantIds),
+          gte(timelineEvents.occurredAt, start),
+          lte(timelineEvents.occurredAt, end),
+        ));
+
+      res.json({
+        sent: parseInt(result?.sent || "0"),
+        replies: parseInt(result?.replies || "0"),
+        payments: parseInt(result?.payments || "0"),
+        paymentAmount: parseFloat(result?.paymentAmount || "0"),
+        disputes: parseInt(result?.disputes || "0"),
+      });
+    } catch (error) {
+      console.error("GET /api/partner/activity/summary error:", error);
+      res.status(500).json({ message: "Failed to load activity summary" });
     }
   });
 }

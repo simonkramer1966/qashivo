@@ -112,6 +112,7 @@ const navigationPillars: NavPillar[] = [
 const partnerNavigationPillars: NavPillar[] = [
   { label: "Portfolio", icon: Briefcase, href: "/partner/dashboard" },
   { label: "Clients", icon: Users, href: "/partner/clients" },
+  { label: "Activity", icon: Activity, href: "/partner/activity" },
   { label: "Reports", icon: FileBarChart, href: "/partner/reports" },
   {
     label: "Settings",
