@@ -92,6 +92,7 @@ import {
   TrendingDown,
   Calendar,
   User,
+  Users,
   Building,
   CreditCard,
   Eye,
@@ -113,6 +114,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { CURRENCIES, SUPPORTED_LANGUAGES, getLanguageName, getCurrencySymbol } from "@shared/currencies";
 import DebtorStatusBanner from "@/components/DebtorStatusBanner";
+import DebtorGroupIndicator from "@/components/debtor-groups/DebtorGroupIndicator";
 import { usePermissions } from "@/hooks/usePermissions";
 import { formatAuditAction, formatRole } from "@/lib/auditDescriptions";
 
@@ -140,6 +142,7 @@ interface Contact {
   creditLimit?: string | null;
   paymentTerms?: string | null;
   address?: string | null;
+  debtorGroupId?: string | null;
   isVip?: boolean;
   isException?: boolean;
   exceptionType?: string | null;
@@ -543,6 +546,119 @@ function DebtorAuditSection({ contactId }: { contactId: string }) {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Group Members Section (used in Details & Contacts tab)
+// ---------------------------------------------------------------------------
+
+function DebtorGroupMembersSection({ contactId, groupId }: { contactId: string; groupId: string }) {
+  const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const { data: groupData } = useQuery<{
+    id: string;
+    groupName: string;
+    primaryContactId?: string | null;
+    members: Array<{ id: string; name: string; companyName?: string | null; email?: string | null; arContactEmail?: string | null }>;
+  }>({
+    queryKey: ["/api/debtor-groups", groupId],
+    enabled: !!groupId,
+  });
+
+  const setPrimaryMut = useMutation({
+    mutationFn: async (cid: string) => {
+      await apiRequest("PUT", `/api/debtor-groups/${groupId}/primary-contact`, { contactId: cid });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/debtor-groups", groupId] });
+      toast({ title: "Primary contact updated" });
+    },
+    onError: () => toast({ title: "Failed", variant: "destructive" }),
+  });
+
+  const removeMut = useMutation({
+    mutationFn: async (cid: string) => {
+      await apiRequest("DELETE", `/api/debtor-groups/${groupId}/members/${cid}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/debtor-groups", groupId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/debtor-groups"] });
+      toast({ title: "Member removed" });
+    },
+    onError: () => toast({ title: "Failed", variant: "destructive" }),
+  });
+
+  if (!groupData) return null;
+
+  return (
+    <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)]">
+      <div className="px-5 pt-5 pb-3 flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-[var(--q-text-primary)] flex items-center gap-2">
+          <Users className="h-4 w-4 text-[var(--q-text-tertiary)]" /> Group Members — {groupData.groupName}
+        </h3>
+        <button
+          className="text-xs text-[var(--q-accent)] hover:underline"
+          onClick={() => setLocation(`/qollections/groups/${groupId}`)}
+        >
+          View full group
+        </button>
+      </div>
+      <div className="px-5 pb-5 space-y-2">
+        {groupData.members.map((m) => {
+          const isPrimary = m.id === groupData.primaryContactId;
+          const isSelf = m.id === contactId;
+          return (
+            <div
+              key={m.id}
+              className={cn(
+                "flex items-center justify-between px-3 py-2 rounded-[var(--q-radius-sm)] text-sm",
+                isSelf ? "bg-[var(--q-bg-surface-alt)]" : "hover:bg-[var(--q-bg-surface-hover)]"
+              )}
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <button
+                  className="font-medium text-[var(--q-text-primary)] hover:underline truncate"
+                  onClick={() => !isSelf && setLocation(`/qollections/debtors/${m.id}`)}
+                >
+                  {m.companyName || m.name}
+                </button>
+                {isPrimary && <QBadge variant="info">Primary</QBadge>}
+                {isSelf && <QBadge variant="neutral">Current</QBadge>}
+              </div>
+              {!isSelf && (
+                <div className="flex items-center gap-1 shrink-0">
+                  {!isPrimary && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      title="Set as primary"
+                      onClick={() => setPrimaryMut.mutate(m.id)}
+                      disabled={setPrimaryMut.isPending}
+                    >
+                      <Star className="h-3 w-3" />
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-destructive"
+                    title="Remove from group"
+                    onClick={() => removeMut.mutate(m.id)}
+                    disabled={removeMut.isPending}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -2745,6 +2861,12 @@ export default function DebtorRecord() {
               </div>
             </div>
 
+            {/* Group Members section — only when contact belongs to a group */}
+            {(contact as any)?.debtorGroupId && (() => {
+              const groupId = contact.debtorGroupId;
+              return <DebtorGroupMembersSection contactId={contactId} groupId={groupId} />;
+            })()}
+
           </TabsContent>
 
           {/* ============================================================== */}
@@ -2796,6 +2918,9 @@ export default function DebtorRecord() {
 
             {/* ── Charlie status banner ── */}
             <DebtorStatusBanner contactId={contactId} />
+
+            {/* ── Group indicator ── */}
+            <DebtorGroupIndicator contactId={contactId} debtorGroupId={contact.debtorGroupId} />
 
             {/* ── Filter bar ── */}
             <div className="flex items-center gap-0 flex-wrap">

@@ -13,6 +13,7 @@ import {
   ChevronRight,
   ChevronLeft,
   Users,
+  UsersRound,
   TrendingUp,
   Bot,
   Settings,
@@ -72,6 +73,7 @@ const navigationPillars: NavPillar[] = [
     children: [
       { name: "Action Centre", href: "/qollections/agent-activity", icon: Activity },
       { name: "Debtors", href: "/qollections/debtors", icon: Users },
+      { name: "Groups", href: "/qollections/groups", icon: UsersRound },
       { name: "Disputes", href: "/qollections/disputes", icon: AlertTriangle },
       { name: "Reports", href: "/qollections/reports", icon: BarChart3 },
     ],
