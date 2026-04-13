@@ -1479,17 +1479,12 @@ ${htmlBody}
 
   /**
    * Send a personalised AI-generated follow-up email after any voice call,
-   * regardless of outcome. Respects cadence rules.
+   * regardless of outcome. Exempt from cadence limits — this is a confirmation
+   * of a conversation that just happened, not a chase email.
    */
   async sendVoiceFollowUpEmail(context: VoiceFollowUpContext): Promise<{ success: boolean; skipped?: boolean; reason?: string; error?: string }> {
     try {
       console.log(`📧 Voice follow-up: ${context.voiceStatus} / ${context.outcomeType || 'N/A'} → ${context.contactEmail}`);
-
-      const cadenceResult = await this.checkEmailCadence(context.tenantId, context.contactId);
-      if (!cadenceResult.canSend) {
-        console.log(`⏸️ Voice follow-up skipped (cadence): ${cadenceResult.reason}`);
-        return { success: true, skipped: true, reason: cadenceResult.reason };
-      }
 
       const debtorContext = await this.gatherDebtorContext(context.tenantId, context.contactId, context.linkedInvoiceIds);
 
@@ -1518,6 +1513,30 @@ ${htmlBody}
 
       if (!result.success) {
         console.error(`❌ Failed to send voice follow-up email: ${result.error}`);
+        // Log failure to timeline so the controller knows the debtor didn't get the recap
+        try {
+          await db.insert(timelineEvents).values({
+            tenantId: context.tenantId,
+            customerId: context.contactId,
+            invoiceId: context.linkedInvoiceIds?.[0] || null,
+            occurredAt: new Date(),
+            direction: 'internal',
+            channel: 'system',
+            summary: 'Voice call recap email failed to send — manual follow-up recommended',
+            preview: `SendGrid error: ${result.error || 'Unknown'}`,
+            status: 'failed',
+            createdByType: 'system',
+            createdByName: 'Qashivo AI',
+            outcomeType: 'voice_followup_failed',
+            outcomeExtracted: {
+              callId: context.callId,
+              voiceStatus: context.voiceStatus,
+              error: result.error,
+            },
+          });
+        } catch (tlErr) {
+          console.warn('[VoiceFollowUp] Failed to create failure timeline event:', tlErr);
+        }
         return { success: false, error: result.error };
       }
 
