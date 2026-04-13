@@ -615,6 +615,11 @@ export class SyncOrchestrator {
       // Log to sync audit
       await this.logSyncAudit(tenantId, result, trigger);
 
+      // Non-blocking: cancel stale actions whose invoices were settled during this sync
+      import('../services/staleActionCleanup')
+        .then(m => m.cancelStaleActions(tenantId))
+        .catch(err => console.warn(`[SyncOrchestrator] Stale action sweep failed for ${tenantId}:`, err));
+
       // Non-blocking: auto-reconcile unallocated payments against newly-synced paid invoices
       import('../services/promiseTrackingService')
         .then(m => m.reconcileUnallocatedPayments(tenantId))
@@ -1096,6 +1101,20 @@ export class SyncOrchestrator {
       await processPaymentAttribution(tenantId, contact.id, paidDate);
     } catch (err) {
       console.warn(`[SyncOrchestrator] Payment attribution failed for ${cachedInv.invoiceNumber}: ${(err as Error).message}`);
+    }
+
+    // Cancel stale actions referencing this now-paid invoice
+    try {
+      const invoiceId = cachedInv.id;
+      if (invoiceId) {
+        const { cancelActionsForPaidInvoice } = await import('../services/staleActionCleanup');
+        const cancelled = await cancelActionsForPaidInvoice(tenantId, invoiceId);
+        if (cancelled > 0) {
+          emitTenantEvent(tenantId, 'approval_needed', { reason: 'stale_actions_cancelled' });
+        }
+      }
+    } catch (err) {
+      console.warn(`[SyncOrchestrator] Stale action cleanup failed for ${cachedInv.invoiceNumber}: ${(err as Error).message}`);
     }
   }
 

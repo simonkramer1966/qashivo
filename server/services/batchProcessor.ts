@@ -197,6 +197,46 @@ export async function proposeAction(params: {
   confidenceScore?: string;
   [key: string]: any;
 }): Promise<{ id: string }> {
+  // ── Deduplication gate ──────────────────────────────────────────────────
+  // Skip if an active action already exists for the same contact + type with overlapping invoices
+  if (params.contactId && params.type) {
+    const newInvoiceIds: string[] = params.invoiceIds?.length
+      ? params.invoiceIds
+      : params.invoiceId
+        ? [params.invoiceId]
+        : [];
+
+    const existingActions = await db
+      .select({ id: actions.id, invoiceId: actions.invoiceId, invoiceIds: actions.invoiceIds })
+      .from(actions)
+      .where(and(
+        eq(actions.tenantId, params.tenantId),
+        eq(actions.contactId, params.contactId),
+        eq(actions.type, params.type),
+        sql`${actions.status} IN ('pending_approval', 'pending', 'scheduled')`,
+      ));
+
+    if (existingActions.length > 0 && newInvoiceIds.length > 0) {
+      // Check for invoice overlap
+      for (const existing of existingActions) {
+        const existingInvIds: string[] = existing.invoiceIds?.length
+          ? existing.invoiceIds
+          : existing.invoiceId
+            ? [existing.invoiceId]
+            : [];
+        const overlap = newInvoiceIds.some(id => existingInvIds.includes(id));
+        if (overlap) {
+          console.log(`[proposeAction] Skipped duplicate: contact=${params.contactId} type=${params.type} overlaps action ${existing.id}`);
+          return { id: existing.id };
+        }
+      }
+    } else if (existingActions.length > 0 && newInvoiceIds.length === 0) {
+      // No invoice IDs (e.g. note actions) — dedup on contact+type within 24h
+      console.log(`[proposeAction] Skipped duplicate: contact=${params.contactId} type=${params.type} already has active action ${existingActions[0].id}`);
+      return { id: existingActions[0].id };
+    }
+  }
+
   const tenant = await storage.getTenant(params.tenantId);
   const approvalMode = (tenant as any).approvalMode ?? "manual";
 
