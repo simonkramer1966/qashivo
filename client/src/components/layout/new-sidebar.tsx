@@ -152,6 +152,10 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
   const [location, setLocation] = useLocation();
   const queryClient = useQueryClient();
 
+  // Determine which nav pillars to show — must be before hooks that reference activePillars
+  const isPartnerPortalContext = location.startsWith("/partner");
+  const activePillars = isPartnerPortalContext ? partnerNavigationPillars : navigationPillars;
+
   const { data: tenant } = useQuery<{
     id: string;
     name: string;
@@ -279,10 +283,6 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
   }, [user]);
 
   const companyName = tenant?.xeroOrganisationName || tenant?.settings?.companyName || tenant?.name || "";
-
-  // Determine which nav pillars to show: partner portal vs standard tenant
-  const isPartnerPortalContext = location.startsWith("/partner");
-  const activePillars = isPartnerPortalContext ? partnerNavigationPillars : navigationPillars;
 
   // Partner type suffix for branding
   const partnerTypeSuffix = isPartner && partnerInfo
