@@ -37,12 +37,12 @@ export interface ActivityEventData {
 
 export function DirectionArrow({ direction }: { direction: string | null | undefined }) {
   if (direction === "inbound") {
-    return <ArrowLeft className="w-4 h-4 shrink-0 mt-0.5" className="text-[var(--q-money-in-text)]" style={{ strokeWidth: 2.5 }} />;
+    return <ArrowLeft className="w-4 h-4 shrink-0 mt-0.5 text-[var(--q-money-in-text)]" style={{ strokeWidth: 2.5 }} />;
   }
   if (direction === "outbound") {
-    return <ArrowRight className="w-4 h-4 shrink-0 mt-0.5" className="text-[var(--q-info-text)]" style={{ strokeWidth: 2.5 }} />;
+    return <ArrowRight className="w-4 h-4 shrink-0 mt-0.5 text-[var(--q-info-text)]" style={{ strokeWidth: 2.5 }} />;
   }
-  return <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" className="text-[var(--q-attention-text)]" style={{ strokeWidth: 2.5 }} />;
+  return <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-[var(--q-attention-text)]" style={{ strokeWidth: 2.5 }} />;
 }
 
 // ── Format helpers ────────────────────────────────────────────

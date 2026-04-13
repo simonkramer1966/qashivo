@@ -742,12 +742,12 @@ export class ActionExecutor {
       let recipientEmail = await resolvePrimaryEmail(contact.id, action.tenantId, contact.email, contact.arContactEmail);
 
       // Group action: override recipient email if the group has a primaryEmail set
-      const meta = (action.metadata ?? {}) as Record<string, any>;
-      if (meta.isGroupAction && meta.groupId) {
+      const groupMeta = (action.metadata ?? {}) as Record<string, any>;
+      if (groupMeta.isGroupAction && groupMeta.groupId) {
         const [group] = await db
           .select({ primaryEmail: debtorGroups.primaryEmail })
           .from(debtorGroups)
-          .where(eq(debtorGroups.id, meta.groupId))
+          .where(eq(debtorGroups.id, groupMeta.groupId))
           .limit(1);
         if (group?.primaryEmail) {
           recipientEmail = group.primaryEmail;
@@ -804,11 +804,11 @@ export class ActionExecutor {
             sequencePosition: action.touchCount ?? undefined,
             currency: contact.preferredCurrency || undefined,
             // Pass group context for consolidated group actions
-            groupContext: meta.isGroupAction ? {
-              groupId: meta.groupId,
-              groupName: meta.groupName,
-              memberContactIds: meta.memberContactIds ?? [],
-              memberCompanyNames: meta.memberCompanyNames ?? [],
+            groupContext: groupMeta.isGroupAction ? {
+              groupId: groupMeta.groupId,
+              groupName: groupMeta.groupName,
+              memberContactIds: groupMeta.memberContactIds ?? [],
+              memberCompanyNames: groupMeta.memberCompanyNames ?? [],
             } : undefined,
           });
 
