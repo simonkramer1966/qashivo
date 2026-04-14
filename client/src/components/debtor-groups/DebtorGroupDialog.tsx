@@ -9,6 +9,16 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,8 +30,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { X, Search, AlertTriangle } from "lucide-react";
-import { QBadge } from "@/components/ui/q-badge";
 
 interface DebtorGroupDialogProps {
   open: boolean;
@@ -60,97 +68,62 @@ export default function DebtorGroupDialog({
   const { toast } = useToast();
 
   const [groupName, setGroupName] = useState("");
-  const [memberIds, setMemberIds] = useState<string[]>([]);
   const [primaryContactId, setPrimaryContactId] = useState<string | null>(null);
   const [consolidateComms, setConsolidateComms] = useState(false);
   const [primaryEmail, setPrimaryEmail] = useState("");
   const [primaryPhone, setPrimaryPhone] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const isEdit = !!editGroup;
 
-  // Load debtors list for member search
-  const { data: debtorsData } = useQuery<Debtor[]>({
+  // For create mode: load debtors to resolve prefillContactIds to names
+  const { data: debtorsData } = useQuery<{ debtors: Debtor[] } | Debtor[]>({
     queryKey: ["/api/qollections/debtors"],
-    enabled: open,
+    enabled: open && !isEdit && !!prefillContactIds?.length,
   });
 
   const debtors: Debtor[] = useMemo(() => {
     if (!debtorsData) return [];
-    return Array.isArray(debtorsData) ? debtorsData : [];
+    if (Array.isArray(debtorsData)) return debtorsData;
+    if ("debtors" in debtorsData) return debtorsData.debtors;
+    return [];
   }, [debtorsData]);
+
+  // Members available for primary contact dropdown
+  const availableMembers = useMemo(() => {
+    if (isEdit) {
+      return editGroup?.members ?? [];
+    }
+    if (prefillContactIds?.length) {
+      return prefillContactIds
+        .map((id) => debtors.find((d) => d.id === id))
+        .filter(Boolean) as Debtor[];
+    }
+    return [];
+  }, [isEdit, editGroup, prefillContactIds, debtors]);
 
   // Reset form when dialog opens
   useEffect(() => {
     if (!open) return;
     if (editGroup) {
       setGroupName(editGroup.groupName);
-      setMemberIds(editGroup.members?.map((m) => m.id) ?? []);
       setPrimaryContactId(editGroup.primaryContactId ?? null);
       setConsolidateComms(editGroup.consolidateComms ?? false);
       setPrimaryEmail(editGroup.primaryEmail ?? "");
       setPrimaryPhone(editGroup.primaryPhone ?? "");
     } else {
       setGroupName(prefillName ?? "");
-      setMemberIds(prefillContactIds ?? []);
       setPrimaryContactId(null);
       setConsolidateComms(false);
       setPrimaryEmail("");
       setPrimaryPhone("");
     }
-    setSearchQuery("");
-  }, [open, editGroup, prefillContactIds, prefillName]);
-
-  // Member search results
-  const searchResults = useMemo(() => {
-    if (!searchQuery.trim() || searchQuery.length < 2) return [];
-    const q = searchQuery.toLowerCase();
-    return debtors
-      .filter(
-        (d) =>
-          !memberIds.includes(d.id) &&
-          ((d.name?.toLowerCase().includes(q)) ||
-           (d.companyName?.toLowerCase().includes(q)) ||
-           (d.email?.toLowerCase().includes(q)))
-      )
-      .slice(0, 8);
-  }, [debtors, searchQuery, memberIds]);
-
-  // Selected members with details
-  const selectedMembers = useMemo(() => {
-    return memberIds
-      .map((id) => {
-        const d = debtors.find((d) => d.id === id);
-        // For edit mode, fall back to editGroup.members
-        if (!d && editGroup?.members) {
-          const m = editGroup.members.find((m) => m.id === id);
-          if (m) return m as Debtor;
-        }
-        return d;
-      })
-      .filter(Boolean) as Debtor[];
-  }, [memberIds, debtors, editGroup]);
-
-  const addMember = (id: string) => {
-    setMemberIds((prev) => [...prev, id]);
-    setSearchQuery("");
-  };
-
-  const removeMember = (id: string) => {
-    setMemberIds((prev) => prev.filter((m) => m !== id));
-    if (primaryContactId === id) setPrimaryContactId(null);
-  };
-
-  // Clear primary if removed from members
-  useEffect(() => {
-    if (primaryContactId && !memberIds.includes(primaryContactId)) {
-      setPrimaryContactId(null);
-    }
-  }, [memberIds, primaryContactId]);
+  }, [open, editGroup, prefillName]);
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["/api/debtor-groups"] });
     queryClient.invalidateQueries({ queryKey: ["/api/debtor-groups/suggestions"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/qollections/debtors"] });
     if (editGroup) {
       queryClient.invalidateQueries({ queryKey: ["/api/debtor-groups", editGroup.id] });
     }
@@ -161,7 +134,7 @@ export default function DebtorGroupDialog({
     mutationFn: async () => {
       const res = await apiRequest("POST", "/api/debtor-groups", {
         groupName,
-        contactIds: memberIds,
+        contactIds: prefillContactIds ?? [],
         primaryContactId: primaryContactId ?? undefined,
         consolidateComms,
         primaryEmail: consolidateComms && primaryEmail ? primaryEmail : undefined,
@@ -172,7 +145,6 @@ export default function DebtorGroupDialog({
     onSuccess: () => {
       toast({ title: "Group created" });
       invalidate();
-      queryClient.invalidateQueries({ queryKey: ["/api/qollections/debtors"] });
       onOpenChange(false);
     },
     onError: () => {
@@ -180,13 +152,12 @@ export default function DebtorGroupDialog({
     },
   });
 
-  // Edit mutation — patches group, syncs members, syncs primary
+  // Edit mutation — patches group settings only (members managed via expandable rows)
   const editMutation = useMutation({
     mutationFn: async () => {
       if (!editGroup) return;
       const groupId = editGroup.id;
 
-      // 1. Update group fields
       await apiRequest("PATCH", `/api/debtor-groups/${groupId}`, {
         groupName,
         consolidateComms,
@@ -194,20 +165,7 @@ export default function DebtorGroupDialog({
         primaryPhone: consolidateComms && primaryPhone ? primaryPhone : null,
       });
 
-      // 2. Diff members
-      const prevIds = new Set(editGroup.members?.map((m) => m.id) ?? []);
-      const newIds = new Set(memberIds);
-      const toAdd = memberIds.filter((id) => !prevIds.has(id));
-      const toRemove = [...prevIds].filter((id) => !newIds.has(id));
-
-      if (toAdd.length > 0) {
-        await apiRequest("POST", `/api/debtor-groups/${groupId}/members`, { contactIds: toAdd });
-      }
-      for (const cid of toRemove) {
-        await apiRequest("DELETE", `/api/debtor-groups/${groupId}/members/${cid}`);
-      }
-
-      // 3. Update primary contact
+      // Update primary contact if changed
       if (primaryContactId !== (editGroup.primaryContactId ?? null)) {
         if (primaryContactId) {
           await apiRequest("PUT", `/api/debtor-groups/${groupId}/primary-contact`, { contactId: primaryContactId });
@@ -219,11 +177,27 @@ export default function DebtorGroupDialog({
     onSuccess: () => {
       toast({ title: "Group updated" });
       invalidate();
-      queryClient.invalidateQueries({ queryKey: ["/api/qollections/debtors"] });
       onOpenChange(false);
     },
     onError: () => {
       toast({ title: "Failed to update group", variant: "destructive" });
+    },
+  });
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      if (!editGroup) return;
+      await apiRequest("DELETE", `/api/debtor-groups/${editGroup.id}`);
+    },
+    onSuccess: () => {
+      toast({ title: "Group deleted" });
+      invalidate();
+      setDeleteConfirmOpen(false);
+      onOpenChange(false);
+    },
+    onError: () => {
+      toast({ title: "Failed to delete group", variant: "destructive" });
     },
   });
 
@@ -236,150 +210,147 @@ export default function DebtorGroupDialog({
   const isPending = createMutation.isPending || editMutation.isPending;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit Group" : "Create Group"}</DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle>{isEdit ? "Edit Group" : "Create Group"}</DialogTitle>
+          </DialogHeader>
 
-        <div className="space-y-4 py-2">
-          {/* Group name */}
-          <div className="space-y-1.5">
-            <Label>Group Name</Label>
-            <Input
-              value={groupName}
-              onChange={(e) => setGroupName(e.target.value)}
-              placeholder="e.g. Acme Holdings"
-            />
-          </div>
-
-          {/* Member search */}
-          <div className="space-y-1.5">
-            <Label>Members</Label>
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-[var(--q-text-tertiary)]" />
+          <div className="space-y-4 py-2">
+            {/* Group name */}
+            <div className="space-y-1.5">
+              <Label>Group Name</Label>
               <Input
-                className="pl-8"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search debtors to add..."
+                value={groupName}
+                onChange={(e) => setGroupName(e.target.value)}
+                placeholder="e.g. Acme Holdings"
               />
             </div>
-            {searchResults.length > 0 && (
-              <div className="border border-[var(--q-border-default)] rounded-[var(--q-radius-md)] bg-[var(--q-bg-surface)] max-h-[160px] overflow-y-auto">
-                {searchResults.map((d) => (
-                  <button
-                    key={d.id}
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-[var(--q-bg-surface-hover)] flex items-center justify-between"
-                    onClick={() => addMember(d.id)}
-                  >
-                    <div>
-                      <span className="font-medium">{d.companyName || d.name}</span>
-                      {d.companyName && d.name !== d.companyName && (
-                        <span className="text-[var(--q-text-tertiary)] ml-1.5">{d.name}</span>
-                      )}
+
+            {/* Create mode: show prefilled members as read-only */}
+            {!isEdit && prefillContactIds && prefillContactIds.length > 0 && (
+              <div className="space-y-1.5">
+                <Label>Members ({prefillContactIds.length})</Label>
+                <div className="space-y-1">
+                  {availableMembers.map((m) => (
+                    <div
+                      key={m.id}
+                      className="px-3 py-1.5 bg-[var(--q-bg-surface-alt)] rounded-[var(--q-radius-sm)] text-sm font-medium"
+                    >
+                      {m.companyName || m.name}
                     </div>
-                    {d.debtorGroupId && (
-                      <span className="flex items-center gap-1 text-xs text-[var(--q-attention-text)]">
-                        <AlertTriangle className="h-3 w-3" /> In group
-                      </span>
-                    )}
-                  </button>
-                ))}
+                  ))}
+                  {prefillContactIds.length > availableMembers.length && (
+                    <p className="text-xs text-[var(--q-text-tertiary)]">
+                      Loading {prefillContactIds.length - availableMembers.length} more...
+                    </p>
+                  )}
+                </div>
               </div>
+            )}
+
+            {/* Primary contact dropdown */}
+            {availableMembers.length > 0 && (
+              <div className="space-y-1.5">
+                <Label>Primary Contact</Label>
+                <Select
+                  value={primaryContactId ?? "none"}
+                  onValueChange={(v) => setPrimaryContactId(v === "none" ? null : v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select primary contact..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {availableMembers.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.companyName || m.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Consolidate comms */}
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Consolidated Communications</Label>
+                <p className="text-xs text-[var(--q-text-tertiary)]">
+                  Send one email to the group instead of individual emails
+                </p>
+              </div>
+              <Switch checked={consolidateComms} onCheckedChange={setConsolidateComms} />
+            </div>
+
+            {/* Override email/phone when consolidateComms is on */}
+            {consolidateComms && (
+              <div className="space-y-3 pl-1 border-l-2 border-[var(--q-border-default)] ml-1">
+                <div className="space-y-1.5 pl-3">
+                  <Label>Group Email</Label>
+                  <Input
+                    type="email"
+                    value={primaryEmail}
+                    onChange={(e) => setPrimaryEmail(e.target.value)}
+                    placeholder="accounts@example.com"
+                  />
+                </div>
+                <div className="space-y-1.5 pl-3">
+                  <Label>Group Phone</Label>
+                  <Input
+                    value={primaryPhone}
+                    onChange={(e) => setPrimaryPhone(e.target.value)}
+                    placeholder="+44 20 1234 5678"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Delete group link (edit mode only) */}
+            {isEdit && (
+              <button
+                className="text-sm text-destructive hover:underline"
+                onClick={() => setDeleteConfirmOpen(true)}
+              >
+                Delete this group
+              </button>
             )}
           </div>
 
-          {/* Selected members */}
-          {selectedMembers.length > 0 && (
-            <div className="space-y-1">
-              {selectedMembers.map((m) => (
-                <div
-                  key={m.id}
-                  className="flex items-center justify-between px-3 py-1.5 bg-[var(--q-bg-surface-alt)] rounded-[var(--q-radius-sm)] text-sm"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="font-medium truncate">{m.companyName || m.name}</span>
-                    {primaryContactId === m.id && <QBadge variant="info">Primary</QBadge>}
-                  </div>
-                  <button
-                    className="shrink-0 p-0.5 hover:bg-[var(--q-bg-surface-hover)] rounded"
-                    onClick={() => removeMember(m.id)}
-                  >
-                    <X className="h-3.5 w-3.5 text-[var(--q-text-tertiary)]" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
+              Cancel
+            </Button>
+            <Button onClick={onSubmit} disabled={isPending || !groupName.trim()}>
+              {isPending ? "Saving..." : isEdit ? "Save Changes" : "Create Group"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-          {/* Primary contact */}
-          {memberIds.length > 0 && (
-            <div className="space-y-1.5">
-              <Label>Primary Contact</Label>
-              <Select
-                value={primaryContactId ?? "none"}
-                onValueChange={(v) => setPrimaryContactId(v === "none" ? null : v)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select primary contact..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  {selectedMembers.map((m) => (
-                    <SelectItem key={m.id} value={m.id}>
-                      {m.companyName || m.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {/* Consolidate comms */}
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>Consolidated Communications</Label>
-              <p className="text-xs text-[var(--q-text-tertiary)]">
-                Send one email to the group instead of individual emails
-              </p>
-            </div>
-            <Switch checked={consolidateComms} onCheckedChange={setConsolidateComms} />
-          </div>
-
-          {/* Override email/phone when consolidateComms is on */}
-          {consolidateComms && (
-            <div className="space-y-3 pl-1 border-l-2 border-[var(--q-border-default)] ml-1">
-              <div className="space-y-1.5 pl-3">
-                <Label>Group Email</Label>
-                <Input
-                  type="email"
-                  value={primaryEmail}
-                  onChange={(e) => setPrimaryEmail(e.target.value)}
-                  placeholder="accounts@example.com"
-                />
-              </div>
-              <div className="space-y-1.5 pl-3">
-                <Label>Group Phone</Label>
-                <Input
-                  value={primaryPhone}
-                  onChange={(e) => setPrimaryPhone(e.target.value)}
-                  placeholder="+44 20 1234 5678"
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
-            Cancel
-          </Button>
-          <Button onClick={onSubmit} disabled={isPending || !groupName.trim()}>
-            {isPending ? "Saving..." : isEdit ? "Save Changes" : "Create Group"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      {/* Delete confirmation */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete group</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will unlink {editGroup?.members?.length ?? 0} member{(editGroup?.members?.length ?? 0) !== 1 ? "s" : ""}
+              {" "}from &ldquo;{editGroup?.groupName}&rdquo;. Members will become ungrouped.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteMutation.mutate()}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

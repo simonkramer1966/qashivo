@@ -28,6 +28,7 @@ import {
 import {
   Search,
   Users,
+  UsersRound,
   ChevronLeft,
   ChevronRight,
   MoreVertical,
@@ -48,6 +49,12 @@ import {
   nextSortState,
 } from "@/components/ui/sortable-header";
 import { DataHealthContent } from "@/pages/settings/data-health";
+import GroupsTab from "@/components/debtors/GroupsTab";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface Debtor {
   id: string;
@@ -68,6 +75,7 @@ interface Debtor {
     status: "open" | "broken";
   } | null;
   conversationState?: string | null;
+  debtorGroupId?: string | null;
 }
 
 const PAGE_SIZE = 20;
@@ -163,7 +171,7 @@ const TH = ({ children, className }: { children?: React.ReactNode; className?: s
   </th>
 );
 
-type PageTab = "debtors" | "data-health";
+type PageTab = "debtors" | "data-health" | "groups";
 
 export default function QollectionsDebtors() {
   const [, navigate] = useLocation();
@@ -172,7 +180,9 @@ export default function QollectionsDebtors() {
 
   const urlParams = new URLSearchParams(window.location.search);
   const tabParam = urlParams.get("tab") as PageTab | null;
-  const [activeTab, setActiveTab] = useState<PageTab>(tabParam === "data-health" ? "data-health" : "debtors");
+  const [activeTab, setActiveTab] = useState<PageTab>(
+    tabParam === "data-health" ? "data-health" : tabParam === "groups" ? "groups" : "debtors"
+  );
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -183,6 +193,18 @@ export default function QollectionsDebtors() {
     queryKey: ["/api/qollections/debtors"],
   });
   const debtors = debtorsResponse?.debtors;
+
+  // Group name map for tooltips on All Debtors tab
+  const { data: groupsList } = useQuery<Array<{ id: string; groupName: string }>>({
+    queryKey: ["/api/debtor-groups"],
+  });
+  const groupNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    if (groupsList) {
+      for (const g of groupsList) map.set(g.id, g.groupName);
+    }
+    return map;
+  }, [groupsList]);
 
   const removeVipMutation = useMutation({
     mutationFn: async (contactId: string) => {
@@ -339,12 +361,15 @@ export default function QollectionsDebtors() {
           options={[
             { key: "debtors", label: "All Debtors" },
             { key: "data-health", label: "Data Health" },
+            { key: "groups", label: "Groups" },
           ]}
           activeKey={activeTab}
-          onChange={(v) => setActiveTab(v as "debtors" | "data-health")}
+          onChange={(v) => setActiveTab(v as PageTab)}
         />
 
-        {activeTab === "data-health" ? (
+        {activeTab === "groups" ? (
+          <GroupsTab debtors={debtors ?? []} />
+        ) : activeTab === "data-health" ? (
           <DataHealthContent />
         ) : (
         <>
@@ -493,6 +518,16 @@ export default function QollectionsDebtors() {
                             <p className="text-[14px] font-medium leading-tight truncate flex items-center gap-1 text-[var(--q-text-primary)]">
                               {debtor.isVip && <Star className="h-3.5 w-3.5 text-[var(--q-attention-text)] fill-[var(--q-attention-text)] flex-shrink-0" />}
                               {debtor.name}
+                              {debtor.debtorGroupId && groupNameMap.has(debtor.debtorGroupId) && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <UsersRound className="h-3.5 w-3.5 text-[var(--q-text-tertiary)] flex-shrink-0" />
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top">
+                                    {groupNameMap.get(debtor.debtorGroupId)}
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
                             </p>
                             <p className="text-xs text-[var(--q-text-tertiary)] truncate">
                               {debtor.email}

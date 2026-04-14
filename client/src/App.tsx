@@ -49,8 +49,7 @@ const DebtorRecord = lazy(() => import("@/pages/qollections/debtor-record"));
 // const QollectionsInvoices = lazy(() => import("@/pages/qollections/invoices"));
 const QollectionsAgentActivity = lazy(() => import("@/pages/qollections/agent-activity"));
 const QollectionsDisputes = lazy(() => import("@/pages/qollections/disputes"));
-const QollectionsGroups = lazy(() => import("@/pages/qollections/groups"));
-const QollectionsGroupDetail = lazy(() => import("@/pages/qollections/group-detail"));
+// Groups moved to tab on Debtors page — standalone pages removed
 const QollectionsReports = lazy(() => import("@/pages/qollections/reports"));
 // Impact page hidden from nav — lazy import removed, redirect in place
 // Pillar pages — Qashflow, Qapital, Agent Team
@@ -341,8 +340,8 @@ function Router() {
           <Route path="/qollections/debtors" component={QollectionsDebtors} />
           <Route path="/qollections/invoices">{() => <Redirect to="/qollections/debtors" />}</Route>
           <Route path="/qollections/agent-activity" component={QollectionsAgentActivity} />
-          <Route path="/qollections/groups/:groupId" component={QollectionsGroupDetail} />
-          <Route path="/qollections/groups" component={QollectionsGroups} />
+          <Route path="/qollections/groups/:groupId">{() => <Redirect to="/qollections/debtors?tab=groups" />}</Route>
+          <Route path="/qollections/groups">{() => <Redirect to="/qollections/debtors?tab=groups" />}</Route>
           <Route path="/qollections/disputes" component={QollectionsDisputes} />
           <Route path="/qollections/impact">{() => <Redirect to="/qollections/agent-activity" />}</Route>
           <Route path="/qollections/reports" component={QollectionsReports} />

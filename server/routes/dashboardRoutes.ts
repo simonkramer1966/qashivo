@@ -2174,6 +2174,7 @@ export function registerDashboardRoutes(app: Express): void {
           isActive: contacts.isActive,
           isVip: contacts.isVip,
           conversationState: conversationStates.state,
+          debtorGroupId: contacts.debtorGroupId,
         })
         .from(contacts)
         .leftJoin(
@@ -2189,7 +2190,7 @@ export function registerDashboardRoutes(app: Express): void {
           eq(contacts.isActive, true),
           isNotNull(contacts.xeroContactId),
         ))
-        .groupBy(contacts.id, contacts.name, contacts.companyName, contacts.email, contacts.isActive, contacts.isVip, conversationStates.state)
+        .groupBy(contacts.id, contacts.name, contacts.companyName, contacts.email, contacts.isActive, contacts.isVip, conversationStates.state, contacts.debtorGroupId)
         .having(
           sql`SUM(CASE WHEN LOWER(${invoices.status}) NOT IN ('paid', 'void', 'voided', 'deleted', 'draft') THEN ${invoices.amount} - ${invoices.amountPaid} ELSE 0 END) > 0`,
         )
@@ -2288,6 +2289,7 @@ export function registerDashboardRoutes(app: Express): void {
           isVip: d.isVip ?? false,
           latestPromise: promiseByContactId.get(d.id) ?? null,
           conversationState: d.conversationState || null,
+          debtorGroupId: d.debtorGroupId || null,
         };
       });
 
