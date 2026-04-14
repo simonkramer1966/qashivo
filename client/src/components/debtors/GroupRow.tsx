@@ -85,7 +85,7 @@ export default function GroupRow({
 
   // Fetch group detail when expanded
   const { data: groupDetail } = useQuery<GroupDetail>({
-    queryKey: ["/api/debtor-groups", group.id],
+    queryKey: [`/api/debtor-groups/${group.id}`],
     enabled: isExpanded,
   });
 
@@ -131,7 +131,7 @@ export default function GroupRow({
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["/api/debtor-groups"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/debtor-groups", group.id] });
+    queryClient.invalidateQueries({ queryKey: [`/api/debtor-groups/${group.id}`] });
     queryClient.invalidateQueries({ queryKey: ["/api/qollections/debtors"] });
     queryClient.invalidateQueries({ queryKey: ["/api/debtor-groups/suggestions"] });
   };
@@ -192,7 +192,7 @@ export default function GroupRow({
     <div className="border-b border-[var(--q-border-default)] last:border-b-0">
       {/* Collapsed/header row */}
       <div
-        className="flex items-center gap-3 px-4 py-3 hover:bg-[var(--q-bg-surface-hover)] cursor-pointer transition-colors"
+        className="flex items-center gap-3 px-4 h-12 hover:bg-[var(--q-bg-surface-hover)] cursor-pointer transition-colors duration-100"
         onClick={onToggle}
       >
         {isExpanded ? (
@@ -300,7 +300,7 @@ export default function GroupRow({
                   return (
                     <tr
                       key={member.id}
-                      className="h-10 border-b border-[var(--q-border-default)] last:border-b-0 hover:bg-[var(--q-bg-surface-hover)] cursor-pointer transition-colors"
+                      className="h-12 border-b border-[var(--q-border-default)] last:border-b-0 hover:bg-[var(--q-bg-surface-hover)] cursor-pointer transition-colors duration-100"
                       onClick={() => navigate(`/qollections/debtors/${member.id}`)}
                     >
                       <td className="px-3 py-1.5" onClick={(e) => e.stopPropagation()}>

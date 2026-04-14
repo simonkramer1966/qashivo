@@ -1,6 +1,8 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { QEmptyState } from "@/components/ui/q-empty-state";
+import { QMetricCard } from "@/components/ui/q-metric-card";
+import { QMetricCardSkeleton } from "@/components/ui/q-skeleton";
 import { Users } from "lucide-react";
 import GroupRow from "./GroupRow";
 import GroupSuggestionsBanner from "@/components/debtor-groups/GroupSuggestionsBanner";
@@ -43,7 +45,7 @@ export default function GroupsTab({ debtors }: GroupsTabProps) {
   const [prefillContactIds, setPrefillContactIds] = useState<string[]>([]);
   const [prefillName, setPrefillName] = useState("");
 
-  const { data: groups } = useQuery<Group[]>({
+  const { data: groups, isLoading } = useQuery<Group[]>({
     queryKey: ["/api/debtor-groups"],
   });
 
@@ -82,7 +84,7 @@ export default function GroupsTab({ debtors }: GroupsTabProps) {
     primaryPhone?: string | null;
     members: Array<{ id: string; name: string; companyName?: string | null; email?: string | null; arContactEmail?: string | null }>;
   }>({
-    queryKey: ["/api/debtor-groups", editGroup?.id],
+    queryKey: [`/api/debtor-groups/${editGroup?.id}`],
     enabled: !!editGroup?.id && dialogOpen,
   });
 
@@ -103,42 +105,80 @@ export default function GroupsTab({ debtors }: GroupsTabProps) {
 
   const groupList = groups ?? [];
 
+  // KPI calculations for groups
+  const kpis = useMemo(() => {
+    const groupedDebtors = debtors.filter((d) => d.debtorGroupId);
+    let totalOutstanding = 0;
+    let totalOverdue = 0;
+    for (const d of groupedDebtors) {
+      totalOutstanding += d.totalOutstanding;
+      totalOverdue += d.overdueAmount;
+    }
+    return {
+      totalGroups: groupList.length,
+      totalOutstanding,
+      totalOverdue,
+      groupedDebtors: groupedDebtors.length,
+    };
+  }, [debtors, groupList]);
+
   return (
-    <div className="space-y-[var(--q-space-lg)]">
+    <div className="space-y-[var(--q-space-2xl)]">
+      {/* KPI Summary Row */}
+      {isLoading ? (
+        <div className="grid grid-cols-2 gap-[var(--q-space-md)] lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => <QMetricCardSkeleton key={i} />)}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-[var(--q-space-md)] lg:grid-cols-4">
+          <QMetricCard label="Total groups" value={kpis.totalGroups} format="number" />
+          <QMetricCard label="Total outstanding" value={kpis.totalOutstanding} format="currency" />
+          <QMetricCard
+            label="Total overdue"
+            value={kpis.totalOverdue}
+            format="currency"
+            valueClassName={kpis.totalOverdue > 0 ? "text-[var(--q-risk-text)]" : undefined}
+          />
+          <QMetricCard label="Grouped debtors" value={kpis.groupedDebtors} format="number" />
+        </div>
+      )}
+
       {/* Suggestions banner */}
       <GroupSuggestionsBanner onCreateFromSuggestion={handleCreateFromSuggestion} />
 
-      {/* Groups section */}
-      <div>
-        <h3 className="text-sm font-semibold text-[var(--q-text-primary)] mb-2">
-          Groups ({groupList.length})
-        </h3>
-        {groupList.length === 0 ? (
-          <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] px-6 py-8">
-            <QEmptyState
-              icon={<Users className="h-10 w-10" />}
-              title="No groups yet"
-              description="Select debtors from the All Debtors tab to create your first group."
-            />
-          </div>
-        ) : (
-          <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] overflow-hidden">
-            {groupList.map((group) => (
-              <GroupRow
-                key={group.id}
-                group={group}
-                isExpanded={expandedGroupId === group.id}
-                onToggle={() => handleToggleGroup(group.id)}
-                selectedMemberIds={expandedGroupId === group.id ? selectedMemberIds : new Set()}
-                onSelectionChange={setSelectedMemberIds}
-                allGroups={groupList}
-                onEditGroup={handleEditGroup}
-                debtors={debtors}
-              />
-            ))}
-          </div>
-        )}
+      {/* Search + count toolbar — matches All Debtors tab treatment */}
+      <div className="flex items-center justify-between gap-4">
+        <span className="text-[13px] text-[var(--q-text-secondary)] whitespace-nowrap">
+          {groupList.length} group{groupList.length !== 1 ? "s" : ""}
+        </span>
       </div>
+
+      {/* Groups table */}
+      {groupList.length === 0 ? (
+        <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] px-6 py-8">
+          <QEmptyState
+            icon={<Users className="h-10 w-10" />}
+            title="No groups yet"
+            description="Select debtors from the All Debtors tab to create your first group."
+          />
+        </div>
+      ) : (
+        <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] overflow-hidden">
+          {groupList.map((group) => (
+            <GroupRow
+              key={group.id}
+              group={group}
+              isExpanded={expandedGroupId === group.id}
+              onToggle={() => handleToggleGroup(group.id)}
+              selectedMemberIds={expandedGroupId === group.id ? selectedMemberIds : new Set()}
+              onSelectionChange={setSelectedMemberIds}
+              allGroups={groupList}
+              onEditGroup={handleEditGroup}
+              debtors={debtors}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Create/Edit dialog */}
       <DebtorGroupDialog

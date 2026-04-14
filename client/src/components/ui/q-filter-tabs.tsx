@@ -15,7 +15,7 @@ interface QFilterTabsProps {
 
 export function QFilterTabs({ options, activeKey, onChange, className }: QFilterTabsProps) {
   return (
-    <div className={cn("flex items-center gap-1", className)}>
+    <div className={cn("flex items-center gap-1 border-b border-[var(--q-border-default)]", className)}>
       {options.map(option => (
         <button
           key={option.key}

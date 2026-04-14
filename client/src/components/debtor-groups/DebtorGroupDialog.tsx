@@ -125,7 +125,7 @@ export default function DebtorGroupDialog({
     queryClient.invalidateQueries({ queryKey: ["/api/debtor-groups/suggestions"] });
     queryClient.invalidateQueries({ queryKey: ["/api/qollections/debtors"] });
     if (editGroup) {
-      queryClient.invalidateQueries({ queryKey: ["/api/debtor-groups", editGroup.id] });
+      queryClient.invalidateQueries({ queryKey: [`/api/debtor-groups/${editGroup.id}`] });
     }
   };
 
