@@ -7300,3 +7300,79 @@ export const insertPartnerRevenueEventSchema = createInsertSchema(partnerRevenue
 });
 export type PartnerRevenueEvent = typeof partnerRevenueEvents.$inferSelect;
 export type InsertPartnerRevenueEvent = z.infer<typeof insertPartnerRevenueEventSchema>;
+
+// ==================== ADMIN PORTAL TABLES ====================
+
+export const adminLlmLogs = pgTable("admin_llm_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").references(() => tenants.id),
+  caller: varchar("caller", { length: 50 }).notNull(),
+  relatedEntityType: varchar("related_entity_type", { length: 30 }),
+  relatedEntityId: varchar("related_entity_id"),
+  model: varchar("model", { length: 50 }).notNull(),
+  systemPrompt: text("system_prompt").notNull(),
+  userMessage: text("user_message").notNull(),
+  assistantResponse: text("assistant_response"),
+  inputTokens: integer("input_tokens"),
+  outputTokens: integer("output_tokens"),
+  latencyMs: integer("latency_ms"),
+  costUsd: varchar("cost_usd", { length: 20 }),
+  error: text("error"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_admin_llm_logs_tenant_created").on(table.tenantId, table.createdAt),
+  index("idx_admin_llm_logs_caller_created").on(table.caller, table.createdAt),
+]);
+
+export const insertAdminLlmLogSchema = createInsertSchema(adminLlmLogs).omit({
+  id: true,
+  createdAt: true,
+});
+export type AdminLlmLog = typeof adminLlmLogs.$inferSelect;
+export type InsertAdminLlmLog = z.infer<typeof insertAdminLlmLogSchema>;
+
+export const adminSystemErrors = pgTable("admin_system_errors", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").references(() => tenants.id),
+  source: varchar("source", { length: 50 }).notNull(),
+  severity: varchar("severity", { length: 10 }).notNull().default("error"),
+  message: text("message").notNull(),
+  stackTrace: text("stack_trace"),
+  context: jsonb("context"),
+  resolved: boolean("resolved").default(false),
+  resolvedAt: timestamp("resolved_at"),
+  resolvedBy: varchar("resolved_by", { length: 100 }),
+  resolutionNotes: text("resolution_notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_admin_system_errors_tenant_created").on(table.tenantId, table.createdAt),
+  index("idx_admin_system_errors_source_created").on(table.source, table.createdAt),
+  index("idx_admin_system_errors_resolved_created").on(table.resolved, table.createdAt),
+]);
+
+export const insertAdminSystemErrorSchema = createInsertSchema(adminSystemErrors).omit({
+  id: true,
+  createdAt: true,
+});
+export type AdminSystemError = typeof adminSystemErrors.$inferSelect;
+export type InsertAdminSystemError = z.infer<typeof insertAdminSystemErrorSchema>;
+
+export const adminCommunicationEvents = pgTable("admin_communication_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").references(() => tenants.id),
+  communicationId: varchar("communication_id").notNull(),
+  eventType: varchar("event_type", { length: 30 }).notNull(),
+  eventData: jsonb("event_data"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_admin_comm_events_comm_created").on(table.communicationId, table.createdAt),
+  index("idx_admin_comm_events_tenant_type_created").on(table.tenantId, table.eventType, table.createdAt),
+]);
+
+export const insertAdminCommunicationEventSchema = createInsertSchema(adminCommunicationEvents).omit({
+  id: true,
+  createdAt: true,
+});
+export type AdminCommunicationEvent = typeof adminCommunicationEvents.$inferSelect;
+export type InsertAdminCommunicationEvent = z.infer<typeof insertAdminCommunicationEventSchema>;

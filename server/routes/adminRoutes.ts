@@ -934,4 +934,116 @@ router.post("/reconcile-xero", requireAdminAuth, async (req, res) => {
   }
 });
 
+// ==================== ADMIN PORTAL — STUB ENDPOINTS ====================
+// These return static empty structures. Will be wired to real data later.
+
+// Dashboard overview
+router.get("/dashboard", requireAdminAuth, async (_req, res) => {
+  res.json({
+    activeTenants: 0,
+    actionsToday: { total: 0, sent: 0, pending: 0 },
+    llmCalls24h: 0,
+    errors24h: 0,
+  });
+});
+
+// Charlie actions
+router.get("/charlie/actions", requireAdminAuth, async (req, res) => {
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 20;
+  res.json({ actions: [], total: 0, page, limit });
+});
+
+router.get("/charlie/actions/:id", requireAdminAuth, async (_req, res) => {
+  res.json({ action: null });
+});
+
+router.get("/charlie/stats", requireAdminAuth, async (_req, res) => {
+  res.json({ totalActions: 0, byStatus: {}, byChannel: {} });
+});
+
+// Communications
+router.get("/comms/log", requireAdminAuth, async (req, res) => {
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 20;
+  res.json({ communications: [], total: 0, page, limit });
+});
+
+router.get("/comms/log/:id", requireAdminAuth, async (_req, res) => {
+  res.json({ communication: null });
+});
+
+router.get("/comms/pipeline", requireAdminAuth, async (_req, res) => {
+  res.json({ generated: 0, sent: 0, delivered: 0, opened: 0, replied: 0, bounced: 0 });
+});
+
+router.get("/comms/stats", requireAdminAuth, async (_req, res) => {
+  res.json({ totalSent: 0, deliveryRate: 0, openRate: 0, replyRate: 0 });
+});
+
+// Riley
+router.get("/riley/conversations", requireAdminAuth, async (req, res) => {
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 20;
+  res.json({ conversations: [], total: 0, page, limit });
+});
+
+router.get("/riley/conversations/:id", requireAdminAuth, async (_req, res) => {
+  res.json({ conversation: null });
+});
+
+router.get("/riley/facts", requireAdminAuth, async (req, res) => {
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 20;
+  res.json({ facts: [], total: 0, page, limit });
+});
+
+router.get("/riley/stats", requireAdminAuth, async (_req, res) => {
+  res.json({ totalConversations: 0, factsExtracted: 0 });
+});
+
+// Tenants
+router.get("/tenants/list", requireAdminAuth, async (_req, res) => {
+  res.json({ tenants: [] });
+});
+
+router.get("/tenants/:id", requireAdminAuth, async (_req, res) => {
+  res.json({ tenant: null });
+});
+
+// Errors
+router.get("/errors/log", requireAdminAuth, async (req, res) => {
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 20;
+  res.json({ errors: [], total: 0, page, limit });
+});
+
+router.get("/errors/log/:id", requireAdminAuth, async (_req, res) => {
+  res.json({ error: null });
+});
+
+router.post("/errors/:id/resolve", requireAdminAuth, async (_req, res) => {
+  res.json({ resolved: true });
+});
+
+// LLM logs
+router.get("/llm/logs", requireAdminAuth, async (req, res) => {
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 20;
+  res.json({ logs: [], total: 0, page, limit });
+});
+
+router.get("/llm/logs/:id", requireAdminAuth, async (_req, res) => {
+  res.json({ log: null });
+});
+
+// System
+router.get("/system/health", requireAdminAuth, async (_req, res) => {
+  res.json({ database: "ok", xero: "ok", sendgrid: "ok", claude: "ok" });
+});
+
+router.get("/system/costs", requireAdminAuth, async (_req, res) => {
+  res.json({ costs: [] });
+});
+
 export default router;
