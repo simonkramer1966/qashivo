@@ -51,6 +51,7 @@ export async function generateCollectionSuggestions(
       system: "You are an expert debt collection advisor with 20+ years of experience. Provide practical, professional advice.",
       prompt,
       model: "fast",
+      logContext: { caller: 'collection_suggestions' },
     });
     return result.suggestions || [];
   } catch (error) {
@@ -94,6 +95,7 @@ export async function generateEmailDraft(
       system: "You are a professional accounts receivable specialist. Generate courteous but effective collection emails.",
       prompt,
       model: "fast",
+      logContext: { caller: 'email_draft' },
     });
     return {
       subject: result.subject || `Payment Reminder - Invoice ${context.invoiceNumber}`,
@@ -225,6 +227,7 @@ FORMATTING INSTRUCTIONS:
       model: "standard",
       temperature: 0.7,
       maxTokens: 500,
+      logContext: { caller: 'ai_cfo_response' },
     });
 
     console.log("🤖 AI CFO: Response received successfully");
@@ -382,6 +385,7 @@ Guidelines:
       system: "You are an experienced UK credit controller writing professional collection emails. You balance firmness with maintaining positive customer relationships. Always use British English and £ currency formatting. CRITICAL: Always refer to the balance as 'overdue balance' (past due date), NEVER use 'outstanding balance' as that term includes invoices not yet due.",
       prompt,
       model: "fast",
+      logContext: { caller: 'collection_email_legacy' },
     });
     
     return {
@@ -499,6 +503,7 @@ Guidelines:
       system: "You are a UK credit controller writing concise SMS collection messages. Keep messages under 160 characters when possible. Be direct, professional, and clear.",
       prompt,
       model: "fast",
+      logContext: { caller: 'sms_draft' },
     });
     
     return {

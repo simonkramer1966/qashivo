@@ -308,6 +308,7 @@ export async function generateDebtorEmail(
     model: "standard",
     temperature: 0.4,
     maxTokens,
+    logContext: { tenantId, caller: 'charlie_email_gen', relatedEntityId: contactId, relatedEntityType: 'contact', metadata: { emailType: request.emailType } },
   });
 
   const subject = result.subject || "Payment Reminder";

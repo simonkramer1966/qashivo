@@ -173,6 +173,7 @@ export async function getRileyWebsiteResponse(opts: RileyWebsiteChatOptions): Pr
       model: "standard", // Claude Sonnet for cost efficiency
       temperature: 0.6,
       maxTokens: 300,
+      logContext: { caller: 'riley_website', metadata: { leadId: lead.id } },
     },
     onDelta,
   );

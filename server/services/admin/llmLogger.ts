@@ -15,7 +15,7 @@ function calculateCost(model: string, inputTokens: number, outputTokens: number)
   return cost.toFixed(6);
 }
 
-interface LLMLogParams {
+export interface LLMLogParams {
   tenantId?: string;
   caller: string;
   relatedEntityType?: string;
@@ -23,6 +23,14 @@ interface LLMLogParams {
   model: string;
   systemPrompt: string;
   userMessage: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface LLMLogContext {
+  tenantId?: string;
+  caller: string;
+  relatedEntityType?: string;
+  relatedEntityId?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -95,4 +103,41 @@ export async function logLLMCall<T>(params: LLMLogParams, apiCallFn: () => Promi
     .catch((err) => console.error("[LLMLogger] Failed to log call:", err));
 
   return response;
+}
+
+/**
+ * Log an LLM call manually — for streaming calls where we only have
+ * the final text + token count after completion.
+ * Fire-and-forget DB insert; never blocks the caller.
+ */
+export function logLLMCallManual(params: LLMLogParams & {
+  assistantResponse?: string;
+  inputTokens?: number;
+  outputTokens?: number;
+  latencyMs: number;
+  error?: string;
+}): void {
+  const costUsd =
+    params.inputTokens != null && params.outputTokens != null
+      ? calculateCost(params.model, params.inputTokens, params.outputTokens)
+      : null;
+
+  db.insert(adminLlmLogs)
+    .values({
+      tenantId: params.tenantId ?? null,
+      caller: params.caller,
+      relatedEntityType: params.relatedEntityType ?? null,
+      relatedEntityId: params.relatedEntityId ?? null,
+      model: params.model,
+      systemPrompt: params.systemPrompt,
+      userMessage: params.userMessage,
+      assistantResponse: params.assistantResponse ?? null,
+      inputTokens: params.inputTokens ?? null,
+      outputTokens: params.outputTokens ?? null,
+      latencyMs: params.latencyMs,
+      costUsd,
+      error: params.error ?? null,
+      metadata: params.metadata ?? null,
+    })
+    .catch((err) => console.error("[LLMLogger] Failed to log manual call:", err));
 }

@@ -1,5 +1,7 @@
 import { eq, and, lte, sql, isNotNull, inArray } from "drizzle-orm";
 import { db } from "../db";
+import { logCommEvent } from "./admin/commEventLogger";
+import { logSystemError } from "./admin/errorLogger";
 import { actions, contacts, invoices, tenants, messageDrafts, emailMessages, timelineEvents, customerBehaviorSignals, debtorGroups } from "@shared/schema";
 import { fitDistribution, estimatePaymentProbability } from "./paymentDistribution";
 import { sendEmail } from "./sendgrid";
@@ -166,6 +168,7 @@ export class ActionExecutor {
               .where(eq(actions.id, action.id));
             errorCount++;
             console.error(`❌ Failed ${action.type} action for ${contact.name}: ${result.error}`);
+            logSystemError({ tenantId: action.tenantId, source: 'action_executor', severity: 'error', message: `Failed ${action.type} action for ${contact.name}: ${result.error}`, context: { actionId: action.id, contactId: action.contactId } }).catch(() => {});
           }
         } catch (error: any) {
           // Gap 9: Circuit open — leave action queued for retry on next executor run
@@ -187,6 +190,7 @@ export class ActionExecutor {
             .where(eq(actions.id, action.id));
           errorCount++;
           console.error(`❌ Error executing action ${action.id}:`, error.message);
+          logSystemError({ tenantId: action.tenantId, source: 'action_executor', severity: 'error', message: `Error executing action ${action.id}: ${error.message}`, stackTrace: error instanceof Error ? error.stack : undefined, context: { actionId: action.id } }).catch(() => {});
         }
       }
 
@@ -195,6 +199,7 @@ export class ActionExecutor {
 
     } catch (error: any) {
       console.error("❌ Action Executor error:", error);
+      logSystemError({ source: 'action_executor', severity: 'critical', message: `Action Executor fatal error: ${error instanceof Error ? error.message : String(error)}`, stackTrace: error instanceof Error ? error.stack : undefined }).catch(() => {});
     } finally {
       this.isRunning = false;
     }
@@ -302,6 +307,7 @@ export class ActionExecutor {
               .where(eq(actions.id, action.id));
             errorCount++;
             console.error(`❌ Failed ${action.type} action for ${contact.name}: ${result.error}`);
+            logSystemError({ tenantId: action.tenantId, source: 'action_executor', severity: 'error', message: `Failed ${action.type} action for ${contact.name}: ${result.error}`, context: { actionId: action.id, contactId: action.contactId } }).catch(() => {});
           }
         } catch (error: any) {
           // Gap 9: Circuit open — leave action queued for retry
@@ -319,6 +325,7 @@ export class ActionExecutor {
             .where(eq(actions.id, action.id));
           errorCount++;
           console.error(`❌ Error executing action ${action.id}:`, error.message);
+          logSystemError({ tenantId: action.tenantId, source: 'action_executor', severity: 'error', message: `Error executing action ${action.id}: ${error.message}`, stackTrace: error instanceof Error ? error.stack : undefined, context: { actionId: action.id } }).catch(() => {});
         }
       }
 
@@ -326,6 +333,7 @@ export class ActionExecutor {
       console.log(`✅ Immediate Executor: Completed in ${duration}ms - ${successCount} successful, ${errorCount} failed`);
     } catch (error: any) {
       console.error("❌ Immediate Executor error:", error);
+      logSystemError({ source: 'action_executor', severity: 'critical', message: `Immediate Executor fatal error: ${error instanceof Error ? error.message : String(error)}`, stackTrace: error instanceof Error ? error.stack : undefined }).catch(() => {});
     }
 
     return { successCount, errorCount };
@@ -534,6 +542,7 @@ export class ActionExecutor {
     } catch (err: any) {
       // Fail closed — if compliance engine errors, do not send
       console.error(`[Executor] Compliance engine error for action ${action.id}:`, err.message);
+      logSystemError({ tenantId: action.tenantId, source: 'action_executor', severity: 'error', message: `Compliance engine error for action ${action.id}: ${err.message}`, stackTrace: err instanceof Error ? err.stack : undefined, context: { actionId: action.id } }).catch(() => {});
       await db.update(actions).set({
         status: 'failed',
         cancellationReason: `compliance_error: ${err.message}`,
@@ -875,6 +884,12 @@ export class ActionExecutor {
           providerMessageId: result.messageId,
           updatedAt: new Date(),
         }).where(eq(actions.id, action.id));
+        logCommEvent({
+          tenantId: action.tenantId,
+          communicationId: action.id,
+          eventType: 'generated',
+          eventData: { channel: 'email', contactId: action.contactId },
+        }).catch(() => {});
       } else {
         await this.handleSendFailure(action, result?.error);
       }
@@ -1004,14 +1019,23 @@ export class ActionExecutor {
         await messagePreGenerator.markDraftUsed(action.id);
       }
 
-      return { 
-        success: result.success, 
-        data: { 
+      if (result.success) {
+        logCommEvent({
+          tenantId: action.tenantId,
+          communicationId: action.id,
+          eventType: 'generated',
+          eventData: { channel: 'sms', contactId: action.contactId },
+        }).catch(() => {});
+      }
+
+      return {
+        success: result.success,
+        data: {
           messageId: result.messageId,
           aiGenerated: !action.content || action.content.trim() === '',
           usedPreGenerated
         },
-        error: result.error 
+        error: result.error
       };
     } catch (error: any) {
       return { success: false, error: error.message };
@@ -1181,8 +1205,15 @@ export class ActionExecutor {
         await messagePreGenerator.markDraftUsed(action.id);
       }
 
-      return { 
-        success: true, 
+      logCommEvent({
+        tenantId: action.tenantId,
+        communicationId: action.id,
+        eventType: 'generated',
+        eventData: { channel: 'voice', contactId: action.contactId },
+      }).catch(() => {});
+
+      return {
+        success: true,
         data: { ...result, aiGenerated: !action.content || action.content.trim() === '', usedPreGenerated }
       };
     } catch (error: any) {
@@ -1268,6 +1299,7 @@ export class ActionExecutor {
         });
       } catch (insertErr) {
         console.error(`[Retry] Failed to create retry action for ${action.id}:`, insertErr);
+        logSystemError({ tenantId: action.tenantId, source: 'action_executor', severity: 'error', message: `Failed to create retry action for ${action.id}: ${insertErr instanceof Error ? insertErr.message : String(insertErr)}`, stackTrace: insertErr instanceof Error ? insertErr.stack : undefined, context: { actionId: action.id } }).catch(() => {});
       }
 
       // Mark original as failed (not permanent — retry pending)
@@ -1295,6 +1327,7 @@ export class ActionExecutor {
           await (eventBus as any).handleHardBounce(action.tenantId, action.contactId);
         } catch (err) {
           console.error('[Retry] Failed to record hard bounce (non-fatal):', err);
+          logSystemError({ tenantId: action.tenantId, source: 'action_executor', severity: 'error', message: `Failed to record hard bounce (non-fatal): ${err instanceof Error ? err.message : String(err)}`, stackTrace: err instanceof Error ? err.stack : undefined, context: { actionId: action.id, contactId: action.contactId } }).catch(() => {});
         }
       }
     }

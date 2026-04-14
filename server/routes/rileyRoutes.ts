@@ -244,6 +244,7 @@ export function registerRileyRoutes(app: Express): void {
         prompt: "health check",
         model: "fast",
         maxTokens: 5,
+        logContext: { tenantId: req.rbac?.tenantId, caller: 'riley_route' },
       });
       res.json({ status: "ok", response: result.trim(), keyPrefix });
     } catch (error: any) {

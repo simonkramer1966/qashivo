@@ -1,4 +1,6 @@
 import { Vonage } from '@vonage/server-sdk';
+import { logCommEvent } from './admin/commEventLogger';
+import { logSystemError } from './admin/errorLogger';
 
 const apiKey = process.env.VONAGE_API_KEY || '';
 const apiSecret = process.env.VONAGE_API_SECRET || '';
@@ -111,6 +113,7 @@ export async function sendSMS(params: SMSParams & {
         const testPhones = tenant?.testPhones as string[] | null;
         if (!testPhones?.length) {
           console.error(`🚫 [SmsCommMode] BLOCKED — ${mode} mode but no test phone numbers configured for tenant ${params.tenantId}`);
+          logSystemError({ tenantId: params.tenantId, source: 'vonage', severity: 'error', message: `${mode} mode but no test phone numbers configured`, context: { tenantId: params.tenantId, mode } }).catch(() => {});
           return { success: false, error: `No test phone numbers configured for ${mode} mode` };
         }
         const originalTo = to;
@@ -125,6 +128,7 @@ export async function sendSMS(params: SMSParams & {
       // Fail closed — block if we can't verify
       if (process.env.NODE_ENV === 'production') {
         console.error('🚫 [SmsSafetyNet] BLOCKING SMS — cannot verify communication mode in production');
+        logSystemError({ tenantId: params.tenantId, source: 'vonage', severity: 'critical', message: 'BLOCKING SMS — cannot verify communication mode in production', context: { tenantId: params.tenantId } }).catch(() => {});
         return { success: false, error: 'Cannot verify communication mode — SMS blocked for safety' };
       }
     }
@@ -142,9 +146,16 @@ export async function sendSMS(params: SMSParams & {
 
       if (message.status === '0') {
         console.log(`✅ Vonage SMS sent successfully! Message ID: ${message.messageId}`);
+        logCommEvent({
+          tenantId: params.tenantId,
+          communicationId: message.messageId || 'unknown',
+          eventType: 'api_accepted',
+          eventData: { channel: 'sms', to },
+        }).catch(() => {});
         return { success: true, messageId: message.messageId };
       } else {
         console.error(`❌ Vonage SMS error: status=${message.status} error="${message.errorText}" to=${to} from=${from}`);
+        logSystemError({ tenantId: params.tenantId, source: 'vonage', severity: 'error', message: `Vonage SMS delivery error: status=${message.status} error="${message.errorText}"`, context: { tenantId: params.tenantId, vonageStatus: message.status, vonageErrorText: message.errorText } }).catch(() => {});
         return {
           success: false,
           error: `Vonage status ${message.status}: ${message.errorText || 'Failed to send SMS'}`
@@ -159,6 +170,13 @@ export async function sendSMS(params: SMSParams & {
     if (error.response) {
       console.error('❌ Vonage error response:', JSON.stringify(error.response, null, 2));
     }
+    logSystemError({ tenantId: params.tenantId, source: 'vonage', severity: 'error', message: error instanceof Error ? error.message : String(error), stackTrace: error instanceof Error ? error.stack : undefined, context: { tenantId: params.tenantId, to: params.to } }).catch(() => {});
+    logCommEvent({
+      tenantId: params.tenantId,
+      communicationId: 'unknown',
+      eventType: 'failed',
+      eventData: { channel: 'sms', error: error.message },
+    }).catch(() => {});
     return {
       success: false,
       error: error.message || 'Failed to send SMS'

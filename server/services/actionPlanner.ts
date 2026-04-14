@@ -29,6 +29,7 @@ import { bulkGetStates } from "./conversationStateService";
 import { evaluateDecisionTree, type DebtorDecisionInput } from "./decisionTree";
 import { getSmallBalancePolicy, isSmallBalance, applySmallBalancePriority } from "./smallBalancePolicy";
 import { getRolling30DayDSO, getARSummary, getEffectiveOverdue } from "./arCalculations";
+import { logSystemError } from "./admin/errorLogger";
 import crypto from "crypto";
 
 // Utility: Format currency for display
@@ -105,6 +106,7 @@ export class ActionPlanner {
         await this.planActionsForTenant(tenant.id);
       } catch (error: any) {
         console.error(`❌ Action Planner: Error planning actions for tenant ${tenant.name}:`, error.message);
+        logSystemError({ tenantId: tenant.id, source: 'action_planner', severity: 'error', message: `Error planning actions for tenant ${tenant.name}: ${error.message}`, stackTrace: error instanceof Error ? error.stack : undefined, context: { tenantId: tenant.id } }).catch(() => {});
       }
     }
   }
@@ -249,6 +251,7 @@ export class ActionPlanner {
               : [];
           } catch (error) {
             console.error(`Error parsing schedule steps for schedule ${schedule.id}:`, error);
+            logSystemError({ source: 'action_planner', severity: 'error', message: `Error parsing schedule steps for schedule ${schedule.id}: ${error instanceof Error ? error.message : String(error)}`, stackTrace: error instanceof Error ? error.stack : undefined, context: { scheduleId: schedule.id } }).catch(() => {});
             continue;
           }
 
@@ -313,6 +316,7 @@ export class ActionPlanner {
       return plannedActions;
     } catch (error: any) {
       console.error('Action Planner error:', error);
+      logSystemError({ tenantId: tenantId, source: 'action_planner', severity: 'error', message: `Action Planner error: ${error.message}`, stackTrace: error instanceof Error ? error.stack : undefined, context: { tenantId } }).catch(() => {});
       throw new Error(`Failed to plan actions: ${error.message}`);
     }
   }
@@ -658,7 +662,7 @@ export class ActionPlanner {
           partialPaymentTarget: decision.dsoAcceptance?.partialPaymentNeeded?.toString() || null,
           inputSnapshot: decisionInput,
           reasoning: decision.reasoning,
-        }).catch(err => console.error('[DecisionTree] Audit log write failed:', err));
+        }).catch(err => { console.error('[DecisionTree] Audit log write failed:', err); logSystemError({ source: 'action_planner', severity: 'error', message: `DecisionTree audit log write failed: ${err instanceof Error ? err.message : String(err)}`, stackTrace: err instanceof Error ? err.stack : undefined }).catch(() => {}); });
 
         if (decision.action === 'HOLD') {
           console.log(`🌳 [DecisionTree] HOLD for ${contact.name} invoice ${invoice.invoiceNumber}: ${decision.holdReason}`);
@@ -795,6 +799,7 @@ export class ActionPlanner {
       return plannedAction;
     } catch (error: any) {
       console.error(`Error planning adaptive action:`, error.message);
+      logSystemError({ source: 'action_planner', severity: 'error', message: `Error planning adaptive action: ${error.message}`, stackTrace: error instanceof Error ? error.stack : undefined }).catch(() => {});
       return null;
     }
   }
@@ -927,6 +932,7 @@ export class ActionPlanner {
         }
       } catch (error: any) {
         console.error(`Error optimizing actions for contact ${contactId}:`, error.message);
+        logSystemError({ source: 'action_planner', severity: 'error', message: `Error optimizing actions for contact ${contactId}: ${error.message}`, stackTrace: error instanceof Error ? error.stack : undefined, context: { contactId } }).catch(() => {});
         // Fallback to original actions
         optimizedActions.push(...contactActions);
       }
@@ -956,6 +962,7 @@ export class ActionPlanner {
         });
       } catch (error: any) {
         console.error(`Error creating scheduled action:`, error.message);
+        logSystemError({ source: 'action_planner', severity: 'error', message: `Error creating scheduled action: ${error.message}`, stackTrace: error instanceof Error ? error.stack : undefined }).catch(() => {});
       }
     }
   }
@@ -1305,6 +1312,7 @@ export async function planAdaptiveActions(
           });
         } catch (error) {
           console.error(`[PLAN] Error processing invoice ${invoice.id}:`, error);
+          logSystemError({ tenantId, source: 'action_planner', severity: 'error', message: `Error processing invoice ${invoice.id}: ${error instanceof Error ? error.message : String(error)}`, stackTrace: error instanceof Error ? error.stack : undefined, context: { tenantId, invoiceId: invoice.id } }).catch(() => {});
         }
       }
 
@@ -1431,6 +1439,7 @@ export async function planAdaptiveActions(
           );
         } catch (error) {
           console.error(`[PLAN] Error creating bundled action for contact ${contactId}:`, error);
+          logSystemError({ tenantId, source: 'action_planner', severity: 'error', message: `Error creating bundled action for contact ${contactId}: ${error instanceof Error ? error.message : String(error)}`, stackTrace: error instanceof Error ? error.stack : undefined, context: { tenantId, contactId } }).catch(() => {});
         }
       }
     }
@@ -1452,6 +1461,7 @@ export async function planAdaptiveActions(
     };
   } catch (error) {
     console.error(`[PLAN] Error planning actions for tenant ${tenantId}:`, error);
+    logSystemError({ tenantId, source: 'action_planner', severity: 'critical', message: `Error planning actions for tenant ${tenantId}: ${error instanceof Error ? error.message : String(error)}`, stackTrace: error instanceof Error ? error.stack : undefined, context: { tenantId } }).catch(() => {});
     throw error;
   }
 }
@@ -1569,6 +1579,7 @@ async function enforceDebtorGroupConsistency(tenantId: string): Promise<number> 
     return totalCancelled;
   } catch (error) {
     console.error('[DebtorGroup] Error enforcing group consistency:', error);
+    logSystemError({ tenantId, source: 'action_planner', severity: 'error', message: `Error enforcing debtor group consistency: ${error instanceof Error ? error.message : String(error)}`, stackTrace: error instanceof Error ? error.stack : undefined, context: { tenantId } }).catch(() => {});
     return 0; // Non-fatal — don't break planning if group enforcement fails
   }
 }

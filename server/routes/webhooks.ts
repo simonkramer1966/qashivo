@@ -1,4 +1,6 @@
 import type { Express, Request, Response } from "express";
+import { logCommEvent } from "../services/admin/commEventLogger";
+import { logSystemError } from "../services/admin/errorLogger";
 import { generateJSON } from "../services/llm/claude";
 import { db } from "../db";
 import { inboundMessages, contacts, emailMessages, actions, invoices, timelineEvents, outcomes, conversations, tenants, customerContactPersons, attentionItems } from "@shared/schema";
@@ -234,6 +236,7 @@ export function registerWebhookRoutes(app: Express) {
 
     } catch (error) {
       console.error('❌ SendGrid webhook error:', error);
+      logSystemError({ source: 'webhook', severity: 'critical', message: `SendGrid inbound webhook error: ${error instanceof Error ? error.message : String(error)}`, stackTrace: error instanceof Error ? error.stack : undefined }).catch(() => {});
       res.status(500).json({ error: 'Webhook processing failed' });
     }
   });
@@ -522,6 +525,7 @@ export function registerWebhookRoutes(app: Express) {
 
     } catch (error) {
       console.error('❌ SendGrid webhook error:', error);
+      logSystemError({ source: 'webhook', severity: 'critical', message: `SendGrid inbound email webhook error: ${error instanceof Error ? error.message : String(error)}`, stackTrace: error instanceof Error ? error.stack : undefined }).catch(() => {});
       res.status(500).json({ error: 'Webhook processing failed' });
     }
   });
@@ -711,6 +715,7 @@ export function registerWebhookRoutes(app: Express) {
 
     } catch (error) {
       console.error('❌ Vonage SMS webhook error:', error);
+      logSystemError({ source: 'webhook', severity: 'error', message: `Vonage SMS webhook error: ${error instanceof Error ? error.message : String(error)}`, stackTrace: error instanceof Error ? error.stack : undefined }).catch(() => {});
       res.status(500).json({ error: 'Webhook processing failed' });
     }
   });
@@ -915,6 +920,7 @@ export function registerWebhookRoutes(app: Express) {
 
     } catch (error) {
       console.error('❌ Retell webhook error:', error);
+      logSystemError({ source: 'webhook', severity: 'error', message: `Retell voice transcript webhook error: ${error instanceof Error ? error.message : String(error)}`, stackTrace: error instanceof Error ? error.stack : undefined }).catch(() => {});
       res.status(500).json({ error: 'Webhook processing failed' });
     }
   });
@@ -967,6 +973,13 @@ export function registerWebhookRoutes(app: Express) {
         }).then(() => {
           console.log(`[SendGrid Events] Processed: type=${eventType} action=${action_id || 'unknown'} contact=${contact_id || 'unknown'}`);
         }).catch(err => console.error('Failed to log SendGrid outcome:', err));
+
+        logCommEvent({
+          tenantId: tenant_id,
+          communicationId: action_id || sg_message_id || 'unknown',
+          eventType: eventType,
+          eventData: { channel: 'email', sgEvent: eventType, email },
+        }).catch(() => {});
       }
 
       res.status(200).json({ message: 'Events processed' });
@@ -2031,6 +2044,7 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
 
     } catch (error) {
       console.error('❌ Retell Custom LLM call ended webhook error:', error);
+      logSystemError({ source: 'webhook', severity: 'error', message: `Retell Custom LLM call ended webhook error: ${error instanceof Error ? error.message : String(error)}`, stackTrace: error instanceof Error ? error.stack : undefined }).catch(() => {});
       res.status(500).json({ error: 'Processing failed' });
     }
   });
@@ -2408,6 +2422,13 @@ async function processNormalizedInboundEmail(
       subject: subject || '(No Subject)',
       preview: (text || '').substring(0, 100),
     });
+
+    logCommEvent({
+      tenantId: linkedContact.tenantId,
+      communicationId: linkedAction?.id || 'inbound-' + Date.now(),
+      eventType: 'replied',
+      eventData: { channel: 'email', from: fromEmail },
+    }).catch(() => {});
 
     // Record email reply signal
     const { signalCollector } = await import("../lib/signal-collector");

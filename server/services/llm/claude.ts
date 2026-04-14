@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { logLLMCall, logLLMCallManual, type LLMLogContext } from "../admin/llmLogger";
 
 if (!process.env.ANTHROPIC_API_KEY) {
   throw new Error("[Claude] ANTHROPIC_API_KEY is not set — server cannot start without it.");
@@ -23,6 +24,7 @@ interface GenerateTextOptions {
   model?: ModelTier;
   temperature?: number;
   maxTokens?: number;
+  logContext?: LLMLogContext;
 }
 
 interface GenerateJSONOptions extends GenerateTextOptions {
@@ -34,10 +36,39 @@ interface GenerateJSONOptions extends GenerateTextOptions {
  * Generate a plain-text completion from Claude.
  */
 export async function generateText(opts: GenerateTextOptions): Promise<string> {
-  const { system, prompt, model = "fast", temperature = 0.3, maxTokens = 1024 } = opts;
+  const { system, prompt, model = "fast", temperature = 0.3, maxTokens = 1024, logContext } = opts;
+  const modelId = MODELS[model];
+
+  if (logContext) {
+    const response = await logLLMCall(
+      {
+        tenantId: logContext.tenantId,
+        caller: logContext.caller,
+        relatedEntityType: logContext.relatedEntityType,
+        relatedEntityId: logContext.relatedEntityId,
+        model: modelId,
+        systemPrompt: system,
+        userMessage: prompt,
+        metadata: logContext.metadata,
+      },
+      () => anthropic.messages.create({
+        model: modelId,
+        max_tokens: maxTokens,
+        temperature,
+        system,
+        messages: [{ role: "user", content: prompt }],
+      }, { timeout: 30_000 }),
+    );
+
+    const block = response.content[0];
+    if (block.type !== "text") {
+      throw new Error(`Unexpected content block type: ${block.type}`);
+    }
+    return block.text;
+  }
 
   const response = await anthropic.messages.create({
-    model: MODELS[model],
+    model: modelId,
     max_tokens: maxTokens,
     temperature,
     system,
@@ -52,6 +83,7 @@ export async function generateText(opts: GenerateTextOptions): Promise<string> {
 }
 
 export type { ModelTier };
+export type { LLMLogContext };
 
 export interface ConversationMessage {
   role: "user" | "assistant";
@@ -64,6 +96,7 @@ interface GenerateConversationOptions {
   model?: ModelTier;
   temperature?: number;
   maxTokens?: number;
+  logContext?: LLMLogContext;
 }
 
 /**
@@ -71,10 +104,40 @@ interface GenerateConversationOptions {
  * Use this for multi-turn conversations like Riley chat.
  */
 export async function generateConversation(opts: GenerateConversationOptions): Promise<string> {
-  const { system, messages, model = "standard", temperature = 0.4, maxTokens = 1024 } = opts;
+  const { system, messages, model = "standard", temperature = 0.4, maxTokens = 1024, logContext } = opts;
+  const modelId = MODELS[model];
+  const userMessage = messages.filter(m => m.role === "user").map(m => m.content).join("\n---\n");
+
+  if (logContext) {
+    const response = await logLLMCall(
+      {
+        tenantId: logContext.tenantId,
+        caller: logContext.caller,
+        relatedEntityType: logContext.relatedEntityType,
+        relatedEntityId: logContext.relatedEntityId,
+        model: modelId,
+        systemPrompt: system,
+        userMessage,
+        metadata: logContext.metadata,
+      },
+      () => anthropic.messages.create({
+        model: modelId,
+        max_tokens: maxTokens,
+        temperature,
+        system,
+        messages,
+      }, { timeout: 30_000 }),
+    );
+
+    const block = response.content[0];
+    if (block.type !== "text") {
+      throw new Error(`Unexpected content block type: ${block.type}`);
+    }
+    return block.text;
+  }
 
   const response = await anthropic.messages.create({
-    model: MODELS[model],
+    model: modelId,
     max_tokens: maxTokens,
     temperature,
     system,
@@ -96,10 +159,12 @@ export async function streamConversation(
   opts: GenerateConversationOptions,
   onDelta: (text: string) => void,
 ): Promise<string> {
-  const { system, messages, model = "standard", temperature = 0.4, maxTokens = 1024 } = opts;
+  const { system, messages, model = "standard", temperature = 0.4, maxTokens = 1024, logContext } = opts;
+  const modelId = MODELS[model];
+  const start = Date.now();
 
   const stream = anthropic.messages.stream({
-    model: MODELS[model],
+    model: modelId,
     max_tokens: maxTokens,
     temperature,
     system,
@@ -116,6 +181,23 @@ export async function streamConversation(
       fullText += event.delta.text;
       onDelta(event.delta.text);
     }
+  }
+
+  // Log streaming calls manually after completion
+  if (logContext) {
+    const userMessage = messages.filter(m => m.role === "user").map(m => m.content).join("\n---\n");
+    logLLMCallManual({
+      tenantId: logContext.tenantId,
+      caller: logContext.caller,
+      relatedEntityType: logContext.relatedEntityType,
+      relatedEntityId: logContext.relatedEntityId,
+      model: modelId,
+      systemPrompt: system,
+      userMessage,
+      assistantResponse: fullText,
+      latencyMs: Date.now() - start,
+      metadata: logContext.metadata,
+    });
   }
 
   return fullText;

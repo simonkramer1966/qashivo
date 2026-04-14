@@ -77,6 +77,7 @@ Respond as JSON with { "reply", "category" (if determined), "done" }.`;
     temperature: 0.4,
     maxTokens: 300,
     schemaHint: '{ "reply": "string", "category?": "string", "done": "boolean" }',
+    logContext: { caller: 'riley_rejection', relatedEntityId: actionId, relatedEntityType: 'action' },
   });
 
   // Append both turns to history

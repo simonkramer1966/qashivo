@@ -316,5 +316,6 @@ Write a 3-4 sentence impact summary. If DSO has improved, celebrate the working 
     model: "fast",
     temperature: 0.4,
     maxTokens: 300,
+    logContext: { caller: 'impact_narrative' },
   });
 }

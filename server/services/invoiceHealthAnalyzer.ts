@@ -439,6 +439,7 @@ Provide analysis in JSON format:
         model: "fast",
         temperature: 0.2,
         maxTokens: 300,
+        logContext: { caller: 'invoice_health' },
       });
       
       return {

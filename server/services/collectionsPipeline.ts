@@ -138,6 +138,7 @@ async function snapToContactWindow(
   return candidate;
 }
 import { determineTone, mapToneToActionContext } from "./toneEscalationEngine";
+import { logSystemError } from "./admin/errorLogger";
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -350,6 +351,7 @@ export async function processCollectionEmail(
     };
   } catch (error: any) {
     console.error(`[Pipeline] Error processing email for action ${actionId}:`, error.message);
+    logSystemError({ tenantId, source: 'collections_pipeline', severity: 'error', message: error instanceof Error ? error.message : String(error), stackTrace: error instanceof Error ? error.stack : undefined, context: { tenantId, contactId, actionId } }).catch(() => {});
 
     await db
       .update(actions)
@@ -821,6 +823,7 @@ async function deliverEmail(
     }
   } catch (error: any) {
     console.error(`[Pipeline] Delivery error for action ${actionId}:`, error.message);
+    logSystemError({ tenantId, source: 'collections_pipeline', severity: 'error', message: error instanceof Error ? error.message : String(error), stackTrace: error instanceof Error ? error.stack : undefined, context: { tenantId, contactId, actionId } }).catch(() => {});
     return { actionId, status: "failed", error: error.message };
   }
 }

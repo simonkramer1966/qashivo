@@ -429,6 +429,7 @@ Guidelines:
         model: "fast",
         temperature: 0.7,
         maxTokens: actionType === 'sms' ? 100 : 500,
+        logContext: { tenantId: req.rbac?.tenantId, caller: 'collection_draft' },
       });
 
       res.json({ draftContent });

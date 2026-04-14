@@ -12,6 +12,7 @@ import { eq } from 'drizzle-orm';
 import * as crypto from 'crypto';
 import { withXeroRefreshLock } from '../../services/xeroTokenLock';
 import { tryEncryptToken, decryptTenantTokens } from '../../utils/tokenEncryption';
+import { logSystemError } from '../../services/admin/errorLogger';
 import type {
   AccountingAdapter,
   AuthStatus,
@@ -742,6 +743,7 @@ export class XeroAdapter implements AccountingAdapter {
         } catch (refreshErr) {
           // Refresh failed — throw the original auth error
           console.error(`[XeroAdapter] Token refresh failed after ${status}: ${(refreshErr as Error).message}`);
+          logSystemError({ tenantId, source: 'xero_sync', severity: 'critical', message: `Token refresh failed after ${status}: ${(refreshErr as Error).message}`, stackTrace: refreshErr instanceof Error ? refreshErr.stack : undefined, context: { tenantId, endpoint, httpStatus: status } }).catch(() => {});
           throw new Error(`XERO_AUTH_ERROR: ${status} for ${endpoint} (refresh also failed) — ${errorText.substring(0, 500)}`);
         }
       }

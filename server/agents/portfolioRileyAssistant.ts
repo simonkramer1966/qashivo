@@ -529,6 +529,7 @@ export async function getPortfolioRileyResponse(params: {
     model: "standard",
     temperature: 0.5,
     maxTokens: 1024,
+    logContext: { caller: 'portfolio_riley', metadata: { partnerId, userId } },
   });
 
   // 6. Save
@@ -630,6 +631,7 @@ export async function getPortfolioRileyResponseStreaming(params: {
       model: "standard",
       temperature: 0.5,
       maxTokens: 1024,
+      logContext: { caller: 'portfolio_riley_stream', metadata: { partnerId, userId } },
     },
     onDelta,
   )

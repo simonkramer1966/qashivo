@@ -1,5 +1,6 @@
 import { generateJSON } from "./llm/claude";
 import { db } from "../db";
+import { logSystemError } from "./admin/errorLogger";
 import { inboundMessages, actions, contacts, invoices, paymentPlans, paymentPlanInvoices, users, outcomes, emailClarifications, tenants, emailMessages, customerContactPersons, forecastUserAdjustments, paymentPromises, timelineEvents, aiFacts } from "@shared/schema";
 import { eq, and, desc, inArray, notInArray, asc, sql, gte, lt } from "drizzle-orm";
 import { getPromiseReliabilityService } from "./promiseReliabilityService.js";
@@ -126,6 +127,7 @@ class IntentAnalyst {
       const prompt = this.buildAnalysisPrompt(messageContent, context);
 
       const result = await generateJSON<any>({
+        logContext: { caller: 'intent_analysis' },
         system: `You are Charlie, an expert B2B credit control AI analysing inbound debtor communications.
 Your role is to detect intent, extract actionable information, and recommend the Collections Agent's response approach.
 
@@ -218,6 +220,7 @@ Critical Rules:
       };
     } catch (error) {
       console.error('❌ Intent analysis failed:', error);
+      logSystemError({ source: 'intent_analyst', severity: 'error', message: `Intent analysis failed: ${error instanceof Error ? error.message : String(error)}`, stackTrace: error instanceof Error ? error.stack : undefined }).catch(() => {});
       return {
         intentType: 'unknown',
         confidence: 0,
@@ -601,6 +604,7 @@ CRITICAL EXCEPTIONS — do NOT flag ambiguity when:
 
     } catch (error) {
       console.error(`❌ Error processing message ${messageId}:`, error);
+      logSystemError({ source: 'intent_analyst', severity: 'error', message: `Error processing message ${messageId}: ${error instanceof Error ? error.message : String(error)}`, stackTrace: error instanceof Error ? error.stack : undefined, context: { messageId } }).catch(() => {});
     }
   }
 
@@ -855,6 +859,7 @@ CRITICAL EXCEPTIONS — do NOT flag ambiguity when:
       console.log(`✅ Action created: ${actionSubject}`);
     } catch (error) {
       console.error('❌ Error creating action:', error);
+      logSystemError({ tenantId: message.tenantId ?? undefined, source: 'intent_analyst', severity: 'error', message: `Error creating action from intent: ${error instanceof Error ? error.message : String(error)}`, stackTrace: error instanceof Error ? error.stack : undefined, context: { messageId: message.id, contactId: message.contactId ?? undefined } }).catch(() => {});
     }
   }
 
@@ -914,9 +919,10 @@ CRITICAL EXCEPTIONS — do NOT flag ambiguity when:
         .returning();
 
       console.log(`✅ Outcome created: ${outcomeType} (${confidenceBand} confidence) - effect: ${effect}`);
-      
+
     } catch (error) {
       console.error('❌ Error creating outcome:', error);
+      logSystemError({ tenantId: message.tenantId ?? undefined, source: 'intent_analyst', severity: 'error', message: `Error creating outcome from intent: ${error instanceof Error ? error.message : String(error)}`, stackTrace: error instanceof Error ? error.stack : undefined, context: { messageId: message.id, contactId: message.contactId ?? undefined } }).catch(() => {});
     }
   }
 
@@ -1566,8 +1572,9 @@ CRITICAL EXCEPTIONS — do NOT flag ambiguity when:
       console.log(`✅ Promise created: ${promise.id} - Payment by ${promisedDate.toLocaleDateString()}${!dateWasExtracted ? ' (default)' : ''}`);
     } catch (error) {
       console.error('❌ Error creating promise from intent:', error);
+      logSystemError({ tenantId: message.tenantId ?? undefined, source: 'intent_analyst', severity: 'error', message: `Error creating promise from intent: ${error instanceof Error ? error.message : String(error)}`, stackTrace: error instanceof Error ? error.stack : undefined, context: { messageId: message.id, contactId: message.contactId ?? undefined, invoiceId: message.invoiceId ?? undefined } }).catch(() => {});
       // Log details for debugging
-      console.error('Message details:', { 
+      console.error('Message details:', {
         messageId: message.id, 
         contactId: message.contactId, 
         invoiceId: message.invoiceId,
@@ -1642,6 +1649,7 @@ CRITICAL EXCEPTIONS — do NOT flag ambiguity when:
       console.log(`✅ Forecast adjustment created: ${debtorName} — £${amount.toFixed(2)} expected ${promisedDate.toLocaleDateString()}`);
     } catch (error) {
       console.error('❌ Error creating forecast adjustment from promise:', error);
+      logSystemError({ tenantId: message.tenantId ?? undefined, source: 'intent_analyst', severity: 'error', message: `Error creating forecast adjustment from promise: ${error instanceof Error ? error.message : String(error)}`, stackTrace: error instanceof Error ? error.stack : undefined, context: { messageId: message.id, contactId: message.contactId ?? undefined } }).catch(() => {});
     }
   }
 
@@ -1975,6 +1983,7 @@ CRITICAL EXCEPTIONS — do NOT flag ambiguity when:
       console.log(`💰 Payment plan created. Amount: £${totalAmount.toFixed(2)}, Start: ${planStartDate.toISOString()}`);
     } catch (error) {
       console.error('❌ Error handling payment plan intent:', error);
+      logSystemError({ tenantId: message.tenantId ?? undefined, source: 'intent_analyst', severity: 'error', message: `Error handling payment plan intent: ${error instanceof Error ? error.message : String(error)}`, stackTrace: error instanceof Error ? error.stack : undefined, context: { messageId: message.id, contactId: message.contactId ?? undefined, invoiceId: message.invoiceId ?? undefined } }).catch(() => {});
     }
   }
 
@@ -2007,6 +2016,7 @@ CRITICAL EXCEPTIONS — do NOT flag ambiguity when:
       console.log(`⚠️ Dispute recorded. Reason: ${disputeReason}`);
     } catch (error) {
       console.error('❌ Error handling dispute intent:', error);
+      logSystemError({ tenantId: message.tenantId ?? undefined, source: 'intent_analyst', severity: 'error', message: `Error handling dispute intent: ${error instanceof Error ? error.message : String(error)}`, stackTrace: error instanceof Error ? error.stack : undefined, context: { messageId: message.id, contactId: message.contactId ?? undefined, invoiceId: message.invoiceId ?? undefined } }).catch(() => {});
     }
   }
 
@@ -2123,6 +2133,7 @@ CRITICAL: Each payment tranche on a DIFFERENT date MUST be a SEPARATE entry in t
       model: "fast",
       temperature: 0.2,
       schemaHint: `{ intentType, confidence, installments: [{ date, amount, description }], totalAmount, invoiceAllocation, reasoning }`,
+      logContext: { caller: 'intent_ptp_extraction' },
     });
 
     return {
@@ -2300,6 +2311,7 @@ CRITICAL: Each payment tranche on a DIFFERENT date MUST be a SEPARATE entry in t
 
     } catch (error) {
       console.error('Failed to handle clarification response:', error);
+      logSystemError({ tenantId: message.tenantId ?? undefined, source: 'intent_analyst', severity: 'error', message: `Failed to handle clarification response: ${error instanceof Error ? error.message : String(error)}`, stackTrace: error instanceof Error ? error.stack : undefined, context: { messageId: message.id, contactId: message.contactId ?? undefined } }).catch(() => {});
     }
   }
 
@@ -2534,6 +2546,7 @@ CRITICAL: Each payment tranche on a DIFFERENT date MUST be a SEPARATE entry in t
       
     } catch (error) {
       console.error('Failed to send clarification for ambiguity:', error);
+      logSystemError({ tenantId: message.tenantId ?? undefined, source: 'intent_analyst', severity: 'error', message: `Failed to send clarification for ambiguity: ${error instanceof Error ? error.message : String(error)}`, stackTrace: error instanceof Error ? error.stack : undefined, context: { messageId: message.id, contactId: message.contactId ?? undefined } }).catch(() => {});
       return null;
     }
   }

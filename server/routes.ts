@@ -2192,6 +2192,7 @@ Guidelines:
         model: "fast",
         temperature: 0.7,
         maxTokens: 500,
+        logContext: { tenantId: req.rbac?.tenantId, caller: 'draft_response' },
       });
 
       res.json({ draftResponse });
@@ -5203,6 +5204,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         prompt: "Say hello in exactly 5 words.",
         model: "fast",
         maxTokens: 50,
+        logContext: { caller: 'test_endpoint' },
       });
 
       console.log("✅ Claude test successful");
@@ -6816,8 +6818,9 @@ Payment required immediately to avoid collection action. Contact us NOW.`
             prompt: transcriptText,
             model: "fast",
             schemaHint: `{ intent, sentiment, confidence, keyInsights, actionItems, summary }`,
+            logContext: { caller: 'call_analysis', metadata: { leadId: leadId as string } },
           });
-          
+
           // Check if call was terminated by customer
           const terminatedByCustomer = callData.disconnection_reason === 'user_hangup' || 
                                         callData.disconnection_reason === 'callee_hangup';
@@ -6904,8 +6907,9 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         prompt: transcriptText,
         model: "fast",
         schemaHint: `{ intent, sentiment, confidence, keyInsights, actionItems, summary }`,
+        logContext: { caller: 'call_analysis', metadata: { leadId } },
       });
-      
+
       // Update lead with voice demo results
       const updatedLead = await storage.updateInvestorLead(leadId, {
         voiceDemoCompleted: true,
@@ -6968,6 +6972,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         prompt: text,
         model: "fast",
         schemaHint: `{ intent, sentiment, confidence }`,
+        logContext: { caller: 'call_analysis', metadata: { leadId: lead.id } },
       });
       
       // Update lead with SMS demo results

@@ -25,6 +25,7 @@ import type {
   FetchOptions, ChangeSet,
 } from './adapters/types';
 import { emitTenantEvent } from '../services/realtimeEvents';
+import { logSystemError } from '../services/admin/errorLogger';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
@@ -207,6 +208,7 @@ export class SyncOrchestrator {
 
       await this.executeSyncForTenant(entry.tenantId, entry.mode, entry.trigger).catch(err => {
         console.error(`[SyncOrchestrator] Queue sync failed for ${entry.tenantId}:`, err);
+        logSystemError({ tenantId: entry.tenantId, source: 'xero_sync', severity: 'error', message: err instanceof Error ? err.message : String(err), stackTrace: err instanceof Error ? err.stack : undefined, context: { tenantId: entry.tenantId, mode: entry.mode, trigger: entry.trigger } }).catch(() => {});
       });
     } finally {
       this.isProcessingQueue = false;
@@ -225,6 +227,7 @@ export class SyncOrchestrator {
       console.log(`[SyncOrchestrator] Scheduled ${mode} sync for ${connectedTenants.length} tenants`);
     } catch (err) {
       console.error('[SyncOrchestrator] Failed to schedule tenant syncs:', err);
+      logSystemError({ source: 'xero_sync', severity: 'error', message: err instanceof Error ? err.message : String(err), stackTrace: err instanceof Error ? err.stack : undefined, context: { mode, trigger } }).catch(() => {});
     }
   }
 
@@ -276,6 +279,7 @@ export class SyncOrchestrator {
       }
     } catch (err) {
       console.error('[SyncOrchestrator] checkSchedule failed:', err);
+      logSystemError({ source: 'xero_sync', severity: 'error', message: err instanceof Error ? err.message : String(err), stackTrace: err instanceof Error ? err.stack : undefined, context: { operation: 'checkSchedule' } }).catch(() => {});
     }
   }
 
@@ -649,6 +653,7 @@ export class SyncOrchestrator {
       result.durationMs = result.completedAt.getTime() - startedAt.getTime();
 
       console.error(`[SyncOrchestrator] Sync FAILED for ${tenantId}: ${errorMessage}`);
+      logSystemError({ tenantId, source: 'xero_sync', severity: 'error', message: errorMessage, stackTrace: err instanceof Error ? (err as Error).stack : undefined, context: { tenantId, trigger, mode: result.syncMode } }).catch(() => {});
 
       await this.recordSyncFailure(tenantId, result);
       await this.logSyncAudit(tenantId, result, trigger);
@@ -1191,6 +1196,7 @@ export class SyncOrchestrator {
       }
     } catch (err) {
       console.error('[SyncOrchestrator] Health check run failed:', err);
+      logSystemError({ source: 'xero_sync', severity: 'error', message: err instanceof Error ? err.message : String(err), stackTrace: err instanceof Error ? err.stack : undefined, context: { operation: 'healthCheckRun' } }).catch(() => {});
     }
   }
 
@@ -1293,6 +1299,7 @@ export class SyncOrchestrator {
 
     if (failures >= CONSECUTIVE_FAILURES_PAUSE_CHARLIE) {
       console.error(`[SyncOrchestrator] ${failures} consecutive failures for ${tenantId} — Charlie should be paused for this tenant`);
+      logSystemError({ tenantId, source: 'xero_sync', severity: 'critical', message: `${failures} consecutive sync failures — Charlie paused for tenant`, context: { tenantId, consecutiveFailures: failures } }).catch(() => {});
     }
   }
 

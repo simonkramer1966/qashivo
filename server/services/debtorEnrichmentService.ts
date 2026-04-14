@@ -174,6 +174,7 @@ async function generateRiskSummary(
     prompt: `Assess this debtor:\n${context}`,
     model: "fast",
     temperature: 0.3,
+    logContext: { caller: 'debtor_enrichment' },
   });
 }
 

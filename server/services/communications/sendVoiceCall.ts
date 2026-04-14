@@ -8,6 +8,8 @@
  * - Email: enforceCommunicationMode() in server/services/sendgrid.ts
  * - SMS: mode check in server/services/vonage.ts
  */
+import { logCommEvent } from '../../services/admin/commEventLogger';
+import { logSystemError } from '../../services/admin/errorLogger';
 
 export interface SendVoiceCallParams {
   tenantId: string;
@@ -116,6 +118,7 @@ export async function sendVoiceCall(params: SendVoiceCallParams): Promise<VoiceC
     // Fail closed — if we can't verify the mode, block the call
     if (process.env.NODE_ENV === 'production') {
       console.error('🚫 [VoiceSafetyNet] BLOCKING voice call — cannot verify communication mode in production');
+      logSystemError({ tenantId, source: 'retell', severity: 'critical', message: 'BLOCKING voice call — cannot verify communication mode in production', stackTrace: err instanceof Error ? err.stack : undefined, context: { tenantId, to } }).catch(() => {});
       throw new Error('Cannot verify communication mode — voice call blocked for safety');
     }
     // In development, allow through with warning
@@ -143,14 +146,32 @@ export async function sendVoiceCall(params: SendVoiceCallParams): Promise<VoiceC
     ...(actualTo !== to ? { originalRecipient: to, originalContactName: contactName } : {}),
   };
 
-  const callResult = await createUnifiedRetellCall({
-    fromNumber: fromNumber || process.env.RETELL_PHONE_NUMBER,
-    toNumber: actualTo,
-    agentId,
-    dynamicVariables: enrichedVariables,
-    metadata: enrichedMetadata,
-    context,
-  });
+  let callResult: Awaited<ReturnType<typeof createUnifiedRetellCall>>;
+  try {
+    callResult = await createUnifiedRetellCall({
+      fromNumber: fromNumber || process.env.RETELL_PHONE_NUMBER,
+      toNumber: actualTo,
+      agentId,
+      dynamicVariables: enrichedVariables,
+      metadata: enrichedMetadata,
+      context,
+    });
+  } catch (callError: any) {
+    logCommEvent({
+      tenantId,
+      communicationId: 'unknown',
+      eventType: 'failed',
+      eventData: { channel: 'voice', error: callError.message },
+    }).catch(() => {});
+    throw callError;
+  }
+
+  logCommEvent({
+    tenantId,
+    communicationId: callResult.callId,
+    eventType: 'api_accepted',
+    eventData: { channel: 'voice', to: actualTo, agentId },
+  }).catch(() => {});
 
   return {
     callId: callResult.callId,

@@ -394,6 +394,7 @@ export async function generateWeeklyReview(
     model: "standard",
     temperature: 0.4,
     maxTokens: 2048,
+    logContext: { tenantId, caller: 'weekly_review' },
   });
 
   // Parse response: prose before the JSON marker, debtor focus after

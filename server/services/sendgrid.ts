@@ -1,6 +1,8 @@
 // Backwards compatibility wrapper for SendGrid email service
 // SECURITY: All outbound email MUST flow through this module's exported functions.
 // Communication mode enforcement happens here — do NOT call emailService.sendEmail() directly.
+import { logCommEvent } from './admin/commEventLogger';
+import { logSystemError } from './admin/errorLogger';
 import { SendGridEmailService } from './email/SendGridEmailService';
 import { EmailServiceConfig, EmailMessage, EmailAddress, EmailProvider } from '../../shared/types/email';
 
@@ -68,6 +70,7 @@ async function enforceCommunicationMode(params: {
     const testEmails = tenant?.testEmails as string[] | null;
     if (!testEmails?.length) {
       console.error(`🚫 [CommMode] BLOCKED — testing mode but no test email addresses configured for tenant ${params.tenantId}`);
+      logSystemError({ tenantId: params.tenantId, source: 'sendgrid', severity: 'error', message: 'testing mode but no test email addresses configured', context: { tenantId: params.tenantId, mode } }).catch(() => {});
       return { allowed: false, to, subject, html, text, mode, error: 'No test email addresses configured for testing mode' };
     }
     if (!subject.startsWith('[TEST]')) {
@@ -91,6 +94,7 @@ async function enforceCommunicationMode(params: {
     const testEmails = tenant?.testEmails as string[] | null;
     if (!testEmails?.length) {
       console.error(`🚫 [CommMode] BLOCKED — soft_live mode but no test email addresses configured for tenant ${params.tenantId}`);
+      logSystemError({ tenantId: params.tenantId, source: 'sendgrid', severity: 'error', message: 'soft_live mode but no test email addresses configured', context: { tenantId: params.tenantId, mode } }).catch(() => {});
       return { allowed: false, to, subject, html, text, mode, error: 'No test email addresses configured for soft_live mode' };
     }
     if (!subject.startsWith('[SOFT LIVE]')) {
@@ -193,6 +197,7 @@ export async function sendEmail(params: {
       // Fail closed — block in production if we can't verify
       if (process.env.NODE_ENV === 'production') {
         console.error('🚫 [EmailSafetyNet] BLOCKING email — cannot verify communication mode in production');
+        logSystemError({ tenantId: params.tenantId, source: 'sendgrid', severity: 'critical', message: 'BLOCKING email — cannot verify communication mode in production', context: { tenantId: params.tenantId } }).catch(() => {});
         return { success: false, error: 'Cannot verify communication mode — email blocked for safety' };
       }
     }
@@ -224,6 +229,7 @@ export async function sendEmail(params: {
       }
     } catch (routingErr: any) {
       console.error(`❌ [EmailRouting] Error checking connected email, falling back to SendGrid:`, routingErr.message);
+      logSystemError({ tenantId: params.tenantId, source: 'sendgrid', severity: 'error', message: `Error checking connected email: ${routingErr.message}`, stackTrace: routingErr instanceof Error ? routingErr.stack : undefined, context: { tenantId: params.tenantId } }).catch(() => {});
     }
 
     // 4. SendGrid dispatch (mode already enforced, params already transformed)
@@ -249,6 +255,14 @@ export async function sendEmail(params: {
     };
 
     const result = await emailService.sendEmail(message);
+    if (result.success) {
+      logCommEvent({
+        tenantId: params.tenantId,
+        communicationId: params.actionId || result.providerMessageId || result.messageId || 'unknown',
+        eventType: 'api_accepted',
+        eventData: { channel: 'email', to: params.to, messageId: result.providerMessageId || result.messageId },
+      }).catch(() => {});
+    }
     return {
       success: result.success,
       messageId: result.providerMessageId || result.messageId,
@@ -259,6 +273,13 @@ export async function sendEmail(params: {
     };
   } catch (error: any) {
     console.error('Send email error:', error);
+    logSystemError({ tenantId: params.tenantId, source: 'sendgrid', severity: 'error', message: error instanceof Error ? error.message : String(error), stackTrace: error instanceof Error ? error.stack : undefined, context: { tenantId: params.tenantId, to: params.to, actionId: params.actionId, contactId: params.contactId } }).catch(() => {});
+    logCommEvent({
+      tenantId: params.tenantId,
+      communicationId: params.actionId || 'unknown',
+      eventType: 'failed',
+      eventData: { channel: 'email', error: error.message },
+    }).catch(() => {});
     return { success: false, error: error.message };
   }
 }
@@ -327,6 +348,7 @@ export async function sendBulkEmails(params: {
     return result.successfulSends > 0;
   } catch (error) {
     console.error('Send bulk emails error:', error);
+    logSystemError({ tenantId: params.tenantId, source: 'sendgrid', severity: 'error', message: error instanceof Error ? error.message : String(error), stackTrace: error instanceof Error ? error.stack : undefined, context: { tenantId: params.tenantId } }).catch(() => {});
     return false;
   }
 }
@@ -382,6 +404,7 @@ export async function sendEmailWithAttachment(params: {
     return result.success;
   } catch (error) {
     console.error('Send email with attachment error:', error);
+    logSystemError({ tenantId: params.tenantId, source: 'sendgrid', severity: 'error', message: error instanceof Error ? error.message : String(error), stackTrace: error instanceof Error ? error.stack : undefined, context: { tenantId: params.tenantId, to: params.to } }).catch(() => {});
     return false;
   }
 }

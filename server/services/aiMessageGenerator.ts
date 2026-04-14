@@ -280,6 +280,7 @@ class AIMessageGenerator {
         prompt: userPrompt,
         model: "fast",
         temperature: 0.7,
+        logContext: { tenantId, caller: 'charlie_message_gen' },
       });
     } catch (firstError) {
       console.warn('[LLM] First attempt failed, retrying in 10s...', (firstError as Error).message);
@@ -290,6 +291,7 @@ class AIMessageGenerator {
           prompt: userPrompt,
           model: "fast",
           temperature: 0.7,
+          logContext: { tenantId, caller: 'charlie_message_gen' },
         });
       } catch (secondError) {
         if (tenantId) recordFailure(tenantId);

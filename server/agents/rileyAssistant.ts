@@ -27,6 +27,7 @@ import {
   type ConversationMessage,
 } from "../services/llm/claude";
 import { getActiveDelegations } from "../middleware/rbac";
+import { logSystemError } from "../services/admin/errorLogger";
 
 // ── Types ───────────────────────────────────────────────────
 
@@ -360,6 +361,7 @@ export async function buildDebtorContext(contactId: string, tenantId: string): P
     return lines.join("\n");
   } catch (error) {
     console.error(`[Riley] buildDebtorContext failed for ${contactId}:`, error);
+    logSystemError({ tenantId, source: 'riley', severity: 'error', message: `buildDebtorContext failed for contact ${contactId}: ${error instanceof Error ? error.message : String(error)}`, stackTrace: error instanceof Error ? error.stack : undefined, context: { tenantId, contactId } }).catch(() => {});
     return `DEBTOR CONTEXT: Failed to load context for contact ${contactId}`;
   }
 }
@@ -471,6 +473,7 @@ async function buildPageContext(
     return "";
   } catch (error) {
     console.error("[Riley] buildPageContext failed:", error);
+    logSystemError({ tenantId, source: 'riley', severity: 'error', message: `buildPageContext failed: ${error instanceof Error ? error.message : String(error)}`, stackTrace: error instanceof Error ? error.stack : undefined, context: { tenantId, pageContext } }).catch(() => {});
     return "";
   }
 }
@@ -645,6 +648,7 @@ async function buildInvoiceDetailContext(invoiceId: string, tenantId: string): P
     } catch { /* graceful */ }
   } catch (error) {
     console.error("[Riley] buildInvoiceDetailContext failed:", error);
+    logSystemError({ tenantId, source: 'riley', severity: 'error', message: `buildInvoiceDetailContext failed: ${error instanceof Error ? error.message : String(error)}`, stackTrace: error instanceof Error ? error.stack : undefined, context: { tenantId, invoiceId } }).catch(() => {});
   }
 
   return lines.join("\n");
@@ -707,6 +711,7 @@ async function buildQashflowContext(tenantId: string): Promise<string> {
     }
   } catch (err) {
     console.error("[Riley] buildQashflowContext: getInvoiceMetrics failed:", err);
+    logSystemError({ tenantId, source: 'riley', severity: 'error', message: `buildQashflowContext: getInvoiceMetrics failed: ${err instanceof Error ? err.message : String(err)}`, stackTrace: err instanceof Error ? err.stack : undefined, context: { tenantId } }).catch(() => {});
   }
 
   // DSO trend
@@ -1149,6 +1154,7 @@ export async function getRileyResponse(params: {
     model: "standard",
     temperature: 0.5,
     maxTokens: 1024,
+    logContext: { tenantId, caller: 'riley_response', metadata: { conversationId: conversation.id } },
   });
 
   // 6. Append messages and save
@@ -1280,6 +1286,7 @@ export async function getRileyResponseStreaming(params: {
       model: "standard",
       temperature: 0.5,
       maxTokens: 1024,
+      logContext: { tenantId, caller: 'riley_response_stream', metadata: { conversationId: convId } },
     },
     onDelta,
   )
@@ -1372,6 +1379,7 @@ export async function extractIntelligence(
       maxTokens: 2048,
       schemaHint:
         '{ facts: [{category, entityType?, entityId?, factKey, factValue, confidence}], forecastInputs: [{category, description, amount, timingType, startDate?, endDate?, affects}], debtorUpdates: [{contactId, field, value}], actionRequests: [{type, entityId?, details}] }',
+      logContext: { tenantId, caller: 'riley_response', metadata: { conversationId } },
     });
 
     // Write facts to aiFacts
@@ -1494,6 +1502,7 @@ export async function extractIntelligence(
       `[Riley] Intelligence extraction failed for conversation ${conversationId}:`,
       error,
     );
+    logSystemError({ tenantId, source: 'riley', severity: 'error', message: `Intelligence extraction failed for conversation ${conversationId}: ${error instanceof Error ? error.message : String(error)}`, stackTrace: error instanceof Error ? error.stack : undefined, context: { tenantId, conversationId } }).catch(() => {});
     // Don't throw — extraction failures should never break the chat flow
   }
 }

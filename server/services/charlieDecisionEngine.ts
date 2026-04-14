@@ -13,6 +13,7 @@ import {
   CadenceRule, CharlieDecision, DailyPlan,
 } from "./playbookEngine";
 import { projectedDSO, getDSOMetadata } from "../lib/dso";
+import { logSystemError } from "./admin/errorLogger";
 
 export type { PriorityTier, CharlieChannel, CustomerSegment, EscalationTrigger, CharlieDecision, DailyPlan, CadenceRule };
 
@@ -1054,6 +1055,7 @@ export async function recomputeUrgency(
     };
   } catch (error) {
     console.error(`[Portfolio Controller] Error recomputing urgency for tenant ${tenantId}:`, error);
+    logSystemError({ tenantId, source: 'decision_engine', severity: 'error', message: `Error recomputing urgency for tenant ${tenantId}: ${error instanceof Error ? error.message : String(error)}`, stackTrace: error instanceof Error ? error.stack : undefined, context: { tenantId } }).catch(() => {});
     throw error;
   }
 }
@@ -1194,6 +1196,7 @@ export async function runNightly(): Promise<{
         // Gap 3: Calculate per-debtor urgency weights
         await calculatePerDebtorUrgency(tenantId, result.urgencyFactor).catch(err => {
           console.error(`[Portfolio Controller] Per-debtor urgency failed for ${tenantId}:`, err);
+          logSystemError({ tenantId, source: 'decision_engine', severity: 'error', message: `Per-debtor urgency calculation failed for ${tenantId}: ${err instanceof Error ? err.message : String(err)}`, stackTrace: err instanceof Error ? err.stack : undefined, context: { tenantId } }).catch(() => {});
         });
 
         console.log(
@@ -1203,6 +1206,7 @@ export async function runNightly(): Promise<{
         );
       } catch (error) {
         console.error(`[Portfolio Controller] Error processing tenant ${tenantId}:`, error);
+        logSystemError({ tenantId, source: 'decision_engine', severity: 'error', message: `Error processing tenant ${tenantId} in nightly run: ${error instanceof Error ? error.message : String(error)}`, stackTrace: error instanceof Error ? error.stack : undefined, context: { tenantId } }).catch(() => {});
         errors++;
       }
     }
@@ -1219,6 +1223,7 @@ export async function runNightly(): Promise<{
     };
   } catch (error) {
     console.error("[Portfolio Controller] Fatal error in nightly run:", error);
+    logSystemError({ source: 'decision_engine', severity: 'critical', message: `Fatal error in Portfolio Controller nightly run: ${error instanceof Error ? error.message : String(error)}`, stackTrace: error instanceof Error ? error.stack : undefined }).catch(() => {});
     throw error;
   }
 }
@@ -1296,6 +1301,7 @@ export async function getPortfolioHealth(tenantId: string): Promise<{
     };
   } catch (error) {
     console.error(`[Portfolio Controller] Error getting portfolio health for tenant ${tenantId}:`, error);
+    logSystemError({ tenantId, source: 'decision_engine', severity: 'error', message: `Error getting portfolio health for tenant ${tenantId}: ${error instanceof Error ? error.message : String(error)}`, stackTrace: error instanceof Error ? error.stack : undefined, context: { tenantId } }).catch(() => {});
     return null;
   }
 }
