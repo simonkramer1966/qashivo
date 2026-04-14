@@ -1,13 +1,14 @@
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { 
-  Building2, 
-  Users, 
-  Factory, 
-  ListChecks, 
-  FileDown, 
+import {
+  Building2,
+  Users,
+  Factory,
+  ListChecks,
+  FileDown,
   ScrollText,
   ClipboardList,
+  Activity,
   LogOut
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -20,6 +21,7 @@ interface AdminLayoutProps {
 }
 
 const navItems = [
+  { path: "/admin/ops", label: "Ops Dashboard", icon: Activity },
   { path: "/admin/partners", label: "Partners", icon: Building2 },
   { path: "/admin/smes", label: "Clients", icon: Factory },
   { path: "/admin/users", label: "Users", icon: Users },

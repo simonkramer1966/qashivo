@@ -3,6 +3,9 @@ import { useLocation, Switch, Route } from "wouter";
 import { useEffect, lazy, Suspense } from "react";
 import { Loader2 } from "lucide-react";
 
+const AdminOpsLayout = lazy(() => import("@/pages/admin/AdminOpsLayout"));
+const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard"));
+const AdminCharlieMonitor = lazy(() => import("@/pages/admin/AdminCharlieMonitor"));
 const AdminAnalytics = lazy(() => import("@/pages/admin-analytics"));
 const AdminOutcomes = lazy(() => import("@/pages/admin-outcomes"));
 const AdminPartners = lazy(() => import("@/pages/admin-partners"));
@@ -47,6 +50,9 @@ export default function AdminShell() {
   return (
     <Suspense fallback={<LoadingSpinner />}>
       <Switch>
+        <Route path="/admin/ops/charlie">{() => <AdminOpsLayout><AdminCharlieMonitor /></AdminOpsLayout>}</Route>
+        <Route path="/admin/ops/:rest*">{() => <AdminOpsLayout><AdminDashboard /></AdminOpsLayout>}</Route>
+        <Route path="/admin/ops">{() => <AdminOpsLayout><AdminDashboard /></AdminOpsLayout>}</Route>
         <Route path="/admin/analytics" component={AdminAnalytics} />
         <Route path="/admin/outcomes" component={AdminOutcomes} />
         <Route path="/admin/partners/:partnerId" component={AdminPartners} />
