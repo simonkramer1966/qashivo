@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { db } from "../db";
-import { partners, smeClients, users, importJobs, activityLogs, tenants, partnerWaitlist } from "@shared/schema";
-import { eq, desc, sql, and, or, ilike, ne } from "drizzle-orm";
+import { partners, smeClients, users, importJobs, activityLogs, tenants, partnerWaitlist, actions, contacts, invoices, adminLlmLogs, adminCommunicationEvents, adminSystemErrors } from "@shared/schema";
+import { eq, desc, sql, and, or, ilike, ne, gte, lte, inArray, isNotNull, asc } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { z } from "zod";
@@ -934,54 +934,780 @@ router.post("/reconcile-xero", requireAdminAuth, async (req, res) => {
   }
 });
 
-// ==================== ADMIN PORTAL — STUB ENDPOINTS ====================
-// These return static empty structures. Will be wired to real data later.
+// ==================== SHARED QUERY HELPERS ====================
 
-// Dashboard overview
-router.get("/dashboard", requireAdminAuth, async (_req, res) => {
-  res.json({
-    activeTenants: 0,
-    actionsToday: { total: 0, sent: 0, pending: 0 },
-    llmCalls24h: 0,
-    errors24h: 0,
-  });
+function parseFilters(req: any) {
+  const page = Math.max(1, parseInt(req.query.page as string) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
+  const offset = (page - 1) * limit;
+  const tenantId = req.query.tenantId as string | undefined;
+  const from = req.query.from as string | undefined;
+  const to = req.query.to as string | undefined;
+  const search = req.query.search as string | undefined;
+  return { page, limit, offset, tenantId, from, to, search };
+}
+
+function paginated(data: any[], total: number, page: number, limit: number) {
+  return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
+}
+
+// Build WHERE conditions for a table with tenantId + createdAt columns
+function dateAndTenantConditions(table: any, filters: { tenantId?: string; from?: string; to?: string }) {
+  const conds: any[] = [];
+  if (filters.tenantId) conds.push(eq(table.tenantId, filters.tenantId));
+  if (filters.from) conds.push(gte(table.createdAt, new Date(filters.from)));
+  if (filters.to) conds.push(lte(table.createdAt, new Date(filters.to)));
+  return conds.length > 0 ? and(...conds) : undefined;
+}
+
+// ==================== DASHBOARD ====================
+
+router.get("/dashboard", requireAdminAuth, async (req, res) => {
+  try {
+    const filters = parseFilters(req);
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const [activeTenantResult, actionsTodayResult, llmResult, errorsResult] = await Promise.all([
+      db.select({ count: sql<number>`count(*)::int` }).from(tenants)
+        .where(isNotNull(tenants.xeroTenantId)),
+      db.select({ count: sql<number>`count(*)::int` }).from(actions)
+        .where(and(
+          gte(actions.createdAt, todayStart),
+          filters.tenantId ? eq(actions.tenantId, filters.tenantId) : undefined,
+        )),
+      db.select({ count: sql<number>`count(*)::int` }).from(adminLlmLogs)
+        .where(gte(adminLlmLogs.createdAt, todayStart)),
+      db.select({ count: sql<number>`count(*)::int` }).from(adminSystemErrors)
+        .where(gte(adminSystemErrors.createdAt, todayStart)),
+    ]);
+
+    res.json({
+      activeTenants: activeTenantResult[0]?.count ?? 0,
+      actionsToday: actionsTodayResult[0]?.count ?? 0,
+      llmCalls24h: llmResult[0]?.count ?? 0,
+      errors24h: errorsResult[0]?.count ?? 0,
+    });
+  } catch (error: any) {
+    console.error("Failed to fetch dashboard:", error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// Charlie actions
+// ==================== CHARLIE MONITOR ====================
+
+// GET /charlie/actions — Action audit trail
 router.get("/charlie/actions", requireAdminAuth, async (req, res) => {
-  const page = parseInt(req.query.page as string) || 1;
-  const limit = parseInt(req.query.limit as string) || 20;
-  res.json({ actions: [], total: 0, page, limit });
+  try {
+    const filters = parseFilters(req);
+    const statusFilter = req.query.status as string | undefined;
+    const channelFilter = req.query.channel as string | undefined;
+
+    // Build WHERE conditions
+    const conds: any[] = [];
+    if (filters.tenantId) conds.push(eq(actions.tenantId, filters.tenantId));
+    if (filters.from) conds.push(gte(actions.createdAt, new Date(filters.from)));
+    if (filters.to) conds.push(lte(actions.createdAt, new Date(filters.to)));
+    if (statusFilter) conds.push(eq(actions.status, statusFilter));
+    if (channelFilter) conds.push(or(eq(actions.agentChannel, channelFilter), eq(actions.type, channelFilter)));
+    if (filters.search) {
+      conds.push(or(
+        ilike(contacts.name, `%${filters.search}%`),
+        ilike(contacts.companyName, `%${filters.search}%`),
+      ));
+    }
+
+    const whereClause = conds.length > 0 ? and(...conds) : undefined;
+
+    const [rows, countResult] = await Promise.all([
+      db.select({
+        id: actions.id,
+        tenantId: actions.tenantId,
+        contactId: actions.contactId,
+        invoiceId: actions.invoiceId,
+        invoiceIds: actions.invoiceIds,
+        channel: actions.agentChannel,
+        type: actions.type,
+        toneLevel: actions.agentToneLevel,
+        status: actions.status,
+        messageSubject: actions.subject,
+        messageContent: actions.content,
+        actionSummary: actions.actionSummary,
+        agentReasoning: actions.agentReasoning,
+        complianceResult: actions.complianceResult,
+        generationMethod: actions.generationMethod,
+        cancellationReason: actions.cancellationReason,
+        confidenceScore: actions.confidenceScore,
+        approvedBy: actions.approvedBy,
+        approvedAt: actions.approvedAt,
+        completedAt: actions.completedAt,
+        createdAt: actions.createdAt,
+        // Contact fields
+        debtorName: contacts.name,
+        debtorCompany: contacts.companyName,
+        debtorEmail: contacts.email,
+        debtorArEmail: contacts.arContactEmail,
+      })
+        .from(actions)
+        .leftJoin(contacts, eq(actions.contactId, contacts.id))
+        .where(whereClause)
+        .orderBy(desc(actions.createdAt))
+        .limit(filters.limit)
+        .offset(filters.offset),
+      db.select({ count: sql<number>`count(*)::int` })
+        .from(actions)
+        .leftJoin(contacts, eq(actions.contactId, contacts.id))
+        .where(whereClause),
+    ]);
+
+    // Batch fetch LLM logs for these action IDs
+    const actionIds = rows.map(r => r.id).filter(Boolean);
+    const llmLogs = actionIds.length > 0
+      ? await db.select({
+          relatedEntityId: adminLlmLogs.relatedEntityId,
+          id: adminLlmLogs.id,
+          model: adminLlmLogs.model,
+          inputTokens: adminLlmLogs.inputTokens,
+          outputTokens: adminLlmLogs.outputTokens,
+          latencyMs: adminLlmLogs.latencyMs,
+          costUsd: adminLlmLogs.costUsd,
+        })
+        .from(adminLlmLogs)
+        .where(and(
+          inArray(adminLlmLogs.relatedEntityId, actionIds),
+          inArray(adminLlmLogs.caller, ['charlie_email_gen', 'charlie_message_gen']),
+        ))
+      : [];
+
+    // Index LLM logs by action ID (take first match per action)
+    const llmByAction = new Map<string, typeof llmLogs[0]>();
+    for (const log of llmLogs) {
+      if (log.relatedEntityId && !llmByAction.has(log.relatedEntityId)) {
+        llmByAction.set(log.relatedEntityId, log);
+      }
+    }
+
+    const data = rows.map(row => {
+      const llm = llmByAction.get(row.id);
+      return {
+        id: row.id,
+        tenantId: row.tenantId,
+        debtorName: row.debtorName,
+        debtorCompany: row.debtorCompany,
+        debtorId: row.contactId,
+        debtorEmail: row.debtorArEmail || row.debtorEmail,
+        invoiceId: row.invoiceId,
+        invoiceIds: row.invoiceIds,
+        channel: row.channel || row.type,
+        toneLevel: row.toneLevel,
+        status: row.status,
+        messageSubject: row.messageSubject,
+        messageContent: row.messageContent ? row.messageContent.slice(0, 300) : null,
+        actionSummary: row.actionSummary,
+        reasoning: {
+          agentReasoning: row.agentReasoning,
+          complianceResult: row.complianceResult,
+          generationMethod: row.generationMethod,
+          cancellationReason: row.cancellationReason,
+          confidenceScore: row.confidenceScore,
+        },
+        llmLog: llm ? {
+          id: llm.id,
+          model: llm.model,
+          inputTokens: llm.inputTokens,
+          outputTokens: llm.outputTokens,
+          latencyMs: llm.latencyMs,
+          costUsd: llm.costUsd,
+        } : null,
+        approvedBy: row.approvedBy,
+        approvedAt: row.approvedAt,
+        completedAt: row.completedAt,
+        createdAt: row.createdAt,
+      };
+    });
+
+    res.json(paginated(data, countResult[0]?.count ?? 0, filters.page, filters.limit));
+  } catch (error: any) {
+    console.error("Failed to fetch charlie actions:", error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-router.get("/charlie/actions/:id", requireAdminAuth, async (_req, res) => {
-  res.json({ action: null });
+// GET /charlie/actions/:id — Single action detail
+router.get("/charlie/actions/:id", requireAdminAuth, async (req, res) => {
+  try {
+    const actionId = req.params.id;
+
+    const [actionRows, llmLogs, commEvents] = await Promise.all([
+      // Action + contact
+      db.select({
+        id: actions.id,
+        tenantId: actions.tenantId,
+        contactId: actions.contactId,
+        invoiceId: actions.invoiceId,
+        invoiceIds: actions.invoiceIds,
+        channel: actions.agentChannel,
+        type: actions.type,
+        toneLevel: actions.agentToneLevel,
+        status: actions.status,
+        messageSubject: actions.subject,
+        messageContent: actions.content,
+        actionSummary: actions.actionSummary,
+        agentReasoning: actions.agentReasoning,
+        complianceResult: actions.complianceResult,
+        generationMethod: actions.generationMethod,
+        cancellationReason: actions.cancellationReason,
+        confidenceScore: actions.confidenceScore,
+        approvedBy: actions.approvedBy,
+        approvedAt: actions.approvedAt,
+        completedAt: actions.completedAt,
+        deliveryStatus: actions.deliveryStatus,
+        providerMessageId: actions.providerMessageId,
+        metadata: actions.metadata,
+        createdAt: actions.createdAt,
+        debtorName: contacts.name,
+        debtorCompany: contacts.companyName,
+        debtorEmail: contacts.email,
+        debtorArEmail: contacts.arContactEmail,
+        debtorPhone: contacts.phone,
+        debtorArPhone: contacts.arContactPhone,
+      })
+        .from(actions)
+        .leftJoin(contacts, eq(actions.contactId, contacts.id))
+        .where(eq(actions.id, actionId)),
+
+      // All LLM logs for this action
+      db.select()
+        .from(adminLlmLogs)
+        .where(eq(adminLlmLogs.relatedEntityId, actionId))
+        .orderBy(asc(adminLlmLogs.createdAt)),
+
+      // Communication events
+      db.select()
+        .from(adminCommunicationEvents)
+        .where(eq(adminCommunicationEvents.communicationId, actionId))
+        .orderBy(asc(adminCommunicationEvents.createdAt)),
+    ]);
+
+    const action = actionRows[0];
+    if (!action) {
+      return res.json({ action: null });
+    }
+
+    // Fetch invoice details if bundled
+    const invoiceIdList = action.invoiceIds?.length ? action.invoiceIds : (action.invoiceId ? [action.invoiceId] : []);
+    const invoiceDetails = invoiceIdList.length > 0
+      ? await db.select({
+          id: invoices.id,
+          invoiceNumber: invoices.invoiceNumber,
+          amount: invoices.amount,
+          amountPaid: invoices.amountPaid,
+          dueDate: invoices.dueDate,
+          status: invoices.status,
+        })
+        .from(invoices)
+        .where(inArray(invoices.id, invoiceIdList))
+      : [];
+
+    res.json({
+      action: {
+        id: action.id,
+        tenantId: action.tenantId,
+        debtorName: action.debtorName,
+        debtorCompany: action.debtorCompany,
+        debtorId: action.contactId,
+        debtorEmail: action.debtorArEmail || action.debtorEmail,
+        debtorPhone: action.debtorArPhone || action.debtorPhone,
+        invoiceId: action.invoiceId,
+        invoiceIds: action.invoiceIds,
+        invoiceDetails,
+        channel: action.channel || action.type,
+        toneLevel: action.toneLevel,
+        status: action.status,
+        deliveryStatus: action.deliveryStatus,
+        providerMessageId: action.providerMessageId,
+        messageSubject: action.messageSubject,
+        messageContent: action.messageContent,
+        actionSummary: action.actionSummary,
+        reasoning: {
+          agentReasoning: action.agentReasoning,
+          complianceResult: action.complianceResult,
+          generationMethod: action.generationMethod,
+          cancellationReason: action.cancellationReason,
+          confidenceScore: action.confidenceScore,
+        },
+        metadata: action.metadata,
+        approvedBy: action.approvedBy,
+        approvedAt: action.approvedAt,
+        completedAt: action.completedAt,
+        createdAt: action.createdAt,
+      },
+      llmCalls: llmLogs.map(log => ({
+        id: log.id,
+        caller: log.caller,
+        model: log.model,
+        systemPrompt: log.systemPrompt,
+        userMessage: log.userMessage,
+        assistantResponse: log.assistantResponse,
+        inputTokens: log.inputTokens,
+        outputTokens: log.outputTokens,
+        latencyMs: log.latencyMs,
+        costUsd: log.costUsd,
+        error: log.error,
+        metadata: log.metadata,
+        createdAt: log.createdAt,
+      })),
+      communicationEvents: commEvents.map(e => ({
+        id: e.id,
+        eventType: e.eventType,
+        eventData: e.eventData,
+        createdAt: e.createdAt,
+      })),
+    });
+  } catch (error: any) {
+    console.error("Failed to fetch charlie action detail:", error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-router.get("/charlie/stats", requireAdminAuth, async (_req, res) => {
-  res.json({ totalActions: 0, byStatus: {}, byChannel: {} });
+// GET /charlie/stats — Charlie performance metrics
+router.get("/charlie/stats", requireAdminAuth, async (req, res) => {
+  try {
+    const filters = parseFilters(req);
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const baseConds = dateAndTenantConditions(actions, filters);
+    const todayConds: any[] = [gte(actions.createdAt, todayStart)];
+    if (filters.tenantId) todayConds.push(eq(actions.tenantId, filters.tenantId));
+
+    const [
+      actionsTodayResult,
+      byStatusResult,
+      byChannelResult,
+      responsesResult,
+      blockedResult,
+      awaitingResult,
+    ] = await Promise.all([
+      db.select({ count: sql<number>`count(*)::int` })
+        .from(actions)
+        .where(and(...todayConds)),
+      db.select({ status: actions.status, count: sql<number>`count(*)::int` })
+        .from(actions)
+        .where(baseConds)
+        .groupBy(actions.status),
+      db.select({ channel: actions.agentChannel, count: sql<number>`count(*)::int` })
+        .from(actions)
+        .where(and(baseConds, isNotNull(actions.agentChannel)))
+        .groupBy(actions.agentChannel),
+      db.select({ count: sql<number>`count(*)::int` })
+        .from(adminCommunicationEvents)
+        .where(and(
+          eq(adminCommunicationEvents.eventType, 'replied'),
+          gte(adminCommunicationEvents.createdAt, todayStart),
+          filters.tenantId ? eq(adminCommunicationEvents.tenantId, filters.tenantId) : undefined,
+        )),
+      db.select({ count: sql<number>`count(*)::int` })
+        .from(actions)
+        .where(and(
+          eq(actions.complianceResult, 'blocked'),
+          ...todayConds,
+        )),
+      // awaitingApproval is NOT date-filtered
+      db.select({ count: sql<number>`count(*)::int` })
+        .from(actions)
+        .where(and(
+          inArray(actions.status, ['pending_approval', 'pending']),
+          filters.tenantId ? eq(actions.tenantId, filters.tenantId) : undefined,
+        )),
+    ]);
+
+    const actionsByStatus: Record<string, number> = {};
+    for (const row of byStatusResult) {
+      if (row.status) actionsByStatus[row.status] = row.count;
+    }
+
+    const actionsByChannel: Record<string, number> = {};
+    for (const row of byChannelResult) {
+      if (row.channel) actionsByChannel[row.channel] = row.count;
+    }
+
+    res.json({
+      actionsToday: actionsTodayResult[0]?.count ?? 0,
+      actionsByStatus,
+      actionsByChannel,
+      responsesToday: responsesResult[0]?.count ?? 0,
+      blockedToday: blockedResult[0]?.count ?? 0,
+      awaitingApproval: awaitingResult[0]?.count ?? 0,
+    });
+  } catch (error: any) {
+    console.error("Failed to fetch charlie stats:", error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// Communications
+// ==================== COMMUNICATIONS LOG ====================
+
+// Event priority for determining current status (lower = higher priority)
+const EVENT_PRIORITY: Record<string, number> = {
+  replied: 1, opened: 2, open: 2, clicked: 3, delivered: 4,
+  api_accepted: 5, generated: 6, bounced: 7, bounce: 7, failed: 8,
+};
+
+function deriveCurrentStatus(events: Array<{ eventType: string; createdAt: Date | null }>): string {
+  if (events.length === 0) return 'pending';
+  let best = events[0];
+  for (const e of events) {
+    if ((EVENT_PRIORITY[e.eventType] ?? 99) < (EVENT_PRIORITY[best.eventType] ?? 99)) {
+      best = e;
+    }
+  }
+  return best.eventType;
+}
+
+function buildStatusSummary(currentStatus: string, events: Array<{ eventType: string; eventData: any; createdAt: Date | null }>): string {
+  const statusEvent = events.find(e => e.eventType === currentStatus);
+  const sentEvent = events.find(e => e.eventType === 'api_accepted' || e.eventType === 'generated');
+
+  if (currentStatus === 'replied' && statusEvent?.createdAt && sentEvent?.createdAt) {
+    const delayMin = Math.round((statusEvent.createdAt.getTime() - sentEvent.createdAt.getTime()) / 60000);
+    return `Reply received (${delayMin}m after send)`;
+  }
+  if ((currentStatus === 'opened' || currentStatus === 'open') && statusEvent?.createdAt && sentEvent?.createdAt) {
+    const delayMin = Math.round((statusEvent.createdAt.getTime() - sentEvent.createdAt.getTime()) / 60000);
+    return `Opened (${delayMin}m after send)`;
+  }
+  if (currentStatus === 'delivered') return 'Delivered';
+  if (currentStatus === 'bounced' || currentStatus === 'bounce') {
+    const bounceType = statusEvent?.eventData?.bounceType || statusEvent?.eventData?.type || 'unknown';
+    return `Bounced — ${bounceType}`;
+  }
+  if (currentStatus === 'failed') {
+    const reason = statusEvent?.eventData?.error || 'unknown';
+    return `Failed — ${reason}`;
+  }
+  if (currentStatus === 'api_accepted' || currentStatus === 'generated') return 'Sent — awaiting delivery';
+  return 'Pending';
+}
+
+// GET /comms/log — Communications log
 router.get("/comms/log", requireAdminAuth, async (req, res) => {
-  const page = parseInt(req.query.page as string) || 1;
-  const limit = parseInt(req.query.limit as string) || 20;
-  res.json({ communications: [], total: 0, page, limit });
+  try {
+    const filters = parseFilters(req);
+    const channelFilter = req.query.channel as string | undefined;
+
+    // Only show communication-type actions
+    const commTypes = ['email', 'sms', 'call', 'voice'];
+    const conds: any[] = [
+      or(
+        inArray(actions.type, commTypes),
+        isNotNull(actions.agentChannel),
+      ),
+    ];
+    if (filters.tenantId) conds.push(eq(actions.tenantId, filters.tenantId));
+    if (filters.from) conds.push(gte(actions.createdAt, new Date(filters.from)));
+    if (filters.to) conds.push(lte(actions.createdAt, new Date(filters.to)));
+    if (channelFilter) conds.push(or(eq(actions.agentChannel, channelFilter), eq(actions.type, channelFilter)));
+    if (filters.search) {
+      conds.push(or(
+        ilike(contacts.name, `%${filters.search}%`),
+        ilike(contacts.companyName, `%${filters.search}%`),
+      ));
+    }
+
+    const whereClause = and(...conds);
+
+    const [rows, countResult] = await Promise.all([
+      db.select({
+        id: actions.id,
+        tenantId: actions.tenantId,
+        contactId: actions.contactId,
+        channel: actions.agentChannel,
+        type: actions.type,
+        toneLevel: actions.agentToneLevel,
+        status: actions.status,
+        deliveryStatus: actions.deliveryStatus,
+        messageSubject: actions.subject,
+        messageContent: actions.content,
+        createdAt: actions.createdAt,
+        debtorName: contacts.name,
+        debtorCompany: contacts.companyName,
+      })
+        .from(actions)
+        .leftJoin(contacts, eq(actions.contactId, contacts.id))
+        .where(whereClause)
+        .orderBy(desc(actions.createdAt))
+        .limit(filters.limit)
+        .offset(filters.offset),
+      db.select({ count: sql<number>`count(*)::int` })
+        .from(actions)
+        .leftJoin(contacts, eq(actions.contactId, contacts.id))
+        .where(whereClause),
+    ]);
+
+    // Batch fetch events for this page's actions
+    const actionIds = rows.map(r => r.id).filter(Boolean);
+    const allEvents = actionIds.length > 0
+      ? await db.select({
+          communicationId: adminCommunicationEvents.communicationId,
+          eventType: adminCommunicationEvents.eventType,
+          eventData: adminCommunicationEvents.eventData,
+          createdAt: adminCommunicationEvents.createdAt,
+        })
+        .from(adminCommunicationEvents)
+        .where(inArray(adminCommunicationEvents.communicationId, actionIds))
+        .orderBy(asc(adminCommunicationEvents.createdAt))
+      : [];
+
+    // Group events by action ID
+    const eventsByAction = new Map<string, typeof allEvents>();
+    for (const event of allEvents) {
+      const list = eventsByAction.get(event.communicationId) || [];
+      list.push(event);
+      eventsByAction.set(event.communicationId, list);
+    }
+
+    const data = rows.map(row => {
+      const events = eventsByAction.get(row.id) || [];
+      const currentStatus = deriveCurrentStatus(events);
+      return {
+        id: row.id,
+        tenantId: row.tenantId,
+        debtorName: row.debtorName,
+        debtorCompany: row.debtorCompany,
+        channel: row.channel || row.type,
+        toneLevel: row.toneLevel,
+        currentStatus,
+        statusSummary: buildStatusSummary(currentStatus, events),
+        messageSubject: row.messageSubject,
+        messagePreview: row.messageContent ? row.messageContent.slice(0, 150) : null,
+        events: events.map(e => ({
+          eventType: e.eventType,
+          eventData: e.eventData,
+          createdAt: e.createdAt,
+        })),
+        createdAt: row.createdAt,
+      };
+    });
+
+    res.json(paginated(data, countResult[0]?.count ?? 0, filters.page, filters.limit));
+  } catch (error: any) {
+    console.error("Failed to fetch comms log:", error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-router.get("/comms/log/:id", requireAdminAuth, async (_req, res) => {
-  res.json({ communication: null });
+// GET /comms/log/:id — Single communication detail
+router.get("/comms/log/:id", requireAdminAuth, async (req, res) => {
+  try {
+    const commId = req.params.id;
+
+    const [actionRows, commEvents, llmLogs] = await Promise.all([
+      db.select({
+        id: actions.id,
+        tenantId: actions.tenantId,
+        contactId: actions.contactId,
+        invoiceId: actions.invoiceId,
+        invoiceIds: actions.invoiceIds,
+        channel: actions.agentChannel,
+        type: actions.type,
+        toneLevel: actions.agentToneLevel,
+        status: actions.status,
+        deliveryStatus: actions.deliveryStatus,
+        providerMessageId: actions.providerMessageId,
+        messageSubject: actions.subject,
+        messageContent: actions.content,
+        metadata: actions.metadata,
+        createdAt: actions.createdAt,
+        completedAt: actions.completedAt,
+        debtorName: contacts.name,
+        debtorCompany: contacts.companyName,
+        debtorEmail: contacts.email,
+        debtorArEmail: contacts.arContactEmail,
+      })
+        .from(actions)
+        .leftJoin(contacts, eq(actions.contactId, contacts.id))
+        .where(eq(actions.id, commId)),
+      db.select()
+        .from(adminCommunicationEvents)
+        .where(eq(adminCommunicationEvents.communicationId, commId))
+        .orderBy(asc(adminCommunicationEvents.createdAt)),
+      db.select()
+        .from(adminLlmLogs)
+        .where(eq(adminLlmLogs.relatedEntityId, commId))
+        .orderBy(asc(adminLlmLogs.createdAt)),
+    ]);
+
+    const action = actionRows[0];
+    if (!action) {
+      return res.json({ communication: null });
+    }
+
+    // Fetch invoices if linked
+    const invoiceIdList = action.invoiceIds?.length ? action.invoiceIds : (action.invoiceId ? [action.invoiceId] : []);
+    const invoiceDetails = invoiceIdList.length > 0
+      ? await db.select({
+          id: invoices.id,
+          invoiceNumber: invoices.invoiceNumber,
+          amount: invoices.amount,
+          amountPaid: invoices.amountPaid,
+          dueDate: invoices.dueDate,
+          status: invoices.status,
+        })
+        .from(invoices)
+        .where(inArray(invoices.id, invoiceIdList))
+      : [];
+
+    const events = commEvents.map(e => ({
+      id: e.id,
+      eventType: e.eventType,
+      eventData: e.eventData,
+      createdAt: e.createdAt,
+    }));
+    const currentStatus = deriveCurrentStatus(events);
+
+    res.json({
+      communication: {
+        id: action.id,
+        tenantId: action.tenantId,
+        debtorName: action.debtorName,
+        debtorCompany: action.debtorCompany,
+        debtorEmail: action.debtorArEmail || action.debtorEmail,
+        contactId: action.contactId,
+        invoiceDetails,
+        channel: action.channel || action.type,
+        toneLevel: action.toneLevel,
+        currentStatus,
+        statusSummary: buildStatusSummary(currentStatus, events),
+        deliveryStatus: action.deliveryStatus,
+        providerMessageId: action.providerMessageId,
+        messageSubject: action.messageSubject,
+        messageContent: action.messageContent,
+        metadata: action.metadata,
+        createdAt: action.createdAt,
+        completedAt: action.completedAt,
+      },
+      events,
+      llmCalls: llmLogs.map(log => ({
+        id: log.id,
+        caller: log.caller,
+        model: log.model,
+        systemPrompt: log.systemPrompt,
+        userMessage: log.userMessage,
+        assistantResponse: log.assistantResponse,
+        inputTokens: log.inputTokens,
+        outputTokens: log.outputTokens,
+        latencyMs: log.latencyMs,
+        costUsd: log.costUsd,
+        error: log.error,
+        createdAt: log.createdAt,
+      })),
+    });
+  } catch (error: any) {
+    console.error("Failed to fetch communication detail:", error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-router.get("/comms/pipeline", requireAdminAuth, async (_req, res) => {
-  res.json({ generated: 0, sent: 0, delivered: 0, opened: 0, replied: 0, bounced: 0 });
+// GET /comms/pipeline — Delivery funnel counts
+router.get("/comms/pipeline", requireAdminAuth, async (req, res) => {
+  try {
+    const filters = parseFilters(req);
+    const whereClause = dateAndTenantConditions(adminCommunicationEvents, filters);
+
+    const result = await db.select({
+      generated: sql<number>`count(DISTINCT CASE WHEN ${adminCommunicationEvents.eventType} = 'generated' THEN ${adminCommunicationEvents.communicationId} END)::int`,
+      sent: sql<number>`count(DISTINCT CASE WHEN ${adminCommunicationEvents.eventType} = 'api_accepted' THEN ${adminCommunicationEvents.communicationId} END)::int`,
+      delivered: sql<number>`count(DISTINCT CASE WHEN ${adminCommunicationEvents.eventType} = 'delivered' THEN ${adminCommunicationEvents.communicationId} END)::int`,
+      opened: sql<number>`count(DISTINCT CASE WHEN ${adminCommunicationEvents.eventType} IN ('opened', 'open') THEN ${adminCommunicationEvents.communicationId} END)::int`,
+      replied: sql<number>`count(DISTINCT CASE WHEN ${adminCommunicationEvents.eventType} = 'replied' THEN ${adminCommunicationEvents.communicationId} END)::int`,
+      bounced: sql<number>`count(DISTINCT CASE WHEN ${adminCommunicationEvents.eventType} IN ('bounced', 'bounce') THEN ${adminCommunicationEvents.communicationId} END)::int`,
+      failed: sql<number>`count(DISTINCT CASE WHEN ${adminCommunicationEvents.eventType} = 'failed' THEN ${adminCommunicationEvents.communicationId} END)::int`,
+    })
+      .from(adminCommunicationEvents)
+      .where(whereClause);
+
+    const row = result[0] || {} as any;
+    res.json({
+      generated: row.generated ?? 0,
+      sent: row.sent ?? 0,
+      delivered: row.delivered ?? 0,
+      opened: row.opened ?? 0,
+      replied: row.replied ?? 0,
+      bounced: row.bounced ?? 0,
+      failed: row.failed ?? 0,
+    });
+  } catch (error: any) {
+    console.error("Failed to fetch comms pipeline:", error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-router.get("/comms/stats", requireAdminAuth, async (_req, res) => {
-  res.json({ totalSent: 0, deliveryRate: 0, openRate: 0, replyRate: 0 });
+// GET /comms/stats — Communications metrics
+router.get("/comms/stats", requireAdminAuth, async (req, res) => {
+  try {
+    const filters = parseFilters(req);
+    const commWhereClause = dateAndTenantConditions(adminCommunicationEvents, filters);
+
+    const [pipelineResult, costResult, channelResult] = await Promise.all([
+      db.select({
+        sent: sql<number>`count(DISTINCT CASE WHEN ${adminCommunicationEvents.eventType} = 'api_accepted' THEN ${adminCommunicationEvents.communicationId} END)::int`,
+        delivered: sql<number>`count(DISTINCT CASE WHEN ${adminCommunicationEvents.eventType} = 'delivered' THEN ${adminCommunicationEvents.communicationId} END)::int`,
+        opened: sql<number>`count(DISTINCT CASE WHEN ${adminCommunicationEvents.eventType} IN ('opened', 'open') THEN ${adminCommunicationEvents.communicationId} END)::int`,
+        replied: sql<number>`count(DISTINCT CASE WHEN ${adminCommunicationEvents.eventType} = 'replied' THEN ${adminCommunicationEvents.communicationId} END)::int`,
+        bounced: sql<number>`count(DISTINCT CASE WHEN ${adminCommunicationEvents.eventType} IN ('bounced', 'bounce') THEN ${adminCommunicationEvents.communicationId} END)::int`,
+      })
+        .from(adminCommunicationEvents)
+        .where(commWhereClause),
+      db.select({
+        totalCost: sql<string>`COALESCE(SUM(cost_usd::numeric), 0)::text`,
+      })
+        .from(adminLlmLogs)
+        .where(and(
+          inArray(adminLlmLogs.caller, ['charlie_email_gen', 'charlie_message_gen', 'charlie_sms_gen']),
+          dateAndTenantConditions(adminLlmLogs, filters),
+        )),
+      db.select({
+        channel: sql<string>`${adminCommunicationEvents.eventData}->>'channel'`,
+        cnt: sql<number>`count(DISTINCT ${adminCommunicationEvents.communicationId})::int`,
+      })
+        .from(adminCommunicationEvents)
+        .where(and(
+          eq(adminCommunicationEvents.eventType, 'api_accepted'),
+          commWhereClause,
+        ))
+        .groupBy(sql`${adminCommunicationEvents.eventData}->>'channel'`),
+    ]);
+
+    const p = pipelineResult[0] || {} as any;
+    const sent = p.sent ?? 0;
+    const delivered = p.delivered ?? 0;
+    const opened = p.opened ?? 0;
+    const replied = p.replied ?? 0;
+    const bounced = p.bounced ?? 0;
+
+    const totalByChannel: Record<string, number> = {};
+    for (const row of channelResult) {
+      if (row.channel) totalByChannel[row.channel] = row.cnt;
+    }
+
+    res.json({
+      totalSent: sent,
+      totalByChannel,
+      deliveryRate: sent > 0 ? Math.round((delivered / sent) * 100) : 0,
+      openRate: delivered > 0 ? Math.round((opened / delivered) * 100) : 0,
+      replyRate: delivered > 0 ? Math.round((replied / delivered) * 100) : 0,
+      bounceRate: sent > 0 ? Math.round((bounced / sent) * 100) : 0,
+      llmCostTotal: costResult[0]?.totalCost ?? "0",
+    });
+  } catch (error: any) {
+    console.error("Failed to fetch comms stats:", error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// Riley
+// ==================== RILEY (stubs — wired in Sprint 7) ====================
+
 router.get("/riley/conversations", requireAdminAuth, async (req, res) => {
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 20;
@@ -1002,7 +1728,8 @@ router.get("/riley/stats", requireAdminAuth, async (_req, res) => {
   res.json({ totalConversations: 0, factsExtracted: 0 });
 });
 
-// Tenants
+// ==================== TENANTS (stubs) ====================
+
 router.get("/tenants/list", requireAdminAuth, async (_req, res) => {
   res.json({ tenants: [] });
 });
@@ -1011,39 +1738,168 @@ router.get("/tenants/:id", requireAdminAuth, async (_req, res) => {
   res.json({ tenant: null });
 });
 
-// Errors
+// ==================== ERRORS LOG ====================
+
 router.get("/errors/log", requireAdminAuth, async (req, res) => {
-  const page = parseInt(req.query.page as string) || 1;
-  const limit = parseInt(req.query.limit as string) || 20;
-  res.json({ errors: [], total: 0, page, limit });
+  try {
+    const filters = parseFilters(req);
+    const sourceFilter = req.query.source as string | undefined;
+    const severityFilter = req.query.severity as string | undefined;
+    const resolvedFilter = req.query.resolved as string | undefined;
+
+    const conds: any[] = [];
+    if (filters.tenantId) conds.push(eq(adminSystemErrors.tenantId, filters.tenantId));
+    if (filters.from) conds.push(gte(adminSystemErrors.createdAt, new Date(filters.from)));
+    if (filters.to) conds.push(lte(adminSystemErrors.createdAt, new Date(filters.to)));
+    if (sourceFilter) conds.push(eq(adminSystemErrors.source, sourceFilter));
+    if (severityFilter) conds.push(eq(adminSystemErrors.severity, severityFilter));
+    if (resolvedFilter === 'true') conds.push(eq(adminSystemErrors.resolved, true));
+    if (resolvedFilter === 'false') conds.push(eq(adminSystemErrors.resolved, false));
+    if (filters.search) conds.push(ilike(adminSystemErrors.message, `%${filters.search}%`));
+
+    const whereClause = conds.length > 0 ? and(...conds) : undefined;
+
+    const [rows, countResult] = await Promise.all([
+      db.select()
+        .from(adminSystemErrors)
+        .where(whereClause)
+        .orderBy(desc(adminSystemErrors.createdAt))
+        .limit(filters.limit)
+        .offset(filters.offset),
+      db.select({ count: sql<number>`count(*)::int` })
+        .from(adminSystemErrors)
+        .where(whereClause),
+    ]);
+
+    res.json(paginated(rows, countResult[0]?.count ?? 0, filters.page, filters.limit));
+  } catch (error: any) {
+    console.error("Failed to fetch error log:", error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-router.get("/errors/log/:id", requireAdminAuth, async (_req, res) => {
-  res.json({ error: null });
+router.get("/errors/log/:id", requireAdminAuth, async (req, res) => {
+  try {
+    const [row] = await db.select()
+      .from(adminSystemErrors)
+      .where(eq(adminSystemErrors.id, req.params.id));
+    res.json({ error: row || null });
+  } catch (error: any) {
+    console.error("Failed to fetch error detail:", error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-router.post("/errors/:id/resolve", requireAdminAuth, async (_req, res) => {
-  res.json({ resolved: true });
+router.post("/errors/:id/resolve", requireAdminAuth, async (req, res) => {
+  try {
+    const { notes } = req.body || {};
+    const [updated] = await db.update(adminSystemErrors)
+      .set({
+        resolved: true,
+        resolvedAt: new Date(),
+        resolvedBy: getUserId(req),
+        resolutionNotes: notes || null,
+      })
+      .where(eq(adminSystemErrors.id, req.params.id))
+      .returning();
+
+    if (!updated) {
+      return res.status(404).json({ error: "Error not found" });
+    }
+    res.json({ resolved: true, error: updated });
+  } catch (error: any) {
+    console.error("Failed to resolve error:", error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// LLM logs
+// ==================== LLM LOGS ====================
+
 router.get("/llm/logs", requireAdminAuth, async (req, res) => {
-  const page = parseInt(req.query.page as string) || 1;
-  const limit = parseInt(req.query.limit as string) || 20;
-  res.json({ logs: [], total: 0, page, limit });
+  try {
+    const filters = parseFilters(req);
+    const callerFilter = req.query.caller as string | undefined;
+    const modelFilter = req.query.model as string | undefined;
+
+    const conds: any[] = [];
+    if (filters.tenantId) conds.push(eq(adminLlmLogs.tenantId, filters.tenantId));
+    if (filters.from) conds.push(gte(adminLlmLogs.createdAt, new Date(filters.from)));
+    if (filters.to) conds.push(lte(adminLlmLogs.createdAt, new Date(filters.to)));
+    if (callerFilter) conds.push(eq(adminLlmLogs.caller, callerFilter));
+    if (modelFilter) conds.push(eq(adminLlmLogs.model, modelFilter));
+    if (filters.search) conds.push(ilike(adminLlmLogs.caller, `%${filters.search}%`));
+
+    const whereClause = conds.length > 0 ? and(...conds) : undefined;
+
+    const [rows, countResult] = await Promise.all([
+      db.select({
+        id: adminLlmLogs.id,
+        tenantId: adminLlmLogs.tenantId,
+        caller: adminLlmLogs.caller,
+        relatedEntityType: adminLlmLogs.relatedEntityType,
+        relatedEntityId: adminLlmLogs.relatedEntityId,
+        model: adminLlmLogs.model,
+        inputTokens: adminLlmLogs.inputTokens,
+        outputTokens: adminLlmLogs.outputTokens,
+        latencyMs: adminLlmLogs.latencyMs,
+        costUsd: adminLlmLogs.costUsd,
+        error: adminLlmLogs.error,
+        createdAt: adminLlmLogs.createdAt,
+      })
+        .from(adminLlmLogs)
+        .where(whereClause)
+        .orderBy(desc(adminLlmLogs.createdAt))
+        .limit(filters.limit)
+        .offset(filters.offset),
+      db.select({ count: sql<number>`count(*)::int` })
+        .from(adminLlmLogs)
+        .where(whereClause),
+    ]);
+
+    res.json(paginated(rows, countResult[0]?.count ?? 0, filters.page, filters.limit));
+  } catch (error: any) {
+    console.error("Failed to fetch LLM logs:", error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-router.get("/llm/logs/:id", requireAdminAuth, async (_req, res) => {
-  res.json({ log: null });
+router.get("/llm/logs/:id", requireAdminAuth, async (req, res) => {
+  try {
+    const [row] = await db.select()
+      .from(adminLlmLogs)
+      .where(eq(adminLlmLogs.id, req.params.id));
+    res.json({ log: row || null });
+  } catch (error: any) {
+    console.error("Failed to fetch LLM log detail:", error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// System
+// ==================== SYSTEM (stubs) ====================
+
 router.get("/system/health", requireAdminAuth, async (_req, res) => {
   res.json({ database: "ok", xero: "ok", sendgrid: "ok", claude: "ok" });
 });
 
-router.get("/system/costs", requireAdminAuth, async (_req, res) => {
-  res.json({ costs: [] });
+router.get("/system/costs", requireAdminAuth, async (req, res) => {
+  try {
+    const filters = parseFilters(req);
+    const result = await db.select({
+      model: adminLlmLogs.model,
+      calls: sql<number>`count(*)::int`,
+      totalInputTokens: sql<number>`COALESCE(SUM(input_tokens), 0)::int`,
+      totalOutputTokens: sql<number>`COALESCE(SUM(output_tokens), 0)::int`,
+      totalCost: sql<string>`COALESCE(SUM(cost_usd::numeric), 0)::text`,
+    })
+      .from(adminLlmLogs)
+      .where(dateAndTenantConditions(adminLlmLogs, filters))
+      .groupBy(adminLlmLogs.model);
+
+    res.json({ costs: result });
+  } catch (error: any) {
+    console.error("Failed to fetch system costs:", error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 export default router;
