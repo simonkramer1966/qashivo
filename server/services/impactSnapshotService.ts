@@ -11,7 +11,7 @@
 import { db } from "../db";
 import { eq, and, sql, desc } from "drizzle-orm";
 import { tenantImpactSnapshots, invoices, contacts, tenants, aiFacts } from "@shared/schema";
-import { getARSummary } from "./arCalculations";
+import { getARSummary, getRolling30DayDSO } from "./arCalculations";
 import { generateText } from "./llm/claude";
 
 type SnapshotType = "baseline" | "30_day" | "90_day" | "manual";
@@ -34,8 +34,9 @@ export async function calculateAndStoreSnapshot(
 ): Promise<SnapshotResult> {
   const now = new Date();
 
-  // 1. AR summary via canonical source
+  // 1. AR summary via canonical source + standard DSO from snapshots
   const ar = await getARSummary(tenantId);
+  const standardDSO = await getRolling30DayDSO(tenantId);
 
   // 2. Average days to pay (weighted by invoice amount, last 12 months)
   const avgDaysResult = await db.execute(sql`
@@ -112,7 +113,7 @@ export async function calculateAndStoreSnapshot(
       const baselineDaysVsTerms = Number(baseline.daysVsTerms ?? 0);
       const baselineCollectionRate = Number(baseline.collectionRate ?? 0);
 
-      const dsoImprovement = Math.round((baselineDso - ar.currentDSO) * 100) / 100;
+      const dsoImprovement = Math.round((baselineDso - standardDSO) * 100) / 100;
       const wcReleased = Math.round(dsoImprovement * avgDailyRevenue * 100) / 100;
 
       comparison = {
@@ -134,7 +135,7 @@ export async function calculateAndStoreSnapshot(
   if (snapshotType === "baseline" || snapshotType === "30_day" || snapshotType === "90_day") {
     try {
       rileySummary = await generateImpactNarrative(snapshotType, {
-        dso: ar.currentDSO,
+        dso: standardDSO,
         avgDaysToPay,
         avgPaymentTerms,
         totalOutstanding: ar.totalOutstanding,
@@ -155,7 +156,7 @@ export async function calculateAndStoreSnapshot(
     tenantId,
     snapshotType,
     snapshotDate: now,
-    dso: ar.currentDSO.toString(),
+    dso: standardDSO.toString(),
     avgDaysToPay: avgDaysToPay.toString(),
     avgPaymentTerms: avgPaymentTerms.toString(),
     daysVsTerms: daysVsTerms.toString(),
@@ -172,14 +173,14 @@ export async function calculateAndStoreSnapshot(
     ...comparison,
   }).returning();
 
-  console.log(`[Impact] ${snapshotType} snapshot created for tenant ${tenantId}: DSO=${ar.currentDSO}, WC released=${comparison.workingCapitalReleased ?? "n/a"}`);
+  console.log(`[Impact] ${snapshotType} snapshot created for tenant ${tenantId}: DSO=${standardDSO}, WC released=${comparison.workingCapitalReleased ?? "n/a"}`);
 
   // 9. Store aiFact for Riley to surface proactively
   if (snapshotType !== "manual") {
     try {
       const gbp = (n: number) => `£${Math.round(n).toLocaleString("en-GB")}`;
       const factValue = snapshotType === "baseline"
-        ? `Baseline AR snapshot captured: DSO ${ar.currentDSO} days, ${gbp(ar.totalOutstanding)} outstanding, ${collectionRate}% on-time collection rate.`
+        ? `Baseline AR snapshot captured: DSO ${standardDSO} days, ${gbp(ar.totalOutstanding)} outstanding, ${collectionRate}% on-time collection rate.`
         : `${snapshotType === "30_day" ? "30-day" : "90-day"} impact milestone: DSO improved by ${comparison.dsoImprovement ?? 0} days, ${comparison.workingCapitalReleased ? gbp(Number(comparison.workingCapitalReleased)) : "£0"} working capital released.`;
 
       await db.insert(aiFacts).values({
@@ -199,7 +200,7 @@ export async function calculateAndStoreSnapshot(
   return {
     id: snapshot.id,
     snapshotType: snapshot.snapshotType,
-    dso: ar.currentDSO,
+    dso: standardDSO,
     avgDaysToPay,
     workingCapitalReleased: comparison.workingCapitalReleased ? Number(comparison.workingCapitalReleased) : null,
     dsoImprovement: comparison.dsoImprovement ? Number(comparison.dsoImprovement) : null,

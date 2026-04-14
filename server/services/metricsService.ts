@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { invoices, actions, contacts, tenants } from '../../shared/schema';
+import { invoices, actions, contacts, tenants, dsoSnapshots } from '../../shared/schema';
 import { eq, and, gte, lte, sql, desc, isNotNull } from 'drizzle-orm';
 import { subDays, differenceInDays, format, startOfDay } from 'date-fns';
 
@@ -89,44 +89,45 @@ export interface DashboardMetrics {
 
 /**
  * Calculate DSO (Days Sales Outstanding)
- * Formula: Weighted average of (due date → paid date) for paid invoices in the window
+ * Uses dsoSnapshots table (standard formula: totalOutstanding / revenue90d × 90).
+ * Sparkline from daily snapshots. Projected DSO adds estimated days for current overdue.
  */
 async function calculateDSO(tenantId: string, windowDays: number = 30): Promise<DSOMetrics> {
   const windowStart = subDays(new Date(), windowDays);
 
-  // Get paid invoices in the window
-  const paidInvoices = await db
+  // Read daily snapshots for sparkline + current DSO
+  const snapshots = await db
     .select({
-      dueDate: invoices.dueDate,
-      paidDate: invoices.paidDate,
-      amount: invoices.amount,
+      dsoValue: dsoSnapshots.dsoValue,
+      snapshotDate: dsoSnapshots.snapshotDate,
     })
-    .from(invoices)
+    .from(dsoSnapshots)
     .where(
       and(
-        eq(invoices.tenantId, tenantId),
-        eq(invoices.status, 'paid'),
-        isNotNull(invoices.paidDate),
-        isNotNull(invoices.dueDate),
-        gte(invoices.paidDate, windowStart)
+        eq(dsoSnapshots.tenantId, tenantId),
+        gte(dsoSnapshots.snapshotDate, windowStart),
       )
-    );
+    )
+    .orderBy(dsoSnapshots.snapshotDate);
 
-  // Calculate weighted DSO
-  let totalWeightedDays = 0;
-  let totalAmount = 0;
-
-  for (const inv of paidInvoices) {
-    if (!inv.dueDate || !inv.paidDate) continue;
-    const days = differenceInDays(new Date(inv.paidDate), new Date(inv.dueDate));
-    const amount = parseFloat(inv.amount?.toString() || '0');
-    totalWeightedDays += days * amount;
-    totalAmount += amount;
+  // Build sparkline from snapshots (pad missing days with previous value)
+  const sparkline: number[] = [];
+  let lastValue = 0;
+  const snapshotMap = new Map<string, number>();
+  for (const s of snapshots) {
+    const dateKey = new Date(s.snapshotDate).toISOString().slice(0, 10);
+    snapshotMap.set(dateKey, Number(s.dsoValue ?? 0));
+  }
+  for (let i = windowDays - 1; i >= 0; i--) {
+    const dateKey = format(subDays(new Date(), i), 'yyyy-MM-dd');
+    const val = snapshotMap.get(dateKey);
+    if (val !== undefined) lastValue = val;
+    sparkline.push(Math.round(lastValue * 10) / 10);
   }
 
-  const actualDSO = totalAmount > 0 ? totalWeightedDays / totalAmount : 0;
+  const actualDSO = lastValue; // Most recent snapshot
 
-  // Calculate projected DSO for current AR
+  // Projected DSO: actual + weighted avg days overdue for current AR
   const overdueInvoices = await db
     .select({
       dueDate: invoices.dueDate,
@@ -136,68 +137,30 @@ async function calculateDSO(tenantId: string, windowDays: number = 30): Promise<
     .where(
       and(
         eq(invoices.tenantId, tenantId),
-        eq(invoices.status, 'authorised')
+        eq(invoices.status, 'authorised'),
+        lte(invoices.dueDate, new Date()),
       )
     );
 
   let projectedWeightedDays = 0;
   let projectedAmount = 0;
   const today = new Date();
-
   for (const inv of overdueInvoices) {
     if (!inv.dueDate) continue;
     const daysOverdue = Math.max(0, differenceInDays(today, new Date(inv.dueDate)));
     const amount = parseFloat(inv.amount?.toString() || '0');
-    // Assume payment in 7-14 days based on current behavior
-    const expectedDays = daysOverdue + 10;
-    projectedWeightedDays += expectedDays * amount;
+    projectedWeightedDays += (daysOverdue + 10) * amount;
     projectedAmount += amount;
   }
-
-  const projectedDSO = projectedAmount > 0 ? projectedWeightedDays / projectedAmount : actualDSO;
-
-  // Generate sparkline (last 30 days)
-  const sparkline: number[] = [];
-  for (let i = 29; i >= 0; i--) {
-    const dayStart = subDays(new Date(), i);
-    const dayEnd = subDays(new Date(), i - 1);
-    
-    const dayInvoices = await db
-      .select({
-        dueDate: invoices.dueDate,
-        paidDate: invoices.paidDate,
-        amount: invoices.amount,
-      })
-      .from(invoices)
-      .where(
-        and(
-          eq(invoices.tenantId, tenantId),
-          eq(invoices.status, 'paid'),
-          isNotNull(invoices.paidDate),
-          gte(invoices.paidDate, dayStart),
-          lte(invoices.paidDate, dayEnd)
-        )
-      );
-
-    let dayWeightedDays = 0;
-    let dayAmount = 0;
-    
-    for (const inv of dayInvoices) {
-      if (!inv.dueDate || !inv.paidDate) continue;
-      const days = differenceInDays(new Date(inv.paidDate), new Date(inv.dueDate));
-      const amount = parseFloat(inv.amount?.toString() || '0');
-      dayWeightedDays += days * amount;
-      dayAmount += amount;
-    }
-
-    sparkline.push(dayAmount > 0 ? dayWeightedDays / dayAmount : actualDSO);
-  }
+  const projectedDSO = projectedAmount > 0
+    ? Math.max(actualDSO, projectedWeightedDays / projectedAmount)
+    : actualDSO;
 
   return {
     actual: Math.round(actualDSO * 10) / 10,
     projected: Math.round(projectedDSO * 10) / 10,
-    target: 30, // Target DSO - could be tenant-specific
-    delta30Days: actualDSO - (sparkline[0] || actualDSO),
+    target: 30,
+    delta30Days: Math.round((actualDSO - (sparkline[0] || actualDSO)) * 10) / 10,
     sparkline,
   };
 }
@@ -352,8 +315,8 @@ async function calculateAdaptiveLift(tenantId: string): Promise<AdaptiveLiftMetr
   const adaptiveCureRate = cureRates.cure30Days;
   const staticCureRate = adaptiveCureRate * 0.82; // 18% worse
 
-  const adaptiveDaysToPay = dso.actual;
-  const staticDaysToPay = adaptiveDaysToPay * 1.15; // 15% slower
+  const adaptiveDaysToPay = dso.actual; // DSO from snapshots
+  const staticDaysToPay = adaptiveDaysToPay * 1.15; // 15% worse baseline
 
   // Estimate touches per cure (adaptive uses bundling, static doesn't)
   const adaptiveTouchesPerCure = 2.1;

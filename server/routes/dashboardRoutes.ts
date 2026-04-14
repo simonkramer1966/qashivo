@@ -2057,7 +2057,7 @@ export function registerDashboardRoutes(app: Express): void {
         totalOverdue: arSummary.totalOverdue,
         overdueCount: Number(overdueRow.overdue_count || 0),
         dso: standardDSO,
-        avgDaysToPay: arSummary.currentDSO, // Realised DSO (avg paid invoice days) — useful for CFO review
+        avgDaysToPay: arSummary.avgDaysToPay, // Average days from issue to payment (last 90 days) — NOT DSO
         totalDebtors: arSummary.debtorCount,
         totalInvoices: Number(invoiceRow.total_invoices || 0),
         ageingBuckets,

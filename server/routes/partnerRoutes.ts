@@ -973,24 +973,25 @@ export function registerPartnerRoutes(app: Express) {
       const issuedTotal = Number(collectionResult[0]?.issuedTotal || 0);
       const collectionRate = issuedTotal > 0 ? Math.round((paidTotal / issuedTotal) * 100) : 0;
 
-      // Weighted DSO: sum(outstanding × days_overdue) / sum(outstanding), capped to active invoices
-      const dsoResult = await db
+      // Portfolio DSO: average of most recent per-tenant DSO snapshots (standard formula)
+      const latestSnapshots = await db
         .select({
-          weightedDays: sql<string>`COALESCE(SUM(
-            (CAST(${invoices.amount} AS DECIMAL) - CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL))
-            * GREATEST(EXTRACT(EPOCH FROM (NOW() - ${invoices.issueDate})) / 86400, 0)
-          ), 0)`,
-          weightedBalance: sql<string>`COALESCE(SUM(CAST(${invoices.amount} AS DECIMAL) - CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL)), 0)`,
+          dsoValue: sql<string>`COALESCE(ds.dso_value, '0')`,
         })
-        .from(invoices)
-        .where(and(
-          inArray(invoices.tenantId, tenantIds),
-          sql`${invoices.status} NOT IN ('paid', 'void', 'voided', 'deleted', 'draft')`
-        ));
+        .from(sql`(
+          SELECT DISTINCT ON (tenant_id) tenant_id, dso_value
+          FROM dso_snapshots
+          WHERE tenant_id = ANY(${tenantIds})
+          ORDER BY tenant_id, snapshot_date DESC
+        ) ds`);
 
-      const weightedDays = Number(dsoResult[0]?.weightedDays || 0);
-      const weightedBalance = Number(dsoResult[0]?.weightedBalance || 0);
-      const portfolioDSO = weightedBalance > 0 ? Math.round(weightedDays / weightedBalance) : 0;
+      let dsoSum = 0;
+      let dsoCount = 0;
+      for (const s of latestSnapshots) {
+        const v = Number(s.dsoValue || 0);
+        if (v > 0) { dsoSum += v; dsoCount++; }
+      }
+      const portfolioDSO = dsoCount > 0 ? Math.round(dsoSum / dsoCount) : 0;
 
       // Attention metrics across all linked tenants
       const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -1037,30 +1038,25 @@ export function registerPartnerRoutes(app: Express) {
         ));
       const exceptionsCount = Number(exceptionResult?.count || 0);
 
-      // DSO trend — weekly snapshots for last 8 weeks
+      // DSO trend — weekly averages from dso_snapshots for last 8 weeks
       const dsoTrend: { week: string; dso: number }[] = [];
       for (let i = 7; i >= 0; i--) {
         const weekEnd = new Date(now.getTime() - i * 7 * 24 * 60 * 60 * 1000);
+        const weekStart = new Date(weekEnd.getTime() - 7 * 24 * 60 * 60 * 1000);
         const weekLabel = weekEnd.toISOString().slice(0, 10);
 
         const [weekDso] = await db
           .select({
-            weightedDays: sql<string>`COALESCE(SUM(
-              (CAST(${invoices.amount} AS DECIMAL) - CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL))
-              * GREATEST(EXTRACT(EPOCH FROM (${weekEnd}::timestamp - ${invoices.issueDate})) / 86400, 0)
-            ), 0)`,
-            weightedBalance: sql<string>`COALESCE(SUM(CAST(${invoices.amount} AS DECIMAL) - CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL)), 0)`,
+            avgDso: sql<string>`COALESCE(AVG(CAST(dso_value AS numeric)), 0)`,
           })
-          .from(invoices)
+          .from(sql`dso_snapshots`)
           .where(and(
-            inArray(invoices.tenantId, tenantIds),
-            sql`${invoices.status} NOT IN ('paid', 'void', 'voided', 'deleted', 'draft')`,
-            lte(invoices.issueDate, weekEnd)
+            sql`tenant_id = ANY(${tenantIds})`,
+            sql`snapshot_date >= ${weekStart}`,
+            sql`snapshot_date <= ${weekEnd}`,
           ));
 
-        const wd = Number(weekDso?.weightedDays || 0);
-        const wb = Number(weekDso?.weightedBalance || 0);
-        dsoTrend.push({ week: weekLabel, dso: wb > 0 ? Math.round(wd / wb) : 0 });
+        dsoTrend.push({ week: weekLabel, dso: Math.round(Number(weekDso?.avgDso || 0)) });
       }
 
       // Weekly collections — paid amounts per week for last 8 weeks

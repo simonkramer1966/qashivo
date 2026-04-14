@@ -27,7 +27,8 @@ export interface ARSummary {
   totalOutstanding: number;
   totalOverdue: number;
   debtorCount: number;
-  currentDSO: number;
+  /** Average days from issue to payment for invoices paid in last 90 days. This is NOT DSO — it's payment velocity. */
+  avgDaysToPay: number;
 }
 
 export const EXCLUDED_STATUSES = "('paid', 'void', 'voided', 'deleted', 'draft')";
@@ -126,10 +127,11 @@ export async function getARSummary(tenantId: string): Promise<ARSummary> {
   // Subtract unmatched credits from total
   totalOutstanding = Math.round((totalOutstanding - unmatchedCredits) * 100) / 100;
 
-  // 6. DSO — average days to pay for invoices paid in last 90 days
+  // 6. Avg days to pay — average days from issue to payment for invoices paid in last 90 days.
+  // This is payment velocity, NOT DSO. DSO uses the standard formula in dsoSnapshotJob.ts.
   // Exclude contacts without xero_contact_id (test/seed data)
-  const dsoResult = await db.execute(sql`
-    SELECT COALESCE(AVG(EXTRACT(DAY FROM AGE(i.paid_date, i.issue_date))), 0) as dso
+  const avgDaysResult = await db.execute(sql`
+    SELECT COALESCE(AVG(EXTRACT(DAY FROM AGE(i.paid_date, i.issue_date))), 0) as avg_days
     FROM invoices i
     JOIN contacts c ON c.id = i.contact_id
     WHERE i.tenant_id = ${tenantId}
@@ -137,14 +139,14 @@ export async function getARSummary(tenantId: string): Promise<ARSummary> {
       AND i.status = 'paid'
       AND i.paid_date >= NOW() - INTERVAL '90 days'
   `);
-  const dsoRow = (dsoResult as any).rows?.[0] || (dsoResult as any)[0] || {};
-  const currentDSO = Math.round(Number(dsoRow.dso || 0));
+  const avgDaysRow = (avgDaysResult as any).rows?.[0] || (avgDaysResult as any)[0] || {};
+  const avgDaysToPay = Math.round(Number(avgDaysRow.avg_days || 0));
 
   return {
     totalOutstanding: Math.round(Math.max(0, totalOutstanding) * 100) / 100,
     totalOverdue: Math.round(Math.max(0, totalOverdue) * 100) / 100,
     debtorCount,
-    currentDSO,
+    avgDaysToPay,
   };
 }
 
@@ -214,7 +216,7 @@ export async function getContactARSummary(
 
 /**
  * Rolling 30-day DSO — average of daily snapshots over the last 30 days.
- * Falls back to getARSummary().currentDSO if no snapshots exist.
+ * Falls back to inline standard DSO formula if no snapshots exist.
  */
 export async function getRolling30DayDSO(tenantId: string): Promise<number> {
   const thirtyDaysAgo = new Date();
@@ -238,9 +240,20 @@ export async function getRolling30DayDSO(tenantId: string): Promise<number> {
     return Math.round(Number(row.avgDSO));
   }
 
-  // Fallback to current DSO from AR summary
+  // Fallback: compute standard DSO inline — (totalOutstanding / revenue90d) × 90
   const summary = await getARSummary(tenantId);
-  return summary.currentDSO;
+  const rev90Result = await db.execute(sql`
+    SELECT COALESCE(SUM(CAST(amount AS numeric)), 0) AS rev
+    FROM invoices
+    WHERE tenant_id = ${tenantId}
+      AND issue_date >= NOW() - INTERVAL '90 days'
+      AND LOWER(status) NOT IN ('void', 'voided', 'deleted', 'draft')
+  `);
+  const rev90 = Number((rev90Result as any).rows?.[0]?.rev ?? 0);
+  if (rev90 > 0) {
+    return Math.round((summary.totalOutstanding / rev90) * 90);
+  }
+  return 0;
 }
 
 /**
