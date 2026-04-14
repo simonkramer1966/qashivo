@@ -114,7 +114,6 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { CURRENCIES, SUPPORTED_LANGUAGES, getLanguageName, getCurrencySymbol } from "@shared/currencies";
 import DebtorStatusBanner from "@/components/DebtorStatusBanner";
-import DebtorGroupIndicator from "@/components/debtor-groups/DebtorGroupIndicator";
 import { usePermissions } from "@/hooks/usePermissions";
 import { formatAuditAction, formatRole } from "@/lib/auditDescriptions";
 
@@ -3002,9 +3001,6 @@ export default function DebtorRecord() {
 
             {/* ── Charlie status banner ── */}
             <DebtorStatusBanner contactId={contactId} />
-
-            {/* ── Group indicator ── */}
-            <DebtorGroupIndicator contactId={contactId} debtorGroupId={contact.debtorGroupId} />
 
             {/* ── Toolbar — search + filter dropdowns ── */}
             <div className="flex flex-wrap items-center gap-3">
