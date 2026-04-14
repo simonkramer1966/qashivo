@@ -6,6 +6,8 @@ import { Loader2 } from "lucide-react";
 const AdminOpsLayout = lazy(() => import("@/pages/admin/AdminOpsLayout"));
 const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard"));
 const AdminCharlieMonitor = lazy(() => import("@/pages/admin/AdminCharlieMonitor"));
+const AdminCommsLog = lazy(() => import("@/pages/admin/AdminCommsLog"));
+const AdminRileyMonitor = lazy(() => import("@/pages/admin/AdminRileyMonitor"));
 const AdminAnalytics = lazy(() => import("@/pages/admin-analytics"));
 const AdminOutcomes = lazy(() => import("@/pages/admin-outcomes"));
 const AdminPartners = lazy(() => import("@/pages/admin-partners"));
@@ -51,6 +53,8 @@ export default function AdminShell() {
     <Suspense fallback={<LoadingSpinner />}>
       <Switch>
         <Route path="/admin/ops/charlie">{() => <AdminOpsLayout><AdminCharlieMonitor /></AdminOpsLayout>}</Route>
+        <Route path="/admin/ops/comms">{() => <AdminOpsLayout><AdminCommsLog /></AdminOpsLayout>}</Route>
+        <Route path="/admin/ops/riley">{() => <AdminOpsLayout><AdminRileyMonitor /></AdminOpsLayout>}</Route>
         <Route path="/admin/ops/:rest*">{() => <AdminOpsLayout><AdminDashboard /></AdminOpsLayout>}</Route>
         <Route path="/admin/ops">{() => <AdminOpsLayout><AdminDashboard /></AdminOpsLayout>}</Route>
         <Route path="/admin/analytics" component={AdminAnalytics} />
