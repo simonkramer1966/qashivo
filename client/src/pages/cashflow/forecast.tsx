@@ -819,10 +819,10 @@ export default function ForecastPage() {
 
       {/* A. Top Metrics Bar — 4 equal-width cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <QMetricCard label="This week" value={forecast.weeklyForecasts[0]?.expected ?? 0} format="currency" />
-        <QMetricCard label="Next week" value={forecast.weeklyForecasts[1]?.expected ?? 0} format="currency" />
+        <QMetricCard label="This Week" value={forecast.weeklyForecasts[0]?.expected ?? 0} format="currency" />
+        <QMetricCard label="Next Week" value={forecast.weeklyForecasts[1]?.expected ?? 0} format="currency" />
         <QMetricCard
-          label="Peak week"
+          label="Peak Week"
           value={peakWeek.expected}
           format="currency"
           trend={{ direction: "flat", value: `Week ${peakWeek.weekNumber}` }}

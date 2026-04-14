@@ -75,7 +75,7 @@ function QMetricCard({
       onKeyDown={onClick ? (e) => { if (e.key === "Enter" || e.key === " ") onClick(); } : undefined}
       {...props}
     >
-      <p className="text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)]">
+      <p className="text-[11px] font-medium tracking-[0.3px] text-[var(--q-text-tertiary)]">
         {label}
       </p>
       <p className={cn("mt-[var(--q-space-sm)] text-[28px] font-semibold leading-none tracking-tight text-[var(--q-text-primary)] q-mono", valueClassName)}>

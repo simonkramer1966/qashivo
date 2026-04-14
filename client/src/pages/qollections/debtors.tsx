@@ -167,7 +167,7 @@ function compareDebtors(a: Debtor, b: Debtor, sort: SortState): number {
 // Table header cell — consistent q-token styling
 const TH = ({ children, className }: { children?: React.ReactNode; className?: string }) => (
   <th className={cn(
-    "text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)] text-left px-3 py-2 border-b border-[var(--q-border-default)] sticky top-0 bg-[var(--q-bg-surface)] z-10",
+    "text-[11px] font-medium tracking-[0.3px] text-[var(--q-text-tertiary)] text-left px-3 py-2 border-b border-[var(--q-border-default)] sticky top-0 bg-[var(--q-bg-surface)] z-10",
     className
   )}>
     {children}
@@ -408,10 +408,10 @@ export default function QollectionsDebtors() {
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-[var(--q-space-md)] lg:grid-cols-4">
-            <QMetricCard label="Total debtors" value={kpis.totalDebtors} format="number" />
-            <QMetricCard label="Total outstanding" value={kpis.totalOutstanding} format="currency" />
+            <QMetricCard label="Total Debtors" value={kpis.totalDebtors} format="number" />
+            <QMetricCard label="Total Outstanding" value={kpis.totalOutstanding} format="currency" />
             <QMetricCard
-              label="Total overdue"
+              label="Total Overdue"
               value={kpis.totalOverdue}
               format="currency"
               valueClassName={kpis.totalOverdue > 0 ? "text-[var(--q-risk-text)]" : undefined}

@@ -60,9 +60,12 @@ interface GroupRowProps {
   debtors: Debtor[];
 }
 
+/* Shared column grid — keeps summary row and child rows aligned */
+const COL_GRID = "grid grid-cols-[36px_1fr_120px_100px_100px_80px_36px]";
+
 const TH = ({ children, className }: { children?: React.ReactNode; className?: string }) => (
   <th className={cn(
-    "text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)] text-left px-3 py-1.5 border-b border-[var(--q-border-default)] bg-[var(--q-bg-surface-alt)]",
+    "text-[11px] font-medium tracking-[0.3px] text-[var(--q-text-tertiary)] text-left px-3 py-1.5 border-b border-[var(--q-border-default)] bg-[var(--q-bg-surface-alt)]",
     className
   )}>
     {children}
@@ -102,13 +105,15 @@ export default function GroupRow({
   const groupTotals = useMemo(() => {
     let outstanding = 0;
     let overdue = 0;
+    let maxOverdueDays = 0;
     for (const d of debtors) {
       if (d.debtorGroupId === group.id) {
         outstanding += d.totalOutstanding;
         overdue += d.overdueAmount;
+        if (d.oldestOverdueDays > maxOverdueDays) maxOverdueDays = d.oldestOverdueDays;
       }
     }
-    return { outstanding, overdue };
+    return { outstanding, overdue, maxOverdueDays };
   }, [debtors, group.id]);
 
   const hasSelection = selectedMemberIds.size > 0;
@@ -190,86 +195,117 @@ export default function GroupRow({
 
   return (
     <div className="border-b border-[var(--q-border-default)] last:border-b-0">
-      {/* Collapsed/header row */}
+      {/* Group summary row — grid-aligned with child columns */}
       <div
-        className="flex items-center gap-3 px-4 h-12 hover:bg-[var(--q-bg-surface-hover)] cursor-pointer transition-colors duration-100"
+        className={cn(
+          COL_GRID,
+          "items-center h-12 hover:bg-[var(--q-bg-surface-hover)] cursor-pointer transition-colors duration-100",
+        )}
         onClick={onToggle}
       >
-        {isExpanded ? (
-          <ChevronDown className="h-4 w-4 text-[var(--q-text-tertiary)] shrink-0" />
-        ) : (
-          <ChevronRight className="h-4 w-4 text-[var(--q-text-tertiary)] shrink-0" />
-        )}
+        {/* Chevron (aligns with checkbox column) */}
+        <div className="flex items-center justify-center">
+          {isExpanded ? (
+            <ChevronDown className="h-4 w-4 text-[var(--q-text-tertiary)]" />
+          ) : (
+            <ChevronRight className="h-4 w-4 text-[var(--q-text-tertiary)]" />
+          )}
+        </div>
 
-        <span className="text-sm font-medium text-[var(--q-text-primary)] min-w-0 truncate">
-          {group.groupName}
-        </span>
+        {/* Group name + member count */}
+        <div className="flex items-center gap-2 px-3 min-w-0">
+          <span className="text-sm font-medium text-[var(--q-text-primary)] truncate">
+            {group.groupName}
+          </span>
+          <span className="text-xs text-[var(--q-text-tertiary)] shrink-0">
+            {group.memberCount} {group.memberCount === 1 ? "company" : "companies"}
+          </span>
+        </div>
 
-        <span className="text-xs text-[var(--q-text-tertiary)] shrink-0">
-          {group.memberCount} {group.memberCount === 1 ? "company" : "companies"}
-        </span>
+        {/* Outstanding */}
+        <div className="px-3">
+          <QAmount value={groupTotals.outstanding} decimals={0} className="text-sm font-semibold" />
+        </div>
 
-        {/* Show selection actions OR financial summary */}
-        {hasSelection && isExpanded ? (
-          <div className="ml-auto flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-            <span className="text-xs font-medium text-[var(--q-text-secondary)]">
-              {selectedMemberIds.size} selected
+        {/* Overdue */}
+        <div className="px-3">
+          {groupTotals.overdue > 0 ? (
+            <QAmount value={groupTotals.overdue} decimals={0} variant="overdue" className="text-sm" />
+          ) : (
+            <span className="text-xs text-[var(--q-text-tertiary)]">&mdash;</span>
+          )}
+        </div>
+
+        {/* Days Overdue */}
+        <div className="px-3 text-center">
+          {groupTotals.maxOverdueDays > 0 ? (
+            <span className={cn(
+              "text-[13px] font-medium tabular-nums",
+              groupTotals.maxOverdueDays <= 60 ? "text-[var(--q-attention-text)]" : "text-[var(--q-risk-text)]",
+            )}>
+              {groupTotals.maxOverdueDays}
             </span>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 text-xs"
-              onClick={() => removeFromGroupMutation.mutate()}
-              disabled={isMutating}
-            >
-              Remove from group
-            </Button>
-            {otherGroups.length > 0 && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button size="sm" variant="outline" className="h-7 text-xs" disabled={isMutating}>
-                    Move to <ChevronUp className="ml-1 h-3 w-3" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {otherGroups.map((g) => (
-                    <DropdownMenuItem key={g.id} onSelect={() => moveToMutation.mutate(g.id)}>
-                      {g.groupName}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          </div>
-        ) : (
-          <div className="ml-auto flex items-center gap-4">
-            <div className="text-right">
-              <QAmount value={groupTotals.outstanding} decimals={0} className="text-sm font-semibold" />
-            </div>
-            <div className="text-right">
-              {groupTotals.overdue > 0 ? (
-                <QAmount value={groupTotals.overdue} decimals={0} variant="overdue" className="text-sm" />
-              ) : (
-                <span className="text-xs text-[var(--q-text-tertiary)]">&mdash;</span>
-              )}
-            </div>
-            <QBadge variant={group.consolidateComms ? "ready" : "neutral"}>
-              {group.consolidateComms ? "Consolidated" : "Reporting"}
-            </QBadge>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 shrink-0"
-              onClick={(e) => {
-                e.stopPropagation();
-                onEditGroup(group);
-              }}
-            >
-              <Pencil className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-        )}
+          ) : (
+            <span className="text-xs text-[var(--q-text-tertiary)]">&mdash;</span>
+          )}
+        </div>
+
+        {/* Badge */}
+        <div className="px-3">
+          <QBadge variant={group.consolidateComms ? "ready" : "neutral"}>
+            {group.consolidateComms ? "Consolidated" : "Reporting"}
+          </QBadge>
+        </div>
+
+        {/* Edit button */}
+        <div className="flex items-center justify-center">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 shrink-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEditGroup(group);
+            }}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       </div>
+
+      {/* Selection action bar — shows above child table when members are selected */}
+      {isExpanded && hasSelection && (
+        <div className="pl-8 flex items-center gap-2 px-4 py-1.5 bg-[var(--q-bg-surface-alt)] border-b border-[var(--q-border-default)]" onClick={(e) => e.stopPropagation()}>
+          <span className="text-xs font-medium text-[var(--q-text-secondary)]">
+            {selectedMemberIds.size} selected
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-xs"
+            onClick={() => removeFromGroupMutation.mutate()}
+            disabled={isMutating}
+          >
+            Remove from group
+          </Button>
+          {otherGroups.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="outline" className="h-7 text-xs" disabled={isMutating}>
+                  Move to <ChevronUp className="ml-1 h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {otherGroups.map((g) => (
+                  <DropdownMenuItem key={g.id} onSelect={() => moveToMutation.mutate(g.id)}>
+                    {g.groupName}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+      )}
 
       {/* Expanded member table */}
       {isExpanded && (
@@ -277,7 +313,15 @@ export default function GroupRow({
           {members.length === 0 ? (
             <p className="text-xs text-[var(--q-text-tertiary)] py-3 px-3">Loading members...</p>
           ) : (
-            <table className="w-full border-collapse">
+            <table className="w-full border-collapse" style={{ tableLayout: "fixed" }}>
+              <colgroup>
+                <col style={{ width: 36 }} />
+                <col />
+                <col style={{ width: 120 }} />
+                <col style={{ width: 100 }} />
+                <col style={{ width: 100 }} />
+                <col style={{ width: 80 }} />
+              </colgroup>
               <thead>
                 <tr>
                   <TH className="w-[36px]">
@@ -288,9 +332,10 @@ export default function GroupRow({
                     />
                   </TH>
                   <TH>Company</TH>
-                  <TH className="w-[120px]">Outstanding</TH>
-                  <TH className="w-[100px] text-center">Days Overdue</TH>
-                  <TH className="w-[80px]">Role</TH>
+                  <TH>Outstanding</TH>
+                  <TH>Overdue</TH>
+                  <TH className="text-center">Days Overdue</TH>
+                  <TH>Role</TH>
                 </tr>
               </thead>
               <tbody>
@@ -318,6 +363,13 @@ export default function GroupRow({
                       <td className="px-3 py-1.5">
                         {debtorData ? (
                           <QAmount value={debtorData.totalOutstanding} decimals={0} className="text-[13px] font-semibold" />
+                        ) : (
+                          <span className="text-xs text-[var(--q-text-tertiary)]">&mdash;</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-1.5">
+                        {debtorData && debtorData.overdueAmount > 0 ? (
+                          <QAmount value={debtorData.overdueAmount} decimals={0} variant="overdue" className="text-[13px]" />
                         ) : (
                           <span className="text-xs text-[var(--q-text-tertiary)]">&mdash;</span>
                         )}

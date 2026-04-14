@@ -98,17 +98,17 @@ export default function FacilityPage() {
 
         {/* Summary cards — top row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <QMetricCard label="Facility limit" value={FACILITY.limit} format="currency" />
-          <QMetricCard label="Current drawdown" value={FACILITY.currentDrawdown} format="currency" trend={{ direction: "neutral", value: `${utilisation}% utilised` }} />
+          <QMetricCard label="Facility Limit" value={FACILITY.limit} format="currency" />
+          <QMetricCard label="Current Drawdown" value={FACILITY.currentDrawdown} format="currency" trend={{ direction: "neutral", value: `${utilisation}% utilised` }} />
           <QMetricCard label="Available" value={FACILITY.available} format="currency" valueClassName="text-[var(--q-money-in-text)]" />
-          <QMetricCard label="Interest rate" value={`${FACILITY.interestRate}% per month`} format="text" />
+          <QMetricCard label="Interest Rate" value={`${FACILITY.interestRate}% per month`} format="text" />
         </div>
 
         {/* Cost metrics row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <QMetricCard label="Total interest paid (YTD)" value={FACILITY.totalInterestPaid} format="currency" />
-          <QMetricCard label="Total fees paid (YTD)" value={FACILITY.totalFeesPaid} format="currency" />
-          <QMetricCard label="Invoices financed (YTD)" value={34_413} format="currency" />
+          <QMetricCard label="Total Interest Paid (YTD)" value={FACILITY.totalInterestPaid} format="currency" />
+          <QMetricCard label="Total Fees Paid (YTD)" value={FACILITY.totalFeesPaid} format="currency" />
+          <QMetricCard label="Invoices Financed (YTD)" value={34_413} format="currency" />
           <QMetricCard label="Qapital Saving (YTD)" value={475} format="currency" />
         </div>
 

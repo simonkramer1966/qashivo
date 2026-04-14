@@ -131,15 +131,15 @@ export default function GroupsTab({ debtors }: GroupsTabProps) {
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-[var(--q-space-md)] lg:grid-cols-4">
-          <QMetricCard label="Total groups" value={kpis.totalGroups} format="number" />
-          <QMetricCard label="Total outstanding" value={kpis.totalOutstanding} format="currency" />
+          <QMetricCard label="Total Groups" value={kpis.totalGroups} format="number" />
+          <QMetricCard label="Total Outstanding" value={kpis.totalOutstanding} format="currency" />
           <QMetricCard
-            label="Total overdue"
+            label="Total Overdue"
             value={kpis.totalOverdue}
             format="currency"
             valueClassName={kpis.totalOverdue > 0 ? "text-[var(--q-risk-text)]" : undefined}
           />
-          <QMetricCard label="Grouped debtors" value={kpis.groupedDebtors} format="number" />
+          <QMetricCard label="Grouped Debtors" value={kpis.groupedDebtors} format="number" />
         </div>
       )}
 
