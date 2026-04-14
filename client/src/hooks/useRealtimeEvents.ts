@@ -18,7 +18,9 @@ type RealtimeEventType =
   | "sync_progress"
   | "sync_complete"
   | "sync_failed"
-  | "cash_gap_alert";
+  | "cash_gap_alert"
+  | "priorities_generated"
+  | "note_created";
 
 interface RealtimeEvent {
   type: RealtimeEventType;
@@ -93,6 +95,14 @@ const INVALIDATION_MAP: Record<RealtimeEventType, string[][]> = {
   ],
   cash_gap_alert: [
     ["/api/cashflow/cash-gap-alerts"],
+  ],
+  priorities_generated: [
+    ["/api/priorities"],
+    ["/api/priorities/unread-count"],
+  ],
+  note_created: [
+    ["/api/notes"],
+    ["/api/notes/unread-count"],
   ],
 };
 

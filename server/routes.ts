@@ -293,6 +293,8 @@ import { registerQuizRoutes } from "./routes/quizRoutes";
 import { registerDemoRoutes } from "./routes/demoRoutes";
 import { registerImpactRoutes } from "./routes/impactRoutes";
 import { registerCashflowRoutes } from "./routes/cashflowRoutes";
+import { registerPriorityRoutes } from "./routes/priorityRoutes";
+import { registerNoteRoutes } from "./routes/noteRoutes";
 import { buildConversationBrief } from "./services/conversationBriefService";
 import { ForecastEngine, type ForecastConfig, type ForecastScenario } from "../shared/forecast";
 import { subscriptionService } from "./services/subscriptionService";
@@ -665,6 +667,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerDemoRoutes(app);
   registerImpactRoutes(app);
   registerCashflowRoutes(app);
+  registerPriorityRoutes(app);
+  registerNoteRoutes(app);
 
   // ── Temporary diagnostic: conversation brief inspector ──
   // Remove after verification. Auth-gated, non-destructive read-only.

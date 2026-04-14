@@ -41,7 +41,9 @@ export type RealtimeEventType =
   | "sync_progress"
   | "sync_complete"
   | "sync_failed"
-  | "cash_gap_alert";
+  | "cash_gap_alert"
+  | "priorities_generated"
+  | "note_created";
 
 export interface RealtimeEvent {
   type: RealtimeEventType;

@@ -48,6 +48,7 @@ const DebtorRecord = lazy(() => import("@/pages/qollections/debtor-record"));
 // REMOVED FROM NAV — invoices accessed via Debtor Detail page.
 // const QollectionsInvoices = lazy(() => import("@/pages/qollections/invoices"));
 const QollectionsAgentActivity = lazy(() => import("@/pages/qollections/agent-activity"));
+const QollectionsPriorities = lazy(() => import("@/pages/qollections/priorities"));
 const QollectionsDisputes = lazy(() => import("@/pages/qollections/disputes"));
 // Groups moved to tab on Debtors page — standalone pages removed
 const QollectionsReports = lazy(() => import("@/pages/qollections/reports"));
@@ -339,6 +340,7 @@ function Router() {
           <Route path="/qollections/debtors/:id" component={DebtorRecord} />
           <Route path="/qollections/debtors" component={QollectionsDebtors} />
           <Route path="/qollections/invoices">{() => <Redirect to="/qollections/debtors" />}</Route>
+          <Route path="/qollections/priorities" component={QollectionsPriorities} />
           <Route path="/qollections/agent-activity" component={QollectionsAgentActivity} />
           <Route path="/qollections/groups/:groupId">{() => <Redirect to="/qollections/debtors?tab=groups" />}</Route>
           <Route path="/qollections/groups">{() => <Redirect to="/qollections/debtors?tab=groups" />}</Route>

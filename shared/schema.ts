@@ -4033,6 +4033,75 @@ export const insertUnallocatedPaymentSchema = createInsertSchema(unallocatedPaym
 export type UnallocatedPayment = typeof unallocatedPayments.$inferSelect;
 export type InsertUnallocatedPayment = z.infer<typeof insertUnallocatedPaymentSchema>;
 
+// === PRIORITIES ===
+// Charlie-generated daily briefing items for credit controllers.
+// Each priority is a single actionable insight for a given date.
+export const priorities = pgTable("priorities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  contactId: varchar("contact_id").references(() => contacts.id),
+  level: varchar("level").notNull(), // 'urgent' | 'important' | 'informational'
+  category: varchar("category").notNull(), // 'broken_promise' | 'unresponsive' | 'cash_gap' | 'deadline' | 'escalation_needed' | 'approvals_pending' | 'payment_received' | 'new_overdue' | 'balance_cleared' | 'dispute' | 'forecast' | 'other'
+  title: varchar("title").notNull(),
+  body: text("body").notNull(),
+  suggestedAction: text("suggested_action"),
+  linkedRoute: varchar("linked_route"),
+  amountAtRisk: integer("amount_at_risk"),
+  priorityDate: varchar("priority_date").notNull(), // ISO date string YYYY-MM-DD
+  isRead: boolean("is_read").default(false),
+  readAt: timestamp("read_at"),
+  readByUserId: varchar("read_by_user_id").references(() => users.id),
+  isDismissed: boolean("is_dismissed").default(false),
+  dismissedAt: timestamp("dismissed_at"),
+  relatedActionId: varchar("related_action_id"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_priorities_tenant_date").on(table.tenantId, table.priorityDate),
+  index("idx_priorities_tenant_read").on(table.tenantId, table.isRead),
+]);
+
+export const insertPrioritySchema = createInsertSchema(priorities).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type Priority = typeof priorities.$inferSelect;
+export type InsertPriority = z.infer<typeof insertPrioritySchema>;
+
+// === NOTES ===
+// Structured notes from users, Charlie, Riley, and system events.
+// Replaces the flat arNotes text field for structured note-taking.
+export const notes = pgTable("notes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  contactId: varchar("contact_id").references(() => contacts.id),
+  content: text("content").notNull(),
+  source: varchar("source").notNull(), // 'user' | 'charlie' | 'riley' | 'system' | 'partner'
+  trigger: varchar("trigger"), // 'chase_cycle' | 'promise_received' | 'promise_broken' | 'payment_received' | 'dispute_raised' | 'unresponsive' | 'tone_escalation' | 'first_contact' | 'status_change' | 'weekly_summary' | 'manual'
+  priority: varchar("priority").default("normal"), // 'low' | 'normal' | 'high'
+  isRead: boolean("is_read").default(false),
+  readAt: timestamp("read_at"),
+  readByUserId: varchar("read_by_user_id").references(() => users.id),
+  relatedActionId: varchar("related_action_id"),
+  relatedInvoiceId: varchar("related_invoice_id"),
+  createdByUserId: varchar("created_by_user_id").references(() => users.id),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_notes_tenant_created").on(table.tenantId, table.createdAt),
+  index("idx_notes_tenant_contact_created").on(table.tenantId, table.contactId, table.createdAt),
+  index("idx_notes_tenant_read").on(table.tenantId, table.isRead),
+]);
+
+export const insertNoteSchema = createInsertSchema(notes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type Note = typeof notes.$inferSelect;
+export type InsertNote = z.infer<typeof insertNoteSchema>;
+
 // === PARTNER-CLIENT SUBSCRIPTION SYSTEM ===
 
 // Subscription plans for partners and clients

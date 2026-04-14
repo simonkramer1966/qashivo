@@ -554,6 +554,86 @@ function DebtorAuditSection({ contactId }: { contactId: string }) {
 // Group Members Section (used in Details & Contacts tab)
 // ---------------------------------------------------------------------------
 
+function DebtorNotesSection({ contactId }: { contactId: string }) {
+  const queryClient = useQueryClient();
+  const [newNote, setNewNote] = useState("");
+  const [, navigate] = useLocation();
+
+  const { data: notesData } = useQuery<{ notes: Array<{ id: string; content: string; source: string; trigger?: string | null; createdAt: string; createdByName?: string | null }> }>({
+    queryKey: [`/api/contacts/${contactId}/notes`],
+    queryFn: () => fetch(`/api/contacts/${contactId}/notes?limit=5`, { credentials: "include" }).then((r) => r.json()),
+  });
+
+  const createNoteMut = useMutation({
+    mutationFn: (data: { content: string; contactId: string }) =>
+      apiRequest("POST", "/api/notes", data),
+    onSuccess: () => {
+      setNewNote("");
+      queryClient.invalidateQueries({ queryKey: [`/api/contacts/${contactId}/notes`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notes"] });
+    },
+  });
+
+  const handleAdd = () => {
+    if (!newNote.trim()) return;
+    createNoteMut.mutate({ content: newNote.trim(), contactId });
+  };
+
+  const notesList = notesData?.notes ?? [];
+  const SOURCE_LABELS: Record<string, string> = { user: "User", charlie: "Charlie", riley: "Riley", system: "System", partner: "Partner" };
+
+  return (
+    <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)]">
+      <div className="px-5 pt-5 pb-3 flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-[var(--q-text-primary)] flex items-center gap-2">
+          Notes
+        </h3>
+        <button
+          onClick={() => navigate(`/qollections/agent-activity?tab=notes`)}
+          className="text-xs text-[var(--q-accent)] hover:underline"
+        >
+          View all
+        </button>
+      </div>
+      <div className="px-5 pb-4 space-y-3">
+        {/* Quick-add */}
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            placeholder="Write a note..."
+            value={newNote}
+            onChange={(e) => setNewNote(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+            className="flex-1 h-8 rounded-md border border-[var(--q-border-default)] bg-[var(--q-bg-page)] px-2.5 text-sm text-[var(--q-text-primary)] placeholder:text-[var(--q-text-tertiary)]"
+          />
+          <button
+            onClick={handleAdd}
+            disabled={!newNote.trim() || createNoteMut.isPending}
+            className="h-8 px-3 rounded-md bg-[var(--q-accent)] text-white text-xs font-medium disabled:opacity-50"
+          >
+            Add
+          </button>
+        </div>
+
+        {/* Notes feed */}
+        {notesList.length === 0 && (
+          <p className="text-xs text-[var(--q-text-tertiary)] py-2">No notes yet</p>
+        )}
+        {notesList.map((n) => (
+          <div key={n.id} className="border-l-2 border-[var(--q-border-default)] pl-3 py-1">
+            <div className="flex items-center gap-1.5 text-[11px] text-[var(--q-text-tertiary)]">
+              <span className="font-medium">{n.createdByName ?? SOURCE_LABELS[n.source] ?? n.source}</span>
+              <span>&middot;</span>
+              <span>{new Date(n.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>
+            </div>
+            <p className="text-sm text-[var(--q-text-primary)] mt-0.5 whitespace-pre-wrap">{n.content}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function DebtorGroupMembersSection({ contactId, groupId }: { contactId: string; groupId: string }) {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
@@ -2860,6 +2940,9 @@ export default function DebtorRecord() {
                 )}
               </div>
             </div>
+
+            {/* Notes section */}
+            <DebtorNotesSection contactId={contactId} />
 
             {/* Group Members section — only when contact belongs to a group */}
             {(contact as any)?.debtorGroupId && (() => {

@@ -2,9 +2,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
 import { usePartnerContext } from "@/hooks/usePartnerContext";
 import { useLocation } from "wouter";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, useQueries } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, type ReactNode } from "react";
 import OrgSwitcher from "@/components/layout/OrgSwitcher";
 import {
   LogOut,
@@ -30,6 +30,7 @@ import {
   ShieldCheck,
   Briefcase,
   FileBarChart,
+  Flag,
 } from "lucide-react";
 import {
   Tooltip,
@@ -52,6 +53,8 @@ interface NavChild {
    * a sibling route like /qollections/debtors is active.
    */
   exact?: boolean;
+  /** API endpoint returning { count: number } — badge shown next to label when count > 0 */
+  badgeQueryKey?: string;
 }
 
 interface NavPillar {
@@ -68,8 +71,9 @@ const navigationPillars: NavPillar[] = [
   {
     label: "Qollections",
     icon: ClipboardList,
-    defaultHref: "/qollections/agent-activity",
+    defaultHref: "/qollections/priorities",
     children: [
+      { name: "Priorities", href: "/qollections/priorities", icon: Flag, badgeQueryKey: "/api/priorities/unread-count" },
       { name: "Action Centre", href: "/qollections/agent-activity", icon: Activity },
       { name: "Debtors", href: "/qollections/debtors", icon: Users },
       { name: "Disputes", href: "/qollections/disputes", icon: AlertTriangle },
@@ -126,6 +130,22 @@ const partnerNavigationPillars: NavPillar[] = [
 ];
 
 const STORAGE_KEY = "sidebar_collapsed";
+
+/** Tiny badge that fetches an unread count from a query endpoint */
+function NavBadge({ queryKey }: { queryKey: string }) {
+  const { data } = useQuery<{ count: number }>({
+    queryKey: [queryKey],
+    refetchInterval: 30_000,
+    staleTime: 10_000,
+  });
+  const c = data?.count ?? 0;
+  if (c <= 0) return null;
+  return (
+    <span className="ml-auto text-[10px] font-semibold leading-none bg-red-500 text-white rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+      {c > 99 ? "99+" : c}
+    </span>
+  );
+}
 
 // ── Sidebar component ─────────────────────────────────────
 
@@ -539,7 +559,8 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
                               isChildActive ? "text-q-accent" : ""
                             )}
                           />
-                          <span>{child.name}</span>
+                          <span className="flex-1 text-left">{child.name}</span>
+                          {child.badgeQueryKey && <NavBadge queryKey={child.badgeQueryKey} />}
                         </button>
                       );
                     })}

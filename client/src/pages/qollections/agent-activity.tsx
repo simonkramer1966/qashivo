@@ -8,6 +8,7 @@ import ApprovalsTab from "@/components/action-centre/ApprovalsTab";
 import ScheduledTab from "@/components/action-centre/ScheduledTab";
 import ActivityFeedTab from "@/components/action-centre/ActivityFeedTab";
 import ExceptionsTab from "@/components/action-centre/ExceptionsTab";
+import NotesTab from "@/components/action-centre/NotesTab";
 import SyncStatusBanner from "@/components/sync/SyncStatusBanner";
 // VipTab removed — VIP is a debtor status, managed from Debtors list + debtor detail
 import { cn } from "@/lib/utils";
@@ -25,9 +26,9 @@ interface TenantSettings {
   approvalTimeoutHours: number;
 }
 
-type MainTab = "summary" | "queue" | "scheduled" | "activity" | "exceptions";
+type MainTab = "notes" | "summary" | "queue" | "scheduled" | "activity" | "exceptions";
 
-const VALID_TABS = new Set<MainTab>(["summary", "queue", "scheduled", "activity", "exceptions"]);
+const VALID_TABS = new Set<MainTab>(["notes", "summary", "queue", "scheduled", "activity", "exceptions"]);
 
 // Parse search string into params
 function parseSearch(search: string): URLSearchParams {
@@ -41,7 +42,7 @@ export default function QollectionsAgentActivity() {
 
   // Read tab state from URL
   const rawTab = params.get("tab") as MainTab | null;
-  const activeTab: MainTab = rawTab && VALID_TABS.has(rawTab) ? rawTab : "queue";
+  const activeTab: MainTab = rawTab && VALID_TABS.has(rawTab) ? rawTab : "notes";
   const rawSub = params.get("sub") as ExceptionSubTab | null;
   const exceptionSubTab: ExceptionSubTab | null = rawSub && VALID_EXCEPTION_SUBS.has(rawSub) ? rawSub : null;
 
@@ -94,6 +95,11 @@ export default function QollectionsAgentActivity() {
     refetchInterval: 30_000,
   });
 
+  const { data: notesUnreadData } = useQuery<{ count: number }>({
+    queryKey: ["/api/notes/unread-count"],
+    refetchInterval: 30_000,
+  });
+
   // VIP data query removed — VIP tab removed
 
   const approvalMode = (context?.tenant as any)?.approvalMode ?? "manual";
@@ -139,6 +145,7 @@ export default function QollectionsAgentActivity() {
         <div className="flex items-center gap-0 flex-wrap overflow-x-auto scrollbar-hide">
           <QFilterTabs
             options={[
+              { key: "notes", label: "Notes", count: (notesUnreadData?.count || 0) || undefined },
               { key: "summary", label: "Summary" },
               ...(showApprovals ? [{ key: "queue", label: "Approval", count: approvalCount || undefined }] : []),
               { key: "scheduled", label: "Scheduled", count: scheduledCount || undefined },
@@ -166,6 +173,7 @@ export default function QollectionsAgentActivity() {
 
         {/* Tab content */}
         <div className="mt-4">
+          {activeTab === "notes" && <NotesTab />}
           {activeTab === "summary" && <OverviewTab />}
           {activeTab === "queue" && showApprovals && <ApprovalsTab />}
           {activeTab === "scheduled" && <ScheduledTab />}
