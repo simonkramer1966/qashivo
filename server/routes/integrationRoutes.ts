@@ -2447,15 +2447,22 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
           if (hasGenericEmail) missingFields.push('generic_email');
           if (hasBounced) missingFields.push('bounced');
 
+          // Check for named contact (arContactName or any contact person name)
+          const hasNamedContact = !!(contact.arContactName?.trim());
+
           if (!hasEmail || hasBounced) {
             readinessStatus = 'needs_email';
           } else if (hasGenericEmail) {
             readinessStatus = 'generic_email';
           } else if (!hasPhone) {
             readinessStatus = 'needs_phone';
+          } else if (!hasNamedContact) {
+            readinessStatus = 'needs_contact';
           } else {
             readinessStatus = 'ready';
           }
+
+          if (!hasNamedContact) missingFields.push('contact');
         }
 
         return {
@@ -2485,6 +2492,7 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
         needsEmail: withOutstanding.filter((c: any) => c.readinessStatus === 'needs_email').length,
         genericEmail: withOutstanding.filter((c: any) => c.readinessStatus === 'generic_email').length,
         needsPhone: withOutstanding.filter((c: any) => c.readinessStatus === 'needs_phone').length,
+        needsContact: withOutstanding.filter((c: any) => c.readinessStatus === 'needs_contact').length,
         needsAttention: withOutstanding.filter((c: any) => c.readinessStatus === 'needs_attention').length,
         bounced: withOutstanding.filter((c: any) => c.bounced).length,
       };

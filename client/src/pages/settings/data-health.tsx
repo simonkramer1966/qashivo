@@ -21,6 +21,7 @@ import {
   Users,
   ShieldAlert,
   MailWarning,
+  UserX,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
@@ -50,18 +51,20 @@ interface DataHealthResponse {
     needsEmail: number;
     genericEmail: number;
     needsPhone: number;
+    needsContact: number;
     needsAttention: number;
   };
   contacts: ContactHealth[];
 }
 
-type FilterTab = 'all' | 'ready' | 'needs_email' | 'generic_email' | 'needs_phone' | 'needs_attention';
+type FilterTab = 'all' | 'ready' | 'needs_email' | 'generic_email' | 'needs_phone' | 'needs_contact' | 'needs_attention';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ElementType }> = {
   ready: { label: 'Ready', color: 'bg-green-100 text-green-800', icon: CheckCircle2 },
   needs_email: { label: 'Needs Email', color: 'bg-red-100 text-red-800', icon: Mail },
   generic_email: { label: 'Generic Email', color: 'bg-amber-100 text-amber-800', icon: MailWarning },
   needs_phone: { label: 'Needs Phone', color: 'bg-orange-100 text-orange-800', icon: Phone },
+  needs_contact: { label: 'Needs Contact', color: 'bg-purple-100 text-purple-800', icon: UserX },
   needs_attention: { label: 'Needs Attention', color: 'bg-red-100 text-red-800', icon: ShieldAlert },
 };
 
@@ -74,7 +77,7 @@ function DhSortTh({ field, label, sort, onSort, className = "" }: {
       <button
         type="button"
         onClick={() => onSort(nextSortState(sort, field))}
-        className={`inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-[0.3px] transition-colors cursor-pointer ${active ? "text-[var(--q-text-primary)]" : "text-[var(--q-text-tertiary)] hover:text-[var(--q-text-primary)]"}`}
+        className={`inline-flex items-center gap-1 text-[11px] font-medium tracking-[0.3px] transition-colors cursor-pointer ${active ? "text-[var(--q-text-primary)]" : "text-[var(--q-text-tertiary)] hover:text-[var(--q-text-primary)]"}`}
       >
         {label}
         {active && sort.dir === "asc" ? (
@@ -168,8 +171,8 @@ export default function SettingsDataHealth({ embedded }: { embedded?: boolean })
   const loadingSkeleton = (
     <div className="space-y-[var(--q-space-2xl)]">
       <Skeleton className="h-8 w-48" />
-      <div className="grid grid-cols-5 gap-4">
-        {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-24" />)}
+      <div className="grid grid-cols-6 gap-4">
+        {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-24" />)}
       </div>
       <Skeleton className="h-96" />
     </div>
@@ -184,7 +187,7 @@ export default function SettingsDataHealth({ embedded }: { embedded?: boolean })
     );
   }
 
-  const summary = data?.summary ?? { total: 0, ready: 0, needsEmail: 0, genericEmail: 0, needsPhone: 0, needsAttention: 0 };
+  const summary = data?.summary ?? { total: 0, ready: 0, needsEmail: 0, genericEmail: 0, needsPhone: 0, needsContact: 0, needsAttention: 0 };
 
   const summaryCards = [
     { key: 'all' as FilterTab, label: 'Total Debtors', value: summary.total, icon: Users, color: 'text-[var(--q-text-tertiary)]' },
@@ -192,12 +195,13 @@ export default function SettingsDataHealth({ embedded }: { embedded?: boolean })
     { key: 'needs_email' as FilterTab, label: 'Needs Email', value: summary.needsEmail, icon: Mail, color: 'text-[var(--q-risk-text)]' },
     { key: 'generic_email' as FilterTab, label: 'Generic Email', value: summary.genericEmail, icon: MailWarning, color: 'text-[var(--q-attention-text)]' },
     { key: 'needs_phone' as FilterTab, label: 'Needs Phone', value: summary.needsPhone, icon: Phone, color: 'text-[var(--q-attention-text)]' },
+    { key: 'needs_contact' as FilterTab, label: 'Needs Contact', value: summary.needsContact, icon: UserX, color: 'text-purple-600' },
   ];
 
   const content = (
     <div className="space-y-[var(--q-space-2xl)]">
       {/* Summary Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-[var(--q-space-md)]">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-[var(--q-space-md)]">
           {summaryCards.map(card => (
             <div
               key={card.key}
@@ -208,7 +212,7 @@ export default function SettingsDataHealth({ embedded }: { embedded?: boolean })
                 <card.icon className={`h-5 w-5 ${card.color}`} />
                 <span className={`text-[28px] font-semibold q-mono ${card.color}`}>{card.value}</span>
               </div>
-              <p className="text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)] mt-1">{card.label}</p>
+              <p className="text-[11px] font-medium tracking-[0.3px] text-[var(--q-text-tertiary)] mt-1">{card.label}</p>
             </div>
           ))}
         </div>
@@ -233,6 +237,7 @@ export default function SettingsDataHealth({ embedded }: { embedded?: boolean })
             { key: "needs_email", label: "Needs email", count: summary.needsEmail },
             { key: "generic_email", label: "Generic email", count: summary.genericEmail },
             { key: "needs_phone", label: "Needs phone", count: summary.needsPhone },
+            { key: "needs_contact", label: "Needs contact", count: summary.needsContact },
           ]}
           activeKey={activeFilter}
           onChange={(v) => setActiveFilter(v as FilterTab)}
@@ -250,16 +255,17 @@ export default function SettingsDataHealth({ embedded }: { embedded?: boolean })
                 <thead>
                   <tr className="border-b border-[var(--q-border-default)] bg-[var(--q-bg-surface-alt)]/30">
                     <DhSortTh field="name" label="Name" sort={sort} onSort={setSort} />
-                    <th className="w-[100px] text-left py-3 px-3 text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)]">Status</th>
-                    <th className="w-[220px] text-left py-3 px-3 text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)]">Email</th>
-                    <th className="w-[160px] text-left py-3 px-3 text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)]">Phone</th>
-                    <th className="w-[60px] text-center py-3 px-3 text-[11px] font-medium uppercase tracking-[0.3px] text-[var(--q-text-tertiary)]">Edit</th>
+                    <th className="w-[160px] text-left py-3 px-3 text-[11px] font-medium tracking-[0.3px] text-[var(--q-text-tertiary)]">Contact</th>
+                    <th className="w-[100px] text-left py-3 px-3 text-[11px] font-medium tracking-[0.3px] text-[var(--q-text-tertiary)]">Status</th>
+                    <th className="w-[220px] text-left py-3 px-3 text-[11px] font-medium tracking-[0.3px] text-[var(--q-text-tertiary)]">Email</th>
+                    <th className="w-[160px] text-left py-3 px-3 text-[11px] font-medium tracking-[0.3px] text-[var(--q-text-tertiary)]">Phone</th>
+                    <th className="w-[60px] text-center py-3 px-3 text-[11px] font-medium tracking-[0.3px] text-[var(--q-text-tertiary)]">Edit</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredContacts.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="text-center py-8 px-3 text-[var(--q-text-tertiary)]">
+                      <td colSpan={6} className="text-center py-8 px-3 text-[var(--q-text-tertiary)]">
                         No debtors found for this filter.
                       </td>
                     </tr>
@@ -274,6 +280,13 @@ export default function SettingsDataHealth({ embedded }: { embedded?: boolean })
                             <div className="font-medium truncate">{contact.name}</div>
                             {contact.companyName && (
                               <div className="text-xs text-[var(--q-text-tertiary)] truncate">{contact.companyName}</div>
+                            )}
+                          </td>
+                          <td className="py-3 px-3">
+                            {contact.arContactName ? (
+                              <span className="text-sm text-[var(--q-text-primary)]">{contact.arContactName}</span>
+                            ) : (
+                              <span className="text-sm italic text-[var(--q-attention-text)]">Missing</span>
                             )}
                           </td>
                           <td className="py-3 px-3">
