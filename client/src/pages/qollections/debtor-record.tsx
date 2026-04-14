@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { QBadge } from "@/components/ui/q-badge";
-import { QFilterTabs, QFilterDivider } from "@/components/ui/q-filter-tabs";
+import { QFilterTabs } from "@/components/ui/q-filter-tabs";
 import { QAmount } from "@/components/ui/q-amount";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -822,10 +822,11 @@ export default function DebtorRecord() {
   const [personNotes, setPersonNotes] = useState("");
 
   // --- Activity filter state ---
-  const [activityCategory, setActivityCategory] = useState("Notes");
+  const [activityCategory, setActivityCategory] = useState("All");
   const [activityRange, setActivityRange] = useState("90d");
   const [activityDirection, setActivityDirection] = useState("All");
   const [activityPage, setActivityPage] = useState(1);
+  const [activitySearch, setActivitySearch] = useState("");
   const [expandedActivityIds, setExpandedActivityIds] = useState<Set<string>>(new Set());
   // --- Sort state for outstanding / paid tables ---
   const [outstandingSortKey, setOutstandingSortKey] = useState<string>("dueDate");
@@ -3005,44 +3006,50 @@ export default function DebtorRecord() {
             {/* ── Group indicator ── */}
             <DebtorGroupIndicator contactId={contactId} debtorGroupId={contact.debtorGroupId} />
 
-            {/* ── Filter bar ── */}
-            <div className="flex items-center gap-0 flex-wrap">
-              <QFilterTabs
-                options={[
-                  { key: "All", label: "All" },
-                  { key: "Communications", label: "Communications" },
-                  { key: "Payments", label: "Payments" },
-                  { key: "Promises", label: "Promises" },
-                  { key: "Notes", label: "Notes" },
-                  { key: "System", label: "System" },
-                  { key: "Risk", label: "Risk" },
-                ]}
-                activeKey={activityCategory}
-                onChange={(v) => { setActivityCategory(v); setActivityPage(1); }}
-              />
-              <QFilterDivider />
-              <QFilterTabs
-                options={[
-                  { key: "All", label: "All" },
-                  { key: "30d", label: "30 days" },
-                  { key: "90d", label: "90 days" },
-                  { key: "12m", label: "12 months" },
-                ]}
-                activeKey={activityRange}
-                onChange={(v) => { setActivityRange(v); setActivityPage(1); }}
-              />
-              <QFilterDivider />
-              <QFilterTabs
-                options={[
-                  { key: "All", label: "All" },
-                  { key: "outbound", label: "Outbound" },
-                  { key: "inbound", label: "Inbound" },
-                ]}
-                activeKey={activityDirection}
-                onChange={(v) => { setActivityDirection(v); setActivityPage(1); }}
-              />
+            {/* ── Toolbar — search + filter dropdowns ── */}
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative flex-1 min-w-[200px] max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search activity..."
+                  value={activitySearch}
+                  onChange={(e) => setActivitySearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Select value={activityCategory} onValueChange={(v) => { setActivityCategory(v); setActivityPage(1); }}>
+                <SelectTrigger className="h-9 w-auto min-w-[130px] text-xs">
+                  <SelectValue placeholder="Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {["All", "Communications", "Payments", "Promises", "Notes", "System", "Risk"].map((v) => (
+                    <SelectItem key={v} value={v}>{v === "All" ? "Type: All" : v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={activityRange} onValueChange={(v) => { setActivityRange(v); setActivityPage(1); }}>
+                <SelectTrigger className="h-9 w-auto min-w-[90px] text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All time</SelectItem>
+                  <SelectItem value="30d">30 days</SelectItem>
+                  <SelectItem value="90d">90 days</SelectItem>
+                  <SelectItem value="12m">12 months</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={activityDirection} onValueChange={(v) => { setActivityDirection(v); setActivityPage(1); }}>
+                <SelectTrigger className="h-9 w-auto min-w-[120px] text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">Direction: All</SelectItem>
+                  <SelectItem value="outbound">Outbound</SelectItem>
+                  <SelectItem value="inbound">Inbound</SelectItem>
+                </SelectContent>
+              </Select>
               {activityQuery.data && (
-                <span className="ml-auto text-[13px] text-[var(--q-text-tertiary)]">
+                <span className="ml-auto text-[13px] text-[var(--q-text-tertiary)] whitespace-nowrap">
                   {activityQuery.data.total} event{activityQuery.data.total !== 1 ? "s" : ""}
                 </span>
               )}
@@ -3082,7 +3089,17 @@ export default function DebtorRecord() {
                       </tr>
                     </thead>
                     <tbody>
-                      {(activityQuery.data?.events ?? []).map((evt) => {
+                      {(activityQuery.data?.events ?? []).filter((evt) => {
+                        if (!activitySearch.trim()) return true;
+                        const q = activitySearch.toLowerCase();
+                        return (
+                          (evt.title || "").toLowerCase().includes(q) ||
+                          (evt.description || "").toLowerCase().includes(q) ||
+                          (evt.eventType || "").toLowerCase().includes(q) ||
+                          (evt.triggeredBy || "").toLowerCase().includes(q) ||
+                          (evt.category || "").toLowerCase().includes(q)
+                        );
+                      }).map((evt) => {
                         const mapped: ActivityEventData = {
                           id: evt.id,
                           direction: evt.direction,
