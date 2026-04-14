@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { db } from "../db";
-import { partners, smeClients, users, importJobs, activityLogs, tenants, partnerWaitlist, actions, contacts, invoices, adminLlmLogs, adminCommunicationEvents, adminSystemErrors } from "@shared/schema";
+import { partners, smeClients, users, importJobs, activityLogs, tenants, partnerWaitlist, actions, contacts, invoices, adminLlmLogs, adminCommunicationEvents, adminSystemErrors, rileyConversations, aiFacts } from "@shared/schema";
 import { eq, desc, sql, and, or, ilike, ne, gte, lte, inArray, isNotNull, asc } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
@@ -967,8 +967,24 @@ router.get("/dashboard", requireAdminAuth, async (req, res) => {
     const filters = parseFilters(req);
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
 
-    const [activeTenantResult, actionsTodayResult, llmResult, errorsResult] = await Promise.all([
+    const [
+      activeTenantResult,
+      actionsTodayResult,
+      actionsByStatusResult,
+      actionsByChannelResult,
+      commsResult,
+      llmResult,
+      errorsResult,
+      llmSpendTodayResult,
+      llmSpendMonthResult,
+      xeroStatusResult,
+      recentActionsResult,
+      recentErrorsResult,
+    ] = await Promise.all([
       db.select({ count: sql<number>`count(*)::int` }).from(tenants)
         .where(isNotNull(tenants.xeroTenantId)),
       db.select({ count: sql<number>`count(*)::int` }).from(actions)
@@ -976,17 +992,95 @@ router.get("/dashboard", requireAdminAuth, async (req, res) => {
           gte(actions.createdAt, todayStart),
           filters.tenantId ? eq(actions.tenantId, filters.tenantId) : undefined,
         )),
+      db.select({
+        status: actions.status,
+        count: sql<number>`count(*)::int`,
+      }).from(actions)
+        .where(gte(actions.createdAt, todayStart))
+        .groupBy(actions.status),
+      db.select({
+        channel: actions.agentChannel,
+        count: sql<number>`count(*)::int`,
+      }).from(actions)
+        .where(gte(actions.createdAt, todayStart))
+        .groupBy(actions.agentChannel),
+      db.select({ count: sql<number>`count(*)::int` }).from(adminCommunicationEvents)
+        .where(gte(adminCommunicationEvents.createdAt, todayStart)),
       db.select({ count: sql<number>`count(*)::int` }).from(adminLlmLogs)
         .where(gte(adminLlmLogs.createdAt, todayStart)),
       db.select({ count: sql<number>`count(*)::int` }).from(adminSystemErrors)
-        .where(gte(adminSystemErrors.createdAt, todayStart)),
+        .where(and(gte(adminSystemErrors.createdAt, todayStart), eq(adminSystemErrors.resolved, false))),
+      db.select({ total: sql<string>`COALESCE(SUM(cost_usd::numeric), 0)::text` }).from(adminLlmLogs)
+        .where(gte(adminLlmLogs.createdAt, todayStart)),
+      db.select({ total: sql<string>`COALESCE(SUM(cost_usd::numeric), 0)::text` }).from(adminLlmLogs)
+        .where(gte(adminLlmLogs.createdAt, monthStart)),
+      db.select({
+        id: tenants.id,
+        name: tenants.name,
+        lastSync: tenants.xeroLastSyncAt,
+        connectionStatus: tenants.xeroConnectionStatus,
+        expiresAt: tenants.xeroExpiresAt,
+      }).from(tenants)
+        .where(isNotNull(tenants.xeroTenantId)),
+      db.select({
+        id: actions.id,
+        type: actions.type,
+        status: actions.status,
+        channel: actions.agentChannel,
+        tenantId: actions.tenantId,
+        contactName: contacts.name,
+        createdAt: actions.createdAt,
+      }).from(actions)
+        .leftJoin(contacts, eq(actions.contactId, contacts.id))
+        .orderBy(desc(actions.createdAt))
+        .limit(20),
+      db.select({
+        id: adminSystemErrors.id,
+        source: adminSystemErrors.source,
+        severity: adminSystemErrors.severity,
+        message: adminSystemErrors.message,
+        createdAt: adminSystemErrors.createdAt,
+      }).from(adminSystemErrors)
+        .orderBy(desc(adminSystemErrors.createdAt))
+        .limit(20),
     ]);
+
+    const actionsByStatus: Record<string, number> = {};
+    for (const row of actionsByStatusResult) {
+      if (row.status) actionsByStatus[row.status] = row.count;
+    }
+    const actionsByChannel: Record<string, number> = {};
+    for (const row of actionsByChannelResult) {
+      if (row.channel) actionsByChannel[row.channel] = row.count;
+    }
+
+    const xeroStatus = xeroStatusResult.map(t => ({
+      tenantId: t.id,
+      tenantName: t.name,
+      lastSync: t.lastSync,
+      status: t.connectionStatus === 'expired' ? 'expired'
+        : t.expiresAt && new Date(t.expiresAt) < new Date() ? 'token_expired'
+        : t.connectionStatus ?? 'unknown',
+    }));
+
+    // Merge recent actions + errors into a unified feed sorted by createdAt
+    const recentActivity = [
+      ...recentActionsResult.map(a => ({ type: 'action' as const, id: a.id, summary: `${a.channel ?? a.type} → ${a.contactName ?? 'Unknown'}`, status: a.status, createdAt: a.createdAt })),
+      ...recentErrorsResult.map(e => ({ type: 'error' as const, id: e.id, summary: e.message, severity: e.severity, createdAt: e.createdAt })),
+    ].sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()).slice(0, 20);
 
     res.json({
       activeTenants: activeTenantResult[0]?.count ?? 0,
       actionsToday: actionsTodayResult[0]?.count ?? 0,
+      actionsByStatus,
+      actionsByChannel,
+      communicationsToday: commsResult[0]?.count ?? 0,
       llmCalls24h: llmResult[0]?.count ?? 0,
-      errors24h: errorsResult[0]?.count ?? 0,
+      unresolvedErrors: errorsResult[0]?.count ?? 0,
+      llmSpendToday: llmSpendTodayResult[0]?.total ?? "0",
+      llmSpendMonth: llmSpendMonthResult[0]?.total ?? "0",
+      xeroStatus,
+      recentActivity,
     });
   } catch (error: any) {
     console.error("Failed to fetch dashboard:", error);
@@ -1706,36 +1800,400 @@ router.get("/comms/stats", requireAdminAuth, async (req, res) => {
   }
 });
 
-// ==================== RILEY (stubs — wired in Sprint 7) ====================
+// ==================== RILEY MONITOR ====================
 
+// GET /riley/conversations — Paginated list with user/tenant names
 router.get("/riley/conversations", requireAdminAuth, async (req, res) => {
-  const page = parseInt(req.query.page as string) || 1;
-  const limit = parseInt(req.query.limit as string) || 20;
-  res.json({ conversations: [], total: 0, page, limit });
+  try {
+    const filters = parseFilters(req);
+    const topicFilter = req.query.topic as string | undefined;
+
+    const conds: any[] = [];
+    if (filters.tenantId) conds.push(eq(rileyConversations.tenantId, filters.tenantId));
+    if (filters.from) conds.push(gte(rileyConversations.createdAt, new Date(filters.from)));
+    if (filters.to) conds.push(lte(rileyConversations.createdAt, new Date(filters.to)));
+    if (topicFilter) conds.push(eq(rileyConversations.topic, topicFilter));
+    if (filters.search) {
+      conds.push(or(
+        ilike(rileyConversations.topic, `%${filters.search}%`),
+        sql`${rileyConversations.messages}::text ILIKE ${'%' + filters.search + '%'}`,
+      ));
+    }
+
+    const whereClause = conds.length > 0 ? and(...conds) : undefined;
+
+    const [rows, countResult] = await Promise.all([
+      db.select({
+        id: rileyConversations.id,
+        tenantId: rileyConversations.tenantId,
+        tenantName: tenants.name,
+        userId: rileyConversations.userId,
+        userName: users.username,
+        topic: rileyConversations.topic,
+        relatedEntityType: rileyConversations.relatedEntityType,
+        relatedEntityId: rileyConversations.relatedEntityId,
+        messageCount: sql<number>`jsonb_array_length(${rileyConversations.messages})`,
+        createdAt: rileyConversations.createdAt,
+        updatedAt: rileyConversations.updatedAt,
+      })
+        .from(rileyConversations)
+        .leftJoin(tenants, eq(rileyConversations.tenantId, tenants.id))
+        .leftJoin(users, eq(rileyConversations.userId, users.id))
+        .where(whereClause)
+        .orderBy(desc(rileyConversations.updatedAt))
+        .limit(filters.limit)
+        .offset(filters.offset),
+      db.select({ count: sql<number>`count(*)::int` })
+        .from(rileyConversations)
+        .where(whereClause),
+    ]);
+
+    res.json(paginated(rows, countResult[0]?.count ?? 0, filters.page, filters.limit));
+  } catch (error: any) {
+    console.error("Failed to fetch Riley conversations:", error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-router.get("/riley/conversations/:id", requireAdminAuth, async (_req, res) => {
-  res.json({ conversation: null });
+// GET /riley/conversations/:id — Full conversation + related facts + LLM logs
+router.get("/riley/conversations/:id", requireAdminAuth, async (req, res) => {
+  try {
+    const [conversationRows, factsRows, llmRows] = await Promise.all([
+      db.select({
+        id: rileyConversations.id,
+        tenantId: rileyConversations.tenantId,
+        tenantName: tenants.name,
+        userId: rileyConversations.userId,
+        userName: users.username,
+        messages: rileyConversations.messages,
+        topic: rileyConversations.topic,
+        relatedEntityType: rileyConversations.relatedEntityType,
+        relatedEntityId: rileyConversations.relatedEntityId,
+        createdAt: rileyConversations.createdAt,
+        updatedAt: rileyConversations.updatedAt,
+      })
+        .from(rileyConversations)
+        .leftJoin(tenants, eq(rileyConversations.tenantId, tenants.id))
+        .leftJoin(users, eq(rileyConversations.userId, users.id))
+        .where(eq(rileyConversations.id, req.params.id)),
+      db.select()
+        .from(aiFacts)
+        .where(eq(aiFacts.sourceConversationId, req.params.id))
+        .orderBy(desc(aiFacts.createdAt)),
+      db.select()
+        .from(adminLlmLogs)
+        .where(and(
+          eq(adminLlmLogs.relatedEntityId, req.params.id),
+          or(eq(adminLlmLogs.caller, 'riley_response'), eq(adminLlmLogs.caller, 'riley_response_stream')),
+        ))
+        .orderBy(desc(adminLlmLogs.createdAt)),
+    ]);
+
+    res.json({
+      conversation: conversationRows[0] || null,
+      extractedFacts: factsRows,
+      llmLogs: llmRows,
+    });
+  } catch (error: any) {
+    console.error("Failed to fetch Riley conversation detail:", error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
+// GET /riley/facts — Paginated aiFacts with entity name resolution
 router.get("/riley/facts", requireAdminAuth, async (req, res) => {
-  const page = parseInt(req.query.page as string) || 1;
-  const limit = parseInt(req.query.limit as string) || 20;
-  res.json({ facts: [], total: 0, page, limit });
+  try {
+    const filters = parseFilters(req);
+    const categoryFilter = req.query.category as string | undefined;
+    const entityTypeFilter = req.query.entityType as string | undefined;
+
+    const conds: any[] = [];
+    if (filters.tenantId) conds.push(eq(aiFacts.tenantId, filters.tenantId));
+    if (filters.from) conds.push(gte(aiFacts.createdAt, new Date(filters.from)));
+    if (filters.to) conds.push(lte(aiFacts.createdAt, new Date(filters.to)));
+    if (categoryFilter) conds.push(eq(aiFacts.category, categoryFilter));
+    if (entityTypeFilter) conds.push(eq(aiFacts.entityType, entityTypeFilter));
+    if (filters.search) {
+      conds.push(or(
+        ilike(aiFacts.factKey, `%${filters.search}%`),
+        ilike(aiFacts.factValue, `%${filters.search}%`),
+        ilike(aiFacts.title, `%${filters.search}%`),
+      ));
+    }
+
+    const whereClause = conds.length > 0 ? and(...conds) : undefined;
+
+    const [rows, countResult] = await Promise.all([
+      db.select({
+        id: aiFacts.id,
+        tenantId: aiFacts.tenantId,
+        category: aiFacts.category,
+        title: aiFacts.title,
+        content: aiFacts.content,
+        factKey: aiFacts.factKey,
+        factValue: aiFacts.factValue,
+        confidence: aiFacts.confidence,
+        source: aiFacts.source,
+        entityType: aiFacts.entityType,
+        entityId: aiFacts.entityId,
+        entityName: contacts.name,
+        sourceConversationId: aiFacts.sourceConversationId,
+        isActive: aiFacts.isActive,
+        expiresAt: aiFacts.expiresAt,
+        createdAt: aiFacts.createdAt,
+      })
+        .from(aiFacts)
+        .leftJoin(contacts, and(eq(aiFacts.entityId, contacts.id), eq(aiFacts.entityType, 'debtor')))
+        .where(whereClause)
+        .orderBy(desc(aiFacts.createdAt))
+        .limit(filters.limit)
+        .offset(filters.offset),
+      db.select({ count: sql<number>`count(*)::int` })
+        .from(aiFacts)
+        .where(whereClause),
+    ]);
+
+    res.json(paginated(rows, countResult[0]?.count ?? 0, filters.page, filters.limit));
+  } catch (error: any) {
+    console.error("Failed to fetch Riley facts:", error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-router.get("/riley/stats", requireAdminAuth, async (_req, res) => {
-  res.json({ totalConversations: 0, factsExtracted: 0 });
+// GET /riley/stats — Aggregation stats
+router.get("/riley/stats", requireAdminAuth, async (req, res) => {
+  try {
+    const filters = parseFilters(req);
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const dateConds: any[] = [];
+    if (filters.tenantId) dateConds.push(eq(rileyConversations.tenantId, filters.tenantId));
+    if (filters.from) dateConds.push(gte(rileyConversations.createdAt, new Date(filters.from)));
+    if (filters.to) dateConds.push(lte(rileyConversations.createdAt, new Date(filters.to)));
+    const dateWhere = dateConds.length > 0 ? and(...dateConds) : undefined;
+
+    const factConds: any[] = [];
+    if (filters.tenantId) factConds.push(eq(aiFacts.tenantId, filters.tenantId));
+    if (filters.from) factConds.push(gte(aiFacts.createdAt, new Date(filters.from)));
+    if (filters.to) factConds.push(lte(aiFacts.createdAt, new Date(filters.to)));
+    const factWhere = factConds.length > 0 ? and(...factConds) : undefined;
+
+    const [todayResult, totalResult, factsResult, factsByCategoryResult, topTopicsResult] = await Promise.all([
+      db.select({ count: sql<number>`count(*)::int` })
+        .from(rileyConversations)
+        .where(and(
+          gte(rileyConversations.createdAt, todayStart),
+          filters.tenantId ? eq(rileyConversations.tenantId, filters.tenantId) : undefined,
+        )),
+      db.select({ count: sql<number>`count(*)::int` })
+        .from(rileyConversations)
+        .where(dateWhere),
+      db.select({ count: sql<number>`count(*)::int` })
+        .from(aiFacts)
+        .where(factWhere),
+      db.select({
+        category: aiFacts.category,
+        count: sql<number>`count(*)::int`,
+      })
+        .from(aiFacts)
+        .where(factWhere)
+        .groupBy(aiFacts.category)
+        .orderBy(sql`count(*) DESC`),
+      db.select({
+        topic: rileyConversations.topic,
+        count: sql<number>`count(*)::int`,
+      })
+        .from(rileyConversations)
+        .where(dateWhere)
+        .groupBy(rileyConversations.topic)
+        .orderBy(sql`count(*) DESC`)
+        .limit(5),
+    ]);
+
+    const factsByCategory: Record<string, number> = {};
+    for (const row of factsByCategoryResult) {
+      if (row.category) factsByCategory[row.category] = row.count;
+    }
+
+    res.json({
+      conversationsToday: todayResult[0]?.count ?? 0,
+      totalConversations: totalResult[0]?.count ?? 0,
+      factsExtracted: factsResult[0]?.count ?? 0,
+      factsByCategory,
+      topTopics: topTopicsResult.map(r => ({ topic: r.topic, count: r.count })),
+    });
+  } catch (error: any) {
+    console.error("Failed to fetch Riley stats:", error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// ==================== TENANTS (stubs) ====================
+// ==================== TENANT EXPLORER ====================
 
+// Safe tenant columns — explicitly omit all tokens
+const SAFE_TENANT_COLUMNS = {
+  id: tenants.id,
+  name: tenants.name,
+  email: tenants.email,
+  companyName: tenants.companyName,
+  plan: tenants.plan,
+  communicationMode: tenants.communicationMode,
+  collectionsAutomationEnabled: tenants.collectionsAutomationEnabled,
+  xeroConnectionStatus: tenants.xeroConnectionStatus,
+  xeroExpiresAt: tenants.xeroExpiresAt,
+  xeroLastSyncAt: tenants.xeroLastSyncAt,
+  xeroTenantId: tenants.xeroTenantId,
+  executionTimezone: tenants.executionTimezone,
+  createdAt: tenants.createdAt,
+  updatedAt: tenants.updatedAt,
+} as const;
+
+// GET /tenants/list — All tenants with aggregate counts
 router.get("/tenants/list", requireAdminAuth, async (_req, res) => {
-  res.json({ tenants: [] });
+  try {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const tenantRows = await db.select(SAFE_TENANT_COLUMNS).from(tenants).orderBy(desc(tenants.createdAt));
+
+    // Batch aggregate queries
+    const [debtorCounts, actionCounts, errorCounts] = await Promise.all([
+      db.select({
+        tenantId: contacts.tenantId,
+        count: sql<number>`count(*)::int`,
+      }).from(contacts).groupBy(contacts.tenantId),
+      db.select({
+        tenantId: actions.tenantId,
+        count: sql<number>`count(*)::int`,
+      }).from(actions)
+        .where(gte(actions.createdAt, sevenDaysAgo))
+        .groupBy(actions.tenantId),
+      db.select({
+        tenantId: adminSystemErrors.tenantId,
+        count: sql<number>`count(*)::int`,
+      }).from(adminSystemErrors)
+        .where(eq(adminSystemErrors.resolved, false))
+        .groupBy(adminSystemErrors.tenantId),
+    ]);
+
+    const debtorMap = Object.fromEntries(debtorCounts.map(r => [r.tenantId, r.count]));
+    const actionMap = Object.fromEntries(actionCounts.map(r => [r.tenantId, r.count]));
+    const errorMap = Object.fromEntries(errorCounts.filter(r => r.tenantId).map(r => [r.tenantId!, r.count]));
+
+    const result = tenantRows.map(t => ({
+      ...t,
+      debtorCount: debtorMap[t.id] ?? 0,
+      actionsLast7d: actionMap[t.id] ?? 0,
+      unresolvedErrors: errorMap[t.id] ?? 0,
+    }));
+
+    res.json({ tenants: result });
+  } catch (error: any) {
+    console.error("Failed to fetch tenant list:", error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-router.get("/tenants/:id", requireAdminAuth, async (_req, res) => {
-  res.json({ tenant: null });
+// GET /tenants/:id — Deep dive into a single tenant
+router.get("/tenants/:id", requireAdminAuth, async (req, res) => {
+  try {
+    const tid = req.params.id;
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const [
+      tenantRows,
+      debtorCountResult,
+      invoiceCountResult,
+      outstandingResult,
+      overdueResult,
+      recentActionsResult,
+      recentErrorsResult,
+      recentConversationsResult,
+      llmSpendResult,
+    ] = await Promise.all([
+      db.select(SAFE_TENANT_COLUMNS).from(tenants).where(eq(tenants.id, tid)),
+      db.select({ count: sql<number>`count(*)::int` }).from(contacts).where(eq(contacts.tenantId, tid)),
+      db.select({ count: sql<number>`count(*)::int` }).from(invoices)
+        .where(and(eq(invoices.tenantId, tid), sql`${invoices.status} NOT IN ('paid','void','voided','deleted','draft')`)),
+      db.select({ total: sql<string>`COALESCE(SUM(${invoices.amount} - COALESCE(${invoices.amountPaid}, 0)), 0)::text` })
+        .from(invoices)
+        .where(and(eq(invoices.tenantId, tid), sql`${invoices.status} NOT IN ('paid','void','voided','deleted','draft')`)),
+      db.select({ total: sql<string>`COALESCE(SUM(${invoices.amount} - COALESCE(${invoices.amountPaid}, 0)), 0)::text` })
+        .from(invoices)
+        .where(and(
+          eq(invoices.tenantId, tid),
+          sql`${invoices.status} NOT IN ('paid','void','voided','deleted','draft')`,
+          sql`${invoices.dueDate} < NOW()`,
+        )),
+      db.select({
+        id: actions.id,
+        type: actions.type,
+        status: actions.status,
+        channel: actions.agentChannel,
+        contactName: contacts.name,
+        createdAt: actions.createdAt,
+      }).from(actions)
+        .leftJoin(contacts, eq(actions.contactId, contacts.id))
+        .where(eq(actions.tenantId, tid))
+        .orderBy(desc(actions.createdAt))
+        .limit(10),
+      db.select({
+        id: adminSystemErrors.id,
+        source: adminSystemErrors.source,
+        severity: adminSystemErrors.severity,
+        message: adminSystemErrors.message,
+        createdAt: adminSystemErrors.createdAt,
+      }).from(adminSystemErrors)
+        .where(eq(adminSystemErrors.tenantId, tid))
+        .orderBy(desc(adminSystemErrors.createdAt))
+        .limit(10),
+      db.select({
+        id: rileyConversations.id,
+        topic: rileyConversations.topic,
+        messageCount: sql<number>`jsonb_array_length(${rileyConversations.messages})`,
+        createdAt: rileyConversations.createdAt,
+      }).from(rileyConversations)
+        .where(eq(rileyConversations.tenantId, tid))
+        .orderBy(desc(rileyConversations.createdAt))
+        .limit(5),
+      db.select({
+        caller: adminLlmLogs.caller,
+        calls: sql<number>`count(*)::int`,
+        totalCost: sql<string>`COALESCE(SUM(cost_usd::numeric), 0)::text`,
+      }).from(adminLlmLogs)
+        .where(and(eq(adminLlmLogs.tenantId, tid), gte(adminLlmLogs.createdAt, thirtyDaysAgo)))
+        .groupBy(adminLlmLogs.caller),
+    ]);
+
+    if (!tenantRows[0]) {
+      return res.status(404).json({ error: "Tenant not found" });
+    }
+
+    const tenant = tenantRows[0];
+    const xeroStatus = tenant.xeroConnectionStatus === 'expired' ? 'expired'
+      : tenant.xeroExpiresAt && new Date(tenant.xeroExpiresAt) < new Date() ? 'token_expired'
+      : tenant.xeroConnectionStatus ?? 'not_connected';
+
+    res.json({
+      tenant,
+      xeroStatus,
+      metrics: {
+        debtorCount: debtorCountResult[0]?.count ?? 0,
+        invoiceCount: invoiceCountResult[0]?.count ?? 0,
+        totalOutstanding: outstandingResult[0]?.total ?? "0",
+        totalOverdue: overdueResult[0]?.total ?? "0",
+      },
+      recentActions: recentActionsResult,
+      recentErrors: recentErrorsResult,
+      recentConversations: recentConversationsResult,
+      llmSpend30d: llmSpendResult,
+    });
+  } catch (error: any) {
+    console.error("Failed to fetch tenant detail:", error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // ==================== ERRORS LOG ====================
@@ -1875,27 +2333,86 @@ router.get("/llm/logs/:id", requireAdminAuth, async (req, res) => {
   }
 });
 
-// ==================== SYSTEM (stubs) ====================
+// ==================== SYSTEM ====================
 
 router.get("/system/health", requireAdminAuth, async (_req, res) => {
-  res.json({ database: "ok", xero: "ok", sendgrid: "ok", claude: "ok" });
+  let dbStatus = "ok";
+  try {
+    await db.execute(sql`SELECT 1`);
+  } catch {
+    dbStatus = "error";
+  }
+
+  const apiKeys: Record<string, boolean> = {
+    SENDGRID_API_KEY: !!process.env.SENDGRID_API_KEY,
+    VONAGE_API_KEY: !!process.env.VONAGE_API_KEY,
+    RETELL_API_KEY: !!process.env.RETELL_API_KEY,
+    ANTHROPIC_API_KEY: !!process.env.ANTHROPIC_API_KEY,
+  };
+
+  res.json({
+    database: dbStatus,
+    apiKeys,
+    uptime: process.uptime(),
+    memoryUsage: process.memoryUsage(),
+  });
 });
 
 router.get("/system/costs", requireAdminAuth, async (req, res) => {
   try {
     const filters = parseFilters(req);
-    const result = await db.select({
-      model: adminLlmLogs.model,
+    const groupBy = (req.query.groupBy as string) || 'model';
+    const whereClause = dateAndTenantConditions(adminLlmLogs, filters);
+
+    const baseSelect = {
       calls: sql<number>`count(*)::int`,
       totalInputTokens: sql<number>`COALESCE(SUM(input_tokens), 0)::int`,
       totalOutputTokens: sql<number>`COALESCE(SUM(output_tokens), 0)::int`,
       totalCost: sql<string>`COALESCE(SUM(cost_usd::numeric), 0)::text`,
-    })
-      .from(adminLlmLogs)
-      .where(dateAndTenantConditions(adminLlmLogs, filters))
-      .groupBy(adminLlmLogs.model);
+    };
 
-    res.json({ costs: result });
+    let result;
+    if (groupBy === 'day') {
+      result = await db.select({
+        day: sql<string>`date_trunc('day', ${adminLlmLogs.createdAt})::date::text`,
+        ...baseSelect,
+      })
+        .from(adminLlmLogs)
+        .where(whereClause)
+        .groupBy(sql`date_trunc('day', ${adminLlmLogs.createdAt})::date`)
+        .orderBy(sql`date_trunc('day', ${adminLlmLogs.createdAt})::date DESC`);
+    } else if (groupBy === 'tenant') {
+      result = await db.select({
+        tenantId: adminLlmLogs.tenantId,
+        tenantName: tenants.name,
+        ...baseSelect,
+      })
+        .from(adminLlmLogs)
+        .leftJoin(tenants, eq(adminLlmLogs.tenantId, tenants.id))
+        .where(whereClause)
+        .groupBy(adminLlmLogs.tenantId, tenants.name)
+        .orderBy(sql`COALESCE(SUM(cost_usd::numeric), 0) DESC`);
+    } else if (groupBy === 'caller') {
+      result = await db.select({
+        caller: adminLlmLogs.caller,
+        ...baseSelect,
+      })
+        .from(adminLlmLogs)
+        .where(whereClause)
+        .groupBy(adminLlmLogs.caller)
+        .orderBy(sql`COALESCE(SUM(cost_usd::numeric), 0) DESC`);
+    } else {
+      // Default: group by model
+      result = await db.select({
+        model: adminLlmLogs.model,
+        ...baseSelect,
+      })
+        .from(adminLlmLogs)
+        .where(whereClause)
+        .groupBy(adminLlmLogs.model);
+    }
+
+    res.json({ costs: result, groupBy });
   } catch (error: any) {
     console.error("Failed to fetch system costs:", error);
     res.status(500).json({ error: error.message });
