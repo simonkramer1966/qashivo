@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { QEmptyState } from "@/components/ui/q-empty-state";
 import { Users } from "lucide-react";
 import GroupRow from "./GroupRow";
-import UngroupedDebtorsList from "./UngroupedDebtorsList";
 import GroupSuggestionsBanner from "@/components/debtor-groups/GroupSuggestionsBanner";
 import DebtorGroupDialog from "@/components/debtor-groups/DebtorGroupDialog";
 
@@ -37,7 +36,6 @@ interface GroupsTabProps {
 export default function GroupsTab({ debtors }: GroupsTabProps) {
   const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null);
   const [selectedMemberIds, setSelectedMemberIds] = useState<Set<string>>(new Set());
-  const [selectedUngroupedIds, setSelectedUngroupedIds] = useState<Set<string>>(new Set());
 
   // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -49,11 +47,6 @@ export default function GroupsTab({ debtors }: GroupsTabProps) {
     queryKey: ["/api/debtor-groups"],
   });
 
-  const ungroupedDebtors = useMemo(
-    () => debtors.filter((d) => !d.debtorGroupId),
-    [debtors]
-  );
-
   // Clear member selections when expanding a different group
   const handleToggleGroup = useCallback((groupId: string) => {
     setExpandedGroupId((prev) => {
@@ -61,14 +54,6 @@ export default function GroupsTab({ debtors }: GroupsTabProps) {
       if (next !== prev) setSelectedMemberIds(new Set());
       return next;
     });
-  }, []);
-
-  // Open create dialog from ungrouped selection
-  const handleCreateFromUngrouped = useCallback((contactIds: string[]) => {
-    setEditGroup(null);
-    setPrefillContactIds(contactIds);
-    setPrefillName("");
-    setDialogOpen(true);
   }, []);
 
   // Open create dialog from suggestion banner
@@ -133,7 +118,7 @@ export default function GroupsTab({ debtors }: GroupsTabProps) {
             <QEmptyState
               icon={<Users className="h-10 w-10" />}
               title="No groups yet"
-              description="Select debtors below to create your first group."
+              description="Select debtors from the All Debtors tab to create your first group."
             />
           </div>
         ) : (
@@ -153,20 +138,6 @@ export default function GroupsTab({ debtors }: GroupsTabProps) {
             ))}
           </div>
         )}
-      </div>
-
-      {/* Ungrouped debtors section */}
-      <div>
-        <h3 className="text-sm font-semibold text-[var(--q-text-primary)] mb-2">
-          Ungrouped debtors ({ungroupedDebtors.length})
-        </h3>
-        <UngroupedDebtorsList
-          debtors={ungroupedDebtors}
-          selectedIds={selectedUngroupedIds}
-          onSelectionChange={setSelectedUngroupedIds}
-          allGroups={groupList}
-          onCreateGroup={handleCreateFromUngrouped}
-        />
       </div>
 
       {/* Create/Edit dialog */}

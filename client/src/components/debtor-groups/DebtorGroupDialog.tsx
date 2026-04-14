@@ -184,20 +184,20 @@ export default function DebtorGroupDialog({
     },
   });
 
-  // Delete mutation
-  const deleteMutation = useMutation({
+  // Ungroup mutation — releases all members, removes the group record
+  const ungroupMutation = useMutation({
     mutationFn: async () => {
       if (!editGroup) return;
       await apiRequest("DELETE", `/api/debtor-groups/${editGroup.id}`);
     },
     onSuccess: () => {
-      toast({ title: "Group deleted" });
+      toast({ title: "Debtors ungrouped" });
       invalidate();
       setDeleteConfirmOpen(false);
       onOpenChange(false);
     },
     onError: () => {
-      toast({ title: "Failed to delete group", variant: "destructive" });
+      toast({ title: "Failed to ungroup debtors", variant: "destructive" });
     },
   });
 
@@ -307,13 +307,13 @@ export default function DebtorGroupDialog({
               </div>
             )}
 
-            {/* Delete group link (edit mode only) */}
+            {/* Ungroup debtors link (edit mode only) */}
             {isEdit && (
               <button
-                className="text-sm text-destructive hover:underline"
+                className="text-sm text-[var(--q-risk-text)] hover:underline"
                 onClick={() => setDeleteConfirmOpen(true)}
               >
-                Delete this group
+                Ungroup debtors
               </button>
             )}
           </div>
@@ -329,24 +329,24 @@ export default function DebtorGroupDialog({
         </DialogContent>
       </Dialog>
 
-      {/* Delete confirmation */}
+      {/* Ungroup confirmation */}
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete group</AlertDialogTitle>
+            <AlertDialogTitle>Ungroup debtors from {editGroup?.groupName}?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will unlink {editGroup?.members?.length ?? 0} member{(editGroup?.members?.length ?? 0) !== 1 ? "s" : ""}
-              {" "}from &ldquo;{editGroup?.groupName}&rdquo;. Members will become ungrouped.
+              This will release all {editGroup?.members?.length ?? 0} debtor{(editGroup?.members?.length ?? 0) !== 1 ? "s" : ""}
+              {" "}from the group. They'll appear as individual debtors again. No debtor data will be deleted.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => deleteMutation.mutate()}
-              disabled={deleteMutation.isPending}
+              onClick={() => ungroupMutation.mutate()}
+              disabled={ungroupMutation.isPending}
             >
-              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+              {ungroupMutation.isPending ? "Ungrouping..." : "Ungroup"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

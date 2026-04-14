@@ -4,6 +4,7 @@ import SyncStatusBanner from "@/components/sync/SyncStatusBanner";
 import AppShell from "@/components/layout/app-shell";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { QBadge } from "@/components/ui/q-badge";
 import { QAmount } from "@/components/ui/q-amount";
 import { QMetricCard } from "@/components/ui/q-metric-card";
@@ -31,6 +32,7 @@ import {
   UsersRound,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   MoreVertical,
   Eye,
   UserPlus,
@@ -50,6 +52,7 @@ import {
 } from "@/components/ui/sortable-header";
 import { DataHealthContent } from "@/pages/settings/data-health";
 import GroupsTab from "@/components/debtors/GroupsTab";
+import DebtorGroupDialog from "@/components/debtor-groups/DebtorGroupDialog";
 import {
   Tooltip,
   TooltipContent,
@@ -189,6 +192,11 @@ export default function QollectionsDebtors() {
   const [sort, setSort] = useState<SortState>(DEFAULT_SORT);
   const [page, setPage] = useState(0);
 
+  // Selection state for group actions
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [createGroupDialogOpen, setCreateGroupDialogOpen] = useState(false);
+  const [createGroupPrefillIds, setCreateGroupPrefillIds] = useState<string[]>([]);
+
   const { data: debtorsResponse, isLoading } = useQuery<{ debtors: Debtor[]; unmatchedCredits: number }>({
     queryKey: ["/api/qollections/debtors"],
   });
@@ -205,6 +213,24 @@ export default function QollectionsDebtors() {
     }
     return map;
   }, [groupsList]);
+
+  // Move to existing group mutation
+  const moveToGroupMutation = useMutation({
+    mutationFn: async (groupId: string) => {
+      await apiRequest("POST", `/api/debtor-groups/${groupId}/members`, {
+        contactIds: Array.from(selectedIds),
+      });
+    },
+    onSuccess: () => {
+      toast({ title: `Moved ${selectedIds.size} debtors to group` });
+      setSelectedIds(new Set());
+      queryClient.invalidateQueries({ queryKey: ["/api/debtor-groups"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/qollections/debtors"] });
+    },
+    onError: () => {
+      toast({ title: "Failed to move debtors", variant: "destructive" });
+    },
+  });
 
   const removeVipMutation = useMutation({
     mutationFn: async (contactId: string) => {
@@ -297,10 +323,11 @@ export default function QollectionsDebtors() {
     return result;
   }, [debtors, searchQuery, statusFilter, sort]);
 
-  // Reset to first page when filters change
+  // Reset to first page and clear selection when filters change
   useMemo(() => {
     setPage(0);
-  }, [searchQuery, statusFilter, sort]);
+    setSelectedIds(new Set());
+  }, [searchQuery, statusFilter, sort, activeTab]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paged = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
@@ -413,6 +440,46 @@ export default function QollectionsDebtors() {
               className="h-9 pl-9 text-sm"
             />
           </div>
+          {/* Inline selection actions */}
+          {selectedIds.size > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-[var(--q-text-secondary)]">
+                {selectedIds.size} selected
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs"
+                onClick={() => {
+                  setCreateGroupPrefillIds(Array.from(selectedIds));
+                  setCreateGroupDialogOpen(true);
+                }}
+              >
+                Move to New Group
+              </Button>
+              {(groupsList ?? []).length > 0 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" variant="outline" className="h-8 text-xs" disabled={moveToGroupMutation.isPending}>
+                      Move to Existing <ChevronDown className="ml-1 h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    {(groupsList ?? []).map((g) => (
+                      <DropdownMenuItem
+                        key={g.id}
+                        onSelect={() => moveToGroupMutation.mutate(g.id)}
+                        disabled={moveToGroupMutation.isPending}
+                      >
+                        {g.groupName}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
+          )}
+
           <div className="flex items-center gap-3">
             <Select
               value={statusFilter}
@@ -442,6 +509,7 @@ export default function QollectionsDebtors() {
             <table className="w-full border-collapse">
               <thead>
                 <tr>
+                  <TH className="w-[40px]" />
                   <TH>Customer</TH>
                   <TH>Outstanding</TH>
                   <TH className="text-center">Invoices</TH>
@@ -455,6 +523,7 @@ export default function QollectionsDebtors() {
               <tbody>
                 {Array.from({ length: 8 }).map((_, i) => (
                   <tr key={i} className="h-12 border-b border-[var(--q-border-default)]">
+                    <td className="px-3 py-3"><div className="h-4 w-4 rounded bg-[var(--q-bg-surface-alt)] animate-pulse" /></td>
                     <td className="px-3 py-3">
                       <div className="h-3.5 w-32 rounded bg-[var(--q-bg-surface-alt)] animate-pulse mb-1" />
                       <div className="h-3 w-44 rounded bg-[var(--q-bg-surface-alt)] animate-pulse" />
@@ -486,6 +555,24 @@ export default function QollectionsDebtors() {
                 <table className="w-full border-collapse table-fixed">
                   <thead>
                     <tr>
+                      <TH className="w-[40px]">
+                        <Checkbox
+                          checked={paged.length > 0 && paged.every((d) => selectedIds.has(d.id))}
+                          onCheckedChange={() => {
+                            const allPageSelected = paged.every((d) => selectedIds.has(d.id));
+                            if (allPageSelected) {
+                              const next = new Set(selectedIds);
+                              for (const d of paged) next.delete(d.id);
+                              setSelectedIds(next);
+                            } else {
+                              const next = new Set(selectedIds);
+                              for (const d of paged) next.add(d.id);
+                              setSelectedIds(next);
+                            }
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </TH>
                       <SortableHeader column="name" label="Customer" currentSort={sort} onSort={setSort} />
                       <DualSortHeader
                         leftColumn="totalOutstanding"
@@ -512,6 +599,19 @@ export default function QollectionsDebtors() {
                         className="h-12 border-b border-[var(--q-border-default)] hover:bg-[var(--q-bg-surface-hover)] cursor-pointer transition-colors duration-100"
                         onClick={() => navigate(`/qollections/debtors/${debtor.id}`)}
                       >
+                        {/* Checkbox */}
+                        <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedIds.has(debtor.id)}
+                            onCheckedChange={() => {
+                              const next = new Set(selectedIds);
+                              if (next.has(debtor.id)) next.delete(debtor.id);
+                              else next.add(debtor.id);
+                              setSelectedIds(next);
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </td>
                         {/* Customer name + email */}
                         <td className="px-3 py-3">
                           <div className="min-w-0">
@@ -684,6 +784,19 @@ export default function QollectionsDebtors() {
         </>
         )}
       </div>
+
+      {/* Create group dialog — triggered from checkbox selection */}
+      <DebtorGroupDialog
+        open={createGroupDialogOpen}
+        onOpenChange={(open) => {
+          setCreateGroupDialogOpen(open);
+          if (!open) {
+            setSelectedIds(new Set());
+            setCreateGroupPrefillIds([]);
+          }
+        }}
+        prefillContactIds={createGroupPrefillIds}
+      />
     </AppShell>
   );
 }

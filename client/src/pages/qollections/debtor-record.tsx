@@ -667,9 +667,9 @@ function DebtorGroupMembersSection({ contactId, groupId }: { contactId: string; 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/debtor-groups", groupId] });
       queryClient.invalidateQueries({ queryKey: ["/api/debtor-groups"] });
-      toast({ title: "Member removed" });
+      toast({ title: "Removed from group" });
     },
-    onError: () => toast({ title: "Failed", variant: "destructive" }),
+    onError: () => toast({ title: "Failed to remove from group", variant: "destructive" }),
   });
 
   if (!groupData) return null;

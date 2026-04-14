@@ -136,25 +136,25 @@ export default function GroupRow({
     queryClient.invalidateQueries({ queryKey: ["/api/debtor-groups/suggestions"] });
   };
 
-  // Ungroup mutation
-  const ungroupMutation = useMutation({
+  // Remove from group mutation
+  const removeFromGroupMutation = useMutation({
     mutationFn: async () => {
       const ids = Array.from(selectedMemberIds);
       for (const id of ids) {
         await apiRequest("DELETE", `/api/debtor-groups/${group.id}/members/${id}`);
       }
-      // If we removed all members, delete the group
+      // If we removed all members, remove the group itself
       if (ids.length >= members.length) {
         await apiRequest("DELETE", `/api/debtor-groups/${group.id}`);
       }
     },
     onSuccess: () => {
-      toast({ title: `Ungrouped ${selectedMemberIds.size} debtors` });
+      toast({ title: `Removed ${selectedMemberIds.size} from group` });
       onSelectionChange(new Set());
       invalidate();
     },
     onError: () => {
-      toast({ title: "Failed to ungroup debtors", variant: "destructive" });
+      toast({ title: "Failed to remove from group", variant: "destructive" });
     },
   });
 
@@ -170,7 +170,7 @@ export default function GroupRow({
       for (const id of ids) {
         await apiRequest("DELETE", `/api/debtor-groups/${group.id}/members/${id}`);
       }
-      // If all removed, delete source group
+      // If all removed, remove the source group itself
       if (ids.length >= members.length) {
         await apiRequest("DELETE", `/api/debtor-groups/${group.id}`);
       }
@@ -186,7 +186,7 @@ export default function GroupRow({
   });
 
   const otherGroups = allGroups.filter((g) => g.id !== group.id);
-  const isMutating = ungroupMutation.isPending || moveToMutation.isPending;
+  const isMutating = removeFromGroupMutation.isPending || moveToMutation.isPending;
 
   return (
     <div className="border-b border-[var(--q-border-default)] last:border-b-0">
@@ -219,10 +219,10 @@ export default function GroupRow({
               size="sm"
               variant="outline"
               className="h-7 text-xs"
-              onClick={() => ungroupMutation.mutate()}
+              onClick={() => removeFromGroupMutation.mutate()}
               disabled={isMutating}
             >
-              Ungroup
+              Remove from group
             </Button>
             {otherGroups.length > 0 && (
               <DropdownMenu>
