@@ -5,8 +5,6 @@ import AppShell from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
-  ChevronLeft,
-  ChevronRight,
   CheckCheck,
   AlertTriangle,
   Info,
@@ -32,23 +30,12 @@ interface Priority {
   createdAt: string;
 }
 
-function formatDate(iso: string) {
-  const d = new Date(iso + "T00:00:00");
-  return d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
-}
-
 function formatAmount(minor: number) {
   return new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(minor / 100);
 }
 
 function getToday() {
   return new Date().toISOString().slice(0, 10);
-}
-
-function addDays(iso: string, n: number) {
-  const d = new Date(iso + "T00:00:00");
-  d.setDate(d.getDate() + n);
-  return d.toISOString().slice(0, 10);
 }
 
 const LEVEL_CONFIG = {
@@ -105,8 +92,6 @@ export default function PrioritiesPage() {
     return groups;
   }, [visiblePriorities]);
 
-  const dateLabel = date === today ? "Today" : date === addDays(today, -1) ? "Yesterday" : date === addDays(today, 1) ? "Tomorrow" : "";
-
   return (
     <AppShell
       title="Priorities"
@@ -126,17 +111,22 @@ export default function PrioritiesPage() {
       }
     >
       <div className="space-y-4">
-        {/* Date nav */}
+        {/* Date picker */}
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDate(addDays(date, -1))}>
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <span className="text-sm font-medium text-q-text-primary min-w-[180px] text-center">
-            {dateLabel ? `${dateLabel} — ` : ""}{formatDate(date)}
-          </span>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDate(addDays(date, 1))}>
-            <ChevronRight className="w-4 h-4" />
-          </Button>
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="text-[14px] bg-q-bg-page border border-q-border rounded-md px-3 py-1.5 text-q-text-primary"
+          />
+          {date !== today && (
+            <button
+              onClick={() => setDate(today)}
+              className="text-[13px] text-q-accent hover:underline"
+            >
+              Today
+            </button>
+          )}
         </div>
 
         {isLoading && (

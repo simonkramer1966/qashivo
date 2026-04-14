@@ -2,12 +2,12 @@
  * Note routes — structured notes from users, Charlie, Riley, and system events.
  */
 
-import type { Express, Request, Response } from "express";
+import type { Express, Response } from "express";
 import { isAuthenticated } from "../auth";
 import { withRBACContext } from "../middleware/rbac";
 import { db } from "../db";
 import { notes, contacts, users } from "@shared/schema";
-import { and, eq, desc, lt, ilike, count, or, sql } from "drizzle-orm";
+import { and, eq, desc, lt, ilike, count, sql } from "drizzle-orm";
 import { z } from "zod";
 import { createNote } from "../services/noteService";
 
@@ -198,44 +198,4 @@ export function registerNoteRoutes(app: Express): void {
     }
   );
 
-  // GET /api/contacts/:contactId/notes — notes for a specific debtor
-  app.get(
-    "/api/contacts/:contactId/notes",
-    isAuthenticated,
-    withRBACContext,
-    async (req: any, res: Response) => {
-      try {
-        const tenantId = req.rbac.tenantId;
-        if (!tenantId) return res.status(400).json({ message: "No tenant" });
-
-        const limit = Math.min(Number(req.query.limit) || 5, 50);
-
-        const rows = await db
-          .select({
-            note: notes,
-            createdByName: sql<string>`COALESCE(${users.firstName} || ' ' || ${users.lastName}, ${users.email})`,
-          })
-          .from(notes)
-          .leftJoin(users, eq(notes.createdByUserId, users.id))
-          .where(
-            and(
-              eq(notes.tenantId, tenantId),
-              eq(notes.contactId, req.params.contactId)
-            )
-          )
-          .orderBy(desc(notes.createdAt))
-          .limit(limit);
-
-        const items = rows.map((r) => ({
-          ...r.note,
-          createdByName: r.createdByName,
-        }));
-
-        res.json({ notes: items });
-      } catch (err: any) {
-        console.error("GET /api/contacts/:contactId/notes error:", err);
-        res.status(500).json({ message: "Failed to load contact notes" });
-      }
-    }
-  );
 }

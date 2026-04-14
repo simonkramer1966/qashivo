@@ -100,7 +100,11 @@ export default function NotesTab() {
   // Fetch contacts for the picker
   const { data: contactsData } = useQuery<{ id: string; name: string }[]>({
     queryKey: ["/api/contacts", { limit: 100 }],
-    queryFn: () => fetch("/api/contacts?limit=100", { credentials: "include" }).then((r) => r.json()),
+    queryFn: async () => {
+      const r = await fetch("/api/contacts?limit=100", { credentials: "include" });
+      if (!r.ok) return [];
+      return r.json();
+    },
     staleTime: 60_000,
     select: (data: any) => {
       // API might return { contacts: [...] } or just [...]
@@ -123,19 +127,22 @@ export default function NotesTab() {
     nextCursor: string | null;
   }>({
     queryKey: ["/api/notes", { source: sourceFilter, search: debouncedSearch }],
-    queryFn: ({ pageParam }) => {
+    queryFn: async ({ pageParam }) => {
       const params = new URLSearchParams();
       if (sourceFilter !== "all") params.set("source", sourceFilter);
       if (debouncedSearch) params.set("search", debouncedSearch);
       if (pageParam) params.set("cursor", pageParam as string);
-      return fetch(`/api/notes?${params}`, { credentials: "include" }).then((r) => r.json());
+      const r = await fetch(`/api/notes?${params}`, { credentials: "include" });
+      if (!r.ok) return { notes: [], nextCursor: null };
+      const data = await r.json();
+      return { notes: Array.isArray(data?.notes) ? data.notes : [], nextCursor: data?.nextCursor ?? null };
     },
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     refetchInterval: 30_000,
   });
 
-  const allNotes = notesData?.pages.flatMap((p) => p.notes) ?? [];
+  const allNotes = notesData?.pages.flatMap((p) => p.notes ?? []).filter(Boolean) ?? [];
 
   const markRead = useMutation({
     mutationFn: (id: string) => apiRequest("PATCH", `/api/notes/${id}/read`, {}),
