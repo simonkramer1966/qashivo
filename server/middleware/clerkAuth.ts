@@ -184,6 +184,49 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
 };
 
 /**
+ * Best-effort auth — populates req.user if a valid token/session exists,
+ * but calls next() regardless. Use on routes where some endpoints need
+ * auth context but others (e.g. auth/status) must respond unauthenticated.
+ */
+export const tryAuthenticate: RequestHandler = async (req, _res, next) => {
+  try {
+    if (process.env.CLERK_SECRET_KEY) {
+      const authHeader = req.headers.authorization;
+      if (authHeader?.startsWith("Bearer ")) {
+        const token = authHeader.slice(7);
+        const verifiedToken = await clerk.verifyToken(token);
+        const clerkUserId = verifiedToken.sub;
+        if (clerkUserId) {
+          const user = await getUserByClerkId(clerkUserId);
+          if (user) {
+            (req as any).user = {
+              id: user.id,
+              email: user.email || "",
+              firstName: user.firstName || null,
+              lastName: user.lastName || null,
+              tenantId: user.tenantId || null,
+              role: user.role || "user",
+              tenantRole: user.tenantRole || null,
+              platformAdmin: user.platformAdmin || false,
+              partnerId: user.partnerId || null,
+              claims: { sub: user.id, email: user.email || "" },
+            };
+          }
+        }
+      }
+    } else {
+      // Legacy Passport session fallback
+      if ((req as any).isAuthenticated?.() && (req as any).user) {
+        // req.user already set by Passport
+      }
+    }
+  } catch {
+    // Silently continue — auth is best-effort
+  }
+  next();
+};
+
+/**
  * Owner-only guard — requires isAuthenticated to have run first.
  */
 export const isOwner: RequestHandler = async (req, res, next) => {

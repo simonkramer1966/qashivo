@@ -10,7 +10,7 @@ import {
   type TradingProfile,
 } from "./services/dynamicRiskScoringService";
 import { setupAuth, regenerateSessionOnLogin } from "./auth";
-import { isAuthenticated, isOwner } from "./middleware/clerkAuth";
+import { isAuthenticated, isOwner, tryAuthenticate } from "./middleware/clerkAuth";
 import { logSecurityEvent, extractClientInfo } from "./services/securityAuditService";
 import { sanitizeObject, stripSensitiveUserFields, stripSensitiveTenantFields, stripSensitiveFields } from "./utils/sanitize";
 import { withPermission, withRole, withMinimumRole, canManageUser, withRBACContext, getActiveDelegations } from "./middleware/rbac";
@@ -5689,7 +5689,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
   // ==================== ADMIN ROUTES ====================
   // Note: Admin routes have their own requireAdminAuth middleware for protected endpoints
   // The login/logout/status endpoints are public
-  app.use('/api/admin', adminRoutes);
+  app.use('/api/admin', tryAuthenticate, adminRoutes);
   // ==================== END ADMIN ROUTES ====================
 
   // ==================== PROSPECT SCORECARD ROUTES ====================
