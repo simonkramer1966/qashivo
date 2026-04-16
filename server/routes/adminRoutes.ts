@@ -1014,14 +1014,15 @@ router.get("/dashboard", requireAdminAuth, async (req, res) => {
         .where(gte(adminLlmLogs.createdAt, todayStart)),
       db.select({ total: sql<string>`COALESCE(SUM(cost_usd::numeric), 0)::text` }).from(adminLlmLogs)
         .where(gte(adminLlmLogs.createdAt, monthStart)),
-      db.select({
-        id: tenants.id,
-        name: tenants.name,
-        lastSync: tenants.xeroLastSyncAt,
-        connectionStatus: tenants.xeroConnectionStatus,
-        expiresAt: tenants.xeroExpiresAt,
-      }).from(tenants)
-        .where(isNotNull(tenants.xeroTenantId)),
+      db.execute(sql`
+        SELECT DISTINCT ON (xero_tenant_id)
+          id, name, xero_last_sync_at AS "lastSync",
+          xero_connection_status AS "connectionStatus",
+          xero_expires_at AS "expiresAt"
+        FROM tenants
+        WHERE xero_tenant_id IS NOT NULL
+        ORDER BY xero_tenant_id, xero_last_sync_at DESC NULLS LAST
+      `).then(r => r.rows as Array<{ id: string; name: string; lastSync: string | null; connectionStatus: string | null; expiresAt: string | null }>),
       db.select({
         id: actions.id,
         type: actions.type,
@@ -2035,9 +2036,6 @@ router.get("/riley/stats", requireAdminAuth, async (req, res) => {
 const SAFE_TENANT_COLUMNS = {
   id: tenants.id,
   name: tenants.name,
-  email: tenants.email,
-  companyName: tenants.companyName,
-  plan: tenants.plan,
   communicationMode: tenants.communicationMode,
   collectionsAutomationEnabled: tenants.collectionsAutomationEnabled,
   xeroConnectionStatus: tenants.xeroConnectionStatus,

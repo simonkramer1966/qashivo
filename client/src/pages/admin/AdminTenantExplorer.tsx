@@ -12,8 +12,6 @@ import { ArrowLeft } from "lucide-react";
 interface TenantListItem {
   id: string;
   name: string | null;
-  companyName: string | null;
-  plan: string | null;
   communicationMode: string | null;
   xeroConnectionStatus: string | null;
   xeroExpiresAt: string | null;
@@ -26,7 +24,6 @@ interface TenantListItem {
 
 interface TenantDetail {
   tenant: TenantListItem & {
-    email: string | null;
     executionTimezone: string | null;
     collectionsAutomationEnabled: boolean | null;
     updatedAt: string | null;
@@ -200,7 +197,7 @@ function TenantListView({ onSelect }: { onSelect: (id: string) => void }) {
                     className="border-b last:border-0 cursor-pointer hover:bg-muted/30 transition-colors"
                     onClick={() => onSelect(t.id)}
                   >
-                    <td className="py-2.5 font-medium">{t.name || t.companyName || t.id.slice(0, 8)}</td>
+                    <td className="py-2.5 font-medium">{t.name || t.id.slice(0, 8)}</td>
                     <td className="py-2.5">
                       <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${mode.className}`}>
                         {mode.label}
@@ -265,7 +262,7 @@ function TenantDetailView({ tenantId, onBack }: { tenantId: string; onBack: () =
         <Button variant="ghost" size="sm" onClick={onBack} className="gap-1.5">
           <ArrowLeft className="w-4 h-4" /> Back
         </Button>
-        <h2 className="text-[17px] font-semibold">{tenant.name || tenant.companyName || "Unnamed"}</h2>
+        <h2 className="text-[17px] font-semibold">{tenant.name || "Unnamed"}</h2>
         <span className="text-[11px] font-mono text-muted-foreground">{tenant.id.slice(0, 12)}...</span>
         <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${mode.className}`}>
           {mode.label}
