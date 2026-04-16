@@ -39,7 +39,7 @@ export default function Step7GoLive({ status, onBack }: Props) {
     { key: "step3Status", label: "Open Banking", required: false },
     { key: "step4Status", label: "Agent persona", required: false },
     { key: "step5Status", label: "Communication preferences", required: false },
-    { key: "step6Status", label: "Debtor review", required: false },
+    { key: "step6Status", label: "Customer review", required: false },
   ];
 
   return (

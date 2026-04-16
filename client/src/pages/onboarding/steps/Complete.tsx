@@ -26,7 +26,8 @@ export default function Complete({ summary }: Props) {
 
   const mutation = useMutation({
     mutationFn: async () => {
-      await apiRequest("POST", "/api/onboarding/complete", {});
+      // go-live uses isAuthenticated (not admin:settings), safer for onboarding
+      await apiRequest("POST", "/api/onboarding/go-live", {});
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/onboarding/full-status"] });

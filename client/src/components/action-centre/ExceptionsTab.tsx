@@ -685,7 +685,7 @@ function ExceptionTableRow({
                     <Link href={`/qollections/debtors/${action.contactId}`}>
                       <Button size="sm" variant="ghost">
                         <ExternalLink className="h-3 w-3 mr-1" />
-                        View Debtor
+                        View Customer
                       </Button>
                     </Link>
                   )}

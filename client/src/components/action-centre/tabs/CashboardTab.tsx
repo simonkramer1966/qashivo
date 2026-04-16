@@ -65,7 +65,7 @@ export function CashboardTab({ debtors, onSelectDebtor, isLoading }: CashboardTa
   if (debtors.length === 0) {
     return (
       <div className="py-16 text-center">
-        <p className="text-[var(--q-text-tertiary)] text-[13px]">No debtors to display</p>
+        <p className="text-[var(--q-text-tertiary)] text-[13px]">No customers to display</p>
       </div>
     );
   }

@@ -37,7 +37,7 @@ export default function OnboardingFlow() {
   const search = useSearch();
   const stepParam = new URLSearchParams(search).get("step");
 
-  const { data: status, isLoading } = useQuery<GuidedStatus>({
+  const { data: status, isLoading, refetch } = useQuery<GuidedStatus>({
     queryKey: ["/api/onboarding/guided-status"],
     staleTime: 5000,
   });
@@ -58,8 +58,13 @@ export default function OnboardingFlow() {
   }, [status, stepParam, initialized]);
 
   const advance = useCallback(() => {
-    setStep((s) => Math.min(s + 1, TOTAL_STEPS));
-  }, []);
+    setStep((s) => {
+      const next = Math.min(s + 1, TOTAL_STEPS);
+      // Refetch status before showing the summary step so it has fresh data
+      if (next === TOTAL_STEPS) refetch();
+      return next;
+    });
+  }, [refetch]);
 
   const back = useCallback(() => {
     setStep((s) => Math.max(s - 1, 1));

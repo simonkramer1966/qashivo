@@ -39,7 +39,7 @@ export default function TermsPage() {
           <section>
             <h2 className="font-headline text-2xl font-extrabold text-brand-navy mb-4">2. Description of Service</h2>
             <p className="text-on-surface-variant leading-relaxed">
-              Qashivo is an autonomous credit control and cashflow management platform. The Service integrates with your accounting software to automate debtor communications, monitor accounts receivable, provide AI-assisted insights, and help you manage cashflow. The Service is provided by Nexus KPI Limited, a company registered in England and Wales.
+              Qashivo is an autonomous credit control and cashflow management platform. The Service integrates with your accounting software to automate customer communications, monitor accounts receivable, provide AI-assisted insights, and help you manage cashflow. The Service is provided by Nexus KPI Limited, a company registered in England and Wales.
             </p>
           </section>
 
@@ -101,7 +101,7 @@ export default function TermsPage() {
           <section>
             <h2 className="font-headline text-2xl font-extrabold text-brand-navy mb-4">8. AI-Generated Content</h2>
             <p className="text-on-surface-variant leading-relaxed">
-              The Service uses artificial intelligence to generate communications (emails, SMS, voice calls) and insights on your behalf. While we strive for accuracy and appropriateness, <strong>you are ultimately responsible for reviewing all AI-generated content before it is sent to your debtors</strong>. Qashivo provides controls to review, edit, and approve communications before delivery. We strongly recommend using approval workflows, particularly during initial setup.
+              The Service uses artificial intelligence to generate communications (emails, SMS, voice calls) and insights on your behalf. While we strive for accuracy and appropriateness, <strong>you are ultimately responsible for reviewing all AI-generated content before it is sent to your customers</strong>. Qashivo provides controls to review, edit, and approve communications before delivery. We strongly recommend using approval workflows, particularly during initial setup.
             </p>
           </section>
 

@@ -76,7 +76,7 @@ const navigationPillars: NavPillar[] = [
     children: [
       { name: "Priorities", href: "/qollections/priorities", icon: Flag, badgeQueryKey: "/api/priorities/unread-count" },
       { name: "Action Centre", href: "/qollections/agent-activity", icon: Activity },
-      { name: "Debtors", href: "/qollections/debtors", icon: Users },
+      { name: "Customers", href: "/qollections/debtors", icon: Users },
       { name: "Disputes", href: "/qollections/disputes", icon: AlertTriangle },
       { name: "Reports", href: "/qollections/reports", icon: BarChart3 },
     ],

@@ -70,19 +70,19 @@ export default function FeaturesPage() {
                   <h4 className="font-bold text-lg text-brand-navy mb-2 flex items-center gap-2">
                     <span className="w-1 h-4 bg-brand-teal"></span> Automated Voice Calling
                   </h4>
-                  <p className="text-on-surface-variant leading-relaxed font-medium">Qashivo doesn't just email. It phones your debtors too. Automated voice calls that chase payments, confirm promises to pay, and escalate when needed. Professional, calm, and persistent.</p>
+                  <p className="text-on-surface-variant leading-relaxed font-medium">Qashivo doesn't just email. It phones your customers too. Automated voice calls that chase payments, confirm promises to pay, and escalate when needed. Professional, calm, and persistent.</p>
                 </div>
                 <div className="group">
                   <h4 className="font-bold text-lg text-brand-navy mb-2 flex items-center gap-2">
                     <span className="w-1 h-4 bg-brand-teal"></span> SMS Reminders
                   </h4>
-                  <p className="text-on-surface-variant leading-relaxed font-medium">Automated text messages for payment reminders, promise-to-pay confirmations, and overdue alerts. Debtors get chased on the channel they're most likely to respond to.</p>
+                  <p className="text-on-surface-variant leading-relaxed font-medium">Automated text messages for payment reminders, promise-to-pay confirmations, and overdue alerts. Customers get chased on the channel they're most likely to respond to.</p>
                 </div>
                 <div className="group">
                   <h4 className="font-bold text-lg text-brand-navy mb-2 flex items-center gap-2">
                     <span className="w-1 h-4 bg-brand-teal"></span> Intelligent Escalation
                   </h4>
-                  <p className="text-on-surface-variant leading-relaxed font-medium">Five-stage escalation from friendly reminder to final notice. Qashivo adapts timing and tone based on each debtor's behaviour.</p>
+                  <p className="text-on-surface-variant leading-relaxed font-medium">Five-stage escalation from friendly reminder to final notice. Qashivo adapts timing and tone based on each customer's behaviour.</p>
                 </div>
                 <div className="group">
                   <h4 className="font-bold text-lg text-brand-navy mb-2 flex items-center gap-2">
@@ -134,7 +134,7 @@ export default function FeaturesPage() {
                 </div>
                 <div className="border-t border-white/10 pt-4 flex gap-3 items-center">
                   <span className="material-symbols-outlined text-brand-amber text-lg">warning</span>
-                  <p className="text-[11px] text-white/70 italic font-medium">"Identified £12.5k liquidity gap in Week 4. Recommendation: Accelerate Qollections for Tier-1 debtors."</p>
+                  <p className="text-[11px] text-white/70 italic font-medium">"Identified £12.5k liquidity gap in Week 4. Recommendation: Accelerate Qollections for Tier-1 customers."</p>
                 </div>
               </div>
             </div>
@@ -193,7 +193,7 @@ export default function FeaturesPage() {
               <div className="bg-white/5 border border-white/10 p-8 rounded hover:bg-white/10 transition-colors">
                 <div className="w-2 h-8 bg-brand-teal mb-6"></div>
                 <h4 className="font-extrabold text-lg mb-4 text-white">Learns Your Business</h4>
-                <p className="text-sm text-white/50 leading-relaxed">Understands your debtor relationships, payment patterns, and preferences.</p>
+                <p className="text-sm text-white/50 leading-relaxed">Understands your customer relationships, payment patterns, and preferences.</p>
               </div>
               <div className="bg-white/5 border border-white/10 p-8 rounded hover:bg-white/10 transition-colors">
                 <div className="w-2 h-8 bg-brand-amber mb-6"></div>

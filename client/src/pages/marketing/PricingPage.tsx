@@ -31,7 +31,7 @@ export default function PricingPage() {
       ],
       features: [
         "AI collections agent (Charlie)",
-        "Unlimited debtor chasing",
+        "Unlimited customer chasing",
         "Intent extraction & promise detection",
         "Tone escalation engine",
         "Two-way email pipeline",
@@ -60,13 +60,13 @@ export default function PricingPage() {
       ],
       featureHeader: "Everything in Qollect, plus",
       features: [
-        "AI voice calls (Charlie calls debtors)",
+        "AI voice calls (Charlie calls customers)",
         "SMS outreach & follow-ups",
         "Multi-channel sequencing",
         "Cashflow forecasting (13-week)",
         "Cash Gap scenario builder",
         "Open Banking integration",
-        "Debtor payment predictions",
+        "Customer payment predictions",
         "Seasonal pattern detection",
         "Priority support",
       ],
@@ -108,7 +108,7 @@ export default function PricingPage() {
     {
       question: "How quickly will I see results?",
       answer:
-        "Most customers see a measurable reduction in debtor days within the first 30 days. Riley begins optimizing your collection strategy from day one, often recovering overdue funds that manual processes missed.",
+        "Most customers see a measurable reduction in payment days within the first 30 days. Riley begins optimizing your collection strategy from day one, often recovering overdue funds that manual processes missed.",
     },
     {
       question: "Will Qashivo damage my customer relationships?",
@@ -352,7 +352,7 @@ export default function PricingPage() {
               </h2>
               <p className="text-white/60 text-lg max-w-2xl mx-auto font-medium">
                 Enter your numbers to see the cashflow impact of reducing your
-                debtor days.
+                payment days.
               </p>
             </div>
 
@@ -388,7 +388,7 @@ export default function PricingPage() {
                 <div>
                   <div className="flex justify-between items-center mb-4">
                     <label className="text-sm font-bold text-white/80">
-                      Current Debtor Days (DSO)
+                      Current Payment Days (DSO)
                     </label>
                     <span className="text-lg font-extrabold text-brand-teal">
                       {debtorDays} days

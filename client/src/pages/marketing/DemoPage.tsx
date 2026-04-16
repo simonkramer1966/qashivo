@@ -470,7 +470,7 @@ export default function DemoPage() {
                 </div>
                 <p className="text-slate-600 text-[15px] mb-8 leading-relaxed">
                   You're about to receive a credit control call from Qashivo.
-                  Play the part of the debtor and respond however you like.
+                  Play the part of the customer and respond however you like.
                   <span className="block mt-4 text-xs font-bold italic text-slate-400 uppercase tracking-wide">
                     The conversation handles objections and payment plans
                     autonomously.
@@ -894,7 +894,7 @@ export default function DemoPage() {
                       >
                         {msg.role === "agent"
                           ? "Qashivo AI Agent"
-                          : "Counterparty (Debtor)"}
+                          : "Counterparty (Customer)"}
                       </span>
                       <span className="text-[10px] text-slate-400 font-mono">
                         {msg.timestamp}

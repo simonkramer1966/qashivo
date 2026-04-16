@@ -73,7 +73,7 @@ export default function Step5CommPrefs({ status, onComplete, onSkip, onBack }: P
       <div>
         <h2 className="text-[15px] font-semibold text-gray-900 mb-1">Communication Preferences</h2>
         <p className="text-[13px] text-gray-500 mb-6">
-          Configure how your AI agent communicates with debtors.
+          Configure how your AI agent communicates with customers.
         </p>
         <div className="border border-[#e5e7eb] rounded-lg p-5">
           <div className="flex items-center gap-3">
@@ -105,7 +105,7 @@ export default function Step5CommPrefs({ status, onComplete, onSkip, onBack }: P
     <div>
       <h2 className="text-[15px] font-semibold text-gray-900 mb-1">Communication Preferences</h2>
       <p className="text-[13px] text-gray-500 mb-6">
-        Set how much autonomy your AI agent has, and when it can contact debtors.
+        Set how much autonomy your AI agent has, and when it can contact customers.
       </p>
 
       <div className="space-y-6">
@@ -205,7 +205,7 @@ export default function Step5CommPrefs({ status, onComplete, onSkip, onBack }: P
               className="w-full px-3 py-2 border border-[#e5e7eb] rounded-lg text-[13px] focus:outline-none focus:ring-2 focus:ring-[#14b8a6]/30 focus:border-[#14b8a6]"
             />
             <p className="text-[11px] text-gray-400 mt-1">
-              Maximum number of contacts per debtor
+              Maximum number of contacts per customer
             </p>
           </div>
           <div>

@@ -95,7 +95,7 @@ const DEFER_DURATIONS = [
 const REJECT_REASONS = [
   { value: "wrong_tone", label: "Wrong tone selected" },
   { value: "invoice_in_dispute", label: "Invoice in dispute" },
-  { value: "debtor_on_hold", label: "Debtor is on hold" },
+  { value: "debtor_on_hold", label: "Customer is on hold" },
   { value: "contact_details_incorrect", label: "Contact details incorrect" },
   { value: "handle_manually", label: "Will handle manually" },
   { value: "too_aggressive", label: "Too aggressive for this client" },
@@ -210,7 +210,7 @@ export default function ApprovalDrawer({
             <div className="flex items-start justify-between gap-2">
               <div>
                 <h2 className="text-lg font-semibold text-[var(--q-text-primary)] leading-tight">
-                  {action.companyName || action.contactName || "Unknown debtor"}
+                  {action.companyName || action.contactName || "Unknown customer"}
                 </h2>
                 <p className="text-[13px] text-[var(--q-text-tertiary)] mt-0.5">
                   {normalizeChannel(action.type)} · <span className="capitalize">{currentTone}</span> · {confidence !== null ? `${confidence}% confidence` : "—"}
@@ -229,7 +229,7 @@ export default function ApprovalDrawer({
                     <Star className="h-4 w-4 mr-2" /> Mark as VIP
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => onMenuAction("view")}>
-                    <Eye className="h-4 w-4 mr-2" /> View debtor detail
+                    <Eye className="h-4 w-4 mr-2" /> View customer detail
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => onMenuAction("note")}>
                     <StickyNote className="h-4 w-4 mr-2" /> Add note
@@ -481,7 +481,7 @@ export default function ApprovalDrawer({
                 const prs = action.prsScore !== null ? `PRS ${Math.round(action.prsScore)} (${prsLabel(action.prsScore)})` : "no PRS data";
                 window.dispatchEvent(new CustomEvent("riley:open", {
                   detail: {
-                    message: `I'm reviewing a queued action for ${action.companyName || action.contactName}. Charlie has proposed a ${currentTone} tone ${channel} with the following reasoning: ${action.daysOverdue} days overdue, ${action.priorContactCount} prior contacts, ${prs}, best channel ${channel}. The tone reason is: ${toneReason}. The email subject is: "${subject}". Should I approve this action, change the tone, or is there anything about this debtor I should know first?`,
+                    message: `I'm reviewing a queued action for ${action.companyName || action.contactName}. Charlie has proposed a ${currentTone} tone ${channel} with the following reasoning: ${action.daysOverdue} days overdue, ${action.priorContactCount} prior contacts, ${prs}, best channel ${channel}. The tone reason is: ${toneReason}. The email subject is: "${subject}". Should I approve this action, change the tone, or is there anything about this customer I should know first?`,
                     context: { relatedEntityType: "contact", relatedEntityId: action.contactId },
                   },
                 }));

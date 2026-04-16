@@ -73,7 +73,7 @@ export default function Step7BusinessIntel({ status, onComplete, onSkip, onBack 
   const startConversation = () => {
     setHasStarted(true);
     const opening =
-      "Before we go live, I'd love to learn about your key accounts. Tell me about your top debtors — any relationship nuances, sensitivities, or special instructions I should know about?";
+      "Before we go live, I'd love to learn about your key accounts. Tell me about your top customers — any relationship nuances, sensitivities, or special instructions I should know about?";
     setMessages([{ role: "assistant", content: opening }]);
   };
 
@@ -108,7 +108,7 @@ export default function Step7BusinessIntel({ status, onComplete, onSkip, onBack 
             </div>
             <div>
               <p className="text-[13px] font-medium text-gray-900">Intel captured</p>
-              <p className="text-[13px] text-gray-500">Riley will use this context when contacting your debtors.</p>
+              <p className="text-[13px] text-gray-500">Riley will use this context when contacting your customers.</p>
             </div>
           </div>
         </div>
@@ -132,7 +132,7 @@ export default function Step7BusinessIntel({ status, onComplete, onSkip, onBack 
             <MessageCircle className="w-6 h-6 text-[#14b8a6]" />
           </div>
           <p className="text-[13px] text-gray-700 mb-4">
-            Riley will ask about your top debtors — sensitivities, contact preferences, and anything the AI agent should know before reaching out.
+            Riley will ask about your top customers — sensitivities, contact preferences, and anything the AI agent should know before reaching out.
           </p>
           <button
             onClick={startConversation}
@@ -205,7 +205,7 @@ export default function Step7BusinessIntel({ status, onComplete, onSkip, onBack 
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSend()}
-          placeholder="Tell Riley about your debtors..."
+          placeholder="Tell Riley about your customers..."
           className="flex-1 px-4 py-2.5 border border-[#e5e7eb] rounded-lg text-[13px] focus:outline-none focus:ring-2 focus:ring-[#14b8a6]/30 focus:border-[#14b8a6]"
           disabled={sendMutation.isPending}
         />

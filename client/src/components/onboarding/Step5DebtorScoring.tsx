@@ -36,7 +36,7 @@ export default function Step5DebtorScoring({ status, onComplete, onSkip, onBack 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/onboarding/full-status"] });
       queryClient.invalidateQueries({ queryKey: ["/api/onboarding/debtor-scoring-status"] });
-      toast({ title: "Debtor scoring started" });
+      toast({ title: "Customer scoring started" });
     },
     onError: () => {
       toast({ title: "Failed to start scoring", variant: "destructive" });
@@ -65,7 +65,7 @@ export default function Step5DebtorScoring({ status, onComplete, onSkip, onBack 
 
   return (
     <div>
-      <h2 className="text-[15px] font-semibold text-gray-900 mb-1">Aged Debtors &amp; Scoring</h2>
+      <h2 className="text-[15px] font-semibold text-gray-900 mb-1">Aged Customers &amp; Scoring</h2>
       <p className="text-[13px] text-gray-500 mb-6">
         Analyse your invoice data to generate payment behaviour scores and collection strategies.
       </p>
@@ -77,7 +77,7 @@ export default function Step5DebtorScoring({ status, onComplete, onSkip, onBack 
             <div>
               <p className="text-[13px] font-medium text-gray-900">Xero not connected</p>
               <p className="text-[13px] text-gray-500 mt-1">
-                Connect your Xero account (Step 2) to run debtor scoring. You can skip this for now and run it later from Settings.
+                Connect your Xero account (Step 2) to run customer scoring. You can skip this for now and run it later from Settings.
               </p>
             </div>
           </div>
@@ -111,7 +111,7 @@ export default function Step5DebtorScoring({ status, onComplete, onSkip, onBack 
               </div>
               <div>
                 <p className="text-[13px] font-medium text-gray-900">Scoring complete</p>
-                <p className="text-[13px] text-gray-500">Debtor profiles and strategies have been generated.</p>
+                <p className="text-[13px] text-gray-500">Customer profiles and strategies have been generated.</p>
               </div>
             </div>
           )}
@@ -130,7 +130,7 @@ export default function Step5DebtorScoring({ status, onComplete, onSkip, onBack 
 
           {!isRunning && !isSucceeded && !isFailed && (
             <p className="text-[13px] text-gray-600">
-              Run debtor scoring to analyse payment behaviour across all your customers.
+              Run customer scoring to analyse payment behaviour across all your customers.
             </p>
           )}
 

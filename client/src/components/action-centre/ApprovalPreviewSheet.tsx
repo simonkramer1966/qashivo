@@ -160,7 +160,7 @@ export function ApprovalPreviewSheet({
                         navigate(`/qollections/debtors/${data.contactId}`);
                       }}
                     >
-                      View debtor <ArrowRight className="h-3 w-3" />
+                      View customer <ArrowRight className="h-3 w-3" />
                     </button>
                   )}
                 </div>

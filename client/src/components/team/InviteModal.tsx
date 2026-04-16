@@ -21,7 +21,7 @@ const ROLE_INFO: Record<
   credit_controller: {
     title: "Controller",
     description:
-      "Day-to-day credit control. Can approve and send agent actions, manage debtor records, add notes, and put accounts on hold. Cannot change system settings, edit forecasts, or access financing.",
+      "Day-to-day credit control. Can approve and send agent actions, manage customer records, add notes, and put accounts on hold. Cannot change system settings, edit forecasts, or access financing.",
     color: "border-zinc-300 dark:border-zinc-600",
   },
   manager: {

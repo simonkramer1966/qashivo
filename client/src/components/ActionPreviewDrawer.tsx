@@ -501,7 +501,7 @@ export function ActionPreviewDrawer({
       return (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          <span className="ml-2 text-muted-foreground">Loading debtor info...</span>
+          <span className="ml-2 text-muted-foreground">Loading customer info...</span>
         </div>
       );
     }
@@ -509,7 +509,7 @@ export function ActionPreviewDrawer({
     if (!debtorData) {
       return (
         <div className="text-center py-8 text-muted-foreground">
-          <p>No debtor information available</p>
+          <p>No customer information available</p>
         </div>
       );
     }
@@ -841,7 +841,7 @@ export function ActionPreviewDrawer({
               className="data-[state=active]:bg-background"
               data-testid="tab-debtor"
             >
-              Debtor
+              Customer
             </TabsTrigger>
           </TabsList>
 

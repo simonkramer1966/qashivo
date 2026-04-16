@@ -5,7 +5,7 @@ import { usePageMeta } from "@/hooks/usePageMeta";
 export default function HomePage() {
   usePageMeta(
     "Qashivo | AI-Powered Credit Control for UK Businesses",
-    "Stop chasing invoices. Qashivo is your autonomous AI credit controller. It chases debtors, forecasts cashflow, and protects your cash position. 24/7."
+    "Stop chasing invoices. Qashivo is your autonomous AI credit controller. It chases customers, forecasts cashflow, and protects your cash position. 24/7."
   );
   return (
     <MarketingLayout currentPage="/">
@@ -78,7 +78,7 @@ export default function HomePage() {
                 </h3>
                 <p className="text-slate-600 leading-relaxed mb-6">
                   Qashivo writes emails, sends SMS reminders,
-                  and phones your debtors, with the right tone, at the right
+                  and phones your customers, with the right tone, at the right
                   time. Multi-channel chasing that never stops.
                 </p>
                 <Link
@@ -150,7 +150,7 @@ export default function HomePage() {
                 </h4>
                 <p className="text-slate-500 text-sm">
                   One-click connection to your accounting software. Your
-                  invoices and debtors sync automatically.
+                  invoices and customers sync automatically.
                 </p>
               </div>
               <div className="p-8 bg-white border border-slate-200">
@@ -185,7 +185,7 @@ export default function HomePage() {
                   Cash Comes In Faster
                 </h4>
                 <p className="text-slate-400 text-sm">
-                  Average 15-day reduction in debtor days. Real results from week
+                  Average 15-day reduction in payment days. Real results from week
                   one.
                 </p>
               </div>
@@ -220,7 +220,7 @@ export default function HomePage() {
                   3.2x
                 </div>
                 <div className="text-xs font-black uppercase tracking-widest text-slate-400">
-                  Faster Debtor Response
+                  Faster Customer Response
                 </div>
               </div>
               <div className="p-10 text-center">

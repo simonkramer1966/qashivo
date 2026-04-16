@@ -514,7 +514,7 @@ function DebtorAuditSection({ contactId }: { contactId: string }) {
           {isLoading ? (
             <div className="py-4 text-center text-xs text-[var(--q-text-tertiary)]">Loading...</div>
           ) : !data?.entries?.length ? (
-            <div className="py-4 text-center text-xs text-[var(--q-text-tertiary)]">No audit entries for this debtor</div>
+            <div className="py-4 text-center text-xs text-[var(--q-text-tertiary)]">No audit entries for this customer</div>
           ) : (
             <div className="space-y-1">
               {data.entries.map((entry) => {
@@ -1840,7 +1840,7 @@ export default function DebtorRecord() {
   if (!matched) {
     return (
       <AppShell title="Not Found">
-        <p className="p-8 text-[var(--q-text-tertiary)]">Debtor not found.</p>
+        <p className="p-8 text-[var(--q-text-tertiary)]">Customer not found.</p>
       </AppShell>
     );
   }
@@ -1874,7 +1874,7 @@ export default function DebtorRecord() {
             <ArrowLeft className="h-4 w-4 mr-1" /> Back
           </Button>
           <p className="mt-4 text-[var(--q-risk-text)]">
-            Failed to load debtor profile. {profileQuery.error?.message}
+            Failed to load customer profile. {profileQuery.error?.message}
           </p>
         </div>
       </AppShell>
@@ -3069,7 +3069,7 @@ export default function DebtorRecord() {
                 </div>
                 <p className="text-sm font-medium text-[var(--q-text-primary)]">No activity yet</p>
                 <p className="text-xs text-[var(--q-text-tertiary)] mt-1 max-w-xs">
-                  Communications, payments, and events will appear here once collection activity begins for this debtor.
+                  Communications, payments, and events will appear here once collection activity begins for this customer.
                 </p>
               </div>
             ) : (
@@ -3944,7 +3944,7 @@ export default function DebtorRecord() {
                   <div>
                     <label className="text-xs text-muted-foreground">To</label>
                     {smsPhoneContacts.length === 0 ? (
-                      <p className="text-sm text-destructive mt-1">No phone numbers found for this debtor</p>
+                      <p className="text-sm text-destructive mt-1">No phone numbers found for this customer</p>
                     ) : smsPhoneContacts.length === 1 ? (
                       <p className="text-sm mt-1">{smsPhoneContacts[0].label} — {smsPhoneContacts[0].phone}</p>
                     ) : (
@@ -4099,7 +4099,7 @@ export default function DebtorRecord() {
                 Schedule AI Voice Call
               </SheetTitle>
               <SheetDescription>
-                Charlie will call {contact?.name || "the debtor"} on your behalf
+                Charlie will call {contact?.name || "the customer"} on your behalf
               </SheetDescription>
             </SheetHeader>
 

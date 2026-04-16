@@ -364,7 +364,7 @@ export default function PromisesSubTab() {
                       </Button>
                       <Link href={`/qollections/debtors/${u.contactId}`}>
                         <Button size="sm" variant="ghost">
-                          Contact debtor
+                          Contact customer
                         </Button>
                       </Link>
                     </div>
@@ -538,7 +538,7 @@ export default function PromisesSubTab() {
                   id="ext-reason"
                   value={extendReason}
                   onChange={(e) => setExtendReason(e.target.value)}
-                  placeholder="e.g. Debtor confirmed delay due to supplier hold-up"
+                  placeholder="e.g. Customer confirmed delay due to supplier hold-up"
                   rows={2}
                 />
               </div>

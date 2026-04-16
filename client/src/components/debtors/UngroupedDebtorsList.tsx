@@ -153,13 +153,13 @@ export default function UngroupedDebtorsList({
       });
     },
     onSuccess: () => {
-      toast({ title: `Moved ${selectedIds.size} debtors to group` });
+      toast({ title: `Moved ${selectedIds.size} customers to group` });
       onSelectionChange(new Set());
       queryClient.invalidateQueries({ queryKey: ["/api/debtor-groups"] });
       queryClient.invalidateQueries({ queryKey: ["/api/qollections/debtors"] });
     },
     onError: () => {
-      toast({ title: "Failed to move debtors", variant: "destructive" });
+      toast({ title: "Failed to move customers", variant: "destructive" });
     },
   });
 
@@ -170,7 +170,7 @@ export default function UngroupedDebtorsList({
         <div className="relative w-full max-w-[240px]">
           <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--q-text-tertiary)]" />
           <Input
-            placeholder="Search debtors..."
+            placeholder="Search customers..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="h-8 pl-9 text-sm"
@@ -233,8 +233,8 @@ export default function UngroupedDebtorsList({
       {filtered.length === 0 ? (
         <div className="px-4 pb-6 text-center text-sm text-[var(--q-text-tertiary)]">
           {debtors.length === 0
-            ? "All debtors are in groups"
-            : "No debtors match your search"}
+            ? "All customers are in groups"
+            : "No customers match your search"}
         </div>
       ) : (
         <>

@@ -29,7 +29,7 @@ export type ExceptionSubTab =
 
 export const EXCEPTION_SUB_TABS: { value: ExceptionSubTab; label: string }[] = [
   { value: "collections", label: "Collections" },
-  { value: "debtor_situations", label: "Debtor Situations" },
+  { value: "debtor_situations", label: "Customer Situations" },
   { value: "promises", label: "Promises" },
   { value: "other", label: "Other" },
 ];

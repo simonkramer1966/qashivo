@@ -51,7 +51,7 @@ export default function WhyQashivoPage() {
               <ul className="space-y-6 relative z-10">
                 <li className="flex gap-4 items-start">
                   <span className="material-symbols-outlined text-teal-brand font-bold">check_circle</span>
-                  <span className="text-lg font-bold">Qashivo emails, texts, and phones your debtors, reducing your workload by 90%</span>
+                  <span className="text-lg font-bold">Qashivo emails, texts, and phones your customers, reducing your workload by 90%</span>
                 </li>
                 <li className="flex gap-4 items-start">
                   <span className="material-symbols-outlined text-teal-brand font-bold">check_circle</span>
@@ -178,7 +178,7 @@ export default function WhyQashivoPage() {
             </div>
             <div className="bg-white p-12 text-center">
               <p className="text-5xl font-black text-mkt-primary mb-2">47d</p>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Average Debtor Days</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Average Payment Days</p>
             </div>
             <div className="bg-white p-12 text-center">
               <p className="text-5xl font-black text-mkt-primary mb-2">82%</p>
@@ -197,7 +197,7 @@ export default function WhyQashivoPage() {
             <span className="material-symbols-outlined text-slate-200 text-6xl">format_quote</span>
           </div>
           <p className="text-3xl md:text-5xl font-black text-mkt-primary leading-tight mb-12">
-            "Qashivo removed the administrative friction of chasing payments. Our debtor days halved within the first quarter."
+            "Qashivo removed the administrative friction of chasing payments. Our payment days halved within the first quarter."
           </p>
           <div className="flex items-center justify-center gap-4">
             <div className="text-center">

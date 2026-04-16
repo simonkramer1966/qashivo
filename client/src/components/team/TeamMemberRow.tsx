@@ -196,7 +196,7 @@ export default function TeamMemberRow({
               )}
               {member.role === "credit_controller" && (
                 <p className="text-sm text-[var(--q-text-tertiary)]">
-                  Day-to-day credit control. Can approve and send agent actions, manage debtor records, add notes, and put accounts on hold.
+                  Day-to-day credit control. Can approve and send agent actions, manage customer records, add notes, and put accounts on hold.
                 </p>
               )}
               {isCurrentUserOwner && member.role === "owner" && transferTargets.length > 0 && (

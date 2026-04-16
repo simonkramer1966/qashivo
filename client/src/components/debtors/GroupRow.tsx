@@ -155,12 +155,12 @@ export default function GroupRow({
       }
     },
     onSuccess: () => {
-      toast({ title: `Moved ${selectedMemberIds.size} debtors` });
+      toast({ title: `Moved ${selectedMemberIds.size} customers` });
       onSelectionChange(new Set());
       invalidate();
     },
     onError: () => {
-      toast({ title: "Failed to move debtors", variant: "destructive" });
+      toast({ title: "Failed to move customers", variant: "destructive" });
     },
   });
 

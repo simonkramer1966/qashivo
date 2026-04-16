@@ -129,7 +129,7 @@ const DEFER_REASONS = [
 const REJECT_REASONS = [
   { value: "wrong_tone", label: "Wrong tone selected" },
   { value: "invoice_in_dispute", label: "Invoice in dispute" },
-  { value: "debtor_on_hold", label: "Debtor is on hold" },
+  { value: "debtor_on_hold", label: "Customer is on hold" },
   { value: "contact_details_incorrect", label: "Contact details incorrect" },
   { value: "handle_manually", label: "Will handle manually" },
   { value: "too_aggressive", label: "Too aggressive for this client" },
@@ -679,7 +679,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
       const elapsedSec = context ? Math.round((Date.now() - context.startedAt) / 1000) : 0;
       const elapsedLabel = elapsedSec >= 60 ? `${Math.floor(elapsedSec / 60)}m ${elapsedSec % 60}s` : `${elapsedSec}s`;
       if (data.generated === 0) {
-        toast({ title: "No new emails generated", description: `Charlie checked every debtor (${elapsedLabel}). All were recently contacted or within cooldown.` });
+        toast({ title: "No new emails generated", description: `Charlie checked every customer (${elapsedLabel}). All were recently contacted or within cooldown.` });
       } else if (data.communicationMode === "testing") {
         toast({ title: `${data.generated} new emails generated in ${elapsedLabel}`, description: "Test mode — emails will be sent to test addresses." });
       } else {
@@ -696,7 +696,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
       await apiRequest("PATCH", `/api/contacts/${contactId}`, { manualBlocked: true });
       // Cancel this queued action
       await apiRequest("POST", `/api/actions/${actionId}/reject`, {
-        reason: "Debtor put on hold",
+        reason: "Customer put on hold",
         category: "debtor_on_hold",
         note: "Manually held from approval queue",
       });
@@ -1076,7 +1076,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>You are in Live mode</AlertDialogTitle>
             <AlertDialogDescription>
-              Generated emails will be sent to real debtors after approval. Continue?
+              Generated emails will be sent to real customers after approval. Continue?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1115,7 +1115,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
           {/* Card header */}
           <div className="px-5 py-4 border-b border-[var(--q-border-default)] flex items-center justify-between">
             <span className="text-sm text-[var(--q-text-secondary)]">
-              <strong>{actions.length}</strong> actions pending · <strong className="q-mono">{formatAmount(totalQueuedAmount)}</strong> queued · <strong>{uniqueDebtors}</strong> debtors
+              <strong>{actions.length}</strong> actions pending · <strong className="q-mono">{formatAmount(totalQueuedAmount)}</strong> queued · <strong>{uniqueDebtors}</strong> customers
             </span>
             <div className="flex items-center gap-2">
               <AlertDialog>
@@ -1189,7 +1189,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
                       className="h-4 w-4"
                     />
                   </ApprovalTH>
-                  <SortableTH field="debtor" label="Debtor" sort={sort} onSort={setSort} />
+                  <SortableTH field="debtor" label="Customer" sort={sort} onSort={setSort} />
                   <SortableTH field="invoiceCount" label="Invoices" sort={sort} onSort={setSort} className="w-[80px] text-right" />
                   <SortableTH field="accountBalance" label="Amount" sort={sort} onSort={setSort} className="w-[110px] text-right" />
                   <SortableTH field="totalAmount" label="Overdue" sort={sort} onSort={setSort} className="w-[110px] text-right" />
@@ -1357,7 +1357,7 @@ export default function ApprovalsTab({ tenantId }: ApprovalsTabProps) {
                                   <Star className="h-4 w-4 mr-2" /> Mark as VIP
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleMenuAction(action, "view")}>
-                                  <Eye className="h-4 w-4 mr-2" /> View debtor detail
+                                  <Eye className="h-4 w-4 mr-2" /> View customer detail
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleMenuAction(action, "note")}>
                                   <StickyNote className="h-4 w-4 mr-2" /> Add note
@@ -1498,7 +1498,7 @@ function AddNoteDialog({
         <DialogHeader>
           <DialogTitle>Add note — {companyName}</DialogTitle>
           <DialogDescription>
-            This note will appear on the debtor's timeline.
+            This note will appear on the customer's timeline.
           </DialogDescription>
         </DialogHeader>
         <Textarea

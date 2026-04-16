@@ -62,7 +62,7 @@ export default function Step4AgentPersona({ status, onComplete, onSkip, onBack }
       <div>
         <h2 className="text-[15px] font-semibold text-gray-900 mb-1">Create Agent Persona</h2>
         <p className="text-[13px] text-gray-500 mb-6">
-          Your AI agent's identity for debtor communications.
+          Your AI agent's identity for customer communications.
         </p>
         <div className="border border-[#e5e7eb] rounded-lg p-5">
           <div className="flex items-center gap-3">
@@ -94,7 +94,7 @@ export default function Step4AgentPersona({ status, onComplete, onSkip, onBack }
     <div>
       <h2 className="text-[15px] font-semibold text-gray-900 mb-1">Create Agent Persona</h2>
       <p className="text-[13px] text-gray-500 mb-6">
-        Set up your AI agent's identity. This is who debtors will see when they receive collection emails.
+        Set up your AI agent's identity. This is who customers will see when they receive collection emails.
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -209,7 +209,7 @@ export default function Step4AgentPersona({ status, onComplete, onSkip, onBack }
             </div>
             <div className="border-t border-[#e5e7eb] pt-3 mt-3">
               <p className="text-[11px] text-gray-400 italic">
-                Debtors will see this signature on all collection emails sent by your AI agent.
+                Customers will see this signature on all collection emails sent by your AI agent.
               </p>
             </div>
           </div>

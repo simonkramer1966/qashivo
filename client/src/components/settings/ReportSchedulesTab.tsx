@@ -36,7 +36,7 @@ import { Plus, Trash2, FileText, Clock, Mail, Calendar } from "lucide-react";
 import type { ScheduledReport } from "@shared/schema";
 
 const REPORT_TYPES = [
-  { value: "aged_debtors", label: "Aged Debtors Report" },
+  { value: "aged_debtors", label: "Aged Customers Report" },
   { value: "cashflow_forecast", label: "Cash Flow Forecast" },
   { value: "collection_performance", label: "Collection Performance" },
   { value: "dso_summary", label: "DSO Summary" },
@@ -337,7 +337,7 @@ export default function ReportSchedulesTab() {
                   <FormItem>
                     <FormLabel>Schedule Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. Weekly Aged Debtors" {...field} />
+                      <Input placeholder="e.g. Weekly Aged Customers" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

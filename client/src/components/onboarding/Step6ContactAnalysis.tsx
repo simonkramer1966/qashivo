@@ -71,7 +71,7 @@ export default function Step6ContactAnalysis({ status, onComplete, onSkip, onBac
             </div>
             <p className="text-[13px] text-gray-700 leading-relaxed">
               {summary.missingEmail > 0 || summary.missingPhone > 0
-                ? `I've found ${summary.totalContacts} contacts. ${summary.missingEmail} are missing email addresses — the agent won't be able to chase those until they're updated. You can fix these in the Debtors page after setup.`
+                ? `I've found ${summary.totalContacts} contacts. ${summary.missingEmail} are missing email addresses — the agent won't be able to chase those until they're updated. You can fix these in the Customers page after setup.`
                 : `Looking good — all ${summary.totalContacts} contacts have email addresses, so the agent can reach everyone from day one.`}
             </p>
           </div>
@@ -95,7 +95,7 @@ export default function Step6ContactAnalysis({ status, onComplete, onSkip, onBac
           {!summary && (
             <div className="border border-[#e5e7eb] rounded-lg p-5 mb-6">
               <p className="text-[13px] text-gray-600 mb-3">
-                Run analysis to check your contact data quality and aged debtors summary.
+                Run analysis to check your contact data quality and aged customers summary.
               </p>
               <button
                 onClick={() => runAnalysisMutation.mutate()}
@@ -110,7 +110,7 @@ export default function Step6ContactAnalysis({ status, onComplete, onSkip, onBac
 
           {agedSummary && (
             <div className="mb-6">
-              <h3 className="text-[13px] font-medium text-gray-900 mb-3">Aged Debtors Summary</h3>
+              <h3 className="text-[13px] font-medium text-gray-900 mb-3">Aged Customers Summary</h3>
               <div className="border border-[#e5e7eb] rounded-lg overflow-hidden">
                 <table className="w-full text-[13px]">
                   <thead>

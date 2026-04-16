@@ -198,9 +198,9 @@ export function buildNarrative(evt: ActivityEventData): string {
     if (content) {
       const trimmed = content.slice(0, 80).trim();
       const ellipsis = content.length > 80 ? "\u2026" : "";
-      return `Debtor replied: \u201C${trimmed}${ellipsis}\u201D`;
+      return `Customer replied: \u201C${trimmed}${ellipsis}\u201D`;
     }
-    return "Debtor replied";
+    return "Customer replied";
   }
 
   // Outbound SMS — always a nudge
@@ -253,7 +253,7 @@ export function buildAttribution(evt: ActivityEventData): string {
 
   // Person name
   if (dir === "inbound") {
-    parts.push(evt.contactName || "Debtor");
+    parts.push(evt.contactName || "Customer");
   } else if (evt.createdByName) {
     parts.push(evt.createdByName);
   } else if (evt.triggeredBy) {

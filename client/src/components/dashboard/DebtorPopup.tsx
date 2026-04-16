@@ -74,7 +74,7 @@ export default function DebtorPopup({ debtor, position, visible, arTotal }: Debt
         )}
       </div>
       <div className="mt-2 text-[10px] text-primary">
-        View debtor detail →
+        View customer detail →
       </div>
     </div>
   );

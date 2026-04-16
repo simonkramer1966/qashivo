@@ -191,13 +191,13 @@ export default function DebtorGroupDialog({
       await apiRequest("DELETE", `/api/debtor-groups/${editGroup.id}`);
     },
     onSuccess: () => {
-      toast({ title: "Debtors ungrouped" });
+      toast({ title: "Customers ungrouped" });
       invalidate();
       setDeleteConfirmOpen(false);
       onOpenChange(false);
     },
     onError: () => {
-      toast({ title: "Failed to ungroup debtors", variant: "destructive" });
+      toast({ title: "Failed to ungroup customers", variant: "destructive" });
     },
   });
 
@@ -313,7 +313,7 @@ export default function DebtorGroupDialog({
                 className="text-sm text-[var(--q-risk-text)] hover:underline"
                 onClick={() => setDeleteConfirmOpen(true)}
               >
-                Ungroup debtors
+                Ungroup customers
               </button>
             )}
           </div>
@@ -333,10 +333,10 @@ export default function DebtorGroupDialog({
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Ungroup debtors from {editGroup?.groupName}?</AlertDialogTitle>
+            <AlertDialogTitle>Ungroup customers from {editGroup?.groupName}?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will release all {editGroup?.members?.length ?? 0} debtor{(editGroup?.members?.length ?? 0) !== 1 ? "s" : ""}
-              {" "}from the group. They'll appear as individual debtors again. No debtor data will be deleted.
+              This will release all {editGroup?.members?.length ?? 0} customer{(editGroup?.members?.length ?? 0) !== 1 ? "s" : ""}
+              {" "}from the group. They'll appear as individual customers again. No customer data will be deleted.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

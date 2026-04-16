@@ -71,7 +71,7 @@ export default function DebtorHeatmap({ debtors: rawDebtors, isLoading }: Debtor
     return (
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-semibold">Debtor Heatmap</CardTitle>
+          <CardTitle className="text-sm font-semibold">Customer Heatmap</CardTitle>
         </CardHeader>
         <CardContent>
           <Skeleton className="h-[120px] w-full" />
@@ -84,11 +84,11 @@ export default function DebtorHeatmap({ debtors: rawDebtors, isLoading }: Debtor
     return (
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-semibold">Debtor Heatmap</CardTitle>
+          <CardTitle className="text-sm font-semibold">Customer Heatmap</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
-            No debtors with outstanding balances
+            No customers with outstanding balances
           </div>
         </CardContent>
       </Card>
@@ -100,9 +100,9 @@ export default function DebtorHeatmap({ debtors: rawDebtors, isLoading }: Debtor
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
-            <CardTitle className="text-sm font-semibold">Debtor Heatmap</CardTitle>
+            <CardTitle className="text-sm font-semibold">Customer Heatmap</CardTitle>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {debtors.length} debtor{debtors.length !== 1 ? "s" : ""} · ordered by outstanding · colour = days overdue
+              {debtors.length} customer{debtors.length !== 1 ? "s" : ""} · ordered by outstanding · colour = days overdue
             </p>
           </div>
           <div className="flex items-center gap-1 text-[10px] text-muted-foreground">

@@ -39,7 +39,7 @@ export default function Step9GoLive({ status, onBack }: Props) {
     { key: "step3Status", label: "Open Banking", required: false },
     { key: "step4Status", label: "Agent persona", required: false },
     { key: "step5Status", label: "Communication preferences", required: false },
-    { key: "step6Status", label: "Debtor review", required: false },
+    { key: "step6Status", label: "Customer review", required: false },
     { key: "step7Status", label: "Business intelligence", required: false },
     { key: "step8Status", label: "Weekly review", required: false },
   ];
@@ -61,7 +61,7 @@ export default function Step9GoLive({ status, onBack }: Props) {
           </div>
           <p className="text-[13px] text-gray-700 leading-relaxed">
             Everything's set, {userName}. Your agent is configured and ready to start collecting. Once you go live,
-            I'll monitor your debtors and generate collection emails based on your preferences. You can always chat
+            I'll monitor your customers and generate collection emails based on your preferences. You can always chat
             with me from any page if you need help.
           </p>
         </div>

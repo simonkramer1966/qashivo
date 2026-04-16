@@ -54,8 +54,8 @@ export default function SyncStatusBanner() {
   if (phase === "processing") {
     const cumulative = progress?.cumulative ?? 0;
     const message = cumulative > 0
-      ? `Syncing with Xero — updating debtors (${cumulative.toLocaleString()} invoices processed)…`
-      : "Syncing with Xero — updating debtors…";
+      ? `Syncing with Xero — updating customers (${cumulative.toLocaleString()} invoices processed)…`
+      : "Syncing with Xero — updating customers…";
 
     return (
       <BannerShell tone="info" onDismiss={() => setDismissed(true)}>

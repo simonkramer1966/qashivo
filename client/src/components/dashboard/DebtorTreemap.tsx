@@ -161,7 +161,7 @@ export default function DebtorTreemap({ debtors, isLoading }: DebtorTreemapProps
   if (isLoading) {
     return (
       <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] p-5">
-        <h3 className="text-sm font-semibold text-[var(--q-text-primary)]">Outstanding by Debtor</h3>
+        <h3 className="text-sm font-semibold text-[var(--q-text-primary)]">Outstanding by Customer</h3>
         <Skeleton className="w-full mt-4" style={{ height: TREEMAP_HEIGHT }} />
       </div>
     );
@@ -170,9 +170,9 @@ export default function DebtorTreemap({ debtors, isLoading }: DebtorTreemapProps
   if (debtors.length === 0) {
     return (
       <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] p-5">
-        <h3 className="text-sm font-semibold text-[var(--q-text-primary)]">Outstanding by Debtor</h3>
+        <h3 className="text-sm font-semibold text-[var(--q-text-primary)]">Outstanding by Customer</h3>
         <div className="flex items-center justify-center py-8 text-sm text-[var(--q-text-tertiary)]">
-          No debtors with outstanding balances
+          No customers with outstanding balances
         </div>
       </div>
     );
@@ -182,11 +182,11 @@ export default function DebtorTreemap({ debtors, isLoading }: DebtorTreemapProps
     <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] p-5">
       <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
         <div>
-          <h3 className="text-sm font-semibold text-[var(--q-text-primary)]">Outstanding by Debtor</h3>
+          <h3 className="text-sm font-semibold text-[var(--q-text-primary)]">Outstanding by Customer</h3>
           <p className="text-[11px] text-[var(--q-text-tertiary)] mt-0.5">
               {overdueOnly
-                ? `${debtors.filter((d) => d.oldestOverdueDays > 0).length} debtors overdue of ${debtors.length}`
-                : `${debtors.length} debtor${debtors.length !== 1 ? "s" : ""}`}
+                ? `${debtors.filter((d) => d.oldestOverdueDays > 0).length} customers overdue of ${debtors.length}`
+                : `${debtors.length} customer${debtors.length !== 1 ? "s" : ""}`}
               {" · cell size = outstanding amount · colour = days overdue"}
             </p>
           </div>

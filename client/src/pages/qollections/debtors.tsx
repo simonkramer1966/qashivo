@@ -222,13 +222,13 @@ export default function QollectionsDebtors() {
       });
     },
     onSuccess: () => {
-      toast({ title: `Moved ${selectedIds.size} debtors to group` });
+      toast({ title: `Moved ${selectedIds.size} customers to group` });
       setSelectedIds(new Set());
       queryClient.invalidateQueries({ queryKey: ["/api/debtor-groups"] });
       queryClient.invalidateQueries({ queryKey: ["/api/qollections/debtors"] });
     },
     onError: () => {
-      toast({ title: "Failed to move debtors", variant: "destructive" });
+      toast({ title: "Failed to move customers", variant: "destructive" });
     },
   });
 
@@ -376,17 +376,17 @@ export default function QollectionsDebtors() {
 
   const subtitle = isLoading
     ? "Loading..."
-    : `${kpis.totalDebtors} debtors · ${formatGBP(kpis.totalOutstanding)} outstanding`;
+    : `${kpis.totalDebtors} customers · ${formatGBP(kpis.totalOutstanding)} outstanding`;
 
   return (
-    <AppShell title="Debtors" subtitle={subtitle}>
+    <AppShell title="Customers" subtitle={subtitle}>
       <div className="space-y-[var(--q-space-2xl)]">
         <SyncStatusBanner />
 
         {/* Tab bar */}
         <QFilterTabs
           options={[
-            { key: "debtors", label: "All Debtors" },
+            { key: "debtors", label: "All Customers" },
             { key: "data-health", label: "Data Health" },
             { key: "groups", label: "Groups" },
           ]}
@@ -408,7 +408,7 @@ export default function QollectionsDebtors() {
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-[var(--q-space-md)] lg:grid-cols-4">
-            <QMetricCard label="Total Debtors" value={kpis.totalDebtors} format="number" />
+            <QMetricCard label="Total Customers" value={kpis.totalDebtors} format="number" />
             <QMetricCard label="Total Outstanding" value={kpis.totalOutstanding} format="currency" />
             <QMetricCard
               label="Total Overdue"
@@ -434,7 +434,7 @@ export default function QollectionsDebtors() {
           <div className="relative w-full max-w-[280px]">
             <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--q-text-tertiary)]" />
             <Input
-              placeholder="Search debtors..."
+              placeholder="Search customers..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="h-9 pl-9 text-sm"
@@ -497,7 +497,7 @@ export default function QollectionsDebtors() {
             </Select>
             {!isLoading && (
               <span className="text-[13px] text-[var(--q-text-secondary)] whitespace-nowrap">
-                {filtered.length} debtor{filtered.length !== 1 ? "s" : ""}
+                {filtered.length} customer{filtered.length !== 1 ? "s" : ""}
               </span>
             )}
           </div>
@@ -542,11 +542,11 @@ export default function QollectionsDebtors() {
           ) : filtered.length === 0 ? (
             <QEmptyState
               icon={<Users className="h-12 w-12" />}
-              title="No debtors found"
+              title="No customers found"
               description={
                 searchQuery || statusFilter !== "all"
                   ? "Try adjusting your search or filters."
-                  : "Debtors will appear here once invoices are synced."
+                  : "Customers will appear here once invoices are synced."
               }
             />
           ) : (

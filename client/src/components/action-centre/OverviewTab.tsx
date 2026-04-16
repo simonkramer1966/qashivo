@@ -395,7 +395,7 @@ export default function OverviewTab() {
 
             <SectionLabel label="By urgency" />
             <SummaryRow label="Waiting > 24 hours" value={queued.waitingOver24h} valueColor={queued.waitingOver24h > 0 ? "attention" : undefined} onClick={() => goTo("queue")} />
-            <SummaryRow label="Debtors > 60 days overdue" value={queued.debtorsOver60DaysOverdue} valueColor={queued.debtorsOver60DaysOverdue > 0 ? "attention" : undefined} onClick={() => goTo("queue")} />
+            <SummaryRow label="Customers > 60 days overdue" value={queued.debtorsOver60DaysOverdue} valueColor={queued.debtorsOver60DaysOverdue > 0 ? "attention" : undefined} onClick={() => goTo("queue")} />
             <SummaryRow label="Total value queued" value={formatGBP(queued.totalValueQueued)} bold />
           </div>
           <div className="border-t border-[var(--q-border-default)] px-5 py-3 flex items-center gap-2">
@@ -484,7 +484,7 @@ export default function OverviewTab() {
               <SummaryRow label="Compliance failures" value={exceptions.complianceFailures} valueColor={exceptions.complianceFailures > 0 ? "attention" : undefined} onClick={() => goTo("exceptions", { sub: "collections" })} />
             </div>
 
-            <SectionLabel label="Debtor situations" />
+            <SectionLabel label="Customer situations" />
             <SummaryRow label="Distress — cashflow issues" value={exceptions.distress} valueColor={exceptions.distress > 0 ? "risk" : undefined} onClick={() => goTo("exceptions", { sub: "debtor_situations" })} />
             <SummaryRow label="Service issue" value={exceptions.serviceIssue} valueColor={exceptions.serviceIssue > 0 ? "attention" : undefined} onClick={() => goTo("exceptions", { sub: "debtor_situations" })} />
             <SummaryRow label="Missing PO / info" value={exceptions.missingPO} valueColor={exceptions.missingPO > 0 ? "attention" : undefined} onClick={() => goTo("exceptions", { sub: "debtor_situations" })} />

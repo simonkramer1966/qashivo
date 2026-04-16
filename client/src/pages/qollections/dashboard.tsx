@@ -151,7 +151,7 @@ export default function QollectionsDashboard() {
             />
           ) : (
             <KpiCard
-              title="Total Debtors"
+              title="Total Customers"
               value={String(summary?.totalDebtors ?? 0)}
               subtitle="With outstanding balance"
               icon={<Users className="h-4 w-4" />}

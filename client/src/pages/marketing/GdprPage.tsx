@@ -41,7 +41,7 @@ export default function GdprPage() {
             <p className="text-on-surface-variant leading-relaxed mb-4">Qashivo operates in two data protection roles depending on the type of data:</p>
             <ul className="list-disc pl-6 space-y-2 text-on-surface-variant leading-relaxed">
               <li><strong>Data Controller</strong> — for your user account data (name, email, login credentials). We determine the purposes and means of processing this data.</li>
-              <li><strong>Data Processor</strong> — for debtor, invoice, and accounts receivable data that you import from your accounting platform. You (our customer) are the controller of this data. We process it on your behalf and solely in accordance with your instructions to provide the Service.</li>
+              <li><strong>Data Processor</strong> — for customer, invoice, and accounts receivable data that you import from your accounting platform. You (our customer) are the controller of this data. We process it on your behalf and solely in accordance with your instructions to provide the Service.</li>
             </ul>
           </section>
 

@@ -95,7 +95,7 @@ export function VipPromotionDialog({
         <DialogHeader>
           <DialogTitle>Move {companyName} to VIP</DialogTitle>
           <DialogDescription>
-            VIP debtors are managed personally. Charlie will stop all automated contact immediately.
+            VIP customers are managed personally. Charlie will stop all automated contact immediately.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3 py-2">

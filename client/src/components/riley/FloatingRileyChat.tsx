@@ -11,7 +11,7 @@ import { X, Send, MessageCircle } from "lucide-react";
 // ── Route → human-readable context mapping ──────────────────
 
 const ROUTE_LABELS: Record<string, string> = {
-  "/qollections/debtors": "Debtors",
+  "/qollections/debtors": "Customers",
   // "/qollections/invoices" removed — redirects to /qollections/debtors
   "/qollections/agent-activity": "Action Centre",
   "/qollections/disputes": "Disputes",
@@ -32,7 +32,7 @@ function getPageName(path: string): string {
   // Exact match first
   if (ROUTE_LABELS[path]) return ROUTE_LABELS[path];
   // Debtor detail page
-  if (path.startsWith("/qollections/debtors/")) return "Debtor Detail";
+  if (path.startsWith("/qollections/debtors/")) return "Customer Detail";
   // Prefix match
   for (const [route, label] of Object.entries(ROUTE_LABELS)) {
     if (path.startsWith(route)) return label;
@@ -80,13 +80,13 @@ function getRelatedEntity(path: string): { relatedEntityType?: string; relatedEn
 
 function getGreeting(path: string): string {
   if (path.startsWith("/qollections/debtors/")) {
-    return "I can see you're looking at a debtor record. Want me to summarise their situation or suggest next steps?";
+    return "I can see you're looking at a customer record. Want me to summarise their situation or suggest next steps?";
   }
   if (path.startsWith("/qollections")) {
-    return "I can see your debtors list. Want a quick summary of what needs attention today?";
+    return "I can see your customers list. Want a quick summary of what needs attention today?";
   }
   if (path.startsWith("/settings/data-health")) {
-    return "A few debtors might need email addresses before the agent can chase them. Want help prioritising?";
+    return "A few customers might need email addresses before the agent can chase them. Want help prioritising?";
   }
   if (path.startsWith("/qashflow")) {
     return "Ready to talk cashflow? I can walk you through what's expected this week.";

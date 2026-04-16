@@ -173,7 +173,7 @@ export function OnboardingWizard() {
               Almost there — we need somewhere safe to send test emails
             </h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Until you go live, all emails go to you, not your debtors.
+              Until you go live, all emails go to you, not your customers.
             </p>
           </div>
           <div className="space-y-4">

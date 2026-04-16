@@ -33,11 +33,11 @@ export default function Step3OpenBanking({ status, onComplete, onSkip, onBack }:
             <ul className="text-[13px] text-gray-500 space-y-1.5 ml-1">
               <li className="flex items-start gap-2">
                 <span className="text-amber-500 mt-0.5">•</span>
-                See real-time bank balances alongside your aged debtors
+                See real-time bank balances alongside your aged customers
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-amber-500 mt-0.5">•</span>
-                Auto-reconcile payments when debtors pay
+                Auto-reconcile payments when customers pay
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-amber-500 mt-0.5">•</span>

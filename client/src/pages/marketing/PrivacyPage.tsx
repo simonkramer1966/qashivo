@@ -43,7 +43,7 @@ export default function PrivacyPage() {
             </p>
             <ul className="list-disc pl-6 space-y-2 text-on-surface-variant leading-relaxed">
               <li><strong>Account data</strong> — your name, email address, and authentication credentials (managed by our authentication provider, Clerk).</li>
-              <li><strong>Business data</strong> — invoices, debtor/contact records, and accounts receivable information synced from your connected accounting platform (e.g. Xero).</li>
+              <li><strong>Business data</strong> — invoices, customer/contact records, and accounts receivable information synced from your connected accounting platform (e.g. Xero).</li>
               <li><strong>Communication data</strong> — emails, SMS messages, and voice call transcripts generated or received through the Qashivo platform on your behalf.</li>
               <li><strong>Usage data</strong> — browser type, IP address, pages visited, and interaction patterns collected via analytics to improve the service.</li>
               <li><strong>Payment data</strong> — billing details processed by Stripe. We do not store full card numbers on our servers.</li>

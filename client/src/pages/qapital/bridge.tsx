@@ -651,7 +651,7 @@ export default function BridgePage() {
                 <tr>
                   <BridgeTH className="w-[48px] text-center" />
                   <SortableBridgeTH field="invoice" label="Invoice" sortField={sortField} sortDir={sortDir} onSort={(f, d) => { setSortField(f); setSortDir(d); }} className="w-[120px]" />
-                  <SortableBridgeTH field="debtor" label="Debtor" sortField={sortField} sortDir={sortDir} onSort={(f, d) => { setSortField(f); setSortDir(d); }} />
+                  <SortableBridgeTH field="debtor" label="Customer" sortField={sortField} sortDir={sortDir} onSort={(f, d) => { setSortField(f); setSortDir(d); }} />
                   <SortableBridgeTH field="amount" label="Amount" sortField={sortField} sortDir={sortDir} onSort={(f, d) => { setSortField(f); setSortDir(d); }} className="w-[120px] text-right" />
                   <SortableBridgeTH field="days" label="Days to pay" sortField={sortField} sortDir={sortDir} onSort={(f, d) => { setSortField(f); setSortDir(d); }} className="w-[110px] text-center" />
                   <SortableBridgeTH field="risk" label="Risk" sortField={sortField} sortDir={sortDir} onSort={(f, d) => { setSortField(f); setSortDir(d); }} className="w-[80px] text-center" />

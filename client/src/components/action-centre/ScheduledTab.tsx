@@ -306,7 +306,7 @@ export default function ScheduledTab() {
   }
 
   const debtorDisplayName = (action: ScheduledAction) =>
-    action.companyName || action.contactName || "this debtor";
+    action.companyName || action.contactName || "this customer";
 
   return (
     <>
@@ -314,7 +314,7 @@ export default function ScheduledTab() {
         <TableHeader>
           <TableRow>
             <TableHead className="w-10"></TableHead>
-            <TableHead>Debtor</TableHead>
+            <TableHead>Customer</TableHead>
             <TableHead>Subject</TableHead>
             <TableHead>Tone</TableHead>
             <TableHead>Scheduled</TableHead>

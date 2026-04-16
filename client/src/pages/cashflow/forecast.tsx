@@ -415,7 +415,7 @@ export default function ForecastPage() {
 
   const forecastSubtitle = (
     <span className="inline-flex items-center gap-1">
-      Built from your debtors' actual payment history
+      Built from your customers' actual payment history
       <button
         onClick={() => setShowMethodology(true)}
         className="inline-flex items-center text-[var(--q-text-tertiary)] hover:text-[var(--q-text-primary)] transition-colors"
@@ -1067,7 +1067,7 @@ export default function ForecastPage() {
                   <thead>
                     <tr className="border-b border-[var(--q-border-default)]">
                       <th className="text-left text-[11px] font-medium tracking-[0.3px] h-10 pl-5 pr-3 text-[var(--q-text-tertiary)]">Invoice #</th>
-                      <th className="text-left text-[11px] font-medium tracking-[0.3px] h-10 px-3 text-[var(--q-text-tertiary)]">Debtor</th>
+                      <th className="text-left text-[11px] font-medium tracking-[0.3px] h-10 px-3 text-[var(--q-text-tertiary)]">Customer</th>
                       <th className="text-right text-[11px] font-medium tracking-[0.3px] h-10 px-3 text-[var(--q-text-tertiary)]">Amount due</th>
                       <th className="text-right text-[11px] font-medium tracking-[0.3px] h-10 px-3 text-[var(--q-risk-text)]">Pessimistic</th>
                       <th className="text-right text-[11px] font-medium tracking-[0.3px] h-10 px-3 text-[var(--q-info-text)]">Expected</th>
@@ -1318,7 +1318,7 @@ export default function ForecastPage() {
                 </span>
               </div>
               <p className="text-sm">
-                Top 3 debtors = {fmtPct(forecast.concentrationRisk.top3Percent)} of
+                Top 3 customers = {fmtPct(forecast.concentrationRisk.top3Percent)} of
                 forecast
               </p>
               {forecast.concentrationRisk.weeklyConcentration
@@ -1342,7 +1342,7 @@ export default function ForecastPage() {
               <div className="flex items-center gap-2 mb-1">
                 <TrendingDown className="h-4 w-4 text-[var(--q-attention-text)]" />
                 <span className="text-sm font-medium text-[var(--q-attention-text)]">
-                  Debtor Trajectory
+                  Customer Trajectory
                 </span>
               </div>
               {forecast.debtorTrajectories
@@ -1708,18 +1708,18 @@ export default function ForecastPage() {
           <div className="text-sm text-[var(--q-text-tertiary)] space-y-2">
             <p>
               <strong>Data source:</strong> Every forecast number traces back to
-              a specific outstanding invoice and your debtor's historical payment
+              a specific outstanding invoice and your customer's historical payment
               behaviour from Xero (up to 24 months).
             </p>
             <p>
-              <strong>Per-debtor model:</strong> For each debtor, we fit a
+              <strong>Per-customer model:</strong> For each customer, we fit a
               log-normal distribution to their past payment timing. This
               captures both their typical speed and their variability.
             </p>
             <p>
               <strong>Three scenarios:</strong> Optimistic (25th percentile —
-              debtors pay at the fast end), Expected (median), and Pessimistic
-              (75th percentile — debtors pay slow). All three are
+              customers pay at the fast end), Expected (median), and Pessimistic
+              (75th percentile — customers pay slow). All three are
               mathematically derived from the same distribution, not separate
               guesses.
             </p>
@@ -1729,7 +1729,7 @@ export default function ForecastPage() {
               payments — using conservative system defaults of 40 days).
             </p>
             <p>
-              <strong>Promise overrides:</strong> When a debtor has an active
+              <strong>Promise overrides:</strong> When a customer has an active
               payment promise, their forecast shifts toward the promised date,
               weighted by their historical reliability score.
             </p>

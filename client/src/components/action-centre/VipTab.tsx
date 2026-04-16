@@ -48,7 +48,7 @@ export default function VipTab() {
       <div className="rounded-lg border border-[var(--q-border-default)] bg-[var(--q-bg-surface)]">
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <AlertTriangle className="mb-3 h-10 w-10 text-destructive" />
-          <h3 className="text-lg font-semibold">Failed to load VIP debtors</h3>
+          <h3 className="text-lg font-semibold">Failed to load VIP customers</h3>
           <p className="text-sm text-[var(--q-text-tertiary)]">{(error as Error).message}</p>
         </div>
       </div>
@@ -62,9 +62,9 @@ export default function VipTab() {
       <div className="rounded-lg border border-[var(--q-border-default)] bg-[var(--q-bg-surface)]">
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <Star className="mb-3 h-10 w-10 text-[var(--q-attention-text)]" />
-          <h3 className="text-lg font-semibold">No VIP debtors</h3>
+          <h3 className="text-lg font-semibold">No VIP customers</h3>
           <p className="text-sm text-[var(--q-text-tertiary)]">
-            VIP debtors are managed personally. Mark a debtor as VIP from the debtors list or queue.
+            VIP customers are managed personally. Mark a customer as VIP from the customers list or queue.
           </p>
         </div>
       </div>
@@ -74,7 +74,7 @@ export default function VipTab() {
   return (
     <div className="space-y-2">
       <div className="text-sm text-[var(--q-text-tertiary)] mb-2">
-        <strong>{contacts.length}</strong> VIP debtor{contacts.length !== 1 ? "s" : ""} under personal management
+        <strong>{contacts.length}</strong> VIP customer{contacts.length !== 1 ? "s" : ""} under personal management
       </div>
 
       {contacts.map(contact => {
@@ -128,7 +128,7 @@ export default function VipTab() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => navigate(`/qollections/debtors/${contact.id}`)}>
-                  <Eye className="h-4 w-4 mr-2" /> View debtor
+                  <Eye className="h-4 w-4 mr-2" /> View customer
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setReturnTarget({ id: contact.id, name: contact.companyName || contact.name })}>
                   <ArrowLeftRight className="h-4 w-4 mr-2" /> Return to main pool

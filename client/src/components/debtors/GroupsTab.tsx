@@ -139,7 +139,7 @@ export default function GroupsTab({ debtors }: GroupsTabProps) {
             format="currency"
             valueClassName={kpis.totalOverdue > 0 ? "text-[var(--q-risk-text)]" : undefined}
           />
-          <QMetricCard label="Grouped Debtors" value={kpis.groupedDebtors} format="number" />
+          <QMetricCard label="Grouped Customers" value={kpis.groupedDebtors} format="number" />
         </div>
       )}
 
@@ -159,7 +159,7 @@ export default function GroupsTab({ debtors }: GroupsTabProps) {
           <QEmptyState
             icon={<Users className="h-10 w-10" />}
             title="No groups yet"
-            description="Select debtors from the All Debtors tab to create your first group."
+            description="Select customers from the All Customers tab to create your first group."
           />
         </div>
       ) : (

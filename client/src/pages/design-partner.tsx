@@ -83,7 +83,7 @@ export default function DesignPartner() {
                 Become a Founding Design Partner for Supervised AI Credit Control
               </h1>
               <p className="text-[16px] md:text-[17px] text-[#556070] leading-relaxed mb-6">
-                Qashivo helps SMEs get paid faster by turning debtor replies into outcomes (promise to pay, more time, dispute) — updating cash expectations immediately. Nothing is sent without approval.
+                Qashivo helps SMEs get paid faster by turning customer replies into outcomes (promise to pay, more time, dispute) — updating cash expectations immediately. Nothing is sent without approval.
               </p>
               <div className="space-y-3 text-[15px] text-[#556070] mb-6">
                 <div className="flex items-center gap-2">
@@ -96,7 +96,7 @@ export default function DesignPartner() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-[#22C55E] flex-shrink-0" />
-                  <span>Outcome capture from debtor replies</span>
+                  <span>Outcome capture from customer replies</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-[#22C55E] flex-shrink-0" />
@@ -104,7 +104,7 @@ export default function DesignPartner() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-[#22C55E] flex-shrink-0" />
-                  <span>Cash expectations updated from debtor intent</span>
+                  <span>Cash expectations updated from customer intent</span>
                 </div>
               </div>
               <p className="text-[13px] text-[#9CA3AF] italic">
@@ -228,7 +228,7 @@ export default function DesignPartner() {
                       required: "Please tell us what you'd like to improve",
                       minLength: { value: 10, message: "Please provide a bit more detail" }
                     })}
-                    placeholder="e.g. Clients take too long to chase debtors, we want to offer credit control as an advisory service..."
+                    placeholder="e.g. Clients take too long to chase customers, we want to offer credit control as an advisory service..."
                     rows={3}
                     className="bg-white border-[#E6E8EC] rounded-lg text-[14px] placeholder:text-[#9CA3AF] resize-none"
                   />
@@ -309,7 +309,7 @@ export default function DesignPartner() {
             <DesignCard
               icon={<Target className="w-5 h-5" />}
               title="Outcome Capture"
-              description="When a debtor replies, we detect the intent — promise to pay, request for more time, dispute — and update the record automatically."
+              description="When a customer replies, we detect the intent — promise to pay, request for more time, dispute — and update the record automatically."
             />
             <DesignCard
               icon={<BarChart3 className="w-5 h-5" />}
