@@ -65,7 +65,7 @@ export default function ThreeDotMenu({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rbac/team"] });
-      toast({ title: `${userName} has been removed` });
+      toast({ title: `${userName} has been removed from the team` });
       setRemoveOpen(false);
     },
     onError: (err: any) => {
@@ -131,7 +131,7 @@ export default function ThreeDotMenu({
               onClick={() => setRemoveOpen(true)}
             >
               <UserMinus className="h-4 w-4 mr-2" />
-              Remove
+              Remove from team
             </DropdownMenuItem>
           )}
         </DropdownMenuContent>
@@ -141,10 +141,12 @@ export default function ThreeDotMenu({
       <AlertDialog open={removeOpen} onOpenChange={setRemoveOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove {userName}?</AlertDialogTitle>
+            <AlertDialogTitle>Remove {userName} from team?</AlertDialogTitle>
             <AlertDialogDescription>
-              They will lose access to this account immediately. You can
-              re-invite them later if needed.
+              They will lose access immediately and their Clerk account will be
+              deleted. Audit history is preserved. If you re-invite the same
+              email later, their existing record will be reconnected
+              automatically.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -154,7 +156,7 @@ export default function ThreeDotMenu({
               onClick={() => removeMutation.mutate()}
               disabled={removeMutation.isPending}
             >
-              {removeMutation.isPending ? "Removing..." : "Remove"}
+              {removeMutation.isPending ? "Removing..." : "Remove from team"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

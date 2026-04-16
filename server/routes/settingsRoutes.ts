@@ -21,7 +21,7 @@ import {
   attentionItems, outcomes, activityLogs, collectionPolicies, paymentPlans,
   emailMessages, customerContactPersons, scheduledReports,
   userInvitations, userDelegations, ownerFailsafe, users,
-  auditLog,
+  auditLog, adminSystemErrors,
 } from "@shared/schema";
 import { computeNextRunAt } from "../services/reportScheduler";
 import { REPORT_TYPE_LABELS, type ReportType } from "../services/reportGenerator";
@@ -586,14 +586,101 @@ export async function registerSettingsRoutes(app: Express): Promise<void> {
         });
       }
 
-      // Check if user already exists in this tenant
+      // Check if user already exists in this tenant — branch on status
       const existingUsers = await storage.getUsersInTenant(tenantId);
       const existingUser = existingUsers.find(u => u.email === email);
+
       if (existingUser) {
-        return res.status(400).json({ message: "User already exists in this tenant" });
+        if (existingUser.status === 'active') {
+          return res.status(400).json({ message: "This user is already an active team member" });
+        }
+
+        if (existingUser.status === 'invited') {
+          // Resend invitation email
+          try {
+            const tenant = await storage.getTenant(tenantId);
+            const inviter = await storage.getUser(invitedBy);
+            const pendingInvitations = await storage.getPendingInvitations(tenantId);
+            const existingInvitation = pendingInvitations.find(inv => inv.email === email);
+            if (existingInvitation) {
+              const { sendUserInvitationEmail } = await import("../services/email/SendGridEmailService");
+              await sendUserInvitationEmail({
+                email,
+                inviteToken: (existingInvitation as any).inviteToken || '',
+                role,
+                tenantName: tenant?.name || 'your organisation',
+                inviterName: inviter ? `${inviter.firstName || ''} ${inviter.lastName || ''}`.trim() || inviter.email : undefined,
+              });
+              console.log(`📧 Invitation email resent to ${email} for tenant ${tenantId}`);
+            }
+          } catch (emailErr: any) {
+            console.error(`⚠️ Failed to resend invitation email:`, emailErr.message);
+          }
+          return res.status(200).json({
+            success: true,
+            message: `Invitation resent to ${email}`,
+          });
+        }
+
+        if (existingUser.status === 'removed') {
+          // GDPR-erased users cannot be reactivated — treat as new
+          if (existingUser.gdprErased) {
+            // Email is anonymised (removed-{id}@erased.local), so it won't match.
+            // If we somehow get here, reject cleanly.
+            return res.status(400).json({ message: "This user account has been permanently erased and cannot be reactivated" });
+          }
+
+          // Silent reactivation: reset status to 'invited', clear removal fields
+          await db.update(users).set({
+            status: 'invited',
+            removedAt: null,
+            removedBy: null,
+            reactivatedAt: new Date(),
+            reactivationCount: sql`COALESCE(${users.reactivationCount}, 0) + 1`,
+            tenantRole: role,
+          }).where(eq(users.id, existingUser.id));
+
+          // Create fresh invitation record
+          const invitation = await storage.createUserInvitation({
+            email,
+            role,
+            tenantId,
+            invitedBy,
+          });
+
+          // Send invitation email
+          try {
+            const tenant = await storage.getTenant(tenantId);
+            const inviter = await storage.getUser(invitedBy);
+            const { sendUserInvitationEmail } = await import("../services/email/SendGridEmailService");
+            await sendUserInvitationEmail({
+              email,
+              inviteToken: invitation.inviteToken,
+              role,
+              tenantName: tenant?.name || 'your organisation',
+              inviterName: inviter ? `${inviter.firstName || ''} ${inviter.lastName || ''}`.trim() || inviter.email : undefined,
+            });
+            console.log(`📧 Reactivation invitation email sent to ${email} for tenant ${tenantId}`);
+          } catch (emailErr: any) {
+            console.error(`⚠️ Reactivation created but email failed to send:`, emailErr.message);
+          }
+
+          // Audit log
+          logAuditFromReq(req, 'reactivate_user', 'operational', { type: 'user', id: existingUser.id }, {
+            targetEmail: email,
+            newRole: role,
+            reactivationCount: (existingUser.reactivationCount || 0) + 1,
+          });
+
+          return res.status(201).json({
+            success: true,
+            invitationId: invitation.id,
+            message: `Invitation sent to ${email} for role ${role}`,
+          });
+        }
       }
 
-      // Create invitation
+      // No existing user — create new invitation (original flow)
       const invitation = await storage.createUserInvitation({
         email,
         role,
@@ -849,6 +936,29 @@ export async function registerSettingsRoutes(app: Express): Promise<void> {
         removedBy: actorId,
       }).where(eq(users.id, userId));
 
+      // Delete Clerk account to prevent authentication
+      if (targetUser.clerkId) {
+        try {
+          const { createClerkClient } = await import("@clerk/clerk-sdk-node");
+          const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY || "" });
+          await clerk.users.deleteUser(targetUser.clerkId);
+          // Clear clerkId so reactivation creates a fresh Clerk account
+          await db.update(users).set({ clerkId: null }).where(eq(users.id, userId));
+        } catch (clerkErr: any) {
+          console.error('⚠️ Failed to delete Clerk account:', clerkErr.message);
+          // Non-fatal — DB soft-delete already done. Log for admin visibility.
+          try {
+            await db.insert(adminSystemErrors).values({
+              tenantId,
+              source: 'clerk_deletion',
+              severity: 'warning',
+              message: `Failed to delete Clerk account for removed user ${targetUser.email}: ${clerkErr.message}`,
+              context: { userId, clerkId: targetUser.clerkId },
+            });
+          } catch (_) { /* swallow — best-effort */ }
+        }
+      }
+
       // Revoke all active delegations
       await db.update(userDelegations).set({
         isActive: false,
@@ -886,6 +996,49 @@ export async function registerSettingsRoutes(app: Express): Promise<void> {
     } catch (error) {
       console.error("Error removing user:", error);
       res.status(500).json({ message: "Failed to remove user" });
+    }
+  });
+
+  // GDPR permanent erasure — owner-only
+  app.post("/api/rbac/users/:userId/gdpr-erase", isAuthenticated, withRBACContext, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const { tenantId, tenantRole } = req.rbac;
+      const actorRole = tenantRole || req.rbac.userRole;
+
+      if (actorRole !== 'owner') {
+        return res.status(403).json({ message: "Only the account owner can permanently erase user data" });
+      }
+
+      const targetUser = await storage.getUser(userId);
+      if (!targetUser || targetUser.tenantId !== tenantId) {
+        return res.status(404).json({ message: "User not found in this tenant" });
+      }
+      if (targetUser.status !== 'removed') {
+        return res.status(400).json({ message: "Only removed users can be erased. Remove the user first." });
+      }
+      if (targetUser.gdprErased) {
+        return res.status(400).json({ message: "This user's data has already been erased" });
+      }
+
+      // Anonymise personal data — keep the row for audit trail integrity
+      await db.update(users).set({
+        firstName: 'Former',
+        lastName: 'user',
+        email: `removed-${userId}@erased.local`,
+        profileImageUrl: null,
+        gdprErased: true,
+        gdprErasedAt: new Date(),
+      }).where(eq(users.id, userId));
+
+      logAuditFromReq(req, 'gdpr_erase_user', 'operational', { type: 'user', id: userId }, {
+        originalEmail: targetUser.email,
+      });
+
+      res.json({ success: true, message: "User personal data has been permanently erased" });
+    } catch (error) {
+      console.error("Error performing GDPR erasure:", error);
+      res.status(500).json({ message: "Failed to erase user data" });
     }
   });
 
@@ -992,6 +1145,7 @@ export async function registerSettingsRoutes(app: Express): Promise<void> {
             previousRole: u.tenantRole || u.role,
             removedAt: u.removedAt,
             removedBy: remover ? { id: remover.id, name: `${remover.firstName || ''} ${remover.lastName || ''}`.trim() || remover.email } : null,
+            gdprErased: u.gdprErased ?? false,
           };
         });
 

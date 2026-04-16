@@ -57,6 +57,11 @@ export const users = pgTable("users", {
   removedAt: timestamp("removed_at"),
   removedBy: varchar("removed_by"), // FK to users.id (self-ref)
   lastActiveAt: timestamp("last_active_at"),
+  // Reactivation & GDPR
+  reactivatedAt: timestamp("reactivated_at"),
+  reactivationCount: integer("reactivation_count").default(0),
+  gdprErased: boolean("gdpr_erased").default(false),
+  gdprErasedAt: timestamp("gdpr_erased_at"),
 });
 
 // Tenants table for multi-tenancy
