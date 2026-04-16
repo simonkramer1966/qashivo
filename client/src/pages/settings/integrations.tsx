@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,10 +31,8 @@ import {
   Landmark,
   Mail,
   AlertTriangle,
-  Radio,
   Phone,
   Mic,
-  Globe,
   Send,
   ShieldCheck,
   ChevronDown,
@@ -940,41 +937,43 @@ export default function SettingsIntegrations() {
     }
   }, []);
 
+  const [activeTab, setActiveTab] = useState(defaultTab);
+
+  const integrationTabs = [
+    { id: "accounting", label: "Accounting" },
+    { id: "email", label: "Email" },
+    { id: "banking", label: "Banking" },
+    { id: "communications", label: "Communications" },
+  ];
+
   return (
     <AppShell title="Integrations" subtitle="Connect your accounting, email, banking, and communication services">
       <div className="max-w-5xl mx-auto">
-        <Tabs defaultValue={defaultTab}>
-          <TabsList className="mb-6">
-            <TabsTrigger value="accounting">
-              <Building2 className="h-4 w-4 mr-1.5" /> Accounting
-            </TabsTrigger>
-            <TabsTrigger value="email">
-              <Mail className="h-4 w-4 mr-1.5" /> Email
-            </TabsTrigger>
-            <TabsTrigger value="banking">
-              <Landmark className="h-4 w-4 mr-1.5" /> Banking
-            </TabsTrigger>
-            <TabsTrigger value="communications">
-              <Radio className="h-4 w-4 mr-1.5" /> Communications
-            </TabsTrigger>
-          </TabsList>
+        <div className="border-b border-border mb-6">
+          <div className="flex items-center gap-1">
+            {integrationTabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-4 py-3 text-[13px] font-medium transition-colors relative ${
+                  activeTab === tab.id
+                    ? "text-foreground"
+                    : "text-muted-foreground/60 hover:text-muted-foreground"
+                }`}
+              >
+                {tab.label}
+                {activeTab === tab.id && (
+                  <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-foreground rounded-full" />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
 
-          <TabsContent value="accounting">
-            <AccountingTab />
-          </TabsContent>
-
-          <TabsContent value="email">
-            <EmailTab />
-          </TabsContent>
-
-          <TabsContent value="banking">
-            <BankingTab />
-          </TabsContent>
-
-          <TabsContent value="communications">
-            <CommunicationsTab />
-          </TabsContent>
-        </Tabs>
+        {activeTab === "accounting" && <AccountingTab />}
+        {activeTab === "email" && <EmailTab />}
+        {activeTab === "banking" && <BankingTab />}
+        {activeTab === "communications" && <CommunicationsTab />}
       </div>
     </AppShell>
   );
