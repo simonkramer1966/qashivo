@@ -582,19 +582,17 @@ function DebtorNotesSection({ contactId }: { contactId: string }) {
   const SOURCE_LABELS: Record<string, string> = { user: "User", charlie: "Charlie", riley: "Riley", system: "System", partner: "Partner" };
 
   return (
-    <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)]">
-      <div className="px-5 pt-5 pb-3 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-[var(--q-text-primary)] flex items-center gap-2">
-          Notes
-        </h3>
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-base font-semibold text-foreground">Notes</h3>
         <button
           onClick={() => navigate(`/qollections/agent-activity?tab=notes`)}
-          className="text-xs text-[var(--q-accent)] hover:underline"
+          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
           View all
         </button>
       </div>
-      <div className="px-5 pb-4 space-y-3">
+      <div className="space-y-3">
         {/* Quick-add */}
         <div className="flex items-center gap-2">
           <input
@@ -603,12 +601,12 @@ function DebtorNotesSection({ contactId }: { contactId: string }) {
             value={newNote}
             onChange={(e) => setNewNote(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-            className="flex-1 h-8 rounded-md border border-[var(--q-border-default)] bg-[var(--q-bg-page)] px-2.5 text-sm text-[var(--q-text-primary)] placeholder:text-[var(--q-text-tertiary)]"
+            className="flex-1 h-8 rounded-md border border-border bg-background px-2.5 text-sm text-foreground placeholder:text-muted-foreground/50"
           />
           <button
             onClick={handleAdd}
             disabled={!newNote.trim() || createNoteMut.isPending}
-            className="h-8 px-3 rounded-md bg-[var(--q-accent)] text-white text-xs font-medium disabled:opacity-50"
+            className="h-8 px-3 rounded-md bg-foreground text-background text-xs font-medium disabled:opacity-50"
           >
             Add
           </button>
@@ -616,16 +614,16 @@ function DebtorNotesSection({ contactId }: { contactId: string }) {
 
         {/* Notes feed */}
         {notesList.length === 0 && (
-          <p className="text-xs text-[var(--q-text-tertiary)] py-2">No notes yet</p>
+          <p className="text-sm text-muted-foreground py-2">No notes yet</p>
         )}
         {notesList.map((n) => (
-          <div key={n.id} className="border-l-2 border-[var(--q-border-default)] pl-3 py-1">
-            <div className="flex items-center gap-1.5 text-[11px] text-[var(--q-text-tertiary)]">
+          <div key={n.id} className="border-l-2 border-border pl-3 py-1">
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
               <span className="font-medium">{n.createdByName ?? SOURCE_LABELS[n.source] ?? n.source}</span>
               <span>&middot;</span>
               <span>{new Date(n.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>
             </div>
-            <p className="text-sm text-[var(--q-text-primary)] mt-0.5 whitespace-pre-wrap">{n.content}</p>
+            <p className="text-sm text-foreground mt-0.5 whitespace-pre-wrap">{n.content}</p>
           </div>
         ))}
       </div>
@@ -808,7 +806,6 @@ export default function DebtorRecord() {
 
   // --- AR details edit state ---
   const [primaryPickerOpen, setPrimaryPickerOpen] = useState(false);
-  const [escalationPickerOpen, setEscalationPickerOpen] = useState(false);
 
   // --- Contact person state ---
   const [personDialogOpen, setPersonDialogOpen] = useState(false);
@@ -2302,225 +2299,169 @@ export default function DebtorRecord() {
           {/* ============================================================== */}
           {/* TAB 1: Details & Contacts                                       */}
           {/* ============================================================== */}
-          <TabsContent value="details" className="space-y-4 mt-4">
-            <div className="grid md:grid-cols-3 gap-4 items-stretch">
-              {/* Company info */}
-              <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] h-full">
-                <div className="px-5 pt-5 pb-3">
-                  <h3 className="text-sm font-semibold text-[var(--q-text-primary)] flex items-center gap-2">
-                    <Building className="h-4 w-4 text-[var(--q-text-tertiary)]" /> Company Information
-                  </h3>
-                </div>
-                <div className="px-5 pb-5 space-y-3 text-sm">
-                  <div>
-                    <span className="text-[var(--q-text-tertiary)]">Name:</span>{" "}
-                    <span className="font-medium text-[var(--q-text-primary)]">{contact.name}</span>
-                  </div>
-                  {contact.address && (
-                    <div>
-                      <span className="text-[var(--q-text-tertiary)]">Address:</span>{" "}
-                      <span className="font-medium text-[var(--q-text-primary)]">{contact.address}</span>
-                    </div>
-                  )}
-                  {contact.email && (
-                    <div>
-                      <span className="text-[var(--q-text-tertiary)]">Email:</span>{" "}
-                      <span className="font-medium text-[var(--q-text-primary)]">{contact.email}</span>
-                    </div>
-                  )}
-                  {contact.phone && (
-                    <div>
-                      <span className="text-[var(--q-text-tertiary)]">Phone:</span>{" "}
-                      <span className="font-medium text-[var(--q-text-primary)]">{contact.phone}</span>
-                    </div>
-                  )}
-                  {contact.paymentTerms && (
-                    <div>
-                      <span className="text-[var(--q-text-tertiary)]">Payment Terms:</span>{" "}
-                      <span className="font-medium text-[var(--q-text-primary)]">{contact.paymentTerms}</span>
-                    </div>
-                  )}
-                  {contact.creditLimit && (
-                    <div>
-                      <span className="text-[var(--q-text-tertiary)]">Credit Limit:</span>{" "}
-                      <span className="font-medium text-[var(--q-text-primary)]">
-                        {gbp.format(num(contact.creditLimit))}
-                      </span>
-                    </div>
-                  )}
-                  {contact.xeroContactId && (
-                    <div className="pt-1">
-                      <a
-                        href={`https://go.xero.com/Contacts/View/${contact.xeroContactId}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[var(--q-accent)] hover:underline text-xs inline-flex items-center gap-1"
-                      >
-                        <ExternalLink className="h-3 w-3" /> View in Xero
-                      </a>
-                    </div>
-                  )}
-                </div>
+          <TabsContent value="details" className="space-y-8 mt-6">
+
+            {/* ── Company Information ── */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-semibold text-foreground">Company information</h3>
+                {contact.xeroContactId && (
+                  <a
+                    href={`https://go.xero.com/Contacts/View/${contact.xeroContactId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 transition-colors"
+                  >
+                    <ExternalLink className="h-3 w-3" /> View in Xero
+                  </a>
+                )}
               </div>
-
-              {/* AR Primary Contact */}
-              {(() => {
-                const primary = persons.find((p) => p.isPrimaryCreditControl);
-                return (
-                  <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] h-full">
-                    <div className="px-5 pt-5 pb-3 flex items-center justify-between">
-                      <h3 className="text-sm font-semibold text-[var(--q-text-primary)] flex items-center gap-2">
-                        <Star className="h-4 w-4 text-[var(--q-text-tertiary)]" /> AR Primary Contact
-                      </h3>
-                      <Button variant="ghost" size="sm" onClick={() => setPrimaryPickerOpen(true)}>
-                        <Pencil className="h-3 w-3 mr-1" /> Edit
-                      </Button>
-                    </div>
-                    <div className="px-5 pb-5 space-y-2 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">Name:</span>{" "}
-                        {primary?.name ? (
-                          <span className="font-medium">{primary.name}</span>
-                        ) : (
-                          <span className="italic text-[var(--q-text-tertiary)] opacity-70">Not set</span>
-                        )}
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Email:</span>{" "}
-                        {primary?.email ? (
-                          <span className="font-medium">{primary.email}</span>
-                        ) : (
-                          <span className="italic text-[var(--q-text-tertiary)] opacity-70">Not set</span>
-                        )}
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Phone:</span>{" "}
-                        {primary?.phone ? (
-                          <span className="font-medium">{primary.phone}</span>
-                        ) : (
-                          <span className="italic text-[var(--q-text-tertiary)] opacity-70">Not set</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {/* AR Escalation Contact */}
-              {(() => {
-                const escalation = persons.find((p) => p.isEscalation);
-                return (
-                  <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)] h-full">
-                    <div className="px-5 pt-5 pb-3 flex items-center justify-between">
-                      <h3 className="text-sm font-semibold text-[var(--q-text-primary)] flex items-center gap-2">
-                        <AlertCircle className="h-4 w-4 text-[var(--q-text-tertiary)]" /> AR Escalation Contact
-                      </h3>
-                      <Button variant="ghost" size="sm" onClick={() => setEscalationPickerOpen(true)}>
-                        <Pencil className="h-3 w-3 mr-1" /> Edit
-                      </Button>
-                    </div>
-                    <div className="px-5 pb-5 space-y-2 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">Name:</span>{" "}
-                        {escalation?.name ? (
-                          <span className="font-medium">{escalation.name}</span>
-                        ) : (
-                          <span className="italic text-[var(--q-text-tertiary)] opacity-70">Not set</span>
-                        )}
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Email:</span>{" "}
-                        {escalation?.email ? (
-                          <span className="font-medium">{escalation.email}</span>
-                        ) : (
-                          <span className="italic text-[var(--q-text-tertiary)] opacity-70">Not set</span>
-                        )}
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Phone:</span>{" "}
-                        {escalation?.phone ? (
-                          <span className="font-medium">{escalation.phone}</span>
-                        ) : (
-                          <span className="italic text-[var(--q-text-tertiary)] opacity-70">Not set</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
+              <div className="grid grid-cols-[140px_1fr] gap-y-2.5 text-sm">
+                <span className="text-muted-foreground">Name</span>
+                <span className="text-foreground">{contact.name}</span>
+                {contact.address && (<>
+                  <span className="text-muted-foreground">Address</span>
+                  <span className="text-foreground">{contact.address}</span>
+                </>)}
+                {contact.email && (<>
+                  <span className="text-muted-foreground">Email</span>
+                  <span className="text-foreground">{contact.email}</span>
+                </>)}
+                {contact.phone && (<>
+                  <span className="text-muted-foreground">Phone</span>
+                  <span className="text-foreground">{contact.phone}</span>
+                </>)}
+                {contact.paymentTerms && (<>
+                  <span className="text-muted-foreground">Payment terms</span>
+                  <span className="text-foreground">{contact.paymentTerms}</span>
+                </>)}
+                {contact.creditLimit && (<>
+                  <span className="text-muted-foreground">Credit limit</span>
+                  <span className="text-foreground">{gbp.format(num(contact.creditLimit))}</span>
+                </>)}
+              </div>
             </div>
 
-            {/* Communication Preferences */}
-            <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)]">
-              <div className="px-5 pt-5 pb-3">
-                <h3 className="text-sm font-semibold text-[var(--q-text-primary)] flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4 text-[var(--q-text-tertiary)]" /> Communication Preferences
-                </h3>
-              </div>
-              <div className="px-5 pb-5">
-                {(() => {
-                  const SavedTick = ({ field }: { field: string }) => (
-                    prefSaveField === field ? (
-                      <CheckCircle2 className="h-3.5 w-3.5 text-[var(--q-money-in-text)] animate-in fade-in duration-200" />
-                    ) : null
-                  );
+            <Separator />
 
-                  const ALL_DAYS = [
-                    { key: "monday", label: "M" },
-                    { key: "tuesday", label: "T" },
-                    { key: "wednesday", label: "W" },
-                    { key: "thursday", label: "T" },
-                    { key: "friday", label: "F" },
-                    { key: "saturday", label: "S" },
-                    { key: "sunday", label: "S" },
-                  ];
+            {/* ── Contacts (AR Primary + Escalation) ── */}
+            {(() => {
+              const primary = persons.find((p) => p.isPrimaryCreditControl);
+              const escalation = persons.find((p) => p.isEscalation);
+              const isSamePerson = primary && escalation && primary.id === escalation.id;
 
-                  const currentDays = commPrefs?.bestContactDays || ["monday", "tuesday", "wednesday", "thursday", "friday"];
-                  const hasCustomHours = !!(commPrefs?.bestContactWindowStart || commPrefs?.bestContactWindowEnd);
-                  const channelOverride = commPrefs?.preferredChannelOverride || null;
+              return (
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-base font-semibold text-foreground">Contacts</h3>
+                    <button
+                      onClick={() => setPrimaryPickerOpen(true)}
+                      className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Edit contacts
+                    </button>
+                  </div>
 
-                  return (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-5">
-                      {/* ── ROW 1, COL 1: Channels ── */}
-                      <div className="space-y-2.5">
-                        <h4 className="text-[13px] font-medium text-muted-foreground">Channels</h4>
-                        <div className="flex flex-col gap-2">
-                          {([
-                            { key: "emailEnabled", label: "Email", icon: Mail },
-                            { key: "smsEnabled", label: "SMS", icon: MessageSquare },
-                            { key: "voiceEnabled", label: "Voice", icon: Phone },
-                          ] as const).map(({ key, label, icon: Icon }) => (
-                            <div key={key} className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-                                <span className="text-sm">{label}</span>
-                                <SavedTick field={key} />
-                              </div>
-                              <Switch
-                                checked={commPrefs?.[key] ?? true}
-                                onCheckedChange={(checked) =>
-                                  updateCommPrefsMutation.mutate({
-                                    [key]: checked,
-                                    channelPreferenceSource: "user_manual",
-                                  })
-                                }
-                              />
-                            </div>
-                          ))}
-                        </div>
-                        {commPrefs?.channelPreferenceSource && (
-                          <p className="text-xs text-muted-foreground">
-                            Set by: {commPrefs.channelPreferenceSource === "user_manual" ? "manual" : commPrefs.channelPreferenceSource}
-                          </p>
-                        )}
+                  {isSamePerson ? (
+                    <div className="text-sm">
+                      <p className="text-muted-foreground text-xs mb-2">Primary and escalation contact</p>
+                      <div className="grid grid-cols-[140px_1fr] gap-y-2">
+                        <span className="text-muted-foreground">Name</span>
+                        <span className="text-foreground">{primary.name}</span>
+                        <span className="text-muted-foreground">Email</span>
+                        <span className="text-foreground">{primary.email || <span className="italic text-muted-foreground/60">Not set</span>}</span>
+                        <span className="text-muted-foreground">Phone</span>
+                        <span className="text-foreground">{primary.phone || <span className="italic text-muted-foreground/60">Not set</span>}</span>
                       </div>
+                    </div>
+                  ) : (
+                    <div className="grid md:grid-cols-2 gap-8">
+                      <div className="text-sm">
+                        <p className="text-muted-foreground text-xs mb-2">AR primary contact</p>
+                        <div className="grid grid-cols-[140px_1fr] gap-y-2">
+                          <span className="text-muted-foreground">Name</span>
+                          <span className="text-foreground">{primary?.name || <span className="italic text-muted-foreground/60">Not set</span>}</span>
+                          <span className="text-muted-foreground">Email</span>
+                          <span className="text-foreground">{primary?.email || <span className="italic text-muted-foreground/60">Not set</span>}</span>
+                          <span className="text-muted-foreground">Phone</span>
+                          <span className="text-foreground">{primary?.phone || <span className="italic text-muted-foreground/60">Not set</span>}</span>
+                        </div>
+                      </div>
+                      <div className="text-sm">
+                        <p className="text-muted-foreground text-xs mb-2">AR escalation contact</p>
+                        <div className="grid grid-cols-[140px_1fr] gap-y-2">
+                          <span className="text-muted-foreground">Name</span>
+                          <span className="text-foreground">{escalation?.name || <span className="italic text-muted-foreground/60">Not set</span>}</span>
+                          <span className="text-muted-foreground">Email</span>
+                          <span className="text-foreground">{escalation?.email || <span className="italic text-muted-foreground/60">Not set</span>}</span>
+                          <span className="text-muted-foreground">Phone</span>
+                          <span className="text-foreground">{escalation?.phone || <span className="italic text-muted-foreground/60">Not set</span>}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
-                      {/* ── ROW 1, COL 2: Contact Hours ── */}
-                      <div className="space-y-2.5">
-                        <h4 className="text-[13px] font-medium text-muted-foreground flex items-center gap-1.5">
-                          Contact Hours
-                          <SavedTick field="bestContactWindowStart" />
-                        </h4>
+            <Separator />
+
+            {/* ── Communication Preferences ── */}
+            <div>
+              <h3 className="text-base font-semibold text-foreground mb-5">Communication preferences</h3>
+              {(() => {
+                const SavedTick = ({ field }: { field: string }) => (
+                  prefSaveField === field ? (
+                    <CheckCircle2 className="h-3.5 w-3.5 text-[var(--q-money-in-text)] animate-in fade-in duration-200" />
+                  ) : null
+                );
+
+                const ALL_DAYS = [
+                  { key: "monday", label: "M" },
+                  { key: "tuesday", label: "T" },
+                  { key: "wednesday", label: "W" },
+                  { key: "thursday", label: "T" },
+                  { key: "friday", label: "F" },
+                  { key: "saturday", label: "S" },
+                  { key: "sunday", label: "S" },
+                ];
+
+                const currentDays = commPrefs?.bestContactDays || ["monday", "tuesday", "wednesday", "thursday", "friday"];
+                const hasCustomHours = !!(commPrefs?.bestContactWindowStart || commPrefs?.bestContactWindowEnd);
+                const channelOverride = commPrefs?.preferredChannelOverride || null;
+
+                return (
+                  <div className="space-y-6">
+                    {/* Channels */}
+                    <div className="flex items-center gap-6 text-sm">
+                      <span className="text-muted-foreground w-32 shrink-0">Channels</span>
+                      <div className="flex items-center gap-5">
+                        {([
+                          { key: "emailEnabled", label: "Email" },
+                          { key: "smsEnabled", label: "SMS" },
+                          { key: "voiceEnabled", label: "Voice" },
+                        ] as const).map(({ key, label }) => (
+                          <div key={key} className="flex items-center gap-2">
+                            <span className="text-foreground">{label}</span>
+                            <Switch
+                              checked={commPrefs?.[key] ?? true}
+                              onCheckedChange={(checked) =>
+                                updateCommPrefsMutation.mutate({
+                                  [key]: checked,
+                                  channelPreferenceSource: "user_manual",
+                                })
+                              }
+                            />
+                            <SavedTick field={key} />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Contact hours */}
+                    <div className="flex items-start gap-6 text-sm">
+                      <span className="text-muted-foreground w-32 shrink-0 pt-0.5">Contact hours</span>
+                      <div className="space-y-2">
                         <RadioGroup
                           value={hasCustomHours ? "custom" : "default"}
                           onValueChange={(val) => {
@@ -2532,12 +2473,12 @@ export default function DebtorRecord() {
                               });
                             }
                           }}
-                          className="flex flex-col gap-1"
+                          className="flex flex-col gap-1.5"
                         >
                           <div className="flex items-center gap-2">
                             <RadioGroupItem value="default" id="hours-default" />
                             <Label htmlFor="hours-default" className="text-sm font-normal cursor-pointer">
-                              Default (08:00–18:00)
+                              Default (08:00 – 18:00)
                             </Label>
                           </div>
                           <div className="flex items-center gap-2">
@@ -2574,7 +2515,7 @@ export default function DebtorRecord() {
                                 updateCommPrefsMutation.mutate({ contactTimezone: val })
                               }
                             >
-                              <SelectTrigger className="h-7 w-full text-xs">
+                              <SelectTrigger className="h-7 w-48 text-xs">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -2585,58 +2526,44 @@ export default function DebtorRecord() {
                             </Select>
                           </div>
                         )}
+                        <SavedTick field="bestContactWindowStart" />
                       </div>
+                    </div>
 
-                      {/* ── ROW 1, COL 3: Do Not Contact ── */}
-                      <div className="space-y-2.5">
-                        <h4 className="text-[13px] font-medium text-muted-foreground flex items-center gap-1.5">
-                          Do Not Contact
-                          <SavedTick field="doNotContactUntil" />
-                        </h4>
-                        <div className="space-y-1.5">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xs text-muted-foreground w-10">From</span>
-                            <Input
-                              type="date"
-                              className="h-7 text-xs flex-1"
-                              value={commPrefs?.doNotContactFrom || ""}
-                              onChange={(e) =>
-                                updateCommPrefsMutation.mutate({ doNotContactFrom: e.target.value || null })
-                              }
-                            />
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xs text-muted-foreground w-10">Until</span>
-                            <Input
-                              type="date"
-                              className="h-7 text-xs flex-1"
-                              value={commPrefs?.doNotContactUntil || ""}
-                              onChange={(e) =>
-                                updateCommPrefsMutation.mutate({ doNotContactUntil: e.target.value || null })
-                              }
-                            />
-                          </div>
-                          <Input
-                            placeholder="Reason (e.g. holiday, staff change)"
-                            className="h-7 text-xs"
-                            defaultValue={commPrefs?.doNotContactReason || ""}
-                            key={commPrefs?.doNotContactReason ?? "dnc-reason"}
-                            onBlur={(e) =>
-                              updateCommPrefsMutation.mutate({ doNotContactReason: e.target.value || null })
-                            }
-                          />
-                        </div>
+                    {/* Contact days */}
+                    <div className="flex items-center gap-6 text-sm">
+                      <span className="text-muted-foreground w-32 shrink-0">Contact days</span>
+                      <div className="flex items-center gap-1">
+                        {ALL_DAYS.map(({ key, label }) => {
+                          const active = currentDays.includes(key);
+                          return (
+                            <button
+                              key={key}
+                              onClick={() => {
+                                const newDays = active
+                                  ? currentDays.filter((d: string) => d !== key)
+                                  : [...currentDays, key];
+                                updateCommPrefsMutation.mutate({ bestContactDays: newDays });
+                              }}
+                              className={cn(
+                                "w-8 h-8 text-xs font-medium rounded-md transition-colors",
+                                active
+                                  ? "bg-foreground text-background"
+                                  : "text-muted-foreground hover:bg-muted"
+                              )}
+                            >
+                              {label}
+                            </button>
+                          );
+                        })}
+                        <SavedTick field="bestContactDays" />
                       </div>
+                    </div>
 
-                      {/* ── Row separator ── */}
-                      <div className="md:col-span-3 border-t border-border" />
-
-                      {/* ── ROW 2, COL 1: Preferred Channel ── */}
-                      <div className="space-y-2.5">
-                        <h4 className="text-[13px] font-medium text-muted-foreground flex items-center gap-1.5">
-                          Preferred Channel
-                          <SavedTick field="preferredChannelOverride" />
-                        </h4>
+                    {/* Preferred channel */}
+                    <div className="flex items-start gap-6 text-sm">
+                      <span className="text-muted-foreground w-32 shrink-0 pt-0.5">Preferred channel</span>
+                      <div className="flex items-center gap-1">
                         <RadioGroup
                           value={channelOverride || "auto"}
                           onValueChange={(val) =>
@@ -2645,7 +2572,7 @@ export default function DebtorRecord() {
                               preferredChannelOverrideSource: "user_manual",
                             })
                           }
-                          className="flex flex-col gap-1"
+                          className="flex flex-col gap-1.5"
                         >
                           {[
                             { value: "auto", label: "Charlie decides" },
@@ -2661,223 +2588,221 @@ export default function DebtorRecord() {
                             </div>
                           ))}
                         </RadioGroup>
-                        <p className="text-xs text-muted-foreground">
-                          Override is a preference, not a hard lock.
-                        </p>
-                      </div>
-
-                      {/* ── ROW 2, COL 2: Contact Days ── */}
-                      <div className="space-y-2.5">
-                        <h4 className="text-[13px] font-medium text-muted-foreground flex items-center gap-1.5">
-                          Contact Days
-                          <SavedTick field="bestContactDays" />
-                        </h4>
-                        <div className="flex gap-1">
-                          {ALL_DAYS.map(({ key, label }) => {
-                            const active = currentDays.includes(key);
-                            return (
-                              <button
-                                key={key}
-                                onClick={() => {
-                                  const newDays = active
-                                    ? currentDays.filter((d: string) => d !== key)
-                                    : [...currentDays, key];
-                                  updateCommPrefsMutation.mutate({ bestContactDays: newDays });
-                                }}
-                                className={cn(
-                                  "w-9 h-9 text-xs font-medium rounded-md border transition-colors",
-                                  active
-                                    ? "bg-[var(--q-accent)] text-white border-[var(--q-accent)]"
-                                    : "bg-background text-muted-foreground border-border hover:bg-muted"
-                                )}
-                              >
-                                {label}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* ── ROW 2, COL 3: Currency & Language ── */}
-                      <div className="space-y-3">
-                        <h4 className="text-[13px] font-medium text-muted-foreground">Currency & Language</h4>
-                        <div className="space-y-2">
-                          <div className="space-y-1">
-                            <span className="text-xs text-muted-foreground">Currency</span>
-                            <Select
-                              value={contact?.preferredCurrency || "__default__"}
-                              onValueChange={(val) =>
-                                updateContactPrefMutation.mutate({
-                                  preferredCurrency: val === "__default__" ? "" : val,
-                                })
-                              }
-                            >
-                              <SelectTrigger className="h-8 rounded-lg bg-background border-border text-sm">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="__default__">Use default</SelectItem>
-                                {CURRENCIES.map((c) => (
-                                  <SelectItem key={c.code} value={c.code}>
-                                    {c.symbol} {c.name} ({c.code})
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-1">
-                            <span className="text-xs text-muted-foreground">Language</span>
-                            <Select
-                              value={contact?.preferredLanguage || "__default__"}
-                              onValueChange={(val) =>
-                                updateContactPrefMutation.mutate({
-                                  preferredLanguage: val === "__default__" ? "" : val,
-                                })
-                              }
-                            >
-                              <SelectTrigger className="h-8 rounded-lg bg-background border-border text-sm">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="__default__">Use default</SelectItem>
-                                {SUPPORTED_LANGUAGES.map((l) => (
-                                  <SelectItem key={l.code} value={l.code}>
-                                    {l.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <p className="text-xs text-muted-foreground">
-                              Overrides tenant default for AI comms.
-                            </p>
-                          </div>
-                        </div>
+                        <SavedTick field="preferredChannelOverride" />
                       </div>
                     </div>
-                  );
-                })()}
-              </div>
+
+                    {/* Do not contact */}
+                    <div className="flex items-start gap-6 text-sm">
+                      <span className="text-muted-foreground w-32 shrink-0 pt-0.5">Do not contact</span>
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-muted-foreground w-10">From</span>
+                          <Input
+                            type="date"
+                            className="h-7 text-xs w-36"
+                            value={commPrefs?.doNotContactFrom || ""}
+                            onChange={(e) =>
+                              updateCommPrefsMutation.mutate({ doNotContactFrom: e.target.value || null })
+                            }
+                          />
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-muted-foreground w-10">Until</span>
+                          <Input
+                            type="date"
+                            className="h-7 text-xs w-36"
+                            value={commPrefs?.doNotContactUntil || ""}
+                            onChange={(e) =>
+                              updateCommPrefsMutation.mutate({ doNotContactUntil: e.target.value || null })
+                            }
+                          />
+                        </div>
+                        <Input
+                          placeholder="Reason (e.g. holiday, staff change)"
+                          className="h-7 text-xs w-64"
+                          defaultValue={commPrefs?.doNotContactReason || ""}
+                          key={commPrefs?.doNotContactReason ?? "dnc-reason"}
+                          onBlur={(e) =>
+                            updateCommPrefsMutation.mutate({ doNotContactReason: e.target.value || null })
+                          }
+                        />
+                        <SavedTick field="doNotContactUntil" />
+                      </div>
+                    </div>
+
+                    {/* Currency & language */}
+                    <div className="flex items-start gap-6 text-sm">
+                      <span className="text-muted-foreground w-32 shrink-0 pt-0.5">Currency</span>
+                      <Select
+                        value={contact?.preferredCurrency || "__default__"}
+                        onValueChange={(val) =>
+                          updateContactPrefMutation.mutate({
+                            preferredCurrency: val === "__default__" ? "" : val,
+                          })
+                        }
+                      >
+                        <SelectTrigger className="h-8 w-56 text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__default__">Use default</SelectItem>
+                          {CURRENCIES.map((c) => (
+                            <SelectItem key={c.code} value={c.code}>
+                              {c.symbol} {c.name} ({c.code})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-start gap-6 text-sm">
+                      <span className="text-muted-foreground w-32 shrink-0 pt-0.5">Language</span>
+                      <Select
+                        value={contact?.preferredLanguage || "__default__"}
+                        onValueChange={(val) =>
+                          updateContactPrefMutation.mutate({
+                            preferredLanguage: val === "__default__" ? "" : val,
+                          })
+                        }
+                      >
+                        <SelectTrigger className="h-8 w-56 text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__default__">Use default</SelectItem>
+                          {SUPPORTED_LANGUAGES.map((l) => (
+                            <SelectItem key={l.code} value={l.code}>
+                              {l.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
-            {/* Primary Contact Picker Dialog */}
+            {/* Primary / Escalation Contact Picker Dialog */}
             <Dialog open={primaryPickerOpen} onOpenChange={setPrimaryPickerOpen}>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Set AR Primary Contact</DialogTitle>
+                  <DialogTitle>Edit contacts</DialogTitle>
                 </DialogHeader>
-                <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                  {persons.length === 0 ? (
-                    <p className="text-sm text-muted-foreground py-4 text-center">
-                      No contact persons available. Add one first.
-                    </p>
-                  ) : (
-                    persons.map((p) => (
-                      <button
-                        key={p.id}
-                        className={cn(
-                          "w-full text-left rounded-lg border p-3 hover:bg-muted/50 transition-colors",
-                          p.isPrimaryCreditControl && "border-[var(--q-info-border)] bg-[var(--q-info-bg)]"
-                        )}
-                        onClick={() => {
-                          setPrimaryMutation.mutate(p.id);
-                          setPrimaryPickerOpen(false);
-                        }}
-                      >
-                        <div className="font-medium text-sm flex items-center gap-2">
-                          {p.name}
-                          {p.isPrimaryCreditControl && (
-                            <QBadge variant="info">Current</QBadge>
-                          )}
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-0.5">
-                          {p.email || "No email"} · {p.phone || "No phone"}
-                        </div>
-                      </button>
-                    ))
-                  )}
-                </div>
-              </DialogContent>
-            </Dialog>
-
-            {/* Escalation Contact Picker Dialog */}
-            <Dialog open={escalationPickerOpen} onOpenChange={setEscalationPickerOpen}>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Set AR Escalation Contact</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                  {persons.length === 0 ? (
-                    <p className="text-sm text-muted-foreground py-4 text-center">
-                      No contact persons available. Add one first.
-                    </p>
-                  ) : (
-                    persons.map((p) => (
-                      <button
-                        key={p.id}
-                        className={cn(
-                          "w-full text-left rounded-lg border p-3 hover:bg-muted/50 transition-colors",
-                          p.isEscalation && "border-[var(--q-attention-border)] bg-[var(--q-attention-bg)]"
-                        )}
-                        onClick={() => {
-                          setEscalationMutation.mutate(p.id);
-                          setEscalationPickerOpen(false);
-                        }}
-                      >
-                        <div className="font-medium text-sm flex items-center gap-2">
-                          {p.name}
-                          {p.isEscalation && (
-                            <QBadge variant="attention">Current</QBadge>
-                          )}
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-0.5">
-                          {p.email || "No email"} · {p.phone || "No phone"}
-                        </div>
-                      </button>
-                    ))
-                  )}
-                </div>
-              </DialogContent>
-            </Dialog>
-
-            {/* Contact Persons */}
-            <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border-default)] rounded-[var(--q-radius-lg)]">
-              <div className="px-5 pt-5 pb-3 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-[var(--q-text-primary)]">Contact Persons</h3>
-                <Button variant="outline" size="sm" onClick={openAddPerson}>
-                  <Plus className="h-3 w-3 mr-1" /> Add Person
-                </Button>
-              </div>
-              <div className="px-5 pb-5">
-                {personsQuery.isLoading ? (
-                  <div className="space-y-2">
-                    <Skeleton className="h-12 w-full" />
-                    <Skeleton className="h-12 w-full" />
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-2">AR primary contact</p>
+                    <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
+                      {persons.length === 0 ? (
+                        <p className="text-sm text-muted-foreground py-4 text-center">
+                          No contact persons available. Add one first.
+                        </p>
+                      ) : (
+                        persons.map((p) => (
+                          <button
+                            key={p.id}
+                            className={cn(
+                              "w-full text-left rounded-lg border p-3 hover:bg-muted/50 transition-colors",
+                              p.isPrimaryCreditControl && "border-foreground/20 bg-muted/50"
+                            )}
+                            onClick={() => {
+                              setPrimaryMutation.mutate(p.id);
+                            }}
+                          >
+                            <div className="font-medium text-sm flex items-center gap-2">
+                              {p.name}
+                              {p.isPrimaryCreditControl && (
+                                <span className="text-xs text-muted-foreground">Current</span>
+                              )}
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-0.5">
+                              {p.email || "No email"} · {p.phone || "No phone"}
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
                   </div>
-                ) : persons.length === 0 ? (
-                  <p className="text-sm text-muted-foreground py-4 text-center">
-                    No contact persons added yet.
-                  </p>
-                ) : (
+                  <Separator />
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-2">AR escalation contact</p>
+                    <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
+                      {persons.length === 0 ? (
+                        <p className="text-sm text-muted-foreground py-4 text-center">
+                          No contact persons available. Add one first.
+                        </p>
+                      ) : (
+                        persons.map((p) => (
+                          <button
+                            key={p.id}
+                            className={cn(
+                              "w-full text-left rounded-lg border p-3 hover:bg-muted/50 transition-colors",
+                              p.isEscalation && "border-foreground/20 bg-muted/50"
+                            )}
+                            onClick={() => {
+                              setEscalationMutation.mutate(p.id);
+                            }}
+                          >
+                            <div className="font-medium text-sm flex items-center gap-2">
+                              {p.name}
+                              {p.isEscalation && (
+                                <span className="text-xs text-muted-foreground">Current</span>
+                              )}
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-0.5">
+                              {p.email || "No email"} · {p.phone || "No phone"}
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            <Separator />
+
+            {/* ── Contact Persons ── */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-semibold text-foreground">Contact persons</h3>
+                <button
+                  onClick={openAddPerson}
+                  className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 transition-colors"
+                >
+                  <Plus className="h-3 w-3" /> Add person
+                </button>
+              </div>
+              {personsQuery.isLoading ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                </div>
+              ) : persons.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4">
+                  No contact persons added yet.
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Name</TableHead>
-                        <TableHead>Job Title</TableHead>
+                        <TableHead>Job title</TableHead>
                         <TableHead>Email</TableHead>
                         <TableHead>Phone</TableHead>
                         <TableHead>Role</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
+                        <TableHead className="w-10"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {persons.map((p) => (
-                        <TableRow key={p.id}>
+                        <TableRow key={p.id} className="group">
                           <TableCell className="font-medium">
                             {p.name}
                             {p.isFromXero && (
-                              <Badge variant="outline" className="ml-2 text-[10px]">
-                                Xero
-                              </Badge>
+                              <span className="ml-2 text-[10px] text-muted-foreground">Xero</span>
                             )}
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
@@ -2885,63 +2810,50 @@ export default function DebtorRecord() {
                           </TableCell>
                           <TableCell className="text-sm">{p.email || "—"}</TableCell>
                           <TableCell className="text-sm">{p.phone || "—"}</TableCell>
-                          <TableCell>
-                            <div className="flex gap-1">
-                              {p.isPrimaryCreditControl && (
-                                <QBadge variant="info">Primary</QBadge>
-                              )}
-                              {p.isEscalation && (
-                                <QBadge variant="attention">Escalation</QBadge>
-                              )}
-                            </div>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {[
+                              p.isPrimaryCreditControl && "Primary",
+                              p.isEscalation && "Escalation",
+                            ].filter(Boolean).join(" · ") || "—"}
                           </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7"
-                                onClick={() => setPrimaryMutation.mutate(p.id)}
-                                title={p.isPrimaryCreditControl ? "Remove primary" : "Set as primary"}
-                              >
-                                <Star className={cn("h-3 w-3", p.isPrimaryCreditControl && "fill-[var(--q-info-text)] text-[var(--q-info-text)]")} />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7"
-                                onClick={() => setEscalationMutation.mutate(p.id)}
-                                title={p.isEscalation ? "Remove escalation" : "Set as escalation"}
-                              >
-                                <AlertCircle className={cn("h-3 w-3", p.isEscalation && "fill-[var(--q-attention-text)] text-[var(--q-attention-text)]")} />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7"
-                                onClick={() => openEditPerson(p)}
-                              >
-                                <Pencil className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-destructive"
-                                onClick={() => deletePersonMutation.mutate(p.id)}
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </div>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3.625 7.5C3.625 8.12132 3.12132 8.625 2.5 8.625C1.87868 8.625 1.375 8.12132 1.375 7.5C1.375 6.87868 1.87868 6.375 2.5 6.375C3.12132 6.375 3.625 6.87868 3.625 7.5ZM8.625 7.5C8.625 8.12132 8.12132 8.625 7.5 8.625C6.87868 8.625 6.375 8.12132 6.375 7.5C6.375 6.87868 6.87868 6.375 7.5 6.375C8.12132 6.375 8.625 6.87868 8.625 7.5ZM13.625 7.5C13.625 8.12132 13.1213 8.625 12.5 8.625C11.8787 8.625 11.375 8.12132 11.375 7.5C11.375 6.87868 11.8787 6.375 12.5 6.375C13.1213 6.375 13.625 6.87868 13.625 7.5Z" fill="currentColor"></path></svg>
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => setPrimaryMutation.mutate(p.id)}>
+                                  {p.isPrimaryCreditControl ? "Remove primary" : "Make primary"}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setEscalationMutation.mutate(p.id)}>
+                                  {p.isEscalation ? "Remove escalation" : "Make escalation"}
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => openEditPerson(p)}>
+                                  Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onClick={() => deletePersonMutation.mutate(p.id)}
+                                >
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
-                )}
-              </div>
+                </div>
+              )}
             </div>
 
-            {/* Notes section */}
+            <Separator />
+
+            {/* ── Notes ── */}
             <DebtorNotesSection contactId={contactId} />
 
             {/* Group Members section — only when contact belongs to a group */}
