@@ -21,7 +21,7 @@ import type { OnboardingStatus } from "@/components/OnboardingWizard";
 // Lazy-loaded pages
 const NotFound = lazy(() => import("@/pages/not-found"));
 const DebtorPortal = lazy(() => import("@/pages/debtor-portal"));
-const UserOnboarding = lazy(() => import("@/pages/UserOnboarding"));
+const OnboardingFlow = lazy(() => import("@/pages/onboarding/index"));
 const ConnectionError = lazy(() => import("@/pages/connection-error"));
 const AcceptInvite = lazy(() => import("@/pages/accept-invite"));
 const AcceptUserInvite = lazy(() => import("@/pages/accept-user-invite"));
@@ -164,11 +164,6 @@ function PartnerGuard({ children }: { children: React.ReactNode }) {
 
 function isOnboardingComplete(status: OnboardingStatus | undefined): boolean {
   if (!status) return false;
-  // Primary: data presence — immune to flag resets from schema migrations
-  if (status.hasDebtors || status.hasInvoices) return true;
-  // Secondary: Xero connected — they've been through OAuth
-  if (status.xeroConnected) return true;
-  // Tertiary: explicit flag
   return status.onboardingCompleted === true;
 }
 
@@ -374,7 +369,7 @@ function Router() {
           <Route path="/settings/billing">{() => <RoleGuard check={p => p.canAccessBilling}><SettingsBilling /></RoleGuard>}</Route>
 
           {/* Onboarding */}
-          <Route path="/onboarding" component={UserOnboarding} />
+          <Route path="/onboarding" component={OnboardingFlow} />
 
           {/* Public pages that also work when authenticated */}
           <Route path="/debtor-portal" component={DebtorPortal} />

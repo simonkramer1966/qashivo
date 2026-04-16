@@ -94,6 +94,8 @@ export const tenants = pgTable("tenants", {
   automationPreference: jsonb("automation_preference").default("{}"), // per customer segment preferences
   onboardingCompleted: boolean("onboarding_completed").default(false),
   onboardingCompletedAt: timestamp("onboarding_completed_at"),
+  onboardingStep: integer("onboarding_step").default(1), // tracks current onboarding step (1-7)
+  tradingAs: text("trading_as"), // optional trading name
   
   // Currency setting
   currency: varchar("currency").default("GBP"),

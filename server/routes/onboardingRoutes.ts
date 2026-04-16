@@ -371,21 +371,109 @@ export function registerOnboardingRoutes(app: Express): void {
     }
   });
 
+  // ── New guided onboarding: lightweight status for the 7-step flow ──
+  app.get('/api/onboarding/guided-status', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      const tenantId = user?.tenantId || req.session?.activeTenantId;
+      if (!tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
+      if (!tenant) return res.status(404).json({ message: "Tenant not found" });
+
+      // Check if Xero is connected
+      const xeroConnected = !!(tenant.xeroAccessToken && tenant.xeroTenantId);
+
+      // Check for default persona
+      const { agentPersonas } = await import("@shared/schema");
+      const [persona] = await db
+        .select({ id: agentPersonas.id })
+        .from(agentPersonas)
+        .where(and(eq(agentPersonas.tenantId, tenantId), eq(agentPersonas.isActive, true)))
+        .limit(1);
+
+      res.json({
+        onboardingStep: (tenant as any).onboardingStep ?? 1,
+        onboardingCompleted: tenant.onboardingCompleted ?? false,
+        tenant: {
+          name: tenant.name,
+          industry: tenant.industry,
+          companySize: tenant.companySize,
+          tradingAs: (tenant as any).tradingAs ?? null,
+          communicationMode: tenant.communicationMode ?? 'testing',
+          businessHoursStart: tenant.businessHoursStart ?? '09:00',
+          businessHoursEnd: tenant.businessHoursEnd ?? '17:30',
+          rileyReviewDay: tenant.rileyReviewDay ?? null,
+          rileyReviewTime: tenant.rileyReviewTime ?? null,
+        },
+        xeroConnected,
+        defaultPersonaId: tenant.defaultPersonaId ?? null,
+        hasPersona: !!persona,
+      });
+    } catch (error) {
+      console.error("Error fetching guided onboarding status:", error);
+      res.status(500).json({ message: "Failed to fetch onboarding status" });
+    }
+  });
+
+  // ── New guided onboarding: communication mode step ──
+  app.post('/api/onboarding/communication-mode', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      const tenantId = user?.tenantId || req.session?.activeTenantId;
+      if (!tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
+
+      const modeSchema = z.object({
+        communicationMode: z.enum(["off", "testing", "soft_live", "live"]).default("testing"),
+        businessHoursStart: z.string().regex(/^\d{2}:\d{2}$/).default("09:00"),
+        businessHoursEnd: z.string().regex(/^\d{2}:\d{2}$/).default("17:30"),
+      });
+
+      const data = modeSchema.parse(req.body);
+
+      await storage.updateTenant(tenantId, {
+        communicationMode: data.communicationMode,
+        businessHoursStart: data.businessHoursStart,
+        businessHoursEnd: data.businessHoursEnd,
+        onboardingStep: 6,
+      } as any);
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error saving communication mode:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to save communication mode" });
+    }
+  });
+
   app.post('/api/onboarding/company-details', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       const tenantId = user?.tenantId || req.session?.activeTenantId;
       if (!tenantId) return res.status(400).json({ message: "User not associated with a tenant" });
 
-      const { subscriberFirstName, subscriberLastName, companyName, companyAddress } = req.body;
-      if (!subscriberFirstName || !subscriberLastName || !companyName || !companyAddress?.line1 || !companyAddress?.city || !companyAddress?.postcode || !companyAddress?.country) {
-        return res.status(400).json({ message: "Missing required fields" });
+      // Support both old format (full address) and new guided onboarding format
+      const { companyName, industry, companySize, tradingAs, subscriberFirstName, subscriberLastName, companyAddress } = req.body;
+
+      if (!companyName) {
+        return res.status(400).json({ message: "Company name is required" });
       }
 
-      await onboardingService.saveCompanyDetails(tenantId, { subscriberFirstName, subscriberLastName, companyName, companyAddress });
+      // Update tenant with company details + advance onboarding step
+      const tenantUpdate: Record<string, any> = { name: companyName, onboardingStep: 3 };
+      if (industry) tenantUpdate.industry = industry;
+      if (companySize) tenantUpdate.companySize = companySize;
+      if (tradingAs !== undefined) tenantUpdate.tradingAs = tradingAs;
+      await storage.updateTenant(tenantId, tenantUpdate);
 
-      if (user) {
-        await storage.updateUser(user.id, { firstName: subscriberFirstName, lastName: subscriberLastName });
+      // Legacy path: save full company details if provided
+      if (subscriberFirstName && subscriberLastName && companyAddress) {
+        await onboardingService.saveCompanyDetails(tenantId, { subscriberFirstName, subscriberLastName, companyName, companyAddress });
+        if (user) {
+          await storage.updateUser(user.id, { firstName: subscriberFirstName, lastName: subscriberLastName });
+        }
       }
 
       await storage.createActivityLog({
@@ -395,8 +483,8 @@ export function registerOnboardingRoutes(app: Express): void {
         category: "audit",
         action: "completed",
         result: "success",
-        description: "Onboarding step 1 (Company Details) completed",
-        metadata: { step: 1, companyName },
+        description: "Onboarding step 2 (Company Details) completed",
+        metadata: { step: 2, companyName },
       });
 
       res.json({ success: true });
@@ -529,6 +617,7 @@ export function registerOnboardingRoutes(app: Express): void {
         rileyReviewDay: day,
         rileyReviewTime: time,
         rileyReviewTimezone: timezone || "Europe/London",
+        onboardingStep: 7,
       } as any);
 
       res.json({ success: true });
@@ -605,7 +694,10 @@ export function registerOnboardingRoutes(app: Express): void {
         isActive: true,
       }).returning();
 
-      // Mark step 4 as completed
+      // Set as default persona + advance onboarding step
+      await storage.updateTenant(tenantId, { defaultPersonaId: persona.id, onboardingStep: 5 } as any);
+
+      // Mark step 4 as completed (legacy tracking)
       await onboardingService.updateStepStatus(tenantId, 4, "COMPLETED");
 
       res.json({ success: true, persona });
