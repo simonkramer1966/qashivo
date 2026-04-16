@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "wouter";
 import { ChevronLeft } from "lucide-react";
 import PageLoader from "@/components/PageLoader";
+import qashivoLogo from "@/assets/qashivo-logo.png";
 import Welcome from "./steps/Welcome";
 import CompanyDetails from "./steps/CompanyDetails";
 import ConnectAccounting from "./steps/ConnectAccounting";
@@ -70,7 +71,8 @@ export default function OnboardingFlow() {
     <div className="min-h-screen bg-[var(--q-bg-page)] flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-center py-8">
-        <div className="text-center">
+        <div className="flex items-center gap-2">
+          <img src={qashivoLogo} alt="Qashivo" className="w-7 h-7" />
           <h1 className="text-lg font-semibold text-[var(--q-text-primary)] tracking-tight">Qashivo</h1>
         </div>
       </div>

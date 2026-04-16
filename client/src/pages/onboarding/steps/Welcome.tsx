@@ -8,7 +8,7 @@ interface Props {
 }
 
 const WELCOME_MESSAGE =
-  "Hi there! I'm Riley, your AI assistant at Qashivo. I'll help you get everything set up so Charlie — our collections agent — can start working on your outstanding invoices.\n\nThis will only take a couple of minutes. Let's get your account configured.";
+  "Hi there! I'm Riley, your AI assistant at Qashivo. I'll help you get everything set up so Charlie — your credit controller — can start working on your outstanding invoices.\n\nThis will only take a couple of minutes. Let's get your account configured.";
 
 export default function Welcome({ onComplete }: Props) {
   const [typingDone, setTypingDone] = useState(false);
