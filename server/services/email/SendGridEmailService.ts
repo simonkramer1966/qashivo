@@ -603,6 +603,8 @@ export async function sendUserInvitationEmail(params: {
   await emailService.sendEmail({
     to: [{ email }],
     subject: `You've been invited to join ${tenantName} on Qashivo`,
+    trackClicks: false,
+    trackOpens: false,
     html: `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 0; color: #0B0F17;">
         <div style="padding: 32px 0 24px 0; border-bottom: 1px solid #E6E8EC;">
@@ -660,6 +662,8 @@ export async function sendPasswordResetEmail(email: string, resetToken: string):
   const result = await emailService.sendEmail({
     to: [{ email }],
     subject: 'Reset Your Password',
+    trackClicks: false,
+    trackOpens: false,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #17B6C3;">Reset Your Password</h2>
@@ -721,6 +725,8 @@ export async function sendDelegationChangedEmail(params: {
   await emailService.sendEmail({
     to: [{ email }],
     subject: `Access updated — ${tenantName} on Qashivo`,
+    trackClicks: false,
+    trackOpens: false,
     html: `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 0; color: #0B0F17;">
         <div style="padding: 32px 0 24px 0; border-bottom: 1px solid #E6E8EC;">
@@ -771,6 +777,8 @@ export async function sendUserRemovedEmail(params: {
   await emailService.sendEmail({
     to: [{ email }],
     subject: `Access removed — ${tenantName} on Qashivo`,
+    trackClicks: false,
+    trackOpens: false,
     html: `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 0; color: #0B0F17;">
         <div style="padding: 32px 0 24px 0; border-bottom: 1px solid #E6E8EC;">
