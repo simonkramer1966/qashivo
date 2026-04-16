@@ -113,7 +113,7 @@ import { Slider } from "@/components/ui/slider";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { CURRENCIES, SUPPORTED_LANGUAGES, getLanguageName, getCurrencySymbol } from "@shared/currencies";
-import DebtorStatusBanner from "@/components/DebtorStatusBanner";
+
 import { usePermissions } from "@/hooks/usePermissions";
 import { formatAuditAction, formatRole } from "@/lib/auditDescriptions";
 
@@ -980,6 +980,17 @@ export default function DebtorRecord() {
       return res.json();
     },
     enabled: !!contactId && activeTab === "disputes",
+  });
+
+  // Charlie chasing status (for header bar)
+  const charlieStatusQuery = useQuery<{ status: string; variant: string; reason: string; detail: Record<string, any> }>({
+    queryKey: [`/api/contacts/${contactId}/charlie-status`],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/contacts/${contactId}/charlie-status`);
+      return res.json();
+    },
+    enabled: !!contactId,
+    staleTime: 30_000,
   });
 
   // ---------------------------------------------------------------------------
@@ -1885,7 +1896,17 @@ export default function DebtorRecord() {
   return (
     <AppShell
       title={contact.name}
-      subtitle={`${gbp.format(metrics?.totalOutstanding ?? 0)} outstanding${(metrics?.totalOverdue ?? 0) > 0 ? ` · ${gbp.format(metrics!.totalOverdue)} overdue` : ""}`}
+      subtitle={
+        <>
+          {gbp.format(metrics?.totalOutstanding ?? 0)} outstanding
+          {(metrics?.totalOverdue ?? 0) > 0 && <> · {gbp.format(metrics!.totalOverdue)} overdue</>}
+          {charlieStatusQuery.data?.reason && (
+            <span className="ml-4 pl-4 border-l border-[var(--q-border-default)]">
+              {charlieStatusQuery.data.reason}
+            </span>
+          )}
+        </>
+      }
     >
       <div className="space-y-4 p-4 md:p-6 max-w-[1400px] mx-auto">
         {/* ----------------------------------------------------------------- */}
@@ -2910,9 +2931,6 @@ export default function DebtorRecord() {
                 </div>
               );
             })()}
-
-            {/* ── Charlie status banner ── */}
-            <DebtorStatusBanner contactId={contactId} />
 
             {/* ── Toolbar — search + filter dropdowns ── */}
             <div className="flex flex-wrap items-center gap-3">
