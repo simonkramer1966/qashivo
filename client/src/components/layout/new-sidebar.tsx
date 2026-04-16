@@ -27,6 +27,7 @@ import {
   Home,
   ArrowRightLeft,
   Building2,
+  Shield,
   ShieldCheck,
   Briefcase,
   FileBarChart,
@@ -571,6 +572,35 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
           })}
         </TooltipProvider>
       </nav>
+
+      {/* Admin Portal link — platform admins only */}
+      {(user as any)?.platformAdmin && (
+        <div className={cn("pb-1", isCollapsed ? "px-2" : "px-3")}>
+          {isCollapsed ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => navigate("/admin/ops")}
+                  className="w-full flex items-center justify-center py-2.5 rounded-md text-q-text-secondary hover:bg-q-bg-surface-hover hover:text-q-text-primary transition-colors"
+                >
+                  <Shield className="w-4 h-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" sideOffset={8}>
+                Admin Portal
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <button
+              onClick={() => navigate("/admin/ops")}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm text-q-text-secondary hover:bg-q-bg-surface-hover hover:text-q-text-primary transition-colors"
+            >
+              <Shield className="w-4 h-4 shrink-0" />
+              <span className="flex-1 text-left">Admin Portal</span>
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Footer — user profile (sync indicator moved to header) */}
       <div className={cn("border-t border-q-border pb-4 pt-3", isCollapsed ? "px-2" : "px-3")}>
