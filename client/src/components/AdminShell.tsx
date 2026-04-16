@@ -28,6 +28,12 @@ function LoadingSpinner() {
   );
 }
 
+function withOpsLayout(Tab: React.ComponentType) {
+  return function OpsPage() {
+    return <AdminOpsLayout><Tab /></AdminOpsLayout>;
+  };
+}
+
 export default function AdminShell() {
   const [location, setLocation] = useLocation();
 
@@ -54,13 +60,13 @@ export default function AdminShell() {
   return (
     <Suspense fallback={<LoadingSpinner />}>
       <Switch>
-        <Route path="/admin/ops/charlie">{() => <AdminOpsLayout><AdminCharlieMonitor /></AdminOpsLayout>}</Route>
-        <Route path="/admin/ops/comms">{() => <AdminOpsLayout><AdminCommsLog /></AdminOpsLayout>}</Route>
-        <Route path="/admin/ops/riley">{() => <AdminOpsLayout><AdminRileyMonitor /></AdminOpsLayout>}</Route>
-        <Route path="/admin/ops/tenants">{() => <AdminOpsLayout><AdminTenantExplorer /></AdminOpsLayout>}</Route>
-        <Route path="/admin/ops/errors">{() => <AdminOpsLayout><AdminErrorConsole /></AdminOpsLayout>}</Route>
-        <Route path="/admin/ops/:rest*">{() => <AdminOpsLayout><AdminDashboard /></AdminOpsLayout>}</Route>
-        <Route path="/admin/ops">{() => <AdminOpsLayout><AdminDashboard /></AdminOpsLayout>}</Route>
+        <Route path="/admin/ops/charlie" component={withOpsLayout(AdminCharlieMonitor)} />
+        <Route path="/admin/ops/comms" component={withOpsLayout(AdminCommsLog)} />
+        <Route path="/admin/ops/riley" component={withOpsLayout(AdminRileyMonitor)} />
+        <Route path="/admin/ops/tenants" component={withOpsLayout(AdminTenantExplorer)} />
+        <Route path="/admin/ops/errors" component={withOpsLayout(AdminErrorConsole)} />
+        <Route path="/admin/ops/:rest*" component={withOpsLayout(AdminDashboard)} />
+        <Route path="/admin/ops" component={withOpsLayout(AdminDashboard)} />
         <Route path="/admin/analytics" component={AdminAnalytics} />
         <Route path="/admin/outcomes" component={AdminOutcomes} />
         <Route path="/admin/partners/:partnerId" component={AdminPartners} />
