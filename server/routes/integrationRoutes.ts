@@ -717,6 +717,10 @@ export async function registerIntegrationRoutes(app: Express): Promise<void> {
         console.error(`[Xero] Failed to check onboarding status:`, error);
       }
 
+      // Reset sync failure counts so the circuit breaker allows retries again
+      await syncOrchestrator.resetAfterReconnect(appTenantId).catch(err =>
+        console.error(`[Xero] Failed to reset failure counts for ${appTenantId}:`, err));
+
       // Trigger automatic sync after successful connection via SyncOrchestrator.
       // Uses 'incremental' — orchestrator auto-detects initial if no prior sync exists.
       console.log(`🚀 Triggering automatic Xero sync for tenant: ${appTenantId}`);

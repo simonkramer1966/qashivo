@@ -185,6 +185,10 @@ export async function runSimulationForecast(
   const openingBalance = tenantRow?.forecastOpeningBalance ? Number(tenantRow.forecastOpeningBalance) : 0;
   const safetyThreshold = tenantRow?.forecastSafetyThreshold ? Number(tenantRow.forecastSafetyThreshold) : 20000;
 
+  // ── Build simulation inputs ──
+
+  const now = new Date();
+
   // Build weekly outflows array from weekStarting timestamps
   const weeklyOutflows = new Array(DEFAULT_WEEKS).fill(0);
   const mondayOfCurrentWeek = new Date(now);
@@ -200,10 +204,6 @@ export async function runSimulationForecast(
       weeklyOutflows[weekIndex] += Number(o.amount || 0);
     }
   }
-
-  // ── Build simulation inputs ──
-
-  const now = new Date();
   const simulationInputs: InvoiceSimulationInput[] = [];
 
   for (const inv of invoiceRows) {

@@ -40,6 +40,7 @@ const HEALTH_CHECK_INTERVAL_MS = 20 * 60 * 1000;  // 20 minutes
 const TENANT_COOLDOWN_MS = 60 * 1000;              // 1 min between syncs per tenant
 const CONSECUTIVE_FAILURES_DEGRADED = 3;
 const CONSECUTIVE_FAILURES_PAUSE_CHARLIE = 6;
+const CONSECUTIVE_AUTH_FAILURES_CIRCUIT_BREAK = 5; // Stop retrying after 5 consecutive 403s
 const DATA_FRESHNESS_THRESHOLD_MS = 6 * 60 * 60 * 1000; // 6 hours
 
 // AR overlay fields — NEVER overwritten during sync (Critical Rule 7)
@@ -156,6 +157,17 @@ export class SyncOrchestrator {
     return this.executeSyncForTenant(tenantId, mode, trigger);
   }
 
+  /** Reset failure counts after a successful OAuth reconnect */
+  async resetAfterReconnect(tenantId: string) {
+    await this.updateSyncState(tenantId, {
+      consecutiveFailures: 0,
+      consecutiveAuthFailures: 0,
+      lastSyncError: null,
+      syncStatus: 'idle',
+    });
+    console.log(`[SyncOrchestrator] Failure counts reset for tenant ${tenantId} after reconnect`);
+  }
+
   /** Get current sync health for a tenant */
   async getSyncHealth(tenantId: string): Promise<{
     status: SyncHealthStatus;
@@ -217,11 +229,12 @@ export class SyncOrchestrator {
 
   private async scheduleAllTenants(mode: SyncMode, trigger: SyncTrigger) {
     try {
-      const connectedTenants = await db.select({ id: tenants.id })
+      const connectedTenants = await db.select({ id: tenants.id, xeroConnectionStatus: tenants.xeroConnectionStatus })
         .from(tenants)
         .where(sql`${tenants.xeroAccessToken} IS NOT NULL AND ${tenants.xeroTenantId} IS NOT NULL`);
 
       for (const t of connectedTenants) {
+        if (t.xeroConnectionStatus === 'expired') continue; // auth circuit breaker tripped
         this.enqueueSync(t.id, mode, trigger);
       }
       console.log(`[SyncOrchestrator] Scheduled ${mode} sync for ${connectedTenants.length} tenants`);
@@ -262,11 +275,13 @@ export class SyncOrchestrator {
         syncScheduleTimes: tenants.syncScheduleTimes,
         executionTimezone: tenants.executionTimezone,
         xeroAutoSync: tenants.xeroAutoSync,
+        xeroConnectionStatus: tenants.xeroConnectionStatus,
       }).from(tenants).where(sql`${tenants.xeroAccessToken} IS NOT NULL AND ${tenants.xeroTenantId} IS NOT NULL`);
 
       let scheduled = 0;
       for (const t of rows) {
         if (t.xeroAutoSync === false) continue;
+        if (t.xeroConnectionStatus === 'expired') continue; // auth circuit breaker tripped
         const slots = t.syncScheduleTimes ?? ['07:00', '13:00'];
         const tz = t.executionTimezone ?? 'Europe/London';
         if (crossedScheduledSlot(lastCheck, now, slots, tz)) {
@@ -590,6 +605,7 @@ export class SyncOrchestrator {
         lastSyncResult: result,
         invoicesCursor: result.status === 'success' ? invoiceFetchedAt.toISOString() : undefined,
         consecutiveFailures: 0,
+        consecutiveAuthFailures: 0,
         initialSyncComplete: effectiveMode === 'initial' && result.status === 'success' ? true : undefined,
         totalInvoicesSynced: result.fetched.invoices > 0 ? result.fetched.invoices : undefined,
         totalContactsSynced: result.fetched.contacts > 0 ? result.fetched.contacts : undefined,
@@ -1271,6 +1287,12 @@ export class SyncOrchestrator {
         consecutiveFailures: updates.consecutiveFailures,
       };
     }
+    if (updates.consecutiveAuthFailures !== undefined) {
+      setData.metadata = {
+        ...((setData.metadata || state.metadata || {}) as any),
+        consecutiveAuthFailures: updates.consecutiveAuthFailures,
+      };
+    }
     if (updates.initialSyncComplete) setData.initialSyncComplete = true;
     if (updates.totalInvoicesSynced) setData.recordsProcessed = updates.totalInvoicesSynced;
     if (updates.totalContactsSynced) {
@@ -1285,22 +1307,42 @@ export class SyncOrchestrator {
 
   private async recordSyncFailure(tenantId: string, result: SyncResult) {
     const state = await this.getOrCreateSyncState(tenantId);
+    const prevAuthFailures = (state.metadata as any)?.consecutiveAuthFailures ?? 0;
     const failures = ((state.metadata as any)?.consecutiveFailures ?? 0) + 1;
+
+    // Track auth failures separately (403 / XERO_AUTH_ERROR / token refresh)
+    const errorMsg = result.errors[0] || '';
+    const isAuthError = /XERO_AUTH_ERROR|403|AuthenticationUnsuccessful|token refresh failed|token.*expired|not connected/i.test(errorMsg);
+    const authFailures = isAuthError ? prevAuthFailures + 1 : 0; // reset on non-auth error
 
     await this.updateSyncState(tenantId, {
       syncStatus: 'failed',
-      lastSyncError: result.errors[0] || 'Unknown error',
+      lastSyncError: errorMsg || 'Unknown error',
       lastSyncCompletedAt: result.completedAt,
       lastSyncResult: result,
       consecutiveFailures: failures,
+      consecutiveAuthFailures: authFailures,
     });
 
     this.safeEmit(tenantId, 'sync_failed', {
-      error: result.errors[0] || 'Unknown error',
+      error: errorMsg || 'Unknown error',
       consecutiveFailures: failures,
+      consecutiveAuthFailures: authFailures,
       mode: result.syncMode,
       failedAt: (result.completedAt ?? new Date()).toISOString(),
+      isAuthError,
     });
+
+    // Circuit breaker: after N consecutive auth failures, mark connection expired and stop retrying
+    if (isAuthError && authFailures >= CONSECUTIVE_AUTH_FAILURES_CIRCUIT_BREAK) {
+      console.error(`[SyncOrchestrator] Xero connection expired for tenant ${tenantId} — ${authFailures} consecutive auth failures, stopping retries until user reconnects`);
+      await db.update(tenants)
+        .set({ xeroConnectionStatus: 'expired' })
+        .where(eq(tenants.id, tenantId));
+      this.safeEmit(tenantId, 'xero_connection_expired', { tenantId, consecutiveAuthFailures: authFailures });
+      logSystemError({ tenantId, source: 'xero_sync', severity: 'critical', message: `Xero auth circuit breaker tripped — ${authFailures} consecutive 403s, connection marked expired`, context: { tenantId, consecutiveAuthFailures: authFailures } }).catch(() => {});
+      return; // Do NOT schedule retry
+    }
 
     if (failures >= CONSECUTIVE_FAILURES_PAUSE_CHARLIE) {
       console.error(`[SyncOrchestrator] ${failures} consecutive failures for ${tenantId} — Charlie should be paused for this tenant`);
@@ -1309,6 +1351,14 @@ export class SyncOrchestrator {
   }
 
   private async scheduleRetry(tenantId: string, trigger: SyncTrigger) {
+    // Don't retry if the auth circuit breaker has tripped
+    const [tenant] = await db.select({ xeroConnectionStatus: tenants.xeroConnectionStatus })
+      .from(tenants).where(eq(tenants.id, tenantId));
+    if (tenant?.xeroConnectionStatus === 'expired') {
+      console.log(`[SyncOrchestrator] Skipping retry for ${tenantId} — connection expired, awaiting user reconnect`);
+      return;
+    }
+
     const state = await this.getOrCreateSyncState(tenantId);
     const failures = (state.metadata as any)?.consecutiveFailures ?? 0;
     const retryIdx = Math.min(failures - 1, RETRY_SCHEDULE.length - 1);

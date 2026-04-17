@@ -18,6 +18,7 @@ type RealtimeEventType =
   | "sync_progress"
   | "sync_complete"
   | "sync_failed"
+  | "xero_connection_expired"
   | "cash_gap_alert"
   | "priorities_generated"
   | "note_created";
@@ -91,6 +92,9 @@ const INVALIDATION_MAP: Record<RealtimeEventType, string[][]> = {
     ["/api/tenant"],
   ],
   sync_failed: [
+    ["/api/sync/current"],
+  ],
+  xero_connection_expired: [
     ["/api/sync/current"],
   ],
   cash_gap_alert: [

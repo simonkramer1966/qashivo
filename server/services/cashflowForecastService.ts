@@ -24,7 +24,7 @@ import {
   forecastOutflows,
   forecastSnapshots,
 } from "@shared/schema";
-import { eq, and, sql, isNotNull } from "drizzle-orm";
+import { eq, and, sql, isNotNull, inArray } from "drizzle-orm";
 import {
   fitDistribution,
   weeklyProbabilitiesThreeScenarios,

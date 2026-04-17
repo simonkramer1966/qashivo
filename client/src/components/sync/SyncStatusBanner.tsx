@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
  * Idle = unmounted. Per-instance dismissal (component state).
  */
 export default function SyncStatusBanner() {
-  const { phase, progress, summary, error, lastSync } = useSyncStatus();
+  const { phase, progress, summary, error, lastSync, connectionStatus } = useSyncStatus();
   const [, setLocation] = useLocation();
   const [dismissed, setDismissed] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -25,6 +25,26 @@ export default function SyncStatusBanner() {
   }, [phase]);
 
   const retryMutation = useManualSync();
+
+  // Persistent (non-dismissable) banner when Xero connection is expired
+  if (connectionStatus === "expired") {
+    return (
+      <div className="flex items-center gap-2.5 rounded-lg bg-[var(--q-attention-bg)] px-4 py-2.5 text-[13px]">
+        <AlertCircle className="h-4 w-4 text-[var(--q-attention-text)] shrink-0" />
+        <span className="flex-1 text-[var(--q-attention-text)] font-medium">
+          Your Xero connection has expired. Data may be out of date.
+        </span>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 px-3 text-[13px] font-medium text-[var(--q-accent)] hover:text-[var(--q-accent-hover)] hover:bg-[var(--q-accent-bg)]"
+          onClick={() => setLocation("/settings/integrations")}
+        >
+          Reconnect Xero
+        </Button>
+      </div>
+    );
+  }
 
   if (dismissed) return null;
   if (phase === "idle") return null;

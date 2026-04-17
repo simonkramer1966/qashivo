@@ -35,6 +35,8 @@ export interface SyncStatusValue {
   nextScheduledSyncAt: Date | null;
   scheduleTimes: string[];
   timezone: string;
+  /** Xero connection status — 'expired' means auth circuit breaker tripped */
+  connectionStatus: string | null;
 }
 
 interface CurrentResponse {
@@ -62,6 +64,7 @@ const DEFAULT_VALUE: SyncStatusValue = {
   nextScheduledSyncAt: null,
   scheduleTimes: ["07:00", "13:00"],
   timezone: "Europe/London",
+  connectionStatus: null,
 };
 
 const SyncStatusContext = createContext<SyncStatusValue>(DEFAULT_VALUE);
@@ -107,6 +110,7 @@ export function SyncStatusProvider({ children }: { children: ReactNode }) {
         nextScheduledSyncAt: current.nextScheduledSyncAt ? new Date(current.nextScheduledSyncAt) : null,
         scheduleTimes: current.syncScheduleTimes ?? prev.scheduleTimes,
         timezone: current.executionTimezone ?? prev.timezone,
+        connectionStatus: current.connectionStatus ?? null,
       };
     });
   }, [current]);
@@ -193,16 +197,28 @@ export function SyncStatusProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const handleConnectionExpired = useCallback(() => {
+    setState((prev) => ({
+      ...prev,
+      phase: "failed",
+      error: "Your Xero connection has expired. Please reconnect.",
+      connectionStatus: "expired",
+      isInProgress: false,
+    }));
+  }, []);
+
   useEffect(() => {
     window.addEventListener("realtime:sync_started", handleStarted);
     window.addEventListener("realtime:sync_progress", handleProgress);
     window.addEventListener("realtime:sync_complete", handleComplete);
     window.addEventListener("realtime:sync_failed", handleFailed);
+    window.addEventListener("realtime:xero_connection_expired", handleConnectionExpired);
     return () => {
       window.removeEventListener("realtime:sync_started", handleStarted);
       window.removeEventListener("realtime:sync_progress", handleProgress);
       window.removeEventListener("realtime:sync_complete", handleComplete);
       window.removeEventListener("realtime:sync_failed", handleFailed);
+      window.removeEventListener("realtime:xero_connection_expired", handleConnectionExpired);
       if (collapseTimerRef.current) {
         clearTimeout(collapseTimerRef.current);
         collapseTimerRef.current = null;

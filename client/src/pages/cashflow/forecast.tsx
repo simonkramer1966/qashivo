@@ -539,6 +539,26 @@ export default function ForecastPage() {
     }
   }, [forecast?.monteCarlo?.inputHash]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // MC data memos — must be called unconditionally (Rules of Hooks)
+  const mc = forecast?.monteCarlo ?? null;
+  const mcWeekMap = useMemo(() => {
+    if (!mc?.weeklyPercentiles) return null;
+    const map = new Map<number, typeof mc.weeklyPercentiles[0]>();
+    for (const wp of mc.weeklyPercentiles) map.set(wp.weekNumber, wp);
+    return map;
+  }, [mc]);
+
+  const materialByWeek = useMemo(() => {
+    if (!mc?.materialInvoices) return new Map<number, typeof mc.materialInvoices>();
+    const map = new Map<number, typeof mc.materialInvoices>();
+    for (const mi of mc.materialInvoices) {
+      const list = map.get(mi.weekNumber) || [];
+      list.push(mi);
+      map.set(mi.weekNumber, list);
+    }
+    return map;
+  }, [mc]);
+
   // Monte Carlo recalculate
   const recalculateMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/cashflow/forecast/recalculate"),
@@ -695,26 +715,6 @@ export default function ForecastPage() {
   let runningOptimistic = openingBal;
   let runningExpected = openingBal;
   let runningPessimistic = openingBal;
-
-  const mc = forecast.monteCarlo;
-  const mcWeekMap = useMemo(() => {
-    if (!mc) return null;
-    const map = new Map<number, typeof mc.weeklyPercentiles[0]>();
-    for (const wp of mc.weeklyPercentiles) map.set(wp.weekNumber, wp);
-    return map;
-  }, [mc]);
-
-  // Material invoices by week for chart markers
-  const materialByWeek = useMemo(() => {
-    if (!mc) return new Map<number, typeof mc.materialInvoices>();
-    const map = new Map<number, typeof mc.materialInvoices>();
-    for (const mi of mc.materialInvoices) {
-      const list = map.get(mi.weekNumber) || [];
-      list.push(mi);
-      map.set(mi.weekNumber, list);
-    }
-    return map;
-  }, [mc]);
 
   const chartData = forecast.weeklyForecasts.map((wf, i) => {
     // Fallback: client-side running balance if server doesn't provide it
