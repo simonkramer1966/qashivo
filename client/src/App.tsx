@@ -91,6 +91,7 @@ const MarketingPrivacy = lazy(() => import("@/pages/marketing/PrivacyPage"));
 const MarketingTerms = lazy(() => import("@/pages/marketing/TermsPage"));
 const MarketingGdpr = lazy(() => import("@/pages/marketing/GdprPage"));
 const MarketingDemo = lazy(() => import("@/pages/marketing/DemoPage"));
+const MarketingCashGap = lazy(() => import("@/pages/marketing/CashGapPage"));
 
 function PermissionGuard({ permission, children }: { permission: string; children: React.ReactNode }) {
   const { hasPermission, isLoadingPermissions } = usePermissions();
@@ -295,6 +296,7 @@ function Router() {
           <Route path="/contact" component={MarketingContact} />
           <Route path="/cashflow-health-check" component={MarketingHealthCheck} />
           <Route path="/demo" component={MarketingDemo} />
+          <Route path="/the-cash-gap" component={MarketingCashGap} />
 
           {/* Home → marketing home for unauthenticated visitors */}
           <Route path="/" component={MarketingHome} />
@@ -325,6 +327,7 @@ function Router() {
           <Route path="/contact" component={MarketingContact} />
           <Route path="/cashflow-health-check" component={MarketingHealthCheck} />
           <Route path="/demo" component={MarketingDemo} />
+          <Route path="/the-cash-gap" component={MarketingCashGap} />
 
           {/* Legal / governance pages (accessible when authenticated too) */}
           <Route path="/privacy" component={MarketingPrivacy} />
