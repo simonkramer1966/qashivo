@@ -15,6 +15,17 @@ import { cleanEmailContent, cleanSmsContent } from "./messagePostProcessor";
 import { canAttemptGeneration, recordSuccess, recordFailure, CircuitOpenError } from "./llmCircuitBreaker";
 import { validateGeneratedMessage } from "./llmOutputValidator";
 import { getTemplateFallback, buildTemplateContext } from "./templateFallback";
+import { generateVoiceCallBrief } from "./influence/voiceCallBriefGenerator";
+import type { InfluenceBarrier } from "./influence/barrierDiagnostic";
+
+/** Extract a first name from a contact name, falling back to full name if it looks like a company. */
+const COMPANY_SUFFIXES = /\b(ltd|limited|plc|llp|inc|corp|group|holdings|partners)\b/i;
+function extractFirstName(fullName: string): string {
+  if (!fullName) return "there";
+  const first = fullName.split(/\s+/)[0];
+  if (!first || COMPANY_SUFFIXES.test(fullName)) return fullName;
+  return first;
+}
 
 export interface InvoiceDetail {
   invoiceNumber: string;
@@ -540,6 +551,33 @@ Respond with valid JSON containing:
       ? `\nPRE-CALL BRIEFING:\n${context.conversationBrief}\nUse this briefing to inform your conversation. Reference relevant history naturally.\n`
       : '';
 
+    // Voice influence brief — barrier-aware openings, questions, de-escalation
+    let voiceInfluenceBrief = '';
+    if (context.influenceBarrier && context.influenceStrategy) {
+      try {
+        const firstName = extractFirstName(context.customerName);
+        voiceInfluenceBrief = '\n' + generateVoiceCallBrief(
+          context.influenceBarrier as InfluenceBarrier,
+          context.influenceStrategy,
+          toneSettings.toneProfile,
+          {
+            contactFirstName: firstName,
+            companyName: context.companyName || context.customerName,
+            invoiceRef: context.invoiceNumber,
+            amount: context.invoiceAmount,
+            daysOverdue: context.daysOverdue,
+            currency: context.currency || 'GBP',
+          },
+          {
+            agentName: context.tenantName,
+            tenantCompanyName: context.tenantName,
+          },
+        ) + '\n';
+      } catch {
+        // Non-fatal — voice prompt works without influence brief
+      }
+    }
+
     // Group-aware voice prompt
     if (context.isGroupAction && context.groupMemberCompanyNames && context.groupMemberCompanyNames.length > 1) {
       const memberNames = context.groupMemberCompanyNames;
@@ -550,7 +588,7 @@ Respond with valid JSON containing:
 
       if (isSmallGroup) {
         return `Generate a voice call script for a GROUP debtor call:
-${voiceBrief}
+${voiceBrief}${voiceInfluenceBrief}
 Customer: ${context.customerName}
 Companies: ${companyReference}
 Total outstanding across all companies: ${currency}${context.invoiceAmount.toFixed(2)}
@@ -563,7 +601,7 @@ Stage: ${toneSettings.stage}
 Tone: ${toneSettings.toneProfile}`;
       } else {
         return `Generate a voice call script for a GROUP debtor call:
-${voiceBrief}
+${voiceBrief}${voiceInfluenceBrief}
 Customer: ${context.customerName}
 Group: ${companyReference}
 Total outstanding: ${currency}${context.invoiceAmount.toFixed(2)}
@@ -580,7 +618,7 @@ Tone: ${toneSettings.toneProfile}`;
     }
 
     return `Generate a voice call script for:
-${voiceBrief}
+${voiceBrief}${voiceInfluenceBrief}
 Customer: ${context.customerName}
 Company: ${context.companyName || context.customerName}
 Invoice: ${context.invoiceNumber}

@@ -2,8 +2,9 @@
  * Influence Engine — barrel export.
  *
  * Phase 1: Diagnostic layer + prompt architecture.
- * Every debtor-facing communication receives a barrier diagnosis and
- * structured PCP (Perception-Context-Permission) guidance.
+ * Phase 2: Technique translation layer (22 named keys → LLM instructions).
+ * Phase 3: Voice call influence brief (barrier openings, calibrated
+ *          questions, de-escalation protocols, voicemail scripts).
  */
 
 export {
@@ -26,3 +27,9 @@ export {
   generateInfluenceBrief,
   generateSmsInfluenceBrief,
 } from "./influenceBriefGenerator";
+
+export {
+  type VoiceDebtorContext,
+  type VoiceAgentContext,
+  generateVoiceCallBrief,
+} from "./voiceCallBriefGenerator";
