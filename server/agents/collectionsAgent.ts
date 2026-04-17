@@ -28,6 +28,13 @@ export interface CollectionEmailResult {
   subject: string;
   body: string;
   agentReasoning: string;
+  influenceDiagnosis?: {
+    barrier: string;
+    strategy: string;
+    signals: string[];
+    reasoning: string;
+    confidence: string;
+  };
 }
 
 // ── Public API ───────────────────────────────────────────────
@@ -75,5 +82,6 @@ export async function generateCollectionEmail(
     subject: result.subject,
     body: result.body,
     agentReasoning: result.agentReasoning,
+    influenceDiagnosis: result.metadata.influenceDiagnosis,
   };
 }

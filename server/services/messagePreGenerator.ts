@@ -395,6 +395,9 @@ export class MessagePreGenerationService {
       tenantPhone: tenant.phone,
       tenantEmail: tenant.email,
       conversationBrief,
+      // Influence engine fields from action metadata
+      influenceBarrier: action.metadata?.influenceBarrier,
+      influenceStrategy: action.metadata?.influenceStrategy,
     };
   }
 

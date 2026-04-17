@@ -22,6 +22,7 @@ import {
   timelineEvents,
   customerBehaviorSignals,
   collectionPolicies,
+  debtorIntelligence,
   type AgentPersona,
 } from "@shared/schema";
 import { generateJSON } from "./llm/claude";
@@ -41,6 +42,13 @@ import {
   applySmallBalancePriority,
   type SmallBalancePolicy,
 } from "./smallBalancePolicy";
+import {
+  buildBarrierContext,
+  diagnoseBarrier,
+  deriveEscalationStage,
+  selectStrategy,
+  generateInfluenceBrief,
+} from "./influence";
 
 // ── Public types ─────────────────────────────────────────────
 
@@ -215,6 +223,64 @@ export async function generateDebtorEmail(
   const hasUnallocatedPayments = unallocatedTotal > 0;
   const netRemaining = Math.max(0, chaseAmount - unallocatedTotal);
 
+  // 5a. Influence Engine — barrier diagnosis + strategy selection.
+  //     Load debtorIntelligence for structured credit risk data.
+  let influenceBriefText: string | undefined;
+  let influenceDiagnosis: {
+    barrier: string;
+    strategy: string;
+    signals: string[];
+    reasoning: string;
+    confidence: string;
+  } | undefined;
+  try {
+    const [intel] = await db
+      .select({
+        creditRiskScore: debtorIntelligence.creditRiskScore,
+        insolvencyRisk: debtorIntelligence.insolvencyRisk,
+      })
+      .from(debtorIntelligence)
+      .where(
+        and(
+          eq(debtorIntelligence.tenantId, tenantId),
+          eq(debtorIntelligence.contactId, contactId),
+        ),
+      )
+      .limit(1);
+
+    const barrierCtx = buildBarrierContext(
+      brief.data,
+      debtor.contactEmail,
+      intel ?? null,
+    );
+    const diagnosis = diagnoseBarrier(barrierCtx);
+    const stage = deriveEscalationStage(barrierCtx.communicationCount);
+    const strategy = selectStrategy(diagnosis.barrier, stage);
+
+    const maxDaysOverdue = chaseInvoices.length > 0
+      ? Math.max(...chaseInvoices.map((inv) => inv.daysOverdue))
+      : 0;
+
+    influenceBriefText = generateInfluenceBrief(diagnosis, strategy, {
+      contactName: debtor.contactName,
+      companyName: debtor.companyName,
+      totalChaseAmount: chaseAmount,
+      daysOverdue: maxDaysOverdue,
+      currency,
+    });
+
+    influenceDiagnosis = {
+      barrier: diagnosis.barrier,
+      strategy: strategy.name,
+      signals: diagnosis.signals,
+      reasoning: diagnosis.reasoning,
+      confidence: diagnosis.confidence,
+    };
+  } catch (err) {
+    // Non-fatal — influence engine failure must never block email generation
+    console.warn(`[debtorEmailService] Influence engine failed for contact ${contactId}:`, err);
+  }
+
   // 5. Build the prompt's ActionContext (legacy escape hatch wins if present).
   const actionContext = buildActionContext(request);
 
@@ -254,6 +320,7 @@ export async function generateDebtorEmail(
     debtor.language,
     currency,
     hasUnallocatedPayments,
+    influenceBriefText,
   );
   // Build group invoice breakdown when this is a consolidated group action.
   // Each company's invoices are grouped separately for the LLM prompt.
@@ -289,6 +356,7 @@ export async function generateDebtorEmail(
     request.groupContext && groupInvoiceContext
       ? { ...request.groupContext, companies: groupInvoiceContext }
       : undefined,
+    influenceBriefText,
   );
 
   // Append email-type-specific addenda the base prompt doesn't natively carry.
@@ -343,6 +411,7 @@ export async function generateDebtorEmail(
       toneUsed: effectiveAction.toneLevel,
       emailType: request.emailType,
       invoiceCount: chaseInvoices.length,
+      ...(influenceDiagnosis ? { influenceDiagnosis } : {}),
     },
     agentReasoning,
   };

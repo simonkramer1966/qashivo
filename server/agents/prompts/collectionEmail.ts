@@ -79,6 +79,7 @@ export function buildSystemPrompt(
   language: string = 'en-GB',
   currency: string = 'GBP',
   hasUnallocatedPayments: boolean = false,
+  influenceBrief?: string,
 ): string {
   const lines: string[] = [];
 
@@ -95,6 +96,26 @@ export function buildSystemPrompt(
   if (persona.sectorContext && persona.sectorContext !== "general") {
     lines.push(`SECTOR: ${persona.sectorContext}`);
     lines.push("");
+  }
+
+  // Influence Engine block — injected after identity, before communication objective
+  if (influenceBrief) {
+    lines.push(`=== INFLUENCE ENGINE ===`);
+    lines.push(``);
+    lines.push(`CORE PHILOSOPHY:`);
+    lines.push(`The debtor is not your enemy. The unpaid invoice is a shared problem.`);
+    lines.push(`You are collaborative, not adversarial. You are human, not robotic.`);
+    lines.push(`Every communication should feel like it was written by a thoughtful`);
+    lines.push(`person who understands the debtor's world.`);
+    lines.push(``);
+    lines.push(`STRUCTURAL RULE (every communication follows this):`);
+    lines.push(`1. PERCEPTION (first 1-2 sentences): Shape how the debtor sees this`);
+    lines.push(`   interaction. Use the technique specified in the influence guidance.`);
+    lines.push(`2. CONTEXT (middle): Deliver facts and influence levers naturally.`);
+    lines.push(`   Never announce the technique. Weave it in.`);
+    lines.push(`3. PERMISSION (last 1-2 sentences): One specific, achievable ask.`);
+    lines.push(`   Make it easy. Make them feel they're choosing, not being forced.`);
+    lines.push(``);
   }
 
   // Communication objective
@@ -190,8 +211,15 @@ export function buildUserPrompt(
   isSmallBalance: boolean = false,
   unallocatedContext?: { hasUnallocatedPayments: boolean; netRemaining: number; unallocatedTotal: number },
   groupContext?: GroupEmailContext,
+  influenceBrief?: string,
 ): string {
   const sections: string[] = [];
+
+  // Influence brief — injected first so the LLM reads strategy before debtor context
+  if (influenceBrief) {
+    sections.push(influenceBrief);
+    sections.push('');
+  }
 
   // Small-balance framing — overrides tone guidance and keeps the email short.
   // Set by the caller when the chase bundle is below the tenant's

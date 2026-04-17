@@ -703,10 +703,16 @@ export class ActionExecutor {
     // Enrich with group context for consolidated group actions
     const actionMeta = (action.metadata ?? {}) as Record<string, any>;
     if (actionMeta.isGroupAction) {
-      (ctx as any).isGroupAction = true;
-      (ctx as any).groupName = actionMeta.groupName;
-      (ctx as any).groupMemberCount = actionMeta.memberCompanyNames?.length ?? 0;
-      (ctx as any).groupMemberCompanyNames = actionMeta.memberCompanyNames ?? [];
+      ctx.isGroupAction = true;
+      ctx.groupName = actionMeta.groupName;
+      ctx.groupMemberCount = actionMeta.memberCompanyNames?.length ?? 0;
+      ctx.groupMemberCompanyNames = actionMeta.memberCompanyNames ?? [];
+    }
+
+    // Enrich with influence engine data from action metadata
+    if (actionMeta.influenceBarrier) {
+      ctx.influenceBarrier = actionMeta.influenceBarrier;
+      ctx.influenceStrategy = actionMeta.influenceStrategy;
     }
 
     return ctx;

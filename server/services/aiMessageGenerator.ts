@@ -53,6 +53,9 @@ export interface MessageContext {
   groupName?: string;
   groupMemberCount?: number;
   groupMemberCompanyNames?: string[];
+  /** Influence engine fields — populated from action metadata */
+  influenceBarrier?: string;
+  influenceStrategy?: string;
 }
 
 export interface ToneSettings {
@@ -478,12 +481,17 @@ Respond with valid JSON:
       groupNote = `\nCONTEXT: This is a group debtor — the contact manages AP for ${context.groupMemberCount} companies under ${context.groupName || 'their group'}. Write the SMS referencing the group — do NOT name individual companies or amounts. Direct them to check their email for the full breakdown.\n`;
     }
 
+    let influenceNote = '';
+    if (context.influenceBarrier && context.influenceStrategy) {
+      influenceNote = `\nINFLUENCE: Barrier is ${context.influenceBarrier}, strategy is "${context.influenceStrategy}". Compress PCP (Perception > Context > Permission) into 1-2 sentences. The sequence is still present but compressed.\n`;
+    }
+
     return `Generate a brief SMS nudge (MUST be under 160 characters):
 
 Customer first name: ${firstName}
 Agent name: ${agentName}
 Tone: ${toneHint}
-${groupNote}
+${groupNote}${influenceNote}
 The SMS should ONLY tell them to check their email. Do NOT include amounts, invoice numbers, links, or phone numbers.
 
 REMEMBER: Max 160 chars. Sign off with "${agentName}".`;

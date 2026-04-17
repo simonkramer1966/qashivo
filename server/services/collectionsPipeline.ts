@@ -272,7 +272,21 @@ export async function processCollectionEmail(
       compliance = recheck;
     }
 
-    // 5. Update action with generated content + metrics
+    // 5. Update action with generated content + metrics + influence diagnosis
+    const influenceMetadata = emailResult.influenceDiagnosis
+      ? {
+          influenceBarrier: emailResult.influenceDiagnosis.barrier,
+          influenceStrategy: emailResult.influenceDiagnosis.strategy,
+          influenceSignals: emailResult.influenceDiagnosis.signals,
+          influenceReasoning: emailResult.influenceDiagnosis.reasoning,
+          influenceConfidence: emailResult.influenceDiagnosis.confidence,
+        }
+      : {};
+    const mergedMetadata = JSON.stringify({
+      agentReasoning: emailResult.agentReasoning,
+      generatedBy: "collections_agent_llm",
+      ...influenceMetadata,
+    });
     await db
       .update(actions)
       .set({
@@ -283,10 +297,7 @@ export async function processCollectionEmail(
         agentToneLevel: actionContext.toneLevel,
         agentChannel: "email",
         complianceResult: compliance.approved ? "approved" : (compliance.action || "blocked"),
-        metadata: sql`jsonb_set(
-          jsonb_set(COALESCE(${actions.metadata}, '{}'), '{agentReasoning}', ${JSON.stringify(emailResult.agentReasoning)}::jsonb),
-          '{generatedBy}', '"collections_agent_llm"'::jsonb
-        )`,
+        metadata: sql`COALESCE(${actions.metadata}, '{}')::jsonb || ${mergedMetadata}::jsonb`,
         updatedAt: new Date(),
       })
       .where(eq(actions.id, actionId));
