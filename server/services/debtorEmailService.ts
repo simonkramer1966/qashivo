@@ -48,6 +48,7 @@ import {
   deriveEscalationStage,
   selectStrategy,
   generateInfluenceBrief,
+  getSocialProofData,
 } from "./influence";
 
 // ── Public types ─────────────────────────────────────────────
@@ -238,6 +239,8 @@ export async function generateDebtorEmail(
       .select({
         creditRiskScore: debtorIntelligence.creditRiskScore,
         insolvencyRisk: debtorIntelligence.insolvencyRisk,
+        industrySector: debtorIntelligence.industrySector,
+        sizeClassification: debtorIntelligence.sizeClassification,
       })
       .from(debtorIntelligence)
       .where(
@@ -261,13 +264,20 @@ export async function generateDebtorEmail(
       ? Math.max(...chaseInvoices.map((inv) => inv.daysOverdue))
       : 0;
 
+    // CIE social proof — segment-level data for influence brief
+    const socialProof = await getSocialProofData(
+      intel?.industrySector ?? null,
+      intel?.sizeClassification ?? null,
+      null, // region not available yet
+    );
+
     influenceBriefText = generateInfluenceBrief(diagnosis, strategy, {
       contactName: debtor.contactName,
       companyName: debtor.companyName,
       totalChaseAmount: chaseAmount,
       daysOverdue: maxDaysOverdue,
       currency,
-    });
+    }, socialProof);
 
     influenceDiagnosis = {
       barrier: diagnosis.barrier,

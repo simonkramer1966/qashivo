@@ -356,6 +356,27 @@ export async function processPaymentAttribution(
     await updateChannelEffectiveness(tenantId, contactId, channel, effectiveness);
     console.log(`💰 [Attribution] Payment attributed to ${channel} action ${attribution.actionId} with ${attribution.attribution} credit (${attribution.reason})`);
 
+    // CIE: publish anonymised payment outcome
+    try {
+      const { getActionInfluenceMetadata, publishInfluenceOutcome } = await import("./influence/ciePublisher");
+      const meta = await getActionInfluenceMetadata(attribution.actionId);
+      if (meta) {
+        const daysDiff = Math.round((paidDate.getTime() - Date.now()) / 86_400_000);
+        void publishInfluenceOutcome(tenantId, contactId, {
+          channel,
+          toneLevel: meta.toneLevel,
+          barrier: meta.barrier,
+          strategyName: meta.strategyName,
+          daysOverdue: meta.daysOverdue,
+          amountBand: meta.amountBand,
+          sequencePosition: meta.sequencePosition,
+        }, {
+          type: attribution.attribution >= 1 ? "paid" : "partial_paid",
+          daysToOutcome: Math.abs(daysDiff),
+        });
+      }
+    } catch { /* non-fatal */ }
+
     // Multi-channel attribution: earlier actions in same window get 0.3 credit
     const actionDate = await db.select({ completedAt: actions.completedAt })
       .from(actions).where(eq(actions.id, attribution.actionId)).limit(1);

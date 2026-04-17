@@ -14,6 +14,7 @@
 
 import type { BarrierDiagnosis } from "./barrierDiagnostic";
 import type { InfluenceStrategy } from "./strategySelector";
+import type { SocialProofData } from "./cieConsumer";
 
 // ── Technique translation layer ──────────────────────────────
 
@@ -88,6 +89,7 @@ export function generateInfluenceBrief(
   diagnosis: BarrierDiagnosis,
   strategy: InfluenceStrategy,
   debtorContext: DebtorBriefContext,
+  socialProof?: SocialProofData,
 ): string {
   const { contactName, companyName, totalChaseAmount, daysOverdue, currency } = debtorContext;
 
@@ -135,6 +137,17 @@ export function generateInfluenceBrief(
     } else {
       lines.push(`  - DO NOT: ${a}`);
     }
+  }
+  lines.push("");
+
+  // CIE social proof — only actionable for motivation barrier
+  if (socialProof?.available && diagnosis.barrier === "motivation") {
+    lines.push("CIE social proof: AVAILABLE");
+    lines.push(`  "${socialProof.percentSettledWithin45Days}% of ${socialProof.segmentLabel} settle within 45 days."`);
+    lines.push("  Use this naturally in the Context phase. Never announce it as a statistic.");
+  } else {
+    lines.push("CIE social proof: NOT AVAILABLE");
+    lines.push("  DO NOT fabricate social proof statistics. Skip this lever entirely.");
   }
   lines.push("");
 

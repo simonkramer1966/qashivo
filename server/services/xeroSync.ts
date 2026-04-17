@@ -1,6 +1,6 @@
 import { db, pool } from "../db";
-import { tenants, cachedXeroInvoices, cachedXeroContacts, cachedXeroOverpayments, cachedXeroPrepayments, cachedXeroCreditNotes, contacts, invoices, syncState, customerContactPersons, timelineEvents, bankTransactions, bankAccounts } from "@shared/schema";
-import { eq, and, sql, inArray } from "drizzle-orm";
+import { tenants, cachedXeroInvoices, cachedXeroContacts, cachedXeroOverpayments, cachedXeroPrepayments, cachedXeroCreditNotes, contacts, invoices, syncState, customerContactPersons, timelineEvents, bankTransactions, bankAccounts, actions } from "@shared/schema";
+import { eq, and, sql, inArray, desc } from "drizzle-orm";
 import { xeroService } from "./xero";
 import { attentionItemService } from "./attentionItemService";
 import { assignContactToDefaultSchedule } from "./strategySeeder";
@@ -713,6 +713,31 @@ export class XeroSyncService {
                 console.warn(`[Attribution] Failed for invoice ${cachedInv.invoiceNumber}: ${(attrErr as Error).message}`);
                 // Non-fatal — sync continues
               }
+              // CIE: publish anonymised payment outcome
+              try {
+                const { getActionInfluenceMetadata, publishInfluenceOutcome } = await import("./influence/ciePublisher");
+                // Find the most recent completed action for this contact
+                const [recentAction] = await db.select({ id: actions.id })
+                  .from(actions)
+                  .where(and(eq(actions.tenantId, tenantId), eq(actions.contactId, contact.id), inArray(actions.status, ["completed", "sent"])))
+                  .orderBy(desc(actions.completedAt))
+                  .limit(1);
+                if (recentAction) {
+                  const meta = await getActionInfluenceMetadata(recentAction.id);
+                  if (meta) {
+                    void publishInfluenceOutcome(tenantId, contact.id, {
+                      channel: "email",
+                      toneLevel: meta.toneLevel,
+                      barrier: meta.barrier,
+                      strategyName: meta.strategyName,
+                      daysOverdue: meta.daysOverdue,
+                      amountBand: meta.amountBand,
+                      sequencePosition: meta.sequencePosition,
+                    }, { type: "paid", daysToOutcome: null });
+                  }
+                }
+              } catch { /* non-fatal */ }
+
               // SSE: notify UI of payment received
               const { emitTenantEvent } = await import("./realtimeEvents");
               emitTenantEvent(tenantId, 'payment_received', {

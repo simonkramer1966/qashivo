@@ -5,6 +5,8 @@
  * Phase 2: Technique translation layer (22 named keys → LLM instructions).
  * Phase 3: Voice call influence brief (barrier openings, calibrated
  *          questions, de-escalation protocols, voicemail scripts).
+ * Phase 4: SMS tone ceiling + barrier-specific compression guidance.
+ * Phase 5: CIE integration stubs (social proof consumer + outcome publisher).
  */
 
 export {
@@ -33,3 +35,15 @@ export {
   type VoiceAgentContext,
   generateVoiceCallBrief,
 } from "./voiceCallBriefGenerator";
+
+export {
+  type SocialProofData,
+  getSocialProofData,
+} from "./cieConsumer";
+
+export {
+  type ActionInfluenceMeta,
+  getAmountBand,
+  getActionInfluenceMetadata,
+  publishInfluenceOutcome,
+} from "./ciePublisher";

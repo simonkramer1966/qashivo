@@ -475,6 +475,36 @@ CRITICAL EXCEPTIONS — do NOT flag ambiguity when:
 
           await this.sendConfirmationEmail(message, analysis, context, activePromise);
           confirmationSent = true;
+
+          // CIE: publish anonymised PTP outcome
+          try {
+            const { getActionInfluenceMetadata, publishInfluenceOutcome } = await import("./influence/ciePublisher");
+            // Find the most recent completed action for this contact to get influence metadata
+            const recentAction = await db
+              .select({ id: actions.id })
+              .from(actions)
+              .where(and(
+                eq(actions.tenantId, message.tenantId),
+                eq(actions.contactId, message.contactId!),
+                inArray(actions.status, ["completed", "sent"]),
+              ))
+              .orderBy(desc(actions.completedAt))
+              .limit(1);
+            if (recentAction[0]) {
+              const meta = await getActionInfluenceMetadata(recentAction[0].id);
+              if (meta) {
+                void publishInfluenceOutcome(message.tenantId, message.contactId!, {
+                  channel: message.channel || "email",
+                  toneLevel: meta.toneLevel,
+                  barrier: meta.barrier,
+                  strategyName: meta.strategyName,
+                  daysOverdue: meta.daysOverdue,
+                  amountBand: meta.amountBand,
+                  sequencePosition: meta.sequencePosition,
+                }, { type: "promised", daysToOutcome: null });
+              }
+            }
+          } catch { /* non-fatal */ }
         } else if (shouldConfirm && !debtorHasOverdue) {
           // Early intelligence — debtor mentioned payment timing but nothing is overdue
           console.log(`📋 Early intelligence: debtor mentioned payment date but has no overdue invoices — storing as aiFact, skipping confirmation`);
