@@ -254,7 +254,12 @@ export async function generateDebtorEmail(
     const barrierCtx = buildBarrierContext(
       brief.data,
       debtor.contactEmail,
-      intel ?? null,
+      {
+        creditRiskScore: intel?.creditRiskScore ?? null,
+        insolvencyRisk: intel?.insolvencyRisk ?? null,
+        vulnerabilityDetected: debtorResult.vulnerabilityDetected,
+        vulnerabilityPausedChasing: debtorResult.vulnerabilityPausedChasing,
+      },
     );
     const diagnosis = diagnoseBarrier(barrierCtx);
     const stage = deriveEscalationStage(barrierCtx.communicationCount);
@@ -277,6 +282,7 @@ export async function generateDebtorEmail(
       totalChaseAmount: chaseAmount,
       daysOverdue: maxDaysOverdue,
       currency,
+      vulnerabilityPausedChasing: debtorResult.vulnerabilityPausedChasing,
     }, socialProof);
 
     influenceDiagnosis = {
@@ -652,7 +658,7 @@ async function resolvePersona(tenantId: string): Promise<AgentPersona> {
 async function loadDebtorProfile(
   tenantId: string,
   contactId: string,
-): Promise<{ profile: DebtorProfile; smallBalancePolicy: SmallBalancePolicy }> {
+): Promise<{ profile: DebtorProfile; smallBalancePolicy: SmallBalancePolicy; vulnerabilityDetected: boolean; vulnerabilityPausedChasing: boolean }> {
   const [contact] = await db
     .select()
     .from(contacts)
@@ -717,6 +723,8 @@ async function loadDebtorProfile(
       behaviour,
     },
     smallBalancePolicy: getSmallBalancePolicy(tenant),
+    vulnerabilityDetected: contact.vulnerabilityDetected ?? false,
+    vulnerabilityPausedChasing: contact.vulnerabilityPausedChasing ?? false,
   };
 }
 

@@ -362,7 +362,12 @@ export class ActionExecutor {
       }
     }
 
-    // 2. Probable payment detected — hold off if medium/high confidence
+    // 2. Vulnerability — do not chase if paused
+    if (contact.vulnerabilityPausedChasing) {
+      return { valid: false, reason: 'vulnerability_blocked' };
+    }
+
+    // 3. Probable payment detected — hold off if medium/high confidence
     if (contact.probablePaymentDetected &&
         ['high', 'medium'].includes(contact.probablePaymentConfidence)) {
       return { valid: false, reason: 'probable_payment_detected' };

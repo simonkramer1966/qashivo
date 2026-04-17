@@ -5581,4 +5581,78 @@ ${type === 'email' ? 'Generate a JSON object with "subject" (string) and "body" 
     }
   });
 
+  // ─── Vulnerability review ───
+  app.post("/api/contacts/:id/vulnerability-review",
+    isAuthenticated,
+    withRBACContext,
+    withMinimumRole('manager'),
+    async (req, res) => {
+      try {
+        const contactId = req.params.id;
+        const tenantId = (req as any).rbac?.tenantId;
+        const userId = (req as any).rbac?.userId;
+        if (!tenantId) return res.status(403).json({ message: "No tenant context" });
+
+        const { outcome } = req.body as { outcome: string };
+        if (!['confirmed_vulnerable', 'not_vulnerable', 'monitoring'].includes(outcome)) {
+          return res.status(400).json({ message: "Invalid outcome. Must be: confirmed_vulnerable, not_vulnerable, monitoring" });
+        }
+
+        const now = new Date();
+
+        if (outcome === 'not_vulnerable') {
+          // Clear all vulnerability flags, resume chasing
+          await db.update(contacts).set({
+            vulnerabilityDetected: false,
+            vulnerabilityPausedChasing: false,
+            vulnerabilitySignals: null,
+            vulnerabilitySeverity: null,
+            vulnerabilityReviewedBy: userId,
+            vulnerabilityReviewedAt: now,
+            vulnerabilityReviewOutcome: 'not_vulnerable',
+            updatedAt: now,
+          }).where(and(eq(contacts.id, contactId), eq(contacts.tenantId, tenantId)));
+        } else if (outcome === 'confirmed_vulnerable') {
+          // Keep paused, confirm vulnerability
+          await db.update(contacts).set({
+            vulnerabilityPausedChasing: true,
+            vulnerabilityReviewedBy: userId,
+            vulnerabilityReviewedAt: now,
+            vulnerabilityReviewOutcome: 'confirmed_vulnerable',
+            updatedAt: now,
+          }).where(and(eq(contacts.id, contactId), eq(contacts.tenantId, tenantId)));
+        } else if (outcome === 'monitoring') {
+          // Resume chasing but keep flag for awareness
+          await db.update(contacts).set({
+            vulnerabilityPausedChasing: false,
+            vulnerabilityReviewedBy: userId,
+            vulnerabilityReviewedAt: now,
+            vulnerabilityReviewOutcome: 'monitoring',
+            updatedAt: now,
+          }).where(and(eq(contacts.id, contactId), eq(contacts.tenantId, tenantId)));
+        }
+
+        // Timeline event
+        await db.insert(timelineEvents).values({
+          tenantId,
+          contactId,
+          eventType: 'vulnerability_reviewed',
+          direction: 'system',
+          channel: 'system',
+          summary: `Vulnerability review: ${outcome.replace(/_/g, ' ')}`,
+          createdAt: now,
+        });
+
+        const [updated] = await db.select().from(contacts)
+          .where(and(eq(contacts.id, contactId), eq(contacts.tenantId, tenantId)))
+          .limit(1);
+
+        res.json({ success: true, contact: updated });
+      } catch (error: any) {
+        console.error("Error processing vulnerability review:", error);
+        res.status(500).json({ message: "Failed to process vulnerability review" });
+      }
+    },
+  );
+
 }

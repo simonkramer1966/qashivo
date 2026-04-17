@@ -1785,6 +1785,19 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
         const confidenceBand = confidenceScore >= 0.85 ? 'HIGH' : confidenceScore >= 0.65 ? 'MEDIUM' : 'LOW';
         const requiresHumanReview = confidenceScore < 0.65 || ['BANK_DETAILS_CHANGE_REQUEST', 'DISPUTE'].includes(outcomeType);
 
+        // Vulnerability detection on voice transcript — non-fatal
+        if (contactId && contentToAnalyze) {
+          try {
+            const { detectVulnerability, handleVulnerabilityDetection } = await import("../services/influence/vulnerabilityDetector");
+            const vulnAssessment = await detectVulnerability(contentToAnalyze, contactId, tenantId);
+            if (vulnAssessment.recommendedAction !== 'continue') {
+              await handleVulnerabilityDetection(vulnAssessment, contactId, tenantId);
+            }
+          } catch (vulnErr) {
+            console.warn('[Vulnerability] Voice transcript detection failed (non-fatal):', vulnErr);
+          }
+        }
+
         // Build extracted data - normalize to promiseToPayDate/promiseToPayAmount
         // (matching intentAnalyst convention used by email/SMS channels)
         const extracted: Record<string, any> = {};
@@ -2440,6 +2453,17 @@ async function processNormalizedInboundEmail(
       timestamp: new Date(),
     }).catch(err => console.error('Failed to record email signal:', err));
     
+    // Vulnerability detection — non-fatal, runs before intent analysis
+    try {
+      const { detectVulnerability, handleVulnerabilityDetection } = await import("../services/influence/vulnerabilityDetector");
+      const vulnAssessment = await detectVulnerability(text || '', linkedContact.id, linkedContact.tenantId);
+      if (vulnAssessment.recommendedAction !== 'continue') {
+        await handleVulnerabilityDetection(vulnAssessment, linkedContact.id, linkedContact.tenantId);
+      }
+    } catch (vulnErr) {
+      console.warn('[Vulnerability] Detection failed (non-fatal):', vulnErr);
+    }
+
     // Trigger unified intent analysis asynchronously (handles all channels consistently)
     intentAnalyst.processInboundMessage(legacyMessage.id)
       .catch(err => console.error('❌ Intent analysis error:', err));

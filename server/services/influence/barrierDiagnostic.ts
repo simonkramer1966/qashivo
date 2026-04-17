@@ -34,6 +34,9 @@ export interface BarrierContext {
   insolvencyRisk: boolean;
   mentionsCashflow: boolean;
   companyAppearsHealthy: boolean;
+  /** Vulnerability detection (Phase 6) */
+  vulnerabilityDetected?: boolean;
+  vulnerabilityPausedChasing?: boolean;
 }
 
 // ── Generic email patterns (matches data health service) ─────
@@ -54,7 +57,12 @@ const GENERIC_EMAIL_PATTERNS = [
 export function buildBarrierContext(
   briefData: ConversationBriefData | null | undefined,
   contactEmail: string,
-  intel: { creditRiskScore: number | null; insolvencyRisk: boolean | null } | null | undefined,
+  intel: {
+    creditRiskScore: number | null;
+    insolvencyRisk: boolean | null;
+    vulnerabilityDetected?: boolean;
+    vulnerabilityPausedChasing?: boolean;
+  } | null | undefined,
 ): BarrierContext {
   const ch = briefData?.channelHistory;
   const communicationCount =
@@ -99,12 +107,24 @@ export function buildBarrierContext(
     insolvencyRisk,
     mentionsCashflow,
     companyAppearsHealthy,
+    vulnerabilityDetected: intel?.vulnerabilityDetected ?? false,
+    vulnerabilityPausedChasing: intel?.vulnerabilityPausedChasing ?? false,
   };
 }
 
 // ── Diagnostic logic ─────────────────────────────────────────
 
 export function diagnoseBarrier(context: BarrierContext): BarrierDiagnosis {
+  // Vulnerability override — influence engine disengaged
+  if (context.vulnerabilityDetected && context.vulnerabilityPausedChasing) {
+    return {
+      barrier: "ability" as InfluenceBarrier,
+      confidence: "high" as const,
+      signals: ["Vulnerability detected — influence engine disengaged"],
+      reasoning: "Debtor flagged as vulnerable. Supportive mode active.",
+    };
+  }
+
   const signals: string[] = [];
 
   // Collect all signals regardless of which barrier wins

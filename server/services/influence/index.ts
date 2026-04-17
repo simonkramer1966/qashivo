@@ -7,6 +7,8 @@
  *          questions, de-escalation protocols, voicemail scripts).
  * Phase 4: SMS tone ceiling + barrier-specific compression guidance.
  * Phase 5: CIE integration stubs (social proof consumer + outcome publisher).
+ * Phase 6: Vulnerability detection (Haiku classification, chasing pause,
+ *          supportive mode, manager review workflow).
  */
 
 export {

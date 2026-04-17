@@ -81,6 +81,7 @@ export interface DebtorBriefContext {
   totalChaseAmount: number;
   daysOverdue: number;
   currency: string;
+  vulnerabilityPausedChasing?: boolean;
 }
 
 // ── Main brief generator ─────────────────────────────────────
@@ -91,6 +92,11 @@ export function generateInfluenceBrief(
   debtorContext: DebtorBriefContext,
   socialProof?: SocialProofData,
 ): string {
+  // Vulnerability override — supportive mode, no influence techniques
+  if (debtorContext.vulnerabilityPausedChasing) {
+    return generateSupportiveBrief(debtorContext);
+  }
+
   const { contactName, companyName, totalChaseAmount, daysOverdue, currency } = debtorContext;
 
   const fmt = new Intl.NumberFormat("en-GB", { style: "currency", currency: currency || "GBP" });
@@ -167,6 +173,38 @@ export function generateInfluenceBrief(
   lines.push("- Never be sarcastic, condescending, or dismissive");
   lines.push("- Never send a communication without a clear, specific next step");
   lines.push('- Never use "promise to pay" or "PTP". Use "payment arrangement" or "confirmed payment date".');
+
+  return lines.join("\n");
+}
+
+/**
+ * Supportive mode brief — used when a debtor is flagged as vulnerable.
+ * The influence engine is fully disengaged. No persuasion techniques.
+ */
+function generateSupportiveBrief(debtorContext: DebtorBriefContext): string {
+  const lines: string[] = [];
+
+  lines.push("=== COMMUNICATION MODE: SUPPORTIVE ===");
+  lines.push("");
+  lines.push("This debtor has been flagged as potentially vulnerable.");
+  lines.push("The influence engine is DISENGAGED. Do not use any persuasion techniques.");
+  lines.push("");
+  lines.push(`Debtor: ${debtorContext.contactName} at ${debtorContext.companyName}`);
+  lines.push("");
+  lines.push("Write with genuine compassion:");
+  lines.push("- Express concern for their wellbeing");
+  lines.push("- Make clear there is no urgency or pressure");
+  lines.push("- Offer to discuss when they are ready");
+  lines.push("- Keep the message short and gentle");
+  lines.push("- If they have raised a specific issue, acknowledge it directly");
+  lines.push("");
+  lines.push("DO NOT:");
+  lines.push("- Use any persuasion techniques (no labels, no calibrated questions, no social proof)");
+  lines.push("- Mention interest, escalation, consequences, or deadlines");
+  lines.push("- Set time pressure or create urgency");
+  lines.push("- Reference payment terms or contractual obligations");
+  lines.push("- Make them feel guilty or responsible");
+  lines.push("- Use 'promise to pay' or 'PTP' language");
 
   return lines.join("\n");
 }

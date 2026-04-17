@@ -269,6 +269,17 @@ export const contacts = pgTable("contacts", {
 
   // Gap 10: Legal response window
   legalResponseWindowEnd: timestamp("legal_response_window_end"),
+
+  // Vulnerability detection (Influence Engine Phase 6)
+  vulnerabilityDetected: boolean("vulnerability_detected").default(false),
+  vulnerabilityDetectedAt: timestamp("vulnerability_detected_at"),
+  vulnerabilitySignals: jsonb("vulnerability_signals").$type<string[]>(),
+  vulnerabilitySeverity: varchar("vulnerability_severity", { length: 10 }), // low | medium | high
+  vulnerabilityPausedChasing: boolean("vulnerability_paused_chasing").default(false),
+  vulnerabilityReviewedBy: varchar("vulnerability_reviewed_by"),
+  vulnerabilityReviewedAt: timestamp("vulnerability_reviewed_at"),
+  vulnerabilityReviewOutcome: varchar("vulnerability_review_outcome", { length: 30 }), // confirmed_vulnerable | not_vulnerable | monitoring
+
   // Gap 14: Probable payment detection
   probablePaymentDetected: boolean("probable_payment_detected").default(false),
   probablePaymentConfidence: varchar("probable_payment_confidence"),

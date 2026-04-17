@@ -750,7 +750,8 @@ export default function DebtorRecord() {
   const contactId = params?.id ?? "";
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { canViewAuditLog } = usePermissions();
+  const { canViewAuditLog, isManager, isOwner, isAdmin } = usePermissions();
+  const canReviewVulnerability = isManager || isOwner || isAdmin;
 
   // --- Tabs state ---
   const [activeTab, setActiveTab] = useState("activity");
@@ -913,6 +914,22 @@ export default function DebtorRecord() {
       toast({ title: "Hold released" });
     },
     onError: (err: Error) => toast({ title: "Failed", description: err.message, variant: "destructive" }),
+  });
+
+  const vulnerabilityReviewMutation = useMutation({
+    mutationFn: async (outcome: string) => {
+      await apiRequest("POST", `/api/contacts/${contactId}/vulnerability-review`, { outcome });
+    },
+    onSuccess: (_data, outcome) => {
+      queryClient.invalidateQueries({ queryKey: ["debtor-profile", contactId] });
+      const labels: Record<string, string> = {
+        confirmed_vulnerable: "Vulnerability confirmed — chasing remains paused",
+        not_vulnerable: "Not vulnerable — chasing resumed",
+        monitoring: "Monitoring — chasing resumed with awareness",
+      };
+      toast({ title: labels[outcome] || "Review saved" });
+    },
+    onError: (err: Error) => toast({ title: "Review failed", description: err.message, variant: "destructive" }),
   });
 
   const updateSilenceTimeoutMutation = useMutation({
@@ -2299,6 +2316,71 @@ export default function DebtorRecord() {
             )}
           </div>
         </div>
+
+        {/* ----------------------------------------------------------------- */}
+        {/* Vulnerability banner                                              */}
+        {/* ----------------------------------------------------------------- */}
+        {contact?.vulnerabilityDetected && (
+          <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 mb-4">
+            <div className="flex items-start gap-3">
+              <ShieldAlert className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-amber-900">
+                  Vulnerability detected
+                  {contact.vulnerabilityDetectedAt && (
+                    <span className="font-normal text-amber-700">
+                      {" "}on {new Date(contact.vulnerabilityDetectedAt).toLocaleDateString("en-GB")}
+                    </span>
+                  )}
+                  {contact.vulnerabilityPausedChasing && (
+                    <span className="font-normal text-amber-700"> — automated chasing is paused</span>
+                  )}
+                </p>
+                {contact.vulnerabilitySignals && (contact.vulnerabilitySignals as string[]).length > 0 && (
+                  <p className="text-sm text-amber-700 mt-1">
+                    Signals: {(contact.vulnerabilitySignals as string[]).join(", ")}
+                  </p>
+                )}
+                {contact.vulnerabilityReviewOutcome && (
+                  <p className="text-sm text-amber-600 mt-1">
+                    Reviewed: {contact.vulnerabilityReviewOutcome.replace(/_/g, " ")}
+                    {contact.vulnerabilityReviewedAt && (
+                      <> on {new Date(contact.vulnerabilityReviewedAt).toLocaleDateString("en-GB")}</>
+                    )}
+                  </p>
+                )}
+                {canReviewVulnerability && !contact.vulnerabilityReviewOutcome && (
+                  <div className="flex gap-2 mt-3">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => vulnerabilityReviewMutation.mutate("confirmed_vulnerable")}
+                      disabled={vulnerabilityReviewMutation.isPending}
+                    >
+                      Confirm vulnerable
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => vulnerabilityReviewMutation.mutate("not_vulnerable")}
+                      disabled={vulnerabilityReviewMutation.isPending}
+                    >
+                      Not vulnerable
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => vulnerabilityReviewMutation.mutate("monitoring")}
+                      disabled={vulnerabilityReviewMutation.isPending}
+                    >
+                      Monitor
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ----------------------------------------------------------------- */}
         {/* Tabs                                                              */}

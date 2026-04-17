@@ -108,7 +108,11 @@ export async function publishInfluenceOutcome(
     type: string;
     daysToOutcome: number | null;
   },
+  options?: { vulnerabilityDetected?: boolean },
 ): Promise<void> {
+  // Never publish vulnerability-related outcomes to CIE
+  if (options?.vulnerabilityDetected) return;
+
   // Stub — collectiveEvents table does not exist yet
   if (process.env.NODE_ENV !== "production") {
     console.debug(
