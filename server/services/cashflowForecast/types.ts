@@ -25,6 +25,8 @@ export interface MaterialInvoice {
   amount: number;
   percentOfP50: number;     // how much of that week's P50 this invoice represents
   hitFrequency: number;     // fraction of runs where this invoice paid in this week (0-1)
+  withTotal: number;        // conditional median of week collections when this invoice pays in this week
+  withoutTotal: number;     // conditional median of week collections when this invoice doesn't pay in this week
 }
 
 export interface InvoiceSimulationInput {

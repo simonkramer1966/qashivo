@@ -217,6 +217,8 @@ interface InflowForecast {
       amount: number;
       percentOfP50: number;
       hitFrequency: number;
+      withTotal: number;
+      withoutTotal: number;
     }[];
     perInvoiceWeekFrequency: Record<string, Record<number, number>>;
     totalRecovery: { p10: number; p25: number; p50: number; p75: number; p90: number };
@@ -1106,10 +1108,19 @@ export default function ForecastPage() {
         const grandExp = wf.isCompleted && wf.actualAmount != null ? wf.actualAmount : wf.expected;
         const grandOpt = wf.optimistic;
 
-        // AR invoice rows sorted by expected amount desc
-        const sortedInvoices = [...wf.invoiceBreakdown].sort(
-          (a, b) => b.amountDue * b.probability - a.amountDue * a.probability,
-        );
+        // AR invoice rows: MC mode sorts by simulation frequency desc, non-MC by expected amount desc
+        const weekNum = wf.weekNumber;
+        const weekMaterials = materialByWeek.get(weekNum);
+        const materialInvoiceIds = new Set(weekMaterials?.map(m => m.invoiceId) ?? []);
+
+        const sortedInvoices = [...wf.invoiceBreakdown].sort((a, b) => {
+          if (mc) {
+            const freqA = mc.perInvoiceWeekFrequency?.[a.invoiceId]?.[weekNum] ?? 0;
+            const freqB = mc.perInvoiceWeekFrequency?.[b.invoiceId]?.[weekNum] ?? 0;
+            return freqB - freqA;
+          }
+          return b.amountDue * b.probability - a.amountDue * a.probability;
+        });
         const PAGE_SIZE = 10;
         const totalInvoices = sortedInvoices.length;
         const totalPages = Math.ceil(totalInvoices / PAGE_SIZE);
@@ -1149,7 +1160,6 @@ export default function ForecastPage() {
                 <col className="w-[120px]" />
                 <col className="w-[120px]" />
                 <col className="w-[120px]" />
-                {mc && <col className="w-[90px]" />}
               </colgroup>
 
               {/* Summary rows */}
@@ -1187,13 +1197,34 @@ export default function ForecastPage() {
               {totalInvoices === 0 ? (
                 <tbody>
                   <tr>
-                    <td colSpan={mc ? 7 : 6} className="text-[14px] text-[var(--q-text-tertiary)] py-6 text-center">
+                    <td colSpan={6} className="text-[14px] text-[var(--q-text-tertiary)] py-6 text-center">
                       No invoices expected this week
                     </td>
                   </tr>
                 </tbody>
               ) : (
                 <>
+                  {/* Material invoices summary — conditional framing */}
+                  {mc && weekMaterials && weekMaterials.length > 0 && (
+                    <tbody>
+                      <tr>
+                        <td colSpan={6} className="px-5 pt-4 pb-2">
+                          <div className="bg-[var(--q-attention-bg)] rounded-lg px-4 py-3 space-y-1.5">
+                            <p className="text-[12px] font-semibold text-[var(--q-attention-text)] uppercase tracking-[0.3px]">Key invoices driving this week</p>
+                            {weekMaterials.slice(0, 3).map((mi) => (
+                              <p key={mi.invoiceId} className="text-[14px] text-[var(--q-text-primary)] leading-relaxed">
+                                If <span className="font-semibold">{mi.contactName}</span> pays this week, likely total jumps to{" "}
+                                <span className="font-mono font-semibold text-[var(--q-money-in-text)]">{fmt(mi.withTotal)}</span>.
+                                {" "}If not, stays around{" "}
+                                <span className="font-mono font-semibold text-[var(--q-text-secondary)]">{fmt(mi.withoutTotal)}</span>.
+                              </p>
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  )}
+
                   {/* Invoices section label */}
                   <tbody>
                     <tr>
@@ -1205,31 +1236,90 @@ export default function ForecastPage() {
                     </tr>
                   </tbody>
 
-                  {/* Column headers */}
+                  {/* Column headers — MC mode replaces Tough/Likely/Good with frequency-based columns */}
                   <thead>
                     <tr className="border-b border-[var(--q-border-default)]">
                       <th className="text-left text-[11px] font-medium tracking-[0.3px] h-10 pl-5 pr-3 text-[var(--q-text-tertiary)]">Invoice #</th>
                       <th className="text-left text-[11px] font-medium tracking-[0.3px] h-10 px-3 text-[var(--q-text-tertiary)]">Customer</th>
                       <th className="text-right text-[11px] font-medium tracking-[0.3px] h-10 px-3 text-[var(--q-text-tertiary)]">Amount due</th>
-                      <th className="text-right text-[11px] font-medium tracking-[0.3px] h-10 px-3 text-[var(--q-risk-text)]">{mc ? "Tough" : "Pessimistic"}</th>
-                      <th className="text-right text-[11px] font-medium tracking-[0.3px] h-10 px-3 text-[var(--q-info-text)]">{mc ? "Likely" : "Expected"}</th>
-                      <th className="text-right text-[11px] font-medium tracking-[0.3px] h-10 px-3 pr-5 text-[var(--q-money-in-text)]">{mc ? "Good" : "Optimistic"}</th>
-                      {mc && <th className="text-right text-[11px] font-medium tracking-[0.3px] h-10 px-3 pr-5 text-[var(--q-text-tertiary)]">Scenarios</th>}
+                      {mc ? (
+                        <>
+                          <th className="text-right text-[11px] font-medium tracking-[0.3px] h-10 px-3 text-[var(--q-text-tertiary)]">Appears in wk {weekNum}</th>
+                          <th className="text-right text-[11px] font-medium tracking-[0.3px] h-10 px-3 text-[var(--q-text-tertiary)]">Typical pay week</th>
+                          <th className="text-right text-[11px] font-medium tracking-[0.3px] h-10 px-3 pr-5 text-[var(--q-attention-text)]">Material</th>
+                        </>
+                      ) : (
+                        <>
+                          <th className="text-right text-[11px] font-medium tracking-[0.3px] h-10 px-3 text-[var(--q-risk-text)]">Pessimistic</th>
+                          <th className="text-right text-[11px] font-medium tracking-[0.3px] h-10 px-3 text-[var(--q-info-text)]">Expected</th>
+                          <th className="text-right text-[11px] font-medium tracking-[0.3px] h-10 px-3 pr-5 text-[var(--q-money-in-text)]">Optimistic</th>
+                        </>
+                      )}
                     </tr>
                   </thead>
 
                   {/* Invoice rows */}
                   <tbody>
                     {pagedInvoices.map((inv) => {
+                      const promiseDate = inv.dueDate && inv.promiseOverride
+                        ? new Date(inv.dueDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
+                        : null;
+
+                      if (mc) {
+                        // MC mode: simulation frequency, typical pay week, material flag
+                        const freq = mc.perInvoiceWeekFrequency?.[inv.invoiceId]?.[weekNum] ?? 0;
+                        const pct = freq ? Math.round((freq / mc.simulationRuns) * 100) : 0;
+
+                        // Typical pay week = week with highest hit count (mode)
+                        const invFreqs = mc.perInvoiceWeekFrequency?.[inv.invoiceId];
+                        let typicalWeek: number | null = null;
+                        if (invFreqs) {
+                          let maxHits = 0;
+                          for (const [wk, hits] of Object.entries(invFreqs)) {
+                            if (hits > maxHits) {
+                              maxHits = hits;
+                              typicalWeek = parseInt(wk);
+                            }
+                          }
+                        }
+
+                        const isMaterial = materialInvoiceIds.has(inv.invoiceId);
+
+                        return (
+                          <tr key={inv.invoiceId} className="border-b border-[var(--q-border-default)] last:border-0 hover:bg-[var(--q-bg-surface-hover)] transition-colors">
+                            <td className="px-3 py-2 pl-5 text-[14px] tabular-nums text-[var(--q-text-secondary)]">{inv.invoiceNumber}</td>
+                            <td className="px-3 py-2 text-[14px] text-[var(--q-text-secondary)] overflow-hidden text-ellipsis whitespace-nowrap">
+                              {inv.contactName}
+                              {inv.promiseOverride && (
+                                <span className="ml-1 text-[var(--q-attention-text)]" title={promiseDate ? `Promise: ${promiseDate}` : "Promise override"}>
+                                  ⚡{promiseDate ? ` Promise: ${promiseDate}` : ""}
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2 text-right text-[14px] font-mono tabular-nums text-[var(--q-text-secondary)]">{fmt(Math.round(inv.amountDue))}</td>
+                            <td className="px-3 py-2 text-right font-mono tabular-nums text-[14px] text-[var(--q-text-secondary)]">
+                              {pct > 0 ? `${pct}%` : "<1%"}
+                            </td>
+                            <td className="px-3 py-2 text-right text-[14px] text-[var(--q-text-secondary)]">
+                              {typicalWeek ? `Wk ${typicalWeek}` : "—"}
+                            </td>
+                            <td className="px-3 py-2 pr-5 text-right text-[14px]">
+                              {isMaterial
+                                ? <span className="font-semibold text-[var(--q-attention-text)]">Yes</span>
+                                : <span className="text-[var(--q-text-tertiary)]">—</span>
+                              }
+                            </td>
+                          </tr>
+                        );
+                      }
+
+                      // Non-MC mode: expected-value columns
                       const pesAmt = inv.amountDue * (inv.pessimisticProbability ?? inv.probability);
                       const expAmt = inv.amountDue * inv.probability;
                       const optAmt = inv.amountDue * (inv.optimisticProbability ?? inv.probability);
                       const pesP = (inv.pessimisticProbability ?? inv.probability) * 100;
                       const expP = inv.probability * 100;
                       const optP = (inv.optimisticProbability ?? inv.probability) * 100;
-                      const promiseDate = inv.dueDate && inv.promiseOverride
-                        ? new Date(inv.dueDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
-                        : null;
 
                       return (
                         <tr key={inv.invoiceId} className="border-b border-[var(--q-border-default)] last:border-0 hover:bg-[var(--q-bg-surface-hover)] transition-colors">
@@ -1251,20 +1341,10 @@ export default function ForecastPage() {
                             <div className="font-mono tabular-nums text-[14px] text-[var(--q-info-text)]">{fmt(Math.round(expAmt))}</div>
                             <div className="font-mono tabular-nums text-[12px] text-[var(--q-text-tertiary)]">({fmtPct(expP)})</div>
                           </td>
-                          <td className={mc ? "px-3 py-2 text-right" : "px-3 py-2 pr-5 text-right"}>
+                          <td className="px-3 py-2 pr-5 text-right">
                             <div className="font-mono tabular-nums text-[14px] text-[var(--q-money-in-text)]">{fmt(Math.round(optAmt))}</div>
                             <div className="font-mono tabular-nums text-[12px] text-[var(--q-text-tertiary)]">({fmtPct(optP)})</div>
                           </td>
-                          {mc && (() => {
-                            const weekNum = wf.weekNumber;
-                            const freq = mc.perInvoiceWeekFrequency?.[inv.invoiceId]?.[weekNum];
-                            const pct = freq ? Math.round((freq / mc.simulationRuns) * 100) : 0;
-                            return (
-                              <td className="px-3 py-2 pr-5 text-right font-mono tabular-nums text-[14px] text-[var(--q-text-secondary)]">
-                                {pct > 0 ? `${pct}%` : "<1%"}
-                              </td>
-                            );
-                          })()}
                         </tr>
                       );
                     })}

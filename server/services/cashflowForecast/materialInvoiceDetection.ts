@@ -4,6 +4,9 @@
  * Identifies invoices whose payment timing materially affects
  * a specific week's cash position. A "material" invoice is one
  * where (hitFrequency × amount) > threshold × weekP50.
+ *
+ * Also computes conditional medians (withTotal / withoutTotal)
+ * for conditional framing: "If X pays this week… if not…"
  */
 
 import type { InvoiceSimulationInput, MaterialInvoice } from './types.js';
@@ -16,8 +19,8 @@ const DEFAULT_THRESHOLD = 0.15; // 15% of week P50
  * An invoice is "material" to week W when:
  *   (hitCount / totalRuns) × invoiceAmount > threshold × weekP50[W]
  *
- * This surfaces invoices where a single debtor paying or not paying
- * significantly changes the week's cash position.
+ * When weeklyCollections and invoiceWeekAssignment are provided,
+ * computes conditional medians for with/without framing.
  */
 export function detectMaterialInvoices(
   perInvoiceWeekFrequency: Record<string, Record<number, number>>,
@@ -25,8 +28,19 @@ export function detectMaterialInvoices(
   invoiceMap: Map<string, InvoiceSimulationInput>,
   totalRuns: number,
   threshold: number = DEFAULT_THRESHOLD,
+  weeklyCollections?: Float64Array[],
+  invoiceWeekAssignment?: Int8Array[],
+  invoices?: InvoiceSimulationInput[],
 ): MaterialInvoice[] {
   const results: MaterialInvoice[] = [];
+
+  // Build invoiceId → index map for looking up assignments
+  const invoiceIndexMap = new Map<string, number>();
+  if (invoices) {
+    for (let i = 0; i < invoices.length; i++) {
+      invoiceIndexMap.set(invoices[i].invoiceId, i);
+    }
+  }
 
   for (const [invoiceId, weekHits] of Object.entries(perInvoiceWeekFrequency)) {
     const invoice = invoiceMap.get(invoiceId);
@@ -44,6 +58,27 @@ export function detectMaterialInvoices(
       const impact = frequency * invoice.amountDue;
 
       if (impact > threshold * p50) {
+        // Compute conditional medians if per-run data is available
+        let withTotal = p50;
+        let withoutTotal = p50;
+
+        const invIdx = invoiceIndexMap.get(invoiceId);
+        if (weeklyCollections && invoiceWeekAssignment && invIdx !== undefined) {
+          const withRuns: number[] = [];
+          const withoutRuns: number[] = [];
+
+          for (let r = 0; r < totalRuns; r++) {
+            if (invoiceWeekAssignment[r][invIdx] === weekIdx) {
+              withRuns.push(weeklyCollections[r][weekIdx]);
+            } else {
+              withoutRuns.push(weeklyCollections[r][weekIdx]);
+            }
+          }
+
+          withTotal = medianOfSorted(withRuns);
+          withoutTotal = medianOfSorted(withoutRuns);
+        }
+
         results.push({
           weekNumber,
           invoiceId,
@@ -52,6 +87,8 @@ export function detectMaterialInvoices(
           amount: invoice.amountDue,
           percentOfP50: Math.round((impact / p50) * 100),
           hitFrequency: Math.round(frequency * 1000) / 1000, // 3 decimal places
+          withTotal: Math.round(withTotal),
+          withoutTotal: Math.round(withoutTotal),
         });
       }
     }
@@ -61,4 +98,16 @@ export function detectMaterialInvoices(
   results.sort((a, b) => b.percentOfP50 - a.percentOfP50 || a.weekNumber - b.weekNumber);
 
   return results;
+}
+
+/**
+ * Compute median from an unsorted array of numbers.
+ */
+function medianOfSorted(values: number[]): number {
+  if (values.length === 0) return 0;
+  values.sort((a, b) => a - b);
+  const mid = Math.floor(values.length / 2);
+  return values.length % 2 === 0
+    ? (values[mid - 1] + values[mid]) / 2
+    : values[mid];
 }

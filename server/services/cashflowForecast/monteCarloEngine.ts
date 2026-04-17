@@ -46,9 +46,15 @@ export function runMonteCarloSimulation(
     invoiceWeekHits.set(inv.invoiceId, new Int32Array(weeks));
   }
 
+  // Track which week each invoice paid in per run, for conditional median calculation.
+  // Int8Array: max value 127 — safe for 13-week window. Revisit if forecast horizon extends beyond 127 weeks.
+  // -1 = didn't pay within the forecast window in this run.
+  const invoiceWeekAssignment: Int8Array[] = new Array(runs);
+
   // Run simulations
   for (let r = 0; r < runs; r++) {
     const collections = new Float64Array(weeks);
+    const assignments = new Int8Array(numInvoices).fill(-1);
 
     for (let i = 0; i < numInvoices; i++) {
       const inv = invoices[i];
@@ -62,6 +68,7 @@ export function runMonteCarloSimulation(
       if (weekIndex >= weeks) continue;
 
       collections[weekIndex] += inv.amountDue;
+      assignments[i] = weekIndex;
 
       // Track hit count for this invoice in this week
       const hits = invoiceWeekHits.get(inv.invoiceId)!;
@@ -84,6 +91,7 @@ export function runMonteCarloSimulation(
     weeklyCollections[r] = collections;
     weeklyBalances[r] = balances;
     totalRecoveryPerRun[r] = runTotal;
+    invoiceWeekAssignment[r] = assignments;
   }
 
   // Extract percentiles
@@ -124,6 +132,10 @@ export function runMonteCarloSimulation(
     weeklyP50,
     invoiceMap,
     runs,
+    undefined, // use default threshold (0.15)
+    weeklyCollections,
+    invoiceWeekAssignment,
+    invoices,
   );
 
   return {
