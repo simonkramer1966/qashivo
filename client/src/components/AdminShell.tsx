@@ -10,6 +10,7 @@ const AdminCommsLog = lazy(() => import("@/pages/admin/AdminCommsLog"));
 const AdminRileyMonitor = lazy(() => import("@/pages/admin/AdminRileyMonitor"));
 const AdminTenantExplorer = lazy(() => import("@/pages/admin/AdminTenantExplorer"));
 const AdminErrorConsole = lazy(() => import("@/pages/admin/AdminErrorConsole"));
+const AdminFeedbackManager = lazy(() => import("@/pages/admin/AdminFeedbackManager"));
 const AdminAnalytics = lazy(() => import("@/pages/admin-analytics"));
 const AdminOutcomes = lazy(() => import("@/pages/admin-outcomes"));
 const AdminPartners = lazy(() => import("@/pages/admin-partners"));
@@ -65,6 +66,7 @@ export default function AdminShell() {
         <Route path="/admin/ops/riley" component={withOpsLayout(AdminRileyMonitor)} />
         <Route path="/admin/ops/tenants" component={withOpsLayout(AdminTenantExplorer)} />
         <Route path="/admin/ops/errors" component={withOpsLayout(AdminErrorConsole)} />
+        <Route path="/admin/ops/feedback" component={withOpsLayout(AdminFeedbackManager)} />
         <Route path="/admin/ops/:rest*" component={withOpsLayout(AdminDashboard)} />
         <Route path="/admin/ops" component={withOpsLayout(AdminDashboard)} />
         <Route path="/admin/analytics" component={AdminAnalytics} />

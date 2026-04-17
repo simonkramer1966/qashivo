@@ -295,6 +295,7 @@ import { registerImpactRoutes } from "./routes/impactRoutes";
 import { registerCashflowRoutes } from "./routes/cashflowRoutes";
 import { registerPriorityRoutes } from "./routes/priorityRoutes";
 import { registerNoteRoutes } from "./routes/noteRoutes";
+import { registerFeedbackRoutes } from "./routes/feedbackRoutes";
 import { buildConversationBrief } from "./services/conversationBriefService";
 import { ForecastEngine, type ForecastConfig, type ForecastScenario } from "../shared/forecast";
 import { subscriptionService } from "./services/subscriptionService";
@@ -669,6 +670,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerCashflowRoutes(app);
   registerPriorityRoutes(app);
   registerNoteRoutes(app);
+  registerFeedbackRoutes(app);
 
   // ── Temporary diagnostic: conversation brief inspector ──
   // Remove after verification. Auth-gated, non-destructive read-only.

@@ -64,6 +64,7 @@ const tabs = [
   { path: "/admin/ops/riley", label: "Riley" },
   { path: "/admin/ops/tenants", label: "Tenants" },
   { path: "/admin/ops/errors", label: "Errors" },
+  { path: "/admin/ops/feedback", label: "Feedback" },
 ];
 
 // --- Layout ---

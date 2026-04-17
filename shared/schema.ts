@@ -7423,3 +7423,33 @@ export const insertAdminCommunicationEventSchema = createInsertSchema(adminCommu
 });
 export type AdminCommunicationEvent = typeof adminCommunicationEvents.$inferSelect;
 export type InsertAdminCommunicationEvent = z.infer<typeof insertAdminCommunicationEventSchema>;
+
+// ── Feedback Submissions ──────────────────────────────────────────
+export const feedbackSubmissions = pgTable("feedback_submissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  userEmail: varchar("user_email").notNull(),
+  type: varchar("type").notNull(), // 'bug' | 'feature' | 'workflow'
+  description: text("description").notNull(),
+  page: varchar("page").notNull(),
+  priority: varchar("priority"), // 'low' | 'medium' | 'high' | null
+  screenshotData: text("screenshot_data"), // base64 encoded image
+  status: varchar("status").default("new").notNull(), // 'new' | 'in_progress' | 'resolved' | 'wont_fix' | 'duplicate'
+  adminNotes: text("admin_notes"),
+  resolvedAt: timestamp("resolved_at"),
+  resolvedBy: varchar("resolved_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_feedback_tenant").on(table.tenantId),
+  index("idx_feedback_status").on(table.status),
+]);
+
+export const insertFeedbackSubmissionSchema = createInsertSchema(feedbackSubmissions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type FeedbackSubmission = typeof feedbackSubmissions.$inferSelect;
+export type InsertFeedbackSubmission = z.infer<typeof insertFeedbackSubmissionSchema>;

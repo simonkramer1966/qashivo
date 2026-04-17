@@ -32,7 +32,9 @@ import {
   Briefcase,
   FileBarChart,
   Flag,
+  MessageSquarePlus,
 } from "lucide-react";
+import FeedbackModal from "@/components/FeedbackModal";
 import {
   Tooltip,
   TooltipContent,
@@ -159,6 +161,7 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
   const { user } = useAuth();
   const { hasPermission, canViewCapital, canManageUsers, canAccessAutonomy, canAccessBilling, canConfigureCharlie } = usePermissions();
   const { isPartner, partnerInfo } = usePartnerContext();
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   function isPillarVisible(pillar: NavPillar): boolean {
     if (pillar.label === "Qapital") return canViewCapital;
@@ -313,6 +316,7 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
     : null;
 
   return (
+    <>
     <aside
       className={cn(
         "flex flex-col h-full bg-q-bg-page text-q-text-primary transition-[width] duration-200 ease-in-out",
@@ -602,6 +606,33 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
         </div>
       )}
 
+      {/* Feedback button — all users */}
+      <div className={cn("pb-1", isCollapsed ? "px-2" : "px-3")}>
+        {isCollapsed ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => setFeedbackOpen(true)}
+                className="w-full flex items-center justify-center py-2.5 rounded-md text-q-text-secondary hover:bg-q-bg-surface-hover hover:text-q-text-primary transition-colors"
+              >
+                <MessageSquarePlus className="w-4 h-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={8}>
+              Send feedback
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <button
+            onClick={() => setFeedbackOpen(true)}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm text-q-text-secondary hover:bg-q-bg-surface-hover hover:text-q-text-primary transition-colors"
+          >
+            <MessageSquarePlus className="w-4 h-4 shrink-0" />
+            <span className="flex-1 text-left">Feedback</span>
+          </button>
+        )}
+      </div>
+
       {/* Footer — user profile (sync indicator moved to header) */}
       <div className={cn("border-t border-q-border pb-4 pt-3", isCollapsed ? "px-2" : "px-3")}>
         {isCollapsed ? (
@@ -636,5 +667,8 @@ export default function NewSidebar({ mobile, onNavigate }: SidebarProps) {
         )}
       </div>
     </aside>
+
+    <FeedbackModal open={feedbackOpen} onOpenChange={setFeedbackOpen} />
+  </>
   );
 }
