@@ -6,7 +6,7 @@ import { usePageMeta } from "@/hooks/usePageMeta";
 const CHAPTERS = [
   {
     title: "The Real Cost of Late Payments",
-    description: "Why the £22,000 average figure is just the beginning — and what it's really costing your business.",
+    description: "Why the £22,000 average figure is just the beginning, and what it's really costing your business.",
   },
   {
     title: "The Cash Gap Cycle",
@@ -14,7 +14,7 @@ const CHAPTERS = [
   },
   {
     title: "Your Rights Under UK Law",
-    description: "The legislation that protects you — and how to use it.",
+    description: "The legislation that protects you, and how to use it.",
   },
   {
     title: "Practical Recovery Strategies",
@@ -32,15 +32,15 @@ const CHAPTERS = [
 
 export default function CashGapPage() {
   usePageMeta(
-    "The Cash Gap — Free Guide by Simon Kramer",
-    "How late payments are killing UK businesses — and what to do about it. Free PDF download."
+    "The Cash Gap. Free Guide by Simon Kramer",
+    "How late payments are killing UK businesses, and what to do about it. Free PDF download."
   );
 
   // OG meta tags for social sharing
   useEffect(() => {
     const ogTags: Record<string, string> = {
-      "og:title": "The Cash Gap — Free Guide by Simon Kramer",
-      "og:description": "How late payments are killing UK businesses — and what to do about it. Free PDF download.",
+      "og:title": "The Cash Gap. Free Guide by Simon Kramer",
+      "og:description": "How late payments are killing UK businesses, and what to do about it. Free PDF download.",
       "og:image": `${window.location.origin}/images/marketing/cash-gap-cover.png`,
       "og:url": `${window.location.origin}/the-cash-gap`,
       "og:type": "website",
@@ -74,13 +74,13 @@ export default function CashGapPage() {
                 The Cash Gap
               </h1>
               <p className="text-xl md:text-2xl text-slate-500 font-medium leading-relaxed mb-3 italic">
-                How Late Payments Are Killing UK Businesses — And What To Do About It
+                How Late Payments Are Killing UK Businesses. And What To Do About It
               </p>
               <p className="text-base text-slate-400 font-semibold mb-8">By Simon Kramer</p>
               <p className="text-lg text-on-surface-variant leading-relaxed mb-10 max-w-xl font-medium">
                 Late payments cost UK SMEs £22,000 a year on average. This free guide breaks down
                 why the cash gap exists, what it really costs your business, and the practical
-                steps you can take to close it — before it closes you.
+                steps you can take to close it. Before it closes you.
               </p>
               <a
                 href="/downloads/the-cash-gap.pdf"
@@ -136,10 +136,10 @@ export default function CashGapPage() {
         <section className="bg-brand-navy py-20 md:py-28">
           <div className="max-w-4xl mx-auto px-6 lg:px-24 text-center">
             <blockquote className="text-3xl md:text-4xl font-headline font-extrabold text-white leading-snug mb-6">
-              "50,000 UK businesses fail every year because of cash flow problems. Most of them were profitable."
+              "Worst-case scenarios are only impossible right up until the moment they happen. After that they're just Tuesday."
             </blockquote>
             <p className="text-slate-400 font-semibold text-sm uppercase tracking-wider">
-              — UK Government Late Payment Report
+              Simon Kramer
             </p>
           </div>
         </section>
@@ -163,12 +163,12 @@ export default function CashGapPage() {
                   Simon Kramer
                 </h2>
                 <p className="text-on-surface-variant text-lg leading-relaxed font-medium mb-4">
-                  Simon has spent over 20 years in credit management, working with businesses of every
-                  size — from sole traders to FTSE-listed corporates. He's seen first-hand how late
-                  payments destroy otherwise healthy companies.
+                  Simon has spent over 30 years in finance & accounting and technology, working with
+                  businesses of every size from sole traders to City of London merchant banks. He's
+                  seen first-hand how late payments destroy otherwise healthy companies.
                 </p>
                 <p className="text-on-surface-variant text-lg leading-relaxed font-medium">
-                  That experience led him to found Qashivo — an AI-powered credit controller that
+                  That experience led him to found Qashivo, an AI-powered credit controller that
                   chases invoices, forecasts cashflow, and protects your cash position around the clock.
                   The Cash Gap distils everything he's learned into a practical guide for business
                   owners who are tired of waiting to get paid.
