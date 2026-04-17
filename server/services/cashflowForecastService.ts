@@ -256,6 +256,8 @@ export interface InflowForecast {
       amount: number;
       percentOfP50: number;
       hitFrequency: number;
+      withTotal: number;
+      withoutTotal: number;
     }[];
     perInvoiceWeekFrequency: Record<string, Record<number, number>>;
     totalRecovery: { p10: number; p25: number; p50: number; p75: number; p90: number };

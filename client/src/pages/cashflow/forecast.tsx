@@ -1211,14 +1211,26 @@ export default function ForecastPage() {
                         <td colSpan={6} className="px-5 pt-4 pb-2">
                           <div className="bg-[var(--q-attention-bg)] rounded-lg px-4 py-3 space-y-1.5">
                             <p className="text-[12px] font-semibold text-[var(--q-attention-text)] uppercase tracking-[0.3px]">Key invoices driving this week</p>
-                            {weekMaterials.slice(0, 3).map((mi) => (
-                              <p key={mi.invoiceId} className="text-[14px] text-[var(--q-text-primary)] leading-relaxed">
-                                If <span className="font-semibold">{mi.contactName}</span> pays this week, likely total jumps to{" "}
-                                <span className="font-mono font-semibold text-[var(--q-money-in-text)]">{fmt(mi.withTotal)}</span>.
-                                {" "}If not, stays around{" "}
-                                <span className="font-mono font-semibold text-[var(--q-text-secondary)]">{fmt(mi.withoutTotal)}</span>.
-                              </p>
-                            ))}
+                            {weekMaterials.slice(0, 3).map((mi) => {
+                              const hasConditionals = typeof mi.withTotal === "number" && typeof mi.withoutTotal === "number" && isFinite(mi.withTotal) && isFinite(mi.withoutTotal);
+                              return (
+                                <p key={mi.invoiceId} className="text-[14px] text-[var(--q-text-primary)] leading-relaxed">
+                                  {hasConditionals ? (
+                                    <>
+                                      If <span className="font-semibold">{mi.contactName}</span> pays this week, likely total jumps to{" "}
+                                      <span className="font-mono font-semibold text-[var(--q-money-in-text)]">{fmt(mi.withTotal)}</span>.
+                                      {" "}If not, stays around{" "}
+                                      <span className="font-mono font-semibold text-[var(--q-text-secondary)]">{fmt(mi.withoutTotal)}</span>.
+                                    </>
+                                  ) : (
+                                    <>
+                                      <span className="font-semibold">{mi.contactName}</span> ({fmt(mi.amount)}) has a{" "}
+                                      {Math.round(mi.hitFrequency * 100)}% chance of paying this week.
+                                    </>
+                                  )}
+                                </p>
+                              );
+                            })}
                           </div>
                         </td>
                       </tr>
