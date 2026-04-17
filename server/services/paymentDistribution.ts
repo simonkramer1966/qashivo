@@ -90,7 +90,7 @@ function erfInv(x: number): number {
 /**
  * Log-normal CDF — probability that payment occurs by day x
  */
-function logNormalCDF(x: number, mu: number, sigma: number): number {
+export function logNormalCDF(x: number, mu: number, sigma: number): number {
   if (x <= 0) return 0;
   const z = (Math.log(x) - mu) / (sigma * Math.SQRT2);
   return 0.5 * (1 + erf(z));
@@ -99,7 +99,7 @@ function logNormalCDF(x: number, mu: number, sigma: number): number {
 /**
  * Log-normal quantile (inverse CDF) — day by which there's a p probability of payment
  */
-function logNormalQuantile(p: number, mu: number, sigma: number): number {
+export function logNormalQuantile(p: number, mu: number, sigma: number): number {
   if (p <= 0) return 0;
   if (p >= 1) return Infinity;
   const z = erfInv(2 * p - 1) * Math.SQRT2;

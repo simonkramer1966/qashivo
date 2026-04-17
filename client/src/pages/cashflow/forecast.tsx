@@ -39,6 +39,7 @@ import {
   Loader2,
   Lock,
   Target,
+  RefreshCw,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import {
@@ -201,6 +202,29 @@ interface InflowForecast {
   openingBalance?: number;
   safetyThreshold?: number;
   safetyBreachWeek?: number | null;
+  monteCarlo?: {
+    weeklyPercentiles: {
+      weekNumber: number;
+      weekStarting: string;
+      collections: { p10: number; p25: number; p50: number; p75: number; p90: number };
+      balance: { p10: number; p25: number; p50: number; p75: number; p90: number };
+    }[];
+    materialInvoices: {
+      weekNumber: number;
+      invoiceId: string;
+      invoiceNumber: string;
+      contactName: string;
+      amount: number;
+      percentOfP50: number;
+      hitFrequency: number;
+    }[];
+    perInvoiceWeekFrequency: Record<string, Record<number, number>>;
+    totalRecovery: { p10: number; p25: number; p50: number; p75: number; p90: number };
+    simulationRuns: number;
+    inputHash: string;
+    safetyBreachWeek: number | null;
+    narrative?: string | null;
+  };
   confidenceByHorizon: {
     weeks1to2: string;
     weeks3to5: string;
@@ -309,19 +333,30 @@ function CollectionsTooltip({ active, payload, label }: any) {
   if (!d) return null;
 
   const concentration = d.concentration;
+  const hasMC = !!d.mcCollectionsBand;
   return (
     <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border)] rounded-md shadow-lg px-3 py-2 space-y-0.5">
       <p className="text-[13px] font-medium text-[var(--q-text-primary)]">{d.label}</p>
-      <p className="text-[12px] tabular-nums">Expected: {fmt(d.expected)} <span className="text-[var(--q-text-tertiary)]">({d.invoiceCount} invoices)</span></p>
-      <p className="text-[12px] text-[var(--q-text-tertiary)] tabular-nums">
-        Range: {fmt(d.pessimistic)} — {fmt(d.optimistic)}
+      <p className="text-[12px] tabular-nums">
+        {hasMC ? "Likely" : "Expected"}: {fmt(d.expected)} <span className="text-[var(--q-text-tertiary)]">({d.invoiceCount} invoices)</span>
       </p>
-      {d.topDebtor && (
+      <p className="text-[12px] text-[var(--q-text-tertiary)] tabular-nums">
+        {hasMC
+          ? <>Good week: {fmt(d.mcCollectionsBand[1])} / Tough week: {fmt(d.mcCollectionsBand[0])}</>
+          : <>Range: {fmt(d.pessimistic)} — {fmt(d.optimistic)}</>
+        }
+      </p>
+      {d.materialInvoices?.length > 0 && (
+        <p className="text-[12px] text-[var(--q-attention-text)]">
+          Depends on {d.materialInvoices[0].contactName} ({fmt(d.materialInvoices[0].amount)} = {d.materialInvoices[0].percentOfP50}% of total)
+        </p>
+      )}
+      {d.topDebtor && !d.materialInvoices?.length && (
         <p className="text-[12px] text-[var(--q-text-tertiary)] tabular-nums">
           Top: {d.topDebtor} {fmt(d.topDebtorAmount)} ({fmtPct(d.topDebtorPercent)})
         </p>
       )}
-      {concentration?.isFragile && (
+      {concentration?.isFragile && !d.materialInvoices?.length && (
         <p className="text-[12px] text-[var(--q-attention-text)]">
           {fmtPct(concentration.topDebtorPercent)} from {concentration.topDebtor} (concentration risk)
         </p>
@@ -335,10 +370,12 @@ function BalanceTooltip({ active, payload }: any) {
   const d = payload[0]?.payload;
   if (!d) return null;
 
+  const hasMC = !!d.mcBalanceBand;
+  const balanceLabel = hasMC ? d.mcBalP50 : d.expectedBalance;
   return (
     <div className="bg-[var(--q-bg-surface)] border border-[var(--q-border)] rounded-md shadow-lg px-3 py-2 space-y-0.5">
       <p className="text-[13px] font-medium text-[var(--q-text-primary)]">{d.label}</p>
-      <p className="text-[12px] tabular-nums">Opening balance: {fmt(d.expectedBalance)}</p>
+      <p className="text-[12px] tabular-nums">{hasMC ? "Likely" : "Expected"} balance: {fmt(balanceLabel)}</p>
       <p className="text-[12px] text-[var(--q-text-tertiary)] tabular-nums">
         This week: +{fmt(d.expected)} inflows
         {d.outflow > 0 && <>, -{fmt(d.outflow)} outflows</>}
@@ -349,7 +386,10 @@ function BalanceTooltip({ active, payload }: any) {
         </p>
       )}
       <p className="text-[12px] text-[var(--q-text-tertiary)] tabular-nums">
-        Closing balance range: {fmt(d.pessimisticBalance)} — {fmt(d.optimisticBalance)}
+        {hasMC
+          ? <>Good week: {fmt(d.mcBalanceBand[1])} / Tough week: {fmt(d.mcBalanceBand[0])}</>
+          : <>Balance range: {fmt(d.pessimisticBalance)} — {fmt(d.optimisticBalance)}</>
+        }
       </p>
     </div>
   );
@@ -414,7 +454,7 @@ export default function ForecastPage() {
   const [showMethodology, setShowMethodology] = useState(false);
 
   const forecastSubtitle = (
-    <span className="inline-flex items-center gap-1">
+    <span className="inline-flex items-center gap-2">
       Built from your customers' actual payment history
       <button
         onClick={() => setShowMethodology(true)}
@@ -423,6 +463,16 @@ export default function ForecastPage() {
       >
         <Info className="h-3 w-3" />
       </button>
+      {canEditForecast && (
+        <button
+          onClick={() => recalculateMutation.mutate()}
+          disabled={recalculateMutation.isPending}
+          className="inline-flex items-center text-[var(--q-text-tertiary)] hover:text-[var(--q-text-primary)] transition-colors disabled:opacity-50"
+          title="Recalculate forecast"
+        >
+          <RefreshCw className={`h-3 w-3 ${recalculateMutation.isPending ? "animate-spin" : ""}`} />
+        </button>
+      )}
     </span>
   );
 
@@ -466,6 +516,38 @@ export default function ForecastPage() {
     onError: (err: any) => {
       const msg = err?.message || "Failed to generate review";
       toast({ title: "Error", description: msg, variant: "destructive" });
+    },
+  });
+
+  // Monte Carlo narrative generation
+  const narrativeMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/cashflow/forecast/narrative"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/cashflow/inflow-forecast"] });
+    },
+  });
+
+  // Auto-generate narrative if MC data exists but narrative is missing
+  React.useEffect(() => {
+    if (
+      forecast?.monteCarlo &&
+      !forecast.monteCarlo.narrative &&
+      !narrativeMutation.isPending &&
+      !narrativeMutation.isSuccess
+    ) {
+      narrativeMutation.mutate();
+    }
+  }, [forecast?.monteCarlo?.inputHash]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Monte Carlo recalculate
+  const recalculateMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/cashflow/forecast/recalculate"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/cashflow/inflow-forecast"] });
+      toast({ title: "Forecast recalculated with latest data" });
+    },
+    onError: (err: any) => {
+      toast({ title: "Recalculation failed", description: err?.message || "Try again", variant: "destructive" });
     },
   });
 
@@ -614,6 +696,26 @@ export default function ForecastPage() {
   let runningExpected = openingBal;
   let runningPessimistic = openingBal;
 
+  const mc = forecast.monteCarlo;
+  const mcWeekMap = useMemo(() => {
+    if (!mc) return null;
+    const map = new Map<number, typeof mc.weeklyPercentiles[0]>();
+    for (const wp of mc.weeklyPercentiles) map.set(wp.weekNumber, wp);
+    return map;
+  }, [mc]);
+
+  // Material invoices by week for chart markers
+  const materialByWeek = useMemo(() => {
+    if (!mc) return new Map<number, typeof mc.materialInvoices>();
+    const map = new Map<number, typeof mc.materialInvoices>();
+    for (const mi of mc.materialInvoices) {
+      const list = map.get(mi.weekNumber) || [];
+      list.push(mi);
+      map.set(mi.weekNumber, list);
+    }
+    return map;
+  }, [mc]);
+
   const chartData = forecast.weeklyForecasts.map((wf, i) => {
     // Fallback: client-side running balance if server doesn't provide it
     runningOptimistic += wf.optimistic;
@@ -623,6 +725,7 @@ export default function ForecastPage() {
     const concentration = forecast.concentrationRisk.weeklyConcentration[i];
     const outflowThisWeek = forecast.outflows?.weeklyTotals?.[i] ?? 0;
     const netThisWeek = forecast.netCashflow?.expected?.[i] ?? (wf.expected - outflowThisWeek);
+    const mcWeek = mcWeekMap?.get(wf.weekNumber);
 
     return {
       label: weekLabel(wf.weekStarting),
@@ -647,6 +750,13 @@ export default function ForecastPage() {
       topDebtorAmount: concentration?.topDebtorAmount ?? 0,
       topDebtorPercent: concentration?.topDebtorPercent ?? 0,
       concentration,
+      // MC percentiles (when available)
+      mcCollectionsBand: mcWeek ? [Math.round(mcWeek.collections.p25), Math.round(mcWeek.collections.p75)] as [number, number] : undefined,
+      mcBalanceBand: mcWeek ? [Math.round(mcWeek.balance.p25), Math.round(mcWeek.balance.p75)] as [number, number] : undefined,
+      mcCollP50: mcWeek ? Math.round(mcWeek.collections.p50) : undefined,
+      mcBalP50: mcWeek ? Math.round(mcWeek.balance.p50) : undefined,
+      hasMaterialInvoice: materialByWeek.has(wf.weekNumber),
+      materialInvoices: materialByWeek.get(wf.weekNumber),
     };
   });
 
@@ -819,19 +929,38 @@ export default function ForecastPage() {
 
       {/* A. Top Metrics Bar — 4 equal-width cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <QMetricCard label="This Week" value={forecast.weeklyForecasts[0]?.expected ?? 0} format="currency" />
-        <QMetricCard label="Next Week" value={forecast.weeklyForecasts[1]?.expected ?? 0} format="currency" />
         <QMetricCard
-          label="Peak Week"
-          value={peakWeek.expected}
+          label="This Week"
+          value={mc?.weeklyPercentiles[0]?.collections.p50 ?? forecast.weeklyForecasts[0]?.expected ?? 0}
           format="currency"
-          trend={{ direction: "flat", value: `Week ${peakWeek.weekNumber}` }}
+          trend={mc ? { direction: "flat", value: `${fmt(mc.weeklyPercentiles[0]?.collections.p25 ?? 0)} — ${fmt(mc.weeklyPercentiles[0]?.collections.p75 ?? 0)}` } : undefined}
         />
         <QMetricCard
-          label="Lowest week"
-          value={lowestWeek.expected}
+          label="Next Week"
+          value={mc?.weeklyPercentiles[1]?.collections.p50 ?? forecast.weeklyForecasts[1]?.expected ?? 0}
           format="currency"
-          trend={{ direction: "flat", value: `Week ${lowestWeek.weekNumber}` }}
+          trend={mc ? { direction: "flat", value: `${fmt(mc.weeklyPercentiles[1]?.collections.p25 ?? 0)} — ${fmt(mc.weeklyPercentiles[1]?.collections.p75 ?? 0)}` } : undefined}
+        />
+        <QMetricCard
+          label={mc ? "13-Week Likely" : "Peak Week"}
+          value={mc ? mc.totalRecovery.p50 : peakWeek.expected}
+          format="currency"
+          trend={mc
+            ? { direction: "flat", value: `${fmt(mc.totalRecovery.p25)} — ${fmt(mc.totalRecovery.p75)}` }
+            : { direction: "flat", value: `Week ${peakWeek.weekNumber}` }
+          }
+        />
+        <QMetricCard
+          label={mc ? "Recovery Rate" : "Lowest Week"}
+          value={mc
+            ? (forecast.totalOutstanding > 0 ? Math.round((mc.totalRecovery.p50 / forecast.totalOutstanding) * 100) : 0)
+            : lowestWeek.expected
+          }
+          format={mc ? "number" : "currency"}
+          trend={mc
+            ? { direction: "flat", value: `${Math.round((mc.totalRecovery.p50 / Math.max(1, forecast.totalOutstanding)) * 1000) / 10}% of outstanding` }
+            : { direction: "flat", value: `Week ${lowestWeek.weekNumber}` }
+          }
         />
       </div>
 
@@ -923,30 +1052,42 @@ export default function ForecastPage() {
                 {chartData.map((entry, i) => (
                   <Cell
                     key={i}
-                    fill={entry.isCompleted ? "var(--q-info-text)" : entry.isFragile ? "var(--q-attention-text)" : "var(--q-info-text)"}
-                    stroke={i === expandedWeekIndex ? "var(--q-text-primary)" : entry.isCompleted ? "var(--q-info-border)" : entry.isFragile ? "var(--q-attention-border)" : "none"}
-                    strokeWidth={i === expandedWeekIndex ? 2 : entry.isCompleted ? 1 : entry.isFragile ? 1.5 : 0}
+                    fill={entry.hasMaterialInvoice ? "var(--q-attention-text)" : entry.isCompleted ? "var(--q-info-text)" : entry.isFragile ? "var(--q-attention-text)" : "var(--q-info-text)"}
+                    stroke={i === expandedWeekIndex ? "var(--q-text-primary)" : entry.isCompleted ? "var(--q-info-border)" : entry.isFragile || entry.hasMaterialInvoice ? "var(--q-attention-border)" : "none"}
+                    strokeWidth={i === expandedWeekIndex ? 2 : entry.isCompleted ? 1 : (entry.isFragile || entry.hasMaterialInvoice) ? 1.5 : 0}
                     opacity={expandedWeekIndex !== null && i !== expandedWeekIndex ? 0.5 : 1}
                   />
                 ))}
               </Bar>
-              {/* Error whiskers via thin lines */}
-              <Line
-                dataKey="optimistic"
-                stroke="var(--q-money-in-text)"
-                strokeWidth={1}
-                dot={{ r: 2, fill: "var(--q-money-in-text)" }}
-                strokeDasharray="2 3"
-                connectNulls
-              />
-              <Line
-                dataKey="pessimistic"
-                stroke="var(--q-risk-text)"
-                strokeWidth={1}
-                dot={{ r: 2, fill: "var(--q-risk-text)" }}
-                strokeDasharray="2 3"
-                connectNulls
-              />
+              {/* Confidence band / whisker lines */}
+              {mc ? (
+                <Area
+                  dataKey="mcCollectionsBand"
+                  type="monotone"
+                  stroke="none"
+                  fill="rgba(59,130,246,0.15)"
+                  connectNulls
+                />
+              ) : (
+                <>
+                  <Line
+                    dataKey="optimistic"
+                    stroke="var(--q-money-in-text)"
+                    strokeWidth={1}
+                    dot={{ r: 2, fill: "var(--q-money-in-text)" }}
+                    strokeDasharray="2 3"
+                    connectNulls
+                  />
+                  <Line
+                    dataKey="pessimistic"
+                    stroke="var(--q-risk-text)"
+                    strokeWidth={1}
+                    dot={{ r: 2, fill: "var(--q-risk-text)" }}
+                    strokeDasharray="2 3"
+                    connectNulls
+                  />
+                </>
+              )}
             </ComposedChart>
           </ResponsiveContainer>
         </CardContent>
@@ -1005,15 +1146,16 @@ export default function ForecastPage() {
                 <col className="w-[100px]" />
                 <col />
                 <col className="w-[110px]" />
-                <col className="w-[140px]" />
-                <col className="w-[140px]" />
-                <col className="w-[140px]" />
+                <col className="w-[120px]" />
+                <col className="w-[120px]" />
+                <col className="w-[120px]" />
+                {mc && <col className="w-[90px]" />}
               </colgroup>
 
               {/* Summary rows */}
               <tbody>
                 <tr className="bg-[var(--q-bg-surface-alt)]">
-                  <td colSpan={3} className="px-5 py-3 text-[15px] font-semibold text-[var(--q-text-primary)]">Total</td>
+                  <td colSpan={3} className="px-5 py-3 text-[15px] font-semibold text-[var(--q-text-primary)]">{mc ? "Likely total" : "Total"}</td>
                   <td className="px-3 py-3 text-right font-mono font-medium tabular-nums text-[14px] text-[var(--q-risk-text)]">{fmt(Math.round(grandPes))}</td>
                   <td className="px-3 py-3 text-right font-mono font-medium tabular-nums text-[14px] text-[var(--q-info-text)]">{fmt(Math.round(grandExp))}</td>
                   <td className="px-3 py-3 pr-5 text-right font-mono font-medium tabular-nums text-[14px] text-[var(--q-money-in-text)]">{fmt(Math.round(grandOpt))}</td>
@@ -1045,7 +1187,7 @@ export default function ForecastPage() {
               {totalInvoices === 0 ? (
                 <tbody>
                   <tr>
-                    <td colSpan={6} className="text-[14px] text-[var(--q-text-tertiary)] py-6 text-center">
+                    <td colSpan={mc ? 7 : 6} className="text-[14px] text-[var(--q-text-tertiary)] py-6 text-center">
                       No invoices expected this week
                     </td>
                   </tr>
@@ -1069,9 +1211,10 @@ export default function ForecastPage() {
                       <th className="text-left text-[11px] font-medium tracking-[0.3px] h-10 pl-5 pr-3 text-[var(--q-text-tertiary)]">Invoice #</th>
                       <th className="text-left text-[11px] font-medium tracking-[0.3px] h-10 px-3 text-[var(--q-text-tertiary)]">Customer</th>
                       <th className="text-right text-[11px] font-medium tracking-[0.3px] h-10 px-3 text-[var(--q-text-tertiary)]">Amount due</th>
-                      <th className="text-right text-[11px] font-medium tracking-[0.3px] h-10 px-3 text-[var(--q-risk-text)]">Pessimistic</th>
-                      <th className="text-right text-[11px] font-medium tracking-[0.3px] h-10 px-3 text-[var(--q-info-text)]">Expected</th>
-                      <th className="text-right text-[11px] font-medium tracking-[0.3px] h-10 px-3 pr-5 text-[var(--q-money-in-text)]">Optimistic</th>
+                      <th className="text-right text-[11px] font-medium tracking-[0.3px] h-10 px-3 text-[var(--q-risk-text)]">{mc ? "Tough" : "Pessimistic"}</th>
+                      <th className="text-right text-[11px] font-medium tracking-[0.3px] h-10 px-3 text-[var(--q-info-text)]">{mc ? "Likely" : "Expected"}</th>
+                      <th className="text-right text-[11px] font-medium tracking-[0.3px] h-10 px-3 pr-5 text-[var(--q-money-in-text)]">{mc ? "Good" : "Optimistic"}</th>
+                      {mc && <th className="text-right text-[11px] font-medium tracking-[0.3px] h-10 px-3 pr-5 text-[var(--q-text-tertiary)]">Scenarios</th>}
                     </tr>
                   </thead>
 
@@ -1108,10 +1251,20 @@ export default function ForecastPage() {
                             <div className="font-mono tabular-nums text-[14px] text-[var(--q-info-text)]">{fmt(Math.round(expAmt))}</div>
                             <div className="font-mono tabular-nums text-[12px] text-[var(--q-text-tertiary)]">({fmtPct(expP)})</div>
                           </td>
-                          <td className="px-3 py-2 pr-5 text-right">
+                          <td className={mc ? "px-3 py-2 text-right" : "px-3 py-2 pr-5 text-right"}>
                             <div className="font-mono tabular-nums text-[14px] text-[var(--q-money-in-text)]">{fmt(Math.round(optAmt))}</div>
                             <div className="font-mono tabular-nums text-[12px] text-[var(--q-text-tertiary)]">({fmtPct(optP)})</div>
                           </td>
+                          {mc && (() => {
+                            const weekNum = wf.weekNumber;
+                            const freq = mc.perInvoiceWeekFrequency?.[inv.invoiceId]?.[weekNum];
+                            const pct = freq ? Math.round((freq / mc.simulationRuns) * 100) : 0;
+                            return (
+                              <td className="px-3 py-2 pr-5 text-right font-mono tabular-nums text-[14px] text-[var(--q-text-secondary)]">
+                                {pct > 0 ? `${pct}%` : "<1%"}
+                              </td>
+                            );
+                          })()}
                         </tr>
                       );
                     })}
@@ -1188,9 +1341,9 @@ export default function ForecastPage() {
                 fillOpacity={1}
                 isFront={false}
               />
-              {/* Confidence band (pessimistic to optimistic range) */}
+              {/* Confidence band (MC P25-P75 or pessimistic-optimistic range) */}
               <Area
-                dataKey="balanceBand"
+                dataKey={mc ? "mcBalanceBand" : "balanceBand"}
                 type="monotone"
                 stroke="none"
                 fill="rgba(59,130,246,0.12)"
@@ -1211,27 +1364,31 @@ export default function ForecastPage() {
                   fill: "var(--q-risk-text)",
                 }}
               />
-              {/* Optimistic balance line — dotted green */}
+              {!mc && (
+                <>
+                  {/* Optimistic balance line — dotted green */}
+                  <Line
+                    dataKey="optimisticBalance"
+                    stroke="var(--q-money-in-text)"
+                    strokeWidth={1}
+                    dot={{ r: 2, fill: "var(--q-money-in-text)" }}
+                    strokeDasharray="2 3"
+                    connectNulls
+                  />
+                  {/* Pessimistic balance line — dotted deep red */}
+                  <Line
+                    dataKey="pessimisticBalance"
+                    stroke="var(--q-risk-text)"
+                    strokeWidth={1}
+                    dot={{ r: 2, fill: "var(--q-risk-text)" }}
+                    strokeDasharray="2 3"
+                    connectNulls
+                  />
+                </>
+              )}
+              {/* Expected / P50 balance line — solid blue */}
               <Line
-                dataKey="optimisticBalance"
-                stroke="var(--q-money-in-text)"
-                strokeWidth={1}
-                dot={{ r: 2, fill: "var(--q-money-in-text)" }}
-                strokeDasharray="2 3"
-                connectNulls
-              />
-              {/* Pessimistic balance line — dotted deep red */}
-              <Line
-                dataKey="pessimisticBalance"
-                stroke="var(--q-risk-text)"
-                strokeWidth={1}
-                dot={{ r: 2, fill: "var(--q-risk-text)" }}
-                strokeDasharray="2 3"
-                connectNulls
-              />
-              {/* Expected balance line — solid blue */}
-              <Line
-                dataKey="expectedBalance"
+                dataKey={mc ? "mcBalP50" : "expectedBalance"}
                 stroke="var(--q-info-text)"
                 strokeWidth={2}
                 dot={{ r: 3, fill: "var(--q-info-text)" }}
@@ -1241,6 +1398,22 @@ export default function ForecastPage() {
           </ResponsiveContainer>
         </CardContent>
       </Card>
+
+      {/* Riley's Take — MC narrative */}
+      {mc?.narrative && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold text-[var(--q-text-primary)]">
+              Riley's take
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="prose prose-sm max-w-none text-sm text-[var(--q-text-tertiary)] [&_p]:my-2 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_strong]:text-[var(--q-text-primary)]">
+              <ReactMarkdown>{mc.narrative}</ReactMarkdown>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* E. Signal Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -1713,19 +1886,43 @@ export default function ForecastPage() {
             </p>
             <p>
               <strong>Per-customer model:</strong> For each customer, we fit a
-              log-normal distribution to their past payment timing. This
-              captures both their typical speed and their variability.
+              payment timing model to their history, weighted so recent payments
+              matter more than old ones. This captures both their typical speed
+              and their variability.
             </p>
-            <p>
-              <strong>Three scenarios:</strong> Optimistic (25th percentile —
-              customers pay at the fast end), Expected (median), and Pessimistic
-              (75th percentile — customers pay slow). All three are
-              mathematically derived from the same distribution, not separate
-              guesses.
-            </p>
+            {forecast?.monteCarlo ? (
+              <>
+                <p>
+                  <strong>5,000 scenarios:</strong> We run {(forecast.monteCarlo.simulationRuns ?? 5000).toLocaleString()} simulations
+                  for every invoice based on how each customer actually pays. The
+                  "Likely" figure is the middle of those outcomes. "Good week"
+                  and "Tough week" show what happens if customers pay faster or
+                  slower than usual.
+                </p>
+                <p>
+                  <strong>Shaded bands:</strong> The blue shaded areas on the
+                  charts show the range between a good week and a tough week (the
+                  middle 50% of outcomes). Most weeks will land inside the band.
+                </p>
+                <p>
+                  <strong>Material invoices:</strong> When a single invoice makes
+                  up a large share of a week's expected collection, the bar turns
+                  amber. These are weeks where one customer paying or not paying
+                  meaningfully changes the outcome.
+                </p>
+              </>
+            ) : (
+              <p>
+                <strong>Three scenarios:</strong> Optimistic (25th percentile —
+                customers pay at the fast end), Expected (median), and Pessimistic
+                (75th percentile — customers pay slow). All three are
+                mathematically derived from the same distribution, not separate
+                guesses.
+              </p>
+            )}
             <p>
               <strong>Confidence levels:</strong> High (10+ historical
-              payments — tight distribution), Medium (3-9 payments), Low (0-2
+              payments — tight model), Medium (3-9 payments), Low (0-2
               payments — using conservative system defaults of 40 days).
             </p>
             <p>

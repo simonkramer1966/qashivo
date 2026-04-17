@@ -239,6 +239,31 @@ export interface InflowForecast {
   openingBalance?: number;
   safetyThreshold?: number;
   safetyBreachWeek?: number | null;
+
+  // Monte Carlo simulation (Phase 1 — optional, present when engine runs successfully)
+  monteCarlo?: {
+    weeklyPercentiles: {
+      weekNumber: number;
+      weekStarting: string;
+      collections: { p10: number; p25: number; p50: number; p75: number; p90: number };
+      balance: { p10: number; p25: number; p50: number; p75: number; p90: number };
+    }[];
+    materialInvoices: {
+      weekNumber: number;
+      invoiceId: string;
+      invoiceNumber: string;
+      contactName: string;
+      amount: number;
+      percentOfP50: number;
+      hitFrequency: number;
+    }[];
+    perInvoiceWeekFrequency: Record<string, Record<number, number>>;
+    totalRecovery: { p10: number; p25: number; p50: number; p75: number; p90: number };
+    simulationRuns: number;
+    inputHash: string;
+    safetyBreachWeek: number | null;
+    narrative?: string | null;
+  };
 }
 
 export interface DebtorPaymentProfile {
@@ -1403,6 +1428,36 @@ export async function generateInflowForecast(
       };
     })(),
   };
+
+  // ── Monte Carlo simulation overlay ──
+  try {
+    const { runSimulationForecast } = await import('./cashflowForecast/index.js');
+    const mcResult = await runSimulationForecast(tenantId, 'manual');
+
+    // Also fetch cached narrative if available
+    const { simulationCache: simCacheTable } = await import('@shared/schema');
+    const { eq: eqOp } = await import('drizzle-orm');
+    const cachedRow = await db
+      .select({ narrative: simCacheTable.narrative })
+      .from(simCacheTable)
+      .where(eqOp(simCacheTable.tenantId, tenantId))
+      .limit(1)
+      .then(rows => rows[0]);
+
+    forecast.monteCarlo = {
+      weeklyPercentiles: mcResult.weeklyResults,
+      materialInvoices: mcResult.materialInvoices,
+      perInvoiceWeekFrequency: mcResult.perInvoiceWeekFrequency,
+      totalRecovery: mcResult.totalRecovery,
+      simulationRuns: mcResult.simulationRuns,
+      inputHash: mcResult.inputHash,
+      safetyBreachWeek: mcResult.safetyBreachWeek,
+      narrative: cachedRow?.narrative ?? null,
+    };
+  } catch (err) {
+    console.warn('[CashflowForecast] Monte Carlo simulation failed, returning forecast without MC data:', err);
+    // Graceful degradation — existing forecast still returned
+  }
 
   // Cache the result
   forecastCache.set(tenantId, {

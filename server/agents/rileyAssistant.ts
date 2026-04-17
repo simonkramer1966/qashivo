@@ -358,6 +358,47 @@ export async function buildDebtorContext(contactId: string, tenantId: string): P
       }
     } catch { /* graceful — distribution context is supplementary */ }
 
+    // Monte Carlo: per-debtor forecast position
+    try {
+      const { simulationCache } = await import("@shared/schema");
+      const { eq: eqMc } = await import("drizzle-orm");
+      const [cachedSim] = await db
+        .select({ perInvoiceWeekFrequency: simulationCache.perInvoiceWeekFrequency, simulationRuns: simulationCache.simulationRuns })
+        .from(simulationCache)
+        .where(eqMc(simulationCache.tenantId, tenantId))
+        .limit(1);
+
+      if (cachedSim?.perInvoiceWeekFrequency) {
+        const freq = cachedSim.perInvoiceWeekFrequency as Record<string, Record<number, number>>;
+        const runs = cachedSim.simulationRuns;
+        // Find this debtor's invoices in the simulation
+        const debtorInvoiceIds = overdueInvoices.map((inv: any) => inv.id).filter(Boolean);
+        const weekHits: Record<number, number> = {};
+        let totalDebtorAmount = 0;
+
+        for (const invId of debtorInvoiceIds) {
+          const invFreq = freq[invId];
+          if (!invFreq) continue;
+          const inv = overdueInvoices.find((i: any) => i.id === invId);
+          if (inv) totalDebtorAmount += inv.amount;
+          for (const [weekStr, count] of Object.entries(invFreq)) {
+            const week = parseInt(weekStr);
+            weekHits[week] = (weekHits[week] || 0) + count;
+          }
+        }
+
+        if (Object.keys(weekHits).length > 0) {
+          // Find peak payment week
+          const peakWeek = Object.entries(weekHits).sort(([, a], [, b]) => b - a)[0];
+          if (peakWeek) {
+            const peakPct = Math.round((parseInt(String(peakWeek[1])) / runs) * 100);
+            lines.push("");
+            lines.push(`FORECAST POSITION: This debtor's most likely payment week is week ${peakWeek[0]} (appears in ${peakPct}% of scenarios). Outstanding amount from overdue invoices: ${formatGBP(totalDebtorAmount)}.`);
+          }
+        }
+      }
+    } catch { /* graceful — MC context is supplementary */ }
+
     return lines.join("\n");
   } catch (error) {
     console.error(`[Riley] buildDebtorContext failed for ${contactId}:`, error);
@@ -743,7 +784,40 @@ async function buildQashflowContext(tenantId: string): Promise<string> {
     console.error("[Riley] buildQashflowContext: getLatestWeeklyReview failed:", err);
   }
 
-  lines.push("\nFOCUS: Help the user understand expected cash inflows from debtors. Identify which debtors are most important to collect this week. If asked about outflows, acknowledge and say outflow forecasting is coming in a future update.");
+  // Monte Carlo simulation context
+  try {
+    const { runSimulationForecast } = await import("../services/cashflowForecast/index.js");
+    const mcResult = await runSimulationForecast(tenantId, 'riley');
+
+    lines.push("\nMONTE CARLO FORECAST (5,000 scenarios per invoice):");
+    const p50Total = mcResult.totalRecovery.p50;
+    const p25Total = mcResult.totalRecovery.p25;
+    const p75Total = mcResult.totalRecovery.p75;
+    lines.push(`13-week likely collection: ${formatGBP(p50Total)} (good outcome: ${formatGBP(p25Total)}, tough outcome: ${formatGBP(p75Total)})`);
+
+    // This week
+    const thisWeek = mcResult.weeklyResults[0];
+    if (thisWeek) {
+      lines.push(`This week likely: ${formatGBP(thisWeek.collections.p50)} (range: ${formatGBP(thisWeek.collections.p25)} — ${formatGBP(thisWeek.collections.p75)})`);
+    }
+
+    // Safety breach
+    if (mcResult.safetyBreachWeek) {
+      lines.push(`WARNING: Cash balance drops below safety threshold in week ${mcResult.safetyBreachWeek} under the likely scenario.`);
+    }
+
+    // Material invoices (top 5)
+    if (mcResult.materialInvoices.length > 0) {
+      lines.push("Material invoices (single invoices that significantly affect a week's outcome):");
+      for (const mi of mcResult.materialInvoices.slice(0, 5)) {
+        lines.push(`- Week ${mi.weekNumber}: ${mi.contactName} ${mi.invoiceNumber} ${formatGBP(mi.amount)} (${mi.percentOfP50}% of week's likely total, appears in ${Math.round(mi.hitFrequency * 100)}% of scenarios)`);
+      }
+    }
+  } catch (err) {
+    console.warn("[Riley] buildQashflowContext: MC simulation failed:", err);
+  }
+
+  lines.push("\nFOCUS: Help the user understand expected cash inflows from debtors. Identify which debtors are most important to collect this week. Use plain English: 'likely', 'good week', 'tough week'. Never say 'percentile', 'Monte Carlo', 'P50', or 'simulation'. If a material invoice drives >30% of a week, frame conditionally: 'If [debtor] pays this week... if they don't...'");
 
   return lines.join("\n");
 }
@@ -896,10 +970,12 @@ const PRODUCT_KNOWLEDGE = `Qashivo has three pillars:
 - Workflows, escalation rules, and collection policies control agent behaviour
 
 **Qashflow (Cashflow Forecasting):**
-- 13-week rolling cashflow forecast (being built)
+- 13-week rolling cashflow forecast powered by Monte Carlo simulation (5,000 scenarios per invoice)
 - Forecast user adjustments: known upcoming costs, revenue changes, hiring, capex
 - Weekly CFO review: Riley prepares a plain-English cashflow briefing each week
-- Three scenarios: optimistic (pay on time), expected (pay at historic average), pessimistic
+- Confidence bands show the range between a good week and a tough week
+- Material invoice detection flags weeks where one debtor's payment makes a big difference
+- FRAMING: Always use "likely" (not "expected"), "good week" (not "optimistic/P25"), "tough week" (not "pessimistic/P75"). Never say "percentile", "Monte Carlo", "P50", or "simulation" to users.
 
 **Qapital (Working Capital Finance):**
 - Invoice finance marketplace (future feature)

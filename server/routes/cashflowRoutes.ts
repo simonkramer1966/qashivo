@@ -75,6 +75,105 @@ export function registerCashflowRoutes(app: Express): void {
     },
   );
 
+  // ── POST /api/cashflow/forecast/recalculate ──
+  // Force-recalculate Monte Carlo simulation (manager+)
+  app.post(
+    "/api/cashflow/forecast/recalculate",
+    isAuthenticated,
+    withMinimumRole("manager"),
+    async (req: any, res) => {
+      try {
+        const tenantId = req.user?.tenantId || req.rbac?.tenantId;
+        if (!tenantId) {
+          return res.status(401).json({ error: "No tenant context" });
+        }
+
+        // Invalidate both caches
+        invalidateForecastCache(tenantId);
+        const { invalidateSimulationCache } = await import("../services/cashflowForecast/index.js");
+        await invalidateSimulationCache(tenantId);
+
+        // Regenerate with force flag
+        const forecast = await generateInflowForecast(tenantId, true);
+        res.json(forecast);
+      } catch (error) {
+        console.error("[CashflowRoutes] recalculate error:", error);
+        res.status(500).json({ error: "Failed to recalculate forecast" });
+      }
+    },
+  );
+
+  // ── POST /api/cashflow/forecast/narrative ──
+  // Generate Riley's plain-English narrative for the MC forecast
+  app.post(
+    "/api/cashflow/forecast/narrative",
+    isAuthenticated,
+    withMinimumRole("manager"),
+    async (req: any, res) => {
+      try {
+        const tenantId = req.user?.tenantId || req.rbac?.tenantId;
+        if (!tenantId) {
+          return res.status(401).json({ error: "No tenant context" });
+        }
+
+        const { simulationCache } = await import("@shared/schema");
+        const { generateText } = await import("../services/llm/claude");
+
+        // Load the cached simulation
+        const [cached] = await db
+          .select()
+          .from(simulationCache)
+          .where(eq(simulationCache.tenantId, tenantId))
+          .limit(1);
+
+        if (!cached) {
+          return res.status(404).json({ error: "No simulation data. Run a forecast first." });
+        }
+
+        // If narrative already exists, return it
+        if (cached.narrative) {
+          return res.json({ narrative: cached.narrative });
+        }
+
+        // Build context for Claude
+        const weeklyPercentiles = cached.weeklyCollections as any[];
+        const materialInvoices = cached.materialInvoices as any[];
+        const balances = cached.weeklyBalances as any;
+
+        const system = `You are Riley, a friendly cashflow advisor for a UK SME. You speak in plain English, use £ (GBP), and keep things conversational and actionable. Use "likely", "good week", "tough week" — never say "percentile", "P50", "Monte Carlo", or "simulation".`;
+
+        const prompt = `Write 2-3 short paragraphs summarising this 13-week cashflow outlook.
+
+Data:
+- Weekly collections (likely/good/tough): ${JSON.stringify(weeklyPercentiles?.slice(0, 5))}... (13 weeks total)
+- Safety breach week: ${balances?.safetyBreachWeek ?? "none"}
+- Material invoices (big single-debtor impact): ${JSON.stringify(materialInvoices?.slice(0, 5))}
+- Total recovery (likely): £${Math.round((balances?.totalRecovery?.p50 ?? 0))}
+
+Cover: overall trajectory, key weeks to watch, material invoice risks, any safety concerns.`;
+
+        const narrative = await generateText({
+          system,
+          prompt,
+          model: "fast",
+          maxTokens: 500,
+          temperature: 0.7,
+        });
+
+        // Cache the narrative
+        await db
+          .update(simulationCache)
+          .set({ narrative })
+          .where(eq(simulationCache.id, cached.id));
+
+        res.json({ narrative });
+      } catch (error) {
+        console.error("[CashflowRoutes] narrative error:", error);
+        res.status(500).json({ error: "Failed to generate narrative" });
+      }
+    },
+  );
+
   // ── GET /api/cashflow/forecast-changes ──
   // Compare current forecast with the last stored snapshot
   app.get(

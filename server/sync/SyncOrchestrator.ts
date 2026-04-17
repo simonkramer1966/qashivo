@@ -642,6 +642,11 @@ export class SyncOrchestrator {
         })
         .catch(err => console.warn(`[SyncOrchestrator] Actuals capture failed for ${tenantId}:`, err));
 
+      // Non-blocking: invalidate Monte Carlo simulation cache (inputs may have changed)
+      import('../services/cashflowForecast/index.js')
+        .then(m => m.invalidateSimulationCache(tenantId))
+        .catch(err => console.warn(`[SyncOrchestrator] MC cache invalidation failed for ${tenantId}:`, err));
+
       return result;
 
     } catch (err) {

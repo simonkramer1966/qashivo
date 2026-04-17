@@ -191,6 +191,10 @@ export const tenants = pgTable("tenants", {
   forecastOverdraftFacility: decimal("forecast_overdraft_facility", { precision: 12, scale: 2 }).default("0"),
   lastForecastSnapshot: jsonb("last_forecast_snapshot"),
 
+  // Monte Carlo simulation settings
+  forecastSimulationRuns: integer("forecast_simulation_runs").default(5000),
+  forecastPaymentDecayHalfLifeDays: integer("forecast_payment_decay_half_life_days").default(365),
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -6507,6 +6511,42 @@ export const insertForecastSnapshotSchema = createInsertSchema(forecastSnapshots
 
 export type ForecastSnapshot = typeof forecastSnapshots.$inferSelect;
 export type InsertForecastSnapshot = z.infer<typeof insertForecastSnapshotSchema>;
+
+// ── Monte Carlo Simulation Cache ────────────────────────────────
+
+export const simulationCache = pgTable("simulation_cache", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  generatedAt: timestamp("generated_at").notNull().defaultNow(),
+  triggerType: varchar("trigger_type", { length: 20 }).notNull(), // 'manual' | 'post_sync' | 'scheduled'
+  simulationRuns: integer("simulation_runs").notNull().default(5000),
+  weeklyCollections: jsonb("weekly_collections").notNull(), // { week1: {p10,p25,p50,p75,p90}, ... }
+  weeklyBalances: jsonb("weekly_balances").notNull(), // same shape for running balance
+  materialInvoices: jsonb("material_invoices").notNull(), // array of flagged invoices per week
+  perInvoiceWeekFrequency: jsonb("per_invoice_week_frequency").notNull(), // { invoiceId: { weekN: hitCount } }
+  inputHash: varchar("input_hash", { length: 64 }).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  narrative: text("narrative"), // Riley's plain-English commentary, cached with simulation
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_simulation_cache_tenant").on(table.tenantId),
+  index("idx_simulation_cache_tenant_hash").on(table.tenantId, table.inputHash),
+]);
+
+export const simulationCacheRelations = relations(simulationCache, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [simulationCache.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
+export const insertSimulationCacheSchema = createInsertSchema(simulationCache).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type SimulationCache = typeof simulationCache.$inferSelect;
+export type InsertSimulationCache = z.infer<typeof insertSimulationCacheSchema>;
 
 // ── Cash Gap Alert History ────────────────────────────────
 
