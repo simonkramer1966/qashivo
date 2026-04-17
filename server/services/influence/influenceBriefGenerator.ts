@@ -15,6 +15,7 @@
 import type { BarrierDiagnosis } from "./barrierDiagnostic";
 import type { InfluenceStrategy } from "./strategySelector";
 import type { SocialProofData } from "./cieConsumer";
+import type { PersonaFraming } from "./personaFraming";
 
 // ── Technique translation layer ──────────────────────────────
 
@@ -91,6 +92,7 @@ export function generateInfluenceBrief(
   strategy: InfluenceStrategy,
   debtorContext: DebtorBriefContext,
   socialProof?: SocialProofData,
+  personaFraming?: PersonaFraming,
 ): string {
   // Vulnerability override — supportive mode, no influence techniques
   if (debtorContext.vulnerabilityPausedChasing) {
@@ -174,6 +176,29 @@ export function generateInfluenceBrief(
   lines.push("- Never send a communication without a clear, specific next step");
   lines.push('- Never use "promise to pay" or "PTP". Use "payment arrangement" or "confirmed payment date".');
 
+  // Persona framing — how to present yourself
+  if (personaFraming) {
+    lines.push("");
+    lines.push("=== PERSONA FRAMING ===");
+    lines.push(`Mode: ${personaFraming.mode.toUpperCase()}`);
+    if (personaFraming.mode === "agency") {
+      lines.push("You are writing as an external credit control professional.");
+      lines.push(`Reference naturally: "We have been instructed to manage this on behalf of the client company."`);
+      lines.push("Do not pretend to be an employee of the debtor's supplier.");
+    } else {
+      lines.push("You are writing as an internal employee of the debtor's supplier.");
+      lines.push("Reference the business relationship naturally. Never mention an external partner.");
+    }
+    if (personaFraming.isTransition) {
+      lines.push("");
+      lines.push("TRANSITION: This is the FIRST communication since the account was transitioned to agency management.");
+      lines.push("Introduce yourself and the change. Be professional and neutral.");
+      lines.push("The framing shift itself is the influence lever — do not escalate tone beyond Professional.");
+      lines.push("Do not use standard collections approach. Instead: introduce, list invoices, invite contact.");
+    }
+    lines.push(`Sign-off: ${personaFraming.emailSignature.name} / ${personaFraming.emailSignature.title} / ${personaFraming.emailSignature.company}`);
+  }
+
   return lines.join("\n");
 }
 
@@ -216,6 +241,7 @@ function generateSupportiveBrief(debtorContext: DebtorBriefContext): string {
 export function generateSmsInfluenceBrief(
   diagnosis: BarrierDiagnosis,
   strategy: InfluenceStrategy,
+  personaFraming?: PersonaFraming,
 ): string {
   const lines: string[] = [];
 
@@ -231,6 +257,12 @@ export function generateSmsInfluenceBrief(
   if (strategy.avoid.length > 0) {
     const avoidInstruction = TECHNIQUE_INSTRUCTIONS[strategy.avoid[0]];
     lines.push(`Avoid: ${avoidInstruction ?? strategy.avoid[0]}`);
+  }
+  if (personaFraming) {
+    lines.push(`Sign off: ${personaFraming.smsSignOff}`);
+    if (personaFraming.mode === "agency") {
+      lines.push("You are writing on behalf of the client company. Frame accordingly.");
+    }
   }
 
   return lines.join("\n");

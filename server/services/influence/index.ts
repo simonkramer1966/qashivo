@@ -9,6 +9,8 @@
  * Phase 5: CIE integration stubs (social proof consumer + outcome publisher).
  * Phase 6: Vulnerability detection (Haiku classification, chasing pause,
  *          supportive mode, manager review workflow).
+ * Phase 7: Persona framing modes (in-house / agency / escalation,
+ *          per-debtor identity switching, transition emails).
  */
 
 export {
@@ -49,3 +51,11 @@ export {
   getActionInfluenceMetadata,
   publishInfluenceOutcome,
 } from "./ciePublisher";
+
+export {
+  type PersonaFraming,
+  type IdentityMode,
+  resolvePersonaFraming,
+  hasContactReceivedAgencyCommunication,
+  generateTransitionEmailContent,
+} from "./personaFraming";

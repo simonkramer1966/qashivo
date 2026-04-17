@@ -86,7 +86,11 @@ export const tenants = pgTable("tenants", {
   testContactName: varchar("test_contact_name"), // Test contact name for soft_live mode
   testEmails: text("test_emails").array(), // Test email addresses for soft_live mode
   testPhones: text("test_phones").array(), // Test phone numbers for soft_live mode
-  
+
+  // Collection Identity Mode: how Charlie presents to debtors
+  collectionIdentityMode: varchar("collection_identity_mode").default("escalation"), // in_house | agency | escalation
+  collectionIdentityDisclosure: varchar("collection_identity_disclosure").default("on_direct_question"), // always_disclose | on_direct_question | redirect_to_human
+
   // Onboarding-specific fields
   companyLogoUrl: varchar("company_logo_url"),
   brandPrimaryColor: varchar("brand_primary_color").default("#17B6C3"),
@@ -279,6 +283,11 @@ export const contacts = pgTable("contacts", {
   vulnerabilityReviewedBy: varchar("vulnerability_reviewed_by"),
   vulnerabilityReviewedAt: timestamp("vulnerability_reviewed_at"),
   vulnerabilityReviewOutcome: varchar("vulnerability_review_outcome", { length: 30 }), // confirmed_vulnerable | not_vulnerable | monitoring
+
+  // Phase 7: Collection identity framing per-debtor escalation
+  collectionIdentityOverride: varchar("collection_identity_override"), // null | 'agency'
+  collectionIdentityEscalatedAt: timestamp("collection_identity_escalated_at"),
+  collectionIdentityEscalatedBy: varchar("collection_identity_escalated_by"), // FK → users
 
   // Gap 14: Probable payment detection
   probablePaymentDetected: boolean("probable_payment_detected").default(false),

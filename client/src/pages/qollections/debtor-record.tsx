@@ -60,6 +60,7 @@ import {
 import {
   ArrowLeft,
   ArrowRight,
+  ArrowUpRight,
   Plus,
   Star,
   AlertCircle,
@@ -752,6 +753,13 @@ export default function DebtorRecord() {
   const { toast } = useToast();
   const { canViewAuditLog, isManager, isOwner, isAdmin } = usePermissions();
   const canReviewVulnerability = isManager || isOwner || isAdmin;
+  const canEscalateIdentity = isManager || isOwner || isAdmin;
+
+  // Tenant settings for collection identity mode
+  const { data: tenantSettings } = useQuery<{ collectionIdentityMode?: string }>({
+    queryKey: ["/api/tenant/settings"],
+  });
+  const isEscalationMode = tenantSettings?.collectionIdentityMode === "escalation";
 
   // --- Tabs state ---
   const [activeTab, setActiveTab] = useState("activity");
@@ -930,6 +938,22 @@ export default function DebtorRecord() {
       toast({ title: labels[outcome] || "Review saved" });
     },
     onError: (err: Error) => toast({ title: "Review failed", description: err.message, variant: "destructive" }),
+  });
+
+  const [escalateConfirmOpen, setEscalateConfirmOpen] = useState(false);
+  const escalateIdentityMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/contacts/${contactId}/escalate-identity`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["debtor-profile", contactId] });
+      setEscalateConfirmOpen(false);
+      toast({ title: "Switched to agency mode — transition email queued" });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Escalation failed", description: err.message, variant: "destructive" });
+    },
   });
 
   const updateSilenceTimeoutMutation = useMutation({
@@ -2380,6 +2404,65 @@ export default function DebtorRecord() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* ----------------------------------------------------------------- */}
+        {/* Collection identity banner                                        */}
+        {/* ----------------------------------------------------------------- */}
+        {isEscalationMode && contact?.collectionIdentityOverride === "agency" && (
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 mb-4">
+            <div className="flex items-center gap-2">
+              <ArrowUpRight className="h-4 w-4 text-blue-600 shrink-0" />
+              <span className="text-sm font-medium text-blue-900">Agency mode</span>
+              {contact.collectionIdentityEscalatedAt && (
+                <span className="text-sm text-blue-600">
+                  since {new Date(contact.collectionIdentityEscalatedAt).toLocaleDateString("en-GB")}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+        {isEscalationMode && canEscalateIdentity && !contact?.collectionIdentityOverride && (
+          <>
+            <div className="mb-4">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setEscalateConfirmOpen(true)}
+              >
+                <ArrowUpRight className="h-4 w-4 mr-1" />
+                Switch to agency mode
+              </Button>
+            </div>
+            <Dialog open={escalateConfirmOpen} onOpenChange={setEscalateConfirmOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Switch to agency mode</DialogTitle>
+                  <DialogDescription>
+                    This will present all future communications to this debtor as coming from
+                    an external credit control partner acting on your behalf. A transition
+                    introduction email will be queued. This cannot be undone.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setEscalateConfirmOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => escalateIdentityMutation.mutate()}
+                    disabled={escalateIdentityMutation.isPending}
+                  >
+                    {escalateIdentityMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <ArrowUpRight className="h-4 w-4 mr-2" />
+                    )}
+                    Confirm
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </>
         )}
 
         {/* ----------------------------------------------------------------- */}

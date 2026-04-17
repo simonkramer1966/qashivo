@@ -60,6 +60,7 @@ export function generateVoiceCallBrief(
   toneAlignment: string,
   debtorContext: VoiceDebtorContext,
   agentContext: VoiceAgentContext,
+  personaFramingVoiceIntro?: string,
 ): string {
   const { contactFirstName, companyName, invoiceRef, amount, daysOverdue, currency } = debtorContext;
   const { agentName, tenantCompanyName } = agentContext;
@@ -84,9 +85,10 @@ export function generateVoiceCallBrief(
   lines.push(`Tone: ${toneAlignment}`);
   lines.push("");
 
-  // Opening
+  // Opening — use persona framing voice intro if available
+  const introLine = personaFramingVoiceIntro || `Hi, this is ${agentName} from ${tenantCompanyName}.`;
   lines.push("OPENING (first 15 seconds):");
-  lines.push(`- Introduce: "Hi, this is ${agentName} from ${tenantCompanyName}."`);
+  lines.push(`- Introduce: "${introLine}"`);
   lines.push(`- Confirm: "Am I speaking with ${contactFirstName}?"`);
   lines.push(`- Frame: "${opening}"`);
   lines.push("");

@@ -80,11 +80,12 @@ export function buildSystemPrompt(
   currency: string = 'GBP',
   hasUnallocatedPayments: boolean = false,
   influenceBrief?: string,
+  identityOverride?: string,
 ): string {
   const lines: string[] = [];
 
-  // Agent identity
-  lines.push(`You are ${persona.personaName}, ${persona.jobTitle} at ${persona.emailSignatureCompany}.`);
+  // Agent identity — overridden by persona framing when in agency mode
+  lines.push(identityOverride ?? `You are ${persona.personaName}, ${persona.jobTitle} at ${persona.emailSignatureCompany}.`);
   lines.push("");
 
   // Company & sector context

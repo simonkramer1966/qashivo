@@ -30,6 +30,9 @@ import {
   Send,
   MessageSquare,
   Mail,
+  UserCog,
+  Building2,
+  ArrowUpRight,
 } from "lucide-react";
 
 interface TenantSettings {
@@ -50,6 +53,8 @@ interface TenantSettings {
   smallAmountChaseEnabled: boolean;
   conversationReplyDelayMin: number;
   conversationReplyDelayMax: number;
+  collectionIdentityMode: string;
+  collectionIdentityDisclosure: string;
 }
 
 interface CommModeSettings {
@@ -164,6 +169,12 @@ export default function SettingsAutonomyRules({ embedded }: { embedded?: boolean
   const [conversationReplyDelayMin, setConversationReplyDelayMin] = useState<number | null>(null);
   const [conversationReplyDelayMax, setConversationReplyDelayMax] = useState<number | null>(null);
 
+  // Collection identity state
+  const [identityMode, setIdentityMode] = useState<string | null>(null);
+  const [disclosurePolicy, setDisclosurePolicy] = useState<string | null>(null);
+  const currentIdentityMode = identityMode ?? settings?.collectionIdentityMode ?? "escalation";
+  const currentDisclosurePolicy = disclosurePolicy ?? settings?.collectionIdentityDisclosure ?? "on_direct_question";
+
   // Communication testing state
   const [commMode, setCommMode] = useState<CommMode | null>(null);
   const [testContactName, setTestContactName] = useState<string | null>(null);
@@ -245,6 +256,8 @@ export default function SettingsAutonomyRules({ embedded }: { embedded?: boolean
       if (smallAmountChaseEnabled !== null) body.smallAmountChaseEnabled = smallAmountChaseEnabled;
       if (conversationReplyDelayMin !== null) body.conversationReplyDelayMin = conversationReplyDelayMin;
       if (conversationReplyDelayMax !== null) body.conversationReplyDelayMax = conversationReplyDelayMax;
+      if (identityMode !== null) body.collectionIdentityMode = identityMode;
+      if (disclosurePolicy !== null) body.collectionIdentityDisclosure = disclosurePolicy;
       const res = await apiRequest("PATCH", "/api/tenant/settings", body);
       return res.json();
     },
@@ -263,6 +276,8 @@ export default function SettingsAutonomyRules({ embedded }: { embedded?: boolean
       setSmallAmountChaseEnabled(null);
       setConversationReplyDelayMin(null);
       setConversationReplyDelayMax(null);
+      setIdentityMode(null);
+      setDisclosurePolicy(null);
     },
     onError: (err: Error) => {
       toast({ title: "Failed to save", description: err.message, variant: "destructive" });
@@ -884,6 +899,151 @@ export default function SettingsAutonomyRules({ embedded }: { embedded?: boolean
                   </Button>
                 </>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Collection Identity */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UserCog className="h-5 w-5 text-primary" />
+                Collection Identity
+              </CardTitle>
+              <CardDescription>
+                How Charlie presents to debtors. The shift from internal to external framing is itself an influence lever.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {[
+                {
+                  value: "in_house",
+                  label: "In-House",
+                  icon: Building2,
+                  description: "Charlie presents as an employee of your company. Natural business relationship language.",
+                  badge: "",
+                  badgeColor: "",
+                },
+                {
+                  value: "agency",
+                  label: "Agency",
+                  icon: ArrowUpRight,
+                  description: "Charlie presents as an external credit control professional acting on your behalf. All debtors receive agency framing.",
+                  badge: "",
+                  badgeColor: "",
+                },
+                {
+                  value: "escalation",
+                  label: "Escalation",
+                  icon: UserCog,
+                  description: "Starts in-house. Switch individual debtors to agency mode from their record page. The framing change acts as an escalation signal.",
+                  badge: "Recommended",
+                  badgeColor: "bg-blue-100 text-blue-700",
+                },
+              ].map((mode) => {
+                const Icon = mode.icon;
+                const isSelected = currentIdentityMode === mode.value;
+                return (
+                  <button
+                    key={mode.value}
+                    onClick={() => setIdentityMode(mode.value)}
+                    className={`w-full text-left rounded-lg border-2 p-4 transition-colors ${
+                      isSelected
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-muted-foreground/30"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <Icon className={`h-5 w-5 mt-0.5 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium text-foreground">{mode.label}</span>
+                          {mode.badge && <Badge className={mode.badgeColor}>{mode.badge}</Badge>}
+                        </div>
+                        <p className="text-sm text-muted-foreground">{mode.description}</p>
+                      </div>
+                      <div
+                        className={`h-4 w-4 rounded-full border-2 mt-0.5 ${
+                          isSelected ? "border-primary bg-primary" : "border-muted-foreground/40"
+                        }`}
+                      >
+                        {isSelected && (
+                          <div className="h-full w-full flex items-center justify-center">
+                            <div className="h-1.5 w-1.5 rounded-full bg-white" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </CardContent>
+          </Card>
+
+          {/* Disclosure Policy */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-primary" />
+                Disclosure Policy
+              </CardTitle>
+              <CardDescription>
+                How Charlie responds if a debtor asks whether they are speaking to a real person or an AI.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {[
+                {
+                  value: "always_disclose",
+                  label: "Always Disclose",
+                  description: "Charlie proactively mentions being an AI assistant in every first communication.",
+                },
+                {
+                  value: "on_direct_question",
+                  label: "On Direct Question",
+                  description: "Charlie answers honestly only when directly asked. Does not volunteer the information.",
+                  badge: "Recommended",
+                  badgeColor: "bg-blue-100 text-blue-700",
+                },
+                {
+                  value: "redirect_to_human",
+                  label: "Redirect to Human",
+                  description: "If asked, Charlie offers to transfer the conversation to a human team member.",
+                },
+              ].map((mode) => {
+                const isSelected = currentDisclosurePolicy === mode.value;
+                return (
+                  <button
+                    key={mode.value}
+                    onClick={() => setDisclosurePolicy(mode.value)}
+                    className={`w-full text-left rounded-lg border-2 p-4 transition-colors ${
+                      isSelected
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-muted-foreground/30"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium text-foreground">{mode.label}</span>
+                          {"badge" in mode && mode.badge && <Badge className={(mode as any).badgeColor}>{mode.badge}</Badge>}
+                        </div>
+                        <p className="text-sm text-muted-foreground">{mode.description}</p>
+                      </div>
+                      <div
+                        className={`h-4 w-4 rounded-full border-2 mt-0.5 ${
+                          isSelected ? "border-primary bg-primary" : "border-muted-foreground/40"
+                        }`}
+                      >
+                        {isSelected && (
+                          <div className="h-full w-full flex items-center justify-center">
+                            <div className="h-1.5 w-1.5 rounded-full bg-white" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
             </CardContent>
           </Card>
     </div>

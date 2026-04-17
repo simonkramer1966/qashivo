@@ -2,7 +2,7 @@ import { eq, and, lte, sql, isNotNull, inArray } from "drizzle-orm";
 import { db } from "../db";
 import { logCommEvent } from "./admin/commEventLogger";
 import { logSystemError } from "./admin/errorLogger";
-import { actions, contacts, invoices, tenants, messageDrafts, emailMessages, timelineEvents, customerBehaviorSignals, debtorGroups } from "@shared/schema";
+import { actions, contacts, invoices, tenants, messageDrafts, emailMessages, timelineEvents, customerBehaviorSignals, debtorGroups, agentPersonas } from "@shared/schema";
 import { fitDistribution, estimatePaymentProbability } from "./paymentDistribution";
 import { sendEmail } from "./sendgrid";
 import { sendSMS } from "./vonage";
@@ -720,6 +720,33 @@ export class ActionExecutor {
       ctx.influenceStrategy = actionMeta.influenceStrategy;
     }
 
+    // Enrich with persona framing for SMS/voice channels
+    if (actionMeta.personaFramingMode) {
+      // Resolve framing from persisted metadata + live data
+      try {
+        const { resolvePersonaFraming, hasContactReceivedAgencyCommunication } = await import("./influence/personaFraming");
+        const hasAgencyComm = await hasContactReceivedAgencyCommunication(action.tenantId, contact.id);
+        const [persona] = await db
+          .select()
+          .from(agentPersonas)
+          .where(and(eq(agentPersonas.tenantId, action.tenantId), eq(agentPersonas.isActive, true)))
+          .limit(1);
+        if (persona) {
+          const framing = resolvePersonaFraming(
+            tenant.collectionIdentityMode,
+            tenant.name || 'Our company',
+            contact.collectionIdentityOverride,
+            persona,
+            hasAgencyComm,
+          );
+          ctx.personaFramingSmsSignOff = framing.smsSignOff;
+          ctx.personaFramingVoiceIntro = framing.voiceIntro;
+        }
+      } catch {
+        // Non-fatal — SMS/voice work without framing
+      }
+    }
+
     return ctx;
   }
 
@@ -847,7 +874,8 @@ export class ActionExecutor {
       }
 
       const fromEmail = process.env.SENDGRID_FROM_EMAIL || 'cc@qashivo.com';
-      const fromName = tenant.name ? `${tenant.name} via Qashivo` : 'Qashivo Credit Control';
+      const fromName = (action.metadata as any)?.emailFromName
+        ?? (tenant.name ? `${tenant.name} via Qashivo` : 'Qashivo Credit Control');
 
       // Convert LLM plain text to proper HTML email with tenant footer
       const { formatEmailHtml, buildEmailFooter, buildEmailFooterText } = await import('./emailFormatter');

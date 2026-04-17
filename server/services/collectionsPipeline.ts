@@ -282,10 +282,14 @@ export async function processCollectionEmail(
           influenceConfidence: emailResult.influenceDiagnosis.confidence,
         }
       : {};
+    const framingMetadata = emailResult.personaFramingMode
+      ? { personaFramingMode: emailResult.personaFramingMode, emailFromName: emailResult.emailFromName }
+      : {};
     const mergedMetadata = JSON.stringify({
       agentReasoning: emailResult.agentReasoning,
       generatedBy: "collections_agent_llm",
       ...influenceMetadata,
+      ...framingMetadata,
     });
     await db
       .update(actions)
@@ -468,6 +472,7 @@ export async function deliverApprovedAction(actionId: string): Promise<PipelineR
       subject: row.action.subject || "Payment Reminder",
       body: row.action.content || "",
       agentReasoning: (row.action.metadata as any)?.agentReasoning || "",
+      emailFromName: (row.action.metadata as any)?.emailFromName,
     },
     row.tenant,
   );
@@ -547,6 +552,7 @@ export async function approveAndSend(
       subject: action.action.subject || "Payment Reminder",
       body: action.action.content || "",
       agentReasoning: (action.action.metadata as any)?.agentReasoning || "",
+      emailFromName: (action.action.metadata as any)?.emailFromName,
     },
     action.tenant,
   );
@@ -701,7 +707,7 @@ async function deliverEmail(
   actionId: string,
   tenantId: string,
   contactId: string,
-  email: { subject: string; body: string; agentReasoning: string },
+  email: { subject: string; body: string; agentReasoning: string; emailFromName?: string },
   tenant: typeof tenants.$inferSelect,
 ): Promise<PipelineResult> {
   try {
@@ -736,7 +742,8 @@ async function deliverEmail(
 
     // Send via SendGrid
     const fromEmail = process.env.SENDGRID_FROM_EMAIL || "cc@qashivo.com";
-    const fromName = tenant.name ? `${tenant.name} via Qashivo` : "Qashivo Credit Control";
+    const fromName = email.emailFromName
+      ?? (tenant.name ? `${tenant.name} via Qashivo` : "Qashivo Credit Control");
 
     console.log(`[Pipeline] Sending email to ${recipientEmail} (replyTo: ${replyToEmail}, cc: ${escalationCc.length ? escalationCc.join(', ') : 'none'})`);
     const sendResult = await sendEmail({

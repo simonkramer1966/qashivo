@@ -427,6 +427,7 @@ export async function registerSettingsRoutes(app: Express): Promise<void> {
         'sendDelayMinutes', 'emailFooterText',
         'chaseDelayDays', 'preDueDateDays', 'preDueDateMinAmount',
         'conversationReplyDelayMin', 'conversationReplyDelayMax',
+        'collectionIdentityMode', 'collectionIdentityDisclosure',
       ];
 
       const nestedFields = ['dailyLimits', 'minConfidence', 'exceptionRules', 'channelCooldowns'];
@@ -447,6 +448,14 @@ export async function registerSettingsRoutes(app: Express): Promise<void> {
             updates[field] = req.body[field];
           }
         }
+      }
+
+      // Validate enum fields
+      if (updates.collectionIdentityMode && !['in_house', 'agency', 'escalation'].includes(updates.collectionIdentityMode)) {
+        return res.status(400).json({ message: "Invalid collectionIdentityMode" });
+      }
+      if (updates.collectionIdentityDisclosure && !['always_disclose', 'on_direct_question', 'redirect_to_human'].includes(updates.collectionIdentityDisclosure)) {
+        return res.status(400).json({ message: "Invalid collectionIdentityDisclosure" });
       }
 
       if (Object.keys(updates).length === 0) {

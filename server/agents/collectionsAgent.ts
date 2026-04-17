@@ -28,6 +28,8 @@ export interface CollectionEmailResult {
   subject: string;
   body: string;
   agentReasoning: string;
+  emailFromName?: string;
+  personaFramingMode?: string;
   influenceDiagnosis?: {
     barrier: string;
     strategy: string;
@@ -82,6 +84,8 @@ export async function generateCollectionEmail(
     subject: result.subject,
     body: result.body,
     agentReasoning: result.agentReasoning,
+    emailFromName: result.metadata.emailFromName,
+    personaFramingMode: result.metadata.personaFramingMode,
     influenceDiagnosis: result.metadata.influenceDiagnosis,
   };
 }

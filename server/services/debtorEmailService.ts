@@ -49,6 +49,8 @@ import {
   selectStrategy,
   generateInfluenceBrief,
   getSocialProofData,
+  resolvePersonaFraming,
+  hasContactReceivedAgencyCommunication,
 } from "./influence";
 
 // ── Public types ─────────────────────────────────────────────
@@ -191,6 +193,22 @@ export async function generateDebtorEmail(
   const debtor = debtorResult.profile;
   const smallBalancePolicy = debtorResult.smallBalancePolicy;
 
+  // 2b. Persona framing — resolve identity mode for this contact.
+  let personaFraming: import("./influence/personaFraming").PersonaFraming | undefined;
+  try {
+    const hasAgencyComm = await hasContactReceivedAgencyCommunication(tenantId, contactId);
+    personaFraming = resolvePersonaFraming(
+      debtorResult.collectionIdentityMode,
+      debtorResult.tenantName,
+      debtorResult.collectionIdentityOverride,
+      persona,
+      hasAgencyComm,
+    );
+  } catch (err) {
+    // Non-fatal — framing failure must never block email generation
+    console.warn(`[debtorEmailService] Persona framing failed for contact ${contactId}:`, err);
+  }
+
   // 3. Compute chase context from the loaded bundle.
   const chaseAmount = chaseInvoices.reduce(
     (sum, inv) =>
@@ -283,7 +301,7 @@ export async function generateDebtorEmail(
       daysOverdue: maxDaysOverdue,
       currency,
       vulnerabilityPausedChasing: debtorResult.vulnerabilityPausedChasing,
-    }, socialProof);
+    }, socialProof, personaFraming);
 
     influenceDiagnosis = {
       barrier: diagnosis.barrier,
@@ -337,6 +355,7 @@ export async function generateDebtorEmail(
     currency,
     hasUnallocatedPayments,
     influenceBriefText,
+    personaFraming?.promptIdentity,
   );
   // Build group invoice breakdown when this is a consolidated group action.
   // Each company's invoices are grouped separately for the LLM prompt.
@@ -415,11 +434,13 @@ export async function generateDebtorEmail(
     body,
     toEmail: debtor.contactEmail,
     ccEmails: [],
-    signature: {
-      name: persona.emailSignatureName,
-      title: persona.emailSignatureTitle,
-      company: persona.emailSignatureCompany,
-    },
+    signature: personaFraming
+      ? personaFraming.emailSignature
+      : {
+          name: persona.emailSignatureName,
+          title: persona.emailSignatureTitle,
+          company: persona.emailSignatureCompany,
+        },
     invoicesReferenced: chaseInvoices.map((inv) => inv.invoiceNumber),
     chaseAmount,
     metadata: {
@@ -428,6 +449,7 @@ export async function generateDebtorEmail(
       emailType: request.emailType,
       invoiceCount: chaseInvoices.length,
       ...(influenceDiagnosis ? { influenceDiagnosis } : {}),
+      ...(personaFraming ? { personaFramingMode: personaFraming.mode, emailFromName: personaFraming.emailFromName } : {}),
     },
     agentReasoning,
   };
@@ -658,7 +680,7 @@ async function resolvePersona(tenantId: string): Promise<AgentPersona> {
 async function loadDebtorProfile(
   tenantId: string,
   contactId: string,
-): Promise<{ profile: DebtorProfile; smallBalancePolicy: SmallBalancePolicy; vulnerabilityDetected: boolean; vulnerabilityPausedChasing: boolean }> {
+): Promise<{ profile: DebtorProfile; smallBalancePolicy: SmallBalancePolicy; vulnerabilityDetected: boolean; vulnerabilityPausedChasing: boolean; collectionIdentityMode: string | null; collectionIdentityOverride: string | null; tenantName: string }> {
   const [contact] = await db
     .select()
     .from(contacts)
@@ -671,11 +693,13 @@ async function loadDebtorProfile(
 
   const [tenant] = await db
     .select({
+      name: tenants.name,
       currency: tenants.currency,
       defaultLanguage: tenants.defaultLanguage,
       smallAmountThreshold: tenants.smallAmountThreshold,
       smallAmountChaseEnabled: tenants.smallAmountChaseEnabled,
       minimumChaseThreshold: tenants.minimumChaseThreshold,
+      collectionIdentityMode: tenants.collectionIdentityMode,
     })
     .from(tenants)
     .where(eq(tenants.id, tenantId))
@@ -725,6 +749,9 @@ async function loadDebtorProfile(
     smallBalancePolicy: getSmallBalancePolicy(tenant),
     vulnerabilityDetected: contact.vulnerabilityDetected ?? false,
     vulnerabilityPausedChasing: contact.vulnerabilityPausedChasing ?? false,
+    collectionIdentityMode: tenant?.collectionIdentityMode ?? null,
+    collectionIdentityOverride: contact.collectionIdentityOverride ?? null,
+    tenantName: tenant?.name || "Our company",
   };
 }
 

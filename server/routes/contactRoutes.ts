@@ -5655,4 +5655,126 @@ ${type === 'email' ? 'Generate a JSON object with "subject" (string) and "body" 
     },
   );
 
+  // ── Phase 7: Escalate debtor to agency identity ─────────────
+  app.post("/api/contacts/:contactId/escalate-identity",
+    isAuthenticated,
+    withRBACContext,
+    withMinimumRole('manager'),
+    async (req, res) => {
+      try {
+        const contactId = req.params.contactId;
+        const tenantId = (req as any).rbac?.tenantId;
+        const userId = (req as any).rbac?.userId;
+        if (!tenantId) return res.status(403).json({ message: "No tenant context" });
+
+        // Verify tenant is in escalation mode
+        const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+        if (!tenant) return res.status(404).json({ message: "Tenant not found" });
+        if (tenant.collectionIdentityMode !== 'escalation') {
+          return res.status(400).json({ message: "Tenant is not in escalation mode. Only escalation mode supports per-debtor agency switching." });
+        }
+
+        // Verify contact belongs to tenant and is not already escalated
+        const [contact] = await db.select().from(contacts)
+          .where(and(eq(contacts.id, contactId), eq(contacts.tenantId, tenantId)))
+          .limit(1);
+        if (!contact) return res.status(404).json({ message: "Contact not found" });
+        if (contact.collectionIdentityOverride === 'agency') {
+          return res.status(409).json({ message: "Contact is already in agency mode" });
+        }
+
+        const now = new Date();
+
+        // Set the one-way override
+        await db.update(contacts).set({
+          collectionIdentityOverride: 'agency',
+          collectionIdentityEscalatedAt: now,
+          collectionIdentityEscalatedBy: userId,
+          updatedAt: now,
+        }).where(and(eq(contacts.id, contactId), eq(contacts.tenantId, tenantId)));
+
+        // Load persona for transition email
+        const [persona] = await db.select().from(agentPersonas)
+          .where(and(eq(agentPersonas.tenantId, tenantId), eq(agentPersonas.isActive, true)))
+          .limit(1);
+
+        let actionId: string | null = null;
+        if (persona) {
+          // Load overdue invoices for the transition email
+          const overdueInvoices = await db.select({
+            invoiceNumber: invoices.invoiceNumber,
+            amount: invoices.amount,
+            amountPaid: invoices.amountPaid,
+            dueDate: invoices.dueDate,
+          }).from(invoices)
+            .where(and(
+              eq(invoices.contactId, contactId),
+              eq(invoices.tenantId, tenantId),
+              sql`${invoices.dueDate} < NOW()`,
+              sql`${invoices.status} NOT IN ('paid', 'voided', 'deleted', 'draft')`,
+            ));
+
+          const { generateTransitionEmailContent } = await import("../services/influence/personaFraming");
+          const transitionInvoices = overdueInvoices.map((inv) => ({
+            invoiceNumber: inv.invoiceNumber || 'N/A',
+            amount: Number(inv.amount || 0) - Number(inv.amountPaid || 0),
+            dueDate: inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('en-GB') : 'N/A',
+            daysOverdue: inv.dueDate ? Math.max(0, Math.floor((Date.now() - new Date(inv.dueDate).getTime()) / (1000 * 60 * 60 * 24))) : 0,
+          }));
+
+          const transitionEmail = generateTransitionEmailContent(
+            tenant.name || 'Our company',
+            persona,
+            contact.arContactName || contact.name,
+            transitionInvoices,
+            tenant.currency || 'GBP',
+          );
+
+          // Queue transition email as an action
+          const [newAction] = await db.insert(actions).values({
+            tenantId,
+            contactId,
+            type: 'email',
+            status: tenant.approvalMode === 'full_auto' ? 'scheduled' : 'pending_approval',
+            subject: transitionEmail.subject,
+            content: transitionEmail.body,
+            agentChannel: 'email',
+            agentToneLevel: 'professional',
+            priority: 2,
+            metadata: {
+              isTransitionEmail: true,
+              personaFramingMode: 'agency',
+              emailFromName: `${persona.emailSignatureName} — ${tenant.name || 'Our company'} Credit Control`,
+              generatedBy: 'identity_escalation',
+            },
+            createdAt: now,
+            updatedAt: now,
+          }).returning({ id: actions.id });
+
+          actionId = newAction?.id ?? null;
+        }
+
+        // Timeline event
+        await db.insert(timelineEvents).values({
+          tenantId,
+          contactId,
+          eventType: 'identity_escalated',
+          direction: 'system',
+          channel: 'system',
+          summary: `Collection identity escalated to agency mode`,
+          createdAt: now,
+        });
+
+        const [updated] = await db.select().from(contacts)
+          .where(and(eq(contacts.id, contactId), eq(contacts.tenantId, tenantId)))
+          .limit(1);
+
+        res.json({ success: true, contact: updated, actionId });
+      } catch (error: any) {
+        console.error("Error escalating identity:", error);
+        res.status(500).json({ message: "Failed to escalate identity" });
+      }
+    },
+  );
+
 }

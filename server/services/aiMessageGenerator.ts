@@ -81,6 +81,9 @@ export interface MessageContext {
   /** Influence engine fields — populated from action metadata */
   influenceBarrier?: string;
   influenceStrategy?: string;
+  /** Persona framing fields — populated from action metadata */
+  personaFramingSmsSignOff?: string;
+  personaFramingVoiceIntro?: string;
 }
 
 export interface ToneSettings {
@@ -500,8 +503,9 @@ Respond with valid JSON:
 
   private buildSMSUserPrompt(context: MessageContext, toneSettings: ToneSettings): string {
     const firstName = context.customerName.split(' ')[0];
-    // Use agent persona name if available, otherwise tenant name
+    // Use persona framing sign-off if available, otherwise tenant name
     const agentName = context.tenantName;
+    const signOff = context.personaFramingSmsSignOff || agentName;
 
     let toneHint = 'friendly';
     if (toneSettings.stage === 'RECOVERY') toneHint = 'firm';
@@ -525,7 +529,7 @@ Tone: ${toneHint}
 ${groupNote}${influenceNote}
 The SMS should ONLY tell them to check their email. Do NOT include amounts, invoice numbers, links, or phone numbers.
 
-REMEMBER: Max 160 chars. Sign off with "${agentName}".`;
+REMEMBER: Max 160 chars. Sign off with "${signOff}".`;
   }
 
   private buildVoiceSystemPrompt(toneSettings: ToneSettings): string {
@@ -592,6 +596,7 @@ Respond with valid JSON containing:
             agentName: context.tenantName,
             tenantCompanyName: context.tenantName,
           },
+          context.personaFramingVoiceIntro,
         ) + '\n';
       } catch {
         // Non-fatal — voice prompt works without influence brief
