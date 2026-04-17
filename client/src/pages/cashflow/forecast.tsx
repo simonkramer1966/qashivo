@@ -453,6 +453,18 @@ export default function ForecastPage() {
   const [invoicePage, setInvoicePage] = useState(0);
   const [showMethodology, setShowMethodology] = useState(false);
 
+  // Monte Carlo recalculate — must be defined before forecastSubtitle which references it
+  const recalculateMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/cashflow/forecast/recalculate"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/cashflow/inflow-forecast"] });
+      toast({ title: "Forecast recalculated with latest data" });
+    },
+    onError: (err: any) => {
+      toast({ title: "Recalculation failed", description: err?.message || "Try again", variant: "destructive" });
+    },
+  });
+
   const forecastSubtitle = (
     <span className="inline-flex items-center gap-2">
       Built from your customers' actual payment history
@@ -558,18 +570,6 @@ export default function ForecastPage() {
     }
     return map;
   }, [mc]);
-
-  // Monte Carlo recalculate
-  const recalculateMutation = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/cashflow/forecast/recalculate"),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/cashflow/inflow-forecast"] });
-      toast({ title: "Forecast recalculated with latest data" });
-    },
-    onError: (err: any) => {
-      toast({ title: "Recalculation failed", description: err?.message || "Try again", variant: "destructive" });
-    },
-  });
 
   // Cash gap alerts
   const [, setLocation] = useLocation();
