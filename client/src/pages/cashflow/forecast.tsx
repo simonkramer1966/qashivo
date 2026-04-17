@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, lazy, Suspense } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -41,7 +41,7 @@ import {
   Target,
   RefreshCw,
 } from "lucide-react";
-import ReactMarkdown from "react-markdown";
+const ReactMarkdown = lazy(() => import("react-markdown"));
 import {
   ComposedChart,
   Bar,
@@ -1409,7 +1409,9 @@ export default function ForecastPage() {
           </CardHeader>
           <CardContent>
             <div className="prose prose-sm max-w-none text-sm text-[var(--q-text-tertiary)] [&_p]:my-2 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_strong]:text-[var(--q-text-primary)]">
-              <ReactMarkdown>{mc.narrative}</ReactMarkdown>
+              <Suspense fallback={<p>{mc.narrative}</p>}>
+                <ReactMarkdown>{mc.narrative}</ReactMarkdown>
+              </Suspense>
             </div>
           </CardContent>
         </Card>
