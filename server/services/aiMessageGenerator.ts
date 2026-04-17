@@ -27,6 +27,20 @@ function extractFirstName(fullName: string): string {
   return first;
 }
 
+/** Barrier-specific SMS compression guidance for the LLM. */
+function buildSmsInfluenceGuidance(barrier: string): string {
+  switch (barrier) {
+    case 'trigger':
+      return 'SMS CONSTRAINT: Max 2 sentences plus sign-off. Write a warm, helpful check-in. Frame as making sure it hasn\'t been missed, not as chasing. PCP compressed: Perception (friendly check-in) → Context (we sent an email) → Permission (check your email).';
+    case 'ability':
+      return 'SMS CONSTRAINT: Max 2 sentences plus sign-off. Write an empathetic note acknowledging things can get stretched. Invite them to check their email to discuss options. Do not demand payment. PCP compressed: Perception (acknowledge difficulty) → Context (we sent details by email) → Permission (reply when ready).';
+    case 'motivation':
+      return 'SMS CONSTRAINT: Max 2 sentences plus sign-off. Write a direct, factual note. State the invoice is overdue and ask them to check their email for details. Be clear but not threatening. PCP compressed: Perception (factual statement) → Context (overdue) → Permission (check email for next steps).';
+    default:
+      return `SMS CONSTRAINT: Max 2 sentences plus sign-off. Barrier is "${barrier}". Compress PCP (Perception → Context → Permission) into 1-2 sentences. The sequence is still present but compressed.`;
+  }
+}
+
 export interface InvoiceDetail {
   invoiceNumber: string;
   amount: number;
@@ -180,6 +194,12 @@ class AIMessageGenerator {
     options?: GenerationOptions,
   ): Promise<GeneratedMessage> {
     const { tenantId, toneLevel } = options || {};
+
+    // Tone ceiling — formal/legal communications require email, not SMS
+    if (toneLevel === 'formal' || toneLevel === 'legal') {
+      console.log(`⛔ SMS skipped — tone "${toneLevel}" requires email, not SMS`);
+      return { body: '', generationMethod: 'skipped_tone_ceiling' };
+    }
 
     // Circuit breaker check
     if (tenantId) {
@@ -494,7 +514,7 @@ Respond with valid JSON:
 
     let influenceNote = '';
     if (context.influenceBarrier && context.influenceStrategy) {
-      influenceNote = `\nINFLUENCE: Barrier is ${context.influenceBarrier}, strategy is "${context.influenceStrategy}". Compress PCP (Perception > Context > Permission) into 1-2 sentences. The sequence is still present but compressed.\n`;
+      influenceNote = '\n' + buildSmsInfluenceGuidance(context.influenceBarrier) + '\n';
     }
 
     return `Generate a brief SMS nudge (MUST be under 160 characters):

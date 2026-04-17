@@ -1008,6 +1008,12 @@ export class ActionExecutor {
         }
       }
 
+      // Guard: skip delivery if body is empty (tone ceiling or generation failure)
+      if (!message) {
+        console.log(`⛔ SMS skipped for ${contact.name} — empty body (tone ceiling or generation failure)`);
+        return { success: false, error: 'SMS body empty — skipped' };
+      }
+
       // Testing mode: prepend original recipient info
       const isTestMode = !!(contact as any)._originalPhone;
       if (isTestMode) {
