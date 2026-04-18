@@ -275,7 +275,7 @@ gets hostile, de-escalate — the global prompt handles that.`;
 
 async function loadContactAndTenant(tenantId: string, contactId: string) {
   const [contact, tenant] = await Promise.all([
-    storage.getContact(contactId),
+    storage.getContact(contactId, tenantId),
     storage.getTenant(tenantId),
   ]);
   if (!contact) throw new Error(`Contact ${contactId} not found`);
