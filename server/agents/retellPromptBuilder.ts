@@ -1,13 +1,17 @@
 /**
- * Retell Prompt Builder — Voice Call Briefing Service (Phase 1: Offline)
+ * Retell Prompt Builder — Voice Call Briefing Service (Phase 2: Enforcement)
  *
  * Assembles full debtor context from multiple sources and calls Claude
  * to compose a single prose call_briefing for Retell AI. Each briefing
  * reads like a senior credit controller briefing a junior colleague on
  * the way into a call. No templates — every briefing LLM-composed.
  *
- * Phase 1 is offline only: generate briefings, inspect output quality,
- * tune the prompt. No Retell integration yet.
+ * Pipeline stages:
+ *   1. assembleContext    — load all data sources, build context object
+ *   2. preGenerationChecks — vulnerability, daily limit, tone floor, phone
+ *   3. generateBriefing   — Claude API call
+ *   4. postGenerationChecks — identity integrity, content safety
+ *   5. applyTestMode      — communication mode enforcement
  */
 
 import { createHash } from "crypto";
@@ -96,7 +100,68 @@ export interface VoiceBriefing {
     contextHash: string;
     claudeLatencyMs: number;
     claudeTokensUsed: number;
+    generatedAt: string;
   };
+}
+
+export class VoiceCallBlockedError extends Error {
+  constructor(
+    public reason: string,
+    public code: string,
+  ) {
+    super(`Voice call blocked: ${reason}`);
+    this.name = "VoiceCallBlockedError";
+  }
+}
+
+// ── Internal context type ────────────────────────────────────
+
+interface BriefingContext {
+  contact: any;
+  tenant: any;
+  persona: any;
+  resolvedPhoneNumber: string;
+  entityType: string;
+  invoiceState: {
+    invoices: Array<{
+      invoiceNumber: string;
+      amount: number;
+      amountDue: number;
+      dueDate: string;
+      daysOverdue: number;
+      partialPayments: number;
+      status: string;
+    }>;
+    totalOutstanding: number;
+    totalOverdue: number;
+  };
+  briefData: ConversationBriefData | null;
+  promiseHistory: {
+    activePromises: Array<{ promiseDate: string; amount: number; status: string }>;
+    recentHistory: Array<{ promiseDate: string; amount: number; outcome: string; daysLate: number | null }>;
+  };
+  disputeState: {
+    openDisputes: Array<{ description: string | null; raisedDate: string; invoiceRef: string | null }>;
+    recentlyResolved: Array<{ description: string | null; resolvedDate: string; outcome: string }>;
+  };
+  rileyIntel: Array<{ category: string; key: string; value: string; confidence: number }>;
+  paymentBehaviour: {
+    medianDaysToPay: number | null;
+    paymentTrend: string;
+    reliabilityDescription: string;
+    lastPaymentDate: string | null;
+    lastPaymentAmount: number | null;
+  };
+  toneState: {
+    currentToneLevel: string;
+    manualToneOverride: string | null;
+  };
+  diagnosis: { barrier: string; confidence: number; signals: string[]; reasoning: string };
+  strategy: { name: string; toneAlignment: string; pcpGuidance: any; techniques: any; avoid: any };
+  framing: { mode: string; isTransition: boolean; voiceIntro: string };
+  voiceInfluenceBrief: string;
+  assembledContext: Record<string, any>;
+  contextHash: string;
 }
 
 // ── System prompt ────────────────────────────────────────────
@@ -522,23 +587,21 @@ function resolvePhoneNumber(contact: any): string {
   return phone;
 }
 
-// ── Main builder ─────────────────────────────────────────────
+// ── Stage 1: Context assembly ────────────────────────────────
 
-export async function buildBriefing(
-  trigger: VoiceCallTrigger,
-): Promise<VoiceBriefing> {
+async function assembleContext(trigger: VoiceCallTrigger): Promise<BriefingContext> {
   const { tenantId, contactId, invoiceIds } = trigger;
 
-  // 1. Contact + Tenant (required — fail fast if missing)
+  // Contact + Tenant (required — fail fast if missing)
   const { contact, tenant } = await loadContactAndTenant(tenantId, contactId);
 
-  // 2. Phone number (required — fail fast if missing)
+  // Phone number (required — fail fast if missing)
   const resolvedPhoneNumber = resolvePhoneNumber(contact);
 
-  // 3. Agent persona
+  // Agent persona
   const persona = await loadPersona(tenantId);
 
-  // 4-12: Parallel context assembly — each section independent, safe defaults on error
+  // Parallel context assembly — each section independent, safe defaults on error
   const [
     invoiceState,
     conversationBrief,
@@ -720,35 +783,243 @@ export async function buildBriefing(
     .digest("hex")
     .slice(0, 16);
 
-  // Claude API call
+  return {
+    contact,
+    tenant,
+    persona,
+    resolvedPhoneNumber,
+    entityType,
+    invoiceState,
+    briefData,
+    promiseHistory,
+    disputeState,
+    rileyIntel,
+    paymentBehaviour,
+    toneState,
+    diagnosis,
+    strategy,
+    framing,
+    voiceInfluenceBrief,
+    assembledContext,
+    contextHash,
+  };
+}
+
+// ── Stage 2: Pre-generation checks ──────────────────────────
+
+const ESCALATED_TONES = new Set(["Firm", "firm", "Formal", "formal", "Legal", "legal"]);
+
+async function preGenerationChecks(
+  trigger: VoiceCallTrigger,
+  ctx: BriefingContext,
+): Promise<void> {
+  // 1. Vulnerability pause — chasing must stop if vulnerability detected
+  if (ctx.contact.vulnerabilityPausedChasing === true) {
+    throw new VoiceCallBlockedError(
+      "Vulnerability detected — chasing paused for this contact",
+      "VULNERABILITY_PAUSED",
+    );
+  }
+
+  // 2. Daily voice limit — count today's voice actions for this tenant
+  const tz = (ctx.tenant as any).executionTimezone || "Europe/London";
+  const todayMidnight = getTodayMidnightInTimezone(tz);
+  const dailyLimits = (ctx.tenant as any).dailyLimits as
+    | { email?: number; sms?: number; voice?: number }
+    | null;
+  const voiceLimit = dailyLimits?.voice ?? 20;
+
+  const [countResult] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(actions)
+    .where(
+      and(
+        eq(actions.tenantId, trigger.tenantId),
+        eq(actions.type, "voice"),
+        gte(actions.createdAt, todayMidnight),
+        inArray(actions.status, ["completed", "sent", "executing"]),
+      ),
+    );
+  const todayCount = countResult?.count ?? 0;
+
+  if (todayCount >= voiceLimit) {
+    throw new VoiceCallBlockedError(
+      `Daily voice limit reached (${todayCount}/${voiceLimit})`,
+      "DAILY_LIMIT",
+    );
+  }
+
+  // 3. Entity-type tone floor — sole traders capped at Professional
+  if (ctx.entityType === "sole_trader" && ESCALATED_TONES.has(ctx.toneState.currentToneLevel)) {
+    console.warn(
+      `[VoiceBriefing] Sole trader tone cap: downgrading ${ctx.toneState.currentToneLevel} → Professional for contact ${trigger.contactId}`,
+    );
+    ctx.toneState.currentToneLevel = "Professional";
+  }
+}
+
+function getTodayMidnightInTimezone(tz: string): Date {
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat("en-GB", {
+    timeZone: tz,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const parts = formatter.formatToParts(now);
+  const year = parts.find((p) => p.type === "year")!.value;
+  const month = parts.find((p) => p.type === "month")!.value;
+  const day = parts.find((p) => p.type === "day")!.value;
+  return new Date(`${year}-${month}-${day}T00:00:00`);
+}
+
+// ── Stage 3: Generate briefing ──────────────────────────────
+
+async function generateBriefingText(
+  trigger: VoiceCallTrigger,
+  ctx: BriefingContext,
+): Promise<{ text: string; latencyMs: number }> {
   const startMs = Date.now();
-  const briefingText = await generateText({
+  const text = await generateText({
     system: BRIEFING_SYSTEM_PROMPT,
-    prompt: JSON.stringify({ trigger, context: assembledContext }),
+    prompt: JSON.stringify({ trigger, context: ctx.assembledContext }),
     model: "standard",
     maxTokens: 1000,
     temperature: 0.4,
     logContext: {
-      tenantId,
+      tenantId: trigger.tenantId,
       caller: "retellPromptBuilder",
       relatedEntityType: "contact",
-      relatedEntityId: contactId,
+      relatedEntityId: trigger.contactId,
     },
   });
-  const claudeLatencyMs = Date.now() - startMs;
+  return { text: text.trim(), latencyMs: Date.now() - startMs };
+}
+
+// ── Stage 4: Post-generation checks ─────────────────────────
+
+const THREATENING_PATTERN = /threaten|legal action is imminent|we will sue|court proceedings will begin/i;
+const RAW_MODEL_PATTERN = /\bp\s*\(\s*pay\s*\)|sigma|mu\s*=|confidence\s*[:=]\s*\d/i;
+const MARKDOWN_PATTERN = /^#{1,3}\s|^\s*[-*]\s|\*\*|__|```/m;
+
+function postGenerationChecks(rawBriefing: string, ctx: BriefingContext): string {
+  const personaName = ctx.persona?.personaName || "Charlie";
+  const tenantCompanyName = (ctx.tenant as any).name || "";
+
+  // 1. Identity integrity — warn if persona name missing or company used as agent name
+  if (!rawBriefing.includes(personaName)) {
+    console.warn(
+      `[VoiceBriefing] Identity check: persona name "${personaName}" not found in briefing for contact ${ctx.contact.id}`,
+    );
+  }
+
+  if (
+    tenantCompanyName &&
+    rawBriefing.includes(`I'm ${tenantCompanyName}`) ||
+    tenantCompanyName && rawBriefing.includes(`it's ${tenantCompanyName}.`)
+  ) {
+    console.warn(
+      `[VoiceBriefing] Identity check: company name "${tenantCompanyName}" used as agent name in briefing for contact ${ctx.contact.id}`,
+    );
+  }
+
+  // 2. Content safety — scan for prohibited patterns (warn only, don't block)
+  if (THREATENING_PATTERN.test(rawBriefing)) {
+    console.warn(
+      `[VoiceBriefing] Content safety: threatening language detected in briefing for contact ${ctx.contact.id}`,
+    );
+  }
+  if (RAW_MODEL_PATTERN.test(rawBriefing)) {
+    console.warn(
+      `[VoiceBriefing] Content safety: raw model output detected in briefing for contact ${ctx.contact.id}`,
+    );
+  }
+  if (MARKDOWN_PATTERN.test(rawBriefing)) {
+    console.warn(
+      `[VoiceBriefing] Content safety: markdown formatting detected in briefing for contact ${ctx.contact.id}`,
+    );
+  }
+
+  return rawBriefing;
+}
+
+// ── Stage 5: Test mode application ──────────────────────────
+
+function applyTestMode(
+  briefing: string,
+  ctx: BriefingContext,
+): { briefing: string; phone: string; isTestMode: boolean } {
+  const mode = (ctx.tenant as any).communicationMode as string | undefined;
+
+  if (mode === "off") {
+    throw new VoiceCallBlockedError("Communication mode is OFF", "MODE_OFF");
+  }
+
+  if (mode === "testing" || mode === "soft_live") {
+    const testPhones = (ctx.tenant as any).testPhones as string[] | null;
+    if (!testPhones?.length) {
+      throw new VoiceCallBlockedError(
+        "No test phone configured for testing mode",
+        "NO_TEST_PHONE",
+      );
+    }
+
+    const originalPhone = ctx.resolvedPhoneNumber;
+    const contactName = ctx.contact.name || "Unknown";
+    const prefix = mode === "testing" ? "TEST" : "SOFT LIVE";
+
+    console.log(
+      `🧪 [VoiceBriefing] ${prefix} redirect: briefing phone ${originalPhone} → ${testPhones[0]}`,
+    );
+
+    return {
+      briefing: `[${prefix} MODE — original recipient: ${contactName} at ${originalPhone}] ${briefing}`,
+      phone: testPhones[0],
+      isTestMode: true,
+    };
+  }
+
+  // Live mode — no modifications
+  return {
+    briefing,
+    phone: ctx.resolvedPhoneNumber,
+    isTestMode: false,
+  };
+}
+
+// ── Main builder (orchestrator) ─────────────────────────────
+
+export async function buildBriefing(
+  trigger: VoiceCallTrigger,
+): Promise<VoiceBriefing> {
+  // Stage 1: Assemble context
+  const ctx = await assembleContext(trigger);
+
+  // Stage 2: Pre-generation checks (throws VoiceCallBlockedError)
+  await preGenerationChecks(trigger, ctx);
+
+  // Stage 3: Generate briefing via Claude
+  const { text: rawBriefing, latencyMs } = await generateBriefingText(trigger, ctx);
+
+  // Stage 4: Post-generation checks (warn only)
+  const validatedBriefing = postGenerationChecks(rawBriefing, ctx);
+
+  // Stage 5: Apply test mode (throws VoiceCallBlockedError if OFF)
+  const { briefing, phone, isTestMode } = applyTestMode(validatedBriefing, ctx);
 
   return {
-    briefing: briefingText.trim(),
-    resolvedPhoneNumber,
-    isTestMode: false, // Enforcement wrappers come in Phase 2
+    briefing,
+    resolvedPhoneNumber: phone,
+    isTestMode,
     metadata: {
-      influenceBarrier: diagnosis.barrier,
-      influenceStrategy: strategy.name,
-      toneLevel: trigger.voiceToneOverride || strategy.toneAlignment,
-      personaFraming: framing.mode,
-      contextHash,
-      claudeLatencyMs,
+      influenceBarrier: ctx.diagnosis.barrier,
+      influenceStrategy: ctx.strategy.name,
+      toneLevel: trigger.voiceToneOverride || ctx.strategy.toneAlignment,
+      personaFraming: ctx.framing.mode,
+      contextHash: ctx.contextHash,
+      claudeLatencyMs: latencyMs,
       claudeTokensUsed: 0, // generateText() doesn't expose token count
+      generatedAt: new Date().toISOString(),
     },
   };
 }

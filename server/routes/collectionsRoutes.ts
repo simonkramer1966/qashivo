@@ -5041,6 +5041,15 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         const briefing = await buildBriefing(trigger as any);
         res.json(briefing);
       } catch (error: any) {
+        if (error.name === "VoiceCallBlockedError") {
+          console.warn(`[VoiceBriefing] Blocked: ${error.code} — ${error.reason}`);
+          res.status(403).json({
+            blocked: true,
+            reason: error.reason,
+            code: error.code,
+          });
+          return;
+        }
         console.error("[VoiceBriefing] Test endpoint error:", error);
         res.status(500).json({
           message: error.message || "Failed to generate voice briefing",
