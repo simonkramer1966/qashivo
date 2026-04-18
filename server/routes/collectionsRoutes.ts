@@ -5018,4 +5018,34 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       res.status(500).json({ message: "Failed to optimize actions" });
     }
   });
+
+  // TODO: Remove or gate behind feature flag before production
+  // Temporary endpoint for offline voice briefing testing (Phase 1)
+  app.post(
+    "/api/voice/generate-briefing-test",
+    isAuthenticated,
+    withRBACContext,
+    withMinimumRole("manager"),
+    async (req, res) => {
+      try {
+        const { buildBriefing } = await import("../agents/retellPromptBuilder");
+        const trigger = {
+          tenantId: req.rbac!.tenantId,
+          contactId: req.body.contactId,
+          invoiceIds: req.body.invoiceIds || [],
+          reasonForCall: req.body.reasonForCall || "follow_up_no_response",
+          callGoal: req.body.callGoal || "secure_payment_date",
+          voiceToneOverride: req.body.voiceToneOverride,
+          triggerSource: req.body.triggerSource || "manual_user",
+        };
+        const briefing = await buildBriefing(trigger as any);
+        res.json(briefing);
+      } catch (error: any) {
+        console.error("[VoiceBriefing] Test endpoint error:", error);
+        res.status(500).json({
+          message: error.message || "Failed to generate voice briefing",
+        });
+      }
+    },
+  );
 }
