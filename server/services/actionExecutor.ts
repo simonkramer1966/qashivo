@@ -1146,6 +1146,12 @@ export class ActionExecutor {
     invoice: any,
     tenant: any
   ): Promise<{ success: boolean; data?: any; error?: string }> {
+    // New briefing-based path (tenant.voiceEnabled = true)
+    if (tenant.voiceEnabled === true) {
+      return this.executeVoiceCallWithBriefing(action, contact, invoice, tenant);
+    }
+
+    // Legacy 11-variable path
     try {
       if (!contact.phone) {
         return { success: false, error: 'Contact has no phone number' };
@@ -1263,6 +1269,110 @@ export class ActionExecutor {
       };
     } catch (error: any) {
       return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Voice call via briefing builder (voiceEnabled=true path).
+   * Replaces 11 individual dynamic variables with a single `call_briefing`.
+   */
+  private async executeVoiceCallWithBriefing(
+    action: any,
+    contact: any,
+    invoice: any,
+    tenant: any
+  ): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      const { buildBriefing, updateBriefingCallStatus, VoiceCallBlockedError } = await import(
+        '../agents/retellPromptBuilder.js'
+      );
+      type VoiceCallTriggerType = import('../agents/retellPromptBuilder.js').VoiceCallTrigger;
+
+      const trigger: VoiceCallTriggerType = {
+        tenantId: action.tenantId,
+        contactId: action.contactId,
+        invoiceIds: action.invoiceIds?.length
+          ? action.invoiceIds
+          : action.invoiceId
+            ? [action.invoiceId]
+            : [],
+        actionId: action.id,
+        reasonForCall: action.metadata?.reasonForCall || 'follow_up_no_response',
+        callGoal: action.metadata?.callGoal || 'secure_payment_date',
+        voiceToneOverride: action.metadata?.voiceTone,
+        triggerSource: 'charlie_approved',
+      };
+
+      // Business hours warning (non-blocking — deferral is caller's concern)
+      const tz = tenant.executionTimezone || 'Europe/London';
+      const start = tenant.businessHoursStart || '08:00';
+      const end = tenant.businessHoursEnd || '18:00';
+      const formatter = new Intl.DateTimeFormat('en-GB', {
+        timeZone: tz,
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+      const nowLocal = formatter.format(new Date());
+      if (nowLocal < start || nowLocal > end) {
+        console.warn(
+          `[VoiceBriefing] Call outside business hours (${nowLocal} ${tz}) for tenant ${tenant.id}`,
+        );
+      }
+
+      // Generate briefing (includes all enforcement: vulnerability, daily limit, tone cap, mode)
+      const briefing = await buildBriefing(trigger);
+
+      // Retell agent ID
+      const agentId = action.metadata?.agentId || process.env.RETELL_AGENT_ID;
+      if (!agentId) {
+        return { success: false, error: 'No Retell agent ID configured' };
+      }
+
+      // Call Retell via existing wrapper — single dynamic variable
+      const { sendVoiceCall } = await import('./communications/sendVoiceCall.js');
+      const result = await sendVoiceCall({
+        tenantId: tenant.id,
+        to: briefing.resolvedPhoneNumber,
+        contactName: contact.name || 'Unknown',
+        agentId,
+        fromNumber: process.env.RETELL_PHONE_NUMBER || '+442045772088',
+        dynamicVariables: { call_briefing: briefing.briefing },
+        metadata: {
+          contactId: contact.id,
+          invoiceId: invoice?.id,
+          actionId: action.id,
+          briefingId: briefing.metadata.briefingId,
+          influenceBarrier: briefing.metadata.influenceBarrier,
+          influenceStrategy: briefing.metadata.influenceStrategy,
+        },
+        context: 'BRIEFING_EXECUTOR',
+      });
+
+      // Update briefing record with Retell call ID
+      await updateBriefingCallStatus(briefing.metadata.briefingId, result.callId, 'dialling');
+
+      logCommEvent({
+        tenantId: action.tenantId,
+        communicationId: action.id,
+        eventType: 'generated',
+        eventData: { channel: 'voice', contactId: action.contactId, usedBriefingPath: true },
+      }).catch(() => {});
+
+      return {
+        success: true,
+        data: {
+          ...result,
+          usedBriefingPath: true,
+          briefingId: briefing.metadata.briefingId,
+        },
+      };
+    } catch (err: any) {
+      if (err.name === 'VoiceCallBlockedError') {
+        console.warn(`[VoiceBriefing] Blocked: ${err.code} — ${err.reason}`);
+        return { success: false, error: `Blocked: ${err.reason}` };
+      }
+      return { success: false, error: err.message };
     }
   }
 

@@ -1,5 +1,5 @@
 /**
- * Retell Prompt Builder — Voice Call Briefing Service (Phase 2: Enforcement)
+ * Retell Prompt Builder — Voice Call Briefing Service (Phase 3: Schema + Logging)
  *
  * Assembles full debtor context from multiple sources and calls Claude
  * to compose a single prose call_briefing for Retell AI. Each briefing
@@ -26,7 +26,7 @@ import {
   disputes,
   aiFacts,
   customerLearningProfiles,
-  actions,
+  voiceCallBriefings,
 } from "@shared/schema";
 import { storage } from "../storage";
 import { generateText } from "../services/llm/claude";
@@ -78,6 +78,7 @@ export interface VoiceCallTrigger {
   tenantId: string;
   contactId: string;
   invoiceIds: string[];
+  actionId?: string;
   reasonForCall: VoiceCallReason;
   callGoal: VoiceCallGoal;
   voiceToneOverride?: string;
@@ -101,6 +102,7 @@ export interface VoiceBriefing {
     claudeLatencyMs: number;
     claudeTokensUsed: number;
     generatedAt: string;
+    briefingId: string;
   };
 }
 
@@ -831,13 +833,11 @@ async function preGenerationChecks(
 
   const [countResult] = await db
     .select({ count: sql<number>`count(*)::int` })
-    .from(actions)
+    .from(voiceCallBriefings)
     .where(
       and(
-        eq(actions.tenantId, trigger.tenantId),
-        eq(actions.type, "voice"),
-        gte(actions.createdAt, todayMidnight),
-        inArray(actions.status, ["completed", "sent", "executing"]),
+        eq(voiceCallBriefings.tenantId, trigger.tenantId),
+        gte(voiceCallBriefings.createdAt, todayMidnight),
       ),
     );
   const todayCount = countResult?.count ?? 0;
@@ -1007,6 +1007,32 @@ export async function buildBriefing(
   // Stage 5: Apply test mode (throws VoiceCallBlockedError if OFF)
   const { briefing, phone, isTestMode } = applyTestMode(validatedBriefing, ctx);
 
+  // Stage 6: Persist briefing (non-fatal — DB failure doesn't block return)
+  let briefingId = "";
+  try {
+    const [record] = await db.insert(voiceCallBriefings).values({
+      tenantId: trigger.tenantId,
+      contactId: trigger.contactId,
+      actionId: trigger.actionId || null,
+      triggerSource: trigger.triggerSource,
+      reasonForCall: trigger.reasonForCall,
+      callGoal: trigger.callGoal,
+      briefingText: briefing,
+      influenceBarrier: ctx.diagnosis.barrier,
+      influenceStrategy: ctx.strategy.name,
+      personaFraming: ctx.framing.mode,
+      toneLevel: trigger.voiceToneOverride || ctx.strategy.toneAlignment,
+      isTestMode,
+      contextHash: ctx.contextHash,
+      inputContextJson: ctx.assembledContext,
+      claudeModel: "claude-sonnet-4-20250514",
+      claudeLatencyMs: latencyMs,
+    }).returning();
+    briefingId = record.id;
+  } catch (err) {
+    console.warn("[VoiceBriefing] Failed to persist briefing record:", err);
+  }
+
   return {
     briefing,
     resolvedPhoneNumber: phone,
@@ -1020,6 +1046,29 @@ export async function buildBriefing(
       claudeLatencyMs: latencyMs,
       claudeTokensUsed: 0, // generateText() doesn't expose token count
       generatedAt: new Date().toISOString(),
+      briefingId,
     },
   };
+}
+
+// ── Post-call status update ─────────────────────────────────
+
+export async function updateBriefingCallStatus(
+  briefingId: string,
+  retellCallId: string | null,
+  callStatus: string,
+): Promise<void> {
+  if (!briefingId) return;
+  try {
+    await db
+      .update(voiceCallBriefings)
+      .set({
+        ...(retellCallId ? { retellCallId } : {}),
+        callStatus,
+        updatedAt: new Date(),
+      })
+      .where(eq(voiceCallBriefings.id, briefingId));
+  } catch (err) {
+    console.warn("[VoiceBriefing] Failed to update briefing call status:", err);
+  }
 }
