@@ -199,6 +199,9 @@ export const tenants = pgTable("tenants", {
   forecastSimulationRuns: integer("forecast_simulation_runs").default(5000),
   forecastPaymentDecayHalfLifeDays: integer("forecast_payment_decay_half_life_days").default(365),
 
+  // Voice channel — tenant-level toggle (distinct from per-persona agentPersonas.voiceEnabled)
+  voiceEnabled: boolean("voice_enabled").default(false),
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -1678,6 +1681,68 @@ export const voiceCalls = pgTable("voice_calls", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Voice Call Briefings — persists every LLM-generated briefing for audit + effectiveness analysis
+export const voiceCallBriefings = pgTable("voice_call_briefings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id),
+  actionId: varchar("action_id"), // nullable — manual calls have no action
+  triggerSource: varchar("trigger_source").notNull(), // charlie_autonomous, charlie_approved, manual_user, manual_riley
+  reasonForCall: varchar("reason_for_call").notNull(),
+  callGoal: varchar("call_goal").notNull(),
+  briefingText: text("briefing_text").notNull(),
+  influenceBarrier: varchar("influence_barrier"),
+  influenceStrategy: varchar("influence_strategy"),
+  personaFraming: varchar("persona_framing"),
+  toneLevel: varchar("tone_level"),
+  isTestMode: boolean("is_test_mode").default(false),
+  contextHash: varchar("context_hash").notNull(),
+  inputContextJson: jsonb("input_context_json"), // full assembled context for debugging
+  claudeModel: varchar("claude_model").notNull(),
+  claudeLatencyMs: integer("claude_latency_ms"),
+  claudeInputTokens: integer("claude_input_tokens"),
+  claudeOutputTokens: integer("claude_output_tokens"),
+  retellCallId: varchar("retell_call_id"), // set later when call is placed
+  callStatus: varchar("call_status").default("pending"), // pending, dialling, completed, failed, blocked
+  deferredUntil: timestamp("deferred_until"),
+  stalenessRegenerated: boolean("staleness_regenerated").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_voice_briefings_tenant_contact").on(table.tenantId, table.contactId),
+  index("idx_voice_briefings_retell_call").on(table.retellCallId),
+]);
+
+// Voice Call Outcomes — links a briefing to its Retell call result for closed-loop learning
+export const voiceCallOutcomes = pgTable("voice_call_outcomes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id),
+  briefingId: varchar("briefing_id").notNull().references(() => voiceCallBriefings.id),
+  retellCallId: varchar("retell_call_id").notNull(),
+  callDuration: integer("call_duration"), // seconds
+  completionStatus: varchar("completion_status"), // completed, no_answer, busy, voicemail, failed
+  recordingUrl: varchar("recording_url"),
+  transcriptText: text("transcript_text"),
+  transcriptSummary: text("transcript_summary"),
+  extractedOutcome: varchar("extracted_outcome"), // payment_date_secured, plan_agreed, dispute_raised, callback_requested, no_commitment, voicemail_left, wrong_number
+  extractedPaymentDate: date("extracted_payment_date"),
+  extractedPaymentAmount: decimal("extracted_payment_amount", { precision: 12, scale: 2 }),
+  extractedInstalmentsCount: integer("extracted_instalments_count"),
+  extractedDisputeReason: text("extracted_dispute_reason"),
+  extractedCallbackDate: timestamp("extracted_callback_date"),
+  extractedNewContactName: varchar("extracted_new_contact_name"),
+  extractedNewContactEmail: varchar("extracted_new_contact_email"),
+  extractedNewContactPhone: varchar("extracted_new_contact_phone"),
+  intentAnalysisJson: jsonb("intent_analysis_json"),
+  influenceBarrier: varchar("influence_barrier"), // post-call — may differ from pre-call
+  influenceStrategy: varchar("influence_strategy"), // post-call
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_voice_outcomes_briefing").on(table.briefingId),
+  uniqueIndex("uniq_voice_outcomes_retell_call").on(table.retellCallId),
+]);
+
 // SMS messages for bidirectional text communication
 export const smsMessages = pgTable("sms_messages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -2287,6 +2352,32 @@ export const voiceCallsRelations = relations(voiceCalls, ({ one }) => ({
   invoice: one(invoices, {
     fields: [voiceCalls.invoiceId],
     references: [invoices.id],
+  }),
+}));
+
+export const voiceCallBriefingsRelations = relations(voiceCallBriefings, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [voiceCallBriefings.tenantId],
+    references: [tenants.id],
+  }),
+  contact: one(contacts, {
+    fields: [voiceCallBriefings.contactId],
+    references: [contacts.id],
+  }),
+}));
+
+export const voiceCallOutcomesRelations = relations(voiceCallOutcomes, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [voiceCallOutcomes.tenantId],
+    references: [tenants.id],
+  }),
+  contact: one(contacts, {
+    fields: [voiceCallOutcomes.contactId],
+    references: [contacts.id],
+  }),
+  briefing: one(voiceCallBriefings, {
+    fields: [voiceCallOutcomes.briefingId],
+    references: [voiceCallBriefings.id],
   }),
 }));
 
@@ -3072,6 +3163,17 @@ export const insertVoiceCallSchema = createInsertSchema(voiceCalls).omit({
   updatedAt: true,
 });
 
+export const insertVoiceCallBriefingSchema = createInsertSchema(voiceCallBriefings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertVoiceCallOutcomeSchema = createInsertSchema(voiceCallOutcomes).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertSmsMessageSchema = createInsertSchema(smsMessages).omit({
   id: true,
   createdAt: true,
@@ -3231,6 +3333,10 @@ export type InsertChannelAnalytics = z.infer<typeof insertChannelAnalyticsSchema
 export type ChannelAnalytics = typeof channelAnalytics.$inferSelect;
 export type InsertVoiceCall = z.infer<typeof insertVoiceCallSchema>;
 export type VoiceCall = typeof voiceCalls.$inferSelect;
+export type InsertVoiceCallBriefing = z.infer<typeof insertVoiceCallBriefingSchema>;
+export type VoiceCallBriefing = typeof voiceCallBriefings.$inferSelect;
+export type InsertVoiceCallOutcome = z.infer<typeof insertVoiceCallOutcomeSchema>;
+export type VoiceCallOutcome = typeof voiceCallOutcomes.$inferSelect;
 export type InsertSmsMessage = z.infer<typeof insertSmsMessageSchema>;
 export type SmsMessage = typeof smsMessages.$inferSelect;
 export type InsertAiFact = z.infer<typeof insertAiFactSchema>;

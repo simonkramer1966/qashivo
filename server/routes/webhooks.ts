@@ -1306,6 +1306,16 @@ export function registerWebhookRoutes(app: Express) {
           console.warn(`[Webhook] Failed to create voice timeline event for call ${call_id}:`, tlErr);
         }
 
+        // Phase 5: Briefing linkage + voiceCallOutcomes (fire-and-forget)
+        void import("../services/voiceCallProcessor.js").then(({ processPostCallOutcome }) =>
+          processPostCallOutcome({
+            retellCallId: call_id, tenantId, contactId, actionId,
+            voiceStatus, durationSeconds, recordingUrl: recording_url || null,
+            transcriptText: transcriptText || null, transcriptSummary: null,
+            callOutcome: voiceStatus, capturedPtp: null, capturedDispute: null, extractedData: {},
+          })
+        ).catch(err => console.error('[PostCall] Non-connected processing failed:', err));
+
         await completeWebhook({
           idempotencyKey: voiceIdempotencyKey,
           source: "retell",
@@ -1423,6 +1433,16 @@ export function registerWebhookRoutes(app: Express) {
         } catch (tlErr) {
           console.warn(`[Webhook] Failed to create voice timeline event for call ${call_id}:`, tlErr);
         }
+
+        // Phase 5: Briefing linkage + voiceCallOutcomes (fire-and-forget)
+        void import("../services/voiceCallProcessor.js").then(({ processPostCallOutcome }) =>
+          processPostCallOutcome({
+            retellCallId: call_id, tenantId, contactId, actionId,
+            voiceStatus, durationSeconds, recordingUrl: recording_url || null,
+            transcriptText: transcriptText || null, transcriptSummary: null,
+            callOutcome: 'failed', capturedPtp: null, capturedDispute: null, extractedData: {},
+          })
+        ).catch(err => console.error('[PostCall] Failed-call processing failed:', err));
 
         await completeWebhook({
           idempotencyKey: voiceIdempotencyKey,
@@ -1930,6 +1950,17 @@ Analyze this debt collection AI call and extract the outcome. Use these EXACT ou
 
         console.log(`🎙️  [WEBHOOK] completed → ${updatedAction?.workState}/${updatedAction?.inFlightState || '-'} (${wasNewlyCreated ? 'new' : 'duplicate'})`);
       }
+
+      // Phase 5: Briefing linkage + voiceCallOutcomes (fire-and-forget)
+      void import("../services/voiceCallProcessor.js").then(({ processPostCallOutcome }) =>
+        processPostCallOutcome({
+          retellCallId: call_id, tenantId, contactId, actionId,
+          voiceStatus, durationSeconds, recordingUrl: recording_url || null,
+          transcriptText: transcriptText || null, transcriptSummary: summarySnippet || null,
+          callOutcome, capturedPtp, capturedDispute,
+          extractedData: newOutcome?.extracted || {},
+        })
+      ).catch(err => console.error('[PostCall] Completed-call processing failed:', err));
 
       // Update the timeline event with call results
       if (callMetadata.action_id) {
