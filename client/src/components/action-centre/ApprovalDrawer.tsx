@@ -32,6 +32,7 @@ import {
 import {
   Check, X, Clock, ChevronDown, Loader2, Sparkles, ArrowRight,
   MoreVertical, Eye, StickyNote, PauseCircle, Star, RotateCcw, RefreshCw,
+  Phone, ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrencyCompact } from "./utils";
@@ -186,13 +187,33 @@ export default function ApprovalDrawer({
     contactName: string;
     companyName: string;
     contactEmail: string;
+    voiceBriefing: {
+      briefingText: string;
+      influenceBarrier: string | null;
+      influenceStrategy: string | null;
+      toneLevel: string | null;
+      callStatus: string | null;
+      personaFraming: string | null;
+      callGoal: string | null;
+      reasonForCall: string | null;
+    } | null;
+    callGoal: string | null;
+    reasonForCall: string | null;
   }>({
     queryKey: [`/api/actions/${action?.id}/preview`],
     enabled: open && !!action?.id,
   });
 
+  const [briefingExpanded, setBriefingExpanded] = useState(false);
+
+  // Reset briefing expanded when action changes
+  useEffect(() => {
+    setBriefingExpanded(false);
+  }, [action?.id]);
+
   if (!action) return null;
 
+  const isVoice = normalizeChannel(action.type) === "Voice";
   const subject = preview?.subject || action.subject || "";
   const body = preview?.content || action.content || "";
   const contactEmail = preview?.contactEmail || "";
@@ -245,75 +266,116 @@ export default function ApprovalDrawer({
             {/* SECTION 1 — Recipients */}
             <div className="border-t border-[var(--q-border-default)] pt-3 space-y-1">
               <div className="flex gap-2 text-[12px]">
-                <span className="text-[var(--q-text-tertiary)] w-6">To:</span>
+                <span className="text-[var(--q-text-tertiary)] w-6">{isVoice ? "Call:" : "To:"}</span>
                 <span className="text-[var(--q-text-primary)]">
                   {action.contactName || "—"}
-                  {contactEmail && <span className="text-[var(--q-text-tertiary)] ml-1">&lt;{contactEmail}&gt;</span>}
+                  {!isVoice && contactEmail && <span className="text-[var(--q-text-tertiary)] ml-1">&lt;{contactEmail}&gt;</span>}
                 </span>
               </div>
             </div>
 
-            {/* SECTION 2 — Email content */}
-            <div className="border-t border-[var(--q-border-default)] pt-3 space-y-2">
-              <div>
-                <p className="text-[11px] text-[var(--q-text-tertiary)] mb-1">Subject</p>
-                <p className="text-[13px] font-medium text-[var(--q-text-primary)]">{subject}</p>
-              </div>
-              <div className="relative">
-                <p className="text-[11px] text-[var(--q-text-tertiary)] mb-1">Body</p>
-                {/* State 2: tone changed but not yet regenerated — dim overlay */}
-                {toneChanged && !isRegenerated && (
-                  <div className="absolute inset-0 top-5 bg-[var(--q-attention-bg)] rounded pointer-events-none z-10" />
-                )}
-                <div
-                  className={cn(
-                    "text-[13px] leading-[1.6] text-foreground whitespace-pre-wrap [&_p]:m-0 [&_p]:text-[13px] [&_p]:leading-[1.6] [&_br]:leading-[1.6]",
-                    toneChanged && !isRegenerated && "opacity-60",
-                  )}
-                  dangerouslySetInnerHTML={{ __html: body }}
-                />
-                {toneChanged && !isRegenerated && (
-                  <p className="text-[11px] text-[var(--q-attention-text)] mt-2">
-                    Tone changed to {currentTone} — click Regenerate to update the email
+            {/* SECTION 2 — Content (voice vs email/SMS) */}
+            {isVoice ? (
+              <div className="border-t border-[var(--q-border-default)] pt-3 space-y-3">
+                <div className="space-y-2">
+                  <div>
+                    <p className="text-[11px] text-[var(--q-text-tertiary)] mb-1">Call goal</p>
+                    <p className="text-[13px] font-medium text-[var(--q-text-primary)]">
+                      {preview?.callGoal || (action.metadata as any)?.callGoal || "Secure payment date"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-[var(--q-text-tertiary)] mb-1">Reason</p>
+                    <p className="text-[13px] text-[var(--q-text-primary)]">
+                      {preview?.reasonForCall || (action.metadata as any)?.reasonForCall || action.actionSummary || "Follow up on outstanding invoices"}
+                    </p>
+                  </div>
+                </div>
+
+                {preview?.voiceBriefing?.briefingText ? (
+                  <div>
+                    <button
+                      className="inline-flex items-center gap-1 text-[12px] text-[var(--q-info-text)] font-medium"
+                      onClick={() => setBriefingExpanded(!briefingExpanded)}
+                    >
+                      <ChevronRight className={cn("h-3 w-3 transition-transform", briefingExpanded && "rotate-90")} />
+                      {briefingExpanded ? "Hide briefing" : "Preview briefing"}
+                    </button>
+                    {briefingExpanded && (
+                      <div className="mt-2 rounded-md border bg-[var(--q-bg-surface-alt)] p-3">
+                        <p className="text-[12px] leading-[1.6] text-[var(--q-text-primary)] whitespace-pre-wrap">
+                          {preview.voiceBriefing.briefingText}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-[var(--q-text-tertiary)] italic">
+                    Briefing will be generated when the call is approved
                   </p>
                 )}
-                {isRegenerated && (
-                  <div className="flex items-center gap-2 mt-2">
-                    <p className="text-[11px] text-[var(--q-money-in-text)]">
-                      Regenerated at {currentTone} tone
-                    </p>
-                    <button
-                      className="inline-flex items-center gap-1 text-[11px] text-[var(--q-text-tertiary)] hover:text-foreground"
-                      onClick={onRevert}
-                    >
-                      <RotateCcw className="h-3 w-3" /> Revert to original
-                    </button>
-                  </div>
-                )}
               </div>
-              <button
-                className="inline-flex items-center gap-1 text-[12px] text-[var(--q-info-text)] hover:text-[var(--q-info-text)] font-medium"
-                onClick={() => {
-                  onOpenChange(false);
-                  const plainBody = body
-                    .replace(/<br\s*\/?>/gi, "\n")
-                    .replace(/<\/p>/gi, "\n\n")
-                    .replace(/<\/div>/gi, "\n")
-                    .replace(/<[^>]+>/g, "")
-                    .replace(/&amp;/g, "&")
-                    .replace(/&lt;/g, "<")
-                    .replace(/&gt;/g, ">")
-                    .replace(/&nbsp;/g, " ")
-                    .replace(/\n{3,}/g, "\n\n")
-                    .trim();
-                  window.dispatchEvent(new CustomEvent("approval:edit", {
-                    detail: { actionId: action.id, subject, body: plainBody },
-                  }));
-                }}
-              >
-                Edit before sending <ArrowRight className="h-3 w-3" />
-              </button>
-            </div>
+            ) : (
+              <div className="border-t border-[var(--q-border-default)] pt-3 space-y-2">
+                <div>
+                  <p className="text-[11px] text-[var(--q-text-tertiary)] mb-1">Subject</p>
+                  <p className="text-[13px] font-medium text-[var(--q-text-primary)]">{subject}</p>
+                </div>
+                <div className="relative">
+                  <p className="text-[11px] text-[var(--q-text-tertiary)] mb-1">Body</p>
+                  {toneChanged && !isRegenerated && (
+                    <div className="absolute inset-0 top-5 bg-[var(--q-attention-bg)] rounded pointer-events-none z-10" />
+                  )}
+                  <div
+                    className={cn(
+                      "text-[13px] leading-[1.6] text-foreground whitespace-pre-wrap [&_p]:m-0 [&_p]:text-[13px] [&_p]:leading-[1.6] [&_br]:leading-[1.6]",
+                      toneChanged && !isRegenerated && "opacity-60",
+                    )}
+                    dangerouslySetInnerHTML={{ __html: body }}
+                  />
+                  {toneChanged && !isRegenerated && (
+                    <p className="text-[11px] text-[var(--q-attention-text)] mt-2">
+                      Tone changed to {currentTone} — click Regenerate to update the email
+                    </p>
+                  )}
+                  {isRegenerated && (
+                    <div className="flex items-center gap-2 mt-2">
+                      <p className="text-[11px] text-[var(--q-money-in-text)]">
+                        Regenerated at {currentTone} tone
+                      </p>
+                      <button
+                        className="inline-flex items-center gap-1 text-[11px] text-[var(--q-text-tertiary)] hover:text-foreground"
+                        onClick={onRevert}
+                      >
+                        <RotateCcw className="h-3 w-3" /> Revert to original
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <button
+                  className="inline-flex items-center gap-1 text-[12px] text-[var(--q-info-text)] hover:text-[var(--q-info-text)] font-medium"
+                  onClick={() => {
+                    onOpenChange(false);
+                    const plainBody = body
+                      .replace(/<br\s*\/?>/gi, "\n")
+                      .replace(/<\/p>/gi, "\n\n")
+                      .replace(/<\/div>/gi, "\n")
+                      .replace(/<[^>]+>/g, "")
+                      .replace(/&amp;/g, "&")
+                      .replace(/&lt;/g, "<")
+                      .replace(/&gt;/g, ">")
+                      .replace(/&nbsp;/g, " ")
+                      .replace(/\n{3,}/g, "\n\n")
+                      .trim();
+                    window.dispatchEvent(new CustomEvent("approval:edit", {
+                      detail: { actionId: action.id, subject, body: plainBody },
+                    }));
+                  }}
+                >
+                  Edit before sending <ArrowRight className="h-3 w-3" />
+                </button>
+              </div>
+            )}
 
             {/* SECTION 3 — Charlie's reasoning */}
             <div className="border-t border-[var(--q-border-default)] pt-3">
@@ -350,6 +412,12 @@ export default function ApprovalDrawer({
                     {action.priorContactCount === 0 ? "First contact" : action.agentReasoning?.slice(0, 40) || currentTone}
                   </span>
                 </div>
+                {isVoice && preview?.voiceBriefing?.influenceBarrier && (
+                  <div className="flex justify-between">
+                    <span className="text-[var(--q-text-tertiary)]">Influence barrier</span>
+                    <span className="text-[var(--q-text-primary)] capitalize">{preview.voiceBriefing.influenceBarrier}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -481,7 +549,9 @@ export default function ApprovalDrawer({
                 const prs = action.prsScore !== null ? `PRS ${Math.round(action.prsScore)} (${prsLabel(action.prsScore)})` : "no PRS data";
                 window.dispatchEvent(new CustomEvent("riley:open", {
                   detail: {
-                    message: `I'm reviewing a queued action for ${action.companyName || action.contactName}. Charlie has proposed a ${currentTone} tone ${channel} with the following reasoning: ${action.daysOverdue} days overdue, ${action.priorContactCount} prior contacts, ${prs}, best channel ${channel}. The tone reason is: ${toneReason}. The email subject is: "${subject}". Should I approve this action, change the tone, or is there anything about this customer I should know first?`,
+                    message: isVoice
+                      ? `I'm reviewing a queued voice call for ${action.companyName || action.contactName}. Charlie has proposed a ${currentTone} tone call with the following reasoning: ${action.daysOverdue} days overdue, ${action.priorContactCount} prior contacts, ${prs}. The call goal is: "${preview?.callGoal || (action.metadata as any)?.callGoal || "Secure payment date"}". Should I approve this call, or is there anything about this customer I should know first?`
+                      : `I'm reviewing a queued action for ${action.companyName || action.contactName}. Charlie has proposed a ${currentTone} tone ${channel} with the following reasoning: ${action.daysOverdue} days overdue, ${action.priorContactCount} prior contacts, ${prs}, best channel ${channel}. The tone reason is: ${toneReason}. The email subject is: "${subject}". Should I approve this action, change the tone, or is there anything about this customer I should know first?`,
                     context: { relatedEntityType: "contact", relatedEntityId: action.contactId },
                   },
                 }));

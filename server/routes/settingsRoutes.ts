@@ -397,6 +397,7 @@ export async function registerSettingsRoutes(app: Express): Promise<void> {
         emailFooterText: tenant.emailFooterText || null,
         conversationReplyDelayMin: tenant.conversationReplyDelayMin ?? 2,
         conversationReplyDelayMax: tenant.conversationReplyDelayMax ?? 5,
+        voiceEnabled: tenant.voiceEnabled ?? false,
       });
     } catch (error) {
       console.error("Error fetching tenant settings:", error);
@@ -428,6 +429,7 @@ export async function registerSettingsRoutes(app: Express): Promise<void> {
         'chaseDelayDays', 'preDueDateDays', 'preDueDateMinAmount',
         'conversationReplyDelayMin', 'conversationReplyDelayMax',
         'collectionIdentityMode', 'collectionIdentityDisclosure',
+        'voiceEnabled',
       ];
 
       const nestedFields = ['dailyLimits', 'minConfidence', 'exceptionRules', 'channelCooldowns'];

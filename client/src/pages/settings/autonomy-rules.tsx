@@ -33,6 +33,7 @@ import {
   UserCog,
   Building2,
   ArrowUpRight,
+  Phone,
 } from "lucide-react";
 
 interface TenantSettings {
@@ -55,6 +56,10 @@ interface TenantSettings {
   conversationReplyDelayMax: number;
   collectionIdentityMode: string;
   collectionIdentityDisclosure: string;
+  voiceEnabled: boolean;
+  dailyLimits: { email?: number; sms?: number; voice?: number };
+  businessHoursStart: string;
+  businessHoursEnd: string;
 }
 
 interface CommModeSettings {
@@ -169,9 +174,19 @@ export default function SettingsAutonomyRules({ embedded }: { embedded?: boolean
   const [conversationReplyDelayMin, setConversationReplyDelayMin] = useState<number | null>(null);
   const [conversationReplyDelayMax, setConversationReplyDelayMax] = useState<number | null>(null);
 
+  // Voice settings state
+  const [voiceEnabled, setVoiceEnabled] = useState<boolean | null>(null);
+  const [voiceDailyLimit, setVoiceDailyLimit] = useState<number | null>(null);
+  const [businessHoursStart, setBusinessHoursStart] = useState<string | null>(null);
+  const [businessHoursEnd, setBusinessHoursEnd] = useState<string | null>(null);
+
   // Collection identity state
   const [identityMode, setIdentityMode] = useState<string | null>(null);
   const [disclosurePolicy, setDisclosurePolicy] = useState<string | null>(null);
+  const currentVoiceEnabled = voiceEnabled ?? settings?.voiceEnabled ?? false;
+  const currentVoiceDailyLimit = voiceDailyLimit ?? settings?.dailyLimits?.voice ?? 20;
+  const currentBusinessHoursStart = businessHoursStart ?? settings?.businessHoursStart ?? "08:00";
+  const currentBusinessHoursEnd = businessHoursEnd ?? settings?.businessHoursEnd ?? "18:00";
   const currentIdentityMode = identityMode ?? settings?.collectionIdentityMode ?? "escalation";
   const currentDisclosurePolicy = disclosurePolicy ?? settings?.collectionIdentityDisclosure ?? "on_direct_question";
 
@@ -239,7 +254,8 @@ export default function SettingsAutonomyRules({ embedded }: { embedded?: boolean
     approvalMode !== null || timeoutHours !== null || exceptionRules !== null ||
     sendDelayMinutes !== null || emailFooterText !== null || chaseDelayDays !== null || preDueDateDays !== null || preDueDateMinAmount !== null ||
     smallAmountThreshold !== null || smallAmountChaseEnabled !== null ||
-    conversationReplyDelayMin !== null || conversationReplyDelayMax !== null;
+    conversationReplyDelayMin !== null || conversationReplyDelayMax !== null ||
+    voiceEnabled !== null || voiceDailyLimit !== null || businessHoursStart !== null || businessHoursEnd !== null;
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -258,6 +274,10 @@ export default function SettingsAutonomyRules({ embedded }: { embedded?: boolean
       if (conversationReplyDelayMax !== null) body.conversationReplyDelayMax = conversationReplyDelayMax;
       if (identityMode !== null) body.collectionIdentityMode = identityMode;
       if (disclosurePolicy !== null) body.collectionIdentityDisclosure = disclosurePolicy;
+      if (voiceEnabled !== null) body.voiceEnabled = voiceEnabled;
+      if (voiceDailyLimit !== null) body.dailyLimits = { voice: voiceDailyLimit };
+      if (businessHoursStart !== null) body.businessHoursStart = businessHoursStart;
+      if (businessHoursEnd !== null) body.businessHoursEnd = businessHoursEnd;
       const res = await apiRequest("PATCH", "/api/tenant/settings", body);
       return res.json();
     },
@@ -278,6 +298,10 @@ export default function SettingsAutonomyRules({ embedded }: { embedded?: boolean
       setConversationReplyDelayMax(null);
       setIdentityMode(null);
       setDisclosurePolicy(null);
+      setVoiceEnabled(null);
+      setVoiceDailyLimit(null);
+      setBusinessHoursStart(null);
+      setBusinessHoursEnd(null);
     },
     onError: (err: Error) => {
       toast({ title: "Failed to save", description: err.message, variant: "destructive" });
@@ -897,6 +921,77 @@ export default function SettingsAutonomyRules({ embedded }: { embedded?: boolean
                     )}
                     Save Communication Settings
                   </Button>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Voice Calls */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Phone className="h-5 w-5 text-primary" />
+                Voice Calls
+              </CardTitle>
+              <CardDescription>
+                Control whether Charlie can schedule outbound voice calls via Retell AI.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-medium">Voice calls enabled</Label>
+                  <p className="text-xs text-muted-foreground">
+                    When enabled, Charlie can schedule voice calls as part of the collection strategy.
+                  </p>
+                </div>
+                <Switch
+                  checked={currentVoiceEnabled}
+                  onCheckedChange={(checked) => setVoiceEnabled(checked)}
+                />
+              </div>
+              {currentVoiceEnabled && (
+                <>
+                  <Separator />
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium">Daily limit</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Maximum voice calls Charlie can place per day.
+                    </p>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={100}
+                      value={currentVoiceDailyLimit}
+                      onChange={(e) => {
+                        const v = parseInt(e.target.value, 10);
+                        if (!isNaN(v) && v >= 1 && v <= 100) setVoiceDailyLimit(v);
+                      }}
+                      className="w-24"
+                    />
+                  </div>
+                  <Separator />
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium">Business hours</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Voice calls will only be placed during these hours in the tenant's timezone.
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="time"
+                        value={currentBusinessHoursStart}
+                        onChange={(e) => setBusinessHoursStart(e.target.value)}
+                        className="w-28"
+                      />
+                      <span className="text-sm text-muted-foreground">to</span>
+                      <Input
+                        type="time"
+                        value={currentBusinessHoursEnd}
+                        onChange={(e) => setBusinessHoursEnd(e.target.value)}
+                        className="w-28"
+                      />
+                    </div>
+                  </div>
                 </>
               )}
             </CardContent>

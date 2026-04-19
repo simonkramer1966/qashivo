@@ -22,7 +22,7 @@ import {
   tenants, paymentPromises, promisesToPay, smeClients, contactNotes, timelineEvents,
   attentionItems, outcomes, activityLogs, collectionPolicies, paymentPlans,
   emailMessages, customerContactPersons, scheduledReports,
-  complianceChecks, aiFacts, customerPreferences,
+  complianceChecks, aiFacts, customerPreferences, voiceCallBriefings,
 } from "@shared/schema";
 import { computeNextRunAt } from "../services/reportScheduler";
 import { REPORT_TYPE_LABELS, type ReportType } from "../services/reportGenerator";
@@ -1650,6 +1650,30 @@ Guidelines:
         }
       }
 
+      // For voice actions, include the briefing if one exists
+      let voiceBriefing = null;
+      if (channel === 'voice' && action.id) {
+        const [briefing] = await db.select().from(voiceCallBriefings)
+          .where(and(
+            eq(voiceCallBriefings.actionId, action.id),
+            eq(voiceCallBriefings.tenantId, user.tenantId),
+          ))
+          .orderBy(desc(voiceCallBriefings.createdAt))
+          .limit(1);
+        if (briefing) {
+          voiceBriefing = {
+            briefingText: briefing.briefingText,
+            influenceBarrier: briefing.influenceBarrier,
+            influenceStrategy: briefing.influenceStrategy,
+            toneLevel: briefing.toneLevel,
+            callStatus: briefing.callStatus,
+            personaFraming: briefing.personaFraming,
+            callGoal: briefing.callGoal,
+            reasonForCall: briefing.reasonForCall,
+          };
+        }
+      }
+
       res.json({
         actionType: action.type,
         subject,
@@ -1669,6 +1693,9 @@ Guidelines:
         priority: action.priority,
         agentReasoning: action.agentReasoning,
         createdAt: action.createdAt,
+        voiceBriefing,
+        callGoal: (action.metadata as any)?.callGoal || voiceBriefing?.callGoal || null,
+        reasonForCall: (action.metadata as any)?.reasonForCall || voiceBriefing?.reasonForCall || null,
       });
     } catch (error) {
       console.error("Error fetching action preview:", error);
